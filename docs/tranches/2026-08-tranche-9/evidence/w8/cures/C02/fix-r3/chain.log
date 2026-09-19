@@ -1,0 +1,45 @@
+loadavg open: { 8.99 7.46 7.65 }
+  pair 4 loadavg { 12.66 8.42 8.00 }
+  pair 5 loadavg { 10.73 8.28 7.95 }
+  pair 6 loadavg { 9.14 8.09 7.89 }
+loadavg close: { 8.97 8.07 7.89 }
+DRAWER-MORE COMPLETE
+DONE cured-run1.txt exit=EXIT=0
+DONE base-run1.txt exit=EXIT=0
+DONE cured-run2.txt exit=EXIT=1
+DONE base-run2.txt exit=EXIT=0
+DONE cured-run3.txt exit=EXIT=1
+DONE base-run3.txt exit=EXIT=0
+RIG BATTERY COMPLETE
+== npm run test:unit
+   exit 0
+== npm run lint:eslint
+   exit 0
+== npm run lint
+   exit 1
+== npm run lint:knip
+   exit 0
+== npm run lint:boundary
+   exit 0
+== npm run lint:tdz
+   exit 0
+== npm run lint:copy
+   exit 0
+== npm run lint:live-regions
+   exit 0
+== npm run lint:motion
+   exit 0
+== npm run typecheck:e2e
+   exit 0
+== npm run typecheck:node
+   exit 0
+== goldens vs :4253 (no --update-snapshots)
+
+  4 passed (1.4s)
+EXIT=0
+== surface specs, BOTH engines, vs :4253, scratch config
+[72/72] [chromium] › e2e/theme-bake-freshness.spec.ts:313:7 › G4.5 · baked ink survives one theme toggle (from dark) › kenken dark → light: both baked surfaces re-ink
+  72 passed (41.5s)
+EXIT=0
+GATES COMPLETE
+ALL-DONE

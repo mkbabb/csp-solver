@@ -1,0 +1,31 @@
+
+> csp-solver-frontend@0.1.0 test:golden:bytes
+> node scripts/check-golden-bytes.mjs
+
+[golden-bytes] 8 golden(s) + 0 unsanctioned PNG(s) under e2e
+  estate total    92.5 KB  (goldens 92.5 KB)
+  estate band    110.0 KB  (headroom 17.5 KB = 18.9% of the total)
+  per-image      150.0 KB ceiling · 1.0 KB floor
+  ok       3.8 KB  e2e/goldens/cell-light-darwin.png  [144×144]
+  ok       3.8 KB  e2e/goldens/cell-light-linux.png  [144×144]
+  ok      15.4 KB  e2e/goldens/grid-corner-light-darwin.png  [360×360]
+  ok      15.3 KB  e2e/goldens/grid-corner-light-linux.png  [360×360]
+  ok      23.7 KB  e2e/goldens/logo-light-darwin.png  [768×226]
+  ok      23.7 KB  e2e/goldens/logo-light-linux.png  [770×224]
+  ok       3.4 KB  e2e/goldens/toggle-crest-dark-darwin.png  [144×144]
+  ok       3.4 KB  e2e/goldens/toggle-crest-dark-linux.png  [144×144]
+
+[golden-bytes] count pin: 8 on disk, pinned at 8
+
+[golden-bytes] pairing + consumers (35 spec file(s) grepped):
+  ok    cell-light  [darwin, linux]  → e2e/visual-golden.spec.ts:379
+  ok    grid-corner-light  [darwin, linux]  → e2e/visual-golden.spec.ts:393
+  ok    logo-light  [darwin, linux]  → e2e/visual-golden.spec.ts:326
+  ok    toggle-crest-dark  [darwin, linux]  → e2e/visual-golden.spec.ts:370
+
+[golden-bytes] tracked-ness: 8 tracked / 8 on disk
+
+[golden-bytes] engine/template: ok   single implicit engine (chromium), no {projectName} needed  (playwright-golden.config.ts)
+
+[golden-bytes] PASS — 8 goldens (pinned at 8), 92.5 KB of a 110.0 KB estate band; paired, consumed, decodable, tracked; no fossils.
+exit 0

@@ -1,0 +1,65 @@
+# C07a — the live edge's answer for a woff2, curl'd 2026-09-17 from this host
+$ curl -sI https://sudoku.babb.dev/assets/fraunces-subset-qp6ShjBRhfYB.woff2
+HTTP/2 200 
+date: Thu, 17 Sep 2026 21:34:10 GMT
+content-type: font/woff2
+content-length: 14636
+x-frame-options: DENY
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=40wBaoOpWXK3VzTX%2Fb8qRFcblAibLwbZZd4t257cNGR3FFuO5d5Qr8%2BqEft2Vp7QAQuPfYfSXzYBIWLArDzTMmpnVQveOLbTL4iS4hxSdpYbthMn0Cj0uiQZP5cNepWnxvU%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+access-control-allow-origin: *
+cache-control: public, max-age=31536000, immutable
+etag: "f917931beb5759a2705d95a4289ce5bd"
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+content-security-policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-site
+permissions-policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+server: cloudflare
+age: 12978
+accept-ranges: bytes
+cf-cache-status: HIT
+cf-ray: a3cb3bc2f8bc57f3-IAD
+alt-svc: h3=":443"; ma=86400
+
+
+$ curl -sI -H 'Origin: https://sudoku.babb.dev' <same>  (the Origin-bearing arm)
+HTTP/2 200 
+date: Thu, 17 Sep 2026 21:34:10 GMT
+content-type: font/woff2
+content-length: 14636
+x-frame-options: DENY
+report-to: {"group":"cf-nel","max_age":604800,"endpoints":[{"url":"https://a.nel.cloudflare.com/report/v4?s=7c53Ai%2F63XE3hJc9gmp1gJ6jb2J0t3StVHaOUTblYFKKhYeDbtw%2BJbeWQQhCrqThKaqhbWa8a2ks8iKcd0ypQvauU3jNcFPNRQwMeORVrIlt4d38dySzhgtneRecB%2BMfXr8%3D"}]}
+nel: {"report_to":"cf-nel","success_fraction":0.0,"max_age":604800}
+access-control-allow-origin: *
+cache-control: public, max-age=31536000, immutable
+etag: "f917931beb5759a2705d95a4289ce5bd"
+strict-transport-security: max-age=63072000; includeSubDomains; preload
+content-security-policy: default-src 'self'; script-src 'self' 'wasm-unsafe-eval'; style-src 'self' 'unsafe-inline'; font-src 'self'; img-src 'self' data: blob:; connect-src 'self' wss://sudoku-relay.mkbabb.workers.dev; worker-src 'self'; object-src 'none'; base-uri 'self'; form-action 'self'; frame-ancestors 'none'
+cross-origin-opener-policy: same-origin
+cross-origin-resource-policy: same-site
+permissions-policy: accelerometer=(), autoplay=(), browsing-topics=(), camera=(), display-capture=(), encrypted-media=(), fullscreen=(), gamepad=(), geolocation=(), gyroscope=(), hid=(), idle-detection=(), local-fonts=(), magnetometer=(), microphone=(), midi=(), payment=(), picture-in-picture=(), publickey-credentials-get=(), screen-wake-lock=(), serial=(), usb=(), web-share=(), xr-spatial-tracking=()
+referrer-policy: strict-origin-when-cross-origin
+x-content-type-options: nosniff
+server: cloudflare
+age: 10299
+accept-ranges: bytes
+cf-cache-status: HIT
+cf-ray: a3cb3bc38b16f031-IAD
+alt-svc: h3=":443"; ma=86400
+
+
+$ curl -sI http://127.0.0.1:4254/assets/fraunces-subset-qp6ShjBRhfYB.woff2   (vite preview, dist-base)
+HTTP/1.1 200 OK
+Vary: Origin
+Content-Length: 14636
+Content-Type: font/woff2
+Last-Modified: Thu, 17 Sep 2026 20:51:45 GMT
+ETag: W/"14636-1789678305612"
+Cache-Control: no-cache
+Date: Thu, 17 Sep 2026 21:34:10 GMT
+Connection: keep-alive
+Keep-Alive: timeout=5
+

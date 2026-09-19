@@ -1,0 +1,24 @@
+# T9-W8 C01 repair r2 — refute/A1 cp-probe.mjs, verbatim, only --port differs
+# webkit · unthrottled, NO CDP · cold · desk 1280x800 dpr 2 · 5 + 5 interleaved (b,c,b,c…) · 0 tainted of 10
+# loadavg { 41.95 51.18 45.54 } -> { 49.17 51.27 46.04 }   (the heaviest host of this session)
+# base :4252 index-9rZPzI5DEcpe.js · cured :4253 index-DOFGihfY7ZtC.js
+#
+# firstTrue       = the first rAF tick at which the board-ready CONDITION held
+# boardReady      = the stamp the census reads (a rAF, so an encode can hold it off)
+# stamp-condition = the charter's accept row: the stamp behind the condition, ≤ 2 frames ≈ 33 ms
+
+base   firstTrue       [232,230,230,263,282] med 232
+       boardReady      [794,733,799,822,901] med 799
+       stamp-condition [562,503,569,559,619] med 562
+       encodes         [20,20,20,20,20] med 20
+cured  firstTrue       [237,241,245,325,248] med 245
+       boardReady      [400,427,399,505,417] med 417
+       stamp-condition [163,186,154,180,169] med 169
+       encodes         [16,16,16,16,16] med 16
+
+# READING. The gap closes by 393 ms on the median and the two spreads are disjoint
+# (503–619 against 154–186). The condition itself does not move (+13, inside both spreads):
+# the board was ready at the same moment in both arms and the cure stops the bake sitting on
+# the stamp. The accept row as written (≤ 2 frames) is NOT met at 169 ms, and HEAD misses it
+# by 562 — the residue is scheduling among the KEPT rounds, which is C03's subject, and it is
+# banked here with its number rather than claimed.

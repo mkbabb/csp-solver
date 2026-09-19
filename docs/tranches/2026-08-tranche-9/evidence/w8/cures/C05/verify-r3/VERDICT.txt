@@ -1,0 +1,148 @@
+T9-W8 C05 — THE THIRD NON-AUTHOR'S VERDICT (round 3)
+VERDICT: ACCEPT, with findings the CHAIR must rule on (scope, not code).
+
+Who: a non-author. I wrote none of C05. Worktree .claude/worktrees/w8-bake, branch w8/bake,
+HEAD 66e34b23. I edited no product file, committed nothing, reset nothing.
+Host darwin 25.4.0 arm64, TEN sibling agents measuring. sysctl -n vm.loadavg:
+  frames battery   start { 8.04 11.16 11.35 }   end { 16.04 12.52 11.82 }
+  pi + gates       start { 19.72 15.13 12.90 }  end { 53.86 26.84 17.51 }
+  identity census  start { 30.67 24.47 17.11 }  end { 16.54 21.60 16.47 }
+  final            { 6.97 16.94 15.23 }
+No real Safari, no iOS, no osascript, no perf-rig script (M19). Every number below is a
+chromium proxy.
+
+1. THE DIFF (c003c1d0^..HEAD, one file, web/frontend/src/pencil/composables/rasterPose.ts)
+   c003c1d0 46 insertions, 0 deletions · da33cb8e 21/6 · 66e34b23 24/17.
+   Non-comment lines added by 66e34b23: 0 (filtered the diff myself). The seam is unchanged
+   since c003c1d0, as claimed.
+   MECHANISM: DEFERRAL. GESTURE_QUIET_MS = MOTION.chromeLeaveMs + MOTION.boardFoldMs +
+   MOTION.cardStepMs = 200 + 520 + 440 = 1,160 (read from pencilConfig.ts myself; no new
+   literal). lastGestureAt stamped in the existing bump(); one reschedule in usePosePrewarm's
+   start(), after the boot-census guard, before alt(). schedule() is guarded by
+   `timer !== null` so there is no busy loop, and the reschedule does not touch `attempts`,
+   so MAX_WARM_ATTEMPTS is not consumed and a page at rest is unaffected
+   (gestureQuietLeftMs() is -Infinity before the first gesture).
+   It draws NOTHING less: no bake dropped, no boil thinned, no filter removed, no transition
+   shortened, no DPR lowered, no cacheKey theme-stripped. Checked the REFUSED and REFUTED
+   lists by name: nothing on either is proposed here.
+   NO MASKED FALLBACK: the deferral sits on the single warm path every surface uses; the
+   seam is present in the cured bundle and absent from the base one.
+
+2. THE ARMS — both match the author's report, printed at both ends of every reading set.
+   base  AUDIT: build-identity — dist entry index-CS-Vym5OZcaO.js · index.html md5
+         c07ba6d9f80a8b26559c0765120fe79d · 43 files / 811.1 KB   (dist-base, :4252)
+   cured AUDIT: build-identity — dist entry index-LjRNU9f7iIUb.js · index.html md5
+         b4865f796519e83934879968e3fbd4f0 · 43 files / 811.3 KB   (dist, :4253)
+   Served entries re-read over HTTP at both ends; identical.
+   THE CURED DIST IS HEAD'S BUILD, PROVEN BY REBUILD: I rebuilt HEAD to a scratch outDir
+   (npx vite build) and got the same entry chunk NAME and md5 —
+   index-LjRNU9f7iIUb.js, md5 c948750838e611b5e13a404799573632 — byte-identical to the
+   served cured arm and to the author's claimed hash. Scratch build removed.
+   The base arm carries no seam: grep for chromeLeaveMs+ in index-CS-Vym5OZcaO.js = 0 hits;
+   the cured entry carries exactly one, Oi=Je.chromeLeaveMs+Je.boardFoldMs+Je.cardStepMs.
+   Base and cured are NOT swapped: the base arm is the one whose warm lands inside the
+   window (see §3), and only the cured entry holds the seam.
+
+3. THE NUMBER, REPRODUCED ON MY OWN BATTERY (verify-r3/battery.sh, A7's fold-frames.mjs
+   verbatim, only --port differs; 6 + 6 windows INTERLEAVED b,c,b,c; 12 runs, all exit 0;
+   0 tainted; verify-r3/STATS.txt via the author's pool.mjs, which computes disjointness
+   from full ranges).
+   REGIME: chromium · 4x CPU · unthrottled link · warm cache · desk 1280x800 · dpr 2 ·
+   cycle 0 (the page's first fold).
+
+   cycle 0 ENTRY, the 1,100 ms choreographed window
+     tasks > 150 ms in window   base 2 (1-2)          cured 0 (0-0)        DISJOINT
+     fps                        base 77.3 (59.1-91.8) cured 115.5 (106.4-117.3) DISJOINT
+     p95                        base 18.1 (13.8-21.5) cured 9.9 (9.7-12.3) DISJOINT (mine alone)
+     worst frame                base 208.1 (97.7-229.3) cured 93.2 (73.2-121.4) inside spread
+     long33                     base 3 (2-3)          cured 2 (2-3)        inside spread
+     jank                       base 365.3 (164-400.5) cured 155.9 (126-180.1) inside spread
+   cycle 0 EXIT — every mark INSIDE SPREAD (worst 65.9 -> 68.1, p95 14.5 -> 9.9,
+     fps 118.4 -> 122.4). The author's round-1 wording is rightly withdrawn.
+   cycles 1-2, both directions — every mark inside spread, as the author says.
+
+   The two marks the record calls disjoint are disjoint in my independent battery too, in
+   the direction claimed, on a host far more loaded than the author's. The three marks the
+   record withdrew read inside spread here as well. Base and cured are not swapped; the
+   regime is the charter's; the cache is warm in both arms by the same instrument.
+
+4. THE ATTRIBUTION, RE-RUN (verify-r3/identity/, attrib/fold-identity.mjs unmodified,
+   2 + 2 runs interleaved, all exit 0, same regime)
+   BOOT, both arms, 2 of 2 each: 33 bakes, IDENTICAL split
+     {celestial 17, grid 12, logo-sudoku-l-205|2|382.5x112|4 : 4}
+   base  c0 entry logo 8 — 4 at 508-571 (the live re-key) AND 4 at 1431-1548 (the base's
+         OWN late warm, past the 1,160 ms line) in 2 of 2 runs; c0 exit logo 4 at 516-650;
+         c1/c2 logo 0.
+   cured c0 entry logo 4 at 311-359 ONLY — the live re-key, untouched; c0 exit logo 4 at
+         1171-1264; c1 entry logo 4 at 1172-1230.
+   Every logged key carries poseCount 4, both arms, both identities
+   (…|2|382.5x112|4 and …|2|277x81|4) at the same device px.
+   This reproduces the cure's central claim independently: only the warm moves, the live
+   bake does not, the wordmark's stack cache does not miss on the flip, and verifier
+   finding (4) from round 2 — the base arm's own late warm — is real.
+
+5. PI
+   Goldens, cured dist on :4253, playwright-golden.config.ts, no --update-snapshots:
+     4 passed, EXIT 0 (verify-r3/golden.txt).
+   The three specs that assert over the BUILT dist — filter-census both engines (this is
+   what holds filterBudget at 9), wordmark-integrity on WebKit over the baked pose bitmaps,
+   theme-bake-freshness both engines: 38 passed, EXIT 0 (verify-r3/e2e-bake-surface.txt).
+   Gallery + masthead surface, both engines, scratch config at :4253: 124 passed, EXIT 0.
+   filterBudget: filterBudget.ts is not in the diff (the diff is one file) and the census
+   spec passes against the cured dist on both engines. Pose count 4 in every key I logged.
+
+6. GATES, bare, in the worktree, each with its own exit code (verify-r3/gates.txt)
+     test:unit 0 (Test Files 66 passed (66) · Tests 810 passed (810)) · lint:eslint 0 ·
+     lint 0 · lint:knip 0 · lint:boundary 0 · lint:tdz 0 · lint:copy 0 ·
+     lint:live-regions 0 · lint:motion 0 · typecheck:e2e 0 · typecheck:node 0.
+
+7. THE MUST-NOTS, one by one
+   "Skip the wordmark's bake" — NO. The cured first fold still bakes 4 live encodes at the
+     new key (2 of 2 identity runs, 311-359 ms), and the author's label census reads 4 on
+     both arms.
+   "Freeze the wordmark on a stale pose" — NO. Goldens 4/0; wordmark-integrity and
+     theme-bake-freshness pass over the baked bitmaps; the live re-key is untouched.
+   "Delay the fold to hide the frame" — NO, and the evidence runs the other way: the cured
+     fold reaches its box change EARLIER (262-308 ms) than the base's (455-509 ms), because
+     the main thread is not holding a 206 ms grid pose. MOTION is unchanged and lint:motion
+     is 0.
+   No golden moved, filterBudget 9, pose count 4, nothing from REFUSED or REFUTED, no
+   user-readable string added (M16 not engaged).
+
+8. FINDINGS FOR THE CHAIR — all disclosed by the record; none is a code repair
+   (a) ACCEPT CLAUSE 1 NOT REACHED, verified. The cured first fold bakes 4 live logo
+       encodes plus the CH-62 probe's 4 drawImages per direction, on BOTH arms. The
+       re-key is legitimate (the gallery pose really moves the capture box, 382.5x112 ->
+       277x81) and the charter itself forbids suppressing it.
+   (b) ACCEPT CLAUSE 2 NOT REACHED, verified. Cured cycle-0 entry worst is 93.2 ms in my
+       battery (87.5 pooled in the record), not 9-17 ms. What sits in that band is the
+       window's p95, 9.9 cured against 18.1 base.
+   (c) THE NUMBER THE CHARTER NAMES IS NOT THE NUMBER THAT MOVED. G2's row is the
+       STEADY-STATE fold (entry worst 57.7); my cycles 1-2 are inside spread on every mark,
+       both directions, both arms. What moved is the FIRST fold — the same instrument, the
+       same regime, a window G2 did not quote. The record says this in those words. Whether
+       a cure may land on a window its charter did not name is the chair's, not mine.
+   (d) THE TRADE REPRODUCES. In my steady-state windows (cycles 1-2, both directions,
+       24 per arm) the cured arm carries a task over 150 ms in 1 window and the base in 0;
+       cycle-1 exit cured worst ranges to 241.2 ms against a base range of 44.9-54.4.
+       Medians are unmoved. Same direction and rate as the record's 6 of 104 vs 0 of 104.
+       Slicing the 1,272-square pose is on the REFUSED list, so this is a placement
+       question for the chair.
+   (e) THE RELOCATED WORDMARK WARM LANDS IN THE NEXT FOLD'S WINDOW in 2 of 2 of my cured
+       runs (the record pools it at 5 of 9). It costs no frame either census can read, and
+       the base arm defers its own warm past the same line in 2 of 2 of mine (6 of 9
+       pooled). Both arms defer; the cure changes which fold pays.
+   (f) DOCUMENTARY, minor: fix-r2/LABEL.txt banks the base arm as `live=8` where the
+       record's mark 8 quotes "4 live encodes at 41-98 ms". The second four (309-488 ms)
+       are the warm round, reported separately in mark 9 and in RECORD.md section 5, so
+       nothing is hidden — but the raw bucket's name and the record's count differ and a
+       reader of mark 8 alone would undercount the base's encodes in that window.
+
+WHY ACCEPT AND NOT REPAIR. Two earlier non-authors ruled REPAIR on the record, never on the
+code, and neither owed a code change. This round paid all five of round 2's findings with
+re-measures, and I reproduced every one of them independently: the two disjoint marks, the
+three withdrawals, the base arm's own late warm, the pooled rate of the cured arm's second
+surface, and the byte-identity of the bundle the numbers were read on. The mechanism is
+lawful deferral, pi holds, all eleven gates are 0, every must-not is clear, and the number
+moves outside the spread on the charter's own instrument and regime. What is left is a
+scope question the record states plainly rather than hides, and scope is the chair's.

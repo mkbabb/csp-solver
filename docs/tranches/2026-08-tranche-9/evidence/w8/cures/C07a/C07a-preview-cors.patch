@@ -1,0 +1,27 @@
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 30fedc66..8a45ae47 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -299,6 +299,22 @@ export default defineConfig({
+   optimizeDeps: {
+     exclude: ['@mkbabb/csp-solver-wasm'],
+   },
++  // `vite preview` is the estate's stand-in for the CF edge, and until this block it
++  // answered /assets/* with a header the edge has never sent: `Vary: Origin`, from the
++  // preview server's CORS middleware (on by default). Everything this app serves is
++  // same-origin, so the middleware grants nothing — but the header splits the HTTP cache
++  // key by the request's `Origin`, and the two ways a font is asked for do not agree on
++  // that header: a `<link rel="preload" as="font" crossorigin>` is a CORS request and
++  // carries `Origin`, while WebKit's own `@font-face` load of the same same-origin URL
++  // carries none. Under `Vary: Origin` the preload is therefore unusable by the face that
++  // needs it and WebKit downloads all three subsets twice (7 woff2 GETs cold, against
++  // chromium's 4 — chromium's `@font-face` load is CORS-mode and matches). The live site
++  // answers `access-control-allow-origin: *`, `cache-control: public, max-age=31536000,
++  // immutable` and NO `Vary` (curl'd 2026-09-17), where both engines read 4.
++  // Turning the middleware off makes the local proxy tell the same story as the edge.
++  preview: {
++    cors: false,
++  },
+   server: {
+     port: 3000,
+     host: '0.0.0.0',

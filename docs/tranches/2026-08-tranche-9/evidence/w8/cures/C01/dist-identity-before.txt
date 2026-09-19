@@ -1,0 +1,14 @@
+BEFORE the reading sets, 2026-09-17T21:06Z
+
+base  (dist-base, :4252) AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T20:51:44.322Z
+cured (dist,      :4253) AUDIT: build-identity — dist entry index-DD23ypDktma1.js · index.html md5 5990c83ef9c29b4397b7da99a6bb762a · 43 files / 806.1 KB · newest mtime 2026-09-17T21:06:29.868Z
+
+THE BASE ARM IS REPRODUCIBLE, and that was checked rather than assumed. The chair's dist-base
+was built with the main tree's node_modules; this track's node_modules is now private (the
+symlink had to come off to consume the library tarball). So HEAD was built ONCE from the
+private node_modules with no source edit and no tarball, and it reproduced the chair's line
+exactly — index-9rZPzI5DEcpe.js, md5 fa3d1af9870916cc728de11e97f57a90, 43 files / 806.1 KB.
+Every delta below is therefore the cure's, not the install's.
+
+    control build (npm ci, no edit, pencil-boil 0.12.0 from the registry lock):
+    AUDIT: build-identity — dist entry index-9rZPzI5DEcpe.js · index.html md5 fa3d1af9870916cc728de11e97f57a90 · 43 files / 806.1 KB · newest mtime 2026-09-17T21:05:55.766Z

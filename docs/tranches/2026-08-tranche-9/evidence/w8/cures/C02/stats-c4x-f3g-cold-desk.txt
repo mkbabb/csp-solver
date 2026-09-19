@@ -1,0 +1,37 @@
+regime: chromium · 4x · fast3g · cold(CDP cache disabled) · desk dpr2 · boot light
+cured : chromium · 4x · fast3g · cold(CDP cache disabled) · desk dpr2 · boot light
+cell  : game-cell · longtask true
+
+### base — 5 windows
+| w | deltaMs | n1SettleMs | n234SettleMs | n1Bakes | n1WhirlFrames | n1WhirlLong33 | n1WhirlWorstMs | n1LongTaskMs | n1RecalcMs | boardReadyMs | bootBakes | bootLongTaskMs | tainted |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base-w1 | 2666.2 | 3126.7 | 460.5 | 8.0 | 0.0 | 0.0 | — | 0.0 | 367.4 | 1458.2 | 16.0 | 1296.0 | 0 |
+| base-w2 | 1496.4 | 1730.0 | 233.6 | 8.0 | 0.0 | 0.0 | — | 1160.0 | 146.5 | 1571.2 | 16.0 | 1510.0 | 0 |
+| base-w3 | 1143.1 | 1243.4 | 100.3 | 8.0 | 1.0 | 1.0 | 208.4 | 871.0 | 77.9 | 1415.2 | 16.0 | 1152.0 | 0 |
+| base-w4 | 1360.2 | 1492.8 | 132.6 | 8.0 | 0.0 | 0.0 | — | 0.0 | 100.8 | 1465.5 | 16.0 | 1376.0 | 0 |
+| base-w5 | 1317.4 | 1777.9 | 460.5 | 8.0 | 0.0 | 0.0 | — | 0.0 | 145.1 | 1426.5 | 16.0 | 1481.0 | 0 |
+
+### cured — 5 windows
+| w | deltaMs | n1SettleMs | n234SettleMs | n1Bakes | n1WhirlFrames | n1WhirlLong33 | n1WhirlWorstMs | n1LongTaskMs | n1RecalcMs | boardReadyMs | bootBakes | bootLongTaskMs | tainted |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| cured-w1 | 61.7 | 578.8 | 517.1 | 0.0 | 68.0 | 7.0 | 133.7 | 0.0 | 317.0 | 1498.0 | 22.0 | 2805.0 | 0 |
+| cured-w2 | 21.4 | 130.1 | 108.7 | 0.0 | 94.0 | 1.0 | 75.6 | 0.0 | 280.6 | 1395.3 | 22.0 | 1545.0 | 0 |
+| cured-w3 | 24.3 | 126.2 | 101.9 | 0.0 | 94.0 | 1.0 | 74.7 | 0.0 | 287.5 | 1385.9 | 22.0 | 1546.0 | 0 |
+| cured-w4 | 1461.2 | 1863.8 | 402.6 | 5.0 | 0.0 | 0.0 | — | 0.0 | 85.8 | 1597.8 | 21.0 | 1781.0 | 0 |
+| cured-w5 | -80.4 | 185.0 | 265.4 | 0.0 | 87.0 | 2.0 | 83.7 | 0.0 | 264.1 | 1640.4 | 21.0 | 1847.0 | 0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| deltaMs | 1360.2 | 1143.1–2666.2 | 24.3 | -80.4–1461.2 | -1335.9 | no — inside the spread |
+| n1SettleMs | 1730.0 | 1243.4–3126.7 | 185.0 | 126.2–1863.8 | -1545.0 | no — inside the spread |
+| n234SettleMs | 233.6 | 100.3–460.5 | 265.4 | 101.9–517.1 | 31.8 | no — inside the spread |
+| n1Bakes | 8.0 | 8.0–8.0 | 0.0 | 0.0–5.0 | -8.0 | YES |
+| n1WhirlFrames | 0.0 | 0.0–1.0 | 87.0 | 0.0–94.0 | 87.0 | no — inside the spread |
+| n1WhirlLong33 | 0.0 | 0.0–1.0 | 1.0 | 0.0–7.0 | 1.0 | no — inside the spread |
+| n1WhirlWorstMs | 208.4 | 208.4–208.4 | 79.7 | 74.7–133.7 | -128.8 | YES |
+| n1LongTaskMs | 0.0 | 0.0–1160.0 | 0.0 | 0.0–0.0 | 0.0 | no — inside the spread |
+| n1RecalcMs | 145.1 | 77.9–367.4 | 280.6 | 85.8–317.0 | 135.5 | no — inside the spread |
+| boardReadyMs | 1458.2 | 1415.2–1571.2 | 1498.0 | 1385.9–1640.4 | 39.8 | no — inside the spread |
+| bootBakes | 16.0 | 16.0–16.0 | 22.0 | 21.0–22.0 | 6.0 | YES |
+| bootLongTaskMs | 1376.0 | 1152.0–1510.0 | 1781.0 | 1545.0–2805.0 | 405.0 | YES |

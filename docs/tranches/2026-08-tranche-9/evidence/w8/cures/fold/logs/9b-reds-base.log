@@ -1,0 +1,189 @@
+
+Running 38 tests using 2 workers
+
+[1/38] [chromium] › e2e/multiplayer.spec.ts:162:1 › the invite carries the board, and both pages sit at one table
+[2/38] [chromium] › e2e/multiplayer.spec.ts:140:1 › solo boot opens no room, and pays no bytes for one
+[3/38] [chromium] › e2e/multiplayer.spec.ts:200:1 › a digit crosses both ways, and it arrives in its author's ink
+[4/38] [chromium] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages
+[5/38] [chromium] › e2e/multiplayer.spec.ts:265:1 › undo skips a cell a peer has taken — your move is spent, their digit stands
+[6/38] [chromium] › e2e/multiplayer.spec.ts:291:1 › an undo is a move the room sees: the digit leaves both boards, and redo restores it
+[7/38] [chromium] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it
+  1) [chromium] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages ─────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "9"
+    Received: "5"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      254 |   // that cannot be seen from one browser.
+      255 |   await write(b, cell, "9");
+    > 256 |   await expect.poll(() => digitAt(a, cell)).toBe("9");
+          |                                             ^
+      257 |   expect(await digitAt(b, cell)).toBe("9");
+      258 |
+      259 |   // Converged, whole: the two boards are one board.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/e2e/multiplayer.spec.ts:256:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-last-writer-wins-the-cell-on-both-pages-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-last-writer-wins-the-cell-on-both-pages-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/multiplayer-last-writer-wins-the-cell-on-both-pages-chromium/error-context.md
+
+
+[8/38] [chromium] › e2e/multiplayer.spec.ts:347:1 › the table says connecting until the room answers, then shows who is at it
+[9/38] [chromium] › e2e/multiplayer.spec.ts:385:1 › leaving drops the room, the roster, and the parameter
+[10/38] [chromium] › e2e/multiplayer.spec.ts:502:1 › the wordmark holds through the join, under an op flood arriving mid-boot
+[11/38] [chromium] › e2e/multiplayer.spec.ts:555:1 › four pages, one board: every roster, every ink, every digit, one contended cell
+  2) [chromium] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "6"
+    Received: ""
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      329 |   const cell = await firstEmpty(b);
+      330 |   await write(b, cell, "6");
+    > 331 |   await expect.poll(() => digitAt(a, cell)).toBe("6");
+          |                                             ^
+      332 |
+      333 |   const before = await boardSignature(a);
+      334 |   await a.locator('.controls-card button[aria-label="Deal a new board"]').click();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/e2e/multiplayer.spec.ts:331:45
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-a-deal-is-an-e-5808c-ither-undo-stack-crosses-it-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/multiplayer-a-deal-is-an-e-5808c-ither-undo-stack-crosses-it-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/multiplayer-a-deal-is-an-e-5808c-ither-undo-stack-crosses-it-chromium/error-context.md
+
+
+[12/38] [chromium] › e2e/multiplayer.spec.ts:610:1 › a player leaves mid-flood: the rosters prune and the survivors keep writing
+[13/38] [chromium] › e2e/multiplayer.spec.ts:649:1 › a joiner arriving mid-game adopts the whole board, then syncs both ways
+[14/38] [chromium] › e2e/multiplayer.spec.ts:683:1 › three hundred ops as fast as the wire takes them, and the boards are one board
+[15/38] [chromium] › e2e/multiplayer.spec.ts:728:1 › a page that reloads mid-session comes back to the same table and the same board
+[16/38] [chromium] › e2e/multiplayer.spec.ts:854:1 › two phones sit at one table, and the well is reachable with the sheet shut
+[17/38] [chromium] › e2e/multiplayer.spec.ts:882:1 › a digit tapped on a phone crosses, and the sheet does not move under the traffic
+[18/38] [chromium] › e2e/multiplayer.spec.ts:950:1 › the real relay carries the board with RTCPeerConnection deleted
+[19/38] [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+[20/38] [webkit] › e2e/multiplayer.spec.ts:140:1 › solo boot opens no room, and pays no bytes for one
+[21/38] [webkit] › e2e/multiplayer.spec.ts:162:1 › the invite carries the board, and both pages sit at one table
+[22/38] [webkit] › e2e/multiplayer.spec.ts:200:1 › a digit crosses both ways, and it arrives in its author's ink
+[23/38] [webkit] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages
+[24/38] [webkit] › e2e/multiplayer.spec.ts:265:1 › undo skips a cell a peer has taken — your move is spent, their digit stands
+[25/38] [webkit] › e2e/multiplayer.spec.ts:291:1 › an undo is a move the room sees: the digit leaves both boards, and redo restores it
+[26/38] [webkit] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it
+  3) [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        24 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-chromium/error-context.md
+
+
+[27/38] [webkit] › e2e/multiplayer.spec.ts:347:1 › the table says connecting until the room answers, then shows who is at it
+[28/38] [webkit] › e2e/multiplayer.spec.ts:385:1 › leaving drops the room, the roster, and the parameter
+[29/38] [webkit] › e2e/multiplayer.spec.ts:502:1 › the wordmark holds through the join, under an op flood arriving mid-boot
+[30/38] [webkit] › e2e/multiplayer.spec.ts:555:1 › four pages, one board: every roster, every ink, every digit, one contended cell
+[31/38] [webkit] › e2e/multiplayer.spec.ts:610:1 › a player leaves mid-flood: the rosters prune and the survivors keep writing
+[32/38] [webkit] › e2e/multiplayer.spec.ts:649:1 › a joiner arriving mid-game adopts the whole board, then syncs both ways
+[33/38] [webkit] › e2e/multiplayer.spec.ts:683:1 › three hundred ops as fast as the wire takes them, and the boards are one board
+[34/38] [webkit] › e2e/multiplayer.spec.ts:728:1 › a page that reloads mid-session comes back to the same table and the same board
+[35/38] [webkit] › e2e/multiplayer.spec.ts:854:1 › two phones sit at one table, and the well is reachable with the sheet shut
+[36/38] [webkit] › e2e/multiplayer.spec.ts:882:1 › a digit tapped on a phone crosses, and the sheet does not move under the traffic
+[37/38] [webkit] › e2e/multiplayer.spec.ts:950:1 › the real relay carries the board with RTCPeerConnection deleted
+[38/38] [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+  4) [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 3
+    Received: 1
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        24 × locator resolved to 1 element
+           - unexpected value "1"
+
+
+      197 |   await c.addInitScript(SWALLOW_BYE);
+      198 |   await boot(c, link);
+    > 199 |   for (const p of [a, b, c]) await expect(roster(p)).toHaveCount(3);
+          |                                                      ^
+      200 |
+      201 |   // Two digits, so the board has an author still at the table and an author about to stop being
+      202 |   // one. C's is the one that has to keep its colour after C is gone.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/e2e/presence.spec.ts:199:54
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/presence-a-page-that-dies--38b21-the-quiet-pages-keep-theirs-webkit/error-context.md
+
+
+  4 failed
+    [chromium] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages ──────────
+    [chromium] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it 
+    [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+    [webkit] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs 
+  2 skipped
+  32 passed (55.4s)
+exit 1

@@ -1,0 +1,32 @@
+regime: chromium · 4× · fast3g · cold · desk   (cured arm: chromium · 4× · fast3g · cold · desk)
+base  : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w8/cures/C01/fix-r1/raw/c4x-fast3g-cold-desk/base.jsonl · load { 24.16 23.91 20.69 } → { 33.76 26.94 22.48 }
+cured : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w8/cures/C01/fix-r1/raw/c4x-fast3g-cold-desk/cured.jsonl · load { 18.67 22.67 20.32 } → { 32.69 27.17 22.67 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+
+### base — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 28.0 | 988.2 | 2058.9 | 3986.8 | 1406.3 | 1469.0 |
+| 2 | 28.0 | 1002.2 | 2064.7 | 4072.7 | 1460.0 | 1530.0 |
+| 3 | 28.0 | 986.6 | 2058.5 | 4000.2 | 1410.6 | 1473.0 |
+| 4 | 28.0 | 978.8 | 2027.7 | 3975.4 | 1421.2 | 1455.0 |
+| 5 | 28.0 | 981.2 | 2057.2 | 4104.9 | 1453.8 | 1508.0 |
+
+### cured — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 1057.7 | 2915.1 | 1430.0 | 846.0 |
+| 2 | 16.0 | 0.0 | 1054.9 | 2826.4 | 1399.0 | 807.0 |
+| 3 | 16.0 | 0.0 | 1053.7 | 2873.0 | 1434.6 | 836.0 |
+| 4 | 16.0 | 0.0 | 1048.2 | 2789.0 | 1390.3 | 791.0 |
+| 5 | 16.0 | 0.0 | 1057.8 | 2852.4 | 1414.6 | 827.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 28.0 | 28.0–28.0 | 16.0 | 16.0–16.0 | -12.0 | YES |
+| discardedMs | 986.6 | 978.8–1002.2 | 0.0 | 0.0–0.0 | -986.6 | YES |
+| encodeMs | 2058.5 | 2027.7–2064.7 | 1054.9 | 1048.2–1057.8 | -1003.6 | YES |
+| lastEncodeMs | 4000.2 | 3975.4–4104.9 | 2852.4 | 2789.0–2915.1 | -1147.8 | YES |
+| boardReadyMs | 1421.2 | 1406.3–1460.0 | 1414.6 | 1390.3–1434.6 | -6.6 | no — inside the spread |
+| tbtMs | 1473.0 | 1455.0–1530.0 | 827.0 | 791.0–846.0 | -646.0 | YES |

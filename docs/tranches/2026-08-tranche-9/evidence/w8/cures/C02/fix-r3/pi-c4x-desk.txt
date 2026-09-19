@@ -1,0 +1,55 @@
+base  : chromium · 4× · fast3g · cold · desk dpr2 · http://127.0.0.1:4252/
+cured : chromium · 4× · fast3g · cold · desk dpr2 · http://127.0.0.1:4253/
+load  : base { 6.63 7.07 7.59 } → { 5.53 6.81 7.49 } · cured { 5.53 6.81 7.49 } → { 4.74 6.57 7.39 }
+taint : base 0/0/0 · cured 0/0/0
+
+## grid
+  base  w1: 8 encodes · r1@1272px t0 1686.7→2880.6 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 9680.9→10709.8 [95f54de5 a885e347 e3829e30 6fe33241]
+  base    rounds byte-identical as SETS: false
+  base  w1: 8 encodes · r1@1272px t0 1615→2745.7 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 9580.1→10613.5 [95f54de5 a885e347 e3829e30 6fe33241]
+  base    rounds byte-identical as SETS: false
+  base  w1: 8 encodes · r1@1272px t0 1593.8→2740 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 9535.2→10550.8 [95f54de5 a885e347 e3829e30 6fe33241]
+  base    rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@1272px t0 1623.1→2712.6 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 3199.3→4256.3 [95f54de5 a885e347 e3829e30 6fe33241]
+  cured   rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@1272px t0 1624.9→2703.1 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 3166.1→4261 [95f54de5 a885e347 e3829e30 6fe33241]
+  cured   rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@1272px t0 1616.3→2807.9 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 3199.9→4282.4 [95f54de5 a885e347 e3829e30 6fe33241]
+  cured   rounds byte-identical as SETS: false
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## logo
+  base  w1: 8 encodes · r1@765px t0 2571.4→2812.4 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 9595.8→10605.6 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  base    rounds byte-identical as SETS: false
+  base  w1: 8 encodes · r1@765px t0 2476→2668 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 9507.8→10521.9 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  base    rounds byte-identical as SETS: false
+  base  w1: 8 encodes · r1@765px t0 2439→2626.6 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 9482.8→10443.4 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  base    rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@765px t0 2517.1→2723.3 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 3058.4→3185.9 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  cured   rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@765px t0 2459.3→2628 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 3016.1→3152.9 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  cured   rounds byte-identical as SETS: false
+  cured w1: 8 encodes · r1@765px t0 2523.1→2720 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 3068.3→3188.7 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  cured   rounds byte-identical as SETS: false
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## toggle-moon
+  base  w1: 4 encodes · r1@416px t0 1600.7→2724.2 [8e55ead1 03bc159d a0a567d0 030ed446]
+  base  w1: 4 encodes · r1@416px t0 1531.4→2617.8 [8e55ead1 03bc159d a0a567d0 030ed446]
+  base  w1: 4 encodes · r1@416px t0 1537.2→2595.7 [8e55ead1 03bc159d a0a567d0 030ed446]
+  cured w1: 4 encodes · r1@416px t0 1538.2→2650.4 [8e55ead1 03bc159d a0a567d0 030ed446]
+  cured w1: 4 encodes · r1@416px t0 1542.3→2629.7 [8e55ead1 03bc159d a0a567d0 030ed446]
+  cured w1: 4 encodes · r1@416px t0 1529→2646.4 [8e55ead1 03bc159d a0a567d0 030ed446]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## toggle-sun
+  base  w1: 4 encodes · r1@416px t0 1515.3→2699.4 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  base  w1: 4 encodes · r1@416px t0 1451.2→2587.7 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  base  w1: 4 encodes · r1@416px t0 1450.4→2554.3 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  cured w1: 4 encodes · r1@416px t0 1456.1→2628.9 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  cured w1: 4 encodes · r1@416px t0 1461.2→2570.5 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  cured w1: 4 encodes · r1@416px t0 1445.8→2641.7 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+π: HOLDS — every surface's shown stack is byte-identical, pose for pose, to the round the estate keeps today
+PI-COMPARE EXIT=0

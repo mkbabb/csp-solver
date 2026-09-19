@@ -1,0 +1,24 @@
+
+> csp-solver-frontend@0.1.0 test:gen-latency
+> node scripts/check-gen-latency.mjs --self-test
+
+  ok   an under-ceiling cell greens — PASS (want PASS)
+  ok   a planted 1 ms ceiling reds — FAIL (want FAIL)
+  ok   median clears, max busts → reds — FAIL (want FAIL)
+  ok   a cell that never dealt reds — MISSING (want MISSING)
+  ok   every ceiling obeys the stated arithmetic (10 cells) — clean (want clean)
+self-test ok — the comparison bites both colours.
+
+file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/scripts/check-gen-latency.mjs:326
+        throw new Error(`${spec.rel}: no \`${decl}\` — the bank module's shape moved`);
+              ^
+
+Error: src/games/sudoku/data/templates.ts: no `const TIER_SOURCE` — the bank module's shape moved
+    at pick (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/scripts/check-gen-latency.mjs:326:15)
+    at loadBanks (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/scripts/check-gen-latency.mjs:331:14)
+    at file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/scripts/check-gen-latency.mjs:383:19
+    at async file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/scripts/check-gen-latency.mjs:545:3
+
+Node.js v26.0.0
+::error::the measuring pass never finished — walled at 96600 ms with the measuring child exited 1 in flight. The table permits 11100 ms of dealing in total.
+exit 1

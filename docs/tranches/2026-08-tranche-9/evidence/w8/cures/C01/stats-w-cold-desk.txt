@@ -1,0 +1,32 @@
+regime: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk   (cured arm: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk)
+base  : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w8/cures/C01/raw/w-cold-desk/base.jsonl · load { 15.90 12.90 12.50 } → { 11.67 12.21 12.27 }
+cured : /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w8/cures/C01/raw/w-cold-desk/cured.jsonl · load { 15.26 12.82 12.47 } → { 11.05 12.07 12.22 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+
+### base — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 20.0 | 270.0 | 594.0 | 988.0 | 430.0 | 0.0 |
+| 2 | 20.0 | 246.0 | 721.0 | 928.0 | 395.0 | 0.0 |
+| 3 | 24.0 | 274.0 | 577.0 | 982.0 | 406.0 | 0.0 |
+| 4 | 24.0 | 290.0 | 611.0 | 868.0 | 426.0 | 0.0 |
+| 5 | 20.0 | 297.0 | 629.0 | 1032.0 | 464.0 | 0.0 |
+
+### cured — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 360.0 | 605.0 | 524.0 | 0.0 |
+| 2 | 20.0 | 21.0 | 432.0 | 704.0 | 583.0 | 0.0 |
+| 3 | 20.0 | 28.0 | 365.0 | 619.0 | 499.0 | 0.0 |
+| 4 | 20.0 | 40.0 | 372.0 | 645.0 | 584.0 | 0.0 |
+| 5 | 20.0 | 30.0 | 358.0 | 618.0 | 499.0 | 0.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 20.0 | 20.0–24.0 | 20.0 | 16.0–20.0 | 0.0 | no — inside the spread |
+| discardedMs | 274.0 | 246.0–297.0 | 28.0 | 0.0–40.0 | -246.0 | YES |
+| encodeMs | 611.0 | 577.0–721.0 | 365.0 | 358.0–432.0 | -246.0 | YES |
+| lastEncodeMs | 982.0 | 868.0–1032.0 | 619.0 | 605.0–704.0 | -363.0 | YES |
+| boardReadyMs | 426.0 | 395.0–464.0 | 524.0 | 499.0–584.0 | 98.0 | YES |
+| tbtMs | 0.0 | 0.0–0.0 | 0.0 | 0.0–0.0 | 0.0 | no — inside the spread |

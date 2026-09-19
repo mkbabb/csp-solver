@@ -1,0 +1,157 @@
+===== npm run test:unit =====
+
+> csp-solver-frontend@0.1.0 test:unit
+> vitest run
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-bake/web/frontend
+
+
+ Test Files  66 passed (66)
+      Tests  810 passed (810)
+   Start at  00:04:28
+   Duration  10.36s (transform 14.12s, setup 1.92s, import 25.21s, tests 19.70s, environment 97.84s)
+
+EXIT=0 (test:unit)
+===== npm run lint:eslint =====
+
+> csp-solver-frontend@0.1.0 lint:eslint
+> eslint .
+
+EXIT=0 (lint:eslint)
+===== npm run lint =====
+
+> csp-solver-frontend@0.1.0 lint
+> prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/
+
+Checking formatting...
+All matched files use Prettier code style!
+EXIT=0 (lint)
+===== npm run lint:knip =====
+
+> csp-solver-frontend@0.1.0 lint:knip
+> knip
+
+EXIT=0 (lint:knip)
+===== npm run lint:boundary =====
+
+> csp-solver-frontend@0.1.0 lint:boundary
+> eslint --no-config-lookup --config eslint.boundary.config.js src/games
+
+EXIT=0 (lint:boundary)
+===== npm run lint:tdz =====
+
+> csp-solver-frontend@0.1.0 lint:tdz
+> node scripts/tdz-probe.mjs --self-test
+
+reproduction (4 modules, executed):
+  OLD graph (scene → game → registry → scene): THREW — ReferenceError: Cannot access 'scene' before initialization
+  NEW graph (spec → defineGame, cards → spec): BOOTED
+
+graph census (src/games): 0 cycle edge(s)
+
+negative control (a synthetic game importing the table): RED as required
+
+tdz-probe: TDZ severed structurally — 0 cycle edges, reproduction both ways
+EXIT=0 (lint:tdz)
+===== npm run lint:copy =====
+
+> csp-solver-frontend@0.1.0 lint:copy
+> node scripts/check-copy-register.mjs --self-test
+
+copy register scanned across 137 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 2 hit(s), 2 admitted, 0 unadmitted (lexicon: 25 entries)
+  ~ src/games/shared/GameControlPanel.vue:1297  [@text]  "solver" (the machine's name) — ADMITTED 2026-08-28
+  ~ src/games/shared/GameControlPanel.vue:980  [template]  "candidates" (solver vocabulary for what a player calls a pencil mark) — ADMITTED 2026-08-28
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  jargon · a narration source speaks the machine's name  →  1 offence(s), RED as required
+  jargon · a narration source in a template literal  →  2 offence(s), RED as required
+  jargon · a narration source whose string carries a close paren  →  1 offence(s), RED as required
+  jargon · positive control — an utterance region declares no copy at its call  →  0 offence(s), GREEN as required
+  jargon · positive control — a narration source in plain English survives  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  2/2, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (2 admitted, each with its cure's seam)
+EXIT=0 (lint:copy)
+===== npm run lint:live-regions =====
+
+> csp-solver-frontend@0.1.0 lint:live-regions
+> node scripts/check-live-regions.mjs --self-test
+
+live-region police scanned 52 SFCs under src
+regions declared: 10 — src/games/shared/GameBoard.vue:1151, src/games/shared/GameControlPanel.vue:1087, src/games/shared/GameControlPanel.vue:1123, src/games/shared/GameControlPanel.vue:1188, src/games/shared/GameControlPanel.vue:1373, src/games/shared/SolverErrorNote.vue:43, src/pencil/chrome/GameGallery/GameGallery.vue:1068, src/pencil/chrome/GameGallery/GameGallery.vue:1074, src/pencil/chrome/MarginNote.vue:54, src/pencil/sheet/AnswerKeyLaminate.vue:204
+
+self-test — the rule against a planted defect and its cure
+  violation · a region born under v-if with its sentence already inside  →  1 finding(s), RED as required
+  control   · the cured idiom: unconditional region, conditional content  →  0 finding(s), GREEN as required
+
+check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+EXIT=0 (lint:live-regions)
+===== npm run lint:motion =====
+
+> csp-solver-frontend@0.1.0 lint:motion
+> node scripts/check-motion-contract.mjs --self-test
+
+MOTION CONTRACT — 34 specs, 34 declaring, 0 silent (head = first 20 lines)
+  ✓ 1 DECLARED
+  ✓ 2 GRAMMAR
+  ✓ 3 ROUTE
+
+SELF-TEST — each check against a known-bad model:
+  [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+      → RED (as it must)
+  [1 DECLARED] the declaration slides below the head window during a doc-block edit
+      → RED (as it must)
+  [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+      → RED (as it must)
+  [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+      → RED (as it must)
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+EXIT=0 (lint:motion)
+===== npm run typecheck:e2e =====
+
+> csp-solver-frontend@0.1.0 typecheck:e2e
+> vue-tsc --noEmit -p tsconfig.e2e.json
+
+EXIT=0 (typecheck:e2e)
+===== npm run typecheck:node =====
+
+> csp-solver-frontend@0.1.0 typecheck:node
+> vue-tsc --noEmit -p tsconfig.node.json
+
+EXIT=0 (typecheck:node)
+===== goldens (cured :4253) =====
+
+Running 4 tests using 4 workers
+
+  ✓  2 e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) (922ms)
+  ✓  3 e2e/visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer (929ms)
+  ✓  1 e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (972ms)
+  ✓  4 e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (974ms)
+
+  4 passed (1.7s)
+EXIT=0 (goldens)

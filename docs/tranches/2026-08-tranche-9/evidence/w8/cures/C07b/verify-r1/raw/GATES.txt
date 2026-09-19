@@ -1,0 +1,27 @@
+C07b verify r1 — gates re-run by the non-author, bare (no pipe, exit code read directly),
+in .claude/worktrees/w8-bake/web/frontend at HEAD e694cc8c. Full logs were pruned to hold the
+evidence dir under its 40 KiB cap; the exit codes and the counted lines are verbatim.
+
+  test:unit           exit=0      Test Files  66 passed (66)
+                                  Tests       810 passed (810)
+  lint:eslint         exit=0
+  lint:knip           exit=0
+  lint:motion         exit=0
+  lint:copy           exit=0
+  lint:boundary       exit=0
+  lint:tdz            exit=0
+  typecheck:node      exit=0
+  test:font-coverage  exit=0
+
+  playwright-golden.config.ts, PLAYWRIGHT_BASE_URL=http://127.0.0.1:4253, no --update-snapshots
+                      exit=0      4 passed  (logo wordmark light · toggle crest dark moon ·
+                                  grid top-left corner light · single cell with given glyph light)
+
+  surface battery, BOTH engines, cured dist, the author's scratch config:
+  font-census wordmark-integrity filter-census theme-bake-freshness theme-quadrants masthead-alignment
+                      exit=0      88 passed
+
+  presence.spec.ts, BOTH engines, against dist-base :4252   exit=1  2 failed (presence.spec.ts:177)
+  presence.spec.ts, BOTH engines, against dist    :4253     exit=1  2 failed (presence.spec.ts:177)
+  — identical on both arms: the relay Worker is not running in this session. A host fact,
+    proven on the base arm, not this cure's.

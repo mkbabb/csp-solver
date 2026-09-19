@@ -1,0 +1,267 @@
+=== C07a · the SAME cured dist through two server shapes ===
+--- :4256 stays the fold's own preview (vite.config.ts carries preview.cors=false) ---
+HTTP/1.1 200 OK
+Cache-Control: no-cache
+
+--- killing :4257 (dist-base preview) and re-raising it with the BASE-SHAPED config (no preview block => vite's CORS middleware ON), serving the CURED dist ---
+  PID COMMAND
+ 5283 node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-fold/web/frontend/node_modules/.bin/vite preview --config .vite-w8fold.config.ts --host 127.0.0.1 --port 4257 --strictPort --outDir dist-base
+HTTP/1.1 200 OK
+Vary: Origin
+Cache-Control: no-cache
+entry on 4257: index-ChSrVSqM0j8q.js
+entry on 4256: index-ChSrVSqM0j8q.js
+
+=== woff2 census, same bytes, two header shapes, 3 windows each, interleaved ===
+-- w1 · webkit · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 2,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 3,
+  "patrickhand-subset-BqV1besB36ib.woff2": 2
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+-- w1 · webkit · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "fraunces-subset-qp6ShjBRhfYB.woff2",
+   "i": "link",
+   "x": 14936,
+   "s": 7
+-- w1 · chromium · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3
+-- w1 · chromium · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3
+-- w2 · webkit · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 2,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 3,
+  "patrickhand-subset-BqV1besB36ib.woff2": 2
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+-- w2 · webkit · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 8
+-- w2 · chromium · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3
+-- w2 · chromium · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3
+-- w3 · webkit · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 2,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 3,
+  "patrickhand-subset-BqV1besB36ib.woff2": 2
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+-- w3 · webkit · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "webkit",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "event,first-input,largest-contentful-paint,mark,measure,navigation,paint,resource",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 7
+-- w3 · chromium · :4257 Vary:Origin ON (the 8.1 regime) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3
+-- w3 · chromium · :4256 cors:false (C07a, edge-faithful) --
+{
+ "engine": "chromium",
+ "driverRequestCounts": {
+  "firacode-subset-CbuNTc2aGjcY.woff2": 1,
+  "fraunces-subset-qp6ShjBRhfYB.woff2": 2,
+  "patrickhand-subset-BqV1besB36ib.woff2": 1
+ },
+ "responses": [
+  "RESP:firacode-subset-CbuNTc2aGjcY.woff2:200",
+  "RESP:patrickhand-subset-BqV1besB36ib.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200",
+  "RESP:fraunces-subset-qp6ShjBRhfYB.woff2:200"
+ ],
+ "supportedEntryTypes": "element,event,first-input,largest-contentful-paint,layout-shift,long-animation-frame,longtask,mark,measure,navigation,paint,resource,visibility-state",
+ "resourceTiming": [
+  {
+   "n": "firacode-subset-CbuNTc2aGjcY.woff2",
+   "i": "link",
+   "x": 3924,
+   "s": 3

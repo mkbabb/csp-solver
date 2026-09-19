@@ -1,0 +1,62 @@
+T9-W8 C02 verify r3 — perf-rig/ci-subset.mjs UNMODIFIED, port 4259, interleaved cured,base,cured,base.
+
+== cured-run1
+loadavg start: { 10.41 9.55 9.41 }
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| chromium | 120.32 | 0 | 120.35 | 118.61 | PASS | 0 | 0 | PASS | 120.52 | 108.29 | PASS |
+| webkit | 60.31 | 0 | 60.34 | 59.45 | PASS | 1 | 0 | **FAIL** | 60.44 | 54.28 | PASS |
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | yes | 227ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| chromium | 4× | 117 (30000000 iter) | 227ms | 1.94 |
+| webkit | 1× | 42 (30000000 iter) | — | — |
+EXIT=1
+loadavg end: { 8.77 9.53 9.44 }
+
+== base-run1
+loadavg start: { 8.77 9.53 9.44 }
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| chromium | 120.3 | 0 | 120.35 | 118.59 | PASS | 0 | 0 | PASS | 120.48 | 108.27 | PASS |
+| webkit | 60.29 | 0 | 60.34 | 59.43 | PASS | 0 | 0 | PASS | 60.44 | 54.26 | PASS |
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | yes | 201ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| chromium | 4× | 117 (30000000 iter) | 201ms | 1.72 |
+| webkit | 1× | 42 (30000000 iter) | — | — |
+EXIT=0
+loadavg end: { 4.49 7.54 8.65 }
+
+== cured-run2
+loadavg start: { 4.49 7.54 8.65 }
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| chromium | 120.29 | 0 | 120.39 | 118.58 | PASS | 0 | 0 | PASS | 120.5 | 108.26 | PASS |
+| webkit | 60.29 | 0 | 60.36 | 59.43 | PASS | 1 | 0 | **FAIL** | 60.41 | 54.26 | PASS |
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | yes | 211ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| chromium | 4× | 116 (30000000 iter) | 211ms | 1.82 |
+| webkit | 1× | 49 (30000000 iter) | — | — |
+EXIT=1
+loadavg end: { 5.67 6.92 8.23 }
+
+== base-run2
+loadavg start: { 5.67 6.92 8.23 }
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| chromium | 120.13 | 0 | 120.43 | 118.42 | PASS | 0 | 0 | PASS | 120.49 | 108.12 | PASS |
+| webkit | 60.34 | 0 | 60.34 | 59.48 | PASS | 0 | 0 | PASS | 60.04 | 54.31 | PASS |
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | yes | 221ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| chromium | 4× | 117 (30000000 iter) | 221ms | 1.89 |
+| webkit | 1× | 51 (30000000 iter) | — | — |
+EXIT=0
+loadavg end: { 9.67 7.96 8.46 }
+
+webkit idle windows, long33 / worst ms (three windows per run, transcripts pruned):
+  cured-run1: 1/35  2/36  1/37     base-run1: 0/18  0/18  0/21
+  cured-run2: 1/35  1/35  2/37     base-run2: 0/33  0/33  0/32
+  every control window in all four runs: long33 0 (worsts 18-31 ms)

@@ -1,0 +1,32 @@
+regime: chromium · 4× · fast3g · cold · desk   (cured arm: chromium · 4× · fast3g · cold · desk)
+base  : verify-r3/raw/c4x-fast3g-cold-desk/base.jsonl · load { 13.73 7.79 7.19 } → { 18.27 14.81 10.38 }
+cured : verify-r3/raw/c4x-fast3g-cold-desk/cured.jsonl · load { 12.84 8.02 7.29 } → { 17.86 14.91 10.49 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+
+### base — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 28.0 | 1164.2 | 2406.8 | 4513.4 | 1458.0 | 1819.0 |
+| 2 | 28.0 | 1179.5 | 2454.3 | 4547.5 | 1444.3 | 1851.0 |
+| 3 | 28.0 | 1139.1 | 2244.4 | 4176.6 | 1298.0 | 1521.0 |
+| 4 | 28.0 | 1433.3 | 2632.5 | 4826.4 | 1536.7 | 2073.0 |
+| 5 | 28.0 | 1311.3 | 2693.0 | 4750.5 | 1448.5 | 2049.0 |
+
+### cured — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 1140.7 | 3009.8 | 1464.9 | 925.0 |
+| 2 | 16.0 | 0.0 | 1226.6 | 3051.8 | 1402.8 | 965.0 |
+| 3 | 16.0 | 0.0 | 1613.0 | 3673.5 | 1554.3 | 1419.0 |
+| 4 | 16.0 | 0.0 | 1451.7 | 3451.0 | 1474.8 | 1216.0 |
+| 5 | 16.0 | 0.0 | 1122.7 | 2920.8 | 1420.0 | 881.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 28.0 | 28.0–28.0 | 16.0 | 16.0–16.0 | -12.0 | YES |
+| discardedMs | 1179.5 | 1139.1–1433.3 | 0.0 | 0.0–0.0 | -1179.5 | YES |
+| encodeMs | 2454.3 | 2244.4–2693.0 | 1226.6 | 1122.7–1613.0 | -1227.7 | YES |
+| lastEncodeMs | 4547.5 | 4176.6–4826.4 | 3051.8 | 2920.8–3673.5 | -1495.7 | YES |
+| boardReadyMs | 1448.5 | 1298.0–1536.7 | 1464.9 | 1402.8–1554.3 | 16.4 | no — inside the spread |
+| tbtMs | 1851.0 | 1521.0–2073.0 | 965.0 | 881.0–1419.0 | -886.0 | YES |

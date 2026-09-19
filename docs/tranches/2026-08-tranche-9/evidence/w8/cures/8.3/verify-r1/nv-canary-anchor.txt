@@ -1,0 +1,17 @@
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+  CANARY: anchors 132, 192, 900 · median anchor 192ms · the OLD median rule would have graded 848ms over 3 window(s) INCLUDING the blown one; per window 925.5ms over 2
+| chromium | desk 1440x900 dpr1 | yes | 2 | 900ms | 925.5ms | 1750 | PASS |
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| chromium | 4× | 192 (30000000 iter) | 848ms | 4.42 |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 120.43 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 120.4. Absolute comparison is a category error and is reported only for the record.
+
+
+host at finish    load 266.02 / 191.80 / 139.70 (1/5/15m) · 2026-09-18T15:18:31.299Z
+
+RESULT: GREEN — every gates.json threshold held on every engine.

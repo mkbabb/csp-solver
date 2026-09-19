@@ -1,0 +1,114 @@
+chromium · 4× · none · cold · mobile · board-ready 309
+
+| surface | first ev | last ev | encodes | Σ toBlob sync ms | Σ drawImage ms | Σ bytes |
+|---|---|---|---|---|---|---|
+| - | 309 | 1713 | 0 | 0.0 | 0.0 | 0 |
+| logo | 325 | 742 | 4 | 85.7 | 3.7 | 79282 |
+| toggle-sun | 357 | 691 | 4 | 24.6 | 1.8 | 76970 |
+| grid | 750 | 1589 | 4 | 643.6 | 8.6 | 796324 |
+| toggle-moon | 1646 | 1707 | 4 | 17.8 | 0.8 | 42469 |
+
+--- the ordered trace ---
+   309  board-ready                
+   318  fonts.ready                
+   325  poseSvg        logo         19819B
+   357  poseSvg        toggle-sun   2324B
+   359  poseSvg        toggle-sun   2320B
+   359  poseSvg        toggle-sun   2319B
+   360  poseSvg        toggle-sun   2318B
+   372  imgDecode      logo         45.7ms
+   374  drawImage      logo         sync 1.2ms 16x16
+   377  poseSvg        logo         20432B
+   378  poseSvg        logo         20432B
+   379  poseSvg        logo         20432B
+   380  poseSvg        logo         20432B
+   399  drawImage      toggle-sun   sync 0.8ms 192x192
+   399  toBlob:start   toggle-sun  
+   406  toBlob:sync    toggle-sun   sync 7ms
+   406  drawImage      toggle-sun   sync 0.1ms 192x192
+   406  toBlob:start   toggle-sun  
+   412  toBlob:sync    toggle-sun   sync 5.7ms
+   413  drawImage      toggle-sun   sync 0.2ms 192x192
+   413  toBlob:start   toggle-sun  
+   419  toBlob:sync    toggle-sun   sync 6.2ms
+   420  drawImage      toggle-sun   sync 0.7ms 192x192
+   420  toBlob:start   toggle-sun  
+   425  toBlob:sync    toggle-sun   sync 5.7ms
+   484  drawImage      logo         sync 0.5ms 728x213
+   484  toBlob:start   logo        
+   506  toBlob:sync    logo         sync 21.9ms
+   508  drawImage      logo         sync 0.9ms 728x213
+   508  toBlob:start   logo        
+   529  toBlob:sync    logo         sync 21.1ms
+   530  drawImage      logo         sync 0.2ms 728x213
+   530  toBlob:start   logo        
+   552  toBlob:sync    logo         sync 21.7ms
+   553  drawImage      logo         sync 0.9ms 728x213
+   553  toBlob:start   logo        
+   574  toBlob:sync    logo         sync 21ms
+   660  toBlob:end     toggle-sun   261.3ms 18333B 192x192
+   668  toBlob:end     toggle-sun   261.9ms 19287B 192x192
+   681  toBlob:end     toggle-sun   260.9ms 19345B 192x192
+   684  toBlob:end     logo         199.5ms 20062B 728x213
+   691  toBlob:end     toggle-sun   278.4ms 20005B 192x192
+   701  imgDecode                   7.7ms
+   702  imgDecode                   9.1ms
+   703  imgDecode                   9.7ms
+   704  imgDecode                   10.7ms
+   726  toBlob:end     logo         218.5ms 19795B 728x213
+   734  toBlob:end     logo         204.5ms 19846B 728x213
+   742  toBlob:end     logo         189ms 19579B 728x213
+   750  poseSvg        grid         5608B
+   751  poseSvg        grid         5610B
+   751  poseSvg        grid         5610B
+   752  poseSvg        grid         5608B
+   765  imgDecode                   21.4ms
+   768  imgDecode                   23.9ms
+   770  imgDecode                   26.1ms
+   772  imgDecode                   27.6ms
+   787  drawImage      grid         sync 2.1ms 1092x1092
+   787  toBlob:start   grid        
+   972  toBlob:sync    grid         sync 185.9ms
+   983  drawImage      grid         sync 2.2ms 1092x1092
+   984  toBlob:start   grid        
+  1136  toBlob:sync    grid         sync 152.4ms
+  1151  drawImage      grid         sync 2.2ms 1092x1092
+  1151  toBlob:start   grid        
+  1305  toBlob:sync    grid         sync 153.6ms
+  1317  drawImage      grid         sync 2.1ms 1092x1092
+  1317  toBlob:start   grid        
+  1469  toBlob:sync    grid         sync 151.7ms
+  1560  toBlob:end     grid         576.3ms 199223B 1092x1092
+  1569  toBlob:end     grid         417.9ms 197503B 1092x1092
+  1575  toBlob:end     grid         257.8ms 198180B 1092x1092
+  1589  toBlob:end     grid         802.5ms 201418B 1092x1092
+  1595  imgDecode                   5.3ms
+  1604  imgDecode                   14.3ms
+  1612  imgDecode                   21.8ms
+  1621  imgDecode                   30.4ms
+  1646  poseSvg        toggle-moon  1939B
+  1647  poseSvg        toggle-moon  1937B
+  1647  poseSvg        toggle-moon  1937B
+  1648  poseSvg        toggle-moon  1939B
+  1661  drawImage      toggle-moon  sync 0.1ms 192x192
+  1661  toBlob:start   toggle-moon 
+  1666  toBlob:sync    toggle-moon  sync 5ms
+  1666  drawImage      toggle-moon  sync 0.1ms 192x192
+  1667  toBlob:start   toggle-moon 
+  1671  toBlob:sync    toggle-moon  sync 4ms
+  1672  drawImage      toggle-moon  sync 0.5ms 192x192
+  1672  toBlob:start   toggle-moon 
+  1676  toBlob:sync    toggle-moon  sync 4.1ms
+  1676  drawImage      toggle-moon  sync 0.1ms 192x192
+  1676  toBlob:start   toggle-moon 
+  1681  toBlob:sync    toggle-moon  sync 4.7ms
+  1699  toBlob:end     toggle-moon  38.1ms 10635B 192x192
+  1701  toBlob:end     toggle-moon  34ms 10761B 192x192
+  1706  toBlob:end     toggle-moon  34.3ms 10621B 192x192
+  1707  toBlob:end     toggle-moon  31.1ms 10452B 192x192
+  1710  imgDecode                   1.8ms
+  1711  imgDecode                   2.4ms
+  1711  imgDecode                   2.5ms
+  1713  imgDecode                   4.7ms
+
+rAF gaps >33.4ms (first 40): 302.2:267.7 477.1:100.6 576.8:99.7 977.7:200.2 1144.5:166.8 1311.5:167 1469.7:158.2 1634.9:33.4

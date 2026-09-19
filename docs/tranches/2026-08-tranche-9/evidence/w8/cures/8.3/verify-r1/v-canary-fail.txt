@@ -1,0 +1,14 @@
+  !! CANARY OVERRIDE  --canary-fail chromium  (a synthetic instrument failure is injected for this engine)
+  bootTbt 1   longtask yes  tbt 251ms  tasks 10  longest 217ms  anchor 116ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 1013ms  tasks 10  longest 200ms  anchor 160ms  window 3000ms  painted true
+  INSTRUMENT FAILURE: SYNTHETIC (--canary-fail chromium) — the control held (0 long frames), the failure is injected.
+  2 boot window(s) WERE measured and are graded below.
+| chromium | — | — | — | — | NOT MEASURED | — | — | NOT MEASURED | — | — | NOT MEASURED |
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | desk 1440x900 dpr1 | yes | 1 | 0 | 251ms | 1750 | PASS |
+| chromium | mobile 390x844 dpr3 | yes | 1 | 0 | 1013ms | (unstamped) | PROVISIONAL |
+  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| chromium | 4× | 138 (30000000 iter) | 632ms | 4.58 |
+PROVISIONAL [chromium · mobile 390x844 dpr3] boot TBT: measured 1013ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)
+RESULT: INADMISSIBLE — no threshold breached on what was measured, but 1 engine(s) never produced an admissible window. No verdict.

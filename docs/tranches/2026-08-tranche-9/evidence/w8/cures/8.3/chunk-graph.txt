@@ -1,0 +1,22 @@
+THE CHUNK GRAPH — the probe is not in the entry, and the entry is not in the probe
+
+entry: dist/assets/index-BRDVCwHoo2FI.js (215440 B) · base entry dist-base/assets/index-9rZPzI5DEcpe.js (215299 B) · delta 141 B raw
+probe chunk: dist/assets/devicePaint-DYfALhM0r-4G.js (13835 B), reached by ONE dynamic import
+
+index.html diff, base vs cured (the entry's name and nothing else — NO modulepreload for the probe):
+41c41
+<     <script type="module" crossorigin src="/assets/index-9rZPzI5DEcpe.js"></script>
+---
+>     <script type="module" crossorigin src="/assets/index-BRDVCwHoo2FI.js"></script>
+
+string census (grep -c):
+mark                   entry    probe   
+__probe                1        1       
+devicePaint            1        0       
+Speed check            0        1       
+Low Power              0        1       
+NOT MEASURED           0        1       
+data-device-probe      0        1       
+
+the guard, as emitted:
+has("__probe")&&rt(()=>import("./devicePaint-DYfALhM0r-4G.js").then(e=>e.m

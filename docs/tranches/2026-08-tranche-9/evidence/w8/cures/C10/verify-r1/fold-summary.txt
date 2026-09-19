@@ -1,0 +1,16 @@
+# fold-frames.mjs — verify r1 summary (chromium 4x, warm, 1280x800 dpr2, 3 interleaved
+# invocations per arm, vm.loadavg 44.27 -> 34.17). Raw jsonl dropped to hold the 40 KiB cap;
+# reproduce with: node ../fold-frames.mjs --engine chromium --throttle 4 --viewport desk
+#                --cycles 2 --port 4256|4257 --out <out>
+
+entry cycle0 base : worst med 116.4 [115.2, 116.4, 124.9] long33 [2, 2, 2] long50 [2, 2, 2] bakes [8, 8, 8]
+entry cycle0 cured: worst med 124.2 [100.5, 124.2, 133.7] long33 [2, 2, 2] long50 [2, 2, 2] bakes [8, 8, 12]
+entry cycle1 base : worst med 66.5 [65.1, 66.5, 76.2] long33 [1, 1, 1] long50 [1, 1, 1] bakes [4, 4, 4]
+entry cycle1 cured: worst med 74.8 [66.4, 74.8, 84.7] long33 [1, 1, 1] long50 [1, 1, 1] bakes [4, 4, 4]
+exit cycle0 base : worst med 73.7 [66.6, 73.7, 74.8] long33 [1, 1, 1] long50 [1, 1, 1] bakes [4, 4, 4]
+exit cycle0 cured: worst med 83.1 [76.3, 83.1, 98.9] long33 [1, 1, 1] long50 [1, 1, 1] bakes [4, 4, 4]
+exit cycle1 base : worst med 65.8 [49.4, 65.8, 73.6] long33 [1, 1, 1] long50 [0, 1, 1] bakes [4, 4, 4]
+exit cycle1 cured: worst med 59.8 [56.9, 59.8, 66.2] long33 [1, 1, 1] long50 [1, 1, 1] bakes [4, 4, 4]
+
+the 12-bake cured window's bake stamps: [[124.8, 140, 155.6, 167.5, 390.1, 404.3, 419.4, 433.3, 658.9, 661.2, 662.2, 663.5]]
+nodes in the deck view: base [1776] / cured [1779]

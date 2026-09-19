@@ -1,0 +1,19 @@
+  window 1   fps 120.13  p50 8.3  p95 10  long33 0  long50 0  worst 10.4ms  frames 361  wall 3005ms  attempt 1
+  window 2   fps 120.97  p50 8.3  p95 9.9  long33 0  long50 0  worst 10.4ms  frames 363  wall 3000.7ms  attempt 1
+  window 3   fps 120.5  p50 8.3  p95 9.4  long33 0  long50 0  worst 10.4ms  frames 362  wall 3004.1ms  attempt 1
+  bootTbt 1   longtask yes  tbt 243ms  tasks 10  longest 208ms  anchor 117ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 584ms  tasks 10  longest 366ms  anchor 117ms  window 3000ms  painted true
+  bootTbt 3   longtask yes  tbt 718ms  tasks 11  longest 356ms  anchor 131ms  window 3000ms  painted true
+  window 1   fps 60.03  p50 17  p95 19  long33 1  long50 0  worst 42ms  frames 181  wall 3015ms  attempt 1
+  window 2   fps 60.36  p50 17  p95 19  long33 1  long50 0  worst 43ms  frames 182  wall 3015ms  attempt 1
+  window 3   fps 60.07  p50 17  p95 19  long33 0  long50 0  worst 28ms  frames 181  wall 3013ms  attempt 1
+  bootTbt 1   longtask NO  tbt —  tasks —  longest —ms  anchor 69ms  window 3000ms  painted true
+  bootTbt 2   longtask NO  tbt —  tasks —  longest —ms  anchor 70ms  window 3000ms  painted true
+  bootTbt 3   longtask NO  tbt —  tasks —  longest —ms  anchor 62ms  window 3000ms  painted true
+| chromium | 120.13 | 0 | 120.5 | 118.42 | PASS | 0 | 0 | PASS | 120.6 | 108.12 | PASS |
+| webkit | 60.17 | 0 | 60.07 | 59.31 | PASS | 1 | 0 | **FAIL** | 60.46 | 54.15 | PASS |
+| chromium | yes | 584ms | 1750 | PASS |
+| webkit | NO | — | 1750 | NOT MEASURED |
+| chromium | 4× | 117 (30000000 iter) | 584ms | 4.99 |
+| webkit | 1× | 69 (30000000 iter) | — | — |
+BREACH [webkit] long-frame census: measured 1 frames >33.4ms > allowed 0 (gates.json desktop.idle3s.maxLong33)

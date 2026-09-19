@@ -1,0 +1,15 @@
+regime: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk   (cured: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk)
+load  : base { 37.15 23.96 25.90 } → { 21.27 21.94 24.93 } · cured { 33.82 23.67 25.77 } → { 20.92 21.86 24.88 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+encodes/surface base : logo 4,4,4,4,4 · toggle-sun 4,4,4,4,4 · toggle-moon 4,4,4,4,4 · grid 4,4,4,4,4
+encodes/surface cured: logo 4,4,4,4,4 · toggle-sun 4,4,4,4,4 · toggle-moon 4,4,4,4,4 · grid 4,4,4,4,4
+
+| quantity (ms; a surface's LAST pose blob) | base median | base spread | cured median | cured spread | Δ | outside both spreads |
+|---|---|---|---|---|---|---|
+| boardReadyMs | 228.0 | 218.0–370.0 | 265.0 | 205.0–329.0 | 37.0 | no — inside the spread |
+| logo | 273.0 | 264.0–463.0 | 316.0 | 243.0–395.0 | 43.0 | no — inside the spread |
+| toggle-sun | 658.0 | 615.0–991.0 | 395.0 | 310.0–502.0 | -263.0 | YES |
+| toggle-moon | 659.0 | 615.0–992.0 | 1694.0 | 1618.0–1942.0 | 1035.0 | YES |
+| grid | 659.0 | 615.0–992.0 | 655.0 | 575.0–874.0 | -4.0 | no — inside the spread |
+| long33 | 5.0 | 4.0–6.0 | 6.0 | 5.0–7.0 | 1.0 | no — inside the spread |
+| worstGap | 374.0 | 333.0–465.0 | 262.0 | 245.0–341.0 | -112.0 | no — inside the spread |

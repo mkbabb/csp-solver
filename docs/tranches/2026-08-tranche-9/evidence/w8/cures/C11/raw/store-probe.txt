@@ -1,0 +1,80 @@
+=== webkit persistent=0 ===
+{
+ "engine": "webkit",
+ "persistent": false,
+ "wrote": {
+  "idbBlob": "error:null",
+  "idbBytes": "ok",
+  "cache": "ok:1"
+ },
+ "afterNav": {
+  "idbBlob": "MISS",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=0 match=MISS"
+ },
+ "afterNewPage": {
+  "idbBlob": "MISS",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=0 match=MISS"
+ }
+}
+=== webkit persistent=1 ===
+{
+ "engine": "webkit",
+ "persistent": true,
+ "wrote": {
+  "idbBlob": "ok",
+  "idbBytes": "ok",
+  "cache": "ok:0"
+ },
+ "afterNav": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=0 match=MISS"
+ },
+ "afterNewPage": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=0 match=MISS"
+ }
+}
+=== chromium persistent=0 ===
+{
+ "engine": "chromium",
+ "persistent": false,
+ "wrote": {
+  "idbBlob": "ok",
+  "idbBytes": "ok",
+  "cache": "ok:1"
+ },
+ "afterNav": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=1 match=262144"
+ },
+ "afterNewPage": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=1 match=262144"
+ }
+}
+=== chromium persistent=1 ===
+{
+ "engine": "chromium",
+ "persistent": true,
+ "wrote": {
+  "idbBlob": "ok",
+  "idbBytes": "ok",
+  "cache": "ok:1"
+ },
+ "afterNav": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=1 match=262144"
+ },
+ "afterNewPage": {
+  "idbBlob": "blob:262144",
+  "idbBytes": "buf:262144",
+  "cache": "names=probe-cache entries=1 match=262144"
+ }
+}

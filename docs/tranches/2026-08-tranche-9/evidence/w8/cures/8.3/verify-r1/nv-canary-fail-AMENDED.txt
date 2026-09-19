@@ -1,0 +1,34 @@
+  INSTRUMENT FAILURE: SYNTHETIC (--canary-fail chromium) — the control held (0 long frames), the failure is injected.
+  The harness cannot hold its own frame budget on this host, so neither a GREEN nor a RED is
+  admissible for chromium. Re-run on a quiescent machine. (r1-rig-baseline.md §2: both real
+  surfaces hold their ceiling with zero long frames.)
+
+  2 boot window(s) WERE measured and are graded below.
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | — | — | — | — | NOT MEASURED | — | — | NOT MEASURED | — | — | NOT MEASURED |
+
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | desk 1440x900 dpr1 | yes | 1 | 0 | 1716ms | 1750 | PASS |
+| chromium | mobile 390x844 dpr3 | yes | 1 | 0 | 2305ms | (unstamped) | PROVISIONAL |
+
+  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own
+  `boot.tbt.poses.<pose>.maxTbtMs` in gates.json, stamped from n >= 3 RUNNER readings at a
+  WGATE. Until then this rig measures the pose and refuses to grade it.
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| chromium | 4× | 215 (30000000 iter) | 2010.5ms | 9.35 |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+
+PROVISIONAL [chromium · mobile 390x844 dpr3] boot TBT: measured 2305ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)
+NOT MEASURED [chromium] — synthetic (--canary-fail chromium)
+
+host at finish    load 182.75 / 186.26 / 142.95 (1/5/15m) · 2026-09-18T15:20:00.314Z
+
+RESULT: INADMISSIBLE — no threshold breached on what was measured, but 1 engine(s) never produced an admissible window. No verdict.

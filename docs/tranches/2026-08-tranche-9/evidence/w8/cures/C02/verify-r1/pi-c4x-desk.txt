@@ -1,0 +1,28 @@
+base  : chromium · 4× · fast3g · cold · desk dpr2 · http://127.0.0.1:4252/
+cured : chromium · 4× · fast3g · cold · desk dpr2 · http://127.0.0.1:4253/
+load  : base { 16.14 11.63 12.11 } → { 26.59 14.89 13.28 } · cured { 26.59 14.89 13.28 } → { 25.71 16.81 14.10 }
+taint : base 0/0/0 · cured 0/0/0
+
+## grid
+  base  w1: 8 encodes · r1@1272px t0 1944.1→3659.3 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 9919.6→11574.1 [95f54de5 a885e347 e3829e30 6fe33241]
+  cured w1: 8 encodes · r1@1272px t0 2063.3→4042.2 [eb65657f e933f00e 6ac9fa66 f9bdc5fb]  |  r2@1272px t0 4600→6768.7 [95f54de5 a885e347 e3829e30 6fe33241]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## logo
+  base  w1: 8 encodes · r1@765px t0 3153.4→3516.7 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 9755.1→11454.1 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  cured w1: 8 encodes · r1@765px t0 3535.2→3966.1 [151a026e 1d265c29 165aa06c 0c04acf5]  |  r2@765px t0 4362→4585.6 [71c256fa 46eda3c1 1f52e7c7 1f5350de]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## toggle-moon
+  base  w1: 4 encodes · r1@416px t0 1803.3→3377.1 [8e55ead1 03bc159d a0a567d0 030ed446]
+  cured w1: 4 encodes · r1@416px t0 1920.8→3776.3 [8e55ead1 03bc159d a0a567d0 030ed446]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+## toggle-sun
+  base  w1: 4 encodes · r1@416px t0 1660.7→3369.3 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  cured w1: 4 encodes · r1@416px t0 1775.2→3769 [e33f39a8 410e0d7f f9c59d63 0cb30b53]
+  VERDICT: base last-round stable true · cured stable true · cured == base LAST round true
+
+π: HOLDS — every surface's shown stack is byte-identical, pose for pose, to the round the estate keeps today
+
+(per-window lines w2/w3 dropped for the 40 KiB text cap; they are identical to w1 in every digest — re-derive with instr/pose-hash-toggle.mjs + pi-compare.mjs.)

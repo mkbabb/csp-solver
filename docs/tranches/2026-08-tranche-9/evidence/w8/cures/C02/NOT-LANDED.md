@@ -1,0 +1,1 @@
+2026-09-18 — bake track REPAIR: the verifier refused the fix commit `feccbb04` (warm widened to the whole interaction, installed-0.12.0 disarm), so `w8/bake` is reset to `aa2573a6` and nothing of C02 lands on this link.

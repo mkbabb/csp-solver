@@ -1,0 +1,30 @@
+T9-W8 C05 — VERIFIER ROUND 2, my own capture-identity census, 3+3 interleaved
+chromium 4x · desk 1280x800 · dpr 2 · warm · instrument attrib/fold-identity.mjs unmodified (only --port)
+LOAD START: { 8.73 12.19 11.16 }
+LOAD END: { 7.19 10.65 10.66 }
+
+BOOT, 6 of 6 runs both arms: 33 bakes, split {celestial 17, grid 12, logo-sudoku-l-205|2|382.5x112|4: 4}. Pose count 4 in every key.
+
+THE LIVE RE-KEY DOES NOT MOVE (must-not 1: the wordmark's bake is not skipped)
+  base : gallery box lands 491.0 / 502.4 / 496.0 ms, 4 gallery-key encodes at +16..+53 ms (507-540, 518-552, 514-549)
+  cured: gallery box lands 304.2 / 307.9 / 297.1 ms, 4 gallery-key encodes at +15..+51 ms (319-353, 324-358, 313-347)
+  3 of 3 each arm. The live bake follows its box in BOTH arms, untouched by the deferral.
+
+THE UNFOLD WARM MOVES, AND ONLY IT
+  base  c0 exit: 4 desk-key encodes at 506-606 / 530-625 / 539-632 ms
+  cured c0 exit: 4 desk-key encodes at 1185-1283 / 1173-1266 / 1168-1262 ms — past GESTURE_QUIET_MS 1,160
+  3 of 3 each arm. Only the prewarm path moved, which is the only path the seam gates.
+
+THE FOLD IS NOT DELAYED (must-not 3)
+  the gallery box lands EARLIER in the cured arm (261-308 ms) than in the base (453-502 ms): the
+  deferral gets the main thread out of the layout's way. Nothing is slowed to hide a frame.
+
+THE SECOND SURFACE, READ AGAIN — and more often than the author's 1 of 3
+  cured c1 entry carries 4 gallery-key encodes at 1168-1254 ms in 2 of 3 runs (cured-2, cured-3);
+  base c1 entry carries 0 in 3 of 3. They land past the 1,160 ms quiet window and nowhere near
+  the box change (236-270 ms), so they are the relocated warm, not an eviction.
+
+A BASE-ARM FACT THE RECORD DOES NOT STATE
+  base c0 entry carries a SECOND batch of 4 gallery-key encodes at 1415-1548 ms in 3 of 3 of my
+  runs (the author's IDENTITY.txt saw it in 1 of 3). So the late logo warm exists on the base arm
+  too; the cure moves it out of the first window and, 2 runs in 3, into the next fold's.

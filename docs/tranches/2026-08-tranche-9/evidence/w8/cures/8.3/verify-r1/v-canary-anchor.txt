@@ -1,0 +1,10 @@
+  bootTbt 1   longtask yes  tbt 297ms  tasks 10  longest 238ms  anchor 117ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 255ms  tasks 10  longest 226ms  anchor 116ms  window 3000ms  painted true
+  bootTbt 3   longtask yes  tbt 252ms  tasks 10  longest 219ms  anchor 900ms  window 3000ms  painted true
+| chromium | 120.31 | 0 | 120.17 | 118.6 | PASS | 0 | 0 | PASS | 120.59 | 108.28 | PASS |
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+  CANARY: anchors 117, 116, 900 · median anchor 117ms · the OLD median rule would have graded 255ms over 3 window(s) INCLUDING the blown one; per window 276ms over 2
+| chromium | desk 1440x900 dpr1 | yes | 2 | 900ms | 276ms | 1750 | PASS |
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| chromium | 4× | 117 (30000000 iter) | 255ms | 2.18 |
+RESULT: GREEN — every gates.json threshold held on every engine.

@@ -1,0 +1,74 @@
+GATE A / B / C / D — THE ESTATE'S PERF RIG, NON-AUTHOR RE-READ (round 2)
+perf-rig/ci-subset.mjs UNMODIFIED, --port 4259 · unthrottled, no CDP rate · desk 1440x900 ·
+dpr 1 (the rig sets no scale factor) · window = 3,000 ms starting 1,200 ms after board-ready,
+3 windows per engine, the app-free /__ceiling control sampled between every window.
+gates.json desktop.idle3s.maxLong33 = 0, threshold 33.4 ms; GATE A grades the MEDIAN of 3.
+arms: base = dist-base (index-DOFGihfY7ZtC.js) · cured = dist (index-CS-Vym5OZcaO.js)
+RUNS, in the order taken, interleaved cured/base:
+
+| run | arm | webkit control long33 | webkit window long33 | webkit window worst ms | median | GATE A | EXIT |
+|---|---|---|---|---|---|---|---|
+| 1 | cured | — | — | — | — | INSTRUMENT FAILURE (probe-server connect refused at load 13.6; NOT graded) | 1 |
+| 1 | base  | 0,0,0 | 0,0,0 | 18 / 18 / 18 | 0 | PASS | 0 |
+| 2 | cured | 0,0,0 | 2,4,1 | 39 / 43 / 34 | 2 | **FAIL** | 1 |
+| 2 | base  | 0,0,0 | 0,0,0 | 18 / 18 / 18 | 0 | PASS | 0 |
+| 3 | cured | 0,0,0 | 3,1,1 | 40 / 37 / 36 | 1 | **FAIL** | 1 |
+| 3 | base  | 0,0,0 | 0,0,0 | 18 / 18 / 18 | 0 | PASS | 0 |
+| 4 | cured | 0,0,0 | 1,0,2 | 34 / 30 / 38 | 1 | **FAIL** | 1 |
+| 4 | base  | 0,0,0 | 0,0,0 | 19 / 18 / 18 | 0 | PASS | 0 |
+
+chromium reads long33 0 on BOTH arms in every run (window worst 9.2-16.6 ms) — the breach is
+WebKit's alone, at this pose. Every control window held 0 long frames, so no run was refused
+for host contention. GATE B (idle fps), GATE C (undoBurst) and GATE D (boot TBT, chromium 4x,
+ceiling 1,750: cured 185-221 ms, base 185-200 ms) PASS on both arms in all eight runs.
+Runs 1-3 were pruned for this directory's size cap after their figures were transcribed above;
+run 4's two files are reproduced verbatim below.
+
+======== run 4, cured (dist) — verbatim
+loadavg start: { 6.29 6.56 7.91 }
+  control 1  fps 120.21  p50 8.3  p95 9.1  long33 0  long50 0  worst 9.3ms  ~120Hz
+  window 1   fps 120.05  p50 8.3  p95 8.8  long33 0  long50 0  worst 9.4ms  frames 361  wall 3007ms  attempt 1
+  control 2  fps 120.34  p50 8.3  p95 9.1  long33 0  long50 0  worst 9.4ms  ~120Hz
+  window 2   fps 120.09  p50 8.3  p95 8.7  long33 0  long50 0  worst 9.2ms  frames 361  wall 3006.2ms  attempt 1
+  control 3  fps 120.1  p50 8.3  p95 9.1  long33 0  long50 0  worst 9.4ms  ~120Hz
+  window 3   fps 120.32  p50 8.3  p95 9.1  long33 0  long50 0  worst 9.3ms  frames 362  wall 3008.7ms  attempt 1
+  control median 120.21 fps / long33 0
+  control 1  fps 60.76  p50 17  p95 17  long33 0  long50 0  worst 23ms  ~59Hz
+  window 1   fps 60.01  p50 17  p95 20  long33 1  long50 0  worst 34ms  frames 181  wall 3016ms  attempt 1
+  control 2  fps 60.27  p50 17  p95 17  long33 0  long50 0  worst 18ms  ~59Hz
+  window 2   fps 60.36  p50 17  p95 18  long33 0  long50 0  worst 30ms  frames 182  wall 3015ms  attempt 1
+  control 3  fps 60.33  p50 17  p95 17  long33 0  long50 0  worst 18ms  ~59Hz
+  window 3   fps 60.38  p50 17  p95 18  long33 2  long50 0  worst 38ms  frames 182  wall 3014ms  attempt 1
+  control median 60.33 fps / long33 0
+| chromium | 120.21 | 0 | 120.09 | 118.5 | PASS | 0 | 0 | PASS | 120.51 | 108.19 | PASS |
+| webkit | 60.33 | 0 | 60.36 | 59.47 | PASS | 1 | 0 | **FAIL** | 60.44 | 54.3 | PASS |
+| chromium | 4× | 115 (30000000 iter) | 188ms | 1.63 |
+| webkit | 1× | 40 (30000000 iter) | — | — |
+BREACH [webkit] long-frame census: measured 1 frames >33.4ms > allowed 0 (gates.json desktop.idle3s.maxLong33)
+RESULT: RED — at least one gates.json threshold breached.
+EXIT=1
+loadavg end: { 6.64 6.78 7.81 }
+
+======== run 4, base (dist-base) — verbatim
+loadavg start: { 6.64 6.78 7.81 }
+  control 1  fps 120.25  p50 8.3  p95 9  long33 0  long50 0  worst 9.2ms  ~120Hz
+  window 1   fps 120.4  p50 8.3  p95 9  long33 0  long50 0  worst 9.4ms  frames 362  wall 3006.7ms  attempt 1
+  control 2  fps 120.14  p50 8.3  p95 9.1  long33 0  long50 0  worst 9.3ms  ~120Hz
+  window 2   fps 120.42  p50 8.3  p95 8.9  long33 0  long50 0  worst 9.3ms  frames 362  wall 3006.1ms  attempt 1
+  control 3  fps 120.99  p50 8.3  p95 9  long33 0  long50 0  worst 9.3ms  ~120Hz
+  window 3   fps 120.39  p50 8.3  p95 8.9  long33 0  long50 0  worst 9.3ms  frames 362  wall 3006.8ms  attempt 1
+  control median 120.25 fps / long33 0
+  control 1  fps 60.21  p50 17  p95 17  long33 0  long50 0  worst 18ms  ~59Hz
+  window 1   fps 60.32  p50 17  p95 18  long33 0  long50 0  worst 19ms  frames 182  wall 3017ms  attempt 1
+  control 2  fps 60.21  p50 17  p95 18  long33 0  long50 0  worst 18ms  ~59Hz
+  window 2   fps 60.36  p50 17  p95 18  long33 0  long50 0  worst 18ms  frames 182  wall 3015ms  attempt 1
+  control 3  fps 60.29  p50 17  p95 17  long33 0  long50 0  worst 18ms  ~59Hz
+  window 3   fps 60.38  p50 17  p95 18  long33 0  long50 0  worst 18ms  frames 182  wall 3014ms  attempt 1
+  control median 60.21 fps / long33 0
+| chromium | 120.25 | 0 | 120.4 | 118.54 | PASS | 0 | 0 | PASS | 120.5 | 108.23 | PASS |
+| webkit | 60.21 | 0 | 60.36 | 59.35 | PASS | 0 | 0 | PASS | 60.41 | 54.19 | PASS |
+| chromium | 4× | 116 (30000000 iter) | 179ms | 1.54 |
+| webkit | 1× | 150 (30000000 iter) | — | — |
+RESULT: GREEN — every gates.json threshold held on every engine.
+EXIT=0
+loadavg end: { 8.32 7.36 7.89 }

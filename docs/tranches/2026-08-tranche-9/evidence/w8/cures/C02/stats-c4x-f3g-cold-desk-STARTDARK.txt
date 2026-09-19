@@ -1,0 +1,33 @@
+regime: chromium · 4x · fast3g · cold(CDP cache disabled) · desk dpr2 · boot dark
+cured : chromium · 4x · fast3g · cold(CDP cache disabled) · desk dpr2 · boot dark
+cell  : game-cell · longtask true
+
+### base — 3 windows
+| w | deltaMs | n1SettleMs | n234SettleMs | n1Bakes | n1WhirlFrames | n1WhirlLong33 | n1WhirlWorstMs | n1LongTaskMs | n1RecalcMs | boardReadyMs | bootBakes | bootLongTaskMs | tainted |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| base-w1 | 1114.1 | 1218.6 | 104.5 | 8.0 | 5.0 | 1.0 | 208.5 | 0.0 | 84.2 | 1399.1 | 16.0 | 1097.0 | 0 |
+| base-w2 | 1112.8 | 1219.3 | 106.5 | 8.0 | 5.0 | 1.0 | 200.8 | 0.0 | 77.1 | 1382.0 | 16.0 | 1083.0 | 0 |
+| base-w3 | 1085.7 | 1185.5 | 99.8 | 8.0 | 7.0 | 1.0 | 209.5 | 0.0 | 75.7 | 1398.5 | 16.0 | 1102.0 | 0 |
+
+### cured — 3 windows
+| w | deltaMs | n1SettleMs | n234SettleMs | n1Bakes | n1WhirlFrames | n1WhirlLong33 | n1WhirlWorstMs | n1LongTaskMs | n1RecalcMs | boardReadyMs | bootBakes | bootLongTaskMs | tainted |
+|---|---|---|---|---|---|---|---|---|---|---|---|---|---|
+| cured-w1 | 364.0 | 469.7 | 105.7 | 0.0 | 91.0 | 2.0 | 64.8 | 0.0 | 278.8 | 1406.2 | 22.0 | 1736.0 | 0 |
+| cured-w2 | 23.1 | 128.4 | 105.3 | 0.0 | 94.0 | 1.0 | 76.6 | 0.0 | 270.9 | 1394.0 | 22.0 | 1714.0 | 0 |
+| cured-w3 | 24.8 | 129.5 | 104.7 | 0.0 | 94.0 | 1.0 | 75.5 | 0.0 | 270.0 | 1394.6 | 22.0 | 1717.0 | 0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| deltaMs | 1112.8 | 1085.7–1114.1 | 24.8 | 23.1–364.0 | -1088.0 | YES |
+| n1SettleMs | 1218.6 | 1185.5–1219.3 | 129.5 | 128.4–469.7 | -1089.1 | YES |
+| n234SettleMs | 104.5 | 99.8–106.5 | 105.3 | 104.7–105.7 | 0.8 | no — inside the spread |
+| n1Bakes | 8.0 | 8.0–8.0 | 0.0 | 0.0–0.0 | -8.0 | YES |
+| n1WhirlFrames | 5.0 | 5.0–7.0 | 94.0 | 91.0–94.0 | 89.0 | YES |
+| n1WhirlLong33 | 1.0 | 1.0–1.0 | 1.0 | 1.0–2.0 | 0.0 | no — inside the spread |
+| n1WhirlWorstMs | 208.5 | 200.8–209.5 | 75.5 | 64.8–76.6 | -133.0 | YES |
+| n1LongTaskMs | 0.0 | 0.0–0.0 | 0.0 | 0.0–0.0 | 0.0 | no — inside the spread |
+| n1RecalcMs | 77.1 | 75.7–84.2 | 270.9 | 270.0–278.8 | 193.8 | YES |
+| boardReadyMs | 1398.5 | 1382.0–1399.1 | 1394.6 | 1394.0–1406.2 | -3.9 | no — inside the spread |
+| bootBakes | 16.0 | 16.0–16.0 | 22.0 | 22.0–22.0 | 6.0 | YES |
+| bootLongTaskMs | 1097.0 | 1083.0–1102.0 | 1717.0 | 1714.0–1736.0 | 620.0 | YES |

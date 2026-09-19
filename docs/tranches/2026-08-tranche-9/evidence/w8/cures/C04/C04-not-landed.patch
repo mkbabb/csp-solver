@@ -1,0 +1,624 @@
+diff --git a/web/frontend/src/games/shared/solver/client.headOfLine.test.ts b/web/frontend/src/games/shared/solver/client.headOfLine.test.ts
+index 12275f30..e7d177b7 100644
+--- a/web/frontend/src/games/shared/solver/client.headOfLine.test.ts
++++ b/web/frontend/src/games/shared/solver/client.headOfLine.test.ts
+@@ -19,7 +19,8 @@
+  */
+ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+ import { classifyCode } from "./classifyError";
+-import type { SolverRequest, SolverResponse } from "./protocol";
++import { isWasmHandoff } from "./protocol";
++import type { SolverRequest, SolverResponse, WasmHandoff } from "./protocol";
+ 
+ /** Every worker minted this test, in mint order. */
+ let workers: MintedWorker[] = [];
+@@ -77,7 +78,10 @@ class BlockingWorker {
+     this.terminated = true;
+   }
+ 
+-  postMessage(req: SolverRequest): void {
++  postMessage(req: SolverRequest | WasmHandoff): void {
++    // C04's wasm handoff is posted at mint, carries no `id` and answers nothing — it is not
++    // one of the requests this file counts.
++    if (isWasmHandoff(req)) return;
+     this.seen.push(req);
+     if (this.terminated) return; // a terminated worker runs nothing, ever again
+     if (req.kind === "generate") {
+diff --git a/web/frontend/src/games/shared/solver/client.test.ts b/web/frontend/src/games/shared/solver/client.test.ts
+index b42fba6b..84e0a6ee 100644
+--- a/web/frontend/src/games/shared/solver/client.test.ts
++++ b/web/frontend/src/games/shared/solver/client.test.ts
+@@ -23,7 +23,8 @@
+  */
+ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+ import { createSolverClient, type ClueCodec } from "./client";
+-import type { SolverRequest, SolverResponse } from "./protocol";
++import { isWasmHandoff } from "./protocol";
++import type { SolverRequest, SolverResponse, WasmHandoff } from "./protocol";
+ 
+ /** Every request the fake worker was handed this test, in order. */
+ let posted: SolverRequest[] = [];
+@@ -37,7 +38,10 @@ class FakeWorker {
+   }
+   removeEventListener() {}
+   terminate() {}
+-  postMessage(req: SolverRequest) {
++  postMessage(req: SolverRequest | WasmHandoff) {
++    // The C04 wasm handoff is posted at mint and carries no `id`. It is not a request, and
++    // the wire this file pins is the request wire.
++    if (isWasmHandoff(req)) return;
+     posted.push(req);
+     const res = reply(req);
+     if (!res) return;
+diff --git a/web/frontend/src/games/shared/solver/protocol.ts b/web/frontend/src/games/shared/solver/protocol.ts
+index c2a25bd8..4433007a 100644
+--- a/web/frontend/src/games/shared/solver/protocol.ts
++++ b/web/frontend/src/games/shared/solver/protocol.ts
+@@ -128,3 +128,50 @@ export type SolverResponse =
+     }
+   | PingResponse
+   | SolverErrorResponse;
++
++/**
++ * THE WASM HANDOFF (T9-W8 §8.2 C04) — main thread → worker, beside the request wire.
++ *
++ * Two worker instances share one binary (the resident and the deal channel, T9-W4 §4.1), and
++ * each used to fetch and compile its own copy: two 123,336 B GETs racing one link on a cold
++ * visit, which is 593 ms of blank board on a slow one. A compiled `WebAssembly.Module` is
++ * structured-cloneable, so the flight can be single — the first worker minted compiles and
++ * hands its module back, the transport keeps it, and every worker minted after that is handed
++ * the module instead of a URL. Both instances stay; the second download goes.
++ *
++ * It is not a request: it carries no `id`, correlates to nothing, and is posted at mint,
++ * before any request the caller makes. `own` says which side of the flight a worker is on
++ * when no module exists yet — `true`, fetch and compile it; `false`, another worker already
++ * is, so wait for the module rather than open a second connection for the same bytes.
++ */
++export interface WasmHandoff {
++  kind: "wasm";
++  /** the compiled module, when the estate already holds one. */
++  module?: WebAssembly.Module;
++  /** `true` when this worker owns the one flight. */
++  own?: boolean;
++}
++
++/** Worker → main thread: the module this worker compiled, offered to the next one. */
++export interface WasmModuleOffer {
++  kind: "wasm-module";
++  module: WebAssembly.Module;
++}
++
++/** Is this frame the handoff rather than a request? A request always carries an `id`. */
++export function isWasmHandoff(frame: unknown): frame is WasmHandoff {
++  return (
++    typeof frame === "object" &&
++    frame !== null &&
++    (frame as { kind?: unknown }).kind === "wasm"
++  );
++}
++
++/** Is this frame the module offer rather than a response? */
++export function isWasmModuleOffer(frame: unknown): frame is WasmModuleOffer {
++  return (
++    typeof frame === "object" &&
++    frame !== null &&
++    (frame as { kind?: unknown }).kind === "wasm-module"
++  );
++}
+diff --git a/web/frontend/src/games/shared/solver/solver.worker.ts b/web/frontend/src/games/shared/solver/solver.worker.ts
+index ff86209b..24888869 100644
+--- a/web/frontend/src/games/shared/solver/solver.worker.ts
++++ b/web/frontend/src/games/shared/solver/solver.worker.ts
+@@ -43,7 +43,8 @@ import init, {
+ // which is five modules that all had to be found and edited together for any change to the
+ // binary's delivery — I3's whole blast radius. It is this line.
+ import wasmUrl from "@mkbabb/csp-solver-wasm/csp_solver_wasm_bg.wasm?url";
+-import type { GameId, SolverRequest, SolverResponse } from "./protocol";
++import { isWasmHandoff } from "./protocol";
++import type { GameId, SolverRequest, SolverResponse, WasmHandoff } from "./protocol";
+ // `describeError` (wasm-error → structured-clone-safe `{code, message}` frame) is single-sourced
+ // in the shared module so the mapping is unit-testable without instantiating this Worker (T4-W2).
+ // A plain `{code, message}` literal — never the `Error` instance — is what crosses `postMessage`,
+@@ -54,10 +55,71 @@ import { describeError } from "./describeError";
+ let ready: Promise<unknown> | null = null;
+ /** The ONE `ensureInit`. It was this exact function, five times, byte for byte. */
+ function ensureInit(): Promise<unknown> {
+-  if (ready === null) ready = init({ module_or_path: wasmUrl });
++  if (ready === null) ready = instantiateOnce();
+   return ready;
+ }
+ 
++// ── The single flight (T9-W8 §8.2 C04) ──────────────────────────────────────────
++// Two instances of this module run over one binary (the resident worker and the deal channel,
++// T9-W4 §4.1). `init({module_or_path: <url>})` ends in `instantiateStreaming`, so two instances
++// meant two GETs for the same 123,336 B, issued ~35 ms apart onto one link where each inflates
++// the other. Compile is separated from instantiate here so the MODULE — structured-cloneable,
++// and the expensive half — can be handed to the sibling instead of downloaded again.
++//
++// Which side of the flight this worker is on is the main thread's to say, because only it can
++// see both instances; `protocol.ts` states the frame. The worker holds the answer, or the wait
++// for it, and nothing else.
++
++/** The module handed down by the transport, once it has one. */
++let handedModule: WebAssembly.Module | null = null;
++/** Set while this worker has been told to wait for another's module; resolves `null` if the
++ *  flight is handed back to this worker (its owner died before it offered anything). */
++let handoff: Promise<WebAssembly.Module | null> | null = null;
++let settleHandoff: ((module: WebAssembly.Module | null) => void) | null = null;
++
++function applyHandoff(frame: WasmHandoff): void {
++  if (frame.module) handedModule = frame.module;
++  settleHandoff?.(frame.module ?? null);
++  settleHandoff = null;
++  // Told to wait, with no module yet: park until one arrives.
++  if (!frame.module && frame.own !== true && handoff === null) {
++    handoff = new Promise((settle) => {
++      settleHandoff = settle;
++    });
++  }
++}
++
++/**
++ * Compile this binary, and only this binary. Returns `null` when the streaming compile is not
++ * available to us — a server that mislabels the MIME type, an engine without
++ * `compileStreaming` — so the caller falls back to the library's own fetch-and-instantiate
++ * path and the worker still starts.
++ */
++async function compileOwn(): Promise<WebAssembly.Module | null> {
++  try {
++    return await WebAssembly.compileStreaming(fetch(wasmUrl));
++  } catch {
++    return null;
++  }
++}
++
++async function instantiateOnce(): Promise<unknown> {
++  const given = handedModule ?? (handoff ? await handoff : null);
++  if (given) return init({ module_or_path: given });
++
++  const module = await compileOwn();
++  if (!module) return init({ module_or_path: wasmUrl });
++  const exports = await init({ module_or_path: module });
++  // Offer it to whoever is minted next. A `postMessage` that cannot clone a module is not a
++  // failure of this worker — it is already running; the sibling simply pays its own fetch.
++  try {
++    (self as unknown as Worker).postMessage({ kind: "wasm-module", module });
++  } catch {
++    /* the engine will not clone a module — the estate keeps the two-fetch behaviour */
++  }
++  return exports;
++}
++
+ /** A family that prints no clue furniture answers with an empty buffer — never a null on the
+  *  wire. Fresh each call: the buffer is TRANSFERRED, and a transferred buffer is detached. */
+ const noClue = (): Uint32Array<ArrayBuffer> => new Uint32Array(0);
+@@ -181,93 +243,102 @@ function post(response: SolverResponse, transfer: ArrayBuffer[] = []): void {
+   (self as unknown as Worker).postMessage(response, transfer);
+ }
+ 
+-self.addEventListener("message", async (event: MessageEvent<SolverRequest>) => {
+-  const req = event.data;
+-  try {
+-    await ensureInit();
+-
+-    // Cold-start prewarm (T3-W8 §cold-start): `ensureInit()` above already instantiated the
+-    // wasm; pong back so the main thread can log that the worker is hot. Names no family — one
+-    // worker, one binary, one warm for all five games.
+-    if (req.kind === "ping") {
+-      post({ id: req.id, ok: true, kind: "ping" });
++self.addEventListener(
++  "message",
++  async (event: MessageEvent<SolverRequest | WasmHandoff>) => {
++    // The wasm handoff (C04) is not a request — it carries no `id`, answers nothing, and is
++    // posted at mint, ahead of every request. Take it and return.
++    if (isWasmHandoff(event.data)) {
++      applyHandoff(event.data);
+       return;
+     }
++    const req = event.data;
++    try {
++      await ensureInit();
+ 
+-    // Request-shape validation (SEC-4b, defense-in-depth): the union is exhaustive at compile
+-    // time, but a malformed postMessage can still arrive at runtime — an unknown family is
+-    // rejected explicitly (→ WORKER_FAILURE via the catch) rather than indexing into nothing.
+-    const family = FAMILIES[req.game];
+-    if (!family) {
+-      throw new Error(`unknown solver game: ${String(req.game)}`);
+-    }
+-
+-    // Explicit request contract (SEC-4b): a typed `switch` on the discriminant, not a
+-    // wasm-bindgen-incidental fall-through — an unknown `kind` is rejected by the `default`
+-    // guard rather than silently routed into `generate`.
+-    switch (req.kind) {
+-      case "generate": {
+-        const { board, clue } = family.generate(
+-          req.dim,
+-          req.difficulty,
+-          req.seed,
+-          req.templates,
+-        );
+-        post({ id: req.id, ok: true, kind: "generate", board, clue }, [
+-          board.buffer as ArrayBuffer,
+-          clue.buffer as ArrayBuffer,
+-        ]);
++      // Cold-start prewarm (T3-W8 §cold-start): `ensureInit()` above already instantiated the
++      // wasm; pong back so the main thread can log that the worker is hot. Names no family — one
++      // worker, one binary, one warm for all five games.
++      if (req.kind === "ping") {
++        post({ id: req.id, ok: true, kind: "ping" });
+         return;
+       }
+ 
+-      case "solve": {
+-        const t0 = performance.now();
+-        const result = family.solve(
+-          req.board,
+-          req.dim,
+-          req.clue,
+-          req.maxSolutions,
+-          req.nodeBudget,
+-        );
+-        const elapsedMs = performance.now() - t0;
+-        const solutions = result.solutions; // Uint32Array, copy out of wasm memory
+-        const response: SolverResponse = {
+-          id: req.id,
+-          ok: true,
+-          kind: "solve",
+-          solved: result.solved,
+-          solutionCount: result.solutionCount,
+-          solutions,
+-          backtracks: result.backtracks.toString(),
+-          nodesExplored: result.nodesExplored.toString(),
+-          propagations: result.propagations.toString(),
+-          budgetExceeded: result.budgetExceeded,
+-          elapsedMs,
+-        };
+-        result.free();
+-        post(response, [solutions.buffer as ArrayBuffer]);
+-        return;
++      // Request-shape validation (SEC-4b, defense-in-depth): the union is exhaustive at compile
++      // time, but a malformed postMessage can still arrive at runtime — an unknown family is
++      // rejected explicitly (→ WORKER_FAILURE via the catch) rather than indexing into nothing.
++      const family = FAMILIES[req.game];
++      if (!family) {
++        throw new Error(`unknown solver game: ${String(req.game)}`);
+       }
+ 
+-      case "propagate": {
+-        // Propagate-only op (W6 beat 9 — engine-domains pencil marks): AC-3/GAC to a fixpoint,
+-        // zero search. Synchronous and sub-solve cheap, but it rides the same worker so the
+-        // main thread never blocks on wasm.
+-        const masks = family.propagate(req.board, req.dim, req.clue);
+-        post({ id: req.id, ok: true, kind: "propagate", masks }, [
+-          masks.buffer as ArrayBuffer,
+-        ]);
+-        return;
+-      }
++      // Explicit request contract (SEC-4b): a typed `switch` on the discriminant, not a
++      // wasm-bindgen-incidental fall-through — an unknown `kind` is rejected by the `default`
++      // guard rather than silently routed into `generate`.
++      switch (req.kind) {
++        case "generate": {
++          const { board, clue } = family.generate(
++            req.dim,
++            req.difficulty,
++            req.seed,
++            req.templates,
++          );
++          post({ id: req.id, ok: true, kind: "generate", board, clue }, [
++            board.buffer as ArrayBuffer,
++            clue.buffer as ArrayBuffer,
++          ]);
++          return;
++        }
++
++        case "solve": {
++          const t0 = performance.now();
++          const result = family.solve(
++            req.board,
++            req.dim,
++            req.clue,
++            req.maxSolutions,
++            req.nodeBudget,
++          );
++          const elapsedMs = performance.now() - t0;
++          const solutions = result.solutions; // Uint32Array, copy out of wasm memory
++          const response: SolverResponse = {
++            id: req.id,
++            ok: true,
++            kind: "solve",
++            solved: result.solved,
++            solutionCount: result.solutionCount,
++            solutions,
++            backtracks: result.backtracks.toString(),
++            nodesExplored: result.nodesExplored.toString(),
++            propagations: result.propagations.toString(),
++            budgetExceeded: result.budgetExceeded,
++            elapsedMs,
++          };
++          result.free();
++          post(response, [solutions.buffer as ArrayBuffer]);
++          return;
++        }
+ 
+-      default: {
+-        throw new Error(
+-          `unknown solver request kind: ${String((req as { kind?: unknown }).kind)}`,
+-        );
++        case "propagate": {
++          // Propagate-only op (W6 beat 9 — engine-domains pencil marks): AC-3/GAC to a fixpoint,
++          // zero search. Synchronous and sub-solve cheap, but it rides the same worker so the
++          // main thread never blocks on wasm.
++          const masks = family.propagate(req.board, req.dim, req.clue);
++          post({ id: req.id, ok: true, kind: "propagate", masks }, [
++            masks.buffer as ArrayBuffer,
++          ]);
++          return;
++        }
++
++        default: {
++          throw new Error(
++            `unknown solver request kind: ${String((req as { kind?: unknown }).kind)}`,
++          );
++        }
+       }
++    } catch (e) {
++      const { code, message } = describeError(e);
++      post({ id: req.id, ok: false, code, message });
+     }
+-  } catch (e) {
+-    const { code, message } = describeError(e);
+-    post({ id: req.id, ok: false, code, message });
+-  }
+-});
++  },
++);
+diff --git a/web/frontend/src/games/shared/solver/transport.test.ts b/web/frontend/src/games/shared/solver/transport.test.ts
+index 7eec4b5e..76f89563 100644
+--- a/web/frontend/src/games/shared/solver/transport.test.ts
++++ b/web/frontend/src/games/shared/solver/transport.test.ts
+@@ -33,6 +33,22 @@ class MockWorker {
+   emitMessage(data: Frame) {
+     for (const fn of [...(this.listeners["message"] ?? [])]) fn({ data });
+   }
++  /** A frame that is not a request/response — the C04 wasm-module offer. */
++  emitRaw(data: unknown) {
++    for (const fn of [...(this.listeners["message"] ?? [])]) fn({ data });
++  }
++  /** The frames this worker was handed that are not requests (C04). */
++  handoffs() {
++    return this.posted.filter((m) => (m as { kind?: unknown }).kind === "wasm") as {
++      kind: string;
++      module?: unknown;
++      own?: boolean;
++    }[];
++  }
++  /** The requests this worker was posted — the wire, with the handoff filtered out. */
++  requests() {
++    return this.posted.filter((m) => (m as { kind?: unknown }).kind !== "wasm");
++  }
+ }
+ 
+ function makeHarness(maxConsecutiveFailures?: number) {
+@@ -165,11 +181,72 @@ describe("solver transport — throwIfError + prewarm", () => {
+     const { workers, createWorker, transport } = makeHarness();
+     transport.prewarm();
+     expect(createWorker).toHaveBeenCalledTimes(1);
+-    expect(workers[0].posted).toHaveLength(1);
+-    expect(workers[0].posted[0]).toMatchObject({ kind: "ping" });
++    // The mint frame (C04's wasm handoff) comes first, then the ping.
++    expect(workers[0].posted[0]).toMatchObject({ kind: "wasm", own: true });
++    expect(workers[0].requests()).toHaveLength(1);
++    expect(workers[0].requests()[0]).toMatchObject({ kind: "ping" });
+ 
+     transport.prewarm();
+     expect(createWorker).toHaveBeenCalledTimes(1); // warmed guard → no second worker
+-    expect(workers[0].posted).toHaveLength(1);
++    expect(workers[0].requests()).toHaveLength(1);
++  });
++});
++
++// C04 (T9-W8 §8.2): the wasm is fetched and compiled ONCE for the two worker instances the
++// deal channel requires. The transport is the broker — it says which worker owns the flight,
++// keeps the module the owner offers, and hands it to every worker minted afterwards.
++describe("solver transport — the wasm single flight (C04)", () => {
++  const module = { fake: "WebAssembly.Module" } as unknown as WebAssembly.Module;
++
++  it("the first worker minted owns the flight; the second is told to wait", () => {
++    const { workers, transport } = makeHarness();
++    transport.prewarm(); // resident
++    void transport.runLeashed({ id: 1 }, [], 1000); // deal channel
++
++    expect(workers).toHaveLength(2);
++    expect(workers[0].handoffs()).toEqual([{ kind: "wasm", own: true }]);
++    expect(workers[1].handoffs()).toEqual([{ kind: "wasm", own: false }]);
++  });
++
++  it("the owner's module reaches the worker that was waiting, and every later mint", () => {
++    const { workers, transport } = makeHarness();
++    transport.prewarm();
++    void transport.runLeashed({ id: 1 }, [], 1000);
++
++    workers[0].emitRaw({ kind: "wasm-module", module });
++    expect(workers[1].handoffs()).toEqual([
++      { kind: "wasm", own: false },
++      { kind: "wasm", module },
++    ]);
++
++    // A superseding deal terminates the deal worker; the re-mint is handed the module, so a
++    // terminated deal worker re-mints WITHOUT refetching (the W4 leash contract, kept).
++    void transport.runLeashed({ id: 2 }, [], 1000);
++    expect(workers[1].terminated).toBe(true);
++    expect(workers).toHaveLength(3);
++    expect(workers[2].handoffs()).toEqual([{ kind: "wasm", module }]);
++  });
++
++  it("the module offer is not a response: it settles no pending call", async () => {
++    const { workers, transport } = makeHarness();
++    const p = transport.call({ id: 7 }, []);
++    workers[0].emitRaw({ kind: "wasm-module", module });
++    workers[0].emitMessage({ id: 7, ok: true, kind: "solve" });
++    await expect(p).resolves.toMatchObject({ id: 7, ok: true });
++  });
++
++  it("a flight that dies with its worker passes to a worker still waiting", async () => {
++    const { workers, transport } = makeHarness();
++    const p = transport.call({ id: 1 }, []); // resident owns the flight
++    void transport.runLeashed({ id: 2 }, [], 1000); // deal channel waits
++    expect(workers[1].handoffs()).toEqual([{ kind: "wasm", own: false }]);
++
++    workers[0].emitError("boom");
++    await rejection(p);
++    // Nobody waits on a fetch that died: the waiter is told to own the flight itself.
++    expect(workers[1].handoffs()).toEqual([
++      { kind: "wasm", own: false },
++      { kind: "wasm", own: true },
++    ]);
+   });
+ });
+diff --git a/web/frontend/src/games/shared/solver/transport.ts b/web/frontend/src/games/shared/solver/transport.ts
+index 261f9653..63539211 100644
+--- a/web/frontend/src/games/shared/solver/transport.ts
++++ b/web/frontend/src/games/shared/solver/transport.ts
+@@ -1,5 +1,6 @@
+ import { SolverError, isSerializedSolverError } from "./solverError";
+-import type { PingRequest, PingResponse } from "./protocol";
++import { isWasmModuleOffer } from "./protocol";
++import type { PingRequest, PingResponse, WasmHandoff } from "./protocol";
+ import { useDebug } from "@/composables/useDebug";
+ 
+ /**
+@@ -42,6 +43,23 @@ import { useDebug } from "@/composables/useDebug";
+  * cold worker before this change too, since `prewarm` rides an idle callback that has not
+  * fired yet when the mount deal goes out. `solverSpine.workers` reads 2 by design now, and the
+  * second one is the price of being able to hang up on a deal.
++ *
++ * ── The single flight (T9-W8 §8.2 C04) ───────────────────────────────────────────
++ * Two instances also meant two DOWNLOADS: each worker's `init` ended in its own
++ * `instantiateStreaming`, so a cold visit issued two GETs for the same 123,336 B binary about
++ * 35 ms apart, onto one link, each inflating the other. On a slow link that is 593 ms of board
++ * with no numbers in it, and it buys nothing: the two instances need two wasm INSTANCES, not
++ * two copies of the bytes.
++ *
++ * So this transport brokers one flight. A compiled `WebAssembly.Module` is structured-cloneable
++ * and is the expensive half; the first worker minted compiles it and offers it back, the offer
++ * is kept here, and every worker minted after that is handed the module at mint — including a
++ * deal worker re-minted after a leash or a supersede, which is why hanging up on a deal now
++ * costs no bytes at all. A worker minted while the flight is still out waits for the module
++ * rather than opening a second connection for the same bytes; if the worker that owned the
++ * flight dies before it offers anything, the flight passes to a worker that is still waiting.
++ * The frames are stated in `protocol.ts`. What did NOT change: two workers, two instances, two
++ * wasm memories, and no fetch a mount did not already make.
+  */
+ export interface SolverTransportOptions {
+   /** Builds a fresh worker — the game supplies `() => new Worker(new URL('./solver.worker.ts', import.meta.url), { type: 'module' })`. */
+@@ -96,6 +114,52 @@ export function createSolverTransport<
+     { resolve: (r: Res) => void; reject: (e: Error) => void }
+   >();
+ 
++  // ── The wasm single flight (C04) ────────────────────────────────────────────────
++  // One compile, handed to every worker this transport mints. Scoped to the transport, not to
++  // the module, because the workers are: a transport owns exactly the instances it made, so
++  // `retire` can never be asked about a worker it did not mint.
++  let compiled: WebAssembly.Module | null = null;
++  let flightOwner: Worker | null = null;
++  const minted = new Set<Worker>();
++
++  /** The first frame every worker gets, before any request: the module if we hold one, else
++   *  which side of the flight it is on. */
++  function adopt(w: Worker): void {
++    minted.add(w);
++    if (compiled) {
++      w.postMessage({ kind: "wasm", module: compiled } satisfies WasmHandoff);
++      return;
++    }
++    const own = flightOwner === null;
++    if (own) flightOwner = w;
++    w.postMessage({ kind: "wasm", own } satisfies WasmHandoff);
++  }
++
++  /** A worker is gone — crashed, or terminated on the leash. If it owned the flight and never
++   *  offered a module, the flight passes to a worker that is still waiting: nobody waits on a
++   *  fetch that died with its worker. */
++  function retire(w: Worker): void {
++    minted.delete(w);
++    if (flightOwner !== w) return;
++    flightOwner = null;
++    if (compiled) return;
++    for (const other of minted) {
++      flightOwner = other;
++      other.postMessage({ kind: "wasm", own: true } satisfies WasmHandoff);
++      break;
++    }
++  }
++
++  /** Keep the owner's module and hand it to everyone already waiting. */
++  function keepModule(source: Worker, module: WebAssembly.Module): void {
++    if (compiled) return;
++    compiled = module;
++    flightOwner = null;
++    for (const w of minted) {
++      if (w !== source) w.postMessage({ kind: "wasm", module } satisfies WasmHandoff);
++    }
++  }
++
+   function rejectAllPending(message: string): void {
+     for (const [pid, p] of pending) {
+       p.reject(new SolverError("WORKER_FAILURE", message));
+@@ -113,9 +177,14 @@ export function createSolverTransport<
+     if (consecutiveFailures >= maxConsecutiveFailures) return null;
+     const w = options.createWorker();
+     worker = w;
++    adopt(w);
+     w.addEventListener("message", (event: MessageEvent<Res>) => {
+       // Any frame from the worker proves it's alive — clear the crash budget.
+       consecutiveFailures = 0;
++      if (isWasmModuleOffer(event.data)) {
++        keepModule(w, event.data.module);
++        return;
++      }
+       const res = event.data;
+       const p = pending.get(res.id);
+       if (!p) return;
+@@ -128,6 +197,7 @@ export function createSolverTransport<
+       // RETIRE the singleton so the next request re-instantiates a fresh worker (bounded).
+       consecutiveFailures++;
+       worker = null;
++      retire(w);
+       w.terminate();
+       rejectAllPending(event.message || "solver worker crashed");
+     });
+@@ -165,7 +235,10 @@ export function createSolverTransport<
+ 
+   /** Take the channel down: terminate the worker, forget the slot. The next deal re-mints. */
+   function retireDealWorker(): void {
+-    if (dealWorker) dealWorker.terminate();
++    if (dealWorker) {
++      retire(dealWorker);
++      dealWorker.terminate();
++    }
+     dealWorker = null;
+     live = null;
+   }
+@@ -174,7 +247,12 @@ export function createSolverTransport<
+     if (dealWorker) return dealWorker;
+     const w = options.createWorker();
+     dealWorker = w;
++    adopt(w);
+     w.addEventListener("message", (event: MessageEvent<Res>) => {
++      if (isWasmModuleOffer(event.data)) {
++        keepModule(w, event.data.module);
++        return;
++      }
+       if (!live || event.data.id !== live.id) return;
+       const done = live;
+       live = null;
+@@ -187,6 +265,7 @@ export function createSolverTransport<
+       // than a spin.
+       const done = live;
+       if (done) clearTimeout(done.timer);
++      retire(w);
+       retireDealWorker();
+       done?.fail(
+         new SolverError("WORKER_FAILURE", event.message || "solver worker crashed"),

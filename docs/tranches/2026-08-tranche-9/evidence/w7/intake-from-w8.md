@@ -68,3 +68,121 @@ the chrome lands before the gesture that carries it. Five animations run from fr
 10. **Pre-rastering the drawer's sheet** (C08 A) and **the avatar in first paint** (C10): presentation calls with a perf price; W8 brings the price.
 
 Frame budgets for each transition get set on the DEVICE (8.3) once §13 has defined them.
+
+---
+
+## ADDENDUM 2026-09-18 — what §8.2 changed under §13's feet (the fold, `evidence/w8/cures/FOLD-MANIFEST.md`)
+
+Six cures fold onto master (8.3, C01, C06, C10, C07a, C07b); C02, C03, C04, C05, C08 and C11 do
+not (the manifest's §3 has each one's numbers). Every number below is still a PROXY—chromium
+under CDP throttle or Playwright WebKit unthrottled—and the device sets the frame budgets.
+Nothing here is a Safari or iOS claim. Append only; §1–§3 above stand as written.
+
+### A. The exit now travels, on the entry's tuple mirrored (C06, `0bf9cb0e`; §2's "gallery out, the board" row is CURED at ownership)
+
+The board's exit mover is tagged (`useFlipGlide.ts` `FLIP_GLIDE_ANIM_ID = "flip-glide"`) and
+`App.vue`'s `boardAnimations()` no longer sweeps it, so `restoreBoardAnims` stops finishing it
+0.3 ms after birth. No curve, no duration was minted: the exit rides `foldCtl`—the SAME
+`useFlipGlide` controller, `MOTION.boardFoldMs` 520 and `MOTION.curves.drawerGlide` the entry
+rides—so what §1's exit table showed as "scale 0.520→1 · 520 ms DECLARED · never runs" now
+runs, and the mover reaches its own CANCEL at 518–531 ms. Measured (`fold-geometry.mjs`,
+warm, 6/6 windows per regime, both engines): exit `boardTravel` 0 px → **296 px** chromium desk
+1280×800 dpr 2, **78 px** chromium 390×844 dpr 3, 218–264 / 64–73 px WebKit (PROXY). Step share
+sits inside the entry's own band on quiet hosts (0.071 vs 0.072 chromium 1× desk); at load
+100–170 the WebKit exit reads COARSER than the entry (0.660 vs 0.471)—not closable there. The
+exit's animation census carries exactly one more live animation (5 → 6 at 82–216 ms; 2 → 3 at
+300 ms): that one is the board. The exit's worst frame is bracketed at zero across three passes
+(−6.3 / +1.5 / +27 against a +29 untouched control).
+
+**What is still yours, unchanged**: §3.1 whole—no beat 0, no un-deal, three easing vocabularies,
+controls settling at 400 ms under a 520 ms wordmark. C06 gives the declared exit a board to land
+against; it declares nothing. If §13 re-points the exit's curve or duration, it re-points the
+board with it (one controller).
+
+### B. What the fold's bake frame looks like after C05—and C05 is NOT in the fold
+
+C05 (`c003c1d0`) is held: it is one reschedule inside C02's `usePosePrewarm`, and the frame it
+moves is a frame C02 would introduce—on a C02 tree the first fold's 1,100 ms window carries a
+>150 ms task in 38 of 38 base windows (a 1,272² grid pose from the idle warm, released at
+`BOOT_CENSUS_MS` 3,000 ms, which is where a fold lands). Without C02 that task does not exist,
+and the fold's frames are the ones §2 already quotes: **entry worst 57.7 ms at 253–284 ms, the
+steady-state G2 frame, UNMOVED** (C05 leaves it inside spread even where it lands: 57.5 → 52.7).
+
+What C05's attribution DID settle, and §13 should read (`cures/C05/RECORD.md` §1):
+
+- **A7's "the wordmark bakes 4 poses per fold, 8 on the first" is the CH-62 `posePaints`
+  probe**: 24 × 24 device px `drawImage`s, one per pose, on every ADMITTED stack (a cache hit
+  re-admits), a 1.2–3.0 ms burst per direction. The magnitude A7 measured is real; the surface
+  it was attributed to is not.
+- **The first entry's four REAL encodes are a legitimate re-key, once**: `.board-group.is-gallery
+  .masthead { --logo-scale: 0.72 }` takes the `<svg>`'s box 382.39 × 111.92 → 275.36 × 80.59, so
+  `captureH` latches 112 → 81 and the key goes `logo-sudoku-l-205|2|382.5x112|4` →
+  `…|2|277x81|4`; four encodes at 310–350 ms, 9 of 9 runs, BOTH arms. The 4-slot cache holds
+  both boxes thereafter. A label change (ArrowRight on the deck) bakes 4 at 41–98 ms, 9/9.
+- **The deck's mount is still on the fold's first frame** (+558 nodes → 1,776; C10 adds 3 head
+  elements, 1,779). §3.4 is live.
+
+So the fold's first-entry frame on the folded tree = the wordmark's legitimate re-key encodes
+(~4 × a few ms at 310–350 ms) + the deck's +558-node mount + the `posePaints` probe burst; the
+steady-state 57.7 ms frame is the mount and the killed-mover residue, not a bake. If §13 wants
+the re-key gone, the cure is pre-warming the gallery identity before the fold (C05 §7: needs an
+alternate-box token `.board-group { --logo-scale-alt: 0.72 }` no component owns today, and its
+number does not move on any proxy here).
+
+### C. C02's cache-miss fallback still needs your written acceptance—and C02 is not landed
+
+§3.6 stands exactly as asked. C02 (`84a4ad45` …) reproduced B2's mark −1,108 ms with N1 bakes
+8 → 0 (chromium 4× Fast-3G cold desk dpr 2) and the whirl un-starved (2 → 95 frames) but does
+not land: it needs pencil-boil 0.12.1 (`prewarm`, local only, unpublished), and its one-pose
+idle encodes red GATE A's WebKit idle census (long33 1/1 vs 0/0 base)—a trade the chair rules
+on, not the code. The hold-through-the-whirl fallback on a pose-cache miss (DPR or box changed
+since boot) was **NOT TAKEN** in any round: the miss path today is exactly HEAD's—the library
+bakes inside the gesture. Your acceptance or refusal of "the previous theme's ink, at full
+quality, ~1 s through the whirl, re-bake after" is a precondition to C02 re-opening, not a
+consequence of it.
+
+Two things C02's readings settle for §13 regardless (`cures/C02/README.md` §2): with the bakes
+gone, N1's `UpdateLayoutTree` reads 277 ms / ~100 elements like N2–N4 (base N1's 86 ms is
+TRUNCATED because the whirl never ran)—**G8's 41–75 ms restyle frame is the top item on the
+toggle once the contention goes**, and it is a grammar-and-CSS fact, yours; and the first flip's
+background repaint stays ~110 ms longer than steady state with zero bakes (383 → 135.5 vs 24
+ms)—first-time invalidation of the dark ladder, not a bake.
+
+### D. C10's idle-vs-intent prefetch (your ask 4), now a measured shape
+
+C10 (`83ee20b6` + `db43df48`) lazy-mounts the deck: `GameGallery` is a `shallowRef<Component |
+null>` behind `<component :is>` at the view flip; its chunk is warmed at idle by a TWO-condition
+gate (board cells exist AND `load` has fired, later wins, +2 rAF of margin, 3,000 ms backstop)
+AND on intent at the head of `enterGallery`—whichever comes first. Chunk fetch starts at
+board-ready +86…+280 ms and is in hand at +290…+503 ms (a load band; before the repair it was
++800 / +1,550). The A7 first fold after the split: entry worst 117.5 → 108.7, long33 2/2, bakes
+8/8/8—no long frame attributable to chunk evaluation. **The residue that is yours to declare**:
+a fold pressed inside ~0.3 s of board-ready pays the chunk on the gesture—+298 ms (author, load
+12–18) to +1,010 ms (verifier, load 46), level by a 400 ms delay. So the answer to ask 4 on the
+proxy is: the declared animation does not begin on a frame that evaluates the module EXCEPT when
+the press beats the warm; §13 decides whether that press waits (gate on the prefetch), plays the
+deck's fade over a not-yet-mounted frame, or accepts the band. The "avatar in first paint" half
+of ask 10 was not ablated by C10.
+
+### E. Smaller facts §13 inherits
+
+- **Drawer (asks 2, and M02)**: C08 did not land. Its dpr-3 re-take (chromium 390×844, cold)
+  closes the dpr-1 caveat in this file's head: steady long33 0 in 20/20 windows both arms, first
+  gesture open worst 34.8 ms at 4× / 58.4 at 6×, and the first gesture's extra cost is
+  **recalc, not raster** (+9.3 of +15 ms vs +1.6)—the sheet's first style resolution, with
+  `inert` invalidating 601 of 991 elements from a 415-element subtree. Deferring the a11y writes
+  out of the settle frame SPLITS a coalesced 826-element / 7.24 ms pass into two (994 / 10.97).
+  M02 ("not smooth") has no proxy at dpr 1 or dpr 3. If the device reads clean frames too, M02 is
+  the tongue's berth swap—yours, whole.
+- **The draw-in (ask 7)**: untouched, as promised. C03's lane queue moved its blocking 665 → 353
+  ms (chromium 4× unthrottled mobile dpr 3) but regressed firstBake +610 ms at 6× Fast-3G and
+  was reset; the draw-in still plays under C01's now-single bake round.
+- **The WebKit FOUT window (ask 8)**: unchanged by C07a/C07b—`link`/`css` woff2 loads start at
+  the same 172–186 ms in both arms. What C07b changes is that the wordmark's BITMAPS mount
+  ~330 ms later on WebKit (first logo encode t0 182–221 → 521–577 ms); in that window the
+  wordmark is its pose-0 live filter painting the page's own Fraunces, not a fallback face. The
+  owner's eye decides whether that is visible.
+- **8.3's fold direction question**: the probe reads the fold's travel off `.board-cells`
+  (`galleryWidthsNode`), A7 off the projected card; the captures read 20 distinct widths TO THE
+  PICKER and 1 TO THE BOARD (the mirror of G3). After C06 both directions should read > 1 on the
+  device; if the way back still reads 1, the two instruments watch different nodes.

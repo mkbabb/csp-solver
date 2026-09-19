@@ -1,0 +1,28 @@
+regime: chromium · 1× · none · cold · desk   (cured arm: chromium · 1× · none · cold · desk)
+base  : fix-r2/raw/c1x-none-cold-desk/base.jsonl · load { 67.91 56.75 46.32 } → { 54.20 54.23 46.34 }
+cured : fix-r2/raw/c1x-none-cold-desk/cured.jsonl · load { 58.18 55.27 46.03 } → { 47.50 52.78 45.96 }
+taint : base 0/0/0 · cured 0/0/0
+
+### base — 3 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 28.0 | 445.1 | 927.4 | 1406.6 | 168.9 | 419.0 |
+| 2 | 28.0 | 394.7 | 818.9 | 1171.8 | 119.7 | 301.0 |
+| 3 | 28.0 | 426.0 | 850.1 | 1250.6 | 130.6 | 336.0 |
+
+### cured — 3 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 467.4 | 786.0 | 122.8 | 207.0 |
+| 2 | 16.0 | 0.0 | 479.2 | 856.7 | 178.6 | 231.0 |
+| 3 | 16.0 | 0.0 | 462.5 | 808.0 | 143.6 | 208.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 28.0 | 28.0–28.0 | 16.0 | 16.0–16.0 | -12.0 | YES |
+| discardedMs | 426.0 | 394.7–445.1 | 0.0 | 0.0–0.0 | -426.0 | YES |
+| encodeMs | 850.1 | 818.9–927.4 | 467.4 | 462.5–479.2 | -382.7 | YES |
+| lastEncodeMs | 1250.6 | 1171.8–1406.6 | 808.0 | 786.0–856.7 | -442.6 | YES |
+| boardReadyMs | 130.6 | 119.7–168.9 | 143.6 | 122.8–178.6 | 13.0 | no — inside the spread |
+| tbtMs | 336.0 | 301.0–419.0 | 208.0 | 207.0–231.0 | -128.0 | YES |

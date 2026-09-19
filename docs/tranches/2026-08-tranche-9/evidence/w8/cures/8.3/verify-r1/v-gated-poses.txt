@@ -1,0 +1,11 @@
+  bootTbt 1   longtask yes  tbt 296ms  tasks 11  longest 236ms  anchor 117ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 2040ms  tasks 10  longest 338ms  anchor 116ms  window 3000ms  painted true
+| chromium | 120.04 | 0 | 120.23 | 118.33 | PASS | 0 | 0 | PASS | 120.47 | 108.04 | PASS |
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| chromium | desk 1440x900 dpr1 | yes | 1 | 0 | 296ms | 1750 | PASS |
+| chromium | mobile 390x844 dpr3 | yes | 1 | 0 | 2040ms | (unstamped) | PROVISIONAL |
+  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| chromium | 4× | 116.5 (30000000 iter) | 1168ms | 10.03 |
+PROVISIONAL [chromium · mobile 390x844 dpr3] boot TBT: measured 2040ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)
+RESULT: GREEN — every gates.json threshold held on every engine.

@@ -1,0 +1,62 @@
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-probe/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  desktop.undoBurst          minFps 52 (real Safari, manual lane) · ciMinPctOfCeiling 0.9 (this lane)
+  boot.tbt                   maxTbtMs 1750 over a 3000ms window at 4× CPU
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+declared fraction undoBurst.ciMinPctOfCeiling = 0.90000 (× this harness's own measured ceiling)
+  !! CANARY OVERRIDE  --canary-fail chromium  (a synthetic instrument failure is injected for this engine)
+engines           chromium   windows/engine 1   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-probe/web/frontend/dist
+entry             assets/index-B5uCFGCeTdy7.js
+host              18 cpus, load 11.53 / 12.24 / 12.28 (1/5/15m) at start
+started           2026-09-17T21:29:44.416Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 120.07  p50 8.3  p95 9.9  long33 0  long50 0  worst 10.4ms  ~120Hz
+  window 1   fps 120.19  p50 8.3  p95 9.8  long33 0  long50 0  worst 10.3ms  frames 361  wall 3003.6ms  attempt 1
+  control median 120.07 fps / long33 0
+  undoBurst 1 fps 120.5  p50 8.3  p95 9.5  long33 0  worst 10.2ms  attempt 1
+  bootTbt 1   longtask yes  tbt 250ms  tasks 10  longest 221ms  anchor 116ms  window 3000ms  painted true
+  bootTbt 2   longtask yes  tbt 980ms  tasks 10  longest 201ms  anchor 116ms  window 3000ms  painted true
+  INSTRUMENT FAILURE: SYNTHETIC (--canary-fail chromium) — the control held (0 long frames), the failure is injected.
+  The harness cannot hold its own frame budget on this host, so neither a GREEN nor a RED is
+  admissible for chromium. Re-run on a quiescent machine. (r1-rig-baseline.md §2: both real
+  surfaces hold their ceiling with zero long frames.)
+
+  2 boot window(s) WERE measured and are graded below.
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | — | — | — | — | NOT MEASURED | — | — | NOT MEASURED | — | — | NOT MEASURED |
+
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | desk 1440x900 dpr1 | yes | 1 | 0 | 250ms | 1750 | PASS |
+| chromium | mobile 390x844 dpr3 | yes | 1 | 0 | 980ms | (unstamped) | PROVISIONAL |
+
+  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own
+  `boot.tbt.poses.<pose>.maxTbtMs` in gates.json, stamped from n >= 3 RUNNER readings at a
+  WGATE. Until then this rig measures the pose and refuses to grade it.
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| chromium | 4× | 116 (30000000 iter) | 615ms | 5.3 |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+
+PROVISIONAL [chromium · mobile 390x844 dpr3] boot TBT: measured 980ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)
+NOT MEASURED [chromium] — synthetic (--canary-fail chromium)
+
+host at finish    load 10.81 / 12.00 / 12.19 (1/5/15m) · 2026-09-17T21:30:17.155Z
+
+RESULT: INADMISSIBLE — no threshold breached on what was measured, but 1 engine(s) never produced an admissible window. No verdict.

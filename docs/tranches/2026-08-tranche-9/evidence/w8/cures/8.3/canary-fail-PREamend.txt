@@ -1,0 +1,47 @@
+# perf-rig CI subset — idle fps + long-frame census on the built dist
+
+gates.json        /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-probe/docs/tranches/2026-07-tranche-4/patches/p1-safari-ios-performance/gates.json
+  desktop.ceilingFps         98.4
+  desktop.idle3s.minFps      97
+  desktop.idle3s.maxLong33   0
+  desktop.undoBurst          minFps 52 (real Safari, manual lane) · ciMinPctOfCeiling 0.9 (this lane)
+  boot.tbt                   maxTbtMs 1750 over a 3000ms window at 4× CPU
+derived ratio     minFps/ceilingFps = 97/98.4 = 0.98577
+declared fraction undoBurst.ciMinPctOfCeiling = 0.90000 (× this harness's own measured ceiling)
+  !! CANARY OVERRIDE  --canary-fail chromium  (a synthetic instrument failure is injected for this engine)
+engines           chromium   windows/engine 1   port 4390
+
+dist              /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w8-probe/web/frontend/dist
+entry             assets/index-B5uCFGCeTdy7.js
+host              18 cpus, load 15.53 / 12.97 / 12.53 (1/5/15m) at start
+started           2026-09-17T21:29:16.689Z
+
+probe-server up on :4390
+
+## chromium
+  UA        Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) HeadlessChrome/149.0.7827.55 Safari/537.36
+  control 1  fps 120.32  p50 8.3  p95 9.6  long33 0  long50 0  worst 10.4ms  ~120Hz
+  window 1   fps 120.02  p50 8.3  p95 9.7  long33 0  long50 0  worst 10.4ms  frames 361  wall 3007.8ms  attempt 1
+  control median 120.32 fps / long33 0
+  undoBurst 1 fps 120.53  p50 8.3  p95 9.8  long33 0  worst 10.4ms  attempt 1
+  bootTbt 1   longtask yes  tbt 245ms  tasks 11  longest 218ms  anchor 116ms  window 3000ms  painted true
+  INSTRUMENT FAILURE: SYNTHETIC (--canary-fail chromium) — the control held (0 long frames), the failure is injected.
+  The harness cannot hold its own frame budget on this host, so neither a GREEN nor a RED is
+  admissible for chromium. Re-run on a quiescent machine. (r1-rig-baseline.md §2: both real
+  surfaces hold their ceiling with zero long frames.)
+
+## verdict
+
+| engine | control fps | control long33 | median idle fps | required (ratio×ceiling) | GATE B | median long33 | max | GATE A | undoBurst fps | required | GATE C |
+| --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+
+| engine | longtask | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+
+NOT MEASURED [chromium] — synthetic (--canary-fail chromium)
+
+host at finish    load 11.84 / 12.31 / 12.30 (1/5/15m) · 2026-09-17T21:29:39.921Z
+
+RESULT: INADMISSIBLE — no threshold breached on what was measured, but 1 engine(s) never produced an admissible window. No verdict.

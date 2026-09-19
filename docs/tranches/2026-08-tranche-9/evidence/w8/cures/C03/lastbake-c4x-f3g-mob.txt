@@ -1,0 +1,15 @@
+regime: chromium · 4× · fast3g · cold · mobile   (cured: chromium · 4× · fast3g · cold · mobile)
+load  : base { 18.30 28.07 34.88 } → { 14.65 24.16 32.68 } · cured { 17.88 27.49 34.56 } → { 13.49 23.60 32.38 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+encodes/surface base : logo 4,4,4,4,4 · toggle-sun 4,4,4,4,4 · toggle-moon 4,4,4,4,4 · grid 4,4,4,4,4
+encodes/surface cured: logo 4,4,4,4,4 · toggle-sun 4,4,4,4,4 · toggle-moon 4,4,4,4,4 · grid 4,4,4,4,4
+
+| quantity (ms; a surface's LAST pose blob) | base median | base spread | cured median | cured spread | Δ | outside both spreads |
+|---|---|---|---|---|---|---|
+| boardReadyMs | 1413.0 | 1398.9–1492.5 | 1401.4 | 1398.0–1418.5 | -11.6 | no — inside the spread |
+| logo | 2594.7 | 2428.0–2975.8 | 1686.5 | 1652.4–1716.2 | -908.2 | YES |
+| toggle-sun | 2496.8 | 2401.9–2830.3 | 1638.2 | 1609.6–1661.8 | -858.6 | YES |
+| toggle-moon | 2457.0 | 2391.8–2836.0 | 2649.3 | 2573.0–2918.6 | 192.3 | no — inside the spread |
+| grid | 2624.4 | 2542.6–3045.9 | 2504.1 | 2470.1–2758.6 | -120.3 | no — inside the spread |
+| long33 | 8.0 | 7.0–9.0 | 9.0 | 7.0–10.0 | 1.0 | no — inside the spread |
+| worstGap | 649.7 | 642.0–669.1 | 658.4 | 649.7–670.7 | 8.7 | no — inside the spread |

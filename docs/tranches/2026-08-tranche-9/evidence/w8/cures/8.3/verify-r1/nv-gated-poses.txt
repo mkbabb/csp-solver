@@ -1,0 +1,22 @@
+| engine | pose | longtask | windows | dropped | median boot TBT | max (4× CPU, 3000ms window) | GATE D |
+| --- | --- | --- | --- | --- | --- | --- | --- |
+| chromium | desk 1440x900 dpr1 | yes | 1 | 0 | 1304ms | 1750 | PASS |
+| chromium | mobile 390x844 dpr3 | yes | 1 | 0 | 2366ms | (unstamped) | PROVISIONAL |
+
+  PROVISIONAL rows gate NOTHING. A pose other than the declared one needs its own
+  `boot.tbt.poses.<pose>.maxTbtMs` in gates.json, stamped from n >= 3 RUNNER readings at a
+  WGATE. Until then this rig measures the pose and refuses to grade it.
+
+host CPU anchor — DIAGNOSTIC, gates nothing; the portable column GATE D would need (see the block comment):
+| engine | throttle | anchor ms (fixed work, min of 3) | median boot TBT | tbt/anchor |
+| --- | --- | --- | --- | --- |
+| chromium | 4× | 170 (30000000 iter) | 1835ms | 10.79 |
+
+advisory (NOT gating) — absolute fps against gates.json's real-Safari anchor:
+  chromium: 120.62 fps vs 97 — the anchor assumes a 98.4 fps ceiling; this harness measured 120.37. Absolute comparison is a category error and is reported only for the record.
+
+PROVISIONAL [chromium · mobile 390x844 dpr3] boot TBT: measured 2366ms against NO stamped threshold — measured, not graded (T9-W8 §8.3 amendment 1)
+
+host at finish    load 154.53 / 153.24 / 120.83 (1/5/15m) · 2026-09-18T15:16:42.386Z
+
+RESULT: GREEN — every gates.json threshold held on every engine.

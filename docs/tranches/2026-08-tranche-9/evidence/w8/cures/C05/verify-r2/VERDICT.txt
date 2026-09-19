@@ -1,0 +1,90 @@
+T9-W8 C05 — NON-AUTHOR VERIFIER, ROUND 2.  VERDICT: REPAIR (the cure stands; the record still does not).
+2026-09-18 · track bake · worktree HEAD da33cb8e (git status clean, nothing of mine committed) · preSha of
+the repair round c003c1d0 · the cure's own preSha aa2573a6.
+
+ARMS, printed at both ends of every set and re-read over HTTP at both:
+  base  dist-base :4252  index-CS-Vym5OZcaO.js  md5 c07ba6d9f80a8b26559c0765120fe79d  43 files / 811.1 KB
+  cured dist      :4253  index-LjRNU9f7iIUb.js  md5 b4865f796519e83934879968e3fbd4f0  43 files / 811.3 KB
+  NOT SWAPPED, NOT MASKED: the seam is in the cured bundle and absent from the base one
+  (`Oi=Je.chromeLeaveMs+Je.boardFoldMs+Je.cardStepMs`, one `Hi()` call site, and the
+  `if(v>0){o(v);return}` reschedule sits in the shipped prewarm BEFORE `a+=1`). Grepped over HTTP
+  on both ports: cured 1 hit, base 0.
+
+MECHANISM: scheduling deferral of idle pre-warm. One file, +61/-0 over the whole cure, of which the
+fix commit is +21/-6 comment only. GESTURE_QUIET_MS = 200+520+440 = 1,160 ms, every term a MOTION row
+(pencilConfig.ts:150/157/163). Nothing drawn less: no bake dropped, no boil thinned, no filter removed,
+no transition shortened, no DPR lowered, no cacheKey theme-stripped. Nothing from the REFUSED or
+REFUTED lists, checked by name.
+
+MY OWN 6+6 INTERLEAVED BATTERY (the cure's fold-frames.mjs, byte-identical to attribution/A7's —
+diffed; only --port differs). chromium 4x CPU · unthrottled link · warm cache · desk 1280x800 · dpr 2 ·
+cycles 0-2 · b,c,b,c… · 0 tainted, 0 retries. Load 8.57 -> 11.84 (STATS.txt has every window).
+
+  cycle 0 ENTRY            base                      cured                    verdict
+  lt>150 inside the window 1 (1-2), 6/6 windows      0 (0-0), 0/6 windows     DISJOINT — the headline
+  p95                      16.3 (15.3-18.1)          10.0 (9.9-12.5)          DISJOINT
+  fps                      84.5 (74.5-90)            115.5 (99.1-119.1)       DISJOINT
+  worst frame              206.2 (95.8-218.2)        90.9 (74.1-114.3)        median -115.3, INSIDE SPREAD
+  long33                   3 (2-3)                   2 (2-2)                  inside spread
+  jank                     338.6 (155.9-360.9)       149.6 (129.4-177.9)      inside spread
+  cycle 0 EXIT worst       62.3 (54.8-71.8)          67.2 (57.2-80.7)         inside spread — NOT a move
+
+The restated headline reproduces for the third time, on a third independently launched battery and a
+second non-author. The withdrawn worst-frame disjointness reproduces as WITHDRAWN, and for exactly the
+reason given: 2 of my 6 base windows read 95.8 and 96.8 ms while still carrying a >150 ms task inside
+the window. The exit is not a move, as the record says.
+
+THE TRADE, reproduced a fourth time: 1 of 6 cured cycle-1 EXIT windows carries a 238 ms worst (long33 2)
+against 0 of 6 base. Medians unmoved. The chair's.
+
+MY OWN 3+3 CAPTURE-IDENTITY CENSUS (attrib/fold-identity.mjs, unmodified; IDENTITY.txt):
+  - the LIVE re-key does not move: 4 gallery-key encodes at +15..+53 ms after the box change in BOTH
+    arms, 3 of 3 each (base box 491-502 -> 507-552; cured box 297-308 -> 313-358).
+  - the unfold warm moves and only it: base c0 exit 506-632 ms -> cured 1,168-1,283 ms, past 1,160.
+  - THE FOLD IS NOT DELAYED: the cured arm's gallery box lands EARLIER (261-308 ms) than the base's
+    (453-502 ms). The deferral gets off the layout's thread; nothing is slowed to hide a frame.
+  - boot 33 bakes with the identical split in 6 of 6 runs, both arms; pose count 4 in every key.
+
+PI: goldens 4 passed exit 0 against :4253, no --update-snapshots. filter-census (both engines, against
+the BUILT dist — it is what holds filterBudget at 9), wordmark-integrity (WebKit, over the baked pose
+bitmaps) and theme-bake-freshness (both engines): 38 passed exit 0. filterBudget.ts is not in the diff.
+
+GATES, bare, mine: test:unit 0 (Test Files 66/66 · Tests 810/810) · lint:eslint 0 · lint:knip 0 ·
+lint:motion 0 (34 specs) · lint:boundary 0 · lint:tdz 0 · lint:copy 0 · typecheck:node 0 ·
+e2e gallery+masthead surface both engines against the cured dist 124 passed exit 0.
+
+REPAIR, exactly — record only, no code change owed, do not reset:
+
+(1) RECORD.md:19-20 and :60 cite `rasterPose.ts:835` (`PROBE_PX` at `:797`). Those were the right lines
+    at c003c1d0 and are the WRONG lines at HEAD: the fix commit's own +15 net lines moved them to :850
+    and :812 (verified by `git show` on both commits). The commit that corrected the cite invalidated it.
+    This is the third round of the same defect class — pin the cite to a symbol, not a line.
+
+(2) RECORD.md never reports against the charter's **Accept** clauses, and two of the three are not met.
+    The charter asks: bakes per fold 0, first fold included (if the first still bakes, say why and how
+    many); worst frame at 4x inside the glide's p95, about 9-17 ms; a label change still bakes 4.
+    Measured: the wordmark's live re-key still encodes 4 on the first entry in 3 of 3 cured runs, and the
+    CH-62 paint probe still fires 4 drawImages per direction forever; the cured worst frame is 90.9 ms
+    median (74.1-114.3), not 9-17; "a label change still bakes 4" is asserted nowhere by name. The record
+    argues the charter's premise away (correctly — the 4-slot cache does not miss, and my census agrees)
+    but never states plainly which Accept clauses it reaches, which it does not, and that the number it
+    actually moved is a different one. The Accept clause is the chair's decision surface; say it there.
+
+(3) RECORD.md:124 "p95 15.5 -> 10.3 and fps 119.7 -> 122.4 are the exit marks that improve". On my 6+6
+    the exit p95 is 14.7 (10.2-15.6) -> 10.0 (9.6-10.4) and the exit fps 119.7 (105.3-121.1) -> 123.7
+    (110.5-125) — both INSIDE SPREAD. fix-r1's own set read exit fps DISJOINT; it is not on a second
+    host. State them as medians, beside the marks that are disjoint, not as "improve".
+
+TWO CORRECTIONS THAT RUN IN THE CURE'S FAVOUR, and should be in the record for that reason:
+
+(4) §1's base-arm account is incomplete. My base runs carry a SECOND batch of 4 gallery-key logo encodes
+    at 1,415-1,548 ms INSIDE the cycle-0 entry window in 3 of 3 (the author saw it in 1 of 3, on base-3,
+    and read the base's logo warm only on the exit at 259-611 ms). The late logo warm is a base-arm fact
+    too, so the wordmark's leg of the trade in §4 is smaller than the record concedes.
+
+(5) The second surface reproduces more often than §1's "1 of 3 runs here" suggests: cured cycle-1 entry
+    carries the 4 gallery-key encodes at 1,168-1,254 ms in 2 of my 3 runs, base 0 of 3. Frame cost still
+    nil (cycle-1 entry worst 57.5 -> 65.4, inside spread). Quote the pooled rate, not one battery's.
+
+M19: no real Safari, no iOS, no osascript, no perf-rig scripts were used. Every number above is chromium
+at 4x on desk 1280x800 dpr 2, and it is a proxy, not a device claim.

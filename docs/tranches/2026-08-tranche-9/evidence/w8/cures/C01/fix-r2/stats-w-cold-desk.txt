@@ -1,0 +1,32 @@
+regime: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk   (cured arm: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk)
+base  : fix-r2/raw/w-cold-desk/base.jsonl · load { 72.43 54.19 40.28 } → { 51.88 53.63 42.50 }
+cured : fix-r2/raw/w-cold-desk/cured.jsonl · load { 58.31 52.17 39.88 } → { 48.86 53.04 42.56 }
+taint : base 0/0/0/0/0 · cured 0/0/0/0/0
+
+### base — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 20.0 | 446.0 | 1099.0 | 1497.0 | 815.0 | 0.0 |
+| 2 | 20.0 | 465.0 | 1147.0 | 1504.0 | 786.0 | 0.0 |
+| 3 | 20.0 | 494.0 | 1118.0 | 1548.0 | 894.0 | 0.0 |
+| 4 | 16.0 | 0.0 | 1097.0 | 1646.0 | 1156.0 | 0.0 |
+| 5 | 20.0 | 446.0 | 1049.0 | 1429.0 | 794.0 | 0.0 |
+
+### cured — 5 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 496.0 | 949.0 | 359.0 | 0.0 |
+| 2 | 16.0 | 0.0 | 729.0 | 1343.0 | 473.0 | 0.0 |
+| 3 | 16.0 | 0.0 | 651.0 | 1203.0 | 407.0 | 0.0 |
+| 4 | 16.0 | 0.0 | 543.0 | 1046.0 | 393.0 | 0.0 |
+| 5 | 16.0 | 0.0 | 784.0 | 1440.0 | 482.0 | 0.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 20.0 | 16.0–20.0 | 16.0 | 16.0–16.0 | -4.0 | no — inside the spread |
+| discardedMs | 446.0 | 0.0–494.0 | 0.0 | 0.0–0.0 | -446.0 | no — inside the spread |
+| encodeMs | 1099.0 | 1049.0–1147.0 | 651.0 | 496.0–784.0 | -448.0 | YES |
+| lastEncodeMs | 1504.0 | 1429.0–1646.0 | 1203.0 | 949.0–1440.0 | -301.0 | no — inside the spread |
+| boardReadyMs | 815.0 | 786.0–1156.0 | 407.0 | 359.0–482.0 | -408.0 | YES |
+| tbtMs | 0.0 | 0.0–0.0 | 0.0 | 0.0–0.0 | 0.0 | no — inside the spread |

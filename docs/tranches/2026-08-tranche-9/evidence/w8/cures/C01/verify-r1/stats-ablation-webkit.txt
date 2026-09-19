@@ -1,0 +1,28 @@
+regime: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk   (cured arm: webkit · 1 (webkit: CDP unavailable)× · unthrottled (webkit: CDP unavailable) · cold · desk)
+base  : /tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/abl/w-base.jsonl · load { 13.20 12.49 11.50 } → { 14.59 15.47 13.06 }
+cured : /tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/abl/w-abl.jsonl · load { 14.78 12.93 11.68 } → { 14.86 15.49 13.11 }
+taint : base 0/0/0 · cured 0/0/0
+
+### base — 3 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 20.0 | 260.0 | 576.0 | 969.0 | 422.0 | 0.0 |
+| 2 | 20.0 | 253.0 | 579.0 | 966.0 | 410.0 | 0.0 |
+| 3 | 24.0 | 293.0 | 626.0 | 1102.0 | 447.0 | 0.0 |
+
+### cured — 3 windows
+| w | encodes | discardedMs | encodeMs | lastEncodeMs | boardReadyMs | tbtMs |
+|---|---|---|---|---|---|---|
+| 1 | 16.0 | 0.0 | 354.0 | 588.0 | 526.0 | 0.0 |
+| 2 | 20.0 | 44.0 | 418.0 | 690.0 | 572.0 | 0.0 |
+| 3 | 16.0 | 0.0 | 381.0 | 633.0 | 545.0 | 0.0 |
+
+### the deltas, each against the arms' own spreads
+| quantity | base median | base spread | cured median | cured spread | Δ median | outside both spreads |
+|---|---|---|---|---|---|---|
+| encodes | 20.0 | 20.0–24.0 | 16.0 | 16.0–20.0 | -4.0 | no — inside the spread |
+| discardedMs | 260.0 | 253.0–293.0 | 0.0 | 0.0–44.0 | -260.0 | YES |
+| encodeMs | 579.0 | 576.0–626.0 | 381.0 | 354.0–418.0 | -198.0 | YES |
+| lastEncodeMs | 969.0 | 966.0–1102.0 | 633.0 | 588.0–690.0 | -336.0 | YES |
+| boardReadyMs | 422.0 | 410.0–447.0 | 545.0 | 526.0–572.0 | 123.0 | YES |
+| tbtMs | 0.0 | 0.0–0.0 | 0.0 | 0.0–0.0 | 0.0 | no — inside the spread |
