@@ -1,0 +1,391 @@
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..2b16db28 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -1137,9 +1137,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+   --logo-scale: 0.72;
+ }
+ 
+-/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
++/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock
++   AND, from T9-W7 §13, on the same curve. It was the one declared twin riding two curves:
++   BEAT 0 leaves on `--ease-fadeOut` (the house's leave curve — things accelerate off the
++   page) and this rode the glass glide, whose job is a sheet arriving. One leave, one curve. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--motion-leave, 200ms) var(--ease-fadeOut);
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..a3141867 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -587,7 +587,7 @@ html {
+      tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
+   .solve-success .grid-line {
+     stroke: var(--color-gold-star) !important;
+-    transition: stroke 500ms;
++    transition: stroke var(--motion-throw, 520ms) var(--ease-drawOn);
+   }
+ 
+   /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+@@ -604,7 +604,7 @@ html {
+       8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+       0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+       8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
+-    transition: box-shadow 500ms;
++    transition: box-shadow var(--motion-throw, 520ms) var(--ease-drawOn);
+   }
+ 
+   /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+@@ -665,8 +665,8 @@ html {
+     html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
+       transition:
+-        background-color 350ms ease,
+-        color 350ms ease !important;
++        background-color var(--motion-dusk, 350ms) var(--ease-standard),
++        color var(--motion-dusk, 350ms) var(--ease-standard) !important;
+     }
+   }
+ 
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index b961a8c8..806478ab 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -141,7 +141,14 @@ defineExpose({
+   padding: 0.5rem 0.15rem;
+   clip-path: polygon(4% 2%, 96% 0%, 100% 50%, 97% 94%, 5% 100%, 0% 52%);
+   transform: rotate(1.4deg);
+-  transition: transform 150ms ease-out;
++  transition: transform var(--motion-whisper, 150ms) var(--ease-drawOn);
++}
++
++/* PRM: the tongue's tilt is a gesture like any other — it collapses to a same-frame swap. */
++@media (prefers-reduced-motion: reduce) {
++  .drawer-tab-text {
++    transition: none;
++  }
+ }
+ 
+ .drawer-tab:hover .drawer-tab-text {
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..10d8a55d 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1954,8 +1954,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+      ±1.25-unit nudge, not a tooth, and CrayonHeart already rules grain sub-perceptual below
+      20 px). Only what actually moved on hover is still allowed to tween. */
+   transition:
+-    background-color 150ms,
+-    color 150ms;
++    background-color var(--motion-whisper, 150ms) var(--ease-standard),
++    color var(--motion-whisper, 150ms) var(--ease-standard);
+ }
+ 
+ /* T4-WM §2: the icon-btn hover paint stuck after a tap on touch (r2 §4) — fenced to
+@@ -2079,7 +2079,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ .sparkle-icon {
+   filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  transition: filter var(--motion-leave, 200ms) var(--ease-standard);
+ }
+ 
+ @media (hover: hover) {
+@@ -2129,7 +2129,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ @media (prefers-reduced-motion: no-preference) {
+   .action-bar::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper, 150ms) var(--ease-standard);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/SolverErrorNote.vue b/web/frontend/src/games/shared/SolverErrorNote.vue
+index 4bcc8e34..1eb69416 100644
+--- a/web/frontend/src/games/shared/SolverErrorNote.vue
++++ b/web/frontend/src/games/shared/SolverErrorNote.vue
+@@ -94,7 +94,7 @@ onMounted(async () => {
+   padding: 0.15rem 0.6rem;
+   cursor: pointer;
+   filter: url(#grain-static);
+-  transition: background 150ms;
++  transition: background var(--motion-whisper, 150ms) var(--ease-standard);
+ }
+ 
+ .error-note-retry:hover {
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..7d6460ce 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -375,7 +375,7 @@
+    went with the sentinel's own — T9-W2 §2.2, above.) */
+ @media (prefers-reduced-motion: no-preference) {
+   .controls-card::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper, 150ms) var(--ease-standard);
+   }
+ }
+ 
+@@ -614,7 +614,7 @@
+ 
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave, 200ms) var(--ease-fadeOut);
+     animation: none;
+   }
+ 
+@@ -626,7 +626,7 @@
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave, 200ms) var(--ease-fadeOut);
+     animation: none;
+   }
+ }
+diff --git a/web/frontend/src/games/shared/useControlsDrawer.ts b/web/frontend/src/games/shared/useControlsDrawer.ts
+index 5831150d..98fd0bc9 100644
+--- a/web/frontend/src/games/shared/useControlsDrawer.ts
++++ b/web/frontend/src/games/shared/useControlsDrawer.ts
+@@ -1,5 +1,7 @@
+ import { computed, nextTick, ref, watch } from "vue";
+ 
++import { MOTION } from "@pencil/config/pencilConfig";
++
+ import { mediaRef, useRowRegime } from "./useCoarsePointer";
+ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
+ 
+@@ -82,8 +84,9 @@ type DrawerPhase = "idle" | "closing" | "opening";
+ const STORAGE_KEY = "csp-drawer-open";
+ /** Band-D one-shot — the movers' shared WAAPI clock (scene.css arms no transitions).
+  *  520ms: the glass settle wants a touch more breath than the dead spring's 480
+- *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
+-const GLIDE_MS = 520;
++ *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). The number
++ *  is unchanged; it now lives where the covenant says timing lives (T9-W7 §13). */
++const GLIDE_MS = MOTION.drawerGlideMs;
+ 
+ const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
+ 
+diff --git a/web/frontend/src/main.ts b/web/frontend/src/main.ts
+index 1c533ff0..8830486b 100644
+--- a/web/frontend/src/main.ts
++++ b/web/frontend/src/main.ts
+@@ -8,6 +8,10 @@ if (import.meta.env.DEV) {
+ 
+ import { createApp } from "vue";
+ import App from "./App.vue";
++import { publishMotionRungs } from "@pencil/config/pencilConfig";
+ import "./assets/index.css";
+ 
++// The duration ladder reaches CSS from ONE place, before the first paint (T9-W7 §13).
++publishMotionRungs(document.documentElement);
++
+ createApp(App).mount("#app");
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..73f9e8d3 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -714,7 +714,7 @@ onUnmounted(() => {
+   padding: 0;
+   border-radius: 50%;
+   background: transparent;
+-  transition: transform 200ms ease;
++  transition: transform var(--motion-leave, 200ms) var(--ease-standard);
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+@@ -871,8 +871,8 @@ onUnmounted(() => {
+   scale: 0.2;
+   opacity: 0;
+   transition:
+-    scale 150ms ease-in,
+-    opacity 100ms ease-in !important;
++    scale var(--motion-whisper, 150ms) var(--ease-accelIn),
++    opacity 100ms var(--ease-accelIn) !important;
+ }
+ 
+ .toggle-icon.is-active .twinkle-star,
+@@ -973,7 +973,7 @@ onUnmounted(() => {
+   .toggle-rest {
+     visibility: visible;
+     opacity: 0;
+-    transition: opacity 200ms ease;
++    transition: opacity var(--motion-leave, 200ms) var(--ease-standard);
+   }
+ 
+   .toggle-rest.is-active {
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+index f662c045..e88e0e60 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+@@ -326,7 +326,14 @@ const filterUrl = computed(() => {
+    no motion, PRM-safe by construction. Triggered by the hosting `.group`'s
+    hover/focus-within (the attribution trigger), with a self-hover fallback. */
+ .face {
+-  transition: opacity 240ms ease;
++  transition: opacity var(--motion-note, 250ms) var(--ease-standard);
++}
++
++/* PRM: the wink is a named gesture, so it collapses to a same-frame swap like the rest. */
++@media (prefers-reduced-motion: reduce) {
++  .face {
++    transition: none;
++  }
+ }
+ .face-b {
+   opacity: 0;
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..555703c5 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -118,9 +118,43 @@ export interface FilterPreset {
+ // the same rAF tick and the pipeline gets idle frames between beats. Cadences quantize
+ // to whole beats (`beatsFor`); amplitudes, seeds, and the boil character are untouched.
+ 
++/** THE DURATION LADDER (T9-W7 §13, T9-M09) — a short closed set of LENGTHS, not
++ *  meanings. What a rung is USED for is the call site's business; the ladder only says
++ *  how long a thing may take. Six rungs, every one of them a number this product already
++ *  ships, so nothing the owner has ruled moves:
++ *
++ *    whisper 150  the most-used length in the estate (18 sites): a hover, a tape, a hint
++ *    leave   200  MOTION.chromeLeaveMs — chrome leaving the page (14 sites)
++ *    note    250  a written note arriving (7 sites)
++ *    dusk    350  the theme's colour turn (4 sites)
++ *    step    440  MOTION.cardStepMs — one card slot (T4-W12 ballot row 4, owner-ratified)
++ *    throw   520  MOTION.boardFoldMs + the drawer — a full sheet (audit 4, 2026-07-11)
++ *
++ *  ABOVE THE LADDER there are five LONG-FORM lengths, and they are NOT rungs: the
++ *  wordmark's 1.2s clip write-on, plush-land's 1010ms, the bloom's 800ms, the loader's
++ *  1000ms infinite cycle, refuse-shake's 600ms. Each was auditioned as itself; a ladder
++ *  that swallowed them would be shortening a deliberate length to make a law tidy, which
++ *  the quality law forbids. They stay literals and say so at their call site.
++ *
++ *  BOTH LAYERS, ONE SOURCE: `publishMotionRungs` writes every rung onto the document root
++ *  as `--motion-<rung>`, so a `<style>` block reads `var(--motion-whisper, 150ms)` — the
++ *  `--card-step-ms` precedent (GameGallery.vue:930 → GameCard.vue:411) lifted from one
++ *  component to the root and widened to the whole ladder. The fallback in each var() is
++ *  the same number, so a rule still paints before the publisher runs. */
++const RUNGS = {
++  whisper: 150,
++  leave: 200,
++  note: 250,
++  dusk: 350,
++  step: 440,
++  throw: 520,
++} as const;
++
+ export const MOTION = {
+   /** The one beat window every perpetual boil swap lands on (~8Hz). */
+   beatMs: 125,
++  /** The ladder itself — see RUNGS above. */
++  rungs: RUNGS,
+   /** Named cadence bands — the beat divisor a pose stack steps on, so a slower
+    *  sky still lands its swaps in the shared dirty frame. 1.5 is rational on the
+    *  beat grid (2 flips per 3 beats, an alternating 250/125ms dwell): no band
+@@ -147,20 +181,25 @@ export const MOTION = {
+    *  throw, 520 (the drawer's full-sheet ceiling) dragged for the shorter travel; 440
+    *  is the settled read, monotone on the glass curve with zero overshoot (`snap-glide-
+    *  trace.json`). Inside the glass band, no new named curve. */
+-  cardStepMs: 440,
++  cardStepMs: RUNGS.step,
+   /** Board⇄card FOLD (T4-W12 Wave C) — the gallery entry folds the live board INTO the
+    *  center card (and the exit unfolds it back) as a classic FLIP on the ONE glass curve
+    *  (`curves.drawerGlide`) via the extracted `useFlipGlide` engine. A FULL-sheet throw
+    *  (board → card-face, not one card slot), so it takes the drawer's glass ceiling 520ms
+    *  — longer than the 440ms card-step. Lands HERE, not as an App-local literal, per the
+    *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap). */
+-  boardFoldMs: 520,
++  boardFoldMs: RUNGS.throw,
+   /** BEAT 0 — chrome leaves (T4-W12 Wave C2 §ENTRY). The gallery entry opens by fading the
+    *  scene's controls/drawer out on the EXISTING scene-leaving beat (scene.css, 200ms) — the
+    *  board itself never erases (we fold it, not discard it). This is that band, so the fold
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+-  chromeLeaveMs: 200,
++  chromeLeaveMs: RUNGS.leave,
++  /** The controls drawer's throw — the sheet, the case, the masthead and the tab counter-
++   *  scale on ONE clock (useControlsDrawer's `GLIDE_MS`, which lived as a module literal
++   *  until this wave and contradicted the covenant three lines below). The 520 is the
++   *  audit-4 ruling, unchanged: auditioned 480/520/560 by eye at :3001 (the S3′ retune). */
++  drawerGlideMs: RUNGS.throw,
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+@@ -194,6 +233,17 @@ export const MOTION = {
+   },
+ } as const;
+ 
++/** THE ONE PUBLISHER. Writes the ladder onto an element as `--motion-<rung>` custom
++ *  properties, so the CSS layer and the TS layer can never disagree: there is no second
++ *  copy to retune. Called once from main.ts against `document.documentElement`, BEFORE
++ *  mount, so the first paint already has them; every consumer still carries the rung's own
++ *  number as the var() fallback, which is what makes a missed publish a no-op rather than a
++ *  zero-length transition. */
++export function publishMotionRungs(el: HTMLElement): void {
++  for (const [name, ms] of Object.entries(MOTION.rungs))
++    el.style.setProperty(`--motion-${name}`, `${ms}ms`);
++}
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..70fef48e 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -586,8 +586,8 @@ onUnmounted(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+     transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++      stroke-dashoffset var(--motion-note, 250ms) var(--ease-drawOn),
++      opacity var(--motion-throw, 520ms) var(--ease-standard);
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+index 48de51d2..56da4a3f 100644
+--- a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
++++ b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+@@ -268,7 +268,7 @@ const keyBucketMs = computed(() =>
+   .answer-key-laminate,
+   .answer-key-laminate.is-shown {
+     transform: none;
+-    transition: opacity 150ms linear;
++    transition: opacity var(--motion-whisper, 150ms) var(--ease-standard);
+   }
+   /* Key glyphs: PRM-instant at 0.9 is inherited from the primitive itself
+      (.pencil-draw-on's reduce arm lands opacity at --draw-opacity) — no scoped rule. */
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..f5f90bc0 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -106,7 +106,7 @@ const geom = computed(() => {
+   border: none;
+   opacity: 0;
+   pointer-events: none;
+-  transition: opacity 150ms;
++  transition: opacity var(--motion-whisper, 150ms) var(--ease-standard);
+   /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+      the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+      controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it
+@@ -116,6 +116,13 @@ const geom = computed(() => {
+   z-index: 50;
+ }
+ 
++/* PRM: the tape appears without a fade. */
++@media (prefers-reduced-motion: reduce) {
++  .washi-label {
++    transition: none;
++  }
++}
++
+ /* Shown on button hover (parent .group) or keyboard focus. */
+ .group:hover .washi-label,
+ .group:focus-visible .washi-label {

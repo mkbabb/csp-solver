@@ -1,0 +1,49 @@
+/* NOTE-ERASE pass-1 prototype overlay — injected with `addStyleTag`, never a source edit.
+   Byte-identical to the RUB_OUT_CSS constant in ../probe/erase.probe.ts.
+
+   THE WRITE-IN, at HEAD (MarginNote.vue:149, index.css:1115):
+     ink-write-in 250ms var(--ease-noteWrite) backwards
+       from { clip-path: inset(0 100% 0 0) }  to { clip-path: inset(0 0 0 0) }
+
+   THE RUB-OUT is that run backwards, on the erase family's own curve: the line goes from its
+   END back to its start. `--ease-accelIn` is the curve the laminate already leaves on
+   (AnswerKeyLaminate.vue:224-226, 200ms out against a 280ms lay-down).
+
+   NO FILL. Law 6 (the motion vocabulary: `backwards`, never `forwards`/`both`) and the
+   secondary census `FILL_ALLOWLIST` (filterBudget.ts:252, gated by
+   e2e/filter-census.spec.ts G3.2) both bite here: a `forwards` rub-out would need a new
+   allowlist row. It does not need one, because the end pose of an EXIT is "not there" — the
+   node is removed when the verb finishes and the released fill has nothing to restore. The
+   probe's E2 trace shows exactly what happens when it is NOT removed: at t = ended + 1 frame
+   the note is back at clip `none`, opacity 1. */
+@keyframes ink-rub-out {
+  from {
+    clip-path: inset(0 0 0 0);
+  }
+  to {
+    clip-path: inset(0 100% 0 0);
+  }
+}
+
+@keyframes ink-rub-out-fade {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+.margin-note-ink[data-note-state="erasing"] {
+  animation:
+    ink-rub-out var(--note-rub-dur, 180ms) var(--ease-accelIn),
+    ink-rub-out-fade var(--note-rub-dur, 180ms) var(--ease-accelIn);
+}
+
+/* arm (b): the settle. After eight beats the note stops being the loudest ink on the page and
+   waits for an act. Colour only — no opacity, no geometry, nothing that could promote a layer
+   or touch the glyphs. */
+.margin-note-ink[data-note-age="settled"] {
+  color: var(--ink-press-quiet);
+  transition: color var(--note-settle-dur, 500ms) var(--ease-standard);
+}

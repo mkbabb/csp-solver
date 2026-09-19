@@ -1,0 +1,60 @@
+### the critic's re-runs, in the prototype's worktree (wf_8630d340-e56-64)
+
+--- npm run lint:verbs (bare exit)
+declarations that name neither a verb nor a rung: 0  (budget 0)
+  by rule — curve 0 · rung 0 · the fence 0 declarations / 0 terms · the set 0 · what it moves 0 · direction 0
+admissions in the ledger: 36, stale 0
+  by kind — shape 12 · signature 9 · layout 1 · graded 6 · loop 1 · prm 3 · elsewhere 4
+declarations written twice in one file (the ordinal keeps them apart): 4
+movers that spend: 2 of 2
+the toggle's beat table: 8 beats, every one read back off its rule
+undeclared duplicate curve tokens: 0
+published rows: 13 of 13 wanted, divergent 0
+verbs with a number of their own: 1 (dusk); exactly one is lawful
+the block matches the config byte for byte: yes
+the source marker pair is in pencilConfig.ts: yes
+GREEN
+GREEN
+exit 0
+
+--- npm run lint:knip (bare exit 1) — RED on the prototype, exit 0 on main
+Unused exports (6)
+TS_BEGIN            scripts/publish-verbs.mjs:31:14 
+TS_END              scripts/publish-verbs.mjs:32:14 
+BEGIN               scripts/publish-verbs.mjs:33:14 
+END                 scripts/publish-verbs.mjs:35:14 
+rows      function  scripts/publish-verbs.mjs:114:17
+block     function  scripts/publish-verbs.mjs:123:17
+
+--- lint:copy / lint:motion / lint:theme-tokens / lint:ink — all bare exit 0
+
+--- vue-tsc -b --force
+TSC_EXIT=0
+ALLDONE
+
+--- vitest src/pencil/config/pencilVerbs.test.ts
+ Test Files  1 passed (1)
+      Tests  5 passed (5)
+   Start at  19:15:00
+   Duration  816ms (transform 31ms, setup 19ms, import 47ms, tests 4ms, environment 591ms)
+
+VITEST_EXIT=0
+
+--- two clean rebuilds of the banked tree (npx vite build)
+dist/assets/index-CZKMXa0jaF0Y.js                  216.65 kB │ gzip: 74.75 kB
+dist/assets/index-CZKMXa0jaF0Y.js
+43 files / 809.3 KB both times; diff -rq of the two dists: empty
+
+--- planted probe A: spend("turn","touch") in useCarouselGlide.ts (SRC= copy)
+gate reads 0 offences, GREEN
+--- planted probe B: .probe-escape { animation: note-in var(--rung-mark) linear backwards } in index.css
+gate reads 0 offences, GREEN
+--- planted probe C: star3 deleted from @toggle-beats + its delay moved 720->900ms
+gate 8 reads '7 beats, every one read back off its rule'; the move is caught only by the ledger (stale 1 + 1 unadmitted)
+
+--- shipped-CSS set diff, base dist (index-BMuoFtzKf9_k.css) vs prototype (index-DyYvzSpy3VHO.css)
+data-v hashes normalised, timing lines excluded, sorted -u: 17 delta lines, of which the only substantive ones are
+  > .margin-note-ink.is-rubbing-out
+  > @keyframes ink-rub-out
+  > clip-path:inset(0 0 0 100%)
+the rest are scoped-keyframe renames (eraserScrub/sharePop/player-*/plush-land/toggle-squash). Zero colour, zero geometry.

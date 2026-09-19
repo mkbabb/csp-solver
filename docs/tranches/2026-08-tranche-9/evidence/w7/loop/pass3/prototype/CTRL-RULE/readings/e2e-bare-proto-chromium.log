@@ -1,0 +1,1282 @@
+
+Running 238 tests using 3 workers
+
+[1/238] [chromium] › e2e/a11y.spec.ts:268:5 › 3.1 rowsPerGrid › thermo: the AX tree reads grid → row → gridcell, N rows of N cells
+[2/238] [chromium] › e2e/a11y.spec.ts:268:5 › 3.1 rowsPerGrid › futoshiki: the AX tree reads grid → row → gridcell, N rows of N cells
+[3/238] [chromium] › e2e/a11y.spec.ts:268:5 › 3.1 rowsPerGrid › sudoku: the AX tree reads grid → row → gridcell, N rows of N cells
+[4/238] [chromium] › e2e/a11y.spec.ts:268:5 › 3.1 rowsPerGrid › killer: the AX tree reads grid → row → gridcell, N rows of N cells
+[5/238] [chromium] › e2e/a11y.spec.ts:268:5 › 3.1 rowsPerGrid › kenken: the AX tree reads grid → row → gridcell, N rows of N cells
+[6/238] [chromium] › e2e/a11y.spec.ts:327:3 › 3.2 guardAnnounced › arming the destructive-work guard announces its armed state
+[7/238] [chromium] › e2e/a11y.spec.ts:347:3 › 3.2 guardAnnounced › the armed guard contains focus (aria-modal + focus inside the dialog)
+[8/238] [chromium] › e2e/a11y.spec.ts:370:3 › 3.2 guardAnnounced › an Enter into the armed guard cannot discard the board unheard
+[9/238] [chromium] › e2e/a11y.spec.ts:427:3 › 3.3 optionsInPicker › the picker publishes five named, AX-visible options
+[10/238] [chromium] › e2e/a11y.spec.ts:476:3 › 3.4 ctrlKDoesNotPeek › Ctrl+K and Cmd+K never trigger the single-key peek
+[11/238] [chromium] › e2e/a11y.spec.ts:506:3 › 3.4 ctrlKDoesNotPeek › a keyboard-shortcuts help names k, g, h, p and d
+[12/238] [chromium] › e2e/a11y.spec.ts:537:3 › 3.5 unnamedImages › a dealt board publishes zero unnamed image nodes
+[13/238] [chromium] › e2e/a11y.spec.ts:573:3 › 3.5 unnamedImages › a filled cell announces its value exactly once
+[14/238] [chromium] › e2e/a11y.spec.ts:619:3 › 3.6 stability › the grid invariants track N (4×4 and 9×9), never a magic total
+[15/238] [chromium] › e2e/a11y.spec.ts:635:3 › 3.6 stability › the invariants survive a re-deal (deal-variant figures never asserted)
+[16/238] [chromium] › e2e/access.spec.ts:235:3 › 2.1 focus-occlusion census — the desktop card › no control in the controls card focuses into a full burial
+[17/238] [chromium] › e2e/access.spec.ts:255:3 › 2.1 focus-occlusion census — the desktop card › the marks-mode "Normal" button is reachable, found by identity
+[18/238] [chromium] › e2e/access.spec.ts:328:3 › 2.2 drawer-open inert census — the phone › no covered control in the drawer subtree stays tabbable
+[19/238] [chromium] › e2e/access.spec.ts:375:3 › 2.3 the roster announces › a join and a leave each move a live region
+[20/238] [chromium] › e2e/access.spec.ts:515:5 › 2.3 contrast floor — light › .icon-sublabel and .ctrl-btn clear 4.5:1 (light)
+[21/238] [chromium] › e2e/access.spec.ts:515:5 › 2.3 contrast floor — dark › .icon-sublabel and .ctrl-btn clear 4.5:1 (dark)
+[22/238] [chromium] › e2e/affordances.spec.ts:122:1 › print: chrome hidden, black strokes, washes stripped (CSS-only)
+[23/238] [chromium] › e2e/affordances.spec.ts:175:1 › stale-note: teacher-red and gold-star notes clear on the next edit
+[24/238] [chromium] › e2e/affordances.spec.ts:244:1 › conflict note: a pure column duplicate names the COLUMN, never a row
+  1) [chromium] › e2e/access.spec.ts:255:3 › 2.1 focus-occlusion census — the desktop card › the marks-mode "Normal" button is reachable, found by identity 
+
+    Error: the marks row publishes exactly one "Normal"
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card').locator('.zone-row').filter({ has: locator('.zone-row-label').filter({ hasText: /^marks$/ }) }).locator('.ctrl-btn').filter({ hasText: /^Normal$/ })
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - the marks row publishes exactly one "Normal" with timeout 10000ms
+      - waiting for locator('.controls-card').locator('.zone-row').filter({ has: locator('.zone-row-label').filter({ hasText: /^marks$/ }) }).locator('.ctrl-btn').filter({ hasText: /^Normal$/ })
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      263 |       .locator(".zone-row", { has: page.locator(".zone-row-label", { hasText: /^marks$/ }) })
+      264 |       .locator(".ctrl-btn", { hasText: /^Normal$/ });
+    > 265 |     await expect(normal, 'the marks row publishes exactly one "Normal"').toHaveCount(1);
+          |                                                                          ^
+      266 |
+      267 |     // CONTROL: it is a real, focusable, published control — the defect is the paint over it,
+      268 |     // not an absence. (`inert` and `aria-hidden` are both false here at HEAD.)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/access.spec.ts:265:74
+
+    Error Context: test-results/access-2-1-focus-occlusion-ae729-reachable-found-by-identity-chromium/error-context.md
+
+
+[25/238] [chromium] › e2e/affordances.spec.ts:287:1 › tally: solve writes "N backtracks · Xms" in the note meta; the next edit clears it
+  2) [chromium] › e2e/affordances.spec.ts:175:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      205 |   await setCellValue(page, b1, '9');
+      206 |   await setCellValue(page, b2, '9');
+    > 207 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+          |                                                                          ^
+      208 |
+      209 |   // T8-W6 M16 — the verdict lost its softener AND the em dash that joined it: it read
+      210 |   // 'not quite — check row 3' and now reads 'check row 3' (or 'no solution from here' where
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:207:74
+
+    Error Context: test-results/affordances-stale-note-tea-d4717-otes-clear-on-the-next-edit-chromium/error-context.md
+
+
+[26/238] [chromium] › e2e/affordances.spec.ts:326:1 › tally: with debug off a solved board prints no tally at all
+  3) [chromium] › e2e/affordances.spec.ts:244:1 › conflict note: a pure column duplicate names the COLUMN, never a row 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      259 |   }
+      260 |
+    > 261 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+          |                                                                          ^
+      262 |
+      263 |   const note = page.locator('.margin-note');
+      264 |   await expect(note).toHaveClass(/teacher-red/, { timeout: 20000 });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:261:74
+
+    Error Context: test-results/affordances-conflict-note--9bd17-ames-the-COLUMN-never-a-row-chromium/error-context.md
+
+
+[27/238] [chromium] › e2e/affordances.spec.ts:339:1 › undo: Ctrl+Z reverts, Ctrl+Shift+Z redoes, Meta+Z works, plain z is not swallowed
+[28/238] [chromium] › e2e/affordances.spec.ts:373:1 › fill batch: one Fill sweep undoes as ONE gesture, redo re-fills
+  4) [chromium] › e2e/affordances.spec.ts:287:1 › tally: solve writes "N backtracks · Xms" in the note meta; the next edit clears it 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      295 |
+      296 |   await expect(page.locator('.margin-note-meta')).toHaveCount(0); // idle → no tally
+    > 297 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+          |                                                                          ^
+      298 |
+      299 |   const stat = page.locator('.margin-note-meta');
+      300 |   await expect(stat).toBeVisible({ timeout: 20000 });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:297:74
+
+    Error Context: test-results/affordances-tally-solve-wr-bfcbc-eta-the-next-edit-clears-it-chromium/error-context.md
+
+
+[29/238] [chromium] › e2e/affordances.spec.ts:410:1 › permalink: share writes ?board= and a reload reproduces the exact board
+  5) [chromium] › e2e/affordances.spec.ts:326:1 › tally: with debug off a solved board prints no tally at all 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      327 |   await loadSudoku(page, '?size=3&difficulty=MEDIUM');
+      328 |
+    > 329 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+          |                                                                          ^
+      330 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+      331 |     timeout: 20000,
+      332 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:329:74
+
+    Error Context: test-results/affordances-tally-with-deb-c5f56-oard-prints-no-tally-at-all-chromium/error-context.md
+
+
+[30/238] [chromium] › e2e/affordances.spec.ts:449:1 › hint: first H gives the reasoning + highlights, second H inks the digit
+[31/238] [chromium] › e2e/affordances.spec.ts:480:1 › marks-gesture: no marks pre-peek, K shows them, Esc clears them
+  6) [chromium] › e2e/affordances.spec.ts:373:1 › fill batch: one Fill sweep undoes as ONE gesture, redo re-fills 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Fill in every cell that has only one possible number"]')
+
+
+      384 |   await page
+      385 |     .locator('.controls-card button[aria-label="Fill in every cell that has only one possible number"]')
+    > 386 |     .click();
+          |      ^
+      387 |   // The sweep inks every forced cell (all of the blank row) in one press.
+      388 |   await expect
+      389 |     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 20000 })
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:386:6
+
+    Error Context: test-results/affordances-fill-batch-one-f64cd-s-ONE-gesture-redo-re-fills-chromium/error-context.md
+
+
+[32/238] [chromium] › e2e/affordances.spec.ts:499:1 › composed keyboard: K-peek from cell focus + roving tabindex (Ctrl+Home/End) + undo in one session
+[33/238] [chromium] › e2e/affordances.spec.ts:581:1 › composed keyboard (futoshiki twin): K-peek from cell focus + roving + undo in one session
+[34/238] [chromium] › e2e/board-covisibility.spec.ts:70:3 › mark 6 — the band dissolves › the tally files with the deal, and the strip it left can still be seen
+[35/238] [chromium] › e2e/board-covisibility.spec.ts:108:3 › mark 6 — the band dissolves › the strip below the board is one reserved line — no more, and no less
+[36/238] [chromium] › e2e/board-covisibility.spec.ts:175:3 › mark 6 — the band dissolves › a solved board prints its tally exactly once, at every width
+[37/238] [chromium] › e2e/board-covisibility.spec.ts:254:3 › mark 6 — the band dissolves › the grade crests on the board — the celebration never moves the page
+[38/238] [chromium] › e2e/board-covisibility.spec.ts:397:3 › mark 6 — the band dissolves › the case: at 390x664 the page is one viewport, and the play verbs are in it
+[39/238] [chromium] › e2e/board-covisibility.spec.ts:573:3 › the board fits the viewport it is drawn in › a landscape phone gets a board no larger than the screen it is drawn on
+[40/238] [chromium] › e2e/board-covisibility.spec.ts:603:3 › the board fits the viewport it is drawn in › turning the phone does not shrink the cell a finger has to hit
+[41/238] [chromium] › e2e/board-covisibility.spec.ts:676:3 › the board fits the viewport it is drawn in › the board hangs no further below the fold than the chrome above it
+[42/238] [chromium] › e2e/drawer.spec.ts:91:1 › drawer: default open — tab present (≥44px), aria wired, controls visible
+[43/238] [chromium] › e2e/drawer.spec.ts:135:1 › drawer: close glides transform-only, board grows ≥24px + centers, persists
+  7) [chromium] › e2e/affordances.spec.ts:410:1 › permalink: share writes ?board= and a reload reproduces the exact board 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Share board link"]')
+
+
+      418 |   await setCellValue(page, blank, '7');
+      419 |
+    > 420 |   await page.locator('.controls-card button[aria-label="Share board link"]').click();
+          |                                                                              ^
+      421 |   await expect
+      422 |     .poll(() => new URL(page.url()).searchParams.has('board'), { timeout: 5000 })
+      423 |     .toBe(true);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/affordances.spec.ts:420:78
+
+    Error Context: test-results/affordances-permalink-shar-df927--reproduces-the-exact-board-chromium/error-context.md
+
+
+[44/238] [chromium] › e2e/drawer.spec.ts:272:1 › drawer: open focuses the first control; Esc closes from within and returns focus to the tab
+[45/238] [chromium] › e2e/drawer.spec.ts:308:1 › drawer: keyboard shortcuts (undo, K-peek) work with the drawer closed
+[46/238] [chromium] › e2e/drawer.spec.ts:345:3 › drawer under prefers-reduced-motion › PRM: toggle is an instant state swap — no glide class, immediate layout
+[47/238] [chromium] › e2e/drawer.spec.ts:394:3 › drawer below the row regime — LANDSCAPE IS THE DOCK (T9-W2 §2.2, a declared delta on T5-W4 charter (c)) › <1024 landscape: the tab rides the board, the card docks, nothing scrolls
+[48/238] [chromium] › e2e/drawer.spec.ts:453:3 › drawer below the row regime — PORTRAIT is the dock › <1024 portrait: the tongue summons a fixed sheet, and the board never moves
+[49/238] [chromium] › e2e/drawer.spec.ts:493:3 › drawer below the row regime — PORTRAIT is the dock › <1024 portrait always lands closed, and a persisted-open desk choice does not carry
+[50/238] [chromium] › e2e/follow-still-authorship.spec.ts:54:1 › a still the table turned away from keeps its peer's ink
+[51/238] [chromium] › e2e/font-census.spec.ts:231:1 › the ledger holds BOTH directions across two games and two regimes
+[52/238] [chromium] › e2e/font-census.spec.ts:344:1 › no string renders in two faces except the ones this estate has ledgered
+[53/238] [chromium] › e2e/futoshiki.spec.ts:80:1 › gallery switches to futoshiki: default board renders with inequality carets
+  8) [chromium] › e2e/font-census.spec.ts:231:1 › the ledger holds BOTH directions across two games and two regimes 
+
+    Error: ledger rows no cell produced — retire them or state the condition
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 3
+
+    - Array []
+    + Array [
+    +   "Patrick Hand|Easy",
+    + ]
+
+      316 |     (k) => !seen.has(k) && !(k in CONDITIONAL) && !PER_DEAL.has(k),
+      317 |   );
+    > 318 |   expect(stale, "ledger rows no cell produced — retire them or state the condition").toEqual(
+          |                                                                                      ^
+      319 |     [],
+      320 |   );
+      321 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/font-census.spec.ts:318:86
+
+    Error Context: test-results/font-census-the-ledger-hol-273f9-s-two-games-and-two-regimes-chromium/error-context.md
+
+
+[54/238] [chromium] › e2e/futoshiki.spec.ts:107:1 › size switching: 4×4/5×5/6×6/7×7 each change the board cell count
+[55/238] [chromium] › e2e/futoshiki.spec.ts:132:1 › blank cell accepts input via pointer + on-screen affordance
+[56/238] [chromium] › e2e/futoshiki.spec.ts:166:1 › solve: a fresh generated board solves to solve-success
+[57/238] [chromium] › e2e/gallery-deal.spec.ts:103:1 › band: a sibling of the listbox, never a control inside role=option
+[58/238] [chromium] › e2e/gallery-deal.spec.ts:192:1 › cold start: an UNMOUNTED game reports its saved board and offers resume
+[59/238] [chromium] › e2e/gallery-deal.spec.ts:220:1 › cold start: a game with NO board offers start, and the card keeps its range line
+[60/238] [chromium] › e2e/gallery-deal.spec.ts:231:1 › cold start: GIVENS ARE NOT WORK — a dealt, untouched board reads "dealt"
+[61/238] [chromium] › e2e/gallery-deal.spec.ts:252:1 › guard: a deal onto ANOTHER game with work on it arms the ribbon
+[62/238] [chromium] › e2e/gallery-deal.spec.ts:285:1 › guard: the NEGATIVE control — an untouched target board deals straight through
+[63/238] [chromium] › e2e/gallery-deal.spec.ts:308:1 › guard: the `d` hotkey routes through the SAME ribbon, from the deck AND from the band
+[64/238] [chromium] › e2e/gallery-deal.spec.ts:391:1 › guard: a cross-game deal ABANDONS the mounted board — dirty sudoku, clean target, ribbon
+[65/238] [chromium] › e2e/gallery-deal.spec.ts:415:1 › guard: when BOTH boards hold work the sub-line says so
+[66/238] [chromium] › e2e/gallery-deal.spec.ts:491:1 › guard: a dirty SAME-game deal raises the ribbon too — the subsumption, gated
+[67/238] [chromium] › e2e/gallery-deal.spec.ts:514:1 › guard: a PRISTINE mounted board deals across with no ribbon (the source-arm control)
+[68/238] [chromium] › e2e/gallery-deal.spec.ts:531:1 › deal: a cross-game deal lands the TARGET game at the STAGED pair
+[69/238] [chromium] › e2e/gallery-deal.spec.ts:561:1 › deal: a same-game deal rides the BRIDGE — the staged pair, and no remount
+[70/238] [chromium] › e2e/gallery-deal.spec.ts:581:1 › deal: a same-game deal issued BEFORE the scene mounts still lands the staged pair
+[71/238] [chromium] › e2e/gallery-deal.spec.ts:652:1 › safe verb: `start` HONOURS the staged pair (a game with no board has none to restore)
+[72/238] [chromium] › e2e/gallery-deal.spec.ts:670:1 › safe verb: `resume` PRINTS the saved pair the moment the chips wander off it
+[73/238] [chromium] › e2e/gallery-deal.spec.ts:707:1 › safe verb: a wandered pair cannot OUTLIVE the transaction
+[74/238] [chromium] › e2e/gallery-deal.spec.ts:735:1 › a11y: the live region carries the staged pair and the board state
+[75/238] [chromium] › e2e/gallery-guard.spec.ts:58:1 › dropdown retired: the wordmark opens the gallery; no listbox affordance remains
+[76/238] [chromium] › e2e/gallery-guard.spec.ts:78:1 › snap chime: the centered card carries a scribble underline; flanks do not
+[77/238] [chromium] › e2e/gallery-guard.spec.ts:99:1 › guard: a solo dirty select switches freely, and the marks are there on return
+[78/238] [chromium] › e2e/gallery-guard.spec.ts:126:1 › guard: keep dismisses the deal ribbon, stays in the gallery, board unchanged
+[79/238] [chromium] › e2e/gallery-guard.spec.ts:146:1 › guard: a pristine board switches to a different game with no ribbon
+[80/238] [chromium] › e2e/gallery-guard.spec.ts:160:1 › guard: selecting the same game never asks, even when the board is dirty
+[81/238] [chromium] › e2e/gallery-guard.spec.ts:213:1 › guard: the armed ribbon is anchored on the chosen card, not on the deck frame
+[82/238] [chromium] › e2e/gallery.spec.ts:107:1 › gallery: ?view=gallery lands in the carousel — listbox roles, labels, focus, pips
+[83/238] [chromium] › e2e/gallery.spec.ts:145:1 › gallery: keyboard step moves the snap, announces it, and updates aria + pips
+[84/238] [chromium] › e2e/gallery.spec.ts:183:1 › gallery: Enter on futoshiki selects it — board swaps, ?game set, ?view cleared
+[85/238] [chromium] › e2e/gallery.spec.ts:199:1 › gallery: Escape cancels back to the board, no swap, ?view cleared
+[86/238] [chromium] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by a staged chip
+  9) [chromium] › e2e/font-census.spec.ts:344:1 › no string renders in two faces except the ones this estate has ledgered 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.innerText: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.zone-row-label').first()
+
+
+      367 |   // same reason: a regression here must not hide inside the ledger's tolerance for the
+      368 |   // pre-existing set.
+    > 369 |   const caption = (await page.locator(".zone-row-label").first().innerText()).trim();
+          |                                                                  ^
+      370 |   expect(caption.length).toBeGreaterThan(0);
+      371 |   expect(mixed.some((m) => m.shown === caption)).toBe(false);
+      372 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/font-census.spec.ts:369:66
+
+    Error Context: test-results/font-census-no-string-rend-76214-es-this-estate-has-ledgered-chromium/error-context.md
+
+
+[87/238] [chromium] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by a page pip
+[88/238] [chromium] › e2e/gallery.spec.ts:235:3 › gallery: Escape still exits with focus moved off the listbox by bare page
+[89/238] [chromium] › e2e/gallery.spec.ts:253:1 › gallery: `g` opens the gallery from playing; a `g` typed into a cell does not
+[90/238] [chromium] › e2e/gallery.spec.ts:279:1 › gallery: only the centered card boils — a flank frame is inert + frozen
+[91/238] [chromium] › e2e/gallery.spec.ts:308:3 › gallery under prefers-reduced-motion › PRM: open is an instant cut — gallery present, no tweening
+[92/238] [chromium] › e2e/gallery.spec.ts:480:1 › drag: pushing the deck left advances the snap and announces it
+[93/238] [chromium] › e2e/gallery.spec.ts:521:1 › drag: a flick moves exactly one card; a release over the centered card selects nothing
+  10) [chromium] › e2e/futoshiki.spec.ts:166:1 › solve: a fresh generated board solves to solve-success 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      171 |
+      172 |   // Solve the freshly-generated (solver-authored, uniquely-solvable) board.
+    > 173 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+          |                                                                          ^
+      174 |
+      175 |   // Terminal UI state: the board carries solve-success once the Worker completes.
+      176 |   await expect(board).toHaveClass(/solve-success/, { timeout: 15000 });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/futoshiki.spec.ts:173:74
+
+    Error Context: test-results/futoshiki-solve-a-fresh-ge-f9284-ard-solves-to-solve-success-chromium/error-context.md
+
+
+[94/238] [chromium] › e2e/gallery.spec.ts:556:1 › drag: a flick whose every move lands inside the sample floor is still a flick
+[95/238] [chromium] › e2e/gallery.spec.ts:606:1 › drag: a slow first sample does not swallow the flick that follows it
+[96/238] [chromium] › e2e/gallery.spec.ts:653:1 › drag: a release that lands a frame after the last move is still a flick
+[97/238] [chromium] › e2e/gallery.spec.ts:704:1 › drag: a grab during a keyboard glide freezes the deck where it is drawn
+[98/238] [chromium] › e2e/gallery.spec.ts:765:1 › click: a flank warps the deck to it, aria + the live region following the same seam
+[99/238] [chromium] › e2e/gallery.spec.ts:801:1 › click: the card the warp delivered then SELECTS on the next click
+[100/238] [chromium] › e2e/gallery.spec.ts:824:1 › drag: a release that lands over a FLANK is swallowed, not taken as a warp
+[101/238] [chromium] › e2e/gallery.spec.ts:860:1 › drag: kenken — the LAST card — is reachable by dragging
+[102/238] [chromium] › e2e/gallery.spec.ts:903:1 › header: the masthead persists in the gallery, names the snapped card, and is inert there
+[103/238] [chromium] › e2e/gallery.spec.ts:995:1 › CH-67: every settled wordmark bake is minted at the size it is shown at
+[104/238] [chromium] › e2e/gallery.spec.ts:1032:3 › gallery on a 375 phone › 375: one card near-fills the width, a neighbor peeks, pips present
+[105/238] [chromium] › e2e/join-language-prm.spec.ts:60:1 › a join renders no ring at all, and the row lands open and written
+[106/238] [chromium] › e2e/join-language-prm.spec.ts:106:1 › a departure is gone the same frame: no held row, no retreating ring
+[107/238] [chromium] › e2e/join-language-prm.spec.ts:129:1 › a peer’s ghost lands drawn — tier 4 sketches on nowhere
+[108/238] [chromium] › e2e/join-language.spec.ts:69:1 › a join rings the board, in the joiner’s own ink, once
+[109/238] [chromium] › e2e/join-language.spec.ts:107:1 › the ring is baked geometry: it mints no filter, in either engine
+[110/238] [chromium] › e2e/join-language.spec.ts:134:1 › the roster row is the other half: the name lands in their ink, and the well says who
+[111/238] [chromium] › e2e/masthead-alignment.spec.ts:112:5 › M17 — the head line › the badge and the celestial hang from one rule (light)
+[112/238] [chromium] › e2e/masthead-alignment.spec.ts:112:5 › M17 — the head line › the badge and the celestial hang from one rule (dark)
+[113/238] [chromium] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1280, in all five games
+[114/238] [chromium] › e2e/masthead-alignment.spec.ts:158:5 › M18 — the board rule › the board hangs from the title at 1440, in all five games
+[115/238] [chromium] › e2e/masthead-alignment.spec.ts:231:3 › M20 — the dock stays a phone regime › a tall landscape window keeps the masthead above the board
+[116/238] [chromium] › e2e/masthead-alignment.spec.ts:278:3 › M20 — the dock stays a phone regime › the dock itself stands at landscape phones
+[117/238] [chromium] › e2e/mobile-platform.spec.ts:90:3 › ios-discipline (iPhone-geometry coarse) › the board scene contains overscroll (no rubber-band / scroll-chain)
+[118/238] [chromium] › e2e/mobile-platform.spec.ts:101:3 › ios-discipline (iPhone-geometry coarse) › game surfaces suppress selection + the double-tap-zoom delay (long-press-clean)
+[119/238] [chromium] › e2e/mobile-platform.spec.ts:144:3 › ios-discipline (iPhone-geometry coarse) › tap-highlight + text-size-adjust are delivered (preflight) app-wide
+[120/238] [chromium] › e2e/mobile-platform.spec.ts:180:3 › ios-discipline (iPhone-geometry coarse) › viewport opts into the notch + the fixed toggle pads clear of the safe area
+[121/238] [chromium] › e2e/mobile-platform.spec.ts:288:3 › keyboard-avoid (emulated visualViewport) › a focused below-fold cell scrolls clear of the emulated keyboard band
+[122/238] [chromium] › e2e/mobile-platform.spec.ts:352:3 › keyboard-avoid (emulated visualViewport) › a viewport wobble with nothing focused publishes no band, and the board holds still
+[123/238] [chromium] › e2e/mobile-platform.spec.ts:432:3 › the 296px keypad band (measured constant, driven through the composable) › with the keypad up, every control seats clear of the band at scrollY 0
+  11) [chromium] › e2e/join-language.spec.ts:134:1 › the roster row is the other half: the name lands in their ink, and the well says who 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.controls-card .tray-well:has(.players-roster, .players-alone) .icon-btn')
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('.controls-card .tray-well:has(.players-roster, .players-alone) .icon-btn')
+
+
+      148 |   await expect(
+      149 |     a.locator('.controls-card .tray-well:has(.players-roster, .players-alone) .icon-btn'),
+    > 150 |   ).toBeVisible();
+          |     ^
+      151 |
+      152 |   await pastBootWindow(a);
+      153 |   const b = await ctx.newPage();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/join-language.spec.ts:150:5
+
+    Error Context: test-results/join-language-the-roster-r-bbf60-r-ink-and-the-well-says-who-chromium/error-context.md
+
+
+[124/238] [chromium] › e2e/mobile-platform.spec.ts:663:3 › iPad portrait (<1024, coarse, stacked) › no horizontal overflow; entry works
+[125/238] [chromium] › e2e/mobile-platform.spec.ts:649:3 › landscape phone (~844×390, coarse) › no horizontal overflow; entry works
+[126/238] [chromium] › e2e/mobile-platform.spec.ts:677:3 › large iPad landscape (≥1024, coarse → desktop drawer layout) › the drawer tab is a clean ≥44px tap target and toggles the rail
+[127/238] [chromium] › e2e/multiplayer.spec.ts:140:1 › solo boot opens no room, and pays no bytes for one
+[128/238] [chromium] › e2e/multiplayer.spec.ts:162:1 › the invite carries the board, and both pages sit at one table
+[129/238] [chromium] › e2e/multiplayer.spec.ts:200:1 › a digit crosses both ways, and it arrives in its author's ink
+[130/238] [chromium] › e2e/multiplayer.spec.ts:241:1 › last writer wins the cell, on both pages
+[131/238] [chromium] › e2e/multiplayer.spec.ts:265:1 › undo skips a cell a peer has taken — your move is spent, their digit stands
+[132/238] [chromium] › e2e/multiplayer.spec.ts:291:1 › an undo is a move the room sees: the digit leaves both boards, and redo restores it
+[133/238] [chromium] › e2e/multiplayer.spec.ts:320:1 › a deal is an epoch: both boards follow, and neither undo stack crosses it
+[134/238] [chromium] › e2e/multiplayer.spec.ts:347:1 › the table says connecting until the room answers, then shows who is at it
+[135/238] [chromium] › e2e/multiplayer.spec.ts:385:1 › leaving drops the room, the roster, and the parameter
+[136/238] [chromium] › e2e/multiplayer.spec.ts:502:1 › the wordmark holds through the join, under an op flood arriving mid-boot
+[137/238] [chromium] › e2e/multiplayer.spec.ts:555:1 › four pages, one board: every roster, every ink, every digit, one contended cell
+[138/238] [chromium] › e2e/multiplayer.spec.ts:610:1 › a player leaves mid-flood: the rosters prune and the survivors keep writing
+[139/238] [chromium] › e2e/multiplayer.spec.ts:649:1 › a joiner arriving mid-game adopts the whole board, then syncs both ways
+[140/238] [chromium] › e2e/multiplayer.spec.ts:683:1 › three hundred ops as fast as the wire takes them, and the boards are one board
+[141/238] [chromium] › e2e/multiplayer.spec.ts:728:1 › a page that reloads mid-session comes back to the same table and the same board
+[142/238] [chromium] › e2e/multiplayer.spec.ts:854:1 › two phones sit at one table, and the well is reachable with the sheet shut
+[143/238] [chromium] › e2e/multiplayer.spec.ts:882:1 › a digit tapped on a phone crosses, and the sheet does not move under the traffic
+[144/238] [chromium] › e2e/multiplayer.spec.ts:950:1 › the real relay carries the board with RTCPeerConnection deleted
+[145/238] [chromium] › e2e/permalink.spec.ts:31:1 › board-only ?board= URL loads the encoded board (sudoku)
+[146/238] [chromium] › e2e/permalink.spec.ts:45:1 › mismatched ?board=/?size= falls closed to the size path (sudoku)
+[147/238] [chromium] › e2e/permalink.spec.ts:57:1 › game switch leaves no foreign board/size params in the URL
+[148/238] [chromium] › e2e/permalink.spec.ts:89:1 › randomize drops ?board= from the URL (sudoku)
+[149/238] [chromium] › e2e/permalink.spec.ts:102:1 › the share affordance writes ?board= on the explicit act (sudoku)
+[150/238] [chromium] › e2e/permalink.spec.ts:118:1 › board-only ?board= loads a futoshiki board with its inequalities, randomize drops it
+[151/238] [chromium] › e2e/permalink.spec.ts:139:1 › an untagged ?board= body fails closed, never a board (sudoku)
+[152/238] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (thermo)
+[153/238] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (killer)
+  12) [chromium] › e2e/permalink.spec.ts:102:1 › the share affordance writes ?board= on the explicit act (sudoku) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Share board link"]')
+
+
+      110 |   expect(boardParam(page)).toBe(false);
+      111 |
+    > 112 |   await page.locator('.controls-card button[aria-label="Share board link"]').click();
+          |                                                                              ^
+      113 |   await expect.poll(() => boardParam(page), { timeout: 5000 }).toBe(true);
+      114 | });
+      115 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/permalink.spec.ts:112:78
+
+    Error Context: test-results/permalink-the-share-afford-fb8db-on-the-explicit-act-sudoku--chromium/error-context.md
+
+
+[154/238] [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (kenken)
+  13) [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (thermo) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Share board link"]')
+
+
+      198 |     expect(boardParam(page)).toBe(false); // never ambient
+      199 |
+    > 200 |     await page.locator('.controls-card button[aria-label="Share board link"]').click();
+          |                                                                                ^
+      201 |     await expect.poll(() => boardParam(page), { timeout: 5000 }).toBe(true);
+      202 |
+      203 |     const shared = page.url();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/permalink.spec.ts:200:80
+
+    Error Context: test-results/permalink-share-writes-a-R-8eb42-und-trips-the-board-thermo--chromium/error-context.md
+
+
+[155/238] [chromium] › e2e/presence.spec.ts:177:1 › a page that dies without a bye leaves the roster on a clock, and the quiet pages keep theirs
+  14) [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (killer) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Share board link"]')
+
+
+      198 |     expect(boardParam(page)).toBe(false); // never ambient
+      199 |
+    > 200 |     await page.locator('.controls-card button[aria-label="Share board link"]').click();
+          |                                                                                ^
+      201 |     await expect.poll(() => boardParam(page), { timeout: 5000 }).toBe(true);
+      202 |
+      203 |     const shared = page.url();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/permalink.spec.ts:200:80
+
+    Error Context: test-results/permalink-share-writes-a-R-cd0bf-und-trips-the-board-killer--chromium/error-context.md
+
+
+[156/238] [chromium] › e2e/prm-void-audition.spec.ts:71:5 › PRM route audition @playwright/test 1.61.1 › the fixture route — test.use({ reducedMotion }) › VOID: the declared option never reaches the page
+[157/238] [chromium] › e2e/prm-void-audition.spec.ts:95:5 › PRM route audition @playwright/test 1.61.1 › the nested fixture route — test.use({ contextOptions }) › LANDS: the void is the dedicated option, not the fixture plumbing
+[158/238] [chromium] › e2e/prm-void-audition.spec.ts:114:3 › PRM route audition @playwright/test 1.61.1 › CONTROL: the same option through browser.newContext() DOES land
+[159/238] [chromium] › e2e/prm-void-audition.spec.ts:131:3 › PRM route audition @playwright/test 1.61.1 › the dead declarations are still on disk to be auditioned
+[160/238] [chromium] › e2e/session-substrate.spec.ts:99:1 › a size-changing deal re-dimensions the whole table, not just the dealer
+[161/238] [chromium] › e2e/session-substrate.spec.ts:132:1 › one page switches game and the whole table turns the page with it
+[162/238] [chromium] › e2e/session-substrate.spec.ts:197:1 › leave a table and come back to it: same name, same row, your digits still yours
+[163/238] [chromium] › e2e/session-substrate.spec.ts:261:1 › a digit is on disk the moment its board stops being the live face
+[164/238] [chromium] › e2e/session-substrate.spec.ts:313:1 › a still draws a peer's digit in the peer's ink, not the reader's
+[165/238] [chromium] › e2e/share-truth.spec.ts:63:1 › sudoku share success: label + aria confirm AND the clipboard holds the link
+  15) [chromium] › e2e/share-truth.spec.ts:63:1 › sudoku share success: label + aria confirm AND the clipboard holds the link 
+
+    Error: expect(locator).toHaveAttribute(expected) failed
+
+    Locator: locator('.controls-card .action-verbs button.icon-btn').last()
+    Expected: "Share board link"
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toHaveAttribute" with timeout 10000ms
+      - waiting for locator('.controls-card .action-verbs button.icon-btn').last()
+
+
+      77 |   await page.waitForSelector('.sudoku-cell', { timeout: 15000 });
+      78 |   const share = shareButton(page);
+    > 79 |   await expect(share).toHaveAttribute('aria-label', 'Share board link');
+         |                       ^
+      80 |
+      81 |   await share.click();
+      82 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/share-truth.spec.ts:79:23
+
+    Error Context: test-results/share-truth-sudoku-share-s-d216e-he-clipboard-holds-the-link-chromium/error-context.md
+
+
+[166/238] [chromium] › e2e/share-truth.spec.ts:97:1 › sudoku share failure: "couldn't copy" signal, link still live in the address bar
+  16) [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (kenken) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Share board link"]')
+
+
+      198 |     expect(boardParam(page)).toBe(false); // never ambient
+      199 |
+    > 200 |     await page.locator('.controls-card button[aria-label="Share board link"]').click();
+          |                                                                                ^
+      201 |     await expect.poll(() => boardParam(page), { timeout: 5000 }).toBe(true);
+      202 |
+      203 |     const shared = page.url();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/permalink.spec.ts:200:80
+
+    Error Context: test-results/permalink-share-writes-a-R-838ea-und-trips-the-board-kenken--chromium/error-context.md
+
+
+[167/238] [chromium] › e2e/share-truth.spec.ts:122:1 › futoshiki share failure: the same "couldn't copy" signal (twin)
+  17) [chromium] › e2e/share-truth.spec.ts:97:1 › sudoku share failure: "couldn't copy" signal, link still live in the address bar 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card .action-verbs button.icon-btn').last()
+
+
+      104 |   const share = shareButton(page);
+      105 |
+    > 106 |   await share.click();
+          |               ^
+      107 |
+      108 |   // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
+      109 |   // failure now says both as sentences.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/share-truth.spec.ts:106:15
+
+    Error Context: test-results/share-truth-sudoku-share-f-0850d-ill-live-in-the-address-bar-chromium/error-context.md
+
+
+[168/238] [chromium] › e2e/share-truth.spec.ts:149:1 › sudoku corrupt ?board= surfaces the margin-voice notice
+[169/238] [chromium] › e2e/share-truth.spec.ts:158:1 › futoshiki corrupt ?board= surfaces the margin-voice notice (twin)
+[170/238] [chromium] › e2e/spoken-controls.spec.ts:174:5 › §3.1 the occlusion law — 390x844 › the risen sheet takes the covered board out of the tab route
+[171/238] [chromium] › e2e/spoken-controls.spec.ts:213:5 › §3.1 the occlusion law — 390x844 › a keystroke cannot land on a cell the sheet is painting over
+[172/238] [chromium] › e2e/spoken-controls.spec.ts:174:5 › §3.1 the occlusion law — 768x1024 › the risen sheet takes the covered board out of the tab route
+[173/238] [chromium] › e2e/spoken-controls.spec.ts:213:5 › §3.1 the occlusion law — 768x1024 › a keystroke cannot land on a cell the sheet is painting over
+[174/238] [chromium] › e2e/spoken-controls.spec.ts:272:3 › §3.5 deals and forced fills announce › a deal says a board arrived, and says what board
+[175/238] [chromium] › e2e/spoken-controls.spec.ts:291:3 › §3.5 deals and forced fills announce › a forced fill says how many squares it filled
+[176/238] [chromium] › e2e/spoken-controls.spec.ts:324:3 › §3.6 the copy act reaches AT › the outcome is spoken, and the name agrees with the label at every beat
+[177/238] [chromium] › e2e/spoken-gallery.spec.ts:93:1 › deck exit by Escape hands focus back to the wordmark that opened it
+  18) [chromium] › e2e/share-truth.spec.ts:122:1 › futoshiki share failure: the same "couldn't copy" signal (twin) 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card .action-verbs button.icon-btn').last()
+
+
+      133 |   const share = shareButton(page);
+      134 |
+    > 135 |   await share.click();
+          |               ^
+      136 |
+      137 |   // T8-W6 M16 — the em dash that joined the two clauses is banned in product copy; the
+      138 |   // failure now says both as sentences.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/share-truth.spec.ts:135:15
+
+    Error Context: test-results/share-truth-futoshiki-shar-39637--couldn-t-copy-signal-twin--chromium/error-context.md
+
+
+[178/238] [chromium] › e2e/spoken-gallery.spec.ts:105:1 › deck exit by Enter on the SAME game hands focus back
+[179/238] [chromium] › e2e/spoken-gallery.spec.ts:120:1 › deck exit by Enter on ANOTHER game hands focus back
+[180/238] [chromium] › e2e/spoken-gallery.spec.ts:136:1 › deck exit by `d` to deal hands focus back
+[181/238] [chromium] › e2e/spoken-gallery.spec.ts:150:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark
+[182/238] [chromium] › e2e/spoken-gallery.spec.ts:178:1 › an Escape taken with focus OUTSIDE the deck does not steal focus back
+[183/238] [chromium] › e2e/spoken-gallery.spec.ts:236:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport
+[184/238] [chromium] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width
+[185/238] [chromium] › e2e/sudoku-interaction.spec.ts:51:1 › valid solution: randomize → solve → success state + all cells filled
+[186/238] [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle
+[187/238] [chromium] › e2e/sudoku-interaction.spec.ts:103:1 › consecutive solve: values remain unchanged on second solve
+  19) [chromium] › e2e/sudoku-interaction.spec.ts:51:1 › valid solution: randomize → solve → success state + all cells filled 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      39 |
+      40 | async function solveBoard(page: Page) {
+    > 41 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+         |                                                                          ^
+      42 |   // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+      43 |   // once the Worker returns (both terminal — the caller asserts the specific verdict).
+      44 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+        at solveBoard (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:41:74)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:55:9
+
+    Error Context: test-results/sudoku-interaction-valid-s-5cf84-cess-state-all-cells-filled-chromium/error-context.md
+
+
+  20) [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      39 |
+      40 | async function solveBoard(page: Page) {
+    > 41 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+         |                                                                          ^
+      42 |   // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+      43 |   // once the Worker returns (both terminal — the caller asserts the specific verdict).
+      44 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+        at solveBoard (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:41:74)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:73:9
+
+    Error Context: test-results/sudoku-interaction-invalid-d6572-ell-→-state-reverts-to-idle-chromium/error-context.md
+
+
+[188/238] [chromium] › e2e/sudoku-interaction.spec.ts:136:1 › given cells use foreground ink, solved cells use solver-ink
+[189/238] [chromium] › e2e/sudoku-interaction.spec.ts:173:1 › given cells are inviolable: a keystroke and a Backspace are both refused
+  21) [chromium] › e2e/sudoku-interaction.spec.ts:103:1 › consecutive solve: values remain unchanged on second solve 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      39 |
+      40 | async function solveBoard(page: Page) {
+    > 41 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+         |                                                                          ^
+      42 |   // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+      43 |   // once the Worker returns (both terminal — the caller asserts the specific verdict).
+      44 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+        at solveBoard (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:41:74)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:107:9
+
+    Error Context: test-results/sudoku-interaction-consecu-5c70c-n-unchanged-on-second-solve-chromium/error-context.md
+
+
+[190/238] [chromium] › e2e/sudoku-interaction.spec.ts:224:1 › solve failure: conflicting user values produce solve-failure state
+[191/238] [chromium] › e2e/sudoku-interaction.spec.ts:279:1 › noise animation: randomize produces multiple unique reveal delays
+[192/238] [chromium] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 1440×640 › §2.1 every game name on the deck is legible at first paint or one cued step away
+[chromium] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 1440×640 › §2.1 every game name on the deck is legible at first paint or one cued step away
+[W2-§2.1] 1440×640 [{"name":"sudoku","visFrac":1},{"name":"futoshiki","visFrac":1},{"name":"thermo","visFrac":1},{"name":"killer","visFrac":1},{"name":"kenken","visFrac":1}]
+
+[193/238] [chromium] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 844×390 › §2.1 every game name on the deck is legible at first paint or one cued step away
+[chromium] › e2e/viewport-law.spec.ts:136:5 › §2.1 deck names @ 844×390 › §2.1 every game name on the deck is legible at first paint or one cued step away
+[W2-§2.1] 844×390 [{"name":"sudoku","visFrac":1},{"name":"futoshiki","visFrac":1},{"name":"thermo","visFrac":1},{"name":"killer","visFrac":1},{"name":"kenken","visFrac":1}]
+
+[194/238] [chromium] › e2e/viewport-law.spec.ts:195:5 › §2.2 short landscape @ 844×390 › §2.2 the deal/level controls are one visible, cued gesture away in short landscape
+[chromium] › e2e/viewport-law.spec.ts:195:5 › §2.2 short landscape @ 844×390 › §2.2 the deal/level controls are one visible, cued gesture away in short landscape
+[W2-§2.2] 844×390 {"openersVisible":{"drawerTab":true,"foldTools":false,"drawerHandle":false},"openerGeom":{"drawerTab":{"box":[597,166.6,48,92],"display":"block","belowFold":-223.41},"foldTools":{"box":[0,0,0,0],"display":"none","belowFold":-390},"drawerHandle":{"box":[756,390,0,0],"display":"block","belowFold":0}},"dealInFirstScreen":false,"dealGeom":{"box":[149.6,550,73.6,77.6],"display":"flex","belowFold":159.95},"levelInFirstScreen":false,"statusResidue":19.19,"docScrollH":409,"innerH":390,"mqPortrait":false,"mqStacked":true}
+
+[195/238] [chromium] › e2e/viewport-law.spec.ts:195:5 › §2.2 short landscape @ 812×375 › §2.2 the deal/level controls are one visible, cued gesture away in short landscape
+[chromium] › e2e/viewport-law.spec.ts:195:5 › §2.2 short landscape @ 812×375 › §2.2 the deal/level controls are one visible, cued gesture away in short landscape
+[W2-§2.2] 812×375 {"openersVisible":{"drawerTab":true,"foldTools":false,"drawerHandle":false},"openerGeom":{"drawerTab":{"box":[573.5,159.1,48,92],"display":"block","belowFold":-215.91},"foldTools":{"box":[0,0,0,0],"display":"none","belowFold":-375},"drawerHandle":{"box":[724,375,0,0],"display":"block","belowFold":0}},"dealInFirstScreen":false,"dealGeom":{"box":[149.6,535,73.6,77.6],"display":"flex","belowFold":159.95},"levelInFirstScreen":false,"statusResidue":19.19,"docScrollH":394,"innerH":375,"mqPortrait":false,"mqStacked":true}
+
+[196/238] [chromium] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme
+[chromium] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme
+[W2-§2.4] toggle=[863.8,59.8,112.3,112.3] overlaps=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.5 text-cen","overlapPx":967.4,"circleFrac":0.375,"at":[920,167.9]}] thefts=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.5 text-cen","overlapPx":967.4,"circleFrac":0.375,"at":[920,167.9],"hit":"BUTTON.sun-moon-toggle is-turning","was":false,"now":true}]
+
+  22) [chromium] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme 
+
+    Error: the toggle's hit surface must never own a sibling control's box; overlaps [{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.5 text-cen","overlapPx":967.4,"circleFrac":0.375,"at":[920,167.9]}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  -  1
+    + Received  + 15
+
+    - Array []
+    + Array [
+    +   Object {
+    +     "at": Array [
+    +       920,
+    +       167.9,
+    +     ],
+    +     "circleFrac": 0.375,
+    +     "cls": "ctrl-btn rounded-md px-3 py-1.5 text-cen",
+    +     "hit": "BUTTON.sun-moon-toggle is-turning",
+    +     "label": "4×4",
+    +     "now": true,
+    +     "overlapPx": 967.4,
+    +     "was": false,
+    +   },
+    + ]
+
+      374 |       `the toggle's hit surface must never own a sibling control's box; ` +
+      375 |         `overlaps ${JSON.stringify(census.out)}`,
+    > 376 |     ).toEqual([]);
+          |       ^
+      377 |   });
+      378 | });
+      379 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/viewport-law.spec.ts:376:7
+
+    Error Context: test-results/viewport-law-§2-4-the-togg-5a263--toggle-box-flips-the-theme-chromium/error-context.md
+
+
+[197/238] [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element
+  23) [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .washi-tag')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .washi-tag')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      481 |     // WITNESS — the tapes this row exists for are actually laid down. A card with no tags would
+      482 |     // green a census that proves nothing.
+    > 483 |     await expect(page.locator('.controls-card .washi-tag')).toHaveCount(4);
+          |                                                             ^
+      484 |
+      485 |     const laid = await settled();
+      486 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/viewport-law.spec.ts:483:61
+
+    Error Context: test-results/viewport-law-§2-5-the-wash-35ff2-t-of-an-interactive-element-chromium/error-context.md
+
+
+[198/238] [chromium] › e2e/viewport-law.spec.ts:575:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail)
+[chromium] › e2e/viewport-law.spec.ts:575:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail)
+[W2-§2.6 rail] {"max":385,"rows":[]}
+
+  24) [chromium] › e2e/viewport-law.spec.ts:575:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+
+    Error: no well could be scrolled past the card's top — the row would assert nothing ({"max":385,"rows":[]})
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      590 |       tested.length,
+      591 |       `no well could be scrolled past the card's top — the row would assert nothing (${JSON.stringify(census)})`,
+    > 592 |     ).toBeGreaterThan(0);
+          |       ^
+      593 |
+      594 |     const lost = tested.filter((r) => (r.tagVisFrac ?? 0) <= LEGIBLE);
+      595 |     expect(
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/viewport-law.spec.ts:592:7
+
+    Error Context: test-results/viewport-law-§2-6-the-sect-8a08a-up-is-in-view-desktop-rail--chromium/error-context.md
+
+
+[199/238] [chromium] › e2e/viewport-law.spec.ts:610:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer)
+  25) [chromium] › e2e/sudoku-interaction.spec.ts:136:1 › given cells use foreground ink, solved cells use solver-ink 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      39 |
+      40 | async function solveBoard(page: Page) {
+    > 41 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+         |                                                                          ^
+      42 |   // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+      43 |   // once the Worker returns (both terminal — the caller asserts the specific verdict).
+      44 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+        at solveBoard (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:41:74)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:151:9
+
+    Error Context: test-results/sudoku-interaction-given-c-9cee9-solved-cells-use-solver-ink-chromium/error-context.md
+
+
+[200/238] [chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 390×844 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[chromium] › e2e/viewport-law.spec.ts:610:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer)
+[W2-§2.6 drawer] {"max":361,"rows":[]}
+
+  26) [chromium] › e2e/viewport-law.spec.ts:610:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 
+
+    Error: no well could be scrolled past the drawer card's top ({"max":361,"rows":[]})
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      627 |       tested.length,
+      628 |       `no well could be scrolled past the drawer card's top (${JSON.stringify(census)})`,
+    > 629 |     ).toBeGreaterThan(0);
+          |       ^
+      630 |
+      631 |     const lost = tested.filter((r) => (r.tagVisFrac ?? 0) <= LEGIBLE);
+      632 |     expect(
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/viewport-law.spec.ts:629:7
+
+    Error Context: test-results/viewport-law-§2-6-the-sect-2406f-p-is-in-view-mobile-drawer--chromium/error-context.md
+
+
+  27) [chromium] › e2e/sudoku-interaction.spec.ts:224:1 › solve failure: conflicting user values produce solve-failure state 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.click: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Solve puzzle"]')
+
+
+      39 |
+      40 | async function solveBoard(page: Page) {
+    > 41 |   await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+         |                                                                          ^
+      42 |   // Settle on the graded terminal state: solve-success | solve-failure lands on the board
+      43 |   // once the Worker returns (both terminal — the caller asserts the specific verdict).
+      44 |   await expect(page.locator('.board-wrapper')).toHaveClass(/solve-(success|failure)/, {
+        at solveBoard (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:41:74)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/sudoku-interaction.spec.ts:260:11
+
+    Error Context: test-results/sudoku-interaction-solve-f-8e281-produce-solve-failure-state-chromium/error-context.md
+
+
+[201/238] [chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 375×812 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[202/238] [chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 430×932 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 390×844 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[W2-§2.7] 390×844 {"tab":[286,579.7,92,48],"paper":[12,219.7,366,366],"gapToPaper":-6,"gapToShell":-35.2}
+
+[203/238] [chromium] › e2e/viewport-law.spec.ts:720:3 › BASELINE the mobile type + tap scale @ 390×844 (M01) › BASELINE M01 — the toolbar and drawer option scale, banked for W7
+[chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 375×812 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[W2-§2.7] 375×812 {"tab":[271,556.2,92,48],"paper":[12,211.2,351,351],"gapToPaper":-6,"gapToShell":-35.2}
+
+[204/238] [chromium] › e2e/viewport-law.spec.ts:798:5 › BASELINE the controls-card fold @ 1440×900 (§2.3) › BASELINE §2.3 — the card cap, the scroll gutter, and what straddles the fold
+[chromium] › e2e/viewport-law.spec.ts:664:5 › §2.7 the controls entry rides the board @ 430×932 › §2.7 the controls entry is attached to the board's bottom edge, not floating below it
+[W2-§2.7] 430×932 {"tab":[326,643.7,92,48],"paper":[12,243.7,406,406],"gapToPaper":-6,"gapToShell":-35.2}
+
+[205/238] [chromium] › e2e/viewport-law.spec.ts:798:5 › BASELINE the controls-card fold @ 1280×800 (§2.3) › BASELINE §2.3 — the card cap, the scroll gutter, and what straddles the fold
+[chromium] › e2e/viewport-law.spec.ts:720:3 › BASELINE the mobile type + tap scale @ 390×844 (M01) › BASELINE M01 — the toolbar and drawer option scale, banked for W7
+[W2-BASELINE M01 toolbar] {"toolbarButtons":[{"text":"Undo","label":"Undo last move","fontPx":16,"w":46,"h":56},{"text":"Redo","label":"Redo move","fontPx":16,"w":46,"h":56},{"text":"Hint","label":"Reveal a hint in the selected cell","fontPx":16,"w":46,"h":56},{"text":"peek","label":null,"fontPx":16,"w":59.8,"h":44}],"toolbarSublabels":[{"text":"Undo","label":null,"fontPx":14,"w":24.4,"h":14},{"text":"Redo","label":null,"fontPx":14,"w":23.5,"h":14},{"text":"Hint","label":null,"fontPx":14,"w":21.6,"h":14}]}
+
+[W2-BASELINE M01 drawer] {"options":[{"text":"4×4","fontPx":20,"w":52,"h":44},{"text":"9×9","fontPx":20,"w":52,"h":44},{"text":"16×16","fontPx":20,"w":76,"h":44},{"text":"Easy","fontPx":20,"w":64,"h":44},{"text":"Medium","fontPx":20,"w":88,"h":44},{"text":"Hard","fontPx":20,"w":64,"h":44},{"text":"Normal","fontPx":20,"w":88,"h":44},{"text":"Corner","fontPx":20,"w":88,"h":44},{"text":"Center","fontPx":20,"w":88,"h":44},{"text":"Off","fontPx":20,"w":52,"h":44},{"text":"On","fontPx":20,"w":44,"h":44},{"text":"Off","fontPx":20,"w":52,"h":44},{"text":"Ask","fontPx":20,"w":52,"h":44},{"text":"Live","fontPx":20,"w":64,"h":44}],"iconButtons":[{"text":"Deal","fontPx":16,"w":73.6,"h":77.6},{"text":"Play","fontPx":16,"w":63.6,"h":65.6},{"text":"Clear","fontPx":16,"w":65.6,"h":67.6},{"text":"Fill","fontPx":16,"w":65.6,"h":67.6},{"text":"Solve","fontPx":16,"w":65.6,"h":67.6},{"text":"Share","fontPx":16,"w":65.6,"h":67.6}],"sublabels":[{"text":"Deal","fontPx":16,"w":24.8,"h":16},{"text":"Play","fontPx":14,"w":22.5,"h":14},{"text":"Clear","fontPx":14,"w":27.4,"h":14},{"text":"Fill","fontPx":14,"w":17,"h":14},{"text":"Solve","fontPx":14,"w":27.7,"h":14},{"text":"Share","fontPx":14,"w":29.5,"h":14}],"tags":[],"rowLabels":[]}
+
+[W2-BASELINE M01 notRendered] []
+
+[206/238] [chromium] › e2e/visual-regression.spec.ts:124:1 › light mode: layout, styles, filters, DOM contract
+[chromium] › e2e/viewport-law.spec.ts:798:5 › BASELINE the controls-card fold @ 1440×900 (§2.3) › BASELINE §2.3 — the card cap, the scroll gutter, and what straddles the fold
+[W2-BASELINE §2.3] 1440×900 {"maxHeight":"563px","clientH":563,"scrollH":948,"hidden":385,"gutter":6,"scrollbarWidth":"auto","scrollPaddingBottom":"auto","straddle":[],"playBelowFold":212}
+
+[207/238] [chromium] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract
+[chromium] › e2e/viewport-law.spec.ts:798:5 › BASELINE the controls-card fold @ 1280×800 (§2.3) › BASELINE §2.3 — the card cap, the scroll gutter, and what straddles the fold
+[W2-BASELINE §2.3] 1280×800 {"maxHeight":"531px","clientH":531,"scrollH":945,"hidden":414,"gutter":6,"scrollbarWidth":"auto","scrollPaddingBottom":"auto","straddle":[{"cls":"ctrl-btn rounded-md px-3 py-1.5 text-center ","label":"Center","cut":14.2,"visFrac":0.373}],"playBelowFold":243.6}
+
+[208/238] [chromium] › e2e/visual-regression.spec.ts:263:1 › grid draw-in completes and path-based boil activates
+[209/238] [chromium] › e2e/visual-regression.spec.ts:322:1 › randomize populates board and blank cells accept input
+[210/238] [chromium] › e2e/visual-regression.spec.ts:388:1 › graceful degradation: UI renders without backend API
+[211/238] [chromium] › e2e/visual-regression.spec.ts:404:1 › size switching: 4x4, 9x9, 16x16 all render grid lines
+[212/238] [chromium] › e2e/visual-regression.spec.ts:466:1 › the Deal die is not crushed: the commit verb's box fits its own content
+[213/238] [chromium] › e2e/visual-regression.spec.ts:544:1 › the glass curve is the same curve in both layers
+[214/238] [chromium] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included
+  28) [chromium] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included 
+
+    Error: expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -55.19
+
+      631 |   const rest = await clearance();
+      632 |   expect(rest).not.toBeNull();
+    > 633 |   expect(rest!.gap).toBeGreaterThanOrEqual(0);
+          |                     ^
+      634 |   expect(rest!.axis, "verb and receipt share one centre").toBeLessThanOrEqual(1);
+      635 |
+      636 |   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/visual-regression.spec.ts:633:21
+
+    Error Context: test-results/visual-regression-the-deal-a5b44--commit-verb-hover-included-chromium/error-context.md
+
+
+[215/238] [chromium] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes
+  29) [chromium] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+
+    Error: coarse row: row group "Normal" (n=3)
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 6
+    Received:    -183.22
+
+      729 |         g.gap!,
+      730 |         `${label}: ${g.axis} group "${g.first}" (n=${g.n})`,
+    > 731 |       ).toBeGreaterThanOrEqual(FLOOR);
+          |         ^
+      732 |     }
+      733 |     return Math.min(...paired.map((g) => g.gap!));
+      734 |   };
+        at check (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/visual-regression.spec.ts:731:9)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/visual-regression.spec.ts:773:5
+
+    Error Context: test-results/visual-regression-option-c-5641d-etween-neighbours-both-axes-chromium/error-context.md
+
+
+[216/238] [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for
+[217/238] [chromium] › e2e/visual-regression.spec.ts:875:1 › toggle warp rest pose: wrung into the page, no carousel travel
+[218/238] [chromium] › e2e/zone-grammar.spec.ts:55:1 › rendered-name census, rail: two eyebrows, four tapes, two captions — and the counter can see an injected one
+  30) [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+
+    Error: negative control: the unpaid layout must break the seal
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 1227.5
+    Received:   1059.98
+
+      864 |       reverted,
+      865 |       "negative control: the unpaid layout must break the seal",
+    > 866 |     ).toBeGreaterThan(SEAL);
+          |       ^
+      867 |     expect(reverted! - shipped!).toBeGreaterThan(30);
+      868 |   } finally {
+      869 |     await ctx.close();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/visual-regression.spec.ts:866:7
+
+    Error Context: test-results/visual-regression-the-iPad-6c4a8-l-the-chip-seam-is-PAID-for-chromium/error-context.md
+
+
+[219/238] [chromium] › e2e/zone-grammar.spec.ts:129:1 › every zone is named by its own VISIBLE tape — the accessible name and the drawn one are one string
+  31) [chromium] › e2e/zone-grammar.spec.ts:55:1 › rendered-name census, rail: two eyebrows, four tapes, two captions — and the counter can see an injected one 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 0
+
+      61 |   // The eyebrow rank is the one the owner called contrived — six co-equal display caps. It
+      62 |   // now holds exactly the two that caption the STAGED inputs, and nothing else.
+    > 63 |   expect(countAt(names, "eyebrow")).toBe(2);
+         |                                     ^
+      64 |   expect(names.filter((n) => n.rank === "eyebrow").map((n) => n.text)).toEqual([
+      65 |     "Size",
+      66 |     "Level",
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:63:37
+
+    Error Context: test-results/zone-grammar-rendered-name-21306-ter-can-see-an-injected-one-chromium/error-context.md
+
+
+[220/238] [chromium] › e2e/zone-grammar.spec.ts:181:1 › the permanent tape is a LABEL, not a tooltip — and the surface it names has a name
+  32) [chromium] › e2e/zone-grammar.spec.ts:181:1 › the permanent tape is a LABEL, not a tooltip — and the surface it names has a name 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 5
+    Received: 1
+
+      191 |   );
+      192 |   const n = await permanent.count();
+    > 193 |   expect(n).toBe(5); // four compartment names + the peek tape
+          |             ^
+      194 |   for (let i = 0; i < n; i++)
+      195 |     expect(
+      196 |       await permanent.nth(i).getAttribute("role"),
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:193:13
+
+    Error Context: test-results/zone-grammar-the-permanent-03a53-surface-it-names-has-a-name-chromium/error-context.md
+
+
+[221/238] [chromium] › e2e/zone-grammar.spec.ts:229:1 › the staged headings are HEADINGS for assistive tech — decided one way, not both
+  33) [chromium] › e2e/zone-grammar.spec.ts:229:1 › the staged headings are HEADINGS for assistive tech — decided one way, not both 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 0
+
+      245 |       })),
+      246 |     );
+    > 247 |   expect(headings.length).toBe(2);
+          |                           ^
+      248 |   for (const h of headings) {
+      249 |     expect(h.tag).toBe("h2");
+      250 |     expect(h.hidden).toBeNull();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:247:27
+
+    Error Context: test-results/zone-grammar-the-staged-he-be952--—-decided-one-way-not-both-chromium/error-context.md
+
+
+[222/238] [chromium] › e2e/zone-grammar.spec.ts:272:1 › selection is announced: every option chip carries aria-pressed, exactly one per group
+[223/238] [chromium] › e2e/zone-grammar.spec.ts:321:1 › the action bar rides the card's own scrollport — at the TOP of a 1039px card, not only at its end
+  34) [chromium] › e2e/zone-grammar.spec.ts:321:1 › the action bar rides the card's own scrollport — at the TOP of a 1039px card, not only at its end 
+
+    Error: the rail card and its action bar must both be mounted
+
+    expect(received).not.toBeNull()
+
+    Received: null
+
+      333 |   });
+      334 |   const at = await page.evaluate(BAR_IN_FRAME);
+    > 335 |   expect(at, "the rail card and its action bar must both be mounted").not.toBeNull();
+          |                                                                           ^
+      336 |
+      337 |   // The frame has to be a real scrollport or the row asserts nothing: a card that fits its
+      338 |   // content puts the bar in view whatever its `position` is.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:335:75
+
+    Error Context: test-results/zone-grammar-the-action-ba-9f0b6-px-card-not-only-at-its-end-chromium/error-context.md
+
+
+[224/238] [chromium] › e2e/zone-grammar.spec.ts:361:1 › a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutline prune)
+  35) [chromium] › e2e/zone-grammar.spec.ts:361:1 › a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutline prune) 
+
+    Error: expect(received).toHaveLength(expected)
+
+    Expected length: 4
+    Received length: 0
+    Received array:  []
+
+      374 |     }),
+      375 |   );
+    > 376 |   expect(wells).toHaveLength(4);
+          |                 ^
+      377 |   // A `:pose` outline never swaps, so the resident sibling stack bought nothing and cost a
+      378 |   // permanently promoted layer each. One node, zero layers.
+      379 |   for (const w of wells) {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:376:17
+
+    Error Context: test-results/zone-grammar-a-frozen-well-261cc-the-HandDrawnOutline-prune--chromium/error-context.md
+
+
+[225/238] [chromium] › e2e/zone-grammar.spec.ts:428:3 › coarse row regime (≥1024) › the pair branch keeps a 44px floor in BOTH dimensions, where the branch exists
+[226/238] [chromium] › e2e/zone-grammar.spec.ts:550:3 › coarse regime › the coarse card: regime witnessed first, then two eyebrows and a 44px floor in BOTH dimensions
+  36) [chromium] › e2e/zone-grammar.spec.ts:550:3 › coarse regime › the coarse card: regime witnessed first, then two eyebrows and a 44px floor in BOTH dimensions 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 0
+
+      568 |
+      569 |     const names = await census(page, panelSel);
+    > 570 |     expect(countAt(names, "eyebrow")).toBe(2);
+          |                                       ^
+      571 |     expect(countAt(names, "tape")).toBe(4);
+      572 |     expect(countAt(names, "caption")).toBe(2);
+      573 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:570:39
+
+    Error Context: test-results/zone-grammar-coarse-regime-79b87-px-floor-in-BOTH-dimensions-chromium/error-context.md
+
+
+[227/238] [chromium] › e2e/zone-grammar.spec.ts:593:3 › coarse regime › the heading lock holds on the CARD too — the regime its rail arm never visits
+  37) [chromium] › e2e/zone-grammar.spec.ts:593:3 › coarse regime › the heading lock holds on the CARD too — the regime its rail arm never visits 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 2
+    Received: 0
+
+      622 |         }),
+      623 |       );
+    > 624 |     expect(headings.length).toBe(2);
+          |                             ^
+      625 |     for (const h of headings) {
+      626 |       expect(h.headingTag).toBe("h2");
+      627 |       expect(h.hidden).toBeNull();
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:624:29
+
+    Error Context: test-results/zone-grammar-coarse-regime-25e0a-e-its-rail-arm-never-visits-chromium/error-context.md
+
+
+[228/238] [chromium] › e2e/zone-grammar.spec.ts:671:3 › coarse regime › the checking well says one thing: its chips
+  38) [chromium] › e2e/zone-grammar.spec.ts:129:1 › every zone is named by its own VISIBLE tape — the accessible name and the drawn one are one string 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .tray-well')
+    Expected: 4
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('.controls-card .tray-well')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      132 |   await loadSudoku(page);
+      133 |   const wells = page.locator(".controls-card .tray-well");
+    > 134 |   await expect(wells).toHaveCount(4);
+          |                       ^
+      135 |
+      136 |   const named = await page.evaluate(ZONE_NAMING);
+      137 |   expect(named.map((n) => n.drawn)).toEqual([
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:134:23
+
+    Error Context: test-results/zone-grammar-every-zone-is-91d3c-he-drawn-one-are-one-string-chromium/error-context.md
+
+
+[229/238] [chromium] › e2e/mobile-affordances.spec.ts:129:1 › native bounded entry (sudoku 9×9): coarse cell raises the numeric keypad, iOS-congruent, 16px floor
+[230/238] [chromium] › e2e/mobile-affordances.spec.ts:145:1 › native bounded entry (sudoku 16×16): two-digit values 10–16 enter whole
+[231/238] [chromium] › e2e/mobile-affordances.spec.ts:161:1 › native bounded entry (futoshiki twin): coarse cell raises the numeric keypad, iOS-congruent
+[232/238] [chromium] › e2e/mobile-affordances.spec.ts:184:1 › touch play tools (T4-WM §2): undo / redo / hint tappable at ≥44px, wired, and no sticky hover
+[233/238] [chromium] › e2e/mobile-affordances.spec.ts:233:1 › hint two-press by touch (T4-W7): first tap gives the reasoning, second inks the digit
+[234/238] [chromium] › e2e/mobile-affordances.spec.ts:265:1 › attribution opens on a single tap (T4-WM §2): the coarse focusin+click double-fire no longer nets closed
+[235/238] [chromium] › e2e/mobile-affordances.spec.ts:316:1 › long-press peek (T4-WM §3, sudoku): a hold on a cell opens the candidate glimpse; release clears it
+[236/238] [chromium] › e2e/mobile-affordances.spec.ts:323:1 › long-press peek (T4-WM §3, futoshiki twin): a hold on a cell opens the candidate glimpse; release clears it
+  39) [chromium] › e2e/zone-grammar.spec.ts:671:3 › coarse regime › the checking well says one thing: its chips 
+
+    Error: expect(locator).toHaveText(expected) failed
+
+    Locator: locator('#controls-drawer .tray-well:has-text("checking")').locator('.ctrl-btn')
+    Timeout: 10000ms
+    - Expected  - 5
+    + Received  + 1
+
+    - Array [
+    -   "Off",
+    -   "Ask",
+    -   "Live",
+    - ]
+    + Array []
+
+    Call log:
+      - Expect "toHaveText" with timeout 10000ms
+      - waiting for locator('#controls-drawer .tray-well:has-text("checking")').locator('.ctrl-btn')
+        24 × locator resolved to 0 elements
+
+
+      675 |
+      676 |     const well = page.locator('#controls-drawer .tray-well:has-text("checking")');
+    > 677 |     await expect(well.locator(".ctrl-btn")).toHaveText(["Off", "Ask", "Live"]);
+          |                                             ^
+      678 |
+      679 |     // The chips still carry the whole of the state, and they say it the way every other option
+      680 |     // row in the estate does — `aria-pressed`, which is the announcement the sentence duplicated.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/zone-grammar.spec.ts:677:45
+
+    Error Context: test-results/zone-grammar-coarse-regime-6c5df-ll-says-one-thing-its-chips-chromium/error-context.md
+
+
+[237/238] [chromium] › e2e/mobile-affordances.spec.ts:339:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat
+[238/238] [chromium] › e2e/mobile-affordances.spec.ts:435:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first
+  40) [chromium] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.evaluate: Test timeout of 30000ms exceeded.
+    Call log:
+      - waiting for locator('.controls-card .control-panel-filtered')
+
+
+      252 |   const cpFilter = await page
+      253 |     .locator(".controls-card .control-panel-filtered")
+    > 254 |     .evaluate((el) => getComputedStyle(el).filter);
+          |      ^
+      255 |   expect(cpFilter).toBe("none");
+      256 |
+      257 |   // (Rendered-pixel capture retired to visual-golden.spec.ts — the `toggle-crest-dark`
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/visual-regression.spec.ts:254:6
+
+    Error Context: test-results/visual-regression-dark-mod-4cd9f-ries-no-filter-DOM-contract-chromium/error-context.md
+
+
+  41) [chromium] › e2e/mobile-affordances.spec.ts:339:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.mobile-control-panel').locator('.icon-sublabel').filter({ hasText: 'Clear' }).first()
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('.mobile-control-panel').locator('.icon-sublabel').filter({ hasText: 'Clear' }).first()
+
+
+      379 |     await expect(
+      380 |       panel.locator(".icon-sublabel", { hasText: label }).first(),
+    > 381 |     ).toBeVisible();
+          |       ^
+      382 |   }
+      383 |
+      384 |   // T4-WU/U3 — Clear is now DIRTY-GATED (born-RED at base: `onClear` armed unconditionally, even on
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/mobile-affordances.spec.ts:381:7
+
+    Error Context: test-results/mobile-affordances-coarse--6c437-ublabels-Clear-confirm-beat-chromium/error-context.md
+
+
+  42) [chromium] › e2e/mobile-affordances.spec.ts:435:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first 
+
+    Error: expect(locator).toBeVisible() failed
+
+    Locator: locator('.mobile-control-panel').getByRole('button', { name: 'Press again to deal a new board' })
+    Expected: visible
+    Timeout: 10000ms
+    Error: element(s) not found
+
+    Call log:
+      - Expect "toBeVisible" with timeout 10000ms
+      - waiting for locator('.mobile-control-panel').getByRole('button', { name: 'Press again to deal a new board' })
+
+
+      462 |   await expect(
+      463 |     panel.getByRole("button", { name: "Press again to deal a new board" }),
+    > 464 |   ).toBeVisible();
+          |     ^
+      465 |   await expect(dealBtn.locator(".icon-sublabel")).toHaveText("sure?");
+      466 |   await expect(input).toHaveValue("5"); // the first tap armed — it did NOT deal a new board
+      467 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-28/web/frontend/e2e/mobile-affordances.spec.ts:464:5
+
+    Error Context: test-results/mobile-affordances-Deal-is-df877-rm-a-dirty-board-arms-first-chromium/error-context.md
+
+
+  42 failed
+    [chromium] › e2e/access.spec.ts:255:3 › 2.1 focus-occlusion census — the desktop card › the marks-mode "Normal" button is reachable, found by identity 
+    [chromium] › e2e/affordances.spec.ts:175:1 › stale-note: teacher-red and gold-star notes clear on the next edit 
+    [chromium] › e2e/affordances.spec.ts:244:1 › conflict note: a pure column duplicate names the COLUMN, never a row 
+    [chromium] › e2e/affordances.spec.ts:287:1 › tally: solve writes "N backtracks · Xms" in the note meta; the next edit clears it 
+    [chromium] › e2e/affordances.spec.ts:326:1 › tally: with debug off a solved board prints no tally at all 
+    [chromium] › e2e/affordances.spec.ts:373:1 › fill batch: one Fill sweep undoes as ONE gesture, redo re-fills 
+    [chromium] › e2e/affordances.spec.ts:410:1 › permalink: share writes ?board= and a reload reproduces the exact board 
+    [chromium] › e2e/font-census.spec.ts:231:1 › the ledger holds BOTH directions across two games and two regimes 
+    [chromium] › e2e/font-census.spec.ts:344:1 › no string renders in two faces except the ones this estate has ledgered 
+    [chromium] › e2e/futoshiki.spec.ts:166:1 › solve: a fresh generated board solves to solve-success 
+    [chromium] › e2e/join-language.spec.ts:134:1 › the roster row is the other half: the name lands in their ink, and the well says who 
+    [chromium] › e2e/mobile-affordances.spec.ts:339:1 › coarse affordances: persistent peek washi on a ≥44px target, icon sublabels, Clear confirm beat 
+    [chromium] › e2e/mobile-affordances.spec.ts:435:1 › Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty board arms first 
+    [chromium] › e2e/permalink.spec.ts:102:1 › the share affordance writes ?board= on the explicit act (sudoku) 
+    [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (thermo) 
+    [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (killer) 
+    [chromium] › e2e/permalink.spec.ts:189:3 › share writes a REAL ?board= and it round-trips the board (kenken) 
+    [chromium] › e2e/share-truth.spec.ts:63:1 › sudoku share success: label + aria confirm AND the clipboard holds the link 
+    [chromium] › e2e/share-truth.spec.ts:97:1 › sudoku share failure: "couldn't copy" signal, link still live in the address bar 
+    [chromium] › e2e/share-truth.spec.ts:122:1 › futoshiki share failure: the same "couldn't copy" signal (twin) 
+    [chromium] › e2e/sudoku-interaction.spec.ts:51:1 › valid solution: randomize → solve → success state + all cells filled 
+    [chromium] › e2e/sudoku-interaction.spec.ts:69:1 › invalid solution: solve → edit cell → state reverts to idle 
+    [chromium] › e2e/sudoku-interaction.spec.ts:103:1 › consecutive solve: values remain unchanged on second solve 
+    [chromium] › e2e/sudoku-interaction.spec.ts:136:1 › given cells use foreground ink, solved cells use solver-ink 
+    [chromium] › e2e/sudoku-interaction.spec.ts:224:1 › solve failure: conflicting user values produce solve-failure state 
+    [chromium] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme 
+    [chromium] › e2e/viewport-law.spec.ts:396:3 › §2.5 the washi tape yields @ 1440×900 › §2.5 no washi tape covers any part of an interactive element 
+    [chromium] › e2e/viewport-law.spec.ts:575:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+    [chromium] › e2e/viewport-law.spec.ts:610:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 
+    [chromium] › e2e/visual-regression.spec.ts:231:1 › dark mode: celestial swap, control panel carries no filter, DOM contract 
+    [chromium] › e2e/visual-regression.spec.ts:569:1 › the deal receipt keeps off the commit verb, hover included 
+    [chromium] › e2e/visual-regression.spec.ts:707:1 › option chips keep their separation: ≥6px between neighbours, both axes 
+    [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+    [chromium] › e2e/zone-grammar.spec.ts:55:1 › rendered-name census, rail: two eyebrows, four tapes, two captions — and the counter can see an injected one 
+    [chromium] › e2e/zone-grammar.spec.ts:129:1 › every zone is named by its own VISIBLE tape — the accessible name and the drawn one are one string 
+    [chromium] › e2e/zone-grammar.spec.ts:181:1 › the permanent tape is a LABEL, not a tooltip — and the surface it names has a name 
+    [chromium] › e2e/zone-grammar.spec.ts:229:1 › the staged headings are HEADINGS for assistive tech — decided one way, not both 
+    [chromium] › e2e/zone-grammar.spec.ts:321:1 › the action bar rides the card's own scrollport — at the TOP of a 1039px card, not only at its end 
+    [chromium] › e2e/zone-grammar.spec.ts:361:1 › a frozen well mints ONE pose node and promotes nothing (the HandDrawnOutline prune) 
+    [chromium] › e2e/zone-grammar.spec.ts:550:3 › coarse regime › the coarse card: regime witnessed first, then two eyebrows and a 44px floor in BOTH dimensions 
+    [chromium] › e2e/zone-grammar.spec.ts:593:3 › coarse regime › the heading lock holds on the CARD too — the regime its rail arm never visits 
+    [chromium] › e2e/zone-grammar.spec.ts:671:3 › coarse regime › the checking well says one thing: its chips 
+  1 skipped
+  195 passed (5.8m)
+EXIT=1

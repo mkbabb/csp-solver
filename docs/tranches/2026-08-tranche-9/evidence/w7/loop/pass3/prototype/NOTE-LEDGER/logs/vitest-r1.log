@@ -1,0 +1,52 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend
+
+ ❯ src/games/shared/GameBoard.notes.test.ts (14 tests | 2 failed) 55ms
+     × hint to null no longer retracts the note — the next sentence displaces it 4ms
+     × the retraction only ever wipes the hint's own line 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a hint note can leave > hint to null no longer retracts the note — the next sentence displaces it
+AssertionError: expected '' to be 'only 4 fits here' // Object.is equality
+
+- Expected
++ Received
+
+- only 4 fits here
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:140:23
+    138|     await w.setProps({ hint });
+    139|     await nextTick();
+    140|     expect(margin(w)).toBe("only 4 fits here");
+       |                       ^
+    141|     await w.setProps({ hint: null });
+    142|     await nextTick();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a hint note can leave > the retraction only ever wipes the hint's own line
+AssertionError: expected '' to be 'only 4 fits here' // Object.is equality
+
+- Expected
++ Received
+
+- only 4 fits here
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:158:23
+    156|     await w.setProps({ hint });
+    157|     await nextTick();
+    158|     expect(margin(w)).toBe("only 4 fits here");
+       |                       ^
+    159|     await w.setProps({
+    160|       hint: null,
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 39 passed (41)
+   Start at  00:08:00
+   Duration  1.05s (transform 673ms, setup 25ms, import 784ms, tests 116ms, environment 966ms)
+
+EXIT=1

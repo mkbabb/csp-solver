@@ -1,0 +1,61 @@
+ACC-FIVE pass-2 prototype — PROPOSED re-cut of the section instrument.
+r0/research row reported MOVED: `pass2/research/ACC-FIVE/probe/dash-law.mjs`.
+
+The banked instrument states a law the built tree falsifies. It reads `pathLengthAttr` and
+`dasharray` into its geometry block and its header names the mechanism as
+`totalLength/pathLength` mis-scaling of an attribute-declared dash. Measured on this lane's
+prototype (readings/dash-live.json, dash-discriminate.json, dash-why.json, dash-why2.json):
+
+  · with NO pathLength and the dash in real user units, WebKit still reads 4 runs / 0.215 at
+    p = 0.05 and 0.970 at p = 0.25;
+  · all four declaration arms (attribute dash, CSS dash, period == path, offset 0) are
+    identical in WebKit;
+  · removing the three inactive poses changes nothing;
+  · a plain 4-corner rect is CORRECT (1 run, 0.051), a straight 599-segment rectangle is
+    BROKEN (5 runs, 0.258), the 492-segment pose is broken (4 runs), a 123-segment decimation
+    of the same pose is correct.
+
+  THE LAW: WebKit restarts a polyline's dash phase roughly every 128 segments. Chromium
+  dashes the path whole. `pathLength` is not the bound; the spelling is not the bound; the
+  wobble is not the bound. 3.966 was this ring's perimeter, and it sat close enough to 4 to
+  look like an explanation.
+
+An instrument that asserts over `pathLength` will green a tree that is still broken — decimate
+the pose below 128 and the defect goes quiet while the mechanism is untouched. It must assert
+over segment count, and it must carry the geometry arms that isolate it.
+
+--- a/pass2/research/ACC-FIVE/probe/dash-law.mjs
++++ b/pass2/research/ACC-FIVE/probe/dash-law.mjs
+@@ header
+- * ACC-GRAPHITE's pass-1 sweep found that a `stroke-dasharray` period LONGER than its path
+- * paints once in Chromium and four times in WebKit (WebKit restarts the dash phase once per
+- * side of the frame ring). The shipped fill gauge is exactly that shape:
+- *   HandDrawnGrid.vue:489-491 — pathLength="1000", stroke-dasharray="1000 1000"
+- *   (period 2000 > path 1000), strokeDashoffset = 1000 * (1 - progress).
+- * The claim was handed on untested against THIS gauge. This probe tests it.
++ * WebKit restarts a polyline's dash phase roughly every 128 SEGMENTS; Chromium dashes the
++ * path whole. Neither `pathLength`, nor where the dash is spelled, nor a dash period longer
++ * than the path is the bound — measured, all four arms, on the cured tree (ACC-FIVE pass-2
++ * prototype, readings/dash-discriminate.json + dash-why2.json). A hand-drawn ring is ~490
++ * segments by construction, so every dashed hand-drawn gauge in the estate is inside it.
++ * This probe measures the SEGMENT COUNT at which an engine's painted share stops agreeing.
+@@ geom block
+     return {
+       totalLength: +p.getTotalLength().toFixed(1),
+       subpaths: (p.getAttribute("d").match(/M/gi) || []).length,
+       closes: (p.getAttribute("d").match(/Z/gi) || []).length,
++      // THE SUBJECT. `pathLength` stays in the record because it is what the estate used to
++      // carry, not because it is the cause.
++      segments: (p.getAttribute("d").match(/L/gi) || []).length,
+       pathLengthAttr: p.getAttribute("pathLength"),
+@@ arms
+-    for (const p of FRACS) { ...drive strokeDashoffset, count runs... }
++    // A DECIMATION LADDER beside the fraction sweep: the same pose at 492 / 123 / 30 / 7
++    // segments, plus a 3-segment rect and a straight 599-segment control, each with the same
++    // dash form. The reading that matters is where `runs` leaves 1 in WebKit.
++    for (const arm of ["rect4", "dense599", "poseFull", "poseEvery4", "poseEvery16"])
++      for (const p of FRACS) { ...same measurement, per arm... }
+
+`probe/dash-discriminate.mjs`, `probe/dash-why.mjs` and `probe/dash-why2.mjs` in this lane's
+prototype dir are the working re-cut; every arm is kept rather than quietly fixed, so the next
+hand can see which hypotheses were eliminated and on what numbers.

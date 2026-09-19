@@ -1,0 +1,29 @@
+shipped declarations (dev rig excluded): 73  (transition 39, animation 34)
+
+bucket	transition	animation	total
+DISTANCE?	11		0		11
+ALL	1		0		1
+NO	27		34		61
+
+A travel-derived duration could reach at most 12 of 73 declarations (16.4%) — and only the subset of those that actually translate.
+Declarations that cannot carry a distance at all: 61 (83.6%). Each needs a stated constant.
+
+— the DISTANCE? rows, for hand verification:
+  src/games/shared/DrawerTab.vue:144                     transition: transform 150ms ease-out
+  src/pencil/celestial/DarkModeToggle.vue:717            transition: transform 200ms ease
+  src/pencil/celestial/DarkModeToggle.vue:795            transition: transform 340ms var(--ease-accelIn) !important
+  src/pencil/celestial/DarkModeToggle.vue:810            transition: transform 800ms var(--ease-springPop) 60ms !important
+  src/pencil/chrome/AttributionCard/AttributionCard.vue:183 transition: opacity 150ms var(--ease-standard), transform 150ms var(--ease-standard), 
+  src/pencil/chrome/AttributionCard/AttributionCard.vue:205 transition: opacity 150ms var(--ease-standard), transform 150ms var(--ease-standard), 
+  src/pencil/chrome/GameGallery/GameCard.vue:410         transition: transform var(--card-step-ms, 440ms) var(--ease-glassGlide), opacity var(-
+  src/pencil/chrome/GameGallery/GameGallery.vue:1473     transition: transform 240ms var(--ease-glassGlide), opacity 240ms var(--ease-glassGlid
+  src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:647 transition: transform 200ms var(--ease-noteWrite)
+  src/pencil/sheet/AnswerKeyLaminate.vue:224             transition: opacity 200ms var(--ease-accelIn), transform 200ms var(--ease-accelIn)
+  src/pencil/sheet/AnswerKeyLaminate.vue:236             transition: opacity 280ms var(--ease-glassGlide), transform 280ms var(--ease-glassGlid
+
+— the ALL rows:
+  src/games/shared/GameControlPanel.vue:2082             transition: all 200ms
+
+— the WAAPI movers (r4-probe3.json), the family's real consumers:
+  27 movers observed across both viewports; 25 carry a pixel translation, 2 are scale-only.
+  distinct gesture classes with travel: drawer (sheet/case/masthead), gallery fold (board/wordmark), card step — THREE.

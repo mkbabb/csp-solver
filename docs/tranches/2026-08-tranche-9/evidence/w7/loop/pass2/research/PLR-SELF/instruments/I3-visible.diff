@@ -1,0 +1,30 @@
+PROPOSED — r0 row I3 reported MOVED. Not applied; `loop/r0/` is frozen (CHAIR-RULINGS §7).
+
+SUBJECT MOVED: the head now carries a mark, and the estate mounts `AttributionCard` TWICE
+(App.vue:802 desk `hidden md:flex`, :849-ish mobile `md:hidden`), so `[data-lobby]` resolves two
+nodes and the line below throws a strict-mode violation instead of asserting. The row can neither
+pass nor fail today (pass-1 prototype README §3.1; re-measured `lobbies: 2, visible: 1`).
+
+This is not a re-wording to pass: the row could not pass either. It restores the row's ability to
+speak, and it ASSERTS the twin's state where the throw merely hid it.
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r5-player-mark/instruments.spec.ts
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r5-player-mark/instruments.spec.ts
+@@ -88,10 +88,17 @@
+   await mark.first().click();
++  // TWO head instances is the estate's decided shape (App.vue:804-807 — DOM order is tab
++  // order, and the badge paints left of the celestial at every width), so a mark slotted
++  // into both yields two lobby nodes. Assert the PAIR and its one visible member; the bare
++  // `.or()` below resolved two and threw, which is a crash, not a red.
++  await expect(a.locator("[data-lobby]"), "one lobby per head instance").toHaveCount(2);
+   await expect(
+-    a.getByRole("dialog").or(a.locator("[data-lobby]")),
++    a.getByRole("dialog").or(a.locator("[data-lobby]:visible")),
+     "pressing it opens the lobby",
+   ).toBeVisible();
++  await expect(
++    a.locator("[data-lobby]:visible"),
++    "and exactly one of them is painted",
++  ).toHaveCount(1);
+   await ctx.close();
+ });

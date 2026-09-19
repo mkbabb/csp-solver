@@ -1,0 +1,330 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>the consequence ladder</title>
+    <!--
+      CTRL-COST pass-1 · THE STATIC PAGE.
+
+      The three tiers with the product's real control SET (its words, its rungs, its tokens),
+      standing alone so the shape can be read without the app around it. It is served from the
+      REPO ROOT so the shipped woff2 subsets are the real faces:
+
+        node -e "import('node:http').then(async ({default:h})=>{const {default:fs}=await import('node:fs');const {default:p}=await import('node:path');h.createServer((q,s)=>{const f=p.join('REPO_ROOT',decodeURIComponent(q.url.split('?')[0]));try{const b=fs.readFileSync(f);s.writeHead(200,{'content-type':f.endsWith('.html')?'text/html':f.endsWith('.woff2')?'font/woff2':'application/octet-stream'});s.end(b)}catch{s.writeHead(404);s.end()}}).listen(4234,'127.0.0.1')})"
+
+      then http://127.0.0.1:4234/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass1/research/CTRL-COST/proto/cost-card-static.html
+
+      The drawn faces are `outline` here for the same reason they are in the overlay: an
+      `outline` costs the box zero layout, which is what `HandDrawnOutline :pose="0"` costs.
+      The shipped form is the component, at stroke 2 (tier 2) and 2.5 (tier 3).
+    -->
+    <style>
+      @font-face {
+        font-family: "Fraunces";
+        src: url("/web/frontend/src/assets/fonts/fraunces-subset.woff2") format("woff2");
+        font-weight: 100 900;
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Patrick Hand";
+        src: url("/web/frontend/src/assets/fonts/patrickhand-subset.woff2") format("woff2");
+        font-display: swap;
+      }
+      @font-face {
+        font-family: "Fira Code";
+        src: url("/web/frontend/src/assets/fonts/firacode-subset.woff2") format("woff2");
+        font-weight: 300 700;
+        font-display: swap;
+      }
+      :root {
+        /* the product's own values, read off `index.css` / `typography.css` at HEAD */
+        --color-background: hsl(48 15% 98%);
+        --color-card: hsl(48 12% 99%);
+        --color-foreground: hsl(24 10% 10%);
+        --color-muted-foreground: hsl(24 5% 45%);
+        --color-accent: hsl(48 8% 96.1%);
+        --color-red-ink: #d02a52;
+        --color-crayon-green: #1d7f35;
+        --tap-floor: 2.75rem;
+        --type-group-title: 1.618rem; /* φ — the rung ROW 3 needs on every width */
+        --type-option: 1.25rem;
+        --type-tag: 0.878rem;
+        --type-act: 1rem;
+        --type-verb: 0.878rem;
+      }
+      @media (max-width: 767.98px) {
+        :root {
+          --type-group-title: 1.618rem; /* the family's one re-point: φ on the phone too */
+        }
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --color-background: hsl(24 8% 6%);
+          --color-card: hsl(24 6% 7%);
+          --color-foreground: hsl(48 10% 92%);
+          --color-muted-foreground: hsl(24 5% 62%);
+          --color-accent: hsl(24 5% 15%);
+          --color-red-ink: #ff5c7c;
+          --color-crayon-green: #3dd968;
+        }
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        padding: 1rem;
+        background: var(--color-background);
+        color: var(--color-foreground);
+        font-family: "Patrick Hand", cursive;
+      }
+      .card {
+        max-width: 22rem;
+        margin: 0 auto;
+        padding: 1rem;
+        background: var(--color-card);
+        outline: 3px solid var(--color-foreground);
+      }
+      h2 {
+        margin: 0;
+      }
+      .cost-band + .cost-band {
+        margin-top: 0.9rem;
+      }
+      .cost-band-head {
+        position: sticky;
+        top: 0;
+        z-index: 3;
+        background: var(--color-card);
+      }
+      .cost-band-name {
+        display: block;
+        font-family: "Fraunces", serif;
+        font-size: var(--type-group-title);
+        font-weight: 800;
+        line-height: 1.05;
+        text-transform: lowercase;
+        color: var(--color-muted-foreground);
+        margin-bottom: 0.35rem;
+      }
+      .cost-row {
+        display: flex;
+        align-items: baseline;
+        gap: 0.5rem;
+        padding-block: 0.15rem;
+      }
+      .cost-row-caption {
+        flex: 0 0 auto;
+        min-width: 3.75rem;
+        font-size: var(--type-tag);
+        color: var(--color-muted-foreground);
+      }
+      .chips {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.35rem;
+      }
+      .chip {
+        min-height: var(--tap-floor);
+        padding: 0 0.4rem;
+        border: 0;
+        background: none;
+        color: var(--color-muted-foreground);
+        font-family: "Fira Code", monospace;
+        font-size: var(--type-option);
+        cursor: pointer;
+      }
+      .chip[aria-checked="true"] {
+        color: var(--color-foreground);
+        font-weight: 700;
+        text-decoration: underline;
+        text-decoration-thickness: 2px;
+        text-underline-offset: 4px;
+      }
+      .chip.crayon[aria-checked="true"] {
+        color: var(--color-crayon-green);
+      }
+      .cost-acts {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 0.6rem;
+      }
+      .cost-face {
+        display: inline-flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: var(--tap-floor);
+        min-width: var(--tap-floor);
+        padding: 0.3rem 0.55rem;
+        border: 0;
+        border-radius: 0.3rem;
+        background: none;
+        color: var(--color-foreground);
+        font-family: "Patrick Hand", cursive;
+        font-size: var(--type-verb);
+        cursor: pointer;
+        outline: 2px solid var(--color-foreground); /* PROXY · HandDrawnOutline :pose="0" sw 2 */
+        outline-offset: 2px;
+      }
+      .cost-face-destructive {
+        outline-width: 2.5px;
+        background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+        font-size: var(--type-act);
+      }
+      .cost-wordstack {
+        display: grid;
+      }
+      .cost-wordstack > * {
+        grid-area: 1 / 1;
+        justify-self: center;
+      }
+      .cost-word-armed {
+        visibility: hidden;
+        color: var(--color-red-ink);
+        font-weight: 600;
+      }
+      .cost-secondline {
+        visibility: hidden;
+        margin-top: 0.1rem;
+        font-size: var(--type-tag);
+        text-decoration: underline;
+        text-underline-offset: 3px;
+      }
+      .is-armed .cost-word-rest {
+        visibility: hidden;
+      }
+      .is-armed .cost-word-armed,
+      .is-armed .cost-secondline {
+        visibility: visible;
+      }
+      .cost-face:focus-visible {
+        box-shadow:
+          0 0 0 2px var(--color-card),
+          0 0 0 4px var(--color-foreground);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <section class="cost-band" role="group" aria-labelledby="b1">
+        <h2 class="cost-band-head"><span class="cost-band-name" id="b1">looking</span></h2>
+        <div class="cost-row">
+          <span class="cost-row-caption">marks</span>
+          <span class="chips" role="radiogroup" aria-labelledby="b1"
+            ><button class="chip" role="radio" aria-checked="true">Normal</button
+            ><button class="chip" role="radio" aria-checked="false">Corner</button
+            ><button class="chip" role="radio" aria-checked="false">Center</button></span
+          >
+        </div>
+        <div class="cost-row">
+          <span class="cost-row-caption">what fits</span>
+          <span class="chips"
+            ><button class="chip" role="radio" aria-checked="true">Off</button
+            ><button class="chip" role="radio" aria-checked="false">On</button></span
+          >
+        </div>
+        <div class="cost-row">
+          <span class="cost-row-caption">checking</span>
+          <span class="chips"
+            ><button class="chip" role="radio" aria-checked="false">Off</button
+            ><button class="chip" role="radio" aria-checked="true">Ask</button
+            ><button class="chip" role="radio" aria-checked="false">Live</button></span
+          >
+        </div>
+        <div class="cost-row">
+          <span class="cost-row-caption">size</span>
+          <span class="chips"
+            ><button class="chip" role="radio" aria-checked="false">4×4</button
+            ><button class="chip" role="radio" aria-checked="true">9×9</button
+            ><button class="chip" role="radio" aria-checked="false">16×16</button></span
+          >
+        </div>
+        <div class="cost-row">
+          <span class="cost-row-caption">level</span>
+          <span class="chips"
+            ><button class="chip crayon" role="radio" aria-checked="true">Easy</button
+            ><button class="chip crayon" role="radio" aria-checked="false">Medium</button
+            ><button class="chip crayon" role="radio" aria-checked="false">Hard</button></span
+          >
+        </div>
+      </section>
+
+      <section class="cost-band" role="group" aria-labelledby="b2">
+        <h2 class="cost-band-head"><span class="cost-band-name" id="b2">writing</span></h2>
+        <div class="cost-acts">
+          <button class="cost-face">hint</button>
+          <button class="cost-face">fill</button>
+          <button class="cost-face">solve</button>
+          <button class="cost-face">undo</button>
+          <button class="cost-face">redo</button>
+        </div>
+      </section>
+
+      <section class="cost-band" role="group" aria-labelledby="b3">
+        <h2 class="cost-band-head"><span class="cost-band-name" id="b3">starting over</span></h2>
+        <div class="cost-acts">
+          <button class="cost-face cost-face-destructive" data-verb="deal">
+            <span class="cost-wordstack"
+              ><span class="cost-word-rest">deal</span
+              ><span class="cost-word-armed">sure?</span></span
+            >
+            <span class="cost-secondline">no</span>
+          </button>
+          <button class="cost-face cost-face-destructive" data-verb="clear">
+            <span class="cost-wordstack"
+              ><span class="cost-word-rest">clear</span
+              ><span class="cost-word-armed">sure?</span></span
+            >
+            <span class="cost-secondline">no</span>
+          </button>
+        </div>
+      </section>
+
+      <section class="cost-band" role="group" aria-labelledby="b4">
+        <h2 class="cost-band-head"><span class="cost-band-name" id="b4">players</span></h2>
+        <div class="cost-acts">
+          <button class="cost-face">play together</button>
+          <button class="cost-face">share</button>
+        </div>
+      </section>
+    </div>
+
+    <script>
+      // THE ARM. Every tier-3 press asks; the second press inside the window acts; any other
+      // tap, or four seconds, disarms. The box is already laid out at its armed size, so the
+      // only thing that changes is which word is `visible`.
+      const faces = [...document.querySelectorAll(".cost-face-destructive")];
+      let timer = null;
+      const disarm = () => {
+        faces.forEach((f) => f.classList.remove("is-armed"));
+        if (timer) clearTimeout(timer);
+        timer = null;
+      };
+      window.__disarm = disarm;
+      for (const f of faces)
+        f.addEventListener("click", (e) => {
+          e.stopPropagation();
+          if (f.classList.contains("is-armed")) {
+            disarm();
+            return; // the real act would fire here
+          }
+          disarm();
+          f.classList.add("is-armed");
+          timer = setTimeout(disarm, 4000);
+        });
+      document.addEventListener("click", (e) => {
+        if (!faces.some((f) => f.contains(e.target))) disarm();
+      });
+      for (const g of document.querySelectorAll(".chips"))
+        g.addEventListener("click", (e) => {
+          const b = e.target.closest(".chip");
+          if (!b) return;
+          [...g.querySelectorAll(".chip")].forEach((c) =>
+            c.setAttribute("aria-checked", String(c === b)),
+          );
+        });
+    </script>
+  </body>
+</html>

@@ -1,0 +1,50 @@
+/* ACC-GRAPHITE · ARM G2 — FORM CARRIES IT
+ *
+ * G1 measured what the charter's literal arm does. G2 is the family's own answer to what G1's
+ * numbers say: weight alone does not separate an achromatic ring from a graphite board, and an
+ * "ink at heavier pressure" meter is invisible over the rule it retraces. So each mark takes a
+ * FORM no other mark on the board has, and the ink stays on the ramp.
+ *
+ *   the ring  — a DOUBLE stroke (the estate's own `scribbleUnderline` retrace idiom), the only
+ *               doubled mark on a board of single rules, plus the fill wash.
+ *   the meter — OFFSET inward by one stroke width (the shipped `.join-pose` scale(0.984)), so
+ *               it sits on paper instead of on the rule, and DASHED, so it is a gauge and not
+ *               a second frame.
+ *
+ * Injected with page.addStyleTag. Touches no product file.
+ */
+
+/* ── §6 THE RING: weight + a doubled form ─────────────────────────────────────── */
+.game-cell:has(input:focus-visible) .cell-ghost-path {
+  stroke: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  fill: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  stroke-width: 16 !important;
+  stroke-opacity: 1 !important;
+  fill-opacity: 0.12 !important;
+}
+
+/* The second pass. The ghost svg holds ONE path, so the arm draws the retrace as an outline
+   on the cell box itself: a 2px graphite rule at offset 3px, the gap being the tell. In the
+   cure this is a second <path> on the ghost's own seed at scale(0.96), which is the join
+   trace's shipped shape; the arm proves the READ, not the mechanism. */
+.game-cell:has(input:focus-visible) {
+  outline: 2px solid var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  outline-offset: -1px !important;
+}
+
+/* ── §4 THE METER: off the rule, and dashed ───────────────────────────────────── */
+.progress-pose {
+  /* one stroke width inward, the shipped `.join-pose` ratio 1 - 8/500 */
+  transform: scale(0.984);
+  transform-origin: 50% 50%;
+}
+
+.progress-trace {
+  stroke: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  stroke-opacity: 1 !important;
+  /* The dash rides ON TOP of the fill-front dash, which owns `stroke-dasharray` and
+     `stroke-dashoffset`. A second dash cannot be expressed on one path, so the arm proves the
+     gauge's FORM with a second, static, fully-drawn tick path in the cure. Here the arm keeps
+     the fill dash and tests weight+offset alone, and the record says so. */
+  stroke-width: 10 !important;
+}

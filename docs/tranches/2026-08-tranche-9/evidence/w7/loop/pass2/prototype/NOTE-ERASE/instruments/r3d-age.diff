@@ -1,0 +1,38 @@
+PROPOSED — not applied. r0 is frozen; this is the edit R3-d needs once the note has an age and
+an exit, so its rows can see what moved. Two rows of R3-d change MECHANISM under NOTE-ERASE
+while keeping their verdict (re-run 2026-09-18, chromium, all ten rows stands/retracted equal to
+r0's):
+
+  · "wait 30s (does it age out?)" — the note still STANDS, and is now `data-note-age="settled"`
+    at 8 beats. The reader below cannot see that, so the row reports "unchanged" for a change.
+  · "type a digit" — still RETRACTED, now over a 150ms rub-out rather than a same-frame cut.
+    The row samples at 600ms, after the verb, so it cannot see that either.
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/marks.probe.ts
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/marks.probe.ts
+@@ the R3-d reader
+   const note = () =>
+     page.evaluate(() => {
+       const n = document.querySelector(".margin-note");
+       const ink = document.querySelector(".margin-note-ink");
+       if (!n) return null;
+       const cs = getComputedStyle(n);
+       const ics = ink ? getComputedStyle(ink) : null;
+       const r = (ink ?? n).getBoundingClientRect();
+       return {
+         text: (n.textContent || "").replace(/\s+/g, " ").trim(),
+         tone: (n.getAttribute("class") || "").replace("margin-note", "").trim(),
++        // T9-W7 §7: the note ages and it leaves. A row that reads only text + opacity reports
++        // "unchanged" through both, because the age is an attribute and the exit is over by the
++        // time this samples.
++        age: ink?.getAttribute("data-note-age") ?? null,
++        inkColor: ics?.color ?? null,
++        leaving: !!document.querySelector(".margin-note-ink.note-leave-active"),
+         opacity: cs.opacity,
+         inkOpacity: ics?.opacity ?? null,
+         visible: r.width > 0 && r.height > 0,
+         quiet: !!document.querySelector(".margin-note-block.is-quiet"),
+         role: n.getAttribute("role"),
+         ariaLive: n.getAttribute("aria-live"),
+       };
+     });

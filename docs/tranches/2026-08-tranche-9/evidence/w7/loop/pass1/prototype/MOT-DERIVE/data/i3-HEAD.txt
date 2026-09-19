@@ -1,0 +1,25 @@
+A. THE MIRROR
+   MOTION.curves.drawerGlide = cubic-bezier(0.32, 0.72, 0, 1)
+   --ease-glassGlide         = cubic-bezier(0.32, 0.72, 0, 1)
+   GREEN
+B1. THE CSS HOME
+   MOTION duration constants : beatMs=125 cardStepMs=440 boardFoldMs=520 chromeLeaveMs=200
+   distinct glass durations  : 6 — 200ms, 320ms, 280ms, var(--card-step-ms, 440ms), 240ms, MOTION.boardFoldMs
+   homeless spends           : 8
+     · src/App.vue:1142                                     200ms
+     · src/games/shared/GameControlPanel.vue:1724           320ms
+     · src/games/shared/GameControlPanel.vue:1735           280ms
+     · src/games/shared/GameControlPanel.vue:1744           320ms
+     · src/pencil/chrome/GameGallery/GameGallery.vue:1474   240ms
+     · src/pencil/chrome/GameGallery/GameGallery.vue:1475   240ms
+     · src/pencil/sheet/AnswerKeyLaminate.vue:237           280ms
+     · src/pencil/sheet/AnswerKeyLaminate.vue:238           280ms
+B2. THE WAAPI HOME (G-MOT-D1)
+   WAAPI duration sites      : 4
+     ok   src/App.vue:376                              useFlipGlide({})     MOTION.boardFoldMs
+     RED  src/games/shared/useControlsDrawer.ts:232    useFlipGlide({})     GLIDE_MS   (decl :86)
+     ok   src/games/shared/useFlipGlide.ts:164         animate()            options.durationMs
+     ok   src/pencil/chrome/GameGallery/useCarouselGlide.ts:330 animate()            GLIDE_MS   (decl :26)
+   homeless WAAPI durations  : 1
+B2 RED
+RED

@@ -1,0 +1,29 @@
+PROPOSED, UNAPPLIED — r0 row L1 reported MOVED (T9-W7 pass 3, ACC-GRAPHITE).
+Target: docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+The record is frozen; this diff is the proposal, the r0 file is untouched, and the chair
+disposes. The law does not change in KIND — the population is still pinned and the budget
+still may not grow. Only the number moves, because the Solve sparkle's drop-shadow is deleted
+(filterBudget.ts, the sparkle row), and a law pinned to a literal that a cure retires is a law
+that reds on its own cure. Measured on the worktree: FILTER_BUDGET rows sum to 8.
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+@@ -36,7 +36,7 @@
+ law(
+   "L1",
+-  "the live-filter population is exactly 9 and the boil budget never grows",
+-  "filterBudget.ts FILTER_BUDGET_TOTAL, T4-P1 filter-deletion cure",
++  "the live-filter population is exactly 8 and the boil budget never grows",
++  "filterBudget.ts FILTER_BUDGET_TOTAL, T4-P1 filter-deletion cure + T9-W7 ACC-GRAPHITE (the Solve sparkle's drop-shadow retired with the violet it haloed)",
+   "GREEN",
+   () => {
+     const src = read("src/pencil/config/filterBudget.ts");
+     // The four budget groups only — FILL_ALLOWLIST below them is the SECONDARY census and
+     // carries its own `count:` rows (reading both was this probe's first bug, banked).
+     const budget = src.slice(0, src.indexOf("SECONDARY CENSUS"));
+     const counts = [...budget.matchAll(/count:\s*(\d+)/g)].map((m) => +m[1]);
+     const total = counts.reduce((a, b) => a + b, 0);
+-    return { ok: total === 9, detail: `FILTER_BUDGET rows sum to ${total}` };
++    return { ok: total === 8, detail: `FILTER_BUDGET rows sum to ${total}` };
+   },
+ );

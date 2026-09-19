@@ -1,0 +1,168 @@
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..a7970264 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -1139,7 +1139,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+ 
+ /* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--rung-breath) var(--verb-lift-ease);
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..9093a44a 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -356,6 +356,27 @@
+   --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+   --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+   --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
++
++  /* ── THE PENCIL VERBS, PUBLISHED (T9-W7 §13) ───────────────────────────────
++     Generated from MOTION.verbs/MOTION.rungs by scripts/publish-verbs.mjs; the
++     gate diffs the two layers byte for byte (i3 check A, widened). Do not hand-edit.
++     A `<style>` block spends a verb by naming it -- the lift's own rung and ease --
++     so a duration is a consequence of the verb, never a number a call site picks. */
++  --rung-page: 520ms;
++  --rung-step: 440ms;
++  --rung-sheet: 280ms;
++  --rung-mark: 250ms;
++  --rung-breath: 200ms;
++  --rung-touch: 150ms;
++
++  --verb-layDown-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-lift-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-turn-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-slide-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-writeIn-ease: cubic-bezier(0.22, 1, 0.36, 1);
++  --verb-rubOut-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-dusk-ease: cubic-bezier(0.4, 0, 0.2, 1);
++  --verb-dusk-ms: 350ms;
+ }
+ 
+ /* Dark theme */
+@@ -665,8 +686,8 @@ html {
+     html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
+       transition:
+-        background-color 350ms ease,
+-        color 350ms ease !important;
++        background-color var(--verb-dusk-ms) var(--verb-dusk-ease),
++        color var(--verb-dusk-ms) var(--verb-dusk-ease) !important;
+     }
+   }
+ 
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..4d93e511 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -614,7 +614,7 @@
+ 
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+     animation: none;
+   }
+ 
+@@ -626,7 +626,7 @@
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+     animation: none;
+   }
+ }
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..b2fe11ae 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -146,7 +146,34 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--rung-mark) var(--verb-writeIn-ease) backwards;
++}
++
++/* RUB OUT (T9-W7 §13) -- the note's missing exit, the write-in run backwards under an
++   accelerating hand. The clip retreats the way it arrived and the ink goes with it, so
++   the glyphs never re-lay out and the text never boils: one clip-path + one opacity on
++   an inline-block that is already its own paint. The verb is defined here; WHICH acts
++   erase a note is not this family's to design. */
++.margin-note-ink.is-rubbing-out {
++  animation: ink-rub-out var(--rung-breath) var(--verb-rubOut-ease) forwards;
++}
++
++@keyframes ink-rub-out {
++  from {
++    clip-path: inset(0 0 0 0);
++    opacity: 1;
++  }
++  to {
++    clip-path: inset(0 0 0 100%);
++    opacity: 0;
++  }
++}
++
++@media (prefers-reduced-motion: reduce) {
++  .margin-note-ink.is-rubbing-out {
++    animation: none;
++    opacity: 0;
++  }
+ }
+ 
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..64a0afeb 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -179,6 +179,45 @@ export const MOTION = {
+    *  minted so the answer-key laminate's lay-down joins the one glass curve
+    *  without becoming a reactive value. Retune a curve → edit ONE side per its
+    *  layer; the two never diverge because each owns a disjoint consumer set. */
++  /** ── THE PENCIL VERBS (T9-W7 §13) ────────────────────────────────────────────
++   *  Motion is named by what a HAND DOES ON PAPER. Six verbs, closed. Each owns its
++   *  whole tuple: the curve, the property set, the fill, the PRM arm, and a duration
++   *  drawn from `rungs` below. A call site names a VERB and a RUNG; it never types a
++   *  number and it never picks a curve. `--verb-*` in @theme is this object published,
++   *  byte-identical, by `scripts/publish-verbs.mjs`.
++   *
++   *  THE RUNGS are travel, not taste: they are the estate's own histogram (150ms x21,
++   *  200ms x16, 250ms x9 are 44% of every literal shipped) given names. */
++  rungs: {
++    /** a whole sheet or the whole board turns over */ page: 520,
++    /** one slot of travel along a rail */ step: 440,
++    /** a sheet is laid on the page */ sheet: 280,
++    /** a mark is made or unmade */ mark: 250,
++    /** a thing stops being there */ breath: 200,
++    /** the page answers a pointer */ touch: 150,
++  },
++  verbs: {
++    /** a hand puts something on the page and it stays */
++    layDown: { ease: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "backwards", props: "opacity, transform" },
++    /** a hand takes something off the page. ONE curve over both declared twins
++     *  (scene.css chrome-leave, App.vue deck-leave) and the laminate's lift-away:
++     *  --ease-fadeOut and --ease-accelIn are the same leave within 2% AUC, so they
++     *  collapse here rather than argue. */
++    lift: { ease: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "none", props: "opacity, transform" },
++    /** the page itself turns; what was here is now there */
++    turn: { ease: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "none", props: "transform" },
++    /** a thing travels along its rail without becoming anything else */
++    slide: { ease: "cubic-bezier(0.32, 0.72, 0, 1)", fill: "none", props: "transform" },
++    /** ink appears the way a hand writes it */
++    writeIn: { ease: "cubic-bezier(0.22, 1, 0.36, 1)", fill: "backwards", props: "clip-path, stroke-dashoffset, opacity" },
++    /** ink leaves the way a hand erases it — the write-in run backwards under an
++     *  accelerating hand. §7's hole, given a tuple. */
++    rubOut: { ease: "cubic-bezier(0.32, 0, 0.67, 0)", fill: "none", props: "clip-path, opacity" },
++    /** THE CLOSED-SET TEST. A change of LIGHT over the whole page is not a lay-down,
++     *  a lift, a turn or a slide. Declared a verb here so the set stays closed; its
++     *  selectors stay the five narrowed ones (index.css), never the 46 P1-W3 killed. */
++    dusk: { ease: "cubic-bezier(0.4, 0, 0.2, 1)", ms: 350, fill: "none", props: "background-color, color" },
++  },
+   curves: {
+     /** The drawer system's ONE curve — all four movers (sheet, case, masthead,
+      *  tab counter-scale), one clock, zero stagger. T3-W13 §3-S3′, the mid-wave

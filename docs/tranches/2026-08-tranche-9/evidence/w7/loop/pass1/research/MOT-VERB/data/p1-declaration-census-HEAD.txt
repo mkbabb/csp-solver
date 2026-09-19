@@ -1,0 +1,97 @@
+
+== I6-CORPUS (src/** vue+css+ts, dev INCLUDED)
+   declarations spelling a duration : 77
+   distinct literal durations       : 35
+   top                              : 150msx21, 200msx16, 250msx9, 500msx6, 240msx5, 350msx4
+   carrying a var(--ease-*)         : 46
+   bare UA keyword only             : 14
+   no curve at all                  : 17
+   raw cubic-bezier at a call site  : 0
+
+== I2-CORPUS (src/** vue+css, dev EXCLUDED)
+   declarations spelling a duration : 73
+   distinct literal durations       : 35
+   top                              : 150msx20, 200msx14, 250msx8, 500msx6, 240msx5, 350msx4
+   carrying a var(--ease-*)         : 44
+   bare UA keyword only             : 14
+   no curve at all                  : 15
+   raw cubic-bezier at a call site  : 0
+
+== EVERY ROW (I6 corpus), file:line | property | durations | curves
+src/App.vue:1142                                         transition                 200ms              var(--ease-glassGlide)
+src/assets/index.css:590                                 transition                 500ms              (none)
+src/assets/index.css:607                                 transition                 500ms              (none)
+src/assets/index.css:667                                 transition                 350ms/350ms        ease ease
+src/assets/index.css:679                                 animation                  0.6s               linear
+src/assets/index.css:721                                 animation                  0.3s               var(--ease-anticipatePop)
+src/assets/index.css:722                                 animation-delay            0ms                (none)
+src/assets/index.css:746                                 animation-duration         0.01ms             (none)
+src/assets/index.css:768                                 animation                  160ms/0ms          var(--ease-drawOn)
+src/assets/index.css:990                                 animation                  2650ms/2.65s       (none)
+src/games/futoshiki/CaretOverlay.vue:64                  transition                 200ms              var(--ease-fadeOut)
+src/games/shared/DrawerTab.vue:144                       transition                 150ms              ease-out
+src/games/shared/GameBoard.vue:1265                      transition                 200ms              var(--ease-fadeOut)
+src/games/shared/GameControlPanel.vue:1724               animation                  320ms              var(--ease-glassGlide)
+src/games/shared/GameControlPanel.vue:1728               animation                  380ms/140ms        var(--ease-drawOn)
+src/games/shared/GameControlPanel.vue:1735               animation                  280ms              var(--ease-glassGlide)
+src/games/shared/GameControlPanel.vue:1739               animation                  320ms/120ms        var(--ease-drawOn)
+src/games/shared/GameControlPanel.vue:1744               animation                  320ms/420ms        var(--ease-glassGlide)
+src/games/shared/GameControlPanel.vue:1749               animation                  260ms/260ms        var(--ease-standard)
+src/games/shared/GameControlPanel.vue:1810               transition                 150ms              var(--ease-standard)
+src/games/shared/GameControlPanel.vue:1956               transition                 150ms/150ms        (none)
+src/games/shared/GameControlPanel.vue:2082               transition                 200ms              (none)
+src/games/shared/GameControlPanel.vue:2132               transition                 150ms              (none)
+src/games/shared/GameControlPanel.vue:2284               transition                 200ms              var(--ease-drawOn)
+src/games/shared/GameControlPanel.vue:2452               animation                  500ms              ease
+src/games/shared/GameControlPanel.vue:2473               animation                  400ms              ease
+src/games/shared/SolverErrorNote.vue:63                  animation                  250ms              var(--ease-noteWrite)
+src/games/shared/SolverErrorNote.vue:97                  transition                 150ms              (none)
+src/games/shared/gameCell.css:35                         animation                  250ms              ease-out
+src/games/shared/gameCell.css:154                        animation                  250ms              ease-out
+src/games/shared/gameCell.css:239                        animation                  180ms              var(--ease-ghostDraw)
+src/games/shared/gameCell.css:257                        animation                  180ms              var(--ease-ghostDraw)
+src/games/shared/scene.css:378                           transition                 150ms              (none)
+src/games/shared/scene.css:606                           animation                  250ms/150ms        var(--ease-drawOn)
+src/games/shared/scene.css:617                           transition                 200ms              var(--ease-fadeOut)
+src/games/shared/scene.css:629                           transition                 200ms              var(--ease-fadeOut)
+src/games/thermo/ThermoTube.vue:114                      transition                 200ms              var(--ease-fadeOut)
+src/pencil/celestial/DarkModeToggle.vue:717              transition                 200ms              ease
+src/pencil/celestial/DarkModeToggle.vue:769              transition                 100ms/240ms        var(--ease-standard)
+src/pencil/celestial/DarkModeToggle.vue:780              transition                 300ms/60ms         var(--ease-standard)
+src/pencil/celestial/DarkModeToggle.vue:795              transition                 340ms              var(--ease-accelIn)
+src/pencil/celestial/DarkModeToggle.vue:810              transition                 800ms/60ms         var(--ease-springPop)
+src/pencil/celestial/DarkModeToggle.vue:822              animation                  120ms              (none)
+src/pencil/celestial/DarkModeToggle.vue:843              animation                  1010ms             (none)
+src/pencil/celestial/DarkModeToggle.vue:873              transition                 150ms/100ms        ease-in ease-in
+src/pencil/celestial/DarkModeToggle.vue:882              transition                 150ms/560ms/120ms/560ms var(--ease-anticipatePop)
+src/pencil/celestial/DarkModeToggle.vue:888              transition-delay           640ms              (none)
+src/pencil/celestial/DarkModeToggle.vue:891              transition-delay           720ms              (none)
+src/pencil/celestial/DarkModeToggle.vue:976              transition                 200ms              ease
+src/pencil/chrome/AttributionCard/AttributionCard.vue:183 transition                 150ms/150ms/0s/150ms var(--ease-standard) var(--ease-standard)
+src/pencil/chrome/AttributionCard/AttributionCard.vue:205 transition                 150ms/150ms/0s/0s  var(--ease-standard) var(--ease-standard)
+src/pencil/chrome/AttributionCard/CrayonHeart.vue:329    transition                 240ms              ease
+src/pencil/chrome/CompletionVignette.vue:133             animation                  250ms              var(--ease-noteWrite)
+src/pencil/chrome/GameGallery/GameCard.vue:410           transition                 440ms/440ms        var(--ease-glassGlide) var(--ease-glassGlide)
+src/pencil/chrome/GameGallery/GameCard.vue:593           transition                 150ms              var(--ease-standard)
+src/pencil/chrome/GameGallery/GameGallery.vue:1320       transition                 200ms              var(--ease-standard)
+src/pencil/chrome/GameGallery/GameGallery.vue:1420       transition                 150ms/150ms        var(--ease-standard) var(--ease-standard)
+src/pencil/chrome/GameGallery/GameGallery.vue:1473       transition                 240ms/240ms        var(--ease-glassGlide) var(--ease-glassGlide)
+src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:560 transition                 1.2s               var(--ease-noteWrite)
+src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:647 transition                 200ms              var(--ease-noteWrite)
+src/pencil/chrome/MarginNote.vue:149                     animation                  250ms              var(--ease-noteWrite)
+src/pencil/chrome/MarginNote.vue:180                     animation                  250ms              var(--ease-noteWrite)
+src/pencil/chrome/ScribbleLoader.vue:81                  animation                  1000ms             linear
+src/pencil/chrome/icons/DiceIcon.vue:113                 animation                  500ms              var(--ease-springPop)
+src/pencil/chrome/icons/DiceIcon.vue:134                 animation                  250ms              var(--ease-springPop)
+src/pencil/chrome/icons/FillForcedIcon.vue:72            animation                  350ms              var(--ease-standard)
+src/pencil/chrome/icons/SolveIcon.vue:55                 animation                  350ms              var(--ease-standard)
+src/pencil/chrome/icons/SolveIcon.vue:70                 animation                  500ms              var(--ease-springPop)
+src/pencil/dev/FilterTuner.vue:434                       transition                 200ms              (none)
+src/pencil/dev/FilterTuner.vue:606                       transition                 150ms              (none)
+src/pencil/dev/FilterTuner.vue:624                       transition                 250ms              var(--ease-springPop)
+src/pencil/dev/FilterTuner.vue:627                       transition                 200ms              var(--ease-standard)
+src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue:588      transition                 240ms/500ms        ease ease
+src/pencil/sheet/AnswerKeyLaminate.vue:224               transition                 200ms/200ms        var(--ease-accelIn) var(--ease-accelIn)
+src/pencil/sheet/AnswerKeyLaminate.vue:236               transition                 280ms/280ms        var(--ease-glassGlide) var(--ease-glassGlide)
+src/pencil/sheet/AnswerKeyLaminate.vue:271               transition                 150ms              linear
+src/pencil/sheet/SheetWashiLabel.vue:109                 transition                 150ms              (none)

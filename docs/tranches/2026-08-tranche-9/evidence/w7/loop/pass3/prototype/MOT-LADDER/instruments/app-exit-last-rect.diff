@@ -1,0 +1,59 @@
+PROPOSED, NOT APPLIED — T9-W7 §13 §1.4, the phone's exit. A BALLOT row (U-10).
+
+WHY IT IS A BALLOT AND NOT A FOLD. At 390x844 the wordmark's rest poses sit 145.49 (chromium)
+/ 145.77 (webkit) px apart — the entry's declared travel to 0.3 px — while the exit declares
+10.0 and so effectively CUTS. The cause is here: `runFold` reads each mover's LAST rect inside
+`nextTick`, which is pre-paint, and at 390 the playing layout does not exist yet at that
+moment. At 1440x900 the tick suffices (316.6 / 318.5 read against 319.10 / 324.02 rest), which
+is why the defect is invisible on the desk.
+
+Applying this moves 145 px of wordmark ink on every phone exit where today it cuts — ink the
+owner has never seen. It is therefore built, measured and carried, never folded silently.
+G-EXIT-MIRROR stays RED until the owner's word.
+
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@
+ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[]) {
+-  void nextTick(() => {
+-    const movers: FlipMover[] = [];
+-    for (const pair of pairs) {
+-      const el = pair.el();
+-      if (!el || !pair.first) continue;
+-      movers.push({
+-        el,
+-        from: flipTransform(pair.first, el.getBoundingClientRect()),
+-        to: "translate(0px, 0px) scale(1)",
+-        transformOrigin: "50% 50%",
+-      });
+-    }
+-    if (movers.length) foldCtl.run(movers);
+-  });
++  void nextTick(() => {
++    // THE LAST RECT IS READ AFTER THE LAYOUT IS REAL. `nextTick` is pre-paint: at 390x844
++    // the playing layout does not exist yet, so every mover's LAST rect is its rest rect
++    // and the delta collapses to ~10 px — the exit cuts. One animation frame later the
++    // layout has been produced and the read is the pose the eye will actually see. The
++    // desk never showed this because at 1440x900 the tick already suffices.
++    requestAnimationFrame(() => {
++      const movers: FlipMover[] = [];
++      for (const pair of pairs) {
++        const el = pair.el();
++        if (!el || !pair.first) continue;
++        movers.push({
++          el,
++          from: flipTransform(pair.first, el.getBoundingClientRect()),
++          to: "translate(0px, 0px) scale(1)",
++          transformOrigin: "50% 50%",
++        });
++      }
++      if (movers.length) foldCtl.run(movers);
++    });
++  });
+ }
+
+MEASUREMENT STATUS: built as a diff; NOT built into a second dist and NOT measured in this
+pass. The lane's budget went to the registration defect (README §2), which forced a rebuild and
+a re-measure of every runtime row. The numbers §7(h) asks for — wordmark exit travel at 390x844
+within 10 % of 145.5 both engines, the board host within 10 % of its entry, the desk unchanged
+— are OWED. The ballot is not decidable without them. Reported as a gap.

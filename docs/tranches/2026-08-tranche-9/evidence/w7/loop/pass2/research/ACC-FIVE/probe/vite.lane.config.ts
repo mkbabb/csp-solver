@@ -1,0 +1,8 @@
+// ACC-FIVE pass-2 scratch vite config. Spreads the estate's default export and gives this
+// lane a PRIVATE optimized-deps cache, because worktrees share node_modules/.vite through
+// the symlink and concurrent servers evict each other's deps.
+import base from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_e58b4764-0fc-42/web/frontend/vite.config.ts";
+export default {
+  ...base,
+  cacheDir: "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc-five-vite-cache",
+};

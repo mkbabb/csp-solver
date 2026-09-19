@@ -1,0 +1,108 @@
+import { describe, it, expect } from "vitest";
+import { generateFrameTraceFrames, poseLengths, tickMarksAlong } from "../gridPaths";
+import { BOIL_CONFIG, FILTER_PRESETS } from "@pencil/config/pencilConfig";
+
+/**
+ * LAW A, IN RATIO FORM (T9-W7 ACC-GRAPHITE §4) — the law the component applies, asserted on
+ * the same geometry it applies it to rather than on a restated constant.
+ *
+ * The row that matters is the DISCONTINUITY. The integer form — a tick stands for
+ * `m = ceil(writable/slots)` whole cells, `k = ceil(written/m)` — is honest for one deal and a
+ * cliff for the next: at 9x9 Hard the frame holds 56 slots, so writable 56 fills 56 ticks and
+ * writable 57 fills 29. One cell of difference in the deal, 1.93x difference in the mark. The
+ * gate the ceil form shipped with sampled 4x4 / 9x9 / 16x16 and never sampled 57, which is why
+ * it could not see it.
+ */
+const TICK_INK = 45;
+const TICK_GAP = 25;
+
+/** The component's law, verbatim (HandDrawnGrid.vue `tallyFrames`). */
+function lawA(perimeter: number, writable: number, written: number) {
+  const slots = Math.max(1, Math.min(writable, Math.floor(perimeter / (TICK_INK + TICK_GAP))));
+  const k = Math.min(slots, Math.round((written * slots) / writable));
+  return { slots, k };
+}
+
+/** The form that shipped in pass 1/2, kept here as the CONTROL the cliff is measured against. */
+function lawAceil(perimeter: number, writable: number, written: number) {
+  const slots = Math.max(1, Math.min(writable, Math.floor(perimeter / (TICK_INK + TICK_GAP))));
+  const m = Math.ceil(writable / slots);
+  return { slots, k: Math.ceil(written / m) };
+}
+
+const traceFrames = generateFrameTraceFrames(
+  1000,
+  42,
+  BOIL_CONFIG.frameCount,
+  BOIL_CONFIG.frameBoil,
+  FILTER_PRESETS["grain-static"]?.grain,
+);
+const PERIMETERS = poseLengths(traceFrames);
+
+describe("LAW A — one mark, every board", () => {
+  it("prices its slots off the pose it is about to cut, and the four poses agree", () => {
+    for (const p of PERIMETERS) expect(p).toBeGreaterThan(3900);
+    expect(Math.max(...PERIMETERS) - Math.min(...PERIMETERS)).toBeLessThan(10);
+    expect(Math.floor(PERIMETERS[0] / (TICK_INK + TICK_GAP))).toBe(56);
+  });
+
+  it("has NO discontinuity at the slot boundary — 56, 57 and 58 writable all fill 56 ticks", () => {
+    const p = PERIMETERS[0];
+    expect(lawA(p, 56, 56).k).toBe(56);
+    expect(lawA(p, 57, 57).k).toBe(56);
+    expect(lawA(p, 58, 58).k).toBe(56);
+    // and the form it replaced cliffs on the same three deals
+    expect(lawAceil(p, 56, 56).k).toBe(56);
+    expect(lawAceil(p, 57, 57).k).toBe(29);
+    expect(lawAceil(p, 58, 58).k).toBe(29);
+  });
+
+  it("counts one tick per cell while the frame can hold them", () => {
+    const p = PERIMETERS[0];
+    for (const [writable, written, k] of [
+      [4, 1, 1],
+      [4, 4, 4],
+      [9, 9, 9],
+      [12, 12, 12],
+      [20, 3, 3],
+      [20, 20, 20],
+      [46, 46, 46],
+    ] as const)
+      expect(lawA(p, writable, written).k).toBe(k);
+  });
+
+  it("clamps at the frame's slots on every board too big to hold one tick per cell", () => {
+    const p = PERIMETERS[0];
+    for (const writable of [57, 64, 146, 172, 204, 240])
+      expect(lawA(p, writable, writable).k).toBe(56);
+  });
+
+  it("cuts exactly k subpaths out of the pose, and the mark is 45 units on every board", () => {
+    const p = PERIMETERS[0];
+    for (const [writable, written] of [
+      [4, 4],
+      [20, 3],
+      [20, 20],
+      [57, 57],
+      [172, 172],
+    ] as const) {
+      const { slots, k } = lawA(p, writable, written);
+      const d = tickMarksAlong(traceFrames[0], k, slots, (TICK_INK * slots) / p);
+      expect((d.match(/M/g) ?? []).length).toBe(k);
+      // the FIRST tick's own arc length is LAW A's 45 units, whatever the board
+      const first = d.split("M")[1] ?? "";
+      const pts = (first.match(/-?[\d.]+,-?[\d.]+/g) ?? []).map((s) => s.split(",").map(Number));
+      let len = 0;
+      for (let i = 1; i < pts.length; i++)
+        len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
+      expect(len).toBeGreaterThan(44.5);
+      expect(len).toBeLessThan(45.5);
+    }
+  });
+
+  it("draws nothing at all when nothing is written", () => {
+    const { slots, k } = lawA(PERIMETERS[0], 51, 0);
+    expect(k).toBe(0);
+    expect(tickMarksAlong(traceFrames[0], k, slots)).toBe("");
+  });
+});

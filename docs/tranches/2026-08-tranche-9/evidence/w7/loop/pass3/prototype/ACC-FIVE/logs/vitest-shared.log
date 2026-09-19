@@ -1,0 +1,41 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-29/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.test.ts (40 tests | 1 failed) 850ms
+     × four names at one rank, five captions at the next, and nothing else 11ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the consequence ladder (T9-W7 CTRL-COST) > four names at one rank, five captions at the next, and nothing else
+AssertionError: expected [ 'Size', 'Level', 'marks', …(2) ] to deeply equal [ 'marks', 'what fits', …(3) ]
+
+- Expected
++ Received
+
+  [
++   "Size",
++   "Level",
+    "marks",
+    "what fits",
+    "checking",
+-   "size",
+-   "level",
+  ]
+
+ ❯ src/games/shared/GameControlPanel.test.ts:434:65
+    432|     // in the copy gate. The fold asserted it on `.zone-row-label`; th…
+    433|     // class and the assertion follows the caption, not the class.
+    434|     expect(w.findAll(".band-row-caption").map((l) => l.text())).toEqua…
+       |                                                                 ^
+    435|       "marks",
+    436|       "what fits",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 33 passed (34)
+      Tests  1 failed | 434 passed (435)
+   Start at  21:52:34
+   Duration  2.80s (transform 6.97s, setup 659ms, import 10.12s, tests 4.11s, environment 23.16s)
+
+RC=1

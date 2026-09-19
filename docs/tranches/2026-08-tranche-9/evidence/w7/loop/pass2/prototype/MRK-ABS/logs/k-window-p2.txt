@@ -1,0 +1,21 @@
+RING_GEOMETRY wanderUnits 5.4 · inset 0.86 · kW4 0.443  ->  declared sigma = 2.3922 units
+
+RING (W4, all cells, board units):
+  size    n     roughness   W4 sigma            dev from 2.392   excursion
+  4       16    1.6744      2.4004 (CV 12.5%)   +0.34%           5.379
+  9       81    3.7674      2.3777 (CV 14.4%)   -0.61%           5.379
+  16      256   6.6977      2.4148 (CV 14.2%)   +0.95%           5.400
+  pop4096 4096  6.6977      2.3918 (CV 14.2%)   -0.02%           -
+  per-size spread 1.55%
+
+RULE (W4, every cell rule + every subgrid rule, frame 0, board units):
+  size  n(cell/sub)  cell-rule sigma      subgrid-rule sigma   all rules
+  4     4/2          2.2484 (CV 18.4%)    3.9335 (CV 20.2%)    2.8101
+  9     12/4         2.0209 (CV 30.0%)    4.4653 (CV 22.6%)    2.6320
+  16    24/6         2.3879 (CV 29.7%)    4.5809 (CV 16.9%)    2.8265
+
+G-ABS-1 — ring sigma / rule sigma, SAME window, same board:
+  size  ring_u   rule_u   ratio(units)  ring_px  rule_px  ratio(px)  band [0.5,2.0]
+  4     2.4004   2.8101   0.854         0.761    1.158    0.657      GREEN
+  9     2.3777   2.6320   0.903         1.163    1.674    0.695      GREEN
+  16    2.4148   2.8265   0.854         1.181    1.798    0.657      GREEN

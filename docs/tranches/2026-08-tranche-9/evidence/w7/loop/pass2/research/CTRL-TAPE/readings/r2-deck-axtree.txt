@@ -1,0 +1,22 @@
+T9-W7 pass 2 · RESEARCH · CTRL-TAPE — the deck's a11y tree, HEAD vs the pass-1 build.
+Probe: probe/r2-deck-axtree.mjs (servers :4230 HEAD / :4232 proto, 390x844, ?view=gallery).
+Read with `locator("body").ariaSnapshot()` — the engine's own computation, not the DOM.
+
+== chromium|head   AX headings (1):
+    - heading "sudoku" [level=1]
+    dom: {"card":{"inert":false,"ariaHidden":null,"display":"block","vis":"hidden"},
+          "drawer":{"inert":false,"ariaHidden":null,"display":"flex","vis":"visible"}}
+== chromium|proto  AX headings (2):
+    - heading "sudoku" [level=1]
+    - heading "new game" [level=2]
+    dom: {"card":{"inert":false,"ariaHidden":null,"display":"block","vis":"hidden"},
+          "drawer":{"inert":false,"ariaHidden":null,"display":"flex","vis":"visible"}}
+== webkit|head     AX headings (1):
+    - heading "sudoku" [level=1]
+== webkit|proto    AX headings (2):
+    - heading "sudoku" [level=1]
+    - heading "new game" [level=2]
+
+READING. The controls card is `visibility: hidden` on the deck route, so the seven headings the
+build mints inside it never reach the tree. The deck's tree moves by exactly ONE node, both
+engines: the staging band's own `new game` tape becomes a level-2 heading.

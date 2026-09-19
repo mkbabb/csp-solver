@@ -1,0 +1,156 @@
+// T9-W7 pass 3 · RESEARCH · CTRL-RULE — PROPOSED SUCCESSOR to r7's instrument I3.
+//
+// NOT APPLIED. Banked as a proposed diff per the lane's laws; the r0 row is reported MOVED.
+//
+// WHY I3 MOVED. `r0/r7-owners-eye/instruments/owners-eye.instruments.mjs:119` reads "a pinned
+// compartment tape names a group at least half on screen, at every scroll state" and is RED at
+// HEAD (3 violating states at 1440×900 webkit). Its ≥50% threshold is a PROXY for the harm the
+// owner saw: a title pinned at the card's top edge for a group that has left, while the groups
+// actually under the eye carry none. Measured in `readings/pinned-name-i3.json`, that proxy also
+// fires on a TRUTHFUL pin: a name pinned in the margin column beside its own field's last 28% is
+// naming exactly what the reader is looking at, and I3 calls it a violation (2 → 4 at 1440×900,
+// both engines). The subject moved; the gate is not re-worded to pass, it is replaced by the two
+// rows the proxy was standing in for, and both are layout-neutral — a detached sticky tape and a
+// sticky margin name are judged by the same sentence.
+//
+//   ROW A · NO ORPHANED FIELD.  For every group with ≥33% of its FIELD readable in the port,
+//           some part of its NAME is on screen.
+//           HEAD's tape: RED.  arm (b) as built: RED (4/14 chromium, 4/13 webkit at 1280×800).
+//           arm (b) + a sticky margin name: GREEN (0/14, 0/13).
+//
+//   ROW B · NO STALE NAME.  Every name box on screen lies wholly inside its OWN group's box.
+//           HEAD's tape: RED — the tape pins at the port's top while its well has scrolled out,
+//           which is the picture in `r7-owners-eye/frames/p7-webkit-rail-wrongtag-1440x900.png`.
+//           A margin name: GREEN by construction — it is a grid item of the group it names and
+//           `position: sticky` is constrained by its grid AREA.
+//
+// Row B is what I3 reached for. Row A is what W2's prove record deferred to this wave ("§2.6
+// asserts a tag stays while its group is in view; it does not assert a tag LEAVES when its group
+// does — a question for W7's voice", `evidence/w2/prove/prove-record.md:47-49`).
+//
+// BORN-RED DISCIPLINE. Run it at HEAD first; both rows must be RED there before either is
+// claimed anywhere, and the run at HEAD is the control the cure is read against.
+//
+//   node name-truth.mjs   [BASE=http://127.0.0.1:4231/]  [CONTROL=http://127.0.0.1:4232/]
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname, join } from "node:path";
+import { fileURLToPath } from "node:url";
+
+const NM =
+  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/";
+const { chromium, webkit } = await import(NM + "playwright/index.mjs");
+
+const HERE = dirname(fileURLToPath(import.meta.url));
+const OUT = join(HERE, "..", "readings");
+mkdirSync(OUT, { recursive: true });
+
+// The two name idioms this estate has: HEAD's compartment tape and arm (b)'s margin name. The
+// gate names BOTH so it can be run against either tree without a second spelling.
+const NAME_SEL = ".rp-name, .tray-well .washi-tag";
+const GROUP_SEL = "[data-ruled-group], .tray-well";
+const FIELD_SEL = ".rp-field, .options-row, .zone-row";
+
+const SCAN = async (sel) => {
+  const [NAME_SEL, GROUP_SEL, FIELD_SEL] = sel;
+  const card = [...document.querySelectorAll(".controls-card")].find(
+    (e) => e.scrollHeight - e.clientHeight > 40,
+  );
+  if (!card) return { error: "the card does not overflow here — the rows would assert nothing" };
+  const max = card.scrollHeight - card.clientHeight;
+  const orphans = [];
+  const stale = [];
+  const states = [];
+  for (let t = 0; t <= max; t += Math.max(20, Math.round(max / 12))) {
+    card.scrollTop = t;
+    await new Promise((r) => setTimeout(r, 260)); // the sentinel publishes async; settle first
+    const port = card.getBoundingClientRect();
+    const visFrac = (r) =>
+      Math.max(0, Math.min(r.bottom, port.bottom) - Math.max(r.top, port.top)) /
+      Math.max(1, r.height);
+    for (const g of card.querySelectorAll(GROUP_SEL)) {
+      const nameEl = g.querySelector(NAME_SEL);
+      const fieldEl = g.querySelector(FIELD_SEL) ?? g;
+      if (!nameEl) continue;
+      const nb = nameEl.getBoundingClientRect();
+      const gb = g.getBoundingClientRect();
+      const fv = visFrac(fieldEl.getBoundingClientRect());
+      const nv = visFrac(nb);
+      // ROW A
+      if (fv >= 0.33 && nv <= 0)
+        orphans.push({ at: card.scrollTop, name: nameEl.textContent.trim(), fieldVis: +fv.toFixed(3) });
+      // ROW B — the name's box must lie wholly inside the group it names
+      if (nv > 0) {
+        const inside =
+          nb.top >= gb.top - 0.5 &&
+          nb.bottom <= gb.bottom + 0.5 &&
+          nb.left >= gb.left - 0.5 &&
+          nb.right <= gb.right + 0.5;
+        if (!inside)
+          stale.push({
+            at: card.scrollTop,
+            name: nameEl.textContent.trim(),
+            nameTop: +nb.top.toFixed(2),
+            groupTop: +gb.top.toFixed(2),
+            groupBottom: +gb.bottom.toFixed(2),
+          });
+      }
+    }
+    states.push(card.scrollTop);
+  }
+  return { maxScroll: max, states: states.length, orphans, stale };
+};
+
+const run = async (base, label) => {
+  const rows = {};
+  for (const engine of ["chromium", "webkit"]) {
+    for (const cell of [
+      { n: "1440x900", w: 1440, h: 900, touch: false },
+      { n: "1280x800", w: 1280, h: 800, touch: false },
+      { n: "390x844", w: 390, h: 844, touch: true },
+    ]) {
+      const browser = await (engine === "webkit" ? webkit : chromium).launch();
+      const ctx = await browser.newContext({
+        viewport: { width: cell.w, height: cell.h },
+        deviceScaleFactor: 1,
+        hasTouch: cell.touch,
+        colorScheme: "light",
+      });
+      await ctx.addInitScript(() => {
+        try {
+          localStorage.clear();
+          localStorage.setItem("sudoku-color-scheme", "light");
+        } catch {}
+      });
+      const page = await ctx.newPage();
+      await page.goto(base + "?size=3&difficulty=EASY", { waitUntil: "domcontentloaded" });
+      await page.waitForSelector("svg.handwritten-logo", { timeout: 40000 });
+      await page.waitForTimeout(1200);
+      if (
+        await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))
+      ) {
+        await page.locator(".drawer-tab").first().click({ force: true });
+        await page.waitForTimeout(950); // THE SHEET SLIDES
+      }
+      const r = await page.evaluate(SCAN, [NAME_SEL, GROUP_SEL, FIELD_SEL]);
+      rows[`${engine}/${cell.n}`] = r;
+      console.log(
+        `[${label}] ${engine} ${cell.n}  ROW A orphans ${r.orphans?.length ?? "—"}  ·  ROW B stale ${r.stale?.length ?? "—"}`,
+      );
+      await browser.close();
+    }
+  }
+  return rows;
+};
+
+const out = { generated: new Date().toISOString(), trees: {} };
+out.trees.subject = { base: process.env.BASE || "http://127.0.0.1:4231/", rows: await run(process.env.BASE || "http://127.0.0.1:4231/", "subject") };
+if (process.env.CONTROL)
+  out.trees.control = { base: process.env.CONTROL, commit: process.env.CONTROL_COMMIT || "unnamed", rows: await run(process.env.CONTROL, "control") };
+writeFileSync(join(OUT, "name-truth.json"), JSON.stringify(out, null, 2));
+
+const bad = Object.values(out.trees.subject.rows).reduce(
+  (a, r) => a + (r.orphans?.length ?? 0) + (r.stale?.length ?? 0),
+  0,
+);
+console.log(bad === 0 ? "GREEN — no orphaned field, no stale name" : `RED — ${bad} rows`);
+process.exit(bad === 0 ? 0 : 1);

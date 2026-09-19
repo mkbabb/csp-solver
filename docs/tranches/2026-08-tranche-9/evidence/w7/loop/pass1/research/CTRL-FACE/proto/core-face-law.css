@@ -1,0 +1,76 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+ * CTRL-FACE · THE CORE FACE LAW — printed and written, zero geometry.
+ *
+ * PRINTED (Fraunces, the face the sheet came printed with): every group name —
+ * all eight, one voice, one rung — and the act verbs.
+ * WRITTEN (Patrick Hand, what a pencil put there): every option value, the
+ * closed tab's value, the tally, the slug, the margin note.
+ *
+ * Nothing here moves a box, a padding, a margin or a radius. Every declaration
+ * is a family, a size that already has a token, a weight, a casing or an ink.
+ * ═══════════════════════════════════════════════════════════════════════════ */
+
+:root {
+  /* The two faces named by WHO put the word there, not by what the file is. */
+  --face-printed: var(--font-display); /* Fraunces */
+  --face-written: var(--font-hand); /* Patrick Hand */
+  /* The printed rank's weight. 800 is the incumbent; the Fraunces subset is a
+     LIVE variable font (fvar wght 100..900, gvar already paid), so any value in
+     the axis costs zero bytes. `arm-*-light.css` re-points this alone. */
+  --printed-weight: 800;
+}
+
+/* ── PRINTED · the eight group names, one voice at one rung ────────────────── */
+.controls-card .section-heading,
+.controls-card .tray-well > .washi-tag,
+.controls-card .zone-row-label {
+  font-family: var(--face-printed);
+  font-size: var(--type-group-title);
+  font-weight: var(--printed-weight);
+  text-transform: lowercase;
+  letter-spacing: var(--type-tracking-wide);
+  line-height: var(--type-leading-heading);
+  font-optical-sizing: auto;
+}
+
+/* A printed name is at full press. `--ink-press-quiet` (68%) was the row
+   caption's way of saying "this is a lesser name"; the FACE says it now, so
+   the alpha rank retires and the caption joins the eyebrow's own ink. */
+.controls-card .zone-row-label {
+  color: var(--color-muted-foreground);
+}
+
+/* ── PRINTED · the act verbs ───────────────────────────────────────────────── */
+.controls-card .icon-sublabel,
+.controls-card .peek-chip-word,
+.play-controls .icon-sublabel,
+.peek-chip .peek-chip-word {
+  font-family: var(--face-printed);
+  font-weight: var(--printed-weight);
+  text-transform: lowercase;
+  font-optical-sizing: auto;
+}
+
+/* ── WRITTEN · every value ─────────────────────────────────────────────────── */
+/* `.ctrl-btn` hardcodes `font-family: "Fira Code", monospace` in the component
+   (OptionSelector.vue:105) — the one face in this estate that is not reachable
+   from a token. The law needs that literal to become `var(--face-written)`; the
+   overlay does it from outside to measure the consequence.
+   `text-transform: lowercase` is not decoration: Patrick Hand's cut ships C, R
+   and S and no other capital, so an untransformed "Easy" paints its E in the
+   cursive fallback mid-word (R6 law 29, P1-W3's ruling B2). */
+.controls-card .ctrl-btn {
+  font-family: var(--face-written);
+  text-transform: lowercase;
+}
+
+/* ── §8 · THE TAB HEAD'S UNDERLINE RETIRES ─────────────────────────────────── */
+/* Two underline grammars forty pixels apart both meaning "selected": a CAD
+   `text-decoration` on the tab head (σ 0.00px) and the option chip's seeded
+   hand-drawn scribble. A pencil mark belongs under a pencilled word, so the
+   printed name gives its underline up and the chosen OPTION keeps the scribble.
+   The tab's chosen-ness is then carried by the ink it already changes
+   (`headingClass` → muted vs the tier's crayon) plus `aria-expanded`. */
+.controls-card .mobile-heading-btn .section-heading.is-active {
+  text-decoration: none;
+}

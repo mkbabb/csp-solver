@@ -1,0 +1,121 @@
+================================================================================================
+1. THE TRAVEL CENSUS — every mover the product creates, its travel, its duration
+================================================================================================
+viewport	gesture	target	travel px	scale	ms	px/ms
+390x844-phone	drawer-toggle-open	DIV.scene-controls	628.0	1.000	520	1.208
+390x844-phone	drawer-toggle-close	DIV.scene-controls	628.0	1.000	520	1.208
+390x844-phone	gallery-enter	DIV.board-peek-host	57.6	1.534	520	0.111
+390x844-phone	gallery-enter	DIV.logo-menu	145.5	1.562	520	0.280
+390x844-phone	card-step-right	DIV.gallery-track	304.0	1.000	440	0.691
+390x844-phone	gallery-exit-escape	DIV.board-peek-host	43.9	0.779	520	0.084
+390x844-phone	gallery-exit-escape	DIV.logo-menu	10.0	0.757	520	0.019
+390x844-phone	gallery-enter-2	DIV.board-peek-host	57.6	1.534	520	0.111
+390x844-phone	gallery-enter-2	DIV.logo-menu	145.5	1.562	520	0.280
+390x844-phone	gallery-exit-select	DIV.board-peek-host	43.9	0.779	520	0.084
+390x844-phone	gallery-exit-select	DIV.logo-menu	10.0	0.640	520	0.019
+1440x900-desk	drawer-toggle-open	DIV.board-peek-host	193.0	0.913	520	0.371
+1440x900-desk	drawer-toggle-open	DIV.scene-controls	209.0	1.000	520	0.402
+1440x900-desk	drawer-toggle-open	BUTTON.drawer-tab	0.0	1.095	520	—
+1440x900-desk	drawer-toggle-open	H1.masthead	317.6	0.957	520	0.611
+1440x900-desk	drawer-toggle-close	DIV.board-peek-host	193.0	1.095	520	0.371
+1440x900-desk	drawer-toggle-close	DIV.scene-controls	209.0	1.000	520	0.402
+1440x900-desk	drawer-toggle-close	BUTTON.drawer-tab	0.0	0.913	520	—
+1440x900-desk	drawer-toggle-close	H1.masthead	317.6	1.045	520	0.611
+1440x900-desk	gallery-enter	DIV.board-peek-host	168.4	2.211	520	0.324
+1440x900-desk	gallery-enter	DIV.logo-menu	319.1	1.546	520	0.614
+1440x900-desk	gallery-exit-escape	DIV.board-peek-host	203.2	0.495	520	0.391
+1440x900-desk	gallery-exit-escape	DIV.logo-menu	306.3	0.765	520	0.589
+1440x900-desk	gallery-enter-2	DIV.board-peek-host	168.4	2.211	520	0.324
+1440x900-desk	gallery-enter-2	DIV.logo-menu	319.1	1.546	520	0.614
+1440x900-desk	gallery-exit-select	DIV.board-peek-host	171.2	0.495	520	0.329
+1440x900-desk	gallery-exit-select	DIV.logo-menu	316.6	0.647	520	0.609
+
+520ms is declared on 24 moving targets, travel 10.0 … 628.0 px  (span 63.0x)
+440ms is declared on 1 moving target(s), travel 304.0 px
+movers with ZERO translate (pure scale) inside a moving gesture: 2 — BUTTON.drawer-tab@520ms, BUTTON.drawer-tab@520ms
+
+================================================================================================
+2. THE SOLVE — paperSpeed from the desk drawer, then predict the rest
+================================================================================================
+  desk drawer (1440, .scene-controls)  travel 209.0 px  ruled 520 ms
+  dock sheet  ( 390, .scene-controls)  travel 628.0 px  ruled 520 ms
+  card step   ( 390, .gallery-track)  travel 304.0 px  ruled 440 ms
+  card step   (1440, .gallery-track)  travel 352.0 px  ruled 440 ms
+
+— ANCHOR = the desk drawer, baseMs = 0
+  baseMs = 0.0 ms   paperSpeed = 0.402 px/ms (402.0 px/s)
+  dock sheet  ( 390, .scene-controls): predicted 1562.3 ms vs ruled 520 → miss +1042.3 ms (+200.5%)
+  card step   ( 390, .gallery-track): predicted 756.3 ms vs ruled 440 → miss +316.3 ms (+71.9%)
+  card step   (1440, .gallery-track): predicted 875.7 ms vs ruled 440 → miss +435.7 ms (+99.0%)
+
+— ANCHOR = the desk drawer, baseMs = 120
+  baseMs = 120.0 ms   paperSpeed = 0.523 px/ms (522.5 px/s)
+  dock sheet  ( 390, .scene-controls): predicted 1321.8 ms vs ruled 520 → miss +801.8 ms (+154.2%)
+  card step   ( 390, .gallery-track): predicted 701.8 ms vs ruled 440 → miss +261.8 ms (+59.5%)
+  card step   (1440, .gallery-track): predicted 793.6 ms vs ruled 440 → miss +353.6 ms (+80.4%)
+
+— ANCHOR = the desk drawer, baseMs = 200
+  baseMs = 200.0 ms   paperSpeed = 0.653 px/ms (653.2 px/s)
+  dock sheet  ( 390, .scene-controls): predicted 1161.4 ms vs ruled 520 → miss +641.4 ms (+123.4%)
+  card step   ( 390, .gallery-track): predicted 665.4 ms vs ruled 440 → miss +225.4 ms (+51.2%)
+  card step   (1440, .gallery-track): predicted 738.9 ms vs ruled 440 → miss +298.9 ms (+67.9%)
+
+— ANCHOR = the dock sheet, baseMs = 0
+  baseMs = 0.0 ms   paperSpeed = 1.208 px/ms (1207.7 px/s)
+  desk drawer (1440, .scene-controls): predicted 173.1 ms vs ruled 520 → miss -346.9 ms (-66.7%)
+  card step   ( 390, .gallery-track): predicted 251.7 ms vs ruled 440 → miss -188.3 ms (-42.8%)
+  card step   (1440, .gallery-track): predicted 291.5 ms vs ruled 440 → miss -148.5 ms (-33.8%)
+
+— ANCHOR = the dock sheet, baseMs = 120
+  baseMs = 120.0 ms   paperSpeed = 1.570 px/ms (1570.0 px/s)
+  desk drawer (1440, .scene-controls): predicted 253.1 ms vs ruled 520 → miss -266.9 ms (-51.3%)
+  card step   ( 390, .gallery-track): predicted 313.6 ms vs ruled 440 → miss -126.4 ms (-28.7%)
+  card step   (1440, .gallery-track): predicted 344.2 ms vs ruled 440 → miss -95.8 ms (-21.8%)
+
+— ANCHOR = the dock sheet, baseMs = 200
+  baseMs = 200.0 ms   paperSpeed = 1.962 px/ms (1962.5 px/s)
+  desk drawer (1440, .scene-controls): predicted 306.5 ms vs ruled 520 → miss -213.5 ms (-41.1%)
+  card step   ( 390, .gallery-track): predicted 354.9 ms vs ruled 440 → miss -85.1 ms (-19.3%)
+  card step   (1440, .gallery-track): predicted 379.4 ms vs ruled 440 → miss -60.6 ms (-13.8%)
+
+================================================================================================
+3. THE PAIRINGS — fit (baseMs, speed) to two ruled facts, predict the third
+================================================================================================
+
+— fit on {desk drawer (1440, .scene-controls)} + {dock sheet  ( 390, .scene-controls)}
+  NO FINITE SOLUTION: equal durations (520ms) on -419.0px of travel difference.
+  The only model consistent with both is speed = infinity, i.e. travel contributes ZERO ms
+  and the 'derived' duration collapses to the constant it was meant to replace.
+
+— fit on {dock sheet  ( 390, .scene-controls)} + {card step   ( 390, .gallery-track)}
+  baseMs = 364.9 ms   paperSpeed = 4.050 px/ms
+  the constant's share of the 520ms it explains: 70.2%
+  → desk drawer (1440, .scene-controls): predicted 416.5 ms vs ruled 520 → miss -103.5 ms (-19.9%)
+
+— fit on {desk drawer (1440, .scene-controls)} + {card step   ( 390, .gallery-track)}
+  baseMs = 696.1 ms   paperSpeed = -1.187 px/ms
+  SPEED IS NEGATIVE — under this fit a longer throw takes LESS time.
+  the constant's share of the 520ms it explains: 133.9%
+  → dock sheet  ( 390, .scene-controls): predicted 167.1 ms vs ruled 520 → miss -352.9 ms (-67.9%)
+
+================================================================================================
+4. LEAST SQUARES — the best single (baseMs, speed) the estate's own numbers allow
+================================================================================================
+  baseMs = 469.3 ms   paperSpeed = 15.803 px/ms (15803.4 px/s)
+  desk drawer (1440, .scene-controls): predicted 482.5 ms vs ruled 520 → -37.5 ms (-7.2%)   [travel term 13.2 ms]
+  dock sheet  ( 390, .scene-controls): predicted 509.0 ms vs ruled 520 → -11.0 ms (-2.1%)   [travel term 39.7 ms]
+  card step   ( 390, .gallery-track): predicted 488.5 ms vs ruled 440 → +48.5 ms (+11.0%)   [travel term 19.2 ms]
+  RMS miss 36.0 ms
+  the travel term across a 3.0x travel range spans 26.5 ms — 1.6 frames at 60Hz.
+  the constant's share of the mean duration: 95.1% — the system is a constant with a rounding error attached.
+
+================================================================================================
+5. THE ENGINE DELTA — one gesture, two travels
+================================================================================================
+  measured dock travel: webkit 576.4 px · chromium 604.6 px (probe-r7b.json)
+  declared keyframe travel at the same viewport: 628 px (probe3, .scene-controls)
+  least-squares fit: webkit 505.8 ms · chromium 507.6 ms → the two engines differ by 1.8 ms (0.4%)
+  (dock+card) two-point fit: webkit 507.2 ms · chromium 514.2 ms → the two engines differ by 7.0 ms (1.4%)
+  desk-anchored, base 0: webkit 1434.0 ms · chromium 1504.1 ms → the two engines differ by 70.2 ms (4.9%)
+
+done.

@@ -1,0 +1,57 @@
+PROPOSED, NOT APPLIED — r0's record is frozen (chair §7). This is the re-cut L6 row for
+`evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs`, to be taken at the wave's fold and folded
+into PAL-WALK's L6 row (both families repeal the same clause from opposite directions: the walk
+keeps a formula and re-cuts its band, the tin replaces the formula with a table).
+
+WHY IT MOVES. L6 asserts "the per-player ink is a FORMULA, not a palette: hue = i × 137.5° at a
+banded lightness". The clause it rests on — "no palette to run out of, therefore no cap" —
+measured false on this paper: twelve golden-angle sticks come out at min ΔE 0.024 (r0's own
+12-stick reading, re-derived by `check-peer-tin.mjs`'s ceiling search at ΔE 0.103 for FIVE
+berths ≥40° apart). A formula that cannot separate twelve is not a cap-free palette; it is an
+undeclared cap with no gate on it. The re-cut row asserts what is now true and is gated:
+a TABLE of five sticks and five ring arms per arm, priced by `scripts/check-peer-tin.mjs`
+(`lint:tin`, in CI beside `lint:ink`).
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+@@ -113,16 +113,22 @@
+ law(
+   "L6",
+-  "the per-player ink is a formula, not a palette: hue = i × 137.5° at a banded lightness",
+-  "playerIdentity.ts inkFor, index.css --peer-ink-l, T6 mark 13",
++  "the per-player ink is a TABLE with a gate on it: five sticks and five ring arms per arm",
++  "playerIdentity.ts inkFor, index.css --color-peer-N/-ring, scripts/check-peer-tin.mjs, T9-W7 PAL-TIN",
+   "GREEN",
+   () => {
+     const p = read("src/games/shared/playerIdentity.ts");
+     const css = read("src/assets/index.css");
+-    const walk = /137\.5/.test(p) && /0\.11/.test(p);
+-    const band = (css.match(/--peer-ink-l:/g) ?? []).length;
+-    return { ok: walk && band === 2, detail: `golden-angle walk: ${walk}; --peer-ink-l arms: ${band}` };
++    // The tin is module-private source text (exporting it mints a consumer-less export knip
++    // reds), so the probe reads it the way the gate does — as text.
++    const tin = /var\(--color-peer-1\)/.test(p) && /var\(--color-peer-1-ring\)/.test(p);
++    const sticks = (css.match(/--color-peer-\d+:/g) ?? []).length;
++    const rings = (css.match(/--color-peer-\d+-ring:/g) ?? []).length;
++    const gated = /check-peer-tin/.test(read("package.json"));
++    return {
++      ok: tin && sticks === 10 && rings === 10 && gated,
++      detail: `two keys off one tin: ${tin}; sticks ${sticks}; ring arms ${rings}; lint:tin present: ${gated}`,
++    };
+   },
+ );
+
+READING AT THIS TREE with the row above applied (re-pointed copy under this dir):
+  L6  GREEN  GREEN  two keys off one tin: true; sticks 10; ring arms 10; lint:tin present: true
+
+READING AT THIS TREE with r0's row unchanged (what the lane actually ran):
+  L6  GREEN  RED    golden-angle walk: false; --peer-ink-l arms: 0      ← MOVED
+
+CONTROL, `74a2b5d9` (the same instrument, re-pointed at the HEAD tree):
+  L6  GREEN  GREEN  golden-angle walk: true; --peer-ink-l arms: 2
+
+ALSO OBSERVED AND NOT THIS FAMILY'S: L3 ("no em dash and no unadmitted jargon reaches a reader")
+reads RED on BOTH trees — the prototype's and `74a2b5d9`'s. `check-copy-register.mjs` itself
+exits 0 with 0 dashes and 0 unadmitted jargon on this tree, so L3's own regex has drifted from
+the gate since the copy gate's discovery grammar was re-cut (`5f8e1a7b`…`4b3b19b3`). An estate
+row for the chair, not a tin row.

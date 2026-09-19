@@ -1,0 +1,56 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-58/web/frontend
+
+ ❯ src/games/shared/wire.red.test.ts (3 tests | 2 failed) 36ms
+     × U2 a joiner's own publish agrees nothing 4ms
+     × U3 no two known ids share an ink across two epochs by two authors 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/wire.red.test.ts > the wire rule (PAL-TIN §1.1) > U2 a joiner's own publish agrees nothing
+AssertionError: expected { Object (--color-user-ink) } to deeply equal { Object (--color-user-ink) }
+
+- Expected
++ Received
+
+  {
+-   "--color-user-ink": "var(--color-peer-4)",
++   "--color-user-ink": "var(--color-peer-1)",
+  }
+
+ ❯ src/games/shared/wire.red.test.ts:95:23
+     93|     p.hear("st", stFrame({ e: 9, ea: "peer-1", k: { [me]: 7 } }), "pee…
+     94|     p.hear("st", stFrame({ e: 10, ea: "peer-1", k: { [me]: 3 } }), "pe…
+     95|     expect(inkOf(me)).toEqual(inkFor(3));
+       |                       ^
+     96|   });
+     97|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/wire.red.test.ts > the wire rule (PAL-TIN §1.1) > U3 no two known ids share an ink across two epochs by two authors
+AssertionError: expected 2 to be 3 // Object.is equality
+
+- Expected
++ Received
+
+- 3
++ 2
+
+ ❯ src/games/shared/wire.red.test.ts:120:32
+    118|     const inks = rows.map((r) => r.ink["--color-user-ink"]);
+    119|     expect(inks.every(Boolean)).toBe(true);
+    120|     expect(new Set(inks).size).toBe(rows.length);
+       |                                ^
+    121|   });
+    122| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  17:59:59
+   Duration  396ms (transform 48ms, setup 12ms, import 36ms, tests 36ms, environment 222ms)
+
+EXIT=1

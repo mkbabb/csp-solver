@@ -1,0 +1,35 @@
+/* MRK-ABS pass-1 — the token-ring overlay, replayable with page.addStyleTag({path}).
+   Measured through probe/token-ring.probe.ts, both engines, both themes, 1280x800. */
+/* the token, everywhere off the board. TWO EXEMPTIONS, both measured:
+     - .cell-native-input keeps the house hand (the board is where the page is drawn);
+     - .gallery-viewport keeps outline:none, because spoken-gallery.spec.ts §3.7 pins exactly
+       ONE ring owner and it is the aria-activedescendant card, not the scrollport. A blanket
+       [tabindex] token catches the scrollport and reds that spec. */
+  :is(button, a, [tabindex]):not(.cell-native-input):not(.gallery-viewport):focus-visible,
+  :is(button, a, [tabindex]):not(.cell-native-input):not(.gallery-viewport):focus {
+    outline: 2px solid var(--color-focus-sketch) !important;
+    outline-offset: 3px !important;
+  }
+  /* the six bespoke rects, overridden by the token */
+  .logo-trigger:focus, .logo-trigger:focus-visible,
+  .drawer-tab:focus, .drawer-tab:focus-visible,
+  .staging-btn:focus .staging-face, .staging-btn:focus-visible .staging-face,
+  .guard-btn:focus .guard-face, .guard-btn:focus-visible .guard-face,
+  .gallery-viewport:focus .game-card.is-center,
+  .gallery-viewport:focus-visible .game-card.is-center {
+    outline: 2px solid var(--color-focus-sketch) !important;
+    outline-offset: 3px !important;
+  }
+  /* the toggle keeps its ornament geometry (54px), takes the token's stroke. ':root' is load
+     bearing: the blanket rule above is (0,2,1) and would otherwise out-specify a bare
+     '.sun-moon-toggle:focus' (0,2,0), pull the ring to offset 3 and bury it under the art —
+     the exact defect T9-W2 §2.4 cured. Measured: the light toggle painted ZERO changed pixels
+     before this line was added. */
+  :root .sun-moon-toggle:focus, :root .sun-moon-toggle:focus-visible {
+    outline: 2px solid var(--color-focus-sketch) !important;
+    outline-offset: calc(2px - var(--toggle-bleed, 0px)) !important;
+  }
+  /* the dark arm the token lacks today */
+  html.dark, .dark {
+    --color-focus-sketch: #6aabeb;
+  }

@@ -1,0 +1,187 @@
+/* ══════════════════════════════════════════════════════════════════════════════════════
+   CTRL-COST · THE CONSEQUENCE LADDER — pass-1 overlay stylesheet.
+
+   Injected with `page.addStyleTag` against the lane's own dev server. It touches NO product
+   file. It is the visual half of the prototype; `cost-card.js` is the structural half.
+
+   THE PROXIES, STATED ONCE so no number here is read as a ship-ready one:
+   · A tier-2/tier-3 face ships as `HandDrawnOutline :pose="0"` at stroke 2 / 2.5 (R6 law 37,
+     the guard ribbon's own move, zero filters). An overlay cannot mount a Vue component, so
+     the face wears `outline: <w>px solid` at `outline-offset: 2px` instead. `outline` is the
+     only CSS edge that costs the box ZERO layout, which is exactly what `HandDrawnOutline`
+     costs (it paints an absolutely-positioned `<svg>` outset from the border box). Every
+     height in this lane's readings is therefore the height the drawn form would have.
+   · Ink, rungs, radii and the tap floor are the product's own tokens, read not invented.
+   ══════════════════════════════════════════════════════════════════════════════════════ */
+
+/* ── THE BAND NAME · one voice, one rank ────────────────────────────────────────────────
+   Three names replace eight. They take `--type-group-title` — the role W2 §2.6 landed for
+   exactly this re-point (R6 law 27) — at Fraunces 800 lowercase, which is the voice two of
+   the eight names already speak in. Nothing new is minted: the role's right-hand side is
+   the whole lever. */
+.cost-band-name {
+  display: block;
+  margin: 0 0 0.35rem;
+  font-family: var(--font-display), serif;
+  font-size: var(--type-group-title);
+  font-weight: 800;
+  line-height: 1.05;
+  text-transform: lowercase;
+  color: var(--color-muted-foreground);
+}
+
+/* THE BAND. No drawn frame: the eight-node census collapses to three names, and a name that
+   outranks everything under it does not also need a box. The wells' 1.5px strokes are what
+   this deletes — one drawn edge per COST, not one per topic. */
+.cost-band {
+  display: block;
+  margin-block: 0.55rem;
+}
+
+.cost-band + .cost-band {
+  margin-top: 0.9rem;
+}
+
+/* ── TIER 1 · LOOKING — bare words, no box ──────────────────────────────────────────────
+   Five rows (marks · what fits · checking · size · level), each a caption beside the chips
+   it names. The chips are the product's own `.ctrl-btn` on its seeded scribble underline;
+   the row caption drops to `--type-tag` and stops pretending to be a group name. */
+.cost-row {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  padding-block: 0.15rem;
+}
+
+.cost-row-caption {
+  flex: 0 0 auto;
+  min-width: 3.75rem;
+  font-family: var(--font-hand), cursive;
+  font-size: var(--type-tag);
+  font-weight: 400;
+  line-height: 1.2;
+  color: var(--color-muted-foreground);
+}
+
+.cost-row > .ctrl-options,
+.cost-row > :not(.cost-row-caption) {
+  flex: 1 1 auto;
+}
+
+/* ── TIER 2 · WRITING — the drawn face at stroke 2 ──────────────────────────────────────
+   The guard ribbon's `keep` weight: a box, no ground. Reversible acts get an edge because
+   they change the board; they do not get the destructive verb's weight. */
+.cost-acts {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: stretch;
+  justify-content: flex-start;
+  gap: 0.6rem;
+}
+
+.cost-face {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--tap-floor, 2.75rem);
+  min-width: var(--tap-floor, 2.75rem);
+  padding: 0.3rem 0.55rem;
+  border-radius: 0.3rem;
+  outline: 2px solid var(--color-foreground); /* PROXY for HandDrawnOutline :pose="0" sw 2 */
+  outline-offset: 2px;
+}
+
+/* ── TIER 3 · STARTING OVER — stroke 2.5 + the 8% ground, and the box never moves ───────
+   The guard ribbon's own leave-verb weight, twice owner-passed (R6 §1.3). The band is laid
+   out at its ARMED size from the start: the word cell is a 1×1 grid holding BOTH words, so
+   it sizes to the wider of them, and the second line is present-but-hidden at rest. Arming
+   swaps `visibility`. Nothing appears, nothing moves — which is M12's "simply, without
+   contrivance or large modals" answered by geometry rather than by a smaller modal. */
+.cost-face-destructive {
+  outline-width: 2.5px;
+  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
+}
+
+.cost-wordstack {
+  display: grid;
+}
+
+.cost-wordstack > * {
+  grid-area: 1 / 1;
+  justify-self: center;
+}
+
+.cost-word-armed {
+  visibility: hidden;
+  color: var(--color-red-ink);
+  font-weight: 600;
+}
+
+.cost-secondline {
+  visibility: hidden;
+  margin-top: 0.1rem;
+  font-family: var(--font-hand), cursive;
+  font-size: var(--type-tag);
+  line-height: 1.2;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  background: none;
+  border: 0;
+  padding: 0;
+  color: var(--color-foreground);
+  cursor: pointer;
+}
+
+.cost-face-destructive.is-armed .cost-word-rest {
+  visibility: hidden;
+}
+
+.cost-face-destructive.is-armed .cost-word-armed,
+.cost-face-destructive.is-armed .cost-secondline {
+  visibility: visible;
+}
+
+/* ── THE FOCUS RING, chosen ────────────────────────────────────────────────────────────
+   The card authors none today (R1 §b): every control falls to the UA's `outline: auto`,
+   drawn 1px in chromium and 3px in webkit. The estate's own authored rings are the tongue's
+   `2px dashed currentColor` offset 3 and the guard face's `2px solid color-mix(fg 45%)`
+   offset 4. The ladder already wears `outline` for its EDGE, so the ring cannot also be an
+   outline — it takes the ring the estate's drawn face uses, one rung out, via box-shadow so
+   the two never fight. */
+.cost-face:focus-visible,
+.cost-row .ctrl-btn:focus-visible {
+  outline-color: var(--color-foreground);
+  box-shadow: 0 0 0 2px var(--color-card), 0 0 0 4px var(--color-foreground);
+}
+
+/* ── THE BAR IS DELETED ────────────────────────────────────────────────────────────────
+   `clear` went to tier 3, `fill`/`solve` to tier 2, `share` beside the players' own acts.
+   What is left is an empty grid with a sticky key, a `::after` skirt and z-index 60 — so
+   the node goes, and with it the 89.6% the `players` well was buried under (I2). */
+.action-bar {
+  display: none !important;
+}
+
+/* ── THE MOBILE TABS DIE ───────────────────────────────────────────────────────────────
+   `size` and `level` are two tier-1 rows. The tab heads were the only reason an option
+   could measure 0×0 until discovered, and the only reason `level` cost three taps. */
+.mobile-heading-row {
+  display: none !important;
+}
+
+.cost-row .ctrl-options {
+  display: flex !important;
+}
+
+/* The wells' drawn frames stand down with their tapes: the cost bands are the compartments
+   now. (`.tray-well` keeps its box for the players band alone — see `cost-card.js`.) */
+.cost-unwelled > .outline-svg,
+.cost-unwelled > .outline-container {
+  display: none !important;
+}
+
+.cost-unwelled {
+  padding: 0 !important;
+  margin: 0 !important;
+}

@@ -1,0 +1,787 @@
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 4a00b36e..1d16a23b 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -114,6 +114,22 @@ const EXTRACT = {
+           .map((m) => ({ s: m[1], where: f.rel })),
+       ),
+   },
++  // T9-W7 ACC-SIX — the count tape is a BOUND tape (`:text="tapeText"`), so the tape
++  // extractor above cannot see it. What it renders is one template with two integer holes,
++  // and the honest census of that is the template's own words plus the ten digits: this
++  // reads the literal where it is authored and emits exactly that alphabet. It reds the day
++  // the template grows a `%` or a `/` — neither codepoint is in the hand's cut, and either
++  // would be a woff2 re-cut minted by a copy edit.
++  countTape: {
++    what: "the count tape's template literal, as the alphabet it can render",
++    run: () =>
++      pick(/HandDrawnGrid\.vue$/).flatMap((f) =>
++        [...f.text.matchAll(/`\$\{[^}]*\} of \$\{[^}]*\} written`/g)].map(() => ({
++          s: "0123456789 of 0123456789 written",
++          where: f.rel,
++        })),
++      ),
++  },
+   zoneRowLabels: {
+     what: "the static text of a `.zone-row-label` span",
+     run: () =>
+@@ -142,6 +158,11 @@ const BOUND_TAPES = [
+     expr: "shareAct.washi.value",
+     why: "the share verb's three states, authored in GameControlPanel.vue's SHARE constants",
+   },
++  {
++    where: "src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue",
++    expr: "tapeText",
++    why: "the count tape — one template with two integer holes; its alphabet is derived by the `countTape` extractor and declared in the Patrick Hand corpus below",
++  },
+ ];
+ 
+ // ── The rendered corpus ─────────────────────────────────────────────────────────────────────
+@@ -220,6 +241,12 @@ const FACES = [
+           "the solver finishes the board",
+         ],
+       },
++      {
++        where: ".count-tape (the board's fill count)",
++        transform: "lowercase",
++        derive: ["countTape"],
++        strings: ["0123456789 of 0123456789 written"],
++      },
+       {
+         where: ".zone-row-label (row captions)",
+         transform: "none",
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..6301da13 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -147,8 +147,20 @@
+      hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+      third name for a colour that already has two. */
+ 
++  /* BLUE HAS ONE JOB (T9-W7 ACC-SIX). Your digits, the unit wash under them and the focus
++     ring around them were three different blues — #2563EB (a stock Tailwind hex), the
++     crayon at 7%, and #3A7BC4 — which is three things to learn for one hand. They collapse
++     to ONE hue at three pressures: the wash is a 7% flat fill, the ring a 0.9 wobbled
++     stroke around the cell, the pen an opaque glyph inside it. Separation by FORM, never by
++     hue. `--color-blue-ink` is the crayon's ink tier, the move `--color-red-ink` /
++     `--color-green-ink` / `--color-orange-ink` already made: hue LOCKED to crayon-blue's
++     251.4°, lightness taken down until it clears AA as text — L .555, C .131, measured
++     4.64:1 on --color-card and 4.53:1 on --color-background. The pen desaturates to buy
++     that (C .215 → .131); the owner disposes (U-10). */
++  --color-blue-ink: #2f76bd;
++
+   /* Handwritten glyph colors */
+-  --color-user-ink: #2563eb;
++  --color-user-ink: var(--color-blue-ink);
+ 
+   /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+      scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+@@ -202,7 +214,8 @@
+      even at body size. Dark mode keeps the pastels (10.1–15.0:1 — crisp already; the
+      chrome sparkle icon stays on the untouched #sparkle-rainbow). */
+   --color-solver-ink-1: #c2286e;
+-  --color-solver-ink-2: #7c3aed;
++  /* Stop 2 IS the sixth anchor's deep rung — same byte, now said out loud (T9-W7). */
++  --color-solver-ink-2: var(--color-answer-deep);
+   --color-solver-ink-3: #2059c8;
+   --color-solver-ink-4: #047857;
+   --color-solver-ink-5: #92600a;
+@@ -216,10 +229,11 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+-     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+-     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++  /* `--color-focus-sketch` is DELETED here (T9-W7 ACC-SIX). It was a fourth blue minted to
++     buy 3.60:1 on the ring, and its comment's claim that dark mode "keeps crayon-blue" was
++     false: the token was declared once, unthemed, so the dark ring painted #3A7BC4 at 3.72:1
++     over the dark card. The ring now reads `--color-blue-ink`, which IS themed — 4.01:1
++     light, 6.47:1 dark at stroke-opacity 0.9 — so one token deleted raises both numbers. */
+   --color-pencil-graphite: var(
+     --grid-line-color
+   ); /* the pencil: grid, ghost ring, hover sketch */
+@@ -264,18 +278,40 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+-     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+-     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+-     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+-     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+-     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+-     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+-     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+-     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+-     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+-     4.16/3.85. */
+-  --color-progress-ink: #8b5cf6;
++  /* ── THE SIXTH ANCHOR — the ANSWER's violet (T9-W7 ACC-SIX) ─────────────────────────────
++     Not a sixth crayon: there is no wax tier, no sticker, no difficulty job, and the crayon
++     dark law ("hue-locked, lightness RAISED at night") is deliberately not obeyed. It is an
++     INK, one hue at 293°, three rungs the tree already held — and its one job is THE ANSWER:
++     the fill trace, the solver rainbow's stop 2, and the sparkle's glow, which were three
++     unrelated violets (a token, a hex, and two inline rgba literals) saying one thing.
++     Zero new bytes: every rung below already shipped.
++
++     The earlier comment here claimed the violet was "NON-blue by construction, 46° off
++     --color-focus-sketch's 212°". Both numbers were wrong (the ink is 292.7° and the ring
++     was 251.4°'s neighbour, 41° away in the same reading), and the claim they were made to
++     support — that a focused board never reads the ring and the trace as one — is now
++     carried by the palette itself: blue is your hand, violet is the answer, and they are
++     the two anchors furthest apart in the reserved set.
++
++     THE INVERSION IS FORCED, not chosen. The trace sits ON the frame line, which flips value
++     between themes (dark graphite in light, light warm-grey in dark), so the light theme
++     needs the rung that reads over dark graphite and the dark theme the rung that reads over
++     a light warm-grey. Solved against all four grounds at once, the intersection is EMPTY:
++     no single rung clears 3:1 on both frames and both cards. Hence one rung per theme, and
++     `--color-solver-ink-2` inverts with it (pale on black paper, deep on white). */
++  --color-answer-pale: #c4b5fd; /* L .811 C .101 h 293.6 — the night's verdict rung */
++  --color-answer-mid: #8b5cf6; /* L .606 C .219 h 292.7 — the ONLY rung inside the light
++     trace's lightness window [.558,.666]; painted 3.28:1 on --grid-line-color, 3.90:1 on
++     --color-card at stroke-opacity 0.95 */
++  --color-answer-deep: #7c3aed; /* L .541 C .247 h 293.0 — the ONLY rung inside the dark
++     window [.510,.576]; 5.60:1 on --color-card as light-mode verdict text */
++  --color-progress-ink: var(--color-answer-mid);
++
++  /* The sparkle's glow, named. Two inline `rgba(196,181,253,…)` literals lived in
++     GameControlPanel's scoped sheet — the pale rung, hand-converted, invisible to every
++     census that reads tokens. One filter still (budget 9), one alpha per state. */
++  --sparkle-glow-soft: color-mix(in srgb, var(--color-answer-pale) 30%, transparent);
++  --sparkle-glow-strong: color-mix(in srgb, var(--color-answer-pale) 60%, transparent);
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -369,7 +405,7 @@
+   --color-border: hsl(24 4% 16%);
+   --color-ring: hsl(48 8% 83%);
+ 
+-  --color-user-ink: #60a5fa;
++  --color-user-ink: var(--color-blue-ink);
+ 
+   /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+   --peer-ink-l: 0.8;
+@@ -385,6 +421,10 @@
+      (gold 11.48:1 on --color-background, rose 6.44:1; both hold on --color-card). */
+   --color-gold-ink: var(--color-crayon-gold);
+   --color-red-ink: var(--color-crayon-rose);
++  /* Blue collapses into wax at night with the rest of them (T9-W7): the crayon is already
++     7.70:1 on --color-card as text and 6.47:1 as the 0.9 ring, so the ink tier has nothing
++     to buy. One name, both themes; the peer seam still rebinds `--color-user-ink` per cell. */
++  --color-blue-ink: var(--color-crayon-blue);
+   /* Difficulty-heading ink collapses into wax at night too (gate 1) — the dark crayon
+      already clears AA as heading text (green 10.11:1, orange 10.26:1 on --color-card). */
+   --color-green-ink: var(--color-crayon-green);
+@@ -393,18 +433,18 @@
+   /* Solver-ink keeps its pastel wax at night (UI-10): 10.1–15.0:1 on the dark papers —
+      the paper darkens and the wax glows; only light mode needed the ink tier. */
+   --color-solver-ink-1: #f9a8d4;
+-  --color-solver-ink-2: #c4b5fd;
++  --color-solver-ink-2: var(--color-answer-pale);
+   --color-solver-ink-3: #93c5fd;
+   --color-solver-ink-4: #6ee7b7;
+   --color-solver-ink-5: #fde68a;
+ 
+   --grid-line-color: hsl(48 10% 80%);
+ 
+-  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+-     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+-     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+-     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+-  --color-progress-ink: #7c3aed;
++  /* The answer's violet INVERTS at night — the rung, not the hue (T9-W7). The dark frame
++     line is a LIGHT warm-grey, so the deep rung is what reads over it. Contrast ledger
++     (opaque / at stroke-opacity 0.95): #7C3AED vs --grid-line-color 3.65/3.48, vs
++     --color-card 3.28/3.07 — all ≥3:1, both grounds, both themes, byte-identical to HEAD. */
++  --color-progress-ink: var(--color-answer-deep);
+ 
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+@@ -919,7 +959,12 @@ html {
+       animation: none !important;
+     }
+ 
+-    .grid-line {
++    /* The frame's two pencils print as one (T9-W7). `.grid-line` blackened here from the
++       first print rule; the violet fill trace that retraces the SAME ring did not, so a
++       printed worksheet carried a coloured arc over a black frame — on a mono printer, a
++       grey smear on one or two sides of the board. It is a pencil line: it prints black. */
++    .grid-line,
++    .progress-trace {
+       stroke: #000 !important;
+     }
+ 
+@@ -945,7 +990,11 @@ html {
+  * ink is the whole point of the mode; the players' colours yield to it. */
+ @media (forced-colors: active) {
+   @layer base {
+-    .glyph-svg path {
++    /* Same omission, same cure (T9-W7): SVG `stroke` is not forced, so the fill trace was
++       the one coloured thing left on a board a high-contrast reader had asked to be
++       system ink. It says how full the board is; it says it in CanvasText. */
++    .glyph-svg path,
++    .progress-trace {
+       stroke: CanvasText;
+     }
+   }
+@@ -1165,6 +1214,7 @@ html {
+     .vignette-voice,
+     .vignette-meta,
+     .error-note,
++    .count-tape,
+     .solve-failure {
+       animation: none !important;
+     }
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 9f4ed306..40ba44cc 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -346,17 +346,19 @@ const conflicts = computed<Conflicts>(() =>
+     : { positions: new Set<string>(), unit: null },
+ );
+ 
+-// ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
++// ── T4-W9 board FILL (the progress trace's numbers) ──────────────────────
+ // A pure derivation over `values`/`givenCells` (re-evaluated on a fill/clear, NEVER on
+-// the boil beat): filled non-given cells / fillable cells. FILL, not correctness — wrong
+-// digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render.
+-const fillProgress = computed(() => {
+-  let filled = 0;
++// the boil beat): cells written / cells writable. FILL, not correctness — wrong digits
++// count (the app grades correctness only on Solve). HandDrawnGrid owns the render, and
++// takes the two COUNTS rather than their quotient (T9-W7): its tape says the count out
++// loud, and a fraction cannot be un-divided back into one.
++const fillCount = computed(() => {
++  let written = 0;
+   for (const [pos, v] of Object.entries(props.values)) {
+-    if (v !== 0 && !props.givenCells.has(pos)) filled++;
++    if (v !== 0 && !props.givenCells.has(pos)) written++;
+   }
+-  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+-  return Math.max(0, Math.min(1, filled / fillable));
++  const writable = Math.max(1, props.totalCells - props.givenCells.size);
++  return { written: Math.min(written, writable), writable };
+ });
+ 
+ // Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
+@@ -997,7 +999,8 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+         :board-size="boardSize"
+         :subgrid-size="subgridSize"
+         :anim-state="gridAnimState"
+-        :progress="fillProgress"
++        :filled="fillCount.written"
++        :fillable="fillCount.writable"
+         :solve-success="solveState === 'solved'"
+         :join-progress="traceProgress"
+         :join-opacity="traceOpacity"
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..fbb33a00 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -2077,14 +2077,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   fill: url(#sparkle-rainbow) !important;
+ }
+ 
++/* The glow NAMES its colour (T9-W7 ACC-SIX). Two hand-converted `rgba(196,181,253,…)`
++   literals were the answer's pale rung written out longhand, invisible to every census that
++   reads tokens — and `transition: all` tweened whatever else the sheet touched, which is what
++   handed the accent census a mid-tween frame to read. One filter (budget row 9, unmoved), one
++   property transitioned, one token per alpha. */
+ .sparkle-icon {
+-  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  filter: drop-shadow(0 0 2px var(--sparkle-glow-soft));
++  transition: filter 200ms var(--ease-standard);
+ }
+ 
+ @media (hover: hover) {
+   .icon-btn:hover .sparkle-icon {
+-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
++    filter: drop-shadow(0 0 5px var(--sparkle-glow-strong));
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..b821b002 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -243,9 +243,16 @@
+    :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+    gets the drawn-on ring. */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
++  /* T9-W7 ACC-SIX — the ring is YOUR INK, and never `--color-user-ink`. `--color-blue-ink`
++     is themed, which `--color-focus-sketch` never was: measured on painted bytes at the 0.9
++     below, 3.91:1 light and 6.46:1 dark (both engines), up from 3.67/3.72 — the light figure
++     clears WCAG 1.4.11's 3:1 non-text floor with 0.91 to spare, and the dark ring gains 2.74
++     from a token that is finally per-theme. TRAP: this selector sits inside the cell the peer seam
++     rebinds `--color-user-ink` on, so reading that name here would paint a peer-coloured
++     ring around YOUR focused square. The ring is the hand's, not the cell's. */
++  fill: var(--color-blue-ink);
+   fill-opacity: 0.08;
+-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
++  stroke: var(--color-blue-ink);
+   stroke-width: 7;
+   stroke-opacity: 0.9;
+   stroke-dasharray: 1;
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..1371d647 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1453,11 +1453,25 @@ onMounted(async () => {
+ }
+ 
+ /* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+-   the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
+-   A reader who can see neither stroke weight nor colour still sees one verb marked and one
+-   bare. */
++   the hand's way of saying weight — plus a neutral ground, exactly as `deal` wears it in the
++   band. A reader who can see neither stroke weight nor colour still sees one verb marked and
++   one bare.
++
++   ── T9-W7 ACC-SIX — THE WORD IS RED, AND THE GROUND IS GONE ───────────────────────────────
++   The armed confirm was ACHROMATIC: two verbs in the same graphite at 18.99:1, told apart by
++   a stroke weight and an 8% wash. The word that throws work away says so in the teacher's own
++   red pencil — the colour this estate already spends on a refusal.
++
++   THE GROUND IS WHAT PAID FOR IT, measured rather than assumed. A red ground is the generic
++   destructive button and it is also the thing that costs the reading: red-ink over the 8%
++   neutral measures 4.14:1 and over a 5% neutral 4.38:1 (both engines, both re-measured on
++   this patch) — under AA either way, for the sake of a wash. Over the plain card the same
++   word measures 4.87:1 light and 6.44:1 dark. So the wash goes and the word stays: the
++   stroke-weight mark above still says which verb is marked, so a reader who sees neither
++   weight nor colour is no worse off than before, and everyone else gets a legible red.
++   `keep` is untouched at 18.99:1. */
+ .guard-leave .guard-face {
+-  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
++  color: var(--color-red-ink);
+ }
+ 
+ @media (pointer: coarse) {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..8485a226 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,22 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** T9-W7 ACC-SIX — THE FILL GAUGE'S OWN THREE NUMBERS, named. Two of them shipped at
++   *  T4-W9 as literals inside `HandDrawnGrid`'s `transition:` (240ms dash, 500ms win
++   *  bow-out); naming them here is the covenant's own rule (no timing constant outside
++   *  this file) applied to the two that slipped it, and the consumer v-binds them as
++   *  `--trace-fill-ms` / `--trace-win-ms`. Nothing moves: both are the shipped values. */
++  traceFillMs: 240,
++  traceWinMs: 500,
++  /** The hand writes left to right, 250ms on `--ease-noteWrite` — the number the margin
++   *  note, the vignette and the solver error note have each open-coded since T3. Named
++   *  here because the count tape is the fourth wearer and a fourth literal is a ledger. */
++  noteWriteMs: 250,
++  /** THE ONE NEW CONSTANT THIS FAMILY MINTS. The count tape says how full the board is for
++   *  the first three fills of a deal, then rests this long and lifts on `chromeLeaveMs`.
++   *  2400ms is a read-twice window at reading pace; the tape does not return for that
++   *  board, so this is the whole of its dwell. */
++  tapeRestMs: 2400,
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..170932e7 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -82,7 +82,7 @@ const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
+ const strokeColor = computed(() => {
+   if (props.isSolved) return "url(#solver-ink)";
+   if (isGivenOriginal.value) return "var(--color-foreground)";
+-  return "var(--color-user-ink, #2563eb)";
++  return "var(--color-user-ink, var(--color-blue-ink))";
+ });
+ 
+ const strokeWidth = computed(() => {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..33079f5f 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,8 +1,18 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+-import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+-import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
++import {
++  generateGridBoilFrames,
++  generateFrameTraceFrames,
++  FRAME_PAD,
++} from "../gridPaths";
++import {
++  BOIL_CONFIG,
++  FILTER_PRESETS,
++  MOTION,
++  beatsFor,
++} from "@pencil/config/pencilConfig";
++import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   readFilterDefs,
+@@ -18,11 +28,15 @@ const props = defineProps<{
+   boardSize: number;
+   subgridSize: number;
+   animState: AnimationState;
+-  /** T4-W9 board FILL fraction in [0,1] (default 0). The GAME owns the number — a
+-   *  `computed` over its own values/givens, re-evaluated on a fill/clear, NEVER on the
+-   *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+-   *  twin is automatic: there is no second implementation to keep in sync. */
+-  progress?: number;
++  /** T4-W9 board FILL, as the two COUNTS rather than the fraction (T9-W7 ACC-SIX). The GAME
++   *  owns the numbers — cells WRITTEN (non-given, any digit, wrong ones included) out of
++   *  cells writable, a `computed` over its own values/givens re-evaluated on a fill/clear
++   *  and NEVER on the beat — and this frame owns the render. It was one fraction in [0,1];
++   *  the trace needs only that, but the tape below says the count out loud and a percentage
++   *  cannot be un-rounded back into one. Both boards pass the identical props, so the twin
++   *  is automatic: there is no second implementation to keep in sync. */
++  filled?: number;
++  fillable?: number;
+   /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+    *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+    *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+@@ -85,8 +99,75 @@ const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+ // HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the violet retraces the
+ // graphite frame in registration. frameCount static poses, opacity-swapped on the SAME
+ // boilFrame beat as the grid: steady-state raster zero (no live `filter=` to invalidate).
+-const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
+-const progressPercent = computed(() => Math.round(progress.value * 100));
++const filled = computed(() => Math.max(0, Math.round(props.filled ?? 0)));
++const fillable = computed(() => Math.max(1, Math.round(props.fillable ?? 1)));
++const progress = computed(() =>
++  Math.max(0, Math.min(1, filled.value / fillable.value)),
++);
++
++// ── T9-W7 ACC-SIX · THE COUNT TAPE ────────────────────────────────────────────────────
++//
++// The board's ONE memorable thing: a scrap of paper tape at the frame's head saying how
++// much of the board is written, in words, for the first three fills of a deal — then it
++// rests and lifts and does not come back. The trace is the permanent gauge and it is
++// unlabelled by design; the tape is the sentence that teaches you to read it, said once.
++//
++// `written`, not `filled`: `Fill` is the FILL-FORCED button's own word a few hundred px
++// away and does a different thing, and written is what the number counts (wrong digits
++// included — the app grades correctness only on Solve). No `%` and no `/`: neither
++// codepoint is in the hand's subset (index.css §FONT), so a percentage would mint a font
++// re-cut for a glyph this estate deliberately does not own.
++const TAPE_FILLS = 3;
++const tapeText = computed(() => `${filled.value} of ${fillable.value} written`);
++const tape = ref<"off" | "on" | "lifting" | "gone">("off");
++let restTimer: ReturnType<typeof setTimeout> | undefined;
++let leaveTimer: ReturnType<typeof setTimeout> | undefined;
++const clearTapeTimers = () => {
++  clearTimeout(restTimer);
++  clearTimeout(leaveTimer);
++  restTimer = leaveTimer = undefined;
++};
++
++// The whole lifecycle is a watch on ONE number, so a deal, an undo and a fill are the same
++// event to it: 0 is a fresh board (the tape comes back for the next deal), the first write
++// lays it down, the third schedules the rest, and anything above the window means the reader
++// arrived mid-board and never sees it at all. No `immediate` — a restored session's board
++// opens without a tape, because nothing has just been written.
++watch(filled, (n) => {
++  if (n === 0) {
++    clearTapeTimers();
++    tape.value = "off";
++    return;
++  }
++  if (tape.value === "gone" || tape.value === "lifting") return;
++  if (tape.value === "off") {
++    if (n > TAPE_FILLS) {
++      tape.value = "gone";
++      return;
++    }
++    tape.value = "on";
++  }
++  if (n >= TAPE_FILLS && !restTimer) {
++    restTimer = setTimeout(() => {
++      restTimer = undefined;
++      tape.value = "lifting";
++      leaveTimer = setTimeout(() => {
++        leaveTimer = undefined;
++        tape.value = "gone";
++      }, MOTION.chromeLeaveMs);
++    }, MOTION.tapeRestMs);
++  }
++});
++
++// The tape hangs off the frame's own inset, in percent of the board box — ONE source with
++// the two pencils it sits between (gridPaths' FRAME_PAD in a 1000-unit viewBox).
++const TAPE_LEFT = `${FRAME_PAD / 10}%`;
++
++// Every duration this sheet spends, read from its home rather than typed here.
++const traceFillMs = `${MOTION.traceFillMs}ms`;
++const traceWinMs = `${MOTION.traceWinMs}ms`;
++const noteWriteMs = `${MOTION.noteWriteMs}ms`;
++const chromeLeaveMs = `${MOTION.chromeLeaveMs}ms`;
+ 
+ // pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+ // every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+@@ -288,23 +369,38 @@ onMounted(() => {
+ 
+ onUnmounted(() => {
+   cleanup();
++  clearTapeTimers();
+ });
+ </script>
+ 
+ <template>
+   <!-- FILL-gauge a11y mirror (T4-W9 ROW 3): the trace counts cells WRITTEN — wrong ones
+        included — because the app grades correctness only on Solve. So this reads how FULL,
+-       never how RIGHT: role=progressbar, aria-valuetext "board N% filled" (never "correct").
+-       A visually-hidden multi-root sibling of the decorative svg. -->
++       never how RIGHT: role=progressbar, never "correct". A visually-hidden multi-root
++       sibling of the decorative svg.
++       T9-W7: the valuetext is now the TAPE'S OWN LITERAL, word for word. It said "board 15%
++       filled" while the visible tape said "3 of 20 written" — two sentences for one fact,
++       one of them a rounded percentage of a count nobody was given. One literal, two
++       carriers (law 33); the tape is `aria-hidden`, so nothing is said twice (W3). -->
+   <div
+     class="progress-trace-a11y"
+     role="progressbar"
+     aria-label="board fill"
+     aria-valuemin="0"
+-    aria-valuemax="100"
+-    :aria-valuenow="progressPercent"
+-    :aria-valuetext="`board ${progressPercent}% filled`"
++    :aria-valuemax="fillable"
++    :aria-valuenow="filled"
++    :aria-valuetext="tapeText"
+   ></div>
++  <!-- THE COUNT TAPE (T9-W7 ACC-SIX) — see the lifecycle in the script. Decorative: the
++       progressbar above speaks the identical string. -->
++  <SheetWashiLabel
++    v-if="tape === 'on' || tape === 'lifting'"
++    class="count-tape"
++    :class="{ 'tape-lifting': tape === 'lifting' }"
++    anchor="head"
++    :text="tapeText"
++    :seed="42"
++  />
+   <!-- Decorative: the board's drawn rules. Its shape is already published by the grid's own
+        role/rowcount/colcount and by every cell's name (a11y r1 M6). -->
+   <svg
+@@ -568,6 +664,11 @@ onUnmounted(() => {
+ 
+ /* T4-W9 progress trace — the same compositor-only opacity-swap discipline as the boil
+    layers (filterless baked geometry; no raster ever recurs on the beat). */
++.hand-drawn-grid {
++  --trace-fill-ms: v-bind(traceFillMs);
++  --trace-win-ms: v-bind(traceWinMs);
++}
++
+ .progress-pose {
+   opacity: 0;
+   will-change: opacity;
+@@ -585,12 +686,40 @@ onUnmounted(() => {
+    here, unlayered, so a CSS-layer `transition` can't win over it. */
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
++    /* The two numbers are `MOTION`'s now, v-bound (T9-W7): a duration living in a component
++       sheet is a timing constant outside pencilConfig, which is the one thing the covenant
++       forbids. The curves are named too — the fill front is a PENCIL STROKE drawing, so it
++       takes the house's draw-on curve instead of the CSS keyword `ease`, and the win's
++       bow-out takes the fade-out curve it has always been. */
+     transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++      stroke-dashoffset var(--trace-fill-ms) var(--ease-drawOn),
++      opacity var(--trace-win-ms) var(--ease-fadeOut);
++  }
++}
++
++/* THE COUNT TAPE. The hand writes it left to right — `ink-write-in`, the margin note's own
++   reveal, at the margin note's own duration; it updates in place on the fills that follow
++   (the text changes, the animation does not re-run — `v-if` holds one node) and lifts on the
++   chrome-leaving fade. Under PRM the write-in is struck by index.css's own reduce list and
++   this transition never matches: same-frame show, same-frame hide. */
++.count-tape {
++  --washi-head-left: v-bind(TAPE_LEFT);
++  --note-write-ms: v-bind(noteWriteMs);
++  --chrome-leave-ms: v-bind(chromeLeaveMs);
++  pointer-events: none;
++  animation: ink-write-in var(--note-write-ms) var(--ease-noteWrite) backwards;
++}
++
++@media (prefers-reduced-motion: no-preference) {
++  .count-tape {
++    transition: opacity var(--chrome-leave-ms) var(--ease-fadeOut);
+   }
+ }
+ 
++.count-tape.tape-lifting {
++  opacity: 0;
++}
++
+ /* T8-W3 join trace — the same compositor-only opacity-swap as every pose stack above it. */
+ .join-pose {
+   opacity: 0;
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..271b2669 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -330,13 +330,23 @@ export function generateRectBoilFrames(
+ 
+ // ── Board frame rect insets (shared: the grid frame + the W9 progress trace) ──
+ //
+-// The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom
+-// (top/bottom flush with the card edge, sides pulled in slightly). Module-level so
++// The frame ring's rect is inset `FRAME_PAD` viewBox units on every side. Module-level so
+ // generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below, same file)
+ // build off ONE source and the violet trace provably hugs the frame (A-1c) — never a
+-// re-declared magic number that could drift out of registration.
+-const FRAME_X_PAD = 12;
+-const FRAME_Y_PAD = 0;
++// re-declared magic number that could drift out of registration. Exported because the count
++// tape hangs off the same inset, in percent of the board box: one number, three consumers.
++//
++// THE RECT IS SYMMETRIC NOW, and there is only one pad (T9-W7 ACC-SIX). It was a PAIR — 12
++// on the sides, 0 top and bottom — so the ring sat flush with the viewBox's top and bottom
++// edges: measured on the painted surface, the fill gauge hung 3.22px ABOVE the board box at
++// the top and 1.72px below it at the bottom while sitting 2.78/2.68px INSIDE on the flanks.
++// A gauge that leaves its own box on two edges and not the other two reads as a
++// misregistration of the frame rather than as a second pencil over it. 12 everywhere puts
++// both pencils ~2.7px inside the box on all four sides; the graphite frame moves with the
++// trace precisely because this is the one source both read (7.63 CSS px at the 1280 desk
++// board, 4.38 on the phone). A declared π DELTA on the four board goldens, re-minted from
++// the runner artifact — never on a single red.
++export const FRAME_PAD = 12;
+ 
+ /**
+  * The board frame ring as `frameCount` grain-BAKED closed poses — the T4-W9 progress
+@@ -357,10 +367,10 @@ export function generateFrameTraceFrames(
+   grain?: GrainConfig,
+ ): string[] {
+   return generateRectBoilFrames(
+-    FRAME_X_PAD,
+-    FRAME_Y_PAD,
+-    viewBoxSize - FRAME_X_PAD * 2,
+-    viewBoxSize - FRAME_Y_PAD * 2,
++    FRAME_PAD,
++    FRAME_PAD,
++    viewBoxSize - FRAME_PAD * 2,
++    viewBoxSize - FRAME_PAD * 2,
+     { roughness: 0.5, segments: 6, seed: baseSeed, jagged: true },
+     frameBoil,
+     frameCount,
+@@ -446,10 +456,9 @@ export function generateGridBoilFrames(
+     () => {
+       const cellSize = viewBoxSize / boardSize;
+       const pad = 26;
+-      // Frame rect: top/bottom flush with card edge, sides pulled in slightly.
+-      // Shared with the W9 progress trace via the exported constants (registration).
+-      const frameXPad = FRAME_X_PAD;
+-      const frameYPad = FRAME_Y_PAD;
++      // Frame rect: inset equally on all four sides, shared with the W9 progress trace
++      // through the one module constant (registration).
++      const framePad = FRAME_PAD;
+ 
+       // FAM-5 reunify (T4-W1): the grid's subgrid/cell lines rode a hand-rolled
+       // copy of the library boil-frame loop at the drifted `+ f*997` stride. It now
+@@ -457,10 +466,10 @@ export function generateGridBoilFrames(
+       // a mandated pixel change on the grid geometry, gated by the ≥0.98 soul gate.
+ 
+       const frame = generateRectBoilFrames(
+-        frameXPad,
+-        frameYPad,
+-        viewBoxSize - frameXPad * 2,
+-        viewBoxSize - frameYPad * 2,
++        framePad,
++        framePad,
++        viewBoxSize - framePad * 2,
++        viewBoxSize - framePad * 2,
+         {
+           roughness: 0.5,
+           segments: 6,
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..b76f778a 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -21,8 +21,12 @@ const props = defineProps<{
+    *  edge — a compartment's own name, taped across its drawn frame (T4-P1 zone grammar).
+    *  A tag is a LABEL, not a tooltip: it is always laid down (there is no hover seam to
+    *  reveal it) and it drops `role="tooltip"`, which is what makes an `id` on it legal as
+-   *  the zone's `aria-labelledby` target — the visible tape IS the accessible name. */
+-  anchor?: "above" | "center" | "tag";
++   *  the zone's `aria-labelledby` target — the visible tape IS the accessible name.
++   *  'head' straddles a BOX's top-left edge the way 'tag' straddles a card's, but absolutely
++   *  rather than in flow — the board is a square whose height is its width, so a tape in that
++   *  flow would change the board's size. Laid down like a tag (no hover seam), inset by
++   *  `--washi-head-left`, which the consumer prices in its own geometry. */
++  anchor?: "above" | "center" | "tag" | "head";
+   /** Persistent on coarse pointers (UI-4/UI-5): hover doesn't exist for touch, so the
+    *  tape stays laid down there; fine pointers keep the hover/focus reveal untouched.
+    *  Like `anchor="tag"`, a persistent tape DROPS `role="tooltip"` (T4-P1, F1 order 4): a
+@@ -78,6 +82,7 @@ const geom = computed(() => {
+     :class="{
+       'washi-center': anchor === 'center',
+       'washi-tag': anchor === 'tag',
++      'washi-head': anchor === 'head',
+       'washi-persistent': persistent,
+       'washi-wide': wide,
+     }"
+@@ -161,25 +166,49 @@ const geom = computed(() => {
+    The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+    rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+    offset with it. */
++/* THE TAG VOICE, worn by both laid-down anchors. A name has no hover seam, so both are
++   always visible; both write one rank under the eyebrow they replace, lower case (the only
++   chimera-free path through Patrick Hand). Only the BOX differs between them, below. */
++.washi-tag,
++.washi-head {
++  line-height: 1.5;
++  padding: 0.02rem 0.4rem;
++  font-size: var(--type-tag);
++  font-weight: 500;
++  letter-spacing: var(--type-tracking-wide);
++  text-transform: lowercase;
++  opacity: 1;
++}
++
+ .washi-tag {
+   position: sticky;
+   top: var(--washi-tag-top, 0.3rem);
+   bottom: auto;
+   left: auto;
+   align-self: flex-start;
+-  line-height: 1.5;
+   margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
+     calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+     var(--washi-tag-inset, 0.85rem);
+-  padding: 0.02rem 0.4rem;
+-  font-size: var(--type-tag);
+-  font-weight: 500;
+-  letter-spacing: var(--type-tracking-wide);
+-  text-transform: lowercase;
+-  opacity: 1;
+   transform: rotate(var(--washi-tilt));
+ }
+ 
++/* anchor="head" (T9-W7 ACC-SIX) — the tape ASTRIDE a BOX's top-left edge: the tag's pose,
++   on a surface that cannot hold it in flow. The board is a square sized by its own width, so
++   an in-flow tape there would change the board's size; this one is absolute and costs the
++   layout nothing. `top: 0` plus the half-height lift is the straddle. The inset is the
++   consumer's own number — the board frame's pad, in percent of the board box — so the tape
++   starts exactly where the pencil starts. z-index 3 sits over the cells (2) and under every
++   piece of page chrome: a tape on the board is board furniture, never a layer over the
++   masthead. */
++.washi-head {
++  top: 0;
++  bottom: auto;
++  left: var(--washi-head-left, 0);
++  margin-bottom: 0;
++  transform: translateY(-50%) rotate(var(--washi-tilt));
++  z-index: 3;
++}
++
+ /* THE TAPE DISSOLVES AT THE CASE EDGE (T9-W2 §2.3, the charter's own words: "the card's own
+    chrome never straddles its case edge"). A well riding down toward the card's sticky action
+    bar used to slide its tape UNDER an opaque band — occluded, so nothing was ever drawn there,

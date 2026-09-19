@@ -1,0 +1,1182 @@
+@import "tailwindcss";
+@import "./typography.css";
+
+@custom-variant dark (&:is(.dark *));
+
+/* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+ * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+ * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+ * `pyftsubset`-built from the upstream google/fonts variable-font source,
+ * trimmed to the EXACT glyphs the app renders.
+ *
+ * DERIVATION RULE (P1-W3 — the rule is the fix; the woff2 is only its output):
+ * cut from the RENDERED text, and for any string that passes through a
+ * `text-transform`, include BOTH CASES. The P5 cut took the AUTHORED strings,
+ * so when `.section-heading` was `text-transform: uppercase` the subset carried
+ * `B D S` and no other capital: 6 of 41 heading glyphs actually painted in
+ * Fraunces on the sudoku screen (14.6%) — 8 of 46 on futoshiki, 9 of 50 over
+ * every distinct heading string once futoshiki's `BOARD SIZE` alternate joins
+ * them. The rest was Georgia at font-weight 800 — synthetic bold on a fallback
+ * serif, and a real component of the owner's mark-4 report.
+ * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
+ * rendered strings and fails if the cmap misses one.
+ *
+ *   fraunces-subset.woff2   14,636 B  — WORDMARK + HEADINGS ONLY (opsz+wght
+ *                                       variable, SOFT/WONK pinned like the
+ *                                       CDN's own served instance). unicode-range
+ *                                       gates it to exactly that repertoire so
+ *                                       any OTHER text asking for 'Fraunces'
+ *                                       falls through to the Georgia stack
+ *                                       instead of mixing glyphs mid-word.
+ *                                       NOT a general body-copy subset.
+ *                                       Re-derived at P1-W3 on the **B2** ruling
+ *                                       (headings went lowercase: the rendered
+ *                                       lowercase letters + space PLUS the
+ *                                       authored initials — "both cases"), and
+ *                                       again at the T8 live-pass cures: the
+ *                                       eyebrow went Difficulty → Level, adding
+ *                                       L and v (the census caught "level"'s v
+ *                                       painting in Georgia mid-word). Now 30
+ *                                       codepoints, 14,636 B.
+ *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
+ *                                       OptionSelector size/difficulty label
+ *                                       (both games) + the "@mbabb" byline.
+ *   patrickhand-subset.woff2 4,312 B  — full realistic app coverage: every
+ *                                       MarginNote status string, SolverErrorNote
+ *                                       paper-note variant, SheetWashiLabel
+ *                                       tooltip, + the wordmark dropdown list.
+ *                                       Re-derived at W6: +b (the backtracks
+ *                                       stat-line), +× (already live in "a fresh
+ *                                       9×9"), and the range now TRUTHS i/r —
+ *                                       the P5 range wrongly excluded both while
+ *                                       the file carried them, so "solved it!"
+ *                                       et al. rendered those two glyphs in the
+ *                                       cursive fallback.
+ *
+ * Total self-hosted: 22,572 B for all three faces, same-origin, immutable-
+ * cached under /assets/* (public/_headers), precached by the W6 SW glob.
+ */
+@font-face {
+  font-family: "Fraunces";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  font-stretch: 100%;
+  src: url("./fonts/fraunces-subset.woff2") format("woff2");
+  /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
+     space · B C D L M N S · a-i · k-o · r-w · y z  (30 codepoints). Re-cut at the T8
+     live-pass cures: the drawer eyebrow went Difficulty → Level, and neither L nor v had
+     ever been asked of this face — the e2e font census caught "level" painting its v in
+     the Georgia fallback mid-word. Same recipe as P1-W3 (instancer SOFT=0 WONK=1, then
+     pyftsubset), both cases per the coverage gate's rule. */
+  unicode-range:
+    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0077,
+    U+0079-007A;
+}
+
+@font-face {
+  font-family: "Fira Code";
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+  src: url("./fonts/firacode-subset.woff2") format("woff2");
+  unicode-range:
+    U+0020, U+0031, U+0034-0037, U+0039, U+0040, U+0045, U+0048, U+004D, U+0061-0062,
+    U+0064-0065, U+0069, U+006D, U+0072, U+0073, U+0075, U+0079, U+00D7;
+}
+
+@font-face {
+  font-family: "Patrick Hand";
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url("./fonts/patrickhand-subset.woff2") format("woff2");
+  unicode-range:
+    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053,
+    U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
+}
+
+@layer base {
+  body {
+    font-family: var(--font-text);
+    background-image: var(--paper-clean-texture);
+    background-attachment: fixed;
+  }
+}
+
+@theme {
+  /* Type register bindings — the pencil faces bound into the vendored √φ ladder
+     (./typography.css). This @theme block IS the rebrand override point: the
+     scale rungs carry no family, so re-pointing these four vars once re-flavors
+     every semantic register while the geometry inherits unchanged. The soul
+     keeps its voice — Fraunces display · Patrick Hand hand · Fira Code mono —
+     and Plus Jakarta never ships. Defining --font-mono here also
+     retires the D5 gap: Tailwind's `font-mono` now resolves to Fira Code (not
+     the ui-monospace system default), so the mono surface is finally the soul's
+     mono, not the platform's.
+     P5 (Tranche II): --font-mono/--font-hand resolve against the self-hosted
+     subsets above (comprehensive — every live consumer's glyphs are covered).
+     --font-text deliberately DROPS 'Fraunces': the self-hosted Fraunces subset
+     only covers the wordmark + .section-heading repertoire, and --font-text is the
+     BODY/prose register — so this changes no rendered pixel; the one live
+     body-inherited use, AttributionCard's caption + GitHub link, gets the honest
+     Georgia fallback instead of a mid-word glyph mismatch now that the CDN link is
+     gone. (--font-serif was its twin, byte-identical and read by nothing: T5-W2 2.3
+     killed it.) --font-display keeps 'Fraunces' — its only consumers
+     (text-display*, .section-heading, the wordmark's own hardcoded family string)
+     are exactly what the subset covers. */
+  --font-text: Georgia, Cambria, "Times New Roman", serif;
+  --font-display: "Fraunces", Georgia, Cambria, "Times New Roman", serif;
+  --font-mono: "Fira Code", monospace;
+  --font-hand: "Patrick Hand", cursive;
+
+  /* Paper-like background tones */
+  --color-background: hsl(48 15% 98%);
+  --color-foreground: hsl(0 0% 3.9%);
+  --color-card: hsl(48 12% 99%);
+  --color-popover: hsl(48 10% 98.5%);
+  --color-muted-foreground: hsl(0 0% 45.1%);
+  --color-accent: hsl(48 8% 96.1%);
+  --color-border: hsl(48 5% 89.8%);
+  --color-ring: hsl(0 0% 3.9%);
+
+  /* The difficulty ramp is the CRAYON ramp, with no alias tier between them. T3 aliased
+     --color-easy/medium/hard onto crayon-green/orange/rose to retire a parallel near-duplicate
+     set; nothing ever read the aliases — the selectors carry the crayon class names directly
+     (`crayon-green`, GameControlPanel's own scoped tints) and the headings write in the
+     hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+     third name for a colour that already has two. */
+
+  /* Handwritten glyph colors */
+  --color-user-ink: #2563eb;
+  --color-peer-1: #b24f00;
+  --color-peer-2: #5f7d00;
+  --color-peer-3: #008086;
+  --color-peer-4: #5a61ce;
+  --color-peer-5: #a5439a;
+
+  /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+     scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+     hue)` with `hue = i × 137.5°` (playerIdentity.ts), so there is no palette to run out of
+     and no player cap to enforce — but a hue walk alone says nothing about contrast, and the
+     band is what makes the AA claim structural instead of a table of hand-checked hexes.
+     Measured over 40 indices at chroma 0.11: worst 5.26:1 on --color-background here, 9.56:1
+     on --color-card in the dark block below. The crayon tiers above are DIFFICULTY's
+     vocabulary and stay there; no player is ever assigned wax, and no player is ever assigned
+     the solver's rainbow, so the three inks never compete. */
+  --peer-ink-l: 0.5;
+
+  /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
+     dark variants PRESERVE hue (±3°), RAISE lightness +7…+13 (OKLCH L +0.06…0.10), and let
+     saturation RISE as needed to hold perceived chroma on the dark ground. Crayons don't
+     desaturate at night — the paper darkens and the wax glows. This is the OPPOSITE of the
+     generic "muted dark mode" default; never give a crayon (or a token aliased to one) the
+     desaturating treatment. See the `.dark` redefinitions below for the applied values. */
+  --color-crayon-green: #2dc653;
+  --color-crayon-orange: #f4a236;
+  --color-crayon-rose: #e8315b;
+  --color-crayon-blue: #4a90d9;
+  --color-crayon-gold: #c99a2e; /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+     earned light: it lives in the sky and comes to the page only when the work is done. Wax
+     tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
+
+  /* Ink tiers — verdict TEXT only (T3-W9). Every crayon fails AA as light-mode text (green
+     2.16:1, gold wax 2.47:1, rose 4.01:1 on the live papers), so the verdict line writes with
+     a darkened ink of the same hue; washes/strokes/fills keep the wax. Measured on
+     --color-background hsl(48 15% 98%): gold-ink #8C691D 4.85:1, red-ink #D02A52 4.87:1
+     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below. */
+  --color-gold-ink: #8c691d;
+  --color-red-ink: #d02a52; /* teacher-red #E8315B hue-locked (346°), darkened to AA */
+
+  /* Difficulty-heading ink tier (T4-W10, a11y gate 1). The Difficulty section-heading
+     writes in the difficulty crayon (green/orange/rose), but the raw wax collapses on the
+     cream papers as light-mode heading text — measured green 2.22:1, orange 2.05:1, rose
+     4.11:1 on --color-card, all < AA 4.5:1. Keep the difficulty semantic, swap the LIGHT ink
+     to a hue-locked darkened tier (the exact move --color-red-ink already models for rose).
+     Measured on --color-card #fdfdfc: green-ink 4.95:1, orange-ink 4.91:1 (rose reuses
+     --color-red-ink 4.99:1). Dark collapses ink into wax below (the crayon already glows AA
+     at night — green 10.11:1, orange 10.26:1, rose 6.32:1). */
+  --color-green-ink: #1d7f35; /* crayon-green #2DC653 hue-locked (135°), darkened to AA */
+  --color-orange-ink: #a26009; /* crayon-orange #F4A236 hue-locked (34°), darkened to AA */
+
+  /* Solver-ink rainbow — BOARD CONTENT ONLY (UI-10, T3-W9; F8 §3.2: never chrome, never a
+     metadata tone). The solver's answers write in a five-hue rainbow gradient
+     (#solver-ink, SvgFilters.vue); the old pastel wax washed to 1.22–1.81:1 on the cream
+     papers, so light mode deepens each stop hue-locked to ink pressure — measured
+     5.40/5.60/6.21/5.39/5.29:1 on --color-card (≥4.72:1 on --color-background), all AA
+     even at body size. Dark mode keeps the pastels (10.1–15.0:1 — crisp already; the
+     chrome sparkle icon stays on the untouched #sparkle-rainbow). */
+  --color-solver-ink-1: #c2286e;
+  --color-solver-ink-2: #7c3aed;
+  --color-solver-ink-3: #2059c8;
+  --color-solver-ink-4: #047857;
+  --color-solver-ink-5: #92600a;
+
+  /* Semantic state tokens — every one an in-world alias into the crayon system, zero new hexes
+     (design-refinement.md §3.4). Each resolves per-theme through the var it references. */
+  --color-teacher-red: var(
+    --color-crayon-rose
+  ); /* teacher's red pencil: failure, conflicts, aria-invalid */
+  --color-gold-star: var(
+    --color-crayon-gold
+  ); /* gold-star sticker: solve success, celebration accents —
+     trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
+  --color-pencil-graphite: var(
+    --grid-line-color
+  ); /* the pencil: grid, ghost ring, hover sketch */
+
+  /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+     `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+     N, and the T4-W10 gate-1 sweep (which raised .heading-value 60→68 and .dt-label 62→68
+     for exactly this reason) reached only two of them — MarginNote's note, the completion
+     voice, and the whole KeyboardLegend stayed sub-AA. Stops with live consumers, no more:
+     a table with a zero-consumer rung is unearned abstraction. These resolve through
+     --color-pencil-graphite, which already flips per theme via --grid-line-color, so ONE
+     definition serves light and dark.
+
+     Contrast light / dark / print (asserted by scripts/check-ink-pressure.mjs, `npm run
+     lint:ink`; every surface below is RESOLVED OUT OF THIS FILE by the script, so re-pitching
+     a card or an ink re-prices the ladder instead of leaving it printing stale digits):
+       rule  55%  3.53 / 4.36 / 4.76  — NON-TEXT only (WCAG 1.4.11 ≥3:1): kbd borders, hairlines
+       quiet 68%  5.23 / 6.06 / 7.86  — the quiet caption-text rung (AA ≥4.5), the W10 gate-1 stop
+     Strictly increasing in all THREE scopes. (A third rung, `firm` at 72%, shipped with no
+     consumer and T5-W2 2.3 cut it — this block's own "a table with a zero-consumer rung is
+     unearned abstraction" applied to itself.) The third is @media print — the only other place
+     that re-pitches --grid-line-color (to pure black, for :root and .dark at once) over a paper
+     the same block forces white. Adding a stop means re-running that assertion over EVERY rung
+     in EVERY scope, not just the new one — a fix that clears one site and inverts its neighbour
+     has only moved the defect.
+
+     WHAT THE LADDER DOES NOT GOVERN, stated so nobody reads three rungs as the register:
+     --color-muted-foreground is the estate's other quiet voice (icon sublabels, headings)
+     and it is NOT on this ramp — it crosses it between themes. 4.646 light (between rule
+     and quiet) but 7.689 dark (above firm). So the keyboard legend, raised to quiet, reads
+     LOUDER in light than the sublabels it explains and quieter in dark. Booked, not cured:
+     tokenising muted-foreground onto the ramp re-pitches every muted surface in the estate
+     and that is a design ruling, not an AA repair. check-ink-pressure prints the rank in
+     both themes on every run so the inversion cannot go quiet. */
+  --ink-press-rule: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 55%,
+    transparent
+  );
+  --ink-press-quiet: color-mix(
+    in srgb,
+    var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+    transparent
+  );
+  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+     4.16/3.85. */
+  --color-progress-ink: #8b5cf6;
+
+  /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+     answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+     Glossary (U7): grain = stroke displacement filter · tooth/fiber = static
+     surface raster · boil = frame-cycled geometry. Every shipped sheet is blur-0
+     (OD-1 no-glass build); the laminate is the held answer key — clear plastic,
+     not glass. Values: design-union §7.3. Each token names its physical object. */
+  --sheet-washi-neutral: color-mix(
+    in srgb,
+    var(--color-foreground) 6%,
+    hsl(0 0% 100% / 0.82)
+  ); /* tinted paper tape */
+  --sheet-ink-edge-laminate: color-mix(
+    in srgb,
+    var(--color-foreground) 10%,
+    transparent
+  ); /* pencil-drawn sheet edge */
+  --sheet-laminate-milk: linear-gradient(
+    165deg,
+    hsl(0 0% 100% / 0.22),
+    hsl(0 0% 100% / 0.1) 38%,
+    hsl(0 0% 100% / 0.16)
+  ); /* the clear sheet's body */
+  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.3); /* gloss catch-light along the top edge */
+  --sheet-laminate-cast:
+    4px 6px 0 color-mix(in srgb, var(--color-foreground) 8%, transparent),
+    0 6px 20px color-mix(in srgb, var(--color-foreground) 14%, transparent); /* the held sheet's cast + lift shadow */
+
+  /* Grid line colors */
+  --grid-line-color: hsl(0 0% 15%);
+
+  /* Paper textures */
+  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.18'/%3E%3C/svg%3E");
+
+  /* §EASING — the house curve ledger, one custom property per distinct curve
+     (T4-W10). This is the CSS half of the TWO-LAYER easing rule: `<style>`-layer
+     consumers read these `--ease-*` vars; JS / `v-bind` consumers read the TS
+     `MOTION.curves` in pencilConfig.ts (the drawer's `drawerGlide` is the sole
+     v-bind curve and stays there — see the two-layer note beside MOTION.curves).
+     Curves are theme-invariant (identical light / dark), so they mint HERE in the
+     base @theme, never in the `.dark` override. Values are byte-preserved from the
+     literals they replace — this wave RE-POINTS references, it never re-times
+     (durations + control points unchanged at every consumer). Role names derive
+     from what the curve does, not its control points (census c1-easing.md).
+
+       token                easing              role
+       --ease-noteWrite     easeOutQuint        write-in / reveal / grow
+       --ease-standard      material standard   show-hide fade / slide
+       --ease-springPop     backOut overshoot   icon / toggle pop
+       --ease-accelIn       easeInCubic         accelerate-away exit
+       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out
+       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw
+       --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls
+       --ease-loaderScrub   easeInOutCubic      loader continuous scrub
+       --ease-anticipatePop backInOut           anticipate + overshoot reveal
+       --ease-glassGlide    glass glide         answer-key laminate lay-down
+
+     Site counts are census output — `grep -rc "var(--ease-"` at a gate — and are
+     not maintained here: a hand-kept column drifted stale twice (T6 motion's
+     observation, then batch B moved it again) and a count the tree can derive
+     should never be prose.
+
+     --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+     but the curve is shared across the laminate leave, ScribbleLoader, and
+     DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+     (census C4 reconciliation).
+     --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+     identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+     answer-key laminate's lay-down joins the one glass curve instead of the retired
+     overshoot spring (0.34, 1.56, 0.64, 1) it rode before this wave. */
+  --ease-noteWrite: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+  --ease-springPop: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --ease-accelIn: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+  --ease-fadeOut: cubic-bezier(0.32, 0, 0.67, 0);
+  --ease-ghostDraw: cubic-bezier(0.215, 0.61, 0.355, 1);
+  --ease-drawOn: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+  --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
+}
+
+/* Dark theme */
+.dark {
+  --color-background: hsl(24 8% 6%);
+  --color-foreground: hsl(48 10% 92%);
+  --color-card: hsl(24 6% 7%);
+  --color-popover: hsl(24 7% 6.5%);
+  --color-muted-foreground: hsl(48 5% 64%);
+  --color-accent: hsl(24 5% 15%);
+  --color-border: hsl(24 4% 16%);
+  --color-ring: hsl(48 8% 83%);
+
+  --color-user-ink: #60a5fa;
+  --color-peer-1: #ff9a62;
+  --color-peer-2: #a0c942;
+  --color-peer-3: #00d0d9;
+  --color-peer-4: #a4b1ff;
+  --color-peer-5: #f48ce6;
+
+  /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+  --peer-ink-l: 0.8;
+
+  /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
+  --color-crayon-green: #3dd968;
+  --color-crayon-orange: #f5b35c;
+  --color-crayon-rose: #ff5c7c;
+  --color-crayon-blue: #6aabeb;
+  --color-crayon-gold: #e5c74d; /* the moon's own outline gold — 11.48:1 on dark paper */
+
+  /* Dark ink collapses into wax — the glowing crayon is already AA at night
+     (gold 11.48:1 on --color-background, rose 6.44:1; both hold on --color-card). */
+  --color-gold-ink: var(--color-crayon-gold);
+  --color-red-ink: var(--color-crayon-rose);
+  /* Difficulty-heading ink collapses into wax at night too (gate 1) — the dark crayon
+     already clears AA as heading text (green 10.11:1, orange 10.26:1 on --color-card). */
+  --color-green-ink: var(--color-crayon-green);
+  --color-orange-ink: var(--color-crayon-orange);
+
+  /* Solver-ink keeps its pastel wax at night (UI-10): 10.1–15.0:1 on the dark papers —
+     the paper darkens and the wax glows; only light mode needed the ink tier. */
+  --color-solver-ink-1: #f9a8d4;
+  --color-solver-ink-2: #c4b5fd;
+  --color-solver-ink-3: #93c5fd;
+  --color-solver-ink-4: #6ee7b7;
+  --color-solver-ink-5: #fde68a;
+
+  --grid-line-color: hsl(48 10% 80%);
+
+  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+  --color-progress-ink: #7c3aed;
+
+  /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+     recedes; the catch-light rises — the one place gloss reads MORE at night.
+
+     THE TAPE GETS ITS BODY BACK (T4-P1, the row `blast-radius.md` §2.7 held open for a dark
+     rendered shot; taken here in both engines — `shots/C-*-dark-*`). The light arm is a
+     near-OPAQUE film (α 0.82) sitting a shade under the paper: a physical object with a word
+     written on it. This arm was a 14% VEIL, so the near-white tape ink and the lifted ground
+     converged and every tape read as a highlighter STRIKE through its own word — measured
+     8.96:1 and still wrong, which is the difference between a contrast ratio and a perception.
+     Same recipe as light, α matched at 0.92, over a value that sits just ABOVE --color-card
+     (hsl(24 6% 7%)) instead of dissolving into it. Two consumers, both estate-wide
+     (SheetWashiLabel, DrawerTab).
+
+     GATED, no longer only witnessed (T4-P1 pass 4): `lint:ink`'s tape row asserts the WORD ON
+     THE TAPE — --color-foreground composited over this mix over --color-card — at the AA text
+     floor, in both themes. The shipped arms read 17.36 light / 9.06 dark; the veil this
+     replaced reads 1.231 dark, which is the highlighter strike the pass-2 shot recorded, now
+     a number. A ratio against the paper never saw it: that one measured 8.96 and was wrong. */
+  --sheet-washi-neutral: color-mix(
+    in srgb,
+    var(--color-foreground) 6%,
+    hsl(24 5% 21% / 0.92)
+  );
+  --sheet-laminate-milk: linear-gradient(
+    165deg,
+    hsl(0 0% 100% / 0.12),
+    hsl(0 0% 100% / 0.06) 38%,
+    hsl(0 0% 100% / 0.1)
+  );
+  --sheet-rim: inset 0 0.5px 0 0 hsl(0 0% 100% / 0.38);
+
+  --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* Crayon color utilities — the difficulty semantic, in ink. The three difficulty tints read
+   the ink tier above rather than the raw wax, which fails AA as light-mode text (green 2.22 /
+   orange 2.05 / rose 4.11 on --color-card); the ink aliases the wax in dark, where the crayon
+   already glows AA. Gate 1, T4-W10; the hexes and their measurements are the ledger above.
+   crayon-blue is the focus wax and takes no ink tier (no text use).
+
+   UNLAYERED, and that is the point of the T6 hoist. These lived in `GameControlPanel`'s
+   SCOPED block, where a selector could never reach a child component's internals: the
+   drawer's selected difficulty chip has rendered `crayon-orange` since T4-P1 and painted
+   nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+   reads the same four classes off the same page as the tokens they resolve through — a
+   layered home would lose to every unlayered author rule that sets `color`. */
+.crayon-green {
+  color: var(--color-green-ink);
+}
+.crayon-orange {
+  color: var(--color-orange-ink);
+}
+.crayon-rose {
+  color: var(--color-red-ink);
+}
+.crayon-blue {
+  color: var(--color-crayon-blue);
+}
+
+/* ── T4-WM (lane C) — iOS/mobile platform discipline ───────────────────────────
+ * Deliberate, single-home touch hygiene for the E8 recut — unlayered so it beats the
+ * layered utilities but never fights a scoped SFC rule (it only ADDS properties none of
+ * them set). Two of the discipline set are ALREADY delivered by Tailwind preflight on
+ * `html,:host` and are deliberately NOT re-declared here (re-declaring would be the exact
+ * "scattershot" the spec forbids — both are asserted green in mobile-platform.spec.ts):
+ * `-webkit-text-size-adjust:100%` and the INHERITED `-webkit-tap-highlight-color:transparent`.
+ * What preflight does not give, and this block adds:
+ *   · overscroll-behavior — the app is an h-screen scene with no inner scroll container, so
+ *     the page IS the board scene's scroller; `contain` stops the rubber-band / scroll-chain
+ *     / pull-to-refresh on it.
+ *   · the GAME-SURFACE suppression — `.board-cells` (the shared BOARD_CELLS_CLASS grid, both
+ *     games) is never a text-selection surface: `-webkit-touch-callout` + `user-select:none`
+ *     kill the iOS long-press callout/loupe (user-select is the load-bearing half — r3 4b) so
+ *     the wave's pointerdown long-press (lane E) inherits a clean gesture surface, and
+ *     `touch-action:manipulation` drops the double-tap-zoom delay without stealing pan/scroll
+ *     or the long-press. Scoped to the board alone — every other surface stays selectable. */
+html {
+  overscroll-behavior: contain;
+}
+
+.board-cells {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+@layer utilities {
+  /* Cartoon shadow variants */
+  .cartoon-shadow-sm {
+    box-shadow:
+      6px 4px 0px rgba(0, 0, 0, 0.14),
+      0 6px 0px rgba(0, 0, 0, 0.14),
+      6px 6px 0px rgba(0, 0, 0, 0.12);
+    border: 2px solid var(--color-border);
+    transform: translateY(-2px);
+  }
+
+  .cartoon-shadow-md {
+    box-shadow:
+      8px 5px 0px rgba(0, 0, 0, 0.14),
+      0 8px 0px rgba(0, 0, 0, 0.14),
+      8px 8px 0px rgba(0, 0, 0, 0.12);
+    border: 2px solid var(--color-border);
+    transform: translateY(-2px);
+  }
+
+  .dark .cartoon-shadow-sm {
+    box-shadow:
+      6px 4px 0px rgba(255, 255, 255, 0.09),
+      0 6px 0px rgba(255, 255, 255, 0.09),
+      6px 6px 0px rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--color-border);
+  }
+
+  .dark .cartoon-shadow-md {
+    box-shadow:
+      8px 5px 0px rgba(255, 255, 255, 0.09),
+      0 8px 0px rgba(255, 255, 255, 0.09),
+      8px 8px 0px rgba(255, 255, 255, 0.06);
+    border: 2px solid var(--color-border);
+  }
+
+  /* One-edge ownership (T3-W10 F1): a host wrapped in HandDrawnOutline gets its drawn
+     edge FROM the wobble frame — the utility's crisp 2px border would double it. The
+     hard shadow stays: it lies beneath the lifted sheet, outside the drawn edge.
+     The -2px lift is dropped too (R5 truthing, the "drop for animated hosts" arm): the
+     frame registers to the card's LAYOUT box, so a transform slides the card out from
+     under its own drawn edge — measured as a 2px vertical skew. Declared == rendered:
+     the variant declares no lift, and none renders. */
+  .cartoon-shadow-sm.edge-outlined,
+  .cartoon-shadow-md.edge-outlined {
+    border: none;
+    transform: none;
+  }
+
+  /* Laminate — the teacher's laminated answer key, briefly held over the page
+     (design-union §3 row 9). The app's flagship translucent object. OD-1 no-glass
+     build: the laminate never blurs its backdrop — the board shows through the milk
+     dimmed but not blurred (in-family with glass-ui's own blur-0 plate). The
+     --sheet-rim catch-light rides as a box-shadow inset (OD-1 dark-rim recovery, §7.3). */
+  .sheet-laminate {
+    position: relative;
+    background: var(--sheet-laminate-milk);
+    border: 1px solid var(--sheet-ink-edge-laminate);
+    box-shadow: var(--sheet-rim), var(--sheet-laminate-cast);
+  }
+
+  /* prefers-reduced-transparency: the laminate goes fully opaque (construction
+     paper — the fallback IS pure pencil). Nothing shows through, so the component
+     prints the COMPLETE solution (givens too) — the W9 blocking PRT fix. There is
+     no glass filter to null out (the no-glass build never authored one). */
+  @media (prefers-reduced-transparency: reduce) {
+    .sheet-laminate {
+      background: var(--color-card);
+      box-shadow: var(--sheet-laminate-cast);
+    }
+  }
+
+  /* prefers-contrast: more — opaque + the drawn ink edge pressed to 30%. */
+  @media (prefers-contrast: more) {
+    .sheet-laminate {
+      background: var(--color-card);
+      border-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+    }
+  }
+
+  /* Solve success — the gold-star moment. Grid lines + shadow both reference the single
+     --color-gold-star token via color-mix (design-refinement.md §3.3.1/§3.4), so the shadow
+     tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
+  .solve-success .grid-line {
+    stroke: var(--color-gold-star) !important;
+    transition: stroke 500ms;
+  }
+
+  /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+     already 100% — redundant with it. The violet trace bows out so the gold reward owns
+     the frame alone; the trace led the eye to the gold, it never competes with it. The
+     500ms bow-out lives in HandDrawnGrid's (unlayered) scoped style so this layered
+     rule's `transition` isn't the one that wins — here we only assert the end state. */
+  .solve-success .progress-trace {
+    opacity: 0;
+  }
+
+  .solve-success {
+    box-shadow:
+      8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+      8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
+    transition: box-shadow 500ms;
+  }
+
+  /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+     cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source order wins. */
+  @media (prefers-reduced-motion: reduce) {
+    .solve-success .grid-line {
+      transition: none;
+    }
+
+    .solve-success {
+      transition: none;
+    }
+  }
+
+  /* T3-W10 dusk ease (disposition keep, re-anchored AT click): when the theme turns,
+     the world dims rather than snaps — body + the paper sheets take a one-shot
+     ~350ms color ease. Scoped to html.theme-turning (DarkModeToggle puts the class
+     on at click, BEFORE the flip, and holds it ~400ms — never a deferral) and
+     no-preference-gated: under PRM the page colors snap. Conforms to the 500ms
+     stroke/box-shadow solve-success precedent above.
+
+     THE NARROWING (T8-W2 M9). `!important` here is the cure `d8942ced` itself named and
+     banked: `disableTransition: true` stamps `* { transition: none !important }` across the
+     one flip frame — the only frame this tween can start — so from P1-W3 to T8 the page
+     SNAPPED while the toggle bloomed over it, and the class plus this rule sat inert for
+     three tranches. The commit's own words: "the cure if the owner wants the dusk back is to
+     NARROW the 46 tweening selectors, not to re-blanket them." This IS the narrowing, and it
+     is enforced by specificity rather than argued in prose: among `!important` declarations
+     the more specific selector wins, so exactly the FIVE named below out-rank the page-wide
+     kill and everything else keeps it along with the +23.5 fps it bought. Measured on this
+     tree, they resolve to THREE elements in the default board scene (page-root, board-wrapper,
+     action-bar; body is a fourth, occluded) against the 46 the flip used to tween. It is the
+     same instrument `827905fa` used one surface over for the toggle's own gesture
+     transitions; the dusk is the half of that cure that was left banked. Doubly narrow in
+     TIME as well: `html.theme-turning` is up for ~400ms per click and never otherwise, so
+     nothing here transitions at rest.
+
+     THE GROUND SET, re-derived at restoration rather than recited (T8-W2 M9; lessons §1,
+     proxy ≠ surface). `body` + `.bg-card` was the whole list in T3-W10 and it is no longer
+     the page: `.page-root` took the app's ground on a later wave and OCCLUDES body entirely,
+     so the old rule tweened a background nobody can see while the one they can see snapped —
+     two grounds at two speeds, which reads worse than the snap it replaced. Measured on this
+     tree, the elements whose painted `background-color` actually differs between themes at
+     >4000 px² are SIX: body (1024000, occluded) · .page-root/.bg-background (1024000) ·
+     .board-wrapper (409600) · .controls-card (197125) · .action-bar (18421) ·
+     .drawer-tab-tongue (4416). Both of the last two sit ON a dusking .bg-card and would
+     otherwise cut a lit rectangle out of it, so they are named. Two tokens carry all six —
+     `--color-background` and `--color-card` — and the list below is those two tokens'
+     consumers, nothing wider. RE-DERIVE THIS LIST whenever a new full-bleed ground lands.
+     The instrument is three lines in a page context: snapshot every element's computed
+     `background-color` light and dark, keep the visible ones that DIFFER above ~4000 px²,
+     rank by area. A ground missing from this list snaps while its neighbours ease, which is
+     the failure mode that made the old two-selector rule read worse than no rule at all. */
+  @media (prefers-reduced-motion: no-preference) {
+    html.theme-turning body,
+    html.theme-turning .bg-background,
+    html.theme-turning .bg-card,
+    html.theme-turning .action-bar,
+    html.theme-turning .drawer-tab-tongue {
+      transition:
+        background-color 350ms ease,
+        color 350ms ease !important;
+    }
+  }
+
+  /* Solve failure — the teacher's red pencil. Shadow carries the full
+     --color-teacher-red token; grid lines take a 30% red wash over the line color
+     so the full-red conflict rings still read one tier hotter (Q8 H1;
+     design-refinement.md §3.3.1/§3.4). !important is defensive — the grid strokes
+     via a presentation attribute, which any CSS rule already beats. */
+  .solve-failure {
+    animation: refuse-shake 0.6s linear;
+    box-shadow:
+      8px 5px 0px color-mix(in srgb, var(--color-teacher-red) 25%, transparent),
+      0 8px 0px color-mix(in srgb, var(--color-teacher-red) 20%, transparent),
+      8px 8px 0px color-mix(in srgb, var(--color-teacher-red) 15%, transparent) !important;
+  }
+
+  .solve-failure .grid-line {
+    stroke: color-mix(
+      in srgb,
+      var(--color-teacher-red) 30%,
+      var(--grid-line-color)
+    ) !important;
+  }
+
+  /* Cell reveal animation */
+  @keyframes cell-reveal {
+    0% {
+      transform: scale(0);
+      opacity: 0;
+    }
+    60% {
+      transform: scale(1.1);
+    }
+    100% {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  /* Cell reveal with noise-staggered delay.
+     `backwards`, NOT `both` (P1-W3, r3 §3.1). The forwards half was REDUNDANT — the 100%
+     keyframe is `transform: scale(1); opacity: 1` and `.game-cell` declares neither, so the
+     cascade already says `transform: none; opacity: 1`. But `scale(1)` does not COMPUTE to
+     `none`, it computes to a matrix, so the retained fill left 35–81 board cells carrying an
+     effect-sourced transform indefinitely (63 measured on a dealt 9×9). WebKit promotes
+     elements carrying accelerated animations, and 35–81 promoted cell layers at DPR3 is a
+     tile-budget event — the best mechanism source can point at for "iOS especially".
+     The backwards half is load-bearing: it holds scale(0)/opacity:0 through the
+     `--reveal-delay` window. One token, zero pixels. `animatingCells` is untouched — the
+     `celebrating` derivation reads its size, so the cure belongs in CSS, never in the store. */
+  .cell-reveal-animated {
+    animation: cell-reveal 0.3s var(--ease-anticipatePop);
+    animation-delay: var(--reveal-delay, 0ms);
+    animation-fill-mode: backwards;
+  }
+
+  /* Sudoku cell focus styling */
+  .sudoku-cell:focus-within {
+    background: color-mix(in srgb, var(--color-accent) 50%, transparent);
+    outline: 1px solid color-mix(in srgb, var(--color-ring) 30%, transparent);
+    outline-offset: -1px;
+    border-radius: 2px;
+  }
+
+  /* Handwritten font utility — the annotation register (--font-hand ← Patrick
+     Hand); 0.02em ≈ --type-tracking-wide, kept bespoke for the hand voice. */
+  .handwritten {
+    font-family: var(--font-hand);
+    letter-spacing: 0.02em;
+  }
+
+  /* Reduced motion: kill looping animations but allow brief transitions
+     so that components can provide their own graceful reduced-motion fallback
+     (e.g. DarkModeToggle keeps a 200ms opacity fade). */
+  @media (prefers-reduced-motion: reduce) {
+    * {
+      animation-duration: 0.01ms !important;
+      animation-iteration-count: 1 !important;
+    }
+  }
+}
+
+/* ── T3-W13 §4.0 — the pencil draw-on primitive ───────────────────────────────
+ * One GLOBAL keyframe + utility class (scoped SFC keyframes hash per-component —
+ * keyFade-41bb021b, marks-fade-in-d0f8c37b — so a shared draw-on must live here,
+ * beside the pencil tokens). The consuming <path> carries pathLength="1": the
+ * browser normalizes dash coordinates to the declared length, so dasharray 1 /
+ * dashoffset 1→0 is EXACT for any geometry — the W8 approximate-length defect
+ * class is sidestepped with zero JS (no reset, no 'none' clearing, no resting
+ * dash-gap). The 8% opacity ramp hides the round-linecap start dot that would
+ * otherwise protrude before the stroke moves; the bezier is easeOutCubic, the
+ * draw-in family curve. Consumers parameterize inline via --draw-dur /
+ * --draw-delay / --draw-opacity. Unlayered on purpose: it must not lose a
+ * competing declaration to unlayered scoped SFC styles.
+ * PRM: instant in the primitive itself — every consumer inherits it. */
+.pencil-draw-on {
+  stroke-dasharray: 1;
+  stroke-dashoffset: 0;
+  animation: pencil-draw-on var(--draw-dur, 160ms) var(--ease-drawOn)
+    var(--draw-delay, 0ms) both;
+}
+
+@keyframes pencil-draw-on {
+  from {
+    stroke-dashoffset: 1;
+    opacity: 0;
+  }
+  8% {
+    opacity: var(--draw-opacity, 1);
+  }
+  to {
+    stroke-dashoffset: 0;
+    opacity: var(--draw-opacity, 1);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pencil-draw-on {
+    animation: none;
+    opacity: var(--draw-opacity, 1);
+  }
+}
+
+/* ── R3 (Tranche II W5) — 44px tap-target floor, coarse pointers only ─────────
+ * The L15 audit's sub-44 controls, floored where a finger is the instrument;
+ * fine pointers keep the compact pencil layout. Shared here (not per-component)
+ * so the listed controls ride it without touching each file's scoped rules.
+ * Board cells are exempt (16×16 at mobile width is a sub-44 arithmetic
+ * impossibility — D12). min-height only: every listed control centers its own
+ * content; the scribble/ghost underlines keep tracking the content box.
+ * (T4-W12 Wave D — the `.logo-menu-item` listbox rows retired with the dropdown.) */
+/* T5-P6 (BC5-G5) — WHOSE FLOOR THIS IS. No component owns 44px; this block does, and four
+ * components inherit it. Stating it at the branch that enforces it read as a property of that
+ * branch, which is how pass 5 came to red the wrong assertion first: a control that leaves
+ * this rule standing cannot push itself under the bar, so a failure here is a failure of this
+ * block, never of the component that reported it.
+ *
+ * THE DEPENDENTS, re-derived at this citation rather than carried (pass 5 wrote "three"; the
+ * grep over rendered `class=` attributes returns FOUR, one component per selector, and the
+ * two halves of the floor do not reach the same set):
+ *   min-height — .ctrl-btn            pencil/chrome/OptionSelector/OptionSelector.vue
+ *              · .mobile-heading-btn  games/shared/GameControlPanel.vue
+ *              · .attribution-trigger pencil/chrome/AttributionCard/AttributionCard.vue
+ *              · .error-note-retry    games/shared/SolverErrorNote.vue
+ *   min-width  — .ctrl-btn and .mobile-heading-btn ONLY (see the block below for why).
+ *
+ * NOT dependents, though they gate on the same number: `.icon-btn` (undo/redo/hint) and
+ * `.peek-hold-surface` clear 44px on their own geometry — `e2e/mobile-affordances.spec.ts`
+ * measures those, and deleting this rule would not move them. The gate that DOES read this
+ * block is `e2e/zone-grammar.spec.ts`, "the pair branch keeps a 44px floor in BOTH
+ * dimensions", and it stays where the branch exists rather than moving here with the prose. */
+/* T9-W2 §2.6 — THE FLOOR IS A TOKEN NOW, AND IT IS DECLARED ONCE. `--tap-floor`
+ * lives on `.page-root` (App.vue, where §2.4 minted it so the celestial's hit disc
+ * could be `max(--tap-floor, --toggle-size / 2)` and grow WITH the toolbar instead
+ * of being its exception). Every consumer reads it; nobody spells 2.75rem twice.
+ * The fallback is the shipped literal, so a consumer mounted outside `.page-root`
+ * still lands on 44px rather than on `initial`. It may be RAISED — W7's voice —
+ * and it may never resolve below 44: the M01 census in `e2e/viewport-law.spec.ts`
+ * reads the rendered boxes, which is the only place that assertion can be honest. */
+@media (pointer: coarse) {
+  .ctrl-btn,
+  .mobile-heading-btn,
+  .attribution-trigger,
+  .error-note-retry {
+    min-height: var(--tap-floor, 2.75rem);
+  }
+
+  /* T4-P1 — the floor is TWO-dimensional, and the width half was missing. The candidates "On"
+     chip measured 43.2px WIDE at coarse (`px-3` + two Fira Code characters), under the 44px
+     floor in a dimension a height-only rule can never reach; every option chip now clears both.
+
+     T5-W3 (a11y r1 M8) — `.mobile-heading-btn` joins it. "Chips ONLY … the other three surfaces
+     are full-width or icon-sized already" was true of the other two and false of this one: the
+     section tabs are `padding: 0` and size to their own word, so the sudoku card's "Size" tab
+     measured 41.2 × 44 at 390×844 coarse — the sole sub-44 control on the page, and the very
+     defect class this block says it closed, on the one surface the width half did not name.
+     `.attribution-trigger` / `.error-note-retry` stay out: both re-measured full-width here. */
+  .ctrl-btn,
+  .mobile-heading-btn {
+    min-width: var(--tap-floor, 2.75rem);
+  }
+}
+
+/* ── THE DRAWN GLYPHS' THREE RANKS (T9-W2 §2.6, the owner's M01) ──────────────
+ * "All buttons and text for controls need to be larger on mobile" is two claims,
+ * and the type ladder answers only the second. This is the first: the icon a
+ * control is MADE of, ranked to mirror the type roles 1:1 — act (Deal, the card's
+ * one primary verb) · verb (clear · fill · solve · share) · tool (undo · redo ·
+ * hint · the peek chip's siblings).
+ * The SVG `:size` props stay as the first-paint default and CSS overrides them,
+ * which is the estate's own precedent — `.action-verbs .icon-btn svg { width: 30px }`
+ * has done exactly this since T6 mark 8, and that literal is now this token.
+ * DECLARED HERE, SPENT IN `GameControlPanel`: the rules that read these ranks are
+ * that component's, beside the `.icon-btn` grammar they belong to, because a global
+ * `.icon-btn svg` rule would race the scoped one on specificity and lose or win by
+ * CSS import order — a fact no file states and every build could change. */
+:root {
+  --icon-act: 36px; /* DiceIcon's shipped `:size` */
+  --icon-verb: 30px; /* `.action-verbs .icon-btn svg`'s shipped width */
+  --icon-tool: 26px; /* the play tools' shipped `:size` */
+}
+
+/* Same key as the read floor and the tap floor — one regime, three floors. The
+   band is width AND pointer (the W2 adjudication's graft): a coarse surface at
+   desk width keeps the desk's glyphs, which this wave has not measured. */
+@media (max-width: 1023.98px) and (pointer: coarse) {
+  :root {
+    --icon-act: 40px;
+    --icon-verb: 32px;
+    --icon-tool: 30px;
+  }
+}
+
+/* ── W6 print — the printed page is the hand-drawn board, nothing else ────────
+ * Chrome hides (controls, wordmark picker, attribution, celestial toggle,
+ * celebration, margin voice, laminate); every stroke goes true black over bare
+ * paper; the solve washes + cartoon shadows strip. Ghost rects + carets alias
+ * --grid-line-color, so one redefinition inks the whole board; the glyph rule
+ * overrides the SVG presentation attribute (user-ink blue, sparkle-rainbow
+ * givens). The stroke/shadow overrides sit in @layer base ON PURPOSE: the
+ * solve-success/failure recolors are !important in @layer utilities, and for
+ * important declarations layer precedence inverts — the EARLIER layer wins.
+ * The var redefinitions stay unlayered + last so they beat the unlayered .dark
+ * block by source order. */
+@media print {
+  .corner-right,
+  .corner-left,
+  .mobile-attribution,
+  .masthead,
+  .controls-card,
+  /* T5-W4 pass 6: `.mobile-board-width` is deleted — the stacked twin it named is gone and the
+     ONE card is `.controls-card`, already listed above. What replaced it in the portrait fold
+     is the play-verbs band, and a printed worksheet wants no undo button either. */
+  .fold-tools,
+  .celebration-star,
+  .board-margin,
+  .answer-key-laminate {
+    display: none !important;
+  }
+
+  @layer base {
+    body,
+    .bg-background,
+    .board-wrapper {
+      background: #fff !important;
+    }
+
+    .board-wrapper {
+      box-shadow: none !important;
+      animation: none !important;
+    }
+
+    .grid-line {
+      stroke: #000 !important;
+    }
+
+    .glyph-svg path {
+      stroke: #000 !important;
+      filter: none !important;
+    }
+  }
+
+  :root,
+  .dark {
+    --grid-line-color: hsl(0 0% 0%);
+    --color-user-ink: #000;
+  }
+}
+
+/* THE PRINT RULE'S MISSING TWIN (T6 mark 13). Print already beats the per-cell player ink —
+ * a rule inside `@layer base` outranks the `stroke` PRESENTATION ATTRIBUTE the glyph carries,
+ * whatever `--color-user-ink` resolves to — so a shared worksheet still prints true black.
+ * Forced colours ask for the same thing and had nobody saying it: browsers force `color` and
+ * `background-color` but leave SVG `stroke` alone, so a high-contrast reader would have been
+ * handed a board written in five hues they had explicitly asked not to receive. The system
+ * ink is the whole point of the mode; the players' colours yield to it. */
+@media (forced-colors: active) {
+  @layer base {
+    .glyph-svg path {
+      stroke: CanvasText;
+    }
+  }
+}
+
+/* ── T6 §THE MOTION VOCABULARY (marks 14, 15) ─────────────────────────────────
+ * The estate's finite verb list, in ONE place, so a celebration reads as grammar
+ * rather than as five components each inventing a tween. Scoped SFC keyframes hash
+ * per component (keyFade-41bb021b), so a verb two components share must live here —
+ * beside `.pencil-draw-on`, the primitive that established the pattern.
+ *
+ *   family    verb            consumer
+ *   ───────   ─────────────   ────────────────────────────────────────────────
+ *   COMPLETE  bloom-in        .celebration-star.is-bloom   (GameBoard overlay)
+ *             outline-flash   .star-flash                  (the bloom's twin path)
+ *             bloom-out       .celebration-star.is-bloom
+ *             sticker-pop     .celebration-star            (the vignette sticker)
+ *             plush-bounce    .celebration-heart
+ *   KIN       plush-murmur    .celebration-heart.is-murmuring
+ *             plush-blink     .celebration-heart .eyes
+ *             ink-write-in    .margin-note-ink · .margin-note-meta ·
+ *                             .vignette-voice · .vignette-meta
+ *             note-in         .error-note
+ *             (incumbents, kept where they are: cell-reveal, pencil-draw-on)
+ *   ERROR     refuse-shake    .solve-failure (the verdict) · .game-cell.is-refused (the
+ *                             given-write refusal, T9-W1 §1.1) — one shake, two wearers;
+ *                             the keystroke earns it only when the model refuses the write.
+ *
+ * NUMBERS DO NOT LIVE HERE. Every duration and delay arrives as a bound custom
+ * property from `CELEBRATION` (the `.pencil-draw-on` --draw-dur/--draw-delay
+ * precedent); what lives here is shape and curve.
+ *
+ * TWO DISCIPLINES, enforced by construction:
+ *
+ *  1. FILL — never `forwards`/`both`. `backwards` where a verb must hold a pre-delay
+ *     pose; nothing retains an effect-sourced transform (the r3 §3.1 promoted-layer
+ *     class, the census's own subject). Every `to` equals its consumer's cascade rest
+ *     pose, so releasing the fill changes no pixel. `bloom-out` takes no fill at all
+ *     and opens exactly where `bloom-in` closes — a later `backwards` animation would
+ *     out-rank the earlier one through its whole delay, and contiguity is what keeps
+ *     the rest pose from showing between them.
+ *  2. PRM — `animation: none !important` at the foot. Load-bearing, not ceremony: the
+ *     global PRM rule zeroes DURATIONS and leaves DELAYS alone, so a 2650ms-delayed
+ *     `backwards` verb would hold its 0% pose — scale 0, opacity 0 — for 2.65s under
+ *     reduced motion. Rest CSS is the settled pose, so this shows the END state at once.
+ *
+ * OWNER KNOBS: `bloom-in`'s 1.06 overshoot; `bloom-out`'s 25% plateau (how long the
+ * grown star holds before it dissolves); the dissolve's 1.12. */
+@layer utilities {
+  @keyframes bloom-in {
+    from {
+      transform: scale(0.06);
+      opacity: 0;
+      animation-timing-function: var(--ease-drawOn);
+    }
+    14% {
+      opacity: 1;
+    }
+    72% {
+      transform: scale(1.06);
+      animation-timing-function: var(--ease-standard);
+    }
+    to {
+      transform: scale(1);
+      opacity: 1;
+    }
+  }
+
+  @keyframes outline-flash {
+    from,
+    to {
+      opacity: 0;
+    }
+    18%,
+    46% {
+      opacity: 1;
+    }
+  }
+
+  @keyframes bloom-out {
+    from {
+      transform: scale(1);
+      opacity: 1;
+    }
+    25% {
+      transform: scale(1);
+      opacity: 1;
+      animation-timing-function: var(--ease-accelIn);
+    }
+    to {
+      transform: scale(1.12);
+      opacity: 0;
+    }
+  }
+
+  @keyframes sticker-pop {
+    from {
+      transform: scale(0.2) rotate(-8deg);
+      opacity: 0;
+      animation-timing-function: var(--ease-drawOn);
+    }
+    30% {
+      opacity: 1;
+    }
+    70% {
+      transform: scale(1.08) rotate(2deg);
+      animation-timing-function: var(--ease-standard);
+    }
+    to {
+      transform: scale(1) rotate(0deg);
+      opacity: 1;
+    }
+  }
+
+  /* The reciprocal-axis squash IS the plush bounce (F7 §3.2): grow to
+     (1.15, 0.92) wide-and-squashed, rebound to (0.97, 1.02) tall, settle at 1 —
+     an overall 0 → ~1.12 → 1 read, nothing snaps. Poses verbatim from the JS
+     tween this replaced; its per-segment easeOutCubic is --ease-drawOn. */
+  @keyframes plush-bounce {
+    from {
+      transform: scale(0, 0);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    55% {
+      transform: scale(1.15, 0.92);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    80% {
+      transform: scale(0.97, 1.02);
+      animation-timing-function: var(--ease-drawOn);
+    }
+    to {
+      transform: scale(1, 1);
+    }
+  }
+
+  /* Murmur participation (F2 §C): one soft toy-bob on the host wrapper when the
+     classroom's 1-in-8 window falls to the heart, then still. */
+  @keyframes plush-murmur {
+    from,
+    to {
+      transform: scale(1, 1);
+    }
+    35% {
+      transform: scale(1.06, 0.94) rotate(-2deg);
+    }
+    70% {
+      transform: scale(0.97, 1.03) rotate(1.5deg);
+    }
+  }
+
+  /* One blink: the EYES group squashes inside the unscaled filtered content, so
+     the filter region never grows. Shut ~140ms of the 240ms verb, once. */
+  @keyframes plush-blink {
+    from,
+    to {
+      transform: scaleY(1);
+    }
+    12%,
+    70% {
+      transform: scaleY(0.1);
+    }
+  }
+
+  /* The hand writes left to right — the logo's reveal mechanic, shortened. ONE
+     keyframe for the margin note and the vignette both (they were byte-twins). */
+  @keyframes ink-write-in {
+    from {
+      clip-path: inset(0 100% 0 0);
+    }
+    to {
+      clip-path: inset(0 0 0 0);
+    }
+  }
+
+  @keyframes note-in {
+    from {
+      transform: translateY(8px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+
+  @keyframes refuse-shake {
+    0%,
+    100% {
+      transform: translateX(0);
+    }
+    10%,
+    30%,
+    50%,
+    70%,
+    90% {
+      transform: translateX(-4px);
+    }
+    20%,
+    40%,
+    60%,
+    80% {
+      transform: translateX(4px);
+    }
+  }
+
+  /* `.cell-reveal-animated` rides here too: it is the incumbent instance of the very
+     delay trap the discipline names (`--reveal-delay` up to 1.2s of held scale(0)). */
+  @media (prefers-reduced-motion: reduce) {
+    .celebration-star,
+    .celebration-star .star-flash,
+    .celebration-heart,
+    .celebration-heart .eyes,
+    .cell-reveal-animated,
+    .margin-note-ink,
+    .margin-note-meta,
+    .vignette-voice,
+    .vignette-meta,
+    .error-note,
+    .solve-failure {
+      animation: none !important;
+    }
+  }
+}

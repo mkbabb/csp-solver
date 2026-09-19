@@ -1,0 +1,407 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..dd96e6b3 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -942,6 +942,15 @@ jobs:
+             - name: ink pressure (graphite ladder + ramp ownership + the rank, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:ink
++            # T9-W7 §11c — the peer walk's arcs are a CONSTANT in playerIdentity.ts because a
++            # browser cannot read a stylesheet's source at run time, which makes the constant
++            # and index.css two statements of one fact. This re-derives the six reserved arcs
++            # from the sheet and diffs, then re-runs the family law on the walk they produce:
++            # a hex that moves, or a sixth anchor, reds here rather than quietly re-landing a
++            # player inside a crayon. Self-tested, same house pattern as ink pressure.
++            - name: peer arcs (reserved set re-derived from index.css, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:arcs
+             # T5-W2 row 2.4b — the swallow census. A catch body must run a statement or say
+             # something; `/* ignore */` says nothing. The eleven it was born RED at were all
+             # guards against a contract pencil-boil did not state until 0.11.0, where `stop()`
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index 32ea521e..eb331a80 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -31,6 +31,7 @@
+     "typecheck:relay": "tsc -p ../relay/tsconfig.json --noEmit",
+     "lint:knip": "knip",
+     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
++    "lint:arcs": "node scripts/check-peer-arcs.mjs --self-test",
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
+     "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..303325d9 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -150,15 +150,18 @@
+   /* Handwritten glyph colors */
+   --color-user-ink: #2563eb;
+ 
+-  /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+-     scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+-     hue)` with `hue = i × 137.5°` (playerIdentity.ts), so there is no palette to run out of
+-     and no player cap to enforce — but a hue walk alone says nothing about contrast, and the
+-     band is what makes the AA claim structural instead of a table of hand-checked hexes.
+-     Measured over 40 indices at chroma 0.11: worst 5.26:1 on --color-background here, 9.56:1
+-     on --color-card in the dark block below. The crayon tiers above are DIFFICULTY's
+-     vocabulary and stay there; no player is ever assigned wax, and no player is ever assigned
+-     the solver's rainbow, so the three inks never compete. */
++  /* T6 mark 13 — the LIGHTNESS BAND a player's ink is written at, and the only new scalar the
++     feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) C hue)`
++     (playerIdentity.ts), where the hue walks the arcs THIS FILE has not already spent and C is
++     the largest chroma sRGB holds at both bands — so there is no palette to run out of and no
++     player cap to enforce, and no hand is ever within 12° of a crayon, an ink tier, the
++     solver's rainbow or the local blue. A hue walk alone says nothing about contrast; the band
++     is what makes the AA claim structural instead of a table of hand-checked hexes. Measured
++     on the engine's own bytes over 144 indices in both engines: worst 5.45:1 on
++     --color-background here and 5.59:1 on --color-card, 9.51:1 and 9.31:1 in the dark block
++     below, 0 of 144 under AA on any of the four grounds. The crayon tiers above are
++     DIFFICULTY's vocabulary and stay there; no player is ever assigned wax and no player is
++     ever assigned the solver's rainbow, so the three inks never compete. */
+   --peer-ink-l: 0.5;
+ 
+   /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..af48af63 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -231,7 +231,11 @@
+   fill-opacity: 0.04;
+   stroke: var(--color-peer-cursor-ink, var(--color-user-ink));
+   stroke-width: 4;
+-  stroke-opacity: 0.55;
++  /* 0.55 was a taste number and it failed 1.4.11 for every index: composited on paper the ring
++     reads 2.28:1, under the 3:1 floor a non-text control owes. 0.80 is the lowest tenth that
++     clears it on both papers (3.0+ measured over 144 indices); the width and the 0.04 fill are
++     untouched, so the ring is still the lighter of the two — keyboard focus keeps 7 and 0.9. */
++  stroke-opacity: 0.8;
+   stroke-dasharray: 1;
+   /* Same "end state equals the cascade" discipline as tier 2: the value moves into the rule
+      and the fill drops to `backwards`. */
+diff --git a/web/frontend/src/games/shared/playerIdentity.ts b/web/frontend/src/games/shared/playerIdentity.ts
+index 4739417a..a03b0c00 100644
+--- a/web/frontend/src/games/shared/playerIdentity.ts
++++ b/web/frontend/src/games/shared/playerIdentity.ts
+@@ -3,13 +3,23 @@
+  * (T6 mark 13).
+  *
+  * A slug is a pure function of the peer's own id, so a name costs no wire traffic and no
+- * round trip: the roster row is drawn the instant the connection opens. Ink is the
+- * golden-angle walk — `hue_i = i × 137.5°` at a lightness the theme bands — which spreads
+- * ANY number of players as far apart around the circle as a sequence can, so there is no
+- * palette to run out of and no player cap to enforce. The band is what makes the contrast
+- * claim structural rather than a table of hand-checked hexes: `--peer-ink-l` is 0.5 on paper
+- * and 0.8 at night, and at chroma 0.11 the whole walk clears AA on both grounds (worst
+- * 5.26:1 light, 9.56:1 dark, measured over 40 indices).
++ * round trip: the roster row is drawn the instant the connection opens. Ink is a golden walk
++ * over the arcs of the wheel this product has NOT already spent — the crayons, the ink tiers,
++ * the solver's rainbow, the focus sketch, the progress bar and the local blue each claim the
++ * ±13° around their own hue, and the walk lives in what is left. So a player is never
++ * mistakable for a verdict, a difficulty or the machine, there is no palette to run out of,
++ * and no player cap to enforce.
++ *
++ * The band is what makes the contrast claim structural rather than a table of hand-checked
++ * hexes: `--peer-ink-l` is 0.5 on paper and 0.8 at night, and the chroma is whatever sRGB can
++ * hold at BOTH (below). Measured on the engine's own bytes over 144 indices, both engines:
++ * worst 5.45:1 on `--color-background` and 5.59:1 on `--color-card` in light, 9.51:1 and
++ * 9.31:1 in dark — 0 of 144 under AA on any of the four grounds.
++ *
++ * WHAT IT DOES NOT BUY. The 12° floor keeps a hand clear of a TOKEN; it is not a threshold for
++ * telling two hands apart. At the chroma the gamut allows, eight hands measure ΔE 0.024 at
++ * their closest, against 0.076 between the two nearest crayons — so eight are apart by the
++ * law and three or four read as different people. The roster keeps listing either way.
+  *
+  * The crayon tiers are DIFFICULTY's vocabulary and stay there; this module mints no token
+  * and touches no wax.
+@@ -60,21 +70,124 @@ export function slugFor(peerId: string, taken: ReadonlySet<string>): string {
+ }
+ 
+ /**
+- * The remote player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is
+- * the whole of the mechanism, because `HandwrittenGlyph` already strokes with that var
+- * (`HandwrittenGlyph.vue:85`). The local player keeps the incumbent blue — nothing is bound
+- * on their cells, so solo is byte-identical.
++ * THE ARCS THE HOUSE HAS ALREADY SPENT. Every ink hex in `index.css` — the five crayons both
++ * themes, the four ink tiers, the solver's five, the focus sketch, the progress bar and the
++ * local blue, 29 in all — claims the ±13° around its hue: the family law's own 12° floor plus
++ * a degree of margin. THE MARGIN IS MEASURED, NOT TASTE. A screen is 8 bits a channel, and an
++ * ink at this chroma rounds to a byte triple whose hue is up to 0.87° off the one asked for
++ * (canvas read-back, 144 indices, both engines) — so a walk built at 12.25 puts index 0 at
++ * 26.41° and the engine paints 26.13°, which is 11.97° from crayon-rose and under the floor
++ * the walk exists to hold. A degree covers the rounding with room to spare, and costs 7.5° of
++ * open wheel and nothing else: still six arcs, still 137.25° open in five, still eight hands
++ * apart. Merged, they are:
++ *
++ * NOTHING HERE IS CHOSEN and nobody edits it by hand: `scripts/check-peer-arcs.mjs` re-derives
++ * the six from `index.css` on every run of the lint lane and exits 1 on drift, so a hex that
++ * moves moves this table with it or reds.
+  */
+-export const inkFor = (index: number): Record<string, string> => ({
+-  "--color-user-ink": `oklch(var(--peer-ink-l) 0.11 ${((index * 137.5) % 360).toFixed(1)}deg)`,
+-});
++const RESERVED_ARCS: ReadonlyArray<readonly [number, number]> = [
++  [0, 27.1616],
++  [51.1659, 108.7459],
++  [133.985, 178.6121],
++  [236.3332, 275.8809],
++  [279.7172, 306.5712],
++  [333.0184, 360],
++];
++
++/** The complement — five open arcs, and the arclength the walk actually runs on. */
++const OPEN: [number, number][] = [];
++{
++  let cut = 0;
++  for (const [a, b] of RESERVED_ARCS) {
++    if (a > cut) OPEN.push([cut, a]);
++    cut = Math.max(cut, b);
++  }
++  if (cut < 360) OPEN.push([cut, 360]);
++}
++const SPAN = OPEN.reduce((s, [a, b]) => s + (b - a), 0);
++/** The golden FRACTION of the open arclength (SPAN/φ² = 52.42°) — the same low-discrepancy
++ *  sequence the full-circle walk was, re-expressed on a shorter circle. (The literal 137.5°
++ *  of a 137.25° arclength is a quarter-degree crawl, which is a walk in name only.) */
++const STEP = SPAN * ((3 - Math.sqrt(5)) / 2);
++
++/** Arclength along the concatenated open arcs → a real hue. Measure-preserving, so a gap in
++ *  arclength is a LOWER BOUND on the hue gap it produces. */
++function hueAt(index: number): number {
++  let p = (((index * STEP) % SPAN) + SPAN) % SPAN; // an index off the wire may be negative
++  for (const [a, b] of OPEN) {
++    if (p < b - a) return a + p;
++    p -= b - a;
++  }
++  return OPEN[OPEN.length - 1][1];
++}
++
++/** The wax's own chroma, re-derived from the five light crayon hexes (mean 0.1658). */
++const WAX = 0.166;
++
++/** Is `oklch(l c h)` a colour sRGB can actually hold? OKLab → linear sRGB, unclamped, so the
++ *  test can see how far outside it is. */
++function inGamut(l: number, c: number, h: number): boolean {
++  const a = c * Math.cos((h * Math.PI) / 180);
++  const b = c * Math.sin((h * Math.PI) / 180);
++  const x = (l + 0.3963377774 * a + 0.2158037573 * b) ** 3;
++  const y = (l - 0.1055613458 * a - 0.0638541728 * b) ** 3;
++  const z = (l - 0.0894841775 * a - 1.291485548 * b) ** 3;
++  return [
++    4.0767416621 * x - 3.3077115913 * y + 0.2309699292 * z,
++    -1.2684380046 * x + 2.6097574011 * y - 0.3413193965 * z,
++    -0.0041960863 * x - 0.7034186147 * y + 1.707614701 * z,
++  ].every((v) => v >= -1e-4 && v <= 1.0001);
++}
++
++/**
++ * THE CHROMA IS THE GAMUT'S, NOT A WISH. Ask for more than sRGB can hold and the engine does
++ * not refuse — it clips channels, and clipping SHIFTS HUE: at a flat 0.166 the browser rotates
++ * the walk by up to 15.33°, which walks index 2 back inside crayon-blue's arc and makes the
++ * law this file is built on false in the painted bytes. So the chroma is the wax's where both
++ * bands can hold it and the ceiling where they cannot, found by bisection. One string serves
++ * both themes (`--peer-ink-l` is 0.5 on paper and 0.8 at night, and the ink is not re-minted
++ * when the theme flips), so the ceiling taken is the LOWER of the two bands'.
++ */
++function chromaAt(h: number): number {
++  const holds = (c: number): boolean => inGamut(0.5, c, h) && inGamut(0.8, c, h);
++  if (holds(WAX)) return WAX;
++  let lo = 0;
++  let hi = WAX;
++  for (let k = 0; k < 20; k++) {
++    const mid = (lo + hi) / 2;
++    if (holds(mid)) lo = mid;
++    else hi = mid;
++  }
++  return lo;
++}
++
++/** Bisection is 20 gamut tests; a roster of sixteen re-reads its own ink on every frame. */
++const inkCache = new Map<number, string>();
++
++/**
++ * The player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is the whole
++ * of the mechanism, because `HandwrittenGlyph` already strokes with that var
++ * (`HandwrittenGlyph.vue:85`). Nothing is bound anywhere until a room exists, so solo is
++ * byte-identical; in a room every hand at the table is inked from this walk, YOURS INCLUDED
++ * (`useSession.mint`), which is what makes your own colour the colour the room sees.
++ */
++export const inkFor = (index: number): Record<string, string> => {
++  let ink = inkCache.get(index);
++  if (ink === undefined) {
++    const h = hueAt(index);
++    ink = `oklch(var(--peer-ink-l) ${chromaAt(h).toFixed(4)} ${h.toFixed(2)}deg)`;
++    inkCache.set(index, ink);
++  }
++  return { "--color-user-ink": ink };
++};
+ 
+ // ── THE BINDING (T8-W3 §2.9) — who you are in a room, kept ──────────────────────────────
+ //
+ // The owner's ruling: "your slug name and session should be preserved, such that if you switch
+ // back to a game as slug x, you rejoin that active session." Everything downstream of the peer
+ // id is ALREADY a pure function of it — the slug (`slugFor` above), the ink (`k[id]`, an index
+-// the epoch carries and never reassigns), authorship (`ledger.clock` keys authors by id) and
++// the epoch carries and `useSession.adoptInk` refuses to rewrite once this page holds one),
++// authorship (`ledger.clock` keys authors by id) and
+ // the roster row (`known[id]` retains departed peers). So the whole of "rejoin as the same
+ // author" is: stop minting a new id per connection, and remember the one you had.
+ //
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 52c0a3c1..7bb2d775 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -123,23 +123,35 @@ describe("identity — derived on every page, negotiated on none", () => {
+     expect(taken.size).toBe(400); // 400 distinct names, no cap, no suffix
+   });
+ 
+-  it("ink is the golden-angle walk, and it never repeats a hue inside a room", () => {
+-    expect(inkFor(0)["--color-user-ink"]).toBe("oklch(var(--peer-ink-l) 0.11 0.0deg)");
++  it("ink walks the arcs the house has not spent, and states where it runs out", () => {
++    // The first three, pinned. The walk OPENS at 27.16° because that is where the rose arc
++    // ends, and each chroma is the most sRGB holds at both bands — ask for more and the engine
++    // clips channels, which rotates the hue back inside the arc the walk was built to clear.
++    expect(inkFor(0)["--color-user-ink"]).toBe(
++      "oklch(var(--peer-ink-l) 0.1145 27.16deg)",
++    );
+     expect(inkFor(1)["--color-user-ink"]).toBe(
+-      "oklch(var(--peer-ink-l) 0.11 137.5deg)",
++      "oklch(var(--peer-ink-l) 0.0898 181.79deg)",
+     );
+     expect(inkFor(2)["--color-user-ink"]).toBe(
+-      "oklch(var(--peer-ink-l) 0.11 275.0deg)",
+-    );
+-    // Sixteen players, sixteen hues, and the closest two are still 12.5° apart: the golden
+-    // angle's whole property is that no prefix of the walk clusters. A table of hexes would
+-    // have run out eleven players ago.
+-    const hues = Array.from({ length: 16 }, (_, i) => (i * 137.5) % 360).sort(
+-      (a, b) => a - b,
++      "oklch(var(--peer-ink-l) 0.1050 234.22deg)",
+     );
+-    const gaps = hues.slice(1).map((h, i) => h - hues[i]);
+-    expect(new Set(hues).size).toBe(16);
+-    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(12.5);
++    // EIGHT PLAYERS APART, AND THE NINTH IS NOT. The open wheel is 137.25° wide, so a walk on
++    // it holds the 12° floor `scripts/check-peer-arcs.mjs` enforces for eight hands (12.38°)
++    // and no further (7.65°). That is the capacity, said out loud rather than pretended away.
++    const hue = (i: number): number =>
++      Number(/ ([\d.]+)deg/.exec(inkFor(i)["--color-user-ink"])![1]);
++    const sep = (n: number): number => {
++      let min = 360;
++      for (let i = 0; i < n; i++)
++        for (let k = i + 1; k < n; k++) {
++          const d = Math.abs(hue(i) - hue(k)) % 360;
++          min = Math.min(min, d > 180 ? 360 - d : d);
++        }
++      return min;
++    };
++    expect(sep(8)).toBeGreaterThanOrEqual(12);
++    expect(sep(9)).toBeLessThan(12);
+   });
+ });
+ 
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..d0dd1293 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -367,6 +367,18 @@ let inkCursor = 0;
+  * which is the whole of why a rejoiner cannot arrive to find somebody else in their colour.
+  */
+ let inkIndex: Record<string, number> = {};
++/**
++ * The ids whose index this page has AGREED with the room — published in its own `st`, or
++ * adopted from one. AN AGREED INDEX IS IDENTITY, AND IDENTITY DOES NOT FOLLOW THE EPOCH.
++ *
++ * `adoptInk` runs inside the `st` arm ABOVE `source.restore`, so any newer frame re-inked
++ * whoever it named, including on a board this page then staged rather than believed. That was
++ * survivable while your own cells were the one thing on the board that never changed colour;
++ * now that a room inks your hand too (§11c), it would hand your own handwriting to a stranger
++ * mid-game. So the cursor still extends and a stranger still enters the roster, but a colour
++ * the room has already settled is never moved again.
++ */
++const inkAgreed = new Set<string>();
+ /** One suppressed publish per adopted board — a flag rather than a timer, because the
+  *  generation watch that would echo it runs on Vue's own flush, not on ours. */
+ let adopted = 0;
+@@ -403,7 +415,10 @@ export const authorInk = computed(() => {
+   const out: Record<string, Record<string, string>> = {};
+   for (const pos of Object.keys(ledger.clock)) {
+     const author = ledger.clock[pos][1];
+-    if (author === selfId.value) continue;
++    // YOUR OWN HAND IS INKED TOO, once there is a room to be inked in (§11c): a colour that is
++    // one thing on your screen and another on everyone else's is a page's colour, not a
++    // player's. The condition is the ROOM's, never self's — solo binds nothing anywhere.
++    if (author === selfId.value && roomId.value === null) continue;
+     const p = known.value[author];
+     if (p) out[pos] = p.ink;
+   }
+@@ -524,25 +539,23 @@ function writeSessionParam(id: string | null): void {
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+-  // EVERY id takes an index, including your own. You still keep `--color-user-ink` — nothing is
+-  // bound on your cells, so solo is byte-identical — but the OTHER pages ink you from `k`, and
+-  // a publisher with no index of its own would be the one player the room could not agree
+-  // about. Everyone else walks the golden angle from where the roster last stopped, so an early
+-  // peer never re-inks because a late one arrived.
++  // EVERY id takes an index, including your own, and in a room every id WRITES IN IT. Everyone
++  // walks the arcs from where the roster last stopped, so an early peer never re-inks because a
++  // late one arrived. Nothing is bound outside a room, so solo is byte-identical.
+   const index = inkIndex[id] ?? inkCursor++;
+   inkIndex[id] = index;
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+-    ink: id === selfId.value ? {} : ident!.inkFor(index),
++    ink: id === selfId.value && roomId.value === null ? {} : ident!.inkFor(index),
+   };
+ }
+ 
+ /**
+- * Adopt the epoch holder's ink assignment (`k`). Idempotent, and it never reassigns: an index
+- * already agreed is written back as itself, the cursor continues from `max+1`, and an id we
+- * have never met enters `known` WITHOUT entering the roster — which is how the tape names a
+- * peer who left before you sat down.
++ * Adopt the epoch holder's ink assignment (`k`). Idempotent, and it never reassigns — an index
++ * already agreed is written back as itself and `inkAgreed` is what makes that true rather than
++ * hoped; the cursor continues from `max+1`, and an id we have never met enters `known` WITHOUT
++ * entering the roster, which is how the tape names a peer who left before you sat down.
+  */
+ function adoptInk(k: Record<string, number>): void {
+   let top = inkCursor - 1;
+@@ -550,10 +563,12 @@ function adoptInk(k: Record<string, number>): void {
+   const taken = new Set(Object.values(next).map((p) => p.slug));
+   for (const [id, raw] of Object.entries(k)) {
+     if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
+-    const index = Math.trunc(raw);
++    const index = inkAgreed.has(id) ? inkIndex[id] : Math.trunc(raw);
+     inkIndex[id] = index;
++    inkAgreed.add(id);
+     if (index > top) top = index;
+-    const ink = id === selfId.value ? {} : ident!.inkFor(index);
++    const ink =
++      id === selfId.value && roomId.value === null ? {} : ident!.inkFor(index);
+     const held = next[id];
+     if (held) {
+       next[id] = { ...held, ink };
+@@ -695,6 +710,12 @@ function sendState(to?: string): void {
+   // the undo pool content-hashes it with `JSON.stringify` — so saying so once here gives both
+   // arms one payload rather than two behaviours.
+   const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
++  // PUBLISHING IS AGREEING — BUT ONLY THE EPOCH'S AUTHOR SPEAKS FOR THE ROOM. The `k` an
++  // author sends IS the room's word on who writes in which colour, and nothing that arrives
++  // afterwards may move it. A page that answers a `hi` before it has adopted anything is
++  // publishing its own arrival order, which must still yield to the room's own.
++  if (ledger.epoch[1] === selfId.value)
++    for (const id of Object.keys(inkIndex)) inkAgreed.add(id);
+   wire.send(
+     "st",
+     plain({
+@@ -878,6 +899,7 @@ function teardown(): void {
+   ownTable = false;
+   inkCursor = 0;
+   inkIndex = {};
++  inkAgreed.clear();
+   clearCursors();
+   stopPresenceClocks(); // the beat and every peer's expiry belong to the room that just left
+   adopted = 0;

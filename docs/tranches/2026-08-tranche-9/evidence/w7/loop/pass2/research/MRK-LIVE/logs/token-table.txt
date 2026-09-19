@@ -1,0 +1,41 @@
+ink                                       theme  value    page   card   board/card  board/fill  min
+A MRK-LIVE  one value both themes         light  #3a7bc4  4.19   4.29   3.67        3.34        3.34
+A MRK-LIVE  one value both themes         dark   #3a7bc4  4.38   4.29   3.72        3.48        3.48
+B MRK-ABS   dark alias crayon-blue        light  #3a7bc4  4.19   4.29   3.67        3.34        3.34
+B MRK-ABS   dark alias crayon-blue        dark   #6aabeb  7.86   7.7    6.53        5.85        5.85
+C ACC-FIVE  dark arm crayon-blue          light  #3a7bc4  4.19   4.29   3.67        3.34        3.34
+C ACC-FIVE  dark arm crayon-blue          dark   #6aabeb  7.86   7.7    6.53        5.85        5.85
+D ACC-SIX   blue-ink replacement          light  #2f76bd  4.53   4.64   3.96        3.58        3.58
+D ACC-SIX   blue-ink replacement          dark   #6aabeb  7.86   7.7    6.53        5.85        5.85
+E ACC-GRAPH graphite (ring deleted)       light  #404040  9.95   10.19  7.8         6.84        6.84
+E ACC-GRAPH graphite (ring deleted)       dark   #a3a3a3  7.58   7.42   6.33        5.63        5.63
+F --ring-ink  foreground 50% (section 10) light  fg50 -> 132,132,1313.68   3.68   -           -           3.68
+F --ring-ink  foreground 50% (section 10) dark   fg50 -> 128,127,1254.71   4.68   -           -           4.68
+
+FLATNESS (max - min over all eight readings, both themes)
+A MRK-LIVE  one value both themes         min 3.34  max 4.38  spread 1.04
+B MRK-ABS   dark alias crayon-blue        min 3.34  max 7.86  spread 4.52
+C ACC-FIVE  dark arm crayon-blue          min 3.34  max 7.86  spread 4.52
+D ACC-SIX   blue-ink replacement          min 3.58  max 7.86  spread 4.28
+E ACC-GRAPH graphite (ring deleted)       min 5.63  max 10.19  spread 4.56
+F --ring-ink  foreground 50% (section 10) min 3.68  max 4.71  spread 1.03
+
+MEASURED BOARD RING (logs/C-boardring-*.json, chromium/webkit agree to 1 byte)
+light   ring 75,135,201  vs cell ground 3.68  vs its own fill 3.35  fill vs ground 1.1
+dark    ring 54,114,180  vs cell ground 3.76  vs its own fill 3.48  fill vs ground 1.08
+
+GRAFT 1 — resting stroke-opacity 0.90 vs 0.95 (board ring)
+light   opacity 0.9  painted 76,135,201  vs cell 3.67  vs fill 3.34
+light   opacity 0.95  painted 67,129,199  vs cell 3.97  vs fill 3.61
+light   opacity 1  painted 58,123,196  vs cell 4.29  vs fill 3.9
+dark    opacity 0.9  painted 54,113,180  vs cell 3.72  vs fill 3.48
+dark    opacity 0.95  painted 56,118,188  vs cell 4  vs fill 3.73
+dark    opacity 1  painted 58,123,196  vs cell 4.29  vs fill 4
+
+GRAFT 2 — digit headroom: the entry ink on the ring's own 0.08 fill
+light   entry #2563eb  bare 5.08  on the focused fill 4.62  spent 0.46
+dark    entry #60a5fa  bare 7.36  on the focused fill 6.87  spent 0.49
+
+GRAFT 3 — the hint laminate's body under the chair's ruling (section 6.11)
+light   hint alone 248,221,220 (vs card 1.26)  hint over selection 234,212,216 (vs card 1.38)  selection alone 237,243,248 (vs card 1.1)
+dark    hint alone 53,32,31 (vs card 1.23)  hint over selection 56,39,43 (vs card 1.33)  selection alone 22,26,31 (vs card 1.07)

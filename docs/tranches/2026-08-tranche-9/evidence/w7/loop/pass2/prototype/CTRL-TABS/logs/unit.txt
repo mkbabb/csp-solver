@@ -1,0 +1,538 @@
+
+> csp-solver-frontend@0.1.0 test:unit
+> vitest run --run
+
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-35/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.test.ts (34 tests | 10 failed) 639ms
+     × four wells, each a group named by its own visible tape 20ms
+     × the mobile tab is a heading WRAPPING a button, never a heading inside one 7ms
+     × six co-equal eyebrows become two, and the four that left are named one rank down 6ms
+       × the mobile tabs: drawn === announced, per eyebrow 5ms
+       × the desktop staged rail: drawn === announced, per eyebrow 23ms
+       × the single-section heading: drawn === announced 40ms
+     × four hint tapes ride beside the names, none of them a name, none of them dashed 19ms
+     × the checking well says one thing: its chips 14ms
+     × the `i` points at the fold and flips it open, without ever naming itself 'keyboard shortcuts' 19ms
+     × the crib stays in the tree at rest — collapsed is not hidden 21ms
+
+⎯⎯⎯⎯⎯⎯ Failed Tests 10 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > four wells, each a group named by its own visible tape
+AssertionError: expected [] to have a length of 4 but got +0
+
+- Expected
++ Received
+
+- 4
++ 0
+
+ ❯ src/games/shared/GameControlPanel.test.ts:275:19
+    273|     // it is not a grammar, so the feature's well is the fourth of its…
+    274|     // thing beside three of them.
+    275|     expect(wells).toHaveLength(4);
+       |                   ^
+    276|     // T8-W6 M16 — the third tape reads `checking`, not `teacher's`. A…
+    277|     // and the possessive made a compartment belong to a person who is…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > the mobile tab is a heading WRAPPING a button, never a heading inside one
+AssertionError: expected [] to have a length of 2 but got +0
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ src/games/shared/GameControlPanel.test.ts:306:18
+    304|     const w = mountPanel();
+    305|     const tabs = w.findAll(".mobile-heading-row .mobile-heading-btn");
+    306|     expect(tabs).toHaveLength(2);
+       |                  ^
+    307|     for (const tab of tabs) {
+    308|       expect(tab.element.tagName).toBe("BUTTON");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > six co-equal eyebrows become two, and the four that left are named one rank down
+AssertionError: expected [] to deeply equal [ 'Size', 'Level' ]
+
+- Expected
++ Received
+
+- [
+-   "Size",
+-   "Level",
+- ]
++ []
+
+ ❯ src/games/shared/GameControlPanel.test.ts:328:64
+    326|   it("six co-equal eyebrows become two, and the four that left are nam…
+    327|     const w = mountPanel();
+    328|     expect(w.findAll(".section-heading").map((h) => h.text())).toEqual…
+       |                                                                ^
+    329|       "Size",
+    330|       "Level",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > the eyebrow's accessible name IS its drawn ink — one string > the mobile tabs: drawn === announced, per eyebrow
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > the eyebrow's accessible name IS its drawn ink — one string > the desktop staged rail: drawn === announced, per eyebrow
+AssertionError: expected +0 to be 2 // Object.is equality
+
+- Expected
++ Received
+
+- 2
++ 0
+
+ ❯ src/games/shared/GameControlPanel.test.ts:369:33
+    367|         const w = mount();
+    368|         const eyebrows = w.findAll(".section-heading");
+    369|         expect(eyebrows.length).toBe(2);
+       |                                 ^
+    370|         for (const h of eyebrows) {
+    371|           const drawn = h.text();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > the eyebrow's accessible name IS its drawn ink — one string > the single-section heading: drawn === announced
+AssertionError: expected +0 to be 1 // Object.is equality
+
+- Expected
++ Received
+
+- 1
++ 0
+
+ ❯ src/games/shared/GameControlPanel.test.ts:392:31
+    390|       const w = mountPanel({ sections: [SECTIONS[0]] });
+    391|       const eyebrows = w.findAll(".section-heading");
+    392|       expect(eyebrows.length).toBe(1);
+       |                               ^
+    393|       const drawn = eyebrows[0].text();
+    394|       expect(drawn).toBe("Size");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > four hint tapes ride beside the names, none of them a name, none of them dashed
+AssertionError: expected [ DOMWrapper{ …(3) }, …(1) ] to have a length of 4 but got 2
+
+- Expected
++ Received
+
+- 4
++ 2
+
+ ❯ src/games/shared/GameControlPanel.test.ts:416:19
+    414|     const w = mountPanel({ mobile: false });
+    415|     const hints = w.findAll(".zone-hint");
+    416|     expect(hints).toHaveLength(4);
+       |                   ^
+    417|     for (const h of hints) {
+    418|       expect(h.text()).not.toMatch(/[—–]/);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[6/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the zone grammar (T4-P1) > the checking well says one thing: its chips
+TypeError: Cannot read properties of undefined (reading 'findAll')
+ ❯ src/games/shared/GameControlPanel.test.ts:436:17
+    434|     expect(w.find(".check-status").exists()).toBe(false);
+    435|     const well = w.findAll(".tray-well").find((t) => t.text().includes…
+    436|     expect(well.findAll(".ctrl-btn").map((b) => b.text())).toEqual([
+       |                 ^
+    437|       "Off",
+    438|       "Ask",
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[7/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the keys fold behind the `i` (T6 mark 5) > the `i` points at the fold and flips it open, without ever naming itself 'keyboard shortcuts'
+Error: Unable to get button.info-btn within: <!--
+    T9-W7 §10 · THE INDEX TABS — the card is a pencil case with tabs on its edge.
+
+    ONE TREE, BOTH REGIMES still (T5-W4c's T′ collapse, kept): `mobile` drives the wrap's class,
+    `OptionSelector :mobile`, the hover washi children and `zone-row-stacked`. What it no longer
+    drives is a SECOND REVEAL — the phone's old `v-show` tab-toggle and the rail's stacked stanzas
+    were two ways of showing the same sections, and the strip below is now the one way at every
+    width. The declared seam that block cost is closed; the only width branch left in the strip is
+    the fifth tab (`keys`), which is a MEASUREMENT (five words need 386.34px against a 374px strip
+    at 390) rather than a regime.
+
+    THE HIERARCHY IS THREE PLACES, and nothing else says rank: EDGE (a tab) · INSIDE (a row) ·
+    FLOOR (an act). No underline, no pill, no fill — the raised tab is a MISSING EDGE running into
+    its tray, which is what a physical index tab does.
+  -->
+<div data-v-fa75191a="" class="control-panel-wrap desk-control-panel">
+  <!-- THE STRIP. `role="tablist"` named `controls` — the estate's first, and the same word the
+         drawer's own tongue carries, because it is the same thing being named.
+         Each tab is an `<h2 style="display:contents">` wrapping its button (the shipped
+         `.mobile-heading-head` host, generalised): heading navigation keeps a stop on every
+         compartment name, the button stays the flex item the strip lays out, and the visible word
+         IS the accessible name (law 33 — one string, no second literal).
+         Roving tabindex + automatic activation (APG): exactly one `tabindex="0"`. -->
+  <div data-v-fa75191a="" class="tab-strip" role="tablist" aria-label="controls">
+    <h2 data-v-fa75191a="" class="tab-head"><button data-v-fa75191a="" id="v-0tab-new-game" type="button" class="tab is-raised" role="tab" aria-selected="true" aria-controls="v-0panel-new-game" tabindex="0">
+        <!-- The tongue's own drawn form, at the tongue's own weight: `:pose="0"` at 2.5 with
+               outset 3 (`DrawerTab.vue:65`). The RAISED tab's edge into the tray is OMITTED from
+               the path itself — `bottom` on the phone's top strip, `right` on the desk's left
+               flank — and the case's lid leaves the matching hole. The continuity is one open
+               path meeting another within the stroke's own width; there is no patch, no second
+               fill and nothing for a `prefers-contrast: more` regime to take away. NO TUCK and
+               no vertical writing-mode on the phone strip: both are forbidden here, or four tabs
+               start reading as four drawers. -->
+        <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container tab-face" style="--outline-outset: 3px;"><span data-v-fa75191a="" class="tab-word">new game</span>
+          <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+          <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+          <!--v-if-->
+        </div>
+      </button></h2>
+    <h2 data-v-fa75191a="" class="tab-head"><button data-v-fa75191a="" id="v-0tab-pencils" type="button" class="tab" role="tab" aria-selected="false" aria-controls="v-0panel-pencils" tabindex="-1">
+        <!-- The tongue's own drawn form, at the tongue's own weight: `:pose="0"` at 2.5 with
+               outset 3 (`DrawerTab.vue:65`). The RAISED tab's edge into the tray is OMITTED from
+               the path itself — `bottom` on the phone's top strip, `right` on the desk's left
+               flank — and the case's lid leaves the matching hole. The continuity is one open
+               path meeting another within the stroke's own width; there is no patch, no second
+               fill and nothing for a `prefers-contrast: more` regime to take away. NO TUCK and
+               no vertical writing-mode on the phone strip: both are forbidden here, or four tabs
+               start reading as four drawers. -->
+        <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container tab-face" style="--outline-outset: 3px;"><span data-v-fa75191a="" class="tab-word">pencils</span>
+          <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+          <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+          <!--v-if-->
+        </div>
+      </button></h2>
+    <h2 data-v-fa75191a="" class="tab-head"><button data-v-fa75191a="" id="v-0tab-checking" type="button" class="tab" role="tab" aria-selected="false" aria-controls="v-0panel-checking" tabindex="-1">
+        <!-- The tongue's own drawn form, at the tongue's own weight: `:pose="0"` at 2.5 with
+               outset 3 (`DrawerTab.vue:65`). The RAISED tab's edge into the tray is OMITTED from
+               the path itself — `bottom` on the phone's top strip, `right` on the desk's left
+               flank — and the case's lid leaves the matching hole. The continuity is one open
+               path meeting another within the stroke's own width; there is no patch, no second
+               fill and nothing for a `prefers-contrast: more` regime to take away. NO TUCK and
+               no vertical writing-mode on the phone strip: both are forbidden here, or four tabs
+               start reading as four drawers. -->
+        <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container tab-face" style="--outline-outset: 3px;"><span data-v-fa75191a="" class="tab-word">checking</span>
+          <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+          <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+          <!--v-if-->
+        </div>
+      </button></h2>
+    <h2 data-v-fa75191a="" class="tab-head"><button data-v-fa75191a="" id="v-0tab-players" type="button" class="tab" role="tab" aria-selected="false" aria-controls="v-0panel-players" tabindex="-1">
+        <!-- The tongue's own drawn form, at the tongue's own weight: `:pose="0"` at 2.5 with
+               outset 3 (`DrawerTab.vue:65`). The RAISED tab's edge into the tray is OMITTED from
+               the path itself — `bottom` on the phone's top strip, `right` on the desk's left
+               flank — and the case's lid leaves the matching hole. The continuity is one open
+               path meeting another within the stroke's own width; there is no patch, no second
+               fill and nothing for a `prefers-contrast: more` regime to take away. NO TUCK and
+               no vertical writing-mode on the phone strip: both are forbidden here, or four tabs
+               start reading as four drawers. -->
+        <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container tab-face" style="--outline-outset: 3px;"><span data-v-fa75191a="" class="tab-word">players</span>
+          <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+          <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+          <!--v-if-->
+        </div>
+      </button></h2>
+    <h2 data-v-fa75191a="" class="tab-head"><button data-v-fa75191a="" id="v-0tab-keys" type="button" class="tab" role="tab" aria-selected="false" aria-controls="v-0panel-keys" tabindex="-1">
+        <!-- The tongue's own drawn form, at the tongue's own weight: `:pose="0"` at 2.5 with
+               outset 3 (`DrawerTab.vue:65`). The RAISED tab's edge into the tray is OMITTED from
+               the path itself — `bottom` on the phone's top strip, `right` on the desk's left
+               flank — and the case's lid leaves the matching hole. The continuity is one open
+               path meeting another within the stroke's own width; there is no patch, no second
+               fill and nothing for a `prefers-contrast: more` regime to take away. NO TUCK and
+               no vertical writing-mode on the phone strip: both are forbidden here, or four tabs
+               start reading as four drawers. -->
+        <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container tab-face" style="--outline-outset: 3px;"><span data-v-fa75191a="" class="tab-word">keys</span>
+          <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+          <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+          <!--v-if-->
+        </div>
+      </button></h2>
+  </div>
+  <!-- THE CASE BODY — one drawn box at 2.5 holding the face-up tray AND the floor, so the lid
+         the raised tab runs into, the sides, and the floor the acts are drawn on are one path.
+         The wells' 1.5px frames retire with it: the tray is the tab's panel, not a box in a box. -->
+  <div data-v-c4c9c933="" data-v-fa75191a="" class="outline-container case-body" style="--outline-outset: 3px;">
+    <!-- ── NEW GAME ─────────────────────────────────────────────────────────────────────────
+           The staged inputs to the NEXT board. `size` and `level` are ROWS here, each an
+           `<h3 style="display:contents">` caption in the same hand as the tab above it — which is
+           what closes R1 ROW 2 (four tab words + two row captions = 6/6 document headings) and
+           R1 ROW 1 (one voice: family, size, weight and transform all shared).
+           The deal verb has LEFT this tray for the floor: it is the act a reader takes most
+           between rounds, and behind a tab it would cost three taps. -->
+    <div data-v-fa75191a="" id="v-0panel-new-game" class="tray" role="tabpanel" aria-labelledby="v-0tab-new-game">
+      <div data-v-fa75191a="" class="control-panel-filtered">
+        <div data-v-fa75191a="" class="zone-row zone-row-stacked" role="group" aria-labelledby="v-0row-size">
+          <h3 data-v-fa75191a="" class="row-head"><span data-v-fa75191a="" id="v-0row-size" class="zone-row-label">Size</span></h3>
+          <div data-v-1e72f8ed="" data-v-fa75191a="" class="ctrl-options options-pair"><button data-v-1e72f8ed="" aria-pressed="true" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left selected-item font-bold text-foreground" style="--scribble-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.0%2C6.5%20Q7.6%2C5.6%2017.9%2C5.9%20Q26.9%2C7.0%2033.7%2C6.9%20Q40.0%2C6.1%2049.5%2C4.5%20Q56.8%2C4.5%2065.4%2C5.4%20Q74.4%2C4.5%2081.2%2C6.2%20Q87.6%2C6.8%2097.1%2C7.2%20M95.8%2C8.1%20Q87.0%2C7.4%2073.3%2C7.4%20Q64.0%2C8.3%2049.5%2C7.6%20Q39.1%2C9.1%2025.8%2C8.0%20Q11.6%2C7.2%202.0%2C8.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-underline-hover: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.4%2C6.6%20Q9.4%2C5.2%2021.4%2C6.2%20Q30.5%2C7.9%2040.5%2C5.9%20Q50.9%2C5.3%2059.5%2C6.7%20Q68.3%2C4.8%2078.6%2C7.5%20Q86.4%2C7.7%2097.6%2C5.6%20M95.7%2C9.1%20Q81.7%2C9.0%2065.9%2C7.9%20Q48.5%2C8.8%2034.1%2C9.7%20Q19.8%2C8.8%202.4%2C9.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.9'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-width: 4ch;">9×9</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M3.0%2C6.5%20Q14.1%2C5.0%2026.7%2C6.5%20Q36.0%2C6.2%2050.4%2C5.6%20Q64.7%2C6.4%2074.1%2C4.6%20Q83.5%2C6.1%2097.8%2C5.8'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.8'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 6ch;">16×16</button></div>
+        </div>
+        <div data-v-fa75191a="" class="zone-row zone-row-stacked" role="group" aria-labelledby="v-0row-difficulty">
+          <h3 data-v-fa75191a="" class="row-head"><span data-v-fa75191a="" id="v-0row-difficulty" class="zone-row-label">Level</span></h3>
+          <div data-v-1e72f8ed="" data-v-fa75191a="" class="ctrl-options options-pair"><button data-v-1e72f8ed="" aria-pressed="true" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left selected-item font-bold text-foreground" style="--scribble-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.5%2C5.2%20Q10.4%2C5.1%2021.6%2C7.3%20Q32.7%2C7.6%2040.7%2C5.3%20Q50.9%2C7.5%2059.7%2C5.5%20Q69.0%2C4.2%2078.8%2C4.5%20Q87.3%2C6.2%2097.8%2C4.6%20M97.1%2C8.2%20Q87.4%2C7.4%2074.0%2C7.0%20Q65.0%2C8.3%2050.2%2C9.0%20Q39.6%2C7.4%2026.4%2C6.9%20Q17.2%2C8.4%202.5%2C7.2'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.5'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-underline-hover: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C6.3%20Q9.8%2C4.9%2018.0%2C4.5%20Q25.7%2C4.1%2033.9%2C7.0%20Q42.8%2C6.9%2049.7%2C5.2%20Q57.1%2C4.0%2065.6%2C7.1%20Q71.1%2C7.2%2081.5%2C7.2%20Q91.6%2C4.6%2097.4%2C4.9%20M96.9%2C6.9%20Q83.7%2C7.4%2073.6%2C7.8%20Q62.4%2C8.0%2049.7%2C7.8%20Q39.8%2C8.9%2025.9%2C6.9%20Q16.0%2C7.5%202.1%2C8.7'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.0'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-width: 5ch;">easy</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M3.7%2C5.7%20Q12.6%2C5.5%2026.9%2C4.6%20Q37.7%2C4.1%2050.2%2C7.2%20Q61.9%2C6.1%2073.4%2C6.8%20Q86.4%2C5.7%2096.7%2C5.9'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.7'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 5ch;">hard</button></div>
+        </div>
+      </div>
+    </div>
+    <!-- ── PENCILS ──────────────────────────────────────────────────────────────────────────
+           Two rows, each its own `role="group"` named by its own visible caption — otherwise a
+           reader hears two unlabelled Off/On pairs under one name. `candidates` is `what fits`
+           now: the same idea in plain English, and the word the hint under it was already using. -->
+    <div data-v-fa75191a="" id="v-0panel-pencils" class="tray" role="tabpanel" aria-labelledby="v-0tab-pencils" inert="true">
+      <div data-v-fa75191a="" class="zone-row zone-row-stacked" role="group" aria-labelledby="v-2">
+        <h3 data-v-fa75191a="" class="row-head"><span data-v-fa75191a="" id="v-2" class="zone-row-label">marks</span></h3><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide zone-hint" style="clip-path: polygon(3.9879909711889923% 0%, 94.87629234651104% 6.723902008961886%, 100% 50%, 96.17772371089086% 89.88200626755133%, 5.449244365096092% 100%, 0% 50%); --washi-tilt: 0.57deg;" aria-hidden="true">normal writes a digit. corner and center write small pencil marks</span>
+        <div data-v-1e72f8ed="" data-v-fa75191a="" class="ctrl-options flex flex-col items-center md:items-stretch"><button data-v-1e72f8ed="" aria-pressed="true" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left selected-item font-bold text-foreground" style="--scribble-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.5%2C5.0%20Q9.6%2C4.2%2018.3%2C4.5%20Q26.3%2C5.8%2034.2%2C6.5%20Q43.4%2C6.2%2050.1%2C7.1%20Q59.4%2C7.7%2066.0%2C7.1%20Q76.0%2C5.1%2081.8%2C5.0%20Q91.6%2C7.0%2097.7%2C6.3%20M94.9%2C7.3%20Q87.5%2C7.5%2073.9%2C7.1%20Q61.9%2C6.9%2050.1%2C8.0%20Q39.6%2C7.8%2026.3%2C8.1%20Q17.3%2C7.4%202.5%2C7.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-underline-hover: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C6.7%20Q10.5%2C4.2%2018.1%2C5.8%20Q28.5%2C4.9%2034.0%2C5.9%20Q43.6%2C6.1%2050.0%2C6.3%20Q59.9%2C7.9%2066.0%2C6.5%20Q74.5%2C4.0%2081.9%2C6.1%20Q89.6%2C5.5%2097.9%2C5.2%20M97.4%2C8.8%20Q81.6%2C6.8%2066.0%2C7.1%20Q52.5%2C8.1%2034.0%2C8.4%20Q16.4%2C8.9%202.1%2C8.6'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.8'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-width: 7ch;">Normal</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C5.8%20Q17.1%2C4.9%2033.4%2C6.7%20Q46.4%2C5.8%2064.8%2C6.2%20Q80.0%2C5.1%2096.2%2C5.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.9'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 7ch;">Corner</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C5.8%20Q17.1%2C4.9%2033.4%2C6.7%20Q46.4%2C5.8%2064.8%2C6.2%20Q80.0%2C5.1%2096.2%2C5.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.9'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 7ch;">Center</button></div>
+      </div>
+      <div data-v-fa75191a="" class="zone-row zone-row-stacked" role="group" aria-labelledby="v-3">
+        <h3 data-v-fa75191a="" class="row-head"><span data-v-fa75191a="" id="v-3" class="zone-row-label">what fits</span></h3><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide zone-hint" style="clip-path: polygon(5.229073774069548% 0%, 97.4212990081869% 7.808443302754313%, 100% 50%, 98.45069623598829% 94.82725197635591%, 4.682462758384645% 100%, 0% 50%); --washi-tilt: 0.98deg;" aria-hidden="true">show every digit that still fits in a cell</span>
+        <div data-v-1e72f8ed="" data-v-fa75191a="" class="ctrl-options options-pair"><button data-v-1e72f8ed="" aria-pressed="true" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left selected-item font-bold text-foreground" style="--scribble-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.5%2C5.0%20Q9.6%2C4.2%2018.3%2C4.5%20Q26.3%2C5.8%2034.2%2C6.5%20Q43.4%2C6.2%2050.1%2C7.1%20Q59.4%2C7.7%2066.0%2C7.1%20Q76.0%2C5.1%2081.8%2C5.0%20Q91.6%2C7.0%2097.7%2C6.3%20M94.9%2C7.3%20Q87.5%2C7.5%2073.9%2C7.1%20Q61.9%2C6.9%2050.1%2C8.0%20Q39.6%2C7.8%2026.3%2C8.1%20Q17.3%2C7.4%202.5%2C7.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-underline-hover: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C6.7%20Q10.5%2C4.2%2018.1%2C5.8%20Q28.5%2C4.9%2034.0%2C5.9%20Q43.6%2C6.1%2050.0%2C6.3%20Q59.9%2C7.9%2066.0%2C6.5%20Q74.5%2C4.0%2081.9%2C6.1%20Q89.6%2C5.5%2097.9%2C5.2%20M97.4%2C8.8%20Q81.6%2C6.8%2066.0%2C7.1%20Q52.5%2C8.1%2034.0%2C8.4%20Q16.4%2C8.9%202.1%2C8.6'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.8'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-width: 4ch;">Off</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.8%2C6.0%20Q16.6%2C5.0%2034.5%2C6.9%20Q49.7%2C7.0%2066.1%2C5.4%20Q84.8%2C4.4%2097.8%2C4.8'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.9'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 3ch;">On</button></div>
+      </div>
+    </div>
+    <!-- ── CHECKING ─────────────────────────────────────────────────────────────────────────
+           One idea, so the TAB is the whole of its name and the tray carries no caption. The
+           hover tape that used to explain it ("when your mistakes get checked") retires with the
+           tape it hung off: the tab says checking, the three chips say when. -->
+    <div data-v-fa75191a="" id="v-0panel-checking" class="tray" role="tabpanel" aria-labelledby="v-0tab-checking" inert="true">
+      <div data-v-1e72f8ed="" data-v-fa75191a="" class="ctrl-options flex flex-col items-center md:items-stretch"><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.8%2C6.0%20Q16.6%2C5.0%2034.5%2C6.9%20Q49.7%2C7.0%2066.1%2C5.4%20Q84.8%2C4.4%2097.8%2C4.8'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.9'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 4ch;">Off</button><button data-v-1e72f8ed="" aria-pressed="true" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left selected-item font-bold text-foreground" style="--scribble-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.5%2C5.0%20Q9.6%2C4.2%2018.3%2C4.5%20Q26.3%2C5.8%2034.2%2C6.5%20Q43.4%2C6.2%2050.1%2C7.1%20Q59.4%2C7.7%2066.0%2C7.1%20Q76.0%2C5.1%2081.8%2C5.0%20Q91.6%2C7.0%2097.7%2C6.3%20M94.9%2C7.3%20Q87.5%2C7.5%2073.9%2C7.1%20Q61.9%2C6.9%2050.1%2C8.0%20Q39.6%2C7.8%2026.3%2C8.1%20Q17.3%2C7.4%202.5%2C7.3'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.2'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-underline-hover: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M2.1%2C6.7%20Q10.5%2C4.2%2018.1%2C5.8%20Q28.5%2C4.9%2034.0%2C5.9%20Q43.6%2C6.1%2050.0%2C6.3%20Q59.9%2C7.9%2066.0%2C6.5%20Q74.5%2C4.0%2081.9%2C6.1%20Q89.6%2C5.5%2097.9%2C5.2%20M97.4%2C8.8%20Q81.6%2C6.8%2066.0%2C7.1%20Q52.5%2C8.1%2034.0%2C8.4%20Q16.4%2C8.9%202.1%2C8.6'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'2.8'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.85'%2F%3E%3C%2Fsvg%3E&quot;); --scribble-width: 4ch;">Ask</button><button data-v-1e72f8ed="" aria-pressed="false" class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150 md:py-0.5 md:text-left text-muted-foreground hover:text-foreground hover-item" style="--ghost-underline: url(&quot;data:image/svg+xml,%3Csvg%20xmlns%3D'http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg'%20viewBox%3D'0%200%20100%2012'%3E%3Cpath%20d%3D'M3.0%2C6.8%20Q20.5%2C5.9%2034.6%2C7.1%20Q47.7%2C7.1%2066.2%2C7.2%20Q82.5%2C6.5%2097.7%2C6.1'%20fill%3D'none'%20stroke%3D'%231a1a1a'%20stroke-width%3D'1.3'%20stroke-linecap%3D'round'%20stroke-linejoin%3D'round'%20opacity%3D'0.4'%2F%3E%3C%2Fsvg%3E&quot;); --ghost-width: 5ch;">Live</button></div>
+    </div>
+    <!-- ── PLAYERS ──────────────────────────────────────────────────────────────────────────
+           The three live regions and the roster are UNTOUCHED (T9-W3 §3.4): each is unconditional
+           and born empty, and the sentence is the conditional half. What changed is the box they
+           live in — a tabpanel named by its tab rather than a well named by a tape. The trust
+           statement stays a DESCRIPTION, now on the panel. -->
+    <div data-v-fa75191a="" id="v-0panel-players" class="tray" role="tabpanel" aria-labelledby="v-0tab-players" aria-describedby="v-1" inert="true">
+      <p data-v-fa75191a="" id="v-1" class="tray-note"> share this board and everyone writes on the same grid </p><button data-v-fa75191a="" class="icon-btn invite-btn" aria-label="Play together on this board">
+        <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-fa75191a="" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="">
+          <!-- T7-W7 — THE INVITE GETS ITS OWN MARK. "Play together on this board" and "Share board
+         link" drew the SAME glyph in the same card, so the two acts were indistinguishable at
+         the only place a reader compares them. Share stays the three-pip graph (a link, sent);
+         invite is drawn as what it actually is — two people sat at one table.
+
+         The family's hand, matched deliberately: outline strokes at 1.7 with round caps and
+         joins and no fill (Hint/FillForced/Eraser), heads as solid circles in the dice-pip
+         vocabulary (Share/Eraser), and every pair a hair uneven — the right figure smaller and
+         a touch lower than the left, the table bowed, its legs splaying by different amounts.
+         Nothing here is mirrored, because nothing in this estate's icons is. -->
+          <!-- The table: one bowed rule, heavier than the figures so it reads as the object they
+         share rather than an underline, with two legs splayed unequally. -->
+          <path d="M2.3,17.6 Q12,16.9 21.7,17.6" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" fill="none"></path>
+          <path d="M6.6,18 L5.7,21.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+          <path d="M17.4,18 L18.4,21.4" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"></path>
+          <!-- Left figure: the larger of the two. Head and shoulders only — the torso runs out just
+         above the table's edge, which is what puts them AT it rather than behind it. -->
+          <circle cx="7.2" cy="5.4" r="2.05" fill="currentColor"></circle>
+          <path d="M3.9,15.3 Q4.2,9.3 7.3,9.2 Q10.4,9.4 10.6,15.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"></path><!-- Right figure: the one who joined — smaller head, seated a hair lower. -->
+          <circle cx="16.8" cy="6" r="1.9" fill="currentColor"></circle>
+          <path d="M13.6,15.3 Q13.9,9.9 16.8,9.8 Q19.7,10 19.9,15.3" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" fill="none"></path>
+        </svg><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Play</span>
+      </button>
+      <!-- PIXELS ONLY (§2.4). These two carried `aria-live` / `role="log"` from inside a tray
+             that is hidden whenever another tab is raised, which is a region that cannot
+             announce. The voice is hoisted to the panel root; what stays here is what a reader
+             looking at this tray sees. -->
+      <p data-v-fa75191a="" class="players-status sr-only"></p>
+      <ul data-v-fa75191a="" class="players-roster sr-only" aria-label="who's on this board"></ul>
+      <p data-v-fa75191a="" class="players-alone sr-only"></p>
+      <!--v-if-->
+    </div>
+    <!-- ── KEYS (desk only) ─────────────────────────────────────────────────────────────────
+           The crib is a TRAY now, which retires both the `i` glyph in the bar and the `0fr→1fr`
+           fold that held it: a tab is the disclosure, so the card needs no second one. The legend
+           is fine-pointer material and the fifth tab is desk-only, which is the same population
+           the `i` served. `keys` is the family's one NEW rendered string — priced against the
+           subset by `check-font-coverage.mjs`. -->
+    <div data-v-fa75191a="" id="v-0panel-keys" class="tray" role="tabpanel" aria-labelledby="v-0tab-keys" inert="true">
+      <dl data-v-e246a9e8="" data-v-fa75191a="" class="keyboard-legend" aria-label="Keyboard shortcuts">
+        <div data-v-e246a9e8="" class="legend-row">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">K</kbd></dt>
+          <dd data-v-e246a9e8="">peek</dd>
+        </div>
+        <div data-v-e246a9e8="" class="legend-row">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">G</kbd></dt>
+          <dd data-v-e246a9e8="">games</dd>
+        </div>
+        <div data-v-e246a9e8="" class="legend-row">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">H</kbd></dt>
+          <dd data-v-e246a9e8="">hint</dd>
+        </div>
+        <div data-v-e246a9e8="" class="legend-row">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">P</kbd></dt>
+          <dd data-v-e246a9e8="">pencil</dd>
+        </div>
+        <div data-v-e246a9e8="" class="legend-row">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">D</kbd></dt>
+          <dd data-v-e246a9e8="">deal</dd>
+        </div>
+        <div class="legend-row" data-v-e246a9e8="">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">⌘</kbd><span class="legend-sep" data-v-e246a9e8="">/</span><kbd data-v-e246a9e8="">Ctrl</kbd><kbd data-v-e246a9e8="">Z</kbd></dt>
+          <dd data-v-e246a9e8="">undo</dd>
+        </div>
+        <div class="legend-row" data-v-e246a9e8="">
+          <dt data-v-e246a9e8=""><kbd data-v-e246a9e8="">⌘</kbd><span class="legend-sep" data-v-e246a9e8="">/</span><kbd data-v-e246a9e8="">Ctrl</kbd><kbd data-v-e246a9e8="">⇧</kbd><kbd data-v-e246a9e8="">Z</kbd></dt>
+          <dd data-v-e246a9e8="">redo</dd>
+        </div>
+      </dl>
+    </div>
+    <!-- ── THE FLOOR (§10's bar, M04) ───────────────────────────────────────────────────────
+           Six acts in one row, drawn as the tray's own floor: `deal · clear · fill · solve ·
+           share · peek`, 299.83px of 374 at 390. It is not sticky and cannot be — nothing
+           scrolls — so `--action-bar-h`, the sticky arm and the scroll padding all retire, and
+           I2's "the bar buries a group" is unreachable by construction rather than by a z-rule:
+           there is no second group on screen to bury.
+           WHILE A VERB IS ARMED the ribbon takes this row (§15). One confirm for the card, in the
+           band the destructive verbs already live in. -->
+    <div data-v-fa75191a="" class="action-bar">
+      <div data-v-fa75191a="" class="action-verbs"><button data-v-fa75191a="" class="icon-btn deal-btn group relative" data-verb="deal" aria-label="Deal a new board">
+          <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-1384b948="" data-v-fa75191a="" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="">
+            <!-- Back die: rotated -10°, showing 3 (diagonal) -->
+            <g data-v-1384b948="" transform="rotate(-10, 12, 12)">
+              <rect data-v-1384b948="" x="8" y="3" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"></rect><!-- Pip top-right -->
+              <circle data-v-1384b948="" cx="17" cy="7" r="1.2" fill="currentColor" class=""></circle><!-- Pip center -->
+              <circle data-v-1384b948="" cx="14.5" cy="9.5" r="1.2" fill="currentColor" class=""></circle><!-- Pip bottom-left -->
+              <circle data-v-1384b948="" cx="12" cy="12" r="1.2" fill="currentColor" class=""></circle>
+            </g><!-- Front die: rotated 8°, showing 4 (corners) -->
+            <g data-v-1384b948="" transform="rotate(8, 12, 12)">
+              <rect data-v-1384b948="" x="3" y="8" width="13" height="13" rx="2" stroke="currentColor" stroke-width="1.8" fill="none"></rect><!-- Pip top-left -->
+              <circle data-v-1384b948="" cx="7" cy="12" r="1.2" fill="currentColor" class=""></circle><!-- Pip top-right -->
+              <circle data-v-1384b948="" cx="12" cy="12" r="1.2" fill="currentColor" class=""></circle><!-- Pip bottom-left -->
+              <circle data-v-1384b948="" cx="7" cy="17" r="1.2" fill="currentColor" class=""></circle><!-- Pip bottom-right -->
+              <circle data-v-1384b948="" cx="12" cy="17" r="1.2" fill="currentColor" class=""></circle>
+            </g>
+          </svg><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Deal</span>
+        </button>
+        <!-- The receipt (mark 6) rides beside the die: the chips in `new game` are the ask,
+               this is the answer, and both stay one tap from the playing view. -->
+        <!--v-if-->
+        <!-- THE DESK FLOOR'S LINE BREAK (§2.3), and it is a CHOSEN reading order rather than a
+               wrap that fell where it fell: row 1 is the new-game act with its tally, row 2 the
+               four acts on the board in front of you. Zero-height and out of the a11y tree; the
+               phone's floor is one row and this span is `display: none` there. --><span data-v-fa75191a="" class="floor-break" aria-hidden="true"></span><button data-v-fa75191a="" class="icon-btn group" data-verb="clear" aria-label="Clear the board"><span data-v-fa75191a="" class=""><!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-fa75191a="" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg"><!-- Block: rotated -40°, working end down-left onto the scrub marks --><g transform="rotate(-40, 11.6, 11.25)"><!-- Body: the left (working) edge is two shallow Q-curves — the worn edge --><path d="M6.1,7 L16.8,7 Q18.6,7 18.6,8.8 L18.6,13.7 Q18.6,15.5 16.8,15.5 L6.5,15.5 Q4.9,15.5 5,13.9 Q4.5,11.4 5.1,8.6 Q5.2,7.1 6.1,7 Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round" fill="none"></path><!-- Sleeve band, a hair off-plumb --><line x1="14.1" y1="7.1" x2="13.8" y2="15.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></line><!-- Worn-edge retrace: a faint second pass just inside the working end --><path d="M6.3,8.3 Q5.85,11.3 6.4,14.2" stroke="currentColor" stroke-width="1.1" stroke-linecap="round" opacity="0.5"></path></g><!-- Scrub swipe + crumbs under the working corner --><path d="M2.6,21 Q5,20 7.6,20.8" stroke="currentColor" stroke-width="1.6" stroke-linecap="round"></path><path d="M9.8,20.9 Q11.3,20.4 12.7,20.8" stroke="currentColor" stroke-width="1.4" stroke-linecap="round"></path><circle cx="14.8" cy="21.2" r="0.85" fill="currentColor"></circle></svg></span><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Clear</span><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide" style="clip-path: polygon(1.3452430441975594% 0%, 97.11918573034927% 7.1381035931408405%, 100% 50%, 95.46422262862325% 89.2038452657871%, 5.635461105499417% 100%, 0% 50%); --washi-tilt: -0.76deg;" aria-hidden="true">wipe every digit you've written</span></button><button data-v-fa75191a="" class="icon-btn group" aria-label="Fill in every cell that has only one possible number">
+          <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-dfc71b04="" data-v-fa75191a="" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <!-- The board frame: a hand-drawn rounded square, the pencil register of the grid (round
+         joins, ~1.7 stroke, no fill — matching Hint/Eraser). The fill-forced act is the partial
+         solve: fill only the cells logic forces, not the whole board. -->
+            <path data-v-dfc71b04="" d="M4.4,3.7 Q3.7,3.8 3.6,4.6 L3.5,19.3 Q3.6,20.2 4.5,20.3 L19.4,20.4 Q20.3,20.3 20.4,19.4 L20.4,4.6 Q20.3,3.7 19.4,3.6 Z" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" fill="none"></path><!-- The 2×2 rules — one vertical, one horizontal, each a hair wavering. -->
+            <path data-v-dfc71b04="" d="M12,4 Q11.8,12 12,20" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"></path>
+            <path data-v-dfc71b04="" d="M4,12 Q12,11.8 20,12" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" fill="none"></path>
+            <!-- Two forced cells penciled in (top-left + bottom-right); the other two stay open — "fill
+         only what's forced." When :playing, each mark draws itself in (the icon echo of the
+         board's reveal-wave draw-in), the second a beat behind the first. -->
+            <path data-v-dfc71b04="" d="M8.4,6.6 L7.1,9.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" class=""></path>
+            <path data-v-dfc71b04="" d="M16.9,14.6 L15.6,17.4" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" class=""></path>
+          </svg><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Fill</span><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide" style="clip-path: polygon(3.980600902810693% 0%, 99.66478557093069% 9.684713869355619%, 100% 50%, 94.30161374015734% 92.9472520831041%, 4.7388042295351624% 100%, 0% 50%); --washi-tilt: 0.22deg;" aria-hidden="true">fill the cells that have only one digit left</span>
+        </button><button data-v-fa75191a="" class="icon-btn group" aria-label="Solve puzzle">
+          <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-965d14f4="" data-v-fa75191a="" aria-hidden="true" width="28" height="28" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="sparkle-icon">
+            <!-- Check: two separate lines — no miter join to blob at the crook -->
+            <line data-v-965d14f4="" x1="2" y1="13" x2="8.5" y2="20" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" class=""></line>
+            <line data-v-965d14f4="" x1="8.5" y1="20" x2="22" y2="4" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" class=""></line><!-- 4-point sparkle with soft curved tips -->
+            <path data-v-965d14f4="" d="M5,1.5 Q5.5,5 8.5,5.5 Q5.5,6 5,9.5 Q4.5,6 1.5,5.5 Q4.5,5 5,1.5 Z" fill="currentColor" class=""></path>
+          </svg><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Solve</span><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide" style="clip-path: polygon(5.205920134205371% 0%, 99.24076185189188% 9.930790570564568%, 100% 50%, 95.07589142397046% 90.30756866792217%, 2.578292108606547% 100%, 0% 50%); --washi-tilt: -0.39deg;" aria-hidden="true">the solver finishes the board</span>
+        </button><button data-v-fa75191a="" class="icon-btn group" data-verb="share" aria-label="Share board link">
+          <!-- Decorative: every icon sits inside a control that carries its own accessible name
+       (a11y r1 M6 — the census leak this file was one of four sources of). --><svg data-v-fa75191a="" aria-hidden="true" width="26" height="26" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" class="">
+            <!-- Three pips (the dice-pip vocabulary, scaled up), sizes a hair uneven -->
+            <circle cx="5" cy="12.3" r="2.1" fill="currentColor"></circle>
+            <circle cx="18.4" cy="5.6" r="2.2" fill="currentColor"></circle>
+            <circle cx="17.9" cy="18.6" r="2" fill="currentColor"></circle><!-- Connectors: gently bowed, sag mismatched — one dips, one lifts -->
+            <path d="M7.9,10.9 Q12.1,9.8 15.5,7" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"></path>
+            <path d="M7.9,13.7 Q11.8,14.7 15,17.3" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" fill="none"></path>
+          </svg><span data-v-fa75191a="" class="icon-sublabel" aria-hidden="true">Share</span><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide" style="clip-path: polygon(5.58512944355607% 0%, 94.67479702830315% 8.803493428975344%, 100% 50%, 96.39305511349812% 94.40870954981074%, 0.010490510612726212% 100%, 0% 50%); --washi-tilt: -0.02deg;" aria-hidden="true">copy a link to this board</span>
+        </button>
+        <!-- THE PEEK, on the floor at every width. The divider it used to live on is deleted
+               (it was the separator between two zones this family no longer has), and the
+               recognizer travels with it unchanged — same 350ms, same 10px slop, same two
+               constants, one pair of consumers. --><button data-v-fa75191a="" class="icon-btn peek-chip" type="button"><span data-v-fa75191a="" class="peek-chip-word">peek</span></button>
+      </div>
+      <!-- THE INVITE VERB'S NOTE, BERTHED (T9-W2 §2.5) — unchanged: the bar's foot is the one
+             band in this card that content can never enter. --><span data-v-0ea9953e="" data-v-fa75191a="" class="washi-label washi-wide berth-note" style="clip-path: polygon(3.3607502155937254% 0%, 99.42763437703252% 9.392382929101586%, 100% 50%, 98.64262676052749% 93.13782084034756%, 5.684890589676797% 100%, 0% 50%); --washi-tilt: -0.64deg;" aria-hidden="true">invite someone to write on this board with you</span>
+    </div>
+    <!-- T3-W13 §1-P2 — the grid's steady-state template minus the filter:
+             frameCount pre-baked grain-in-geometry siblings; the beat only flips
+             which one is opacity:1 (compositor-only — no SourceGraphic invalidation,
+             zero steady-state raster). -->
+    <!-- Decorative: the drawn frame around a box whose contents carry their own names
+         (a11y r1 M6 — five of the census's unnamed graphics were this one component). -->
+    <!--v-if-->
+  </div>
+  <!-- ── THE CARD'S VOICE BERTH (§2.4) ────────────────────────────────────────────────────
+         Three sr-only regions at the panel ROOT, outside every tray and outside every `inert`:
+         the copy act's status, the roster's own status, and the roster's log. The last two are
+         the hoisted half of the players tray's regions — same strings, a node that is always in
+         the a11y tree. All three born empty. -->
+  <p data-v-fa75191a="" class="copy-status sr-only" role="status" aria-live="polite"></p>
+  <p data-v-fa75191a="" class="roster-status sr-only" aria-live="polite"></p>
+  <p data-v-fa75191a="" class="roster-voice sr-only" role="log" aria-label="who's on this board"></p>
+  <!-- ── ONE TOOL HOME (§14, M13) ─────────────────────────────────────────────────────────
+         `undo · redo · hint` leave the card for the BOARD'S EDGE, beside the `controls` tongue,
+         on every mobile pose — portrait's bottom edge and landscape's right flank, the two
+         berths the tongue already owns. Three tongues under ONE outline at the tongue's own 2.5,
+         each ≥44×44; the free edge measures 274 / 259 / 314 / 248 / 274 against the 132 three
+         targets need. At 844×390 these three go from NO HOME AT ALL (`#fold-tools` 0×0, this row
+         at y 1070 inside a fixed sheet) to zero taps.
+         It IS the toolbar — the one toolbar, in the tongue's idiom — which is why `#fold-tools`
+         and its composed ribbon retire rather than gaining a neighbour. `defer` for the reason
+         the shipped Teleport records: the berth is minted later in `GameScene`'s own tree. -->
+  <!--teleport start-->
+  <!--teleport end-->
+</div>
+ ❯ VueWrapper.get ../../../../../web/frontend/node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ src/games/shared/GameControlPanel.test.ts:455:20
+    453|   it("the `i` points at the fold and flips it open, without ever namin…
+    454|     const w = mountPanel({ mobile: false });
+    455|     const info = w.get(INFO);
+       |                    ^
+    456|     expect(info.attributes("aria-controls")).toBe("keys-fold");
+    457|     expect(info.attributes("aria-expanded")).toBe("false");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[8/10]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the keys fold behind the `i` (T6 mark 5) > the crib stays in the tree at rest — collapsed is not hidden
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/GameControlPanel.test.ts:475:60
+    473|     // CONTENT must be mounted whether it is open or shut.
+    474|     const w = mountPanel({ mobile: false });
+    475|     expect(w.find("#keys-fold .keyboard-legend").exists()).toBe(true);
+       |                                                            ^
+    476|     expect(w.find("#keys-fold").attributes("aria-hidden")).toBeUndefin…
+    477|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[9/10]⎯
+
+
+ Test Files  1 failed | 65 passed (66)
+      Tests  10 failed | 800 passed (810)
+   Start at  15:00:16
+   Duration  4.13s (transform 7.17s, setup 1.09s, import 13.22s, tests 6.10s, environment 34.50s)
+
+EXIT=1

@@ -1,0 +1,59 @@
+PLR-SELF pass-2 RESEARCH — raw probe lines. Server 127.0.0.1:4241 (prototype worktree
+wf_e58b4764-0fc-46, private vite cacheDir), both engines, 2026-09-18. Killed after.
+Run: cd <worktree>/web/frontend && NODE_PATH=<repo>/web/frontend/node_modules \
+     npx playwright test --config <this dir>/r2.config.ts [-g "<row>"] [--project=…]
+
+── A · keyboard + focus, desk, solo mark (the room never armed in this arm) ────────────────
+R2SELF|{"t":"A","engine":"chromium","rest":{"color":"color(srgb 0.15 0.15 0.15 / 0.68)","live":false,"expanded":"false"},"tabHops":13,"focused":{"isActive":true,"outlineStyle":"dashed","outlineWidth":"2px"},"rows":[{"case":"enter-1","expanded":"false","lobbyVisible":0,"focusStays":true},{"case":"enter-2","expanded":"false","lobbyVisible":0,"focusStays":true},{"case":"space-open","expanded":"true","lobbyVisible":1,"focusStays":true},{"case":"escape-while-open","expanded":"true","lobbyVisible":1,"focusStays":true},{"case":"space-close","expanded":"false","focusStays":true}]}
+R2SELF|{"t":"A","engine":"webkit","tabHops":31,"focused":{"isActive":false,"outlineStyle":"none"},"NOTE":"WebKit in this rig will not Tab to a <button> — 30 hops, never reached. Every row below it is void; row L is the honest webkit reading."}
+
+── B · the estate's own .attribution-trigger, COARSE pointer (the focus-open mask stands down)
+R2SELF|{"t":"B","engine":"chromium","coarse":true,"afterFocus":"false","afterEnter":"false","afterSpace":"true"}
+R2SELF|{"t":"B","engine":"webkit","coarse":true,"afterFocus":"false","afterEnter":"false","afterSpace":"true"}
+
+── C · the focusout seam, on the wire ─────────────────────────────────────────────────────
+R2SELF|{"t":"C","engine":"chromium","afterCell":[0],"afterMouse":{"cur":[null],"active":"player-mark"},"afterTab":[null]}
+R2SELF|{"t":"C","engine":"webkit","afterCell":[0],"afterMouse":{"cur":[null],"active":""},"afterTab":[null,null,0]}
+
+── E · live-region roll per view; the deck's self swatch ──────────────────────────────────
+R2SELF|{"t":"E","engine":"chromium","soloRoll":["board-voice","copy-status","margin-note","players-alone","players-roster","players-status"],"roomRoll":[…same 6…],"galleryRoll":["board-voice","copy-status","gallery-guard-live","gallery-live","margin-note","players-alone","players-roster","players-status"],"swatches":[{"style":"--color-user-ink: oklch(var(--peer-ink-l) 0.11 0.0deg);","bg":"oklch(0.5 0.11 0)"}]}
+
+── F · the LIVE mark under hover and focus; the 400ms ink mid-flight ──────────────────────
+R2LIVE|{"t":"F","engine":"chromium","rest":{"live":true,"color":"oklch(0.5 0.11 0)","label":"1 other player","rosterRows":2},"solo":{"live":false,"color":"color(srgb 0.15 0.15 0.15 / 0.68)","label":"no other players","rosterRows":1},"hovered":{"live":true,"color":"rgb(38, 38, 38)"},"unhovered":{"color":"oklch(0.5 0.11 0)"},"focusedSettled":{"color":"rgb(38, 38, 38)","outline":"dashed 2px rgb(38, 38, 38)"},"midflight":[{"t":265,"color":"color(srgb 0.15 0.15 0.15 / 0.68)"},{"t":309,"color":"oklab(0.276036 0.00306208 … / 0.686088)"},{"t":352,"color":"oklab(0.307946 0.0182984 … / 0.71821)"},{"t":397,"color":"oklab(0.384895 0.0550401 … / 0.809619)"},{"t":442,"color":"oklab(0.438876 0.0808145 … / 0.88899)"},{"t":488,"color":"oklab(0.46739 0.0944296 … / 0.937542)"},{"t":533,"color":"oklab(0.485615 0.103132 … / 0.971452)"},{"t":578,"color":"oklab(0.493775 0.107028 … / 0.987444)"},{"t":623,"color":"oklab(0.498598 0.10933 … / 0.997144)"},{"t":669,"color":"oklab(0.499976 … / 0.99995)"},{"t":714,"color":"oklch(0.5 0.11 0)"}]}
+R2LIVE|{"t":"F","engine":"webkit","rest":{"live":true,"color":"oklch(0.5 0.11 0)"},"hovered":{"color":"rgb(38, 38, 38)"},"unhovered":{"color":"oklch(0.5 0.11 0)"},"focusedSettled":{"color":"oklch(0.5 0.11 0)","outline":"none","NOTE":"never focused — see A"},"midflight":[{"t":262,"quiet"},{"t":341,"oklab(0.289689 0.009569 0 / 0.699472)"},{"t":482,"oklab(0.41476 0.069295 0 / 0.851687)"},{"t":550,"oklab(0.472134 … / 0.946137)"},{"t":614,"oklab(0.488255 … / 0.976569)"},{"t":664,"oklab(0.495294 … / 0.990478)"},{"t":711,"oklab(0.499329 … / 0.998631)"},{"t":758,"oklch(0.5 0.11 0)"}]}
+
+── G · the sheet with rows; geometry and the painted ground ───────────────────────────────
+R2LIVE|{"t":"G","engine":"chromium","vp":1280,"geo":{"sheet":{"x":0,"y":51.8,"w":256,"h":143.7,"bottom":195.5},"wordmark":{"x":129.9,"y":5.5,"w":382.4,"h":111.9,"bottom":117.5,"right":512.3},"mark":{"x":75.5,"y":12,"w":45.1,"h":39.8},"scroll":{"sh":140,"ch":140},"rows":[{"cls":"lobby-state","text":"3 other players","color":"color(srgb 0.15 0.15 0.15 / 0.68)","x":18,"y":69.8,"w":220,"h":19},{"cls":"lobby-name","text":"swift-gerbil","color":"oklch(0.5 0.11 0)","x":37.6,"y":91.1},{"cls":"lobby-qualifier","text":"you","color":"color(srgb 0.15 0.15 0.15 / 0.68)","x":112.1,"y":92.4,"w":17.2},{"cls":"lobby-name","color":"oklch(0.5 0.11 137.5)"},{"cls":"lobby-name","color":"oklch(0.5 0.11 275)"},{"cls":"lobby-name","color":"oklch(0.5 0.11 52.5)"}]},"ground":{"px":36864,"distinct":956,"top":[["252,251,251",19084],["253,252,251",6356],["204,203,203",3275],["245,244,244",933],["212,211,211",585]]}}
+R2LIVE|{"t":"G","engine":"chromium","vp":390,"geo":{"sheet":{"x":0,"y":39.8,"w":256,"h":130.4,"bottom":170.1},"wordmark":{"x":58.1,"y":174.3,"bottom":245.5}},"ground":{"px":33280,"top":[["252,251,251",28846],["245,244,244",1385],["66,113,47",163],["82,92,161",140],["148,69,97",132],["147,79,29",110],["107,107,107",47]]}}
+
+── H · the sheet's neighbours, six lines (4 rows + `and 2 more`), fine and coarse ─────────
+R2BOUND|{"t":"H","engine":"chromium","arm":"desk-fine","coarse":false,"geo":{"sheet":{"y":51.8,"w":256,"h":162.7,"bottom":214.4,"right":256},"mark":{"x":75.5,"y":12,"w":45.1,"h":39.8},"wordmark":{"x":129.9,"y":5.5,"bottom":117.5,"right":512.3},"sun":{"x":1072,"y":12,"w":208,"h":208},"controls":{"x":825.9},"rowCount":8,"overflow":"and 2 more","scroll":{"sh":159,"ch":159},"rung":{"state":"14.048px","name":"16px"}}}
+R2BOUND|{"t":"H","engine":"chromium","arm":"phone-fine","geo":{"sheet":{"y":39.8,"h":146.8,"bottom":186.5},"wordmark":{"x":58.1,"y":174.3,"bottom":245.5},"sun":{"x":326,"w":64},"rung":{"state":"12.179px","name":"14px"}}}
+R2BOUND|{"t":"H","engine":"chromium","arm":"phone-coarse","coarse":true,"geo":{"sheet":{"y":44,"h":162.5,"bottom":206.5},"mark":{"y":0,"w":45.1,"h":44},"wordmark":{"x":58.1,"y":143.5,"bottom":214.7},"sun":{"x":326},"rung":{"state":"14px","name":"16px"}}}
+R2BOUND|{"t":"H","engine":"webkit","arm":"desk-fine","geo":{"sheet":{"y":51.8,"h":162.7,"bottom":214.4},"wordmark":{"x":129.8,"y":5.8,"bottom":117.8,"right":510.4},"sun":{"x":1072}}}
+R2BOUND|{"t":"H","engine":"webkit","arm":"phone-fine","geo":{"sheet":{"bottom":186.5},"wordmark":{"y":174.6}}}
+R2BOUND|{"t":"H","engine":"webkit","arm":"phone-coarse","geo":{"sheet":{"bottom":206.5},"wordmark":{"y":143.8}}}
+
+── J · programmatic focus does NOT arm :focus-visible, either engine ──────────────────────
+R2AA|{"t":"J","engine":"chromium","before":"oklch(0.5 0.11 0)","afterFocus":{"active":true,"focusVisible":false,"color":"oklch(0.5 0.11 0)","outline":"none 3px oklab(0.144521 … / 0.5)"}}
+R2AA|{"t":"J","engine":"webkit","afterFocus":{"active":true,"focusVisible":false,"color":"oklch(0.5 0.11 0)","outline":"none 3px oklab(0.144522 0 0 / 0.5)"}}
+
+── K · a 2nd-percentile sampler MISREADS a box that is a quarter bleed. Banked as the wrong
+──     method, so nobody re-derives 4.38. Row N is the reading.
+R2AA|{"t":"K","engine":"chromium","state":{"halves":{"clear":{"ink":"107,107,107","ground":"252,251,251","ratio":5.16},"over-wordmark":{"ink":"204,203,203","ground":"252,251,251","ratio":1.57}}},"qualifier":{"halves":{"over-wordmark":{"ink":"107,107,107","ground":"252,251,251","ratio":5.16}}}}
+R2KEY|{"t":"M","engine":"chromium","game":"futoshiki","WRONG-METHOD":true,"rows":[{"cls":"lobby-state","p2ink":"119,118,118","ratio":4.38},{"cls":"lobby-overflow","p2ink":"126,126,126","ratio":3.96}]}
+
+── L · the key contract off a programmatic focus — the route WebKit actually has ──────────
+R2KEY|{"t":"L","engine":"chromium","rows":[{"case":"focused","expanded":"false","lobby":0,"stillFocused":true},{"case":"enter-1","expanded":"false","lobby":0},{"case":"enter-2","expanded":"false","lobby":0},{"case":"space-1","expanded":"true","lobby":1},{"case":"escape","expanded":"true","lobby":1},{"case":"space-2","expanded":"false","lobby":0}]}
+R2KEY|{"t":"L","engine":"webkit","rows":[{"case":"focused","expanded":"false"},{"case":"enter-1","expanded":"false"},{"case":"enter-2","expanded":"false"},{"case":"space-1","expanded":"true"},{"case":"escape","expanded":"true"},{"case":"space-2","expanded":"false"}]}
+
+── N · the GLYPH CORE (darkest painted pixel), two wordmarks — the headline ────────────────
+R2GND|{"t":"N","engine":"chromium","game":"sudoku","wordmarkW":382.4,"sheetBottom":214.4,"rows":[{"cls":"lobby-state","core":"107,107,107","paper":252,"coreVsPaper":5.19,"darkerThan100":0,"modes":[[252,2296],[204,1156],[107,57],[250,36]]},{"cls":"lobby-qualifier","core":"107,107,107","paper":252,"coreVsPaper":5.19,"darkerThan100":0},{"cls":"lobby-overflow","core":"107,107,107","paper":253,"coreVsPaper":5.24,"darkerThan100":0}]}
+R2GND|{"t":"N","engine":"chromium","game":"futoshiki","wordmarkW":473.8,"sheetBottom":214.4,"rows":[{"cls":"lobby-state","core":"107,107,107","paper":252,"coreVsPaper":5.19,"darkerThan100":0,"modes":[[252,2471],[204,1048],[107,57],[205,48]]},{"cls":"lobby-qualifier","core":"107,107,107","coreVsPaper":5.19,"darkerThan100":0},{"cls":"lobby-overflow","core":"107,107,107","coreVsPaper":5.24,"darkerThan100":0}]}
+   ARITHMETIC: --ink-press-quiet is 68% graphite(38) → over paper 252 it paints 107 (5.19:1);
+   over the bleed 204 it would paint 204-0.68*(204-38)=91, and 91 on a 204 ground is 4.23:1.
+   darkerThan100 == 0 in both games ⇒ no glyph landed on bleed. Stroke luck, not design.
+
+── P · the frame ──────────────────────────────────────────────────────────────────────────
+CROP|{"markColor":"oklch(0.5 0.11 0)"}  → ../mark-and-self-row.png (1280 desk, light, 4 at the
+     table, sheet open, pointer parked at 900,740). The stub and `dirty-coyote you` are one rose.

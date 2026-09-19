@@ -1,0 +1,84 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend
+
+stderr | src/pencil/glyph/HandwrittenGlyph.ink.test.ts > HandwrittenGlyph — whose hand wrote this digit > writes a player's digit in --color-user-ink, with NO fallback spelling
+[Vue warn]: Missing required prop: "isOverridden" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "isSolved" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "isRevealed" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "noiseDelay" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "boardSize" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "isHovered" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=false  ... > 
+  at <VTUROOT>
+
+stderr | src/pencil/glyph/HandwrittenGlyph.ink.test.ts > HandwrittenGlyph — whose hand wrote this digit > writes an OVERRIDDEN given in the player's ink too — they wrote it, so it is theirs
+[Vue warn]: Missing required prop: "isSolved" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=true  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "isRevealed" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=true  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "noiseDelay" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=true  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "boardSize" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=true  ... > 
+  at <VTUROOT>
+[Vue warn]: Missing required prop: "isHovered" 
+  at <HandwrittenGlyph value="5" position=0 isGiven=true  ... > 
+  at <VTUROOT>
+
+ ❯ src/pencil/glyph/HandwrittenGlyph.ink.test.ts (4 tests | 2 failed) 19ms
+     × writes a player's digit in --color-user-ink, with NO fallback spelling 15ms
+     × writes an OVERRIDDEN given in the player's ink too — they wrote it, so it is theirs 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/glyph/HandwrittenGlyph.ink.test.ts > HandwrittenGlyph — whose hand wrote this digit > writes a player's digit in --color-user-ink, with NO fallback spelling
+AssertionError: expected 'var(--color-user-ink, #2563eb)' to be 'var(--color-user-ink)' // Object.is equality
+
+Expected: "var(--color-user-ink)"
+Received: "var(--color-user-ink, #2563eb)"
+
+ ❯ src/pencil/glyph/HandwrittenGlyph.ink.test.ts:27:20
+     25|   it("writes a player's digit in --color-user-ink, with NO fallback sp…
+     26|     const stroke = strokeOf({ isGiven: false });
+     27|     expect(stroke).toBe("var(--color-user-ink)");
+       |                    ^
+     28|     // the tell the defect left behind: a comma means a second colour …
+     29|     expect(stroke).not.toContain(",");
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pencil/glyph/HandwrittenGlyph.ink.test.ts > HandwrittenGlyph — whose hand wrote this digit > writes an OVERRIDDEN given in the player's ink too — they wrote it, so it is theirs
+AssertionError: expected 'var(--color-user-ink, #2563eb)' to be 'var(--color-user-ink)' // Object.is equality
+
+Expected: "var(--color-user-ink)"
+Received: "var(--color-user-ink, #2563eb)"
+
+ ❯ src/pencil/glyph/HandwrittenGlyph.ink.test.ts:33:61
+     31|
+     32|   it("writes an OVERRIDDEN given in the player's ink too — they wrote …
+     33|     expect(strokeOf({ isGiven: true, isOverridden: true })).toBe("var(…
+       |                                                             ^
+     34|   });
+     35|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 2 passed (4)
+   Start at  23:38:33
+   Duration  400ms (transform 51ms, setup 12ms, import 71ms, tests 19ms, environment 213ms)
+

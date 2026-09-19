@@ -1,0 +1,22 @@
+
+SheetWashiLabel — 5 scoped classes, 3 render consumers
+  classes: washi-label · group · washi-center · washi-tag · washi-wide
+  src/games/shared/GameBoard.vue  (1)
+      <SheetWashiLabel :text="hoveredAuthor.slug" :seed="97">
+  src/games/shared/GameControlPanel.vue  (14)
+      <SheetWashiLabel :id="newGameId" text="new game" :seed="13" anchor="tag">
+      <SheetWashiLabel v-if="!portraitDock" text="hold to peek" :seed="53" anchor="center" persistent>
+      <SheetWashiLabel :id="pencilsId" text="pencils" :seed="29" anchor="tag">
+      <SheetWashiLabel class="zone-hint" text="normal writes a digit. corner and center write small pencil marks" :seed="31" wide>
+      <SheetWashiLabel class="zone-hint" text="show every digit that still fits in a cell" :seed="41" wide>
+      <SheetWashiLabel :id="checkingId" text="checking" :seed="59" anchor="tag">
+      <SheetWashiLabel class="zone-hint" text="when your mistakes get checked" :seed="47" wide>
+      <SheetWashiLabel :id="playersId" text="players" :seed="67" anchor="tag">
+      <SheetWashiLabel :id="playersHintId" class="zone-hint" text="share this board and everyone writes on the same grid" :seed="61" wide>
+      <SheetWashiLabel v-if="!mobile" text="wipe every digit you've written" :seed="23" wide>
+      <SheetWashiLabel v-if="!mobile" text="fill the cells that have only one digit left" :seed="43" wide>
+      <SheetWashiLabel v-if="!mobile" text="the solver finishes the board" :seed="37" wide>
+      <SheetWashiLabel v-if="!mobile" :text="shareAct.washi.value" :seed="71" wide>
+      <SheetWashiLabel v-if="!mobile && (!session.roomId.value || aloneInRoom)" class="berth-note" :text="inviteAct.washi.value" :seed="73" wide>
+  src/pencil/chrome/GameGallery/StagingBand.vue  (1)
+      <SheetWashiLabel :id="zoneId" text="new game" :seed="13" anchor="tag">

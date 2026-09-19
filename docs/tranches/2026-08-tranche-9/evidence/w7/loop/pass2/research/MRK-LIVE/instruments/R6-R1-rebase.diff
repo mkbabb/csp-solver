@@ -1,0 +1,68 @@
+PROPOSED DIFF · r0/r6-idiom-history/law-probe.mjs · row R1 · reported MOVED
+
+The record is frozen: this is a PROPOSAL banked beside the lane's research, never an edit to
+`loop/r0/`. The r0 row R1 is reported MOVED, not re-cut in place, and not re-worded to pass.
+
+WHY. R1 asserts "every chromatic token that paints in BOTH themes carries a dark arm", born
+RED against `--color-focus-sketch`. MRK-LIVE refutes the law rather than satisfying it, and
+the refutation is arithmetic on painted bytes over four grounds x two themes
+(`../logs/B-grounds-*.json`, `../logs/C-boardring-*.json`, `../probe/token-table.mjs`):
+
+  one value #3a7bc4        chrome 4.19 / 4.29 light, 4.38 / 4.29 dark
+                           board  3.67 / 3.34 light, 3.72 / 3.48 dark
+                           SPREAD over all eight readings: 1.04
+  a dark arm (#6aabeb)     SPREAD 4.52 — the mark weighs four times more at night
+  every candidate clears WCAG 1.4.11's 3:1 on every ground in both themes
+
+So the law's premise ("a token painting in both themes NEEDS a dark arm") does not hold as an
+accessibility law on this tree. What the row actually caught was a COMMENT that claimed a dark
+arm the token has never had. Re-base the row onto the defect it found.
+
+THE PROPOSED ROW. Strictly stronger than the incumbent: it catches the original defect AND
+every future one of the same class, in both directions.
+
+--- a/law-probe.mjs
++++ b/law-probe.mjs
+@@
+ law(
+   "R1",
+-  "every chromatic token that paints in BOTH themes carries a dark arm",
+-  "index.css --color-focus-sketch:219 — its own comment claims 'Dark mode keeps crayon-blue'",
++  "every chromatic token's comment tells the truth about its themes",
++  "index.css --color-focus-sketch:219 — declared once in :root, comment claims 'Dark mode keeps crayon-blue'",
+   "RED",
+   () => {
+     const css = read("src/assets/index.css");
+     const darkAt = css.indexOf("\n.dark");
+-    const inDark = css.slice(darkAt).includes("--color-focus-sketch:");
+-    return {
+-      ok: inDark,
+-      detail: inDark
+-        ? "declared in .dark"
+-        : "declared ONLY in :root — the focus ring paints #3a7bc4 at night, and the comment says otherwise",
+-    };
++    const inDark = css.slice(darkAt).includes("--color-focus-sketch:");
++    // The comment that sits above the :root declaration, whatever it now says.
++    const decl = css.indexOf("--color-focus-sketch:");
++    const comment = css.slice(decl, css.indexOf("\n", css.indexOf("*/", decl)) + 1);
++    // A token declared ONLY in :root must not claim an arm; a token WITH an arm must name
++    // its arm's measured reading. Both directions, so neither a lying comment nor a silent
++    // arm can pass.
++    const claimsArm = /dark mode|at night|\.dark/i.test(comment);
++    const namesReading = /\d+\.\d+\s*(:1|ratio)/i.test(comment);
++    const ok = inDark ? claimsArm && namesReading : !claimsArm && namesReading;
++    return {
++      ok,
++      detail: inDark
++        ? `declared in .dark; comment ${claimsArm ? "names the arm" : "is SILENT about it"}, ` +
++          `${namesReading ? "with a measured reading" : "with NO measured reading"}`
++        : `declared ONLY in :root; comment ${claimsArm ? "CLAIMS an arm it does not have" : "correctly claims none"}, ` +
++          `${namesReading ? "with a measured reading" : "with NO measured reading"}`,
++    };
+   },
+ );
+
+STATE AT THE PROTOTYPE'S TREE. The pass-1 diff already rewrote the comment to the true
+sentence with all four measured readings in it, so the proposed row reads GREEN there and RED
+at HEAD — which is the born-RED shape the wave asks for. The incumbent row reads RED on both,
+forever, whatever anyone does.

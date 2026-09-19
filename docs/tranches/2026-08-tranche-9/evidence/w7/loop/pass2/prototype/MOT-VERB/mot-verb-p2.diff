@@ -1,0 +1,994 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..5c3c0c23 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1060,6 +1060,18 @@ jobs:
+             - name: motion contract (every spec declares its PRM posture, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:motion
++            # T9-W7 §13 gate — the pencil verbs. Every shipped transition and animation
++            # names a house curve (a verb) and a named duration (a rung), spends only a
++            # rung that verb is allowed to spend, and anything the set cannot take is in
++            # the admission ledger with a ruling. The ledger is closed both ways: a row
++            # whose site has gone reds too. Comments are blanked before anything is read,
++            # so prose about a transition is never counted as one. This also runs the
++            # publisher's own check, so MOTION.rungs/MOTION.verbs and the @theme block can
++            # never drift. Born RED at aab67b92 on 71 declarations (52 of them unadmitted);
++            # this is a step in the lint job, so the sixteen lanes stay sixteen (O-12).
++            - name: pencil verbs (every duration is a rung, every curve a verb)
++              working-directory: web/frontend
++              run: npm run lint:verbs
+             # T8-W6 gate — M16's one machine-checkable clause. Every template text node and
+             # every user-string literal in src/** (+ index.html's head) must carry no em or
+             # en dash. Comments are masked; two allowlisted files carry their reason.
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index 32ea521e..e38d48a1 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -37,6 +37,7 @@
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
++    "lint:verbs": "node scripts/check-pencil-verbs.mjs",
+     "lint:copy": "node scripts/check-copy-register.mjs --self-test",
+     "lint:live-regions": "node scripts/check-live-regions.mjs --self-test",
+     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 1de7ee06..0cccbd56 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -12,7 +12,7 @@ import {
+   type FunctionalComponent,
+ } from "vue";
+ import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { MOTION, spend } from "@pencil/config/pencilConfig";
+ import {
+   FLIP_GLIDE_ANIM_ID,
+   flipTransform,
+@@ -374,7 +374,11 @@ const coarse = useCoarsePointer();
+ // (`setLiveFaceTarget`); the board itself is the FLIP mover, folding from its full pose into the
+ // face. Every view/URL/game transition still fires as Wave B, so a missing rect / PRM degrades
+ // to the same-frame cut and no state/visibility assertion sees mid-glide pixels.
+-const foldCtl = useFlipGlide({ durationMs: MOTION.boardFoldMs });
++// The fold TURNS the page: the board goes over into the card face and back (T9-W7 §13).
++// `page` is the only rung TURN may spend, which is the law saying out loud what the fold
++// has always been — a whole sheet, never a slot.
++const FOLD = spend("turn", "page");
++const foldCtl = useFlipGlide({ durationMs: FOLD.duration, easing: FOLD.easing });
+ 
+ // Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+ // Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+@@ -1148,7 +1152,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+ 
+ /* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--rung-breath) var(--verb-lift-ease);
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..54ce3c53 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -325,9 +325,8 @@
+        --ease-noteWrite     easeOutQuint        write-in / reveal / grow
+        --ease-standard      material standard   show-hide fade / slide
+        --ease-springPop     backOut overshoot   icon / toggle pop
+-       --ease-accelIn       easeInCubic         accelerate-away exit
+-       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out
+-       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw
++       --ease-accelIn       easeInCubic         accelerate-away exit (SHAPE only)
++       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw (SHAPE, §6's)
+        --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls
+        --ease-loaderScrub   easeInOutCubic      loader continuous scrub
+        --ease-anticipatePop backInOut           anticipate + overshoot reveal
+@@ -338,10 +337,23 @@
+      observation, then batch B moved it again) and a count the tree can derive
+      should never be prose.
+ 
++     T9-W7 §13, THE OTHER LAYER. This set is now the SHAPE half of the grammar: a
++     curve spent inside `@keyframes` as a per-step timing function, or by the T6
++     motion vocabulary below. WHEN a thing moves is the pencil verbs' half, published
++     under this block as `--rung-*` / `--verb-*`; a rule names one of each. That is why
++     `--ease-fadeOut` is gone from this ledger: all five of its consumers were the same
++     act — a hand taking something off the page — so its control points became
++     `--verb-lift-ease` and the token folded whole. A token whose last consumer leaves is
++     dead ink — `check-theme-tokens` reads it as such, which is how this one was caught
++     rather than argued. `--ease-ghostDraw` STAYS: pass 1 folded it into WRITE IN, and pass 2
++     hands its two consumers back to §6 with the rest of `gameCell.css` (the chair's §6.11),
++     so the token still has the ring it names.
++
+      --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+      but the curve is shared across the laminate leave, ScribbleLoader, and
+      DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+-     (census C4 reconciliation).
++     (census C4 reconciliation). It keeps its two SHAPE consumers (:1036 and
++     ScribbleLoader) and gives up its two timing ones to LIFT.
+      --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+      identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+      answer-key laminate's lay-down joins the one glass curve instead of the retired
+@@ -350,13 +362,49 @@
+   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+   --ease-springPop: cubic-bezier(0.34, 1.56, 0.64, 1);
+   --ease-accelIn: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+-  --ease-fadeOut: cubic-bezier(0.32, 0, 0.67, 0);
+   --ease-ghostDraw: cubic-bezier(0.215, 0.61, 0.355, 1);
+   --ease-drawOn: cubic-bezier(0.33, 1, 0.68, 1);
+   --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+   --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+   --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
++
++  /* ── THE PENCIL VERBS, PUBLISHED (T9-W7 §13) ── generated, do not hand-edit ──
++     Written by scripts/publish-verbs.mjs from the marker pair in pencilConfig.ts;
++     lint:verbs diffs the two layers byte for byte. A rung is how far a thing travels,
++     a verb is what a hand does; a rule names one of each. A delay keeps its own number. */
++  --rung-page: 520ms;
++  --rung-step: 440ms;
++  --rung-sheet: 280ms;
++  --rung-mark: 250ms;
++  --rung-breath: 200ms;
++  --rung-touch: 150ms;
++  --verb-layDown-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-lift-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-slide-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-writeIn-ease: cubic-bezier(0.22, 1, 0.36, 1);
++  --verb-rubOut-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-dusk-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
++  --verb-dusk-ms: 350ms;
++}
++
++/* PRM IS A VALUE OF THE LADDER (T9-W7 §13), not a block in every file. Under reduce every
++   rung and the dusk's own number read zero at the root, stated once, so every rule that
++   spends one becomes a same-frame swap and a rule that names a rung is armed by naming it.
++   Keyframes are already cut by the global rule below; the WAAPI movers keep their own JS
++   cut. Nothing in src/ waits on `transitionend`. The two admitted fallbacks (the toggle's
++   200ms crossfade, the laminate's 150ms linear) keep their literals and keep breathing. */
++@media (prefers-reduced-motion: reduce) {
++  :root {
++    --rung-page: 0ms;
++    --rung-step: 0ms;
++    --rung-sheet: 0ms;
++    --rung-mark: 0ms;
++    --rung-breath: 0ms;
++    --rung-touch: 0ms;
++    --verb-dusk-ms: 0ms;
++  }
+ }
++/* ── end of the published verbs ── */
+ 
+ /* Dark theme */
+ .dark {
+@@ -587,7 +635,9 @@ html {
+      tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
+   .solve-success .grid-line {
+     stroke: var(--color-gold-star) !important;
+-    transition: stroke 500ms;
++    /* LAY DOWN at the page rung: the gold arrives over the whole board and stays. 500ms
++       was the auditioned length and 520 is the rung it sits on, one frame away. */
++    transition: stroke var(--rung-page) var(--verb-layDown-ease);
+   }
+ 
+   /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+@@ -604,11 +654,13 @@ html {
+       8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+       0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+       8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
+-    transition: box-shadow 500ms;
++    /* LAY DOWN at the page rung, the stroke sweep's twin above and on its clock. */
++    transition: box-shadow var(--rung-page) var(--verb-layDown-ease);
+   }
+ 
+-  /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+-     cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source order wins. */
++  /* PRM: the gold lands instantly — the page-rung (520ms) stroke/shadow sweeps are
++     motion-adjacent cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source
++     order wins. */
+   @media (prefers-reduced-motion: reduce) {
+     .solve-success .grid-line {
+       transition: none;
+@@ -665,8 +717,8 @@ html {
+     html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
+       transition:
+-        background-color 350ms ease,
+-        color 350ms ease !important;
++        background-color var(--verb-dusk-ms) var(--verb-dusk-ease),
++        color var(--verb-dusk-ms) var(--verb-dusk-ease) !important;
+     }
+   }
+ 
+@@ -968,6 +1020,9 @@ html {
+  *             plush-blink     .celebration-heart .eyes
+  *             ink-write-in    .margin-note-ink · .margin-note-meta ·
+  *                             .vignette-voice · .vignette-meta
++ *             ink-rub-out     .margin-note-ink.is-rubbing-out — the write-in's other
++ *                             direction (T9-W7 §13); the note's exit, which until now
++ *                             was a verb the estate had no implementation for
+  *             note-in         .error-note
+  *             (incumbents, kept where they are: cell-reveal, pencil-draw-on)
+  *   ERROR     refuse-shake    .solve-failure (the verdict) · .game-cell.is-refused (the
+@@ -976,7 +1031,10 @@ html {
+  *
+  * NUMBERS DO NOT LIVE HERE. Every duration and delay arrives as a bound custom
+  * property from `CELEBRATION` (the `.pencil-draw-on` --draw-dur/--draw-delay
+- * precedent); what lives here is shape and curve.
++ * precedent); what lives here is shape and curve. Where they DO live, since T9-W7 §13,
++ * is the pencil verbs: `MOTION.rungs` / `MOTION.verbs`, published above this file's
++ * §EASING as `--rung-*` and `--verb-*`. This list names what geometry does; that one
++ * names how long it takes and on which curve. A shape verb consumes a timing verb.
+  *
+  * TWO DISCIPLINES, enforced by construction:
+  *
+@@ -1121,6 +1179,22 @@ html {
+     }
+   }
+ 
++  /* The same hand, going the other way (T9-W7 §13, RUB OUT). The clip retreats from the
++     edge the write-in arrived at and the ink goes with it: one clip-path and one opacity
++     on an inline-block that is already its own paint, so the glyphs never re-lay out and
++     the text never boils. `to` is the consumer's cascade rest pose, which is what lets the
++     fill stay `backwards` like every other verb and makes the reduced-motion cut free. */
++  @keyframes ink-rub-out {
++    from {
++      clip-path: inset(0 0 0 0);
++      opacity: 1;
++    }
++    to {
++      clip-path: inset(0 0 0 100%);
++      opacity: 0;
++    }
++  }
++
+   @keyframes note-in {
+     from {
+       transform: translateY(8px);
+diff --git a/web/frontend/src/games/futoshiki/CaretOverlay.vue b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+index 1fdd193a..b15a9803 100644
+--- a/web/frontend/src/games/futoshiki/CaretOverlay.vue
++++ b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+@@ -61,7 +61,7 @@ defineProps<{
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .caret-layer {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+   }
+ }
+ </style>
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index b961a8c8..536a892e 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -141,7 +141,7 @@ defineExpose({
+   padding: 0.5rem 0.15rem;
+   clip-path: polygon(4% 2%, 96% 0%, 100% 50%, 97% 94%, 5% 100%, 0% 52%);
+   transform: rotate(1.4deg);
+-  transition: transform 150ms ease-out;
++  transition: transform var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ .drawer-tab:hover .drawer-tab-text {
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 9f4ed306..bc8c27df 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -1262,7 +1262,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+   .board-leaving .board-margin,
+   .board-leaving .completion-vignette {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..1e07f988 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1728,9 +1728,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   animation: ink-write-in 380ms var(--ease-drawOn) 140ms backwards;
+ }
+ 
+-/* A RETURN IS LIGHTER THAN AN ARRIVAL. Same shape, less of it: the fold and the write-in both
+-   land 40ms sooner, and the board's ring holds no beat at all. Somebody you already know coming
+-   back is not the same news as somebody new. */
++/* A RETURN IS LIGHTER THAN AN ARRIVAL, and this is by how much: the fold lands 40ms sooner
++   (320 → 280) and the name is written in 60ms shorter and 20ms earlier (380 @140 → 320 @120),
++   so the name finishes 80ms sooner — 520ms after the row opens against 440ms.
++   Somebody you already know coming back is not the same news as somebody new.
++
++   SIX NUMBERS, ONE DECISION (T9-W7 §13 pass 2). The set is admitted whole as `graded` at the
++   literals the owner auditioned: naming them rung by rung would shorten the arriving name by
++   130ms, which is a retune wearing a rename, and the no-shorten law forbids it as a sweep.
++   The rung expression is banked as a pass-3 audition, shown beside this, for the owner. */
+ .player-row.is-returning {
+   animation: player-row-open 280ms var(--ease-glassGlide) backwards;
+ }
+@@ -1805,9 +1811,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   /* T8-W1 (agent C's M5 census, R2) — the lift TWEENS, like every sibling ink lift in this
+      card. `.icon-btn` has carried `color 150ms` since P1-W3 narrowed it off `all`; this one
+      snapped, so the two quiet words in the players well answered the pointer in two different
+-     languages. One property, the same 150ms, on the estate's standard curve — and NOT `all`,
+-     which is the exact width P1-W3 measured the cost of. */
+-  transition: color 150ms var(--ease-standard);
++     languages. One property, the same 150ms — the `touch` rung, LAY DOWN since T9-W7 §13
++     (the ground answers the pointer; ∆progress 0.548 off Material's standard, declared) — and
++     NOT `all`, which is the exact width P1-W3 measured the cost of. */
++  transition: color var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ .players-leave:hover {
+@@ -1954,8 +1961,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+      ±1.25-unit nudge, not a tooth, and CrayonHeart already rules grain sub-perceptual below
+      20 px). Only what actually moved on hover is still allowed to tween. */
+   transition:
+-    background-color 150ms,
+-    color 150ms;
++    background-color var(--rung-touch) var(--verb-layDown-ease),
++    color var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ /* T4-WM §2: the icon-btn hover paint stuck after a tap on touch (r2 §4) — fenced to
+@@ -2079,7 +2086,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ .sparkle-icon {
+   filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  transition:
++    filter var(--rung-breath) var(--verb-layDown-ease),
++    transform var(--rung-breath) var(--verb-layDown-ease);
+ }
+ 
+ @media (hover: hover) {
+@@ -2129,7 +2138,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ @media (prefers-reduced-motion: no-preference) {
+   .action-bar::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--rung-touch) var(--verb-layDown-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/SolverErrorNote.vue b/web/frontend/src/games/shared/SolverErrorNote.vue
+index 4bcc8e34..c3257708 100644
+--- a/web/frontend/src/games/shared/SolverErrorNote.vue
++++ b/web/frontend/src/games/shared/SolverErrorNote.vue
+@@ -60,7 +60,7 @@ onMounted(async () => {
+ <style scoped>
+ .error-note {
+   pointer-events: auto; /* the strip container passes events through; the card takes them back */
+-  animation: note-in 250ms var(--ease-noteWrite) backwards;
++  animation: note-in var(--rung-mark) var(--verb-layDown-ease) backwards;
+ }
+ 
+ .error-note-card {
+@@ -94,7 +94,7 @@ onMounted(async () => {
+   padding: 0.15rem 0.6rem;
+   cursor: pointer;
+   filter: url(#grain-static);
+-  transition: background 150ms;
++  transition: background var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ .error-note-retry:hover {
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..b9798002 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -375,7 +375,7 @@
+    went with the sentinel's own — T9-W2 §2.2, above.) */
+ @media (prefers-reduced-motion: no-preference) {
+   .controls-card::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--rung-touch) var(--verb-layDown-ease);
+   }
+ }
+ 
+@@ -599,22 +599,22 @@
+ }
+ 
+ /* ── F6 page-turn: the controls chrome follows the grid (T3-W10) ──────────────
+-   Beat 3: fade IN on scene mount — 250ms easeOutCubic, +150ms after the draw-in's
+-   onset (the grid leads, chrome follows). `backwards` fill, NOT `both`: a finished
++   Beat 3: fade IN on scene mount — WRITE IN at the `mark` rung (250ms), +150ms after the
++   draw-in's onset (the grid leads, chrome follows); the delay keeps its own number. `backwards` fill, NOT `both`: a finished
+    fill-forward animation would pin opacity:1 and silently defeat the beat-1 fade.
+-   Beat 1: fade OUT with the erase — 200ms easeInCubic (things leave the page),
++   Beat 1: fade OUT with the erase — LIFT at the `breath` rung (200ms: things leave the page),
+    `animation: none` so the mount fade-in can never fight the leave.
+    PRM: the whole block gates to no-preference — mount and switch are both instant. */
+ @media (prefers-reduced-motion: no-preference) {
+   /* One card now, so one selector: `.mobile-board-width` was the other twin's name in each of
+      these three rules and it named the same fade. */
+   .scene-controls {
+-    animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
++    animation: controls-fade-in var(--rung-mark) var(--verb-writeIn-ease) 150ms backwards;
+   }
+ 
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+     animation: none;
+   }
+ 
+@@ -626,7 +626,7 @@
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+     animation: none;
+   }
+ }
+diff --git a/web/frontend/src/games/shared/useControlsDrawer.ts b/web/frontend/src/games/shared/useControlsDrawer.ts
+index 5831150d..e0d8fddd 100644
+--- a/web/frontend/src/games/shared/useControlsDrawer.ts
++++ b/web/frontend/src/games/shared/useControlsDrawer.ts
+@@ -1,5 +1,7 @@
+ import { computed, nextTick, ref, watch } from "vue";
+ 
++import { spend } from "@pencil/config/pencilConfig";
++
+ import { mediaRef, useRowRegime } from "./useCoarsePointer";
+ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
+ 
+@@ -82,8 +84,16 @@ type DrawerPhase = "idle" | "closing" | "opening";
+ const STORAGE_KEY = "csp-drawer-open";
+ /** Band-D one-shot — the movers' shared WAAPI clock (scene.css arms no transitions).
+  *  520ms: the glass settle wants a touch more breath than the dead spring's 480
+- *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
+-const GLIDE_MS = 520;
++ *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D).
++ *
++ *  T9-W7 §13: that number is now a RUNG and that curve is now a VERB. The desk rail TURNS
++ *  a page — a whole sheet goes over, which is the only rung TURN may spend — and it is the
++ *  audit-4 ruling verbatim: the same 520ms on the same glass curve, byte for byte. The
++ *  portrait dock throws the sheet along its rail, which is SLIDE at the same page rung;
++ *  both verbs ride the one glass curve, so the three poses keep the ONE clock they have
++ *  always shared and this seam stays a single tuple. Whether the dock wants the shorter
++ *  `step` rung instead is the owner's to dispose, and it is a one-word edit here. */
++const GLIDE = spend("turn", "page");
+ 
+ const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
+ 
+@@ -225,12 +235,13 @@ let targetOpen = drawerOpen.value;
+ // origin) — the host rides `flipTransform`, so `cx` is all that survives here.
+ const cx = (r: DOMRect) => r.left + r.width / 2;
+ 
+-/** The drawer's glide controller — 520ms on the ONE glass curve (the primitive's default
+- *  easing = `MOTION.curves.drawerGlide`), one clock, the never-never guard at 520+220.
++/** The drawer's glide controller — TURN at the page rung (520ms on the ONE glass curve,
++ *  named above, never typed), one clock, the never-never guard at 520+220.
+  *  `onSettle` is the drawer's own settle: demote the gesture layers, re-flip the layout to
+  *  the (possibly reversal-flipped) target, land idle, and focus the panel on open. */
+ const glideCtl = useFlipGlide({
+-  durationMs: GLIDE_MS,
++  durationMs: GLIDE.duration,
++  easing: GLIDE.easing,
+   onSettle: () => {
+     document.documentElement.classList.remove("drawer-gesturing");
+     applyLayout(targetOpen);
+diff --git a/web/frontend/src/games/thermo/ThermoTube.vue b/web/frontend/src/games/thermo/ThermoTube.vue
+index ff009dff..8acd51c4 100644
+--- a/web/frontend/src/games/thermo/ThermoTube.vue
++++ b/web/frontend/src/games/thermo/ThermoTube.vue
+@@ -111,7 +111,7 @@ const tubes = computed<Tube[]>(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .thermo-tube-overlay {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--rung-breath) var(--verb-lift-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..df5189eb 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -714,7 +714,7 @@ onUnmounted(() => {
+   padding: 0;
+   border-radius: 50%;
+   background: transparent;
+-  transition: transform 200ms ease;
++  transition: transform var(--rung-breath) var(--verb-layDown-ease);
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+@@ -742,6 +742,25 @@ onUnmounted(() => {
+   outline-offset: calc(2px - var(--toggle-bleed, 0px));
+ }
+ 
++/* ── THE WHIRL'S BEAT TABLE (T9-W7 §13 pass 2) — data, beside the gesture ──────────
++   The turn is ONE character, admitted whole: eleven values the owner auditioned and kept,
++   and no verb reaches inside them. The table is written here once, and `npm run lint:verbs`
++   (rule 8) reads each rule's own declaration back off it — the prototype's roster reads the
++   COMPUTED duration and delay off the live element and compares against this same table, so
++   a comment that contradicts its declaration reds on the surface the owner audited most.
++   `delayOnly` marks the two rules that carry a bare `transition-delay`.
++
++   @toggle-beats {
++     "wring":  { "selector": ".toggle-icon .warp", "property": "transform", "duration": 340, "delay": 0 },
++     "bloom":  { "selector": ".toggle-icon.is-active .warp", "property": "transform", "duration": 800, "delay": 60 },
++     "rise":   { "selector": ".toggle-icon.is-active", "property": "opacity", "duration": 300, "delay": 60 },
++     "out":    { "selector": ".toggle-icon", "property": "opacity", "duration": 100, "delay": 240 },
++     "tuck":   { "selector": ".toggle-icon .twinkle-star", "property": "scale", "duration": 150, "delay": 0 },
++     "star1":  { "selector": ".toggle-icon.is-active .twinkle-star", "property": "scale", "duration": 150, "delay": 560 },
++     "star2":  { "selector": ".toggle-icon.is-active .twinkle-star-2", "property": "transition-delay", "duration": 0, "delay": 640, "delayOnly": true },
++     "star3":  { "selector": ".toggle-icon.is-active .twinkle-star-3", "property": "transition-delay", "duration": 0, "delay": 720, "delayOnly": true }
++   } */
++
+ /* ── THE BLOOM (T3-W13 §2) — live instances, gesture only ─────────────────
+    The -270° whirl and the translateX(-50%) slide are DEAD: a pop-up piece doesn't
+    travel, it rises out of the page and sinks back into it. Both live icons are
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+index c3adf396..7352b274 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+@@ -181,8 +181,8 @@ defineExpose({ close });
+   pointer-events: none;
+   transform: scale(0.9) translateY(8px);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--rung-touch) var(--verb-layDown-ease),
++    transform var(--rung-touch) var(--verb-layDown-ease),
+     visibility 0s linear 150ms;
+   z-index: 50;
+   min-width: 16rem;
+@@ -203,8 +203,8 @@ defineExpose({ close });
+   pointer-events: auto;
+   transform: scale(1) translateY(0);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--rung-touch) var(--verb-layDown-ease),
++    transform var(--rung-touch) var(--verb-layDown-ease),
+     visibility 0s linear 0s;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+index f662c045..a05a8856 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+@@ -326,7 +326,7 @@ const filterUrl = computed(() => {
+    no motion, PRM-safe by construction. Triggered by the hosting `.group`'s
+    hover/focus-within (the attribution trigger), with a self-hover fallback. */
+ .face {
+-  transition: opacity 240ms ease;
++  transition: opacity var(--rung-mark) var(--verb-layDown-ease);
+ }
+ .face-b {
+   opacity: 0;
+diff --git a/web/frontend/src/pencil/chrome/CompletionVignette.vue b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+index c33a0905..5d7c2954 100644
+--- a/web/frontend/src/pencil/chrome/CompletionVignette.vue
++++ b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+@@ -130,7 +130,7 @@ withDefaults(
+    star needs nothing here: it plays its own landing. */
+ .vignette-voice,
+ .vignette-meta {
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--rung-mark) var(--verb-writeIn-ease) backwards;
+ }
+ 
+ /* ── Row regime base (≥1024): the corner-press sticker over the board's top-RIGHT
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..68423fd1 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -408,8 +408,8 @@ const dealStyle = computed(() => {
+   opacity: var(--d-opacity, 0.58);
+   transform-origin: center center;
+   transition:
+-    transform var(--card-step-ms, 440ms) var(--ease-glassGlide),
+-    opacity var(--card-step-ms, 440ms) var(--ease-glassGlide);
++    transform var(--rung-step) var(--verb-slide-ease),
++    opacity var(--rung-step) var(--verb-slide-ease);
+   will-change: transform, opacity;
+ }
+ 
+@@ -590,7 +590,7 @@ const dealStyle = computed(() => {
+   line-height: 1.1;
+   color: var(--color-muted-foreground);
+   letter-spacing: 0.01em;
+-  transition: color 150ms var(--ease-standard);
++  transition: color var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ /* THE SUB-LINE ROW (T9-W2 §2.1) — the range line and the roster echo on ONE line. The echo
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..bc59ed80 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1317,7 +1317,7 @@ onMounted(async () => {
+   border-radius: 50%;
+   border: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+   background: transparent;
+-  transition: background-color 200ms var(--ease-standard);
++  transition: background-color var(--rung-breath) var(--verb-layDown-ease);
+ }
+ 
+ .gallery-pip.is-inked {
+@@ -1418,8 +1418,8 @@ onMounted(async () => {
+   padding: 0.32rem 0.9rem;
+   border-radius: 0.3rem;
+   transition:
+-    background-color 150ms var(--ease-standard),
+-    color 150ms var(--ease-standard);
++    background-color var(--rung-touch) var(--verb-layDown-ease),
++    color var(--rung-touch) var(--verb-layDown-ease);
+ }
+ 
+ /* THE GROUND FORM (T8 M5, agent C's boil census — R2 in this fence). These are the two most
+@@ -1467,12 +1467,14 @@ onMounted(async () => {
+ }
+ 
+ /* The ribbon SLIDES in (a note pulled from the card) — a CSS transition on the Vue
+-   Transition, the app's card idiom (Wave B's depth transition), not a new animation brain. */
++   Transition, the app's card idiom (Wave B's depth transition), not a new animation brain.
++   LAY DOWN at the `mark` rung: 240 → 250ms, the section's length row (MOT-LADDER files it
++   against R6:48; this family cites). */
+ .guard-ribbon-enter-active,
+ .guard-ribbon-leave-active {
+   transition:
+-    transform 240ms var(--ease-glassGlide),
+-    opacity 240ms var(--ease-glassGlide);
++    transform var(--rung-mark) var(--verb-layDown-ease),
++    opacity var(--rung-mark) var(--verb-layDown-ease);
+ }
+ 
+ .guard-ribbon-enter-from,
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+index f85e4b67..90854285 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
++++ b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+@@ -1,5 +1,5 @@
+ import { onBeforeUnmount, onMounted, type Ref } from "vue";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { spend } from "@pencil/config/pencilConfig";
+ 
+ /**
+  * The carousel track glide (T4-W12 §6) — the same FLIP-on-WAAPI discipline the drawer
+@@ -24,8 +24,10 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * PRM: `glideTo` collapses to an instant `jumpTo` (no tween frames).
+  */
+ 
+-const GLIDE_MS = MOTION.cardStepMs;
+-const GLIDE_EASING = MOTION.curves.drawerGlide;
++/** A card SLIDES one slot along its rail, which is what the step rung is named for
++ *  (T9-W7 §13). Same 440ms, same glass curve; the tuple is spent by name now. */
++const GLIDE = spend("slide", "step");
++const GLIDE_MS = GLIDE.duration;
+ /** Never-never backstop (App.vue's seam-guard grammar): a glide whose `finished` can't
+  *  resolve (unmounted mid-flight) settles late, never never. */
+ const SETTLE_GUARD_MS = GLIDE_MS + 200;
+@@ -328,10 +330,7 @@ export function useCarouselGlide(
+     anim = t.animate(
+       [{ transform: `translateX(${dx}px)` }, { transform: "translateX(0px)" }],
+       {
+-        duration: GLIDE_MS,
+-        easing: GLIDE_EASING,
+-        composite: "replace",
+-        fill: "none",
++        ...GLIDE,
+       },
+     );
+     // One clock (the drawer's §3-S3 discipline): pin the start so the first painted
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 1f4a357c..341bf15e 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -644,7 +644,7 @@ span.logo-trigger {
+   height: var(--caret-size);
+   color: var(--color-foreground);
+   transform: translateY(var(--caret-nudge)) rotate(90deg);
+-  transition: transform 200ms var(--ease-noteWrite);
++  transition: transform var(--rung-breath) var(--verb-layDown-ease);
+ }
+ 
+ @media (min-width: 640px) {
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..899a5c20 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -146,7 +146,21 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--rung-mark) var(--verb-writeIn-ease) backwards;
++}
++
++/* RUB OUT (T9-W7 §13) — the note's exit, which the estate has never had. The write-in run
++   backwards under an accelerating hand: the clip retreats from the edge the ink arrived at
++   and the ink goes with it. The rest pose here IS the keyframe's `to`, so the fill stays
++   `backwards` like every other verb, nothing is retained after the run, FILL_ALLOWLIST never
++   hears about it, and under reduced motion (where the keyframe is cut and the rung reads
++   zero) the same-frame result is the erased state. The keyframe lives in index.css beside
++   ink-write-in, because a scoped one would hash per component.
++   The verb is defined here; WHICH acts erase a note is not this family's to design. */
++.margin-note-ink.is-rubbing-out {
++  opacity: 0;
++  clip-path: inset(0 0 0 100%);
++  animation: ink-rub-out var(--rung-breath) var(--verb-rubOut-ease) backwards;
+ }
+ 
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+@@ -177,6 +191,6 @@ const NOTE_STAR_D =
+      .dt-label for this exact reason never reached the note. */
+   color: var(--ink-press-quiet);
+   pointer-events: auto;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--rung-mark) var(--verb-writeIn-ease) backwards;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..49102895 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -118,6 +118,35 @@ export interface FilterPreset {
+ // the same rAF tick and the pipeline gets idle frames between beats. Cadences quantize
+ // to whole beats (`beatsFor`); amplitudes, seeds, and the boil character are untouched.
+ 
++/** ── THE RUNGS (T9-W7 §13, the pencil verbs) ──────────────────────────────────
++ *  A duration is named for how far a thing TRAVELS, never for how it feels. These six
++ *  are not a scale someone invented: they are the estate's own histogram given names
++ *  (150ms ×21, 200ms ×16, 250ms ×9 — 43.8% of every literal shipped; 280 ×3; 440 and
++ *  520 were already MOTION's own). A seventh rung is a diff review, not a freedom.
++ *  Published to CSS as `--rung-*` by `scripts/publish-verbs.mjs`; under
++ *  `prefers-reduced-motion: reduce` every one of them reads 0ms at `:root`, stated once,
++ *  so PRM is a VALUE of this ladder rather than a block in every file.
++ *
++ *  A RUNG IS TRAVEL, NEVER A WAIT (T9-W7 pass 2, rule 2′). The first time value in a term is
++ *  how far; the second is when, and it keeps its own number. Spelling a delay as a rung is
++ *  what moved six decided beats in pass 1 — the toggle's rise, its wring, the stars' stagger —
++ *  because a delay that reads a rung is retuned by a ladder it never belonged to. */
++/* @verbs-begin */
++const RUNGS = {
++  /** a whole sheet, or the whole board, turns over */
++  page: 520,
++  /** one slot of travel along a rail */
++  step: 440,
++  /** a sheet is laid on the page */
++  sheet: 280,
++  /** a mark is made, or unmade */
++  mark: 250,
++  /** a thing stops being there */
++  breath: 200,
++  /** the page answers a pointer */
++  touch: 150,
++} as const;
++
+ export const MOTION = {
+   /** The one beat window every perpetual boil swap lands on (~8Hz). */
+   beatMs: 125,
+@@ -146,21 +175,132 @@ export const MOTION = {
+    *  the Wave-D preview (:4788) against 380/440/520 — 380 read clipped for a one-slot
+    *  throw, 520 (the drawer's full-sheet ceiling) dragged for the shorter travel; 440
+    *  is the settled read, monotone on the glass curve with zero overshoot (`snap-glide-
+-   *  trace.json`). Inside the glass band, no new named curve. */
+-  cardStepMs: 440,
++   *  trace.json`). Inside the glass band, no new named curve.
++   *
++   *  T9-W7: an ALIAS of `rungs.step` — a card step travels one slot, which is what the
++   *  rung is named for. The alias holds this pass so no consumer churns; it dies the
++   *  pass after, with its call sites renamed to `spend("slide", "step")`. */
++  cardStepMs: RUNGS.step,
+   /** Board⇄card FOLD (T4-W12 Wave C) — the gallery entry folds the live board INTO the
+    *  center card (and the exit unfolds it back) as a classic FLIP on the ONE glass curve
+    *  (`curves.drawerGlide`) via the extracted `useFlipGlide` engine. A FULL-sheet throw
+    *  (board → card-face, not one card slot), so it takes the drawer's glass ceiling 520ms
+    *  — longer than the 440ms card-step. Lands HERE, not as an App-local literal, per the
+-   *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap). */
+-  boardFoldMs: 520,
++   *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap).
++   *
++   *  T9-W7: an ALIAS of `rungs.page`. A fold is never shorter than a page, which is why
++   *  TURN may spend that rung and no other. Dies the pass after, like its two siblings. */
++  boardFoldMs: RUNGS.page,
+   /** BEAT 0 — chrome leaves (T4-W12 Wave C2 §ENTRY). The gallery entry opens by fading the
+    *  scene's controls/drawer out on the EXISTING scene-leaving beat (scene.css, 200ms) — the
+    *  board itself never erases (we fold it, not discard it). This is that band, so the fold
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+-  chromeLeaveMs: 200,
++  chromeLeaveMs: RUNGS.breath,
++  /** ── THE PENCIL VERBS (T9-W7 §13) ────────────────────────────────────────────
++   *  Motion here is named by what a HAND DOES ON PAPER. Six hand verbs and one light
++   *  verb, closed. A verb owns its curve, its property set, its fill arm, its PRM arm
++   *  and THE RUNGS IT MAY SPEND; it owns no number, so a call site names a verb and a
++   *  rung and never types a duration or picks a curve. `--verb-*` in @theme is this
++   *  object published byte for byte by `scripts/publish-verbs.mjs`; `npm run lint:verbs`
++   *  diffs the two layers and refuses a declaration that names neither.
++   *
++   *  SHAPE vs TIMING, the other half of the grammar: T6's motion vocabulary
++   *  (`assets/index.css` §THE MOTION VOCABULARY) names what geometry DOES — the KIN
++   *  families, and the `--ease-*` set spent inside `@keyframes` as a per-step timing
++   *  function. It says numbers do not live there, and this is where they live. A shape
++   *  verb consumes a timing verb. Neither set is called "the verbs" twice. */
++  rungs: RUNGS,
++  verbs: {
++    /** a hand puts something on the page and it stays. `breath` is here because a ground
++     *  arriving at 200ms is the estate's second-commonest length: without that rung three
++     *  shipped rows (the sparkle, the gallery pip, the toggle's hover) were silently
++     *  lengthened to `mark` for no reason but the ladder's gaps. `filter` is here because
++     *  the `transition: all` cure names `filter, transform`, and a property law that reds
++     *  its own cure is a law nobody keeps. */
++    layDown: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "opacity, transform, background-color, color, box-shadow, stroke, filter",
++      fill: "none",
++      mechanism: ["transition", "keyframe"],
++      rungs: ["page", "sheet", "mark", "breath", "touch"],
++    },
++    /** a hand takes something off the page. ONE curve over both declared twins (the
++     *  chrome-leave in `scene.css` and the deck's leave-only dissolve in `App.vue`) and
++     *  over the laminate's lift-away: `--ease-fadeOut` and `--ease-accelIn` are the same
++     *  leave within 2% AUC, so they collapse here instead of arguing. `--ease-fadeOut`
++     *  retires INTO this row; `--ease-accelIn` keeps its two SHAPE consumers and loses
++     *  its two timing ones. */
++    lift: {
++      ease: "cubic-bezier(0.32, 0, 0.67, 0)",
++      props: "opacity, transform, scale",
++      fill: "none",
++      mechanism: ["transition", "keyframe"],
++      rungs: ["breath", "mark", "touch"],
++    },
++    /** the page itself turns; what was here is now there. Fenced to `page` alone — a
++     *  fold is never shorter than a page — which is what makes TURN and SLIDE two verbs
++     *  on one curve rather than one verb with a loose number. Carries the owner's
++     *  audit-4 ruling verbatim: the glass curve at 520ms, scope-fenced to the drawer and
++     *  the fold that borrows its ceiling. */
++    turn: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "transform",
++      fill: "none",
++      mechanism: ["waapi"],
++      rungs: ["page"],
++      /** The one verb NO stylesheet spends: every turn in the product is a script mover, so
++       *  publishing `--verb-turn-ease` would mint a token with no consumer and the estate's
++       *  dead-token census would red on it (measured — `check-theme-tokens` names it). The
++       *  curve still has a CSS mirror where CSS needs one: `--ease-glassGlide`, byte-identical,
++       *  under the two-layer rule. `published: false` keeps the two layers diffable without
++       *  minting ink nothing reads. */
++      published: false,
++    },
++    /** a thing travels its rail and stays itself */
++    slide: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "transform, opacity",
++      fill: "none",
++      mechanism: ["waapi", "transition"],
++      rungs: ["page", "step", "sheet", "touch"],
++    },
++    /** ink arrives the way a hand writes it */
++    writeIn: {
++      ease: "cubic-bezier(0.22, 1, 0.36, 1)",
++      props: "clip-path, stroke-dashoffset, opacity",
++      fill: "backwards",
++      mechanism: ["keyframe"],
++      rungs: ["mark", "breath", "touch"],
++    },
++    /** ink leaves the way a hand erases it — the write-in run backwards under an
++     *  accelerating hand. §7's hole, given a tuple. The keyframe's `to` equals the
++     *  consumer's cascade rest pose, so the fill is `backwards` like every other verb
++     *  and `FILL_ALLOWLIST` never hears about it. */
++    rubOut: {
++      ease: "cubic-bezier(0.32, 0, 0.67, 0)",
++      props: "clip-path, opacity",
++      fill: "backwards",
++      mechanism: ["keyframe"],
++      rungs: ["breath", "mark"],
++    },
++    /** THE CLOSED-SET TEST. A change of LIGHT over the whole page is not a lay-down, a
++     *  lift, a turn or a slide, so the light gets a verb of its own — and the one own
++     *  number in the set, which the gate counts (exactly one own-ms verb, ever). The
++     *  curve is CSS `ease`'s own control points under a name, so the paint is
++     *  byte-identical to what ships: the memorable thing about the dusk is that it does
++     *  not move at all, it gets a name and a home. Its selectors stay the FIVE narrowed
++     *  ones (`assets/index.css`), never the 46 P1-W3 killed for +23.5 fps. */
++    dusk: {
++      ease: "cubic-bezier(0.25, 0.1, 0.25, 1)",
++      ms: 350,
++      props: "background-color, color",
++      fill: "none",
++      mechanism: ["transition"],
++      rungs: [],
++    },
++  },
++  /* @verbs-end */
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+@@ -194,6 +334,28 @@ export const MOTION = {
+   },
+ } as const;
+ 
++/** The verbs a WAAPI mover may spend: DERIVED from each verb's own `mechanism`, never listed
++ *  twice. `spend("writeIn", …)` is a type error rather than a masked fallback — a keyframe
++ *  verb has no options half to hand a mover. */
++type WaapiVerb = {
++  [K in keyof typeof MOTION.verbs]: "waapi" extends (typeof MOTION.verbs)[K]["mechanism"][number]
++    ? K
++    : never;
++}[keyof typeof MOTION.verbs];
++
++/** A WAAPI mover SPENDS a verb at a rung (T9-W7 §13): it never types a number and it
++ *  never picks a curve. Returns the options half of `element.animate(keyframes, …)`;
++ *  the keyframes stay the caller's, because the SHAPE is theirs and the TIMING is ours.
++ *  The fill comes from the VERB (pass 2) — it is the verb's arm, not the mover's taste, and
++ *  no verb fills `forwards`, so `FILL_ALLOWLIST` never hears about a spend. */
++export const spend = <V extends WaapiVerb>(verb: V, rung: keyof typeof MOTION.rungs) =>
++  ({
++    duration: MOTION.rungs[rung],
++    easing: MOTION.verbs[verb].ease,
++    fill: MOTION.verbs[verb].fill,
++    composite: "replace",
++  }) as const;
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..20ef0c97 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -586,8 +586,8 @@ onUnmounted(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+     transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++      stroke-dashoffset var(--rung-mark) var(--verb-writeIn-ease),
++      opacity var(--rung-page) var(--verb-layDown-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+index 48de51d2..24a8387d 100644
+--- a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
++++ b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+@@ -218,12 +218,13 @@ const keyBucketMs = computed(() =>
+   z-index: 3; /* above the cells layer, a sibling over the board — never inside its <g> */
+   border-radius: 0.75rem; /* match board-wrapper rounded-xl */
+   pointer-events: none;
+-  /* lift-away (leaving): fast + easeInCubic (the erase-family asymmetry) */
++  /* lift-away (leaving): LIFT at the `breath` rung — the erase-family asymmetry, same 200ms,
++     and the curve is the one leave this house has (3.2% of area off easeInCubic, declared) */
+   opacity: 0;
+   transform: scale(1.02);
+   transition:
+-    opacity 200ms var(--ease-accelIn),
+-    transform 200ms var(--ease-accelIn);
++    opacity var(--rung-breath) var(--verb-lift-ease),
++    transform var(--rung-breath) var(--verb-lift-ease);
+ }
+ 
+ .answer-key-laminate.is-shown {
+@@ -234,8 +235,8 @@ const keyBucketMs = computed(() =>
+   opacity: 1;
+   transform: scale(1);
+   transition:
+-    opacity 280ms var(--ease-glassGlide),
+-    transform 280ms var(--ease-glassGlide);
++    opacity var(--rung-sheet) var(--verb-layDown-ease),
++    transform var(--rung-sheet) var(--verb-layDown-ease);
+ }
+ 
+ .key-cell {
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..2265c7ae 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -106,7 +106,7 @@ const geom = computed(() => {
+   border: none;
+   opacity: 0;
+   pointer-events: none;
+-  transition: opacity 150ms;
++  transition: opacity var(--rung-touch) var(--verb-layDown-ease);
+   /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+      the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+      controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it

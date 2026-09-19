@@ -1,0 +1,893 @@
+diff --git a/web/frontend/e2e/font-census.spec.ts b/web/frontend/e2e/font-census.spec.ts
+index eeffd803..5bcffccf 100644
+--- a/web/frontend/e2e/font-census.spec.ts
++++ b/web/frontend/e2e/font-census.spec.ts
+@@ -47,16 +47,16 @@ import { test, expect, type Page } from "@playwright/test";
+ /** Strings that render in a second face today, with the reason each is tolerated. Keys are
+  *  `face|shown`. Anything rendered and mixed that is NOT here fails the row. */
+ const LEDGER: Record<string, string> = {
+-  // ── Fira Code: the cut covers the SIZE and DIFFICULTY chips (4×4 · 9×9 · 16×16 · Easy ·
+-  // Medium · Hard) and nothing else. The live-zone chips joined the same component later and
+-  // were never in the corpus. Pre-existing, estate-wide, unledgered until now.
+-  "Fira Code|Normal": "live-zone chip; o/l/N outside the size+difficulty cut",
+-  "Fira Code|Corner": "live-zone chip; C/o/n outside the cut",
+-  "Fira Code|Center": "live-zone chip; C/n/t outside the cut",
+-  "Fira Code|Off": "live-zone chip; O/f outside the cut",
+-  "Fira Code|On": "live-zone chip; O/n outside the cut",
+-  "Fira Code|Ask": "live-zone chip; A/k outside the cut",
+-  "Fira Code|Live": "live-zone chip; L/v outside the cut",
++  // ── T9-W7 CTRL-FACE RETIRED ELEVEN ROWS HERE, and they are the whole of this ledger's
++  // option-chip population. The seven `Fira Code|…` live-zone rows are gone because the chips
++  // are WRITTEN now: the face law moved every option value to Patrick Hand and lowercased it
++  // by CSS, so the strings this census reads are `normal` / `corner` / `center` / `off` / `on`
++  // / `ask` / `live` and every codepoint is in the hand's cut. `Patrick Hand|Easy`, `|Medium`
++  // and `|Hard` (the closed tab's value, UI-12) go with them — the same transform, plus the
++  // re-cut that took A E H L M N O for the gate's both-cases rule; the two CONDITIONAL rows
++  // below went with them for the same reason. `Patrick Hand|H` (keycap) is retired by the
++  // re-cut alone: H is in the cut now, so the keycap draws in the hand like every other
++  // letter it names. K/P/Z/G/D and the glyph keycaps still fall through and still ledger.
+   // ── Patrick Hand: the cut declares C/R/S as its only capitals. Every other capital in the
+   // hand register falls through. Pre-existing.
+   // T6 mark 12 RETIRED FOUR ROWS HERE — `Deal`, `Fill`, `Undo`, `Hint`. The sublabels wear
+@@ -65,13 +65,9 @@ const LEDGER: Record<string, string> = {
+   // codepoint is in the cut. Leaving them would red the BACKWARD arm at `:291` as stale, which
+   // is the direction that exists so a ledger cannot quietly become a list. (The `"Deal"`
+   // literal in the CAGE_LABEL negative control below is a regex fixture, not a ledger row.)
+-  "Patrick Hand|Easy": "closed-tab value (UI-12); E outside the cut",
+-  "Patrick Hand|Medium": "closed-tab value (UI-12); M outside the cut",
+-  "Patrick Hand|Hard": "closed-tab value (UI-12); H outside the cut",
+   // ── the keyboard legend is literally a set of capital keycaps, and a keycap that renders in
+   // the system face still reads as the key it names.
+   "Patrick Hand|K": "keycap",
+-  "Patrick Hand|H": "keycap",
+   "Patrick Hand|P": "keycap",
+   "Patrick Hand|Z": "keycap",
+   // T5-W3 row 3.6 (a11y r1 L10): the crib grew the two bare keys it never named — G (games)
+@@ -100,8 +96,8 @@ const LEDGER: Record<string, string> = {
+  *  it. The backward check exempts exactly these, by key — a row that stops rendering for any
+  *  OTHER reason still reds as stale, which is the direction the row was missing. */
+ const CONDITIONAL: Record<string, string> = {
+-  "Patrick Hand|Medium": "closed-tab value; every cell below deals EASY",
+-  "Patrick Hand|Hard": "closed-tab value; every cell below deals EASY",
++  // T9-W7: the two closed-tab values left with their LEDGER rows (see above) — a conditional
++  // row for a string that can no longer render mixed is a claim about a page that has moved on.
+   "Patrick Hand|Ctrl": "keycap; the legend draws ⌘ on Apple platforms and Ctrl elsewhere",
+ };
+ 
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index f288137a..e79e6adb 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -676,17 +676,24 @@ test.describe("coarse regime", () => {
+ 
+     // The chips still carry the whole of the state, and they say it the way every other option
+     // row in the estate does — `aria-pressed`, which is the announcement the sentence duplicated.
+-    await well.locator('.ctrl-btn:text-is("Live")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    // THE SELECTOR NAMES THE WORD'S OWN SPAN (T9-W7 CTRL-FACE). `:text-is()` matches the
++    // SMALLEST element carrying the text, so wrapping each label in `.ctrl-word` — the span the
++    // scribble is measured against — left `.ctrl-btn:text-is("Live")` matching nothing and this
++    // row timing out in both engines. Measured while fixing it: the engine reads `textContent`,
++    // not the painted text, so the CSS lowercasing is not what moved (`:text-is("live")` finds
++    // 0 and `:text-is("Live")` finds 1 on a chip that paints `live`). The authored word is
++    // still the assertion above; the state is still read off the BUTTON.
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await well.locator('.ctrl-btn:text-is("Off")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Off")')).toHaveAttribute(
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "false",
+     );
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 4a00b36e..99b4a095 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -55,6 +55,18 @@
+  * compared here, both directions: a re-cut that adds `x` leaves the generator refusing a name
+  * the page can now draw, and one that drops a letter puts a half-drawn slug on a roster row.
+  *
++ * ── T9-W7 CTRL-FACE — CHECK 6, THE FACE LAW (the spec's "check 4"; the file numbers it sixth
++ * because five were already numbered) ──────────────────────────────────────────────────────
++ * Every check above binds a FACE to a CORPUS by a hand-written `where` label, and not one of
++ * them reads which face a selector actually renders in. So a face re-point is invisible here:
++ * measured at the CTRL-FACE research lane, this gate printed `font coverage OK` while `pencils`
++ * and `players` painted their `p` in Georgia at weight 800 — the T8 ransom-note trap re-armed
++ * from the other side, a cut that is honest about a register nothing renders in any more.
++ * `FACE_SITES` closes it: each site names the family it must paint in, the script finds the
++ * rule block that sets `font-family` AT that selector, and resolves the value through the
++ * `--face-*` / `--font-*` tokens. A literal family string reds — a face reachable from no token
++ * is a face no voice can re-cut.
++ *
+  *   node scripts/check-font-coverage.mjs
+  */
+ import { readFileSync, readdirSync } from "node:fs";
+@@ -104,16 +116,39 @@ const EXTRACT = {
+     what: '`label: "…"` in src/games/cards.ts (the picker\'s axis captions)',
+     run: () => grab(pick(/^src\/games\/cards\.ts$/), /\blabel:\s*"([^"]+)"/g),
+   },
++  // T9-W7 CTRL-FACE — the tapes split by ANCHOR, because the two anchors no longer share a
++  // face: a `tag` tape is a compartment's printed NAME (Fraunces), every other tape is a note
++  // in the hand. The union is unchanged, so nothing left the derivation.
+   washiTapes: {
+-    what: 'static `text="…"` on <SheetWashiLabel> across src/**/*.vue',
++    what: 'static `text="…"` on a non-tag <SheetWashiLabel> across src/**/*.vue',
+     run: () =>
+       pick(/\.vue$/).flatMap((f) =>
+         [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
++          .filter((m) => !/anchor="tag"/.test(m[0]))
+           .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
+           .filter(Boolean)
+           .map((m) => ({ s: m[1], where: f.rel })),
+       ),
+   },
++  washiTags: {
++    what: 'static `text="…"` on <SheetWashiLabel anchor="tag"> — the compartment names',
++    run: () =>
++      pick(/\.vue$/).flatMap((f) =>
++        [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
++          .filter((m) => /anchor="tag"/.test(m[0]))
++          .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
++          .filter(Boolean)
++          .map((m) => ({ s: m[1], where: f.rel })),
++      ),
++  },
++  optionLabels: {
++    what: '`label: "…"` in src/games/shared/selectors.ts and GameControlPanel\'s option consts',
++    run: () =>
++      grab(
++        pick(/^src\/games\/shared\/(selectors\.ts|GameControlPanel\.vue)$/),
++        /\blabel:\s*"([^"]+)"/g,
++      ),
++  },
+   zoneRowLabels: {
+     what: "the static text of a `.zone-row-label` span",
+     run: () =>
+@@ -180,6 +215,22 @@ const FACES = [
+         derive: ["cardNames"],
+         strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
+       },
++      // T9-W7 CTRL-FACE — the compartment names and the row captions are PRINTED now (the
++      // sheet's own eight nouns), so they move here from the hand's corpus. `p` is the one
++      // letter the eight names need that the cut never held: `pencils` and `players` painted
++      // it in Georgia at weight 800, mid-word, proved by advance in both engines.
++      {
++        where: ".washi-tag (the compartment names)",
++        transform: "lowercase",
++        derive: ["washiTags"],
++        strings: ["new game", "pencils", "checking", "players"],
++      },
++      {
++        where: ".zone-row-label (row captions)",
++        transform: "lowercase",
++        derive: ["zoneRowLabels"],
++        strings: ["marks", "candidates"],
++      },
+     ],
+   },
+   // THE SECOND FACE (T4-P1, stage BC). The hand register was never in this gate, and the zone
+@@ -201,30 +252,48 @@ const FACES = [
+       // exactly. All twelve are declared here and all twelve clear the cut (measured \u2014 the
+       // hand's repertoire is lowercase, and the tooltips are written in it).
+       {
+-        where: ".washi-tag (compartment names) + the tapes",
++        where: "the hover/persistent tapes (the notes, not the names)",
+         transform: "none",
+         derive: ["washiTapes"],
+         strings: [
+-          "new game",
+-          "pencils",
+           "teacher's",
+           "hold to peek",
+           "normal writes a digit. corner and center write small pencil marks",
+           "show every digit that still fits in a cell",
+-          "checking",
+           "when your mistakes get checked",
+-          "players",
+           "share this board and everyone writes on the same grid",
+           "wipe every digit you've written",
+           "fill the cells that have only one digit left",
+           "the solver finishes the board",
+         ],
+       },
++      // T9-W7 CTRL-FACE \u2014 every option VALUE is written, and the register had never been in
++      // this gate at all: `.heading-value` renders the authored `Easy` with no transform, so
++      // its `E` has painted in the system cursive mid-word for the life of the closed tab.
++      // The face law lowercases both sites; the corpus carries the authored form too, per the
++      // both-cases rule at the head of this file, which is what the +A E H L M N O re-cut buys.
+       {
+-        where: ".zone-row-label (row captions)",
+-        transform: "none",
+-        derive: ["zoneRowLabels"],
+-        strings: ["marks", "candidates"],
++        where: ".ctrl-btn + .heading-value (the option values)",
++        transform: "lowercase",
++        derive: ["optionLabels"],
++        strings: [
++          "Easy",
++          "Medium",
++          "Hard",
++          "4\u00d74",
++          "9\u00d79",
++          "16\u00d716",
++          "5\u00d75",
++          "6\u00d76",
++          "7\u00d77",
++          "Normal",
++          "Corner",
++          "Center",
++          "Off",
++          "Ask",
++          "Live",
++          "On",
++        ],
+       },
+       // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
+       // them. The cut is NOT re-narrowed: `level` (the picker's difficulty caption, the string
+@@ -564,6 +633,92 @@ const WRITEABLE_SRC = "src/games/shared/playerIdentity.ts";
+   }
+ }
+ 
++// 6. THE FACE LAW (T9-W7 CTRL-FACE; the spec's "check 4"). PRINTED is what the sheet came
++// printed with — the eight group names; WRITTEN is what a pencil put there — every value and
++// every verb. Each site declares its face AT the site, through a token, and this compares the
++// declaration to the law. A literal family string is red on its own: it is unreachable from
++// any voice, which is how `"Fira Code", monospace` outlived three type re-cuts in a template.
++const FACE_SITES = {
++  ".section-heading": "Fraunces",
++  ".washi-tag": "Fraunces",
++  ".zone-row-label": "Fraunces",
++  ".ctrl-btn": "Patrick Hand",
++  ".heading-value": "Patrick Hand",
++  ".icon-sublabel": "Patrick Hand",
++};
++{
++  /** Every flat CSS rule block on the tree — `<style>` blocks in .vue, whole .css files. */
++  const blocks = [];
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    let css = f.rel.endsWith(".vue")
++      ? [...f.text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
++          .map((m) => m[1])
++          .join("\n")
++      : f.text;
++    css = css.replace(/\/\*[\s\S]*?\*\//g, " ");
++    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
++      const sel = m[1].trim();
++      if (!sel || sel.startsWith("@")) continue; // at-rule preludes, never a selector
++      blocks.push({ where: f.rel, sel, body: m[2] });
++    }
++  }
++  /** `--font-*` / `--face-*` definitions, so a face is resolved the way the browser does. */
++  const tokens = {};
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    for (const m of f.text.matchAll(/(--(?:font|face)-[\w-]+)\s*:\s*([^;]+);/g))
++      if (!(m[1] in tokens)) tokens[m[1]] = m[2].trim();
++  }
++  const resolve = (value) => {
++    const seen = new Set();
++    let v = value.trim();
++    let m;
++    while ((m = /^var\(\s*(--[\w-]+)\s*(?:,[\s\S]*)?\)$/.exec(v))) {
++      if (seen.has(m[1]) || !(m[1] in tokens)) return null;
++      seen.add(m[1]);
++      v = tokens[m[1]].trim();
++    }
++    return v.split(",")[0].replace(/["']/g, "").trim();
++  };
++  for (const [sel, family] of Object.entries(FACE_SITES)) {
++    const token = new RegExp(`\\${sel}(?![\\w-])`);
++    const declaring = blocks
++      .filter((b) => b.sel.split(",").some((s) => token.test(s)))
++      .map((b) => ({
++        ...b,
++        decl: /(?:^|[;{\s])font-family\s*:\s*([^;]+)/.exec(b.body),
++      }))
++      .filter((b) => b.decl);
++    if (!declaring.length) {
++      problems.push(
++        `the face law: no rule sets \`font-family\` AT \`${sel}\`, so the site inherits its ` +
++          `face from whatever encloses it. A face that is not declared at the site cannot be ` +
++          `re-cut at the site — declare it there, reading one face token.`,
++      );
++      continue;
++    }
++    for (const d of declaring) {
++      const raw = d.decl[1].trim();
++      if (!raw.startsWith("var(")) {
++        problems.push(
++          `the face law: ${d.where} sets \`${sel} { font-family: ${raw} }\` — a LITERAL family. ` +
++            `No voice can re-cut what no token names; read \`--face-printed\` / ` +
++            `\`--face-written\` instead.`,
++        );
++        continue;
++      }
++      const got = resolve(raw);
++      if (got !== family)
++        problems.push(
++          `the face law: ${d.where} paints \`${sel}\` in ${got ?? "an unresolvable family"} ` +
++            `(\`${raw}\`) and the law says ${family}. PRINTED is the eight group names; ` +
++            `WRITTEN is every value and every verb.`,
++        );
++    }
++  }
++}
++
+ if (problems.length) {
+   console.error("font coverage FAILED:");
+   for (const p of problems) console.error(`  · ${p}`);
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..0ae290e7 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -21,7 +21,7 @@
+  * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
+  * rendered strings and fails if the cmap misses one.
+  *
+- *   fraunces-subset.woff2   14,636 B  — WORDMARK + HEADINGS ONLY (opsz+wght
++ *   fraunces-subset.woff2   14,896 B  — WORDMARK + THE PRINTED NAMES (opsz+wght
+  *                                       variable, SOFT/WONK pinned like the
+  *                                       CDN's own served instance). unicode-range
+  *                                       gates it to exactly that repertoire so
+@@ -36,12 +36,18 @@
+  *                                       again at the T8 live-pass cures: the
+  *                                       eyebrow went Difficulty → Level, adding
+  *                                       L and v (the census caught "level"'s v
+- *                                       painting in Georgia mid-word). Now 30
+- *                                       codepoints, 14,636 B.
+- *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
+- *                                       OptionSelector size/difficulty label
+- *                                       (both games) + the "@mbabb" byline.
+- *   patrickhand-subset.woff2 4,312 B  — full realistic app coverage: every
++ *                                       painting in Georgia mid-word), and again
++ *                                       at T9-W7's face law: the eight group
++ *                                       NAMES are printed now, so +p — the one
++ *                                       letter they need that the cut lacked,
++ *                                       and `pencils`/`players` had been paying
++ *                                       for it in Georgia at weight 800 (proved
++ *                                       by advance, both engines). Now 31
++ *                                       codepoints, 14,896 B (+260).
++ *   firacode-subset.woff2    3,624 B  — the "@mbabb" byline. (T9-W7: the option
++ *                                       labels left this face for the hand; the
++ *                                       file stays, the byline still reads it.)
++ *   patrickhand-subset.woff2 4,896 B  — full realistic app coverage: every
+  *                                       MarginNote status string, SolverErrorNote
+  *                                       paper-note variant, SheetWashiLabel
+  *                                       tooltip, + the wordmark dropdown list.
+@@ -51,9 +57,15 @@
+  *                                       the P5 range wrongly excluded both while
+  *                                       the file carried them, so "solved it!"
+  *                                       et al. rendered those two glyphs in the
+- *                                       cursive fallback.
++ *                                       cursive fallback. Re-derived at T9-W7:
++ *                                       the option VALUES joined this face, and
++ *                                       the both-cases rule above wants their
++ *                                       authored initials — +A E H L M N O
++ *                                       (+584 B). `.heading-value` had been
++ *                                       drawing `Easy`'s E in the system cursive
++ *                                       since UI-12 shipped.
+  *
+- * Total self-hosted: 22,572 B for all three faces, same-origin, immutable-
++ * Total self-hosted: 23,416 B for all three faces, same-origin, immutable-
+  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
+  */
+ @font-face {
+@@ -64,13 +76,16 @@
+   font-stretch: 100%;
+   src: url("./fonts/fraunces-subset.woff2") format("woff2");
+   /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
+-     space · B C D L M N S · a-i · k-o · r-w · y z  (30 codepoints). Re-cut at the T8
++     space · B C D L M N S · a-i · k-p · r-w · y z  (31 codepoints). Re-cut at the T8
+      live-pass cures: the drawer eyebrow went Difficulty → Level, and neither L nor v had
+      ever been asked of this face — the e2e font census caught "level" painting its v in
+-     the Georgia fallback mid-word. Same recipe as P1-W3 (instancer SOFT=0 WONK=1, then
+-     pyftsubset), both cases per the coverage gate's rule. */
++     the Georgia fallback mid-word. Re-cut again at T9-W7 (the face law): the compartment
++     names and the row captions are printed now, and `p` is the single letter the eight
++     nouns need that this cut never held. Same recipe as P1-W3 (instancer SOFT=0 WONK=1,
++     then pyftsubset --layout-features= --no-hinting), both cases per the coverage gate's
++     rule. */
+   unicode-range:
+-    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0077,
++    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-0070, U+0072-0077,
+     U+0079-007A;
+ }
+ 
+@@ -91,9 +106,14 @@
+   font-weight: 400;
+   font-display: swap;
+   src: url("./fonts/patrickhand-subset.woff2") format("woff2");
++  /* T9-W7 — the written register took the option VALUES, so the cut takes their authored
++     initials (A E H L M N O) beside the C R S it already held: the gate's both-cases rule,
++     which is what keeps a later change of transform from painting `Easy` in the cursive
++     fallback the way `.heading-value` has been doing since UI-12. */
+   unicode-range:
+-    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053,
+-    U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
++    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0041, U+0043, U+0045,
++    U+0048, U+004C-004F, U+0052, U+0053, U+0061-0069, U+006B-0077, U+0079-007A, U+00D7,
++    U+2014, U+2026;
+ }
+ 
+ @layer base {
+@@ -461,6 +481,17 @@
+    nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+    reads the same four classes off the same page as the tokens they resolve through — a
+    layered home would lose to every unlayered author rule that sets `color`. */
++/* T9-W7 CTRL-FACE — and the closed tab's VALUE word rides the same cascade. Its quiet ink is
++   the default a section without a tier wears; a section with one writes its value in the tier's
++   crayon, the way the open tab's name does. Layered here so the unlayered classes below outrank
++   it, which is the mechanism the paragraph above describes, applied to the other half of the
++   tab row. (`GameControlPanel` keeps the rest of `.heading-value`; only the ink is here.) */
++@layer components {
++  .heading-value {
++    color: var(--ink-press-quiet);
++  }
++}
++
+ .crayon-green {
+   color: var(--color-green-ink);
+ }
+diff --git a/web/frontend/src/assets/typography.css b/web/frontend/src/assets/typography.css
+index 89fab7aa..fa65cc4a 100644
+--- a/web/frontend/src/assets/typography.css
++++ b/web/frontend/src/assets/typography.css
+@@ -121,50 +121,43 @@
+   --type-verb: var(--type-caption); /* clear · fill · solve · share */
+   --type-tool: var(--type-caption); /* undo · redo · hint — the play tools */
+   --type-tag: var(--type-caption); /* row caption · closed-tab value · roster */
+-  --type-group-title: var(--type-subheading); /* the section heading */
++  --type-group-title: var(--type-heading); /* the group NAME — φ at every width */
+ }
+ 
+-/* The heading's second arm. It lives HERE, unlayered, and not beside
+-   `.section-heading` in `@layer components`: an unlayered declaration outranks a
+-   layered one whatever the media query says, so a `:root` written inside that
+-   layer would lose to the block above and the ≥768 heading would silently drop a
+-   rung. (Measured the wrong way round once; the rule is the cascade's, not
+-   this file's.) */
+-@media (min-width: 768px) {
+-  :root {
+-    --type-group-title: var(--type-heading); /* √φ → φ at the md rung */
+-  }
+-}
+-
+-/* THE OPTION CHIP'S RUNG, and it is spelled as three width arms because that is
+-   what it ALREADY WAS — four arbitrary Tailwind utilities in `OptionSelector`'s
+-   template (`text-[1rem] md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`),
+-   invisible to the ladder and unreachable from any token. The literals move here
+-   unchanged, so every rung renders byte-identical; what changes is that they are
+-   now ONE name a later voice can re-cut. */
++/* ── THE FACE LAW (T9-W7 CTRL-FACE) — printed and written ───────────────────
++   PRINTED is what the sheet came printed with: the eight group names, and only
++   those (new game · size · level · pencils · marks · candidates · checking ·
++   players). WRITTEN is what a pencil put there: every value and every verb.
++   The sites read a FACE the way they read a ROLE — one token each, AT the site,
++   because a shared rule in `@layer components` loses a specificity tie to a
++   scoped component sheet and drops `font-family` in silence (measured).
++   `scripts/check-font-coverage.mjs` check 6 holds each site to its face. */
+ :root {
+-  --type-option: 1.25rem; /* 20px — the desk rail's chip */
+-}
+-
+-@media (max-width: 1023.98px) {
+-  :root {
+-    --type-option: 1.375rem; /* 22px — the stacked card at ≥768 */
+-  }
++  --face-printed: var(--font-display); /* Fraunces — the wordmark's own face */
++  --face-written: var(--font-hand); /* Patrick Hand */
++  --printed-weight: 800; /* fvar wght 100..900 is live in the shipped
++                                          subset, so a lighter rank is one
++                                          number and zero bytes */
++  --printed-ink: var(--color-foreground);
+ }
+ 
+-@media (max-width: 767.98px) {
+-  :root {
+-    --type-option: 1rem; /* 16px — the phone, as it shipped */
+-  }
+-}
++/* THE ROLE HAS ONE RIGHT-HAND SIDE, and that is the whole of the re-cut. The
++   heading's md arm is GONE: `--type-group-title` was √φ under 768 and φ above
++   it, which put the phone's group name at 20.35px against a 20px chip — 1.018,
++   one size for the name and the thing it names, M03's mark read as a number.
++   φ at every width is 25.888, the desk's own rung, and the name/option ratio is
++   1.2945 at the desk, the dock, the rail AND 900×500 (1.1768 there, which no
++   instrument had ever looked at). Rotation-invariant type: one number, four
++   cells, no width arm to keep true.
+ 
+-/* M01's lift, on the one arm that was under the floor. A 768–1023 coarse tablet
+-   already draws its chips at 22px, above anything this band would set, so the
+-   phone arm is the only one that moves — 16 → 20px, the rail's own chip size. */
+-@media (max-width: 767.98px) and (pointer: coarse) {
+-  :root {
+-    --type-option: 1.25rem; /* 20px */
+-  }
++   THE OPTION CHIP'S RUNG, likewise one line. It was three width arms carrying
++   the four Tailwind literals `OptionSelector` used to spell (`text-[1rem]
++   md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`) — and the 22px in
++   the 768–1023 band was one of those literals moved verbatim, never a ruling.
++   20px is the rail's chip and the phone's chip (M01's lift), so the band joins
++   them and the tablet loses 2px of chip to gain the ratio. */
++:root {
++  --type-option: 1.25rem; /* 20px — every width */
+ }
+ 
+ /* ═══════════════════════════════════════════════════════════════════════════
+@@ -247,7 +240,7 @@
+   text-wrap: balance;
+ }
+ 
+-/* ── HEADINGS / BODY — the text register (--font-text ← Fraunces) ─────────── */
++/* ── HEADINGS / BODY — the text register (--font-text ← Georgia) ──────────── */
+ @utility text-title {
+   font-family: var(--font-text);
+   font-size: var(--type-title);
+@@ -360,14 +353,17 @@
+      and far too airy under x-height forms) to `--type-tracking-wide` (0.025em) — the eyebrow
+      still reads as a caption tier, without gapping. The subset is re-cut from RENDERED text in
+      the same commit; `scripts/check-font-coverage.mjs` is the standing guard. */
+-  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. The md
+-     arm below re-points `--type-group-title` instead of restating a font-size, so
+-     the two arms of one heading are one declaration a voice can re-cut. */
++  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. T9-W7
++     CTRL-FACE — it reads its FACE the same way: `--face-printed` and
++     `--printed-weight`, the same two tokens the tape and the row caption read,
++     so the eight names are one voice a later rank can re-cut in one place.
++     Colour stays with the consuming template (the crayon tier is DATA) except
++     where the template asks for the printed ink by name. */
+   .section-heading {
+-    font-family: var(--font-display);
++    font-family: var(--face-printed);
+     font-size: var(--type-group-title);
+     line-height: var(--type-leading-heading);
+-    font-weight: 800;
++    font-weight: var(--printed-weight);
+     text-transform: lowercase;
+     letter-spacing: var(--type-tracking-wide);
+     text-align: center;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..20258efd 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -185,9 +185,18 @@ const showTabs = computed(() => props.sections.length >= 2);
+ function activeColorClass(section: ControlSection): string | undefined {
+   return section.options.find((o) => o.value === section.selected)?.colorClass;
+ }
++// T9-W7 CTRL-FACE — A PRINTED NAME IS AT FULL PRESS. The non-crayon arm was
++// `text-muted-foreground`, which made ink say two things at once: the desk's `size` was quiet
++// because it has no tier, and the dock's shut tab was quiet because it is shut. One rule for
++// both platforms now — a name at full press is a name, and muted means SHUT (the dock's own
++// arm, in the template). The tween joins the chips' 150ms so a tab switch answers in one
++// window instead of two.
+ function headingClass(section: ControlSection): (string | Record<string, boolean>)[] {
+-  const cc = activeColorClass(section);
+-  return cc ? ["transition-colors", "duration-250", cc] : ["text-muted-foreground"];
++  return [
++    "transition-colors",
++    "duration-150",
++    activeColorClass(section) ?? "text-foreground",
++  ];
+ }
+ // UI-12: the mobile tabs show only the active panel's options, so the inactive tab's current
+ // value is invisible while the other is open. Surface it small + graphite beneath the heading.
+@@ -796,19 +805,29 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+               :aria-expanded="expandedPanel === section.key"
+               @click="expandedPanel = section.key"
+             >
++              <!-- T9-W7 CTRL-FACE — OPENNESS IS PRESSURE. The underline is gone (two underline
++                   grammars 40px apart, and the chips' scribble is the other one); what says a
++                   tab is open is its name at full press, and what says it is shut is a muted
++                   name with its value written underneath. The crayon follows the VALUE — on the
++                   open tab it sits on the name the way the desk's h2 wears it, on the shut tab
++                   it sits on the value word. -->
+               <span
+                 class="section-heading"
+-                :class="[
+-                  headingClass(section),
+-                  { 'is-active': expandedPanel === section.key },
+-                ]"
++                :class="
++                  expandedPanel === section.key
++                    ? headingClass(section)
++                    : ['transition-colors', 'duration-150', 'text-muted-foreground']
++                "
+               >
+                 {{ section.heading }}
+               </span>
+               <!-- UI-12: the current value, shown only while this tab is closed. -->
+-              <span v-if="expandedPanel !== section.key" class="heading-value">{{
+-                valueLabel(section)
+-              }}</span>
++              <span
++                v-if="expandedPanel !== section.key"
++                class="heading-value"
++                :class="activeColorClass(section)"
++                >{{ valueLabel(section) }}</span
++              >
+             </button>
+           </h2>
+         </div>
+@@ -1484,6 +1503,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   --washi-tag-lift: 3px;
+   --washi-tag-gap: 0.1rem;
+   --washi-tag-inset: 0.35rem;
++  /* The fourth consumer term (T9-W7): the tape's LEADING, read twice — once by the tape's own
++     line box and once by the pull that lifts it. A printed name is set at the heading's
++     leading, and the pull follows it by arithmetic rather than by a literal that has to be
++     remembered. */
++  --washi-tag-lh: var(--type-leading-heading);
+   /* WHERE A TAPE PINS: at the CASE EDGE, not at the content edge a sticky offset counts from
+      (`--card-pad-t`, published above). Two things fall out of the same 0.15rem, and both are
+      the reason it is that small rather than the drawer's comfortable 0.3rem:
+@@ -1511,8 +1535,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   gap: 0.1rem;
+ }
+ 
++/* THE FIRST WELL'S ROOM, re-priced by measurement (T9-W7 CTRL-FACE). On the dock the card's
++   padding is 6px, so the first tape is PINNED at rest — and a printed name is a taller tape
++   (layout 21.64 → 32px), which put its painted box 6.79px into the `size` tab head below it
++   (353.7px² at 390/375/430, both engines; 0 at head).
++   SWEPT, not reasoned: 0.35 → -6.79px gap · 0.85 → -5.20 · 1.20 → +0.40 · 1.50 → +1.13 · 2.00
++   → +1.13. The number stops moving at 1.5rem because that is where the tape's REST pose clears
++   the card's top edge and it stops being pinned at scrollTop 0 — the rail's own law ("the first
++   tape is unpinned at rest and straddles its stroke exactly as it shipped", the pin's comment
++   above), now true on the dock as well. 1.2rem clears by 0.4px and is a number that has to keep
++   being right; 1.5rem clears by construction. Both engines agree to 0.02px. The dock's card
++   still ends up SHORTER than head (689 vs 699); the rail pays 18px of a card that scrolls. */
+ .tray-well:first-child {
+-  margin-top: 0.35rem;
++  margin-top: 1.5rem;
+ }
+ 
+ /* The tape rides ABOVE the drawn stroke it straddles (the outline svg is z-index 1) — and now
+@@ -1605,16 +1640,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   opacity: 1;
+ }
+ 
++/* PRINTED (T9-W7 CTRL-FACE). A row caption names a control the way a tape names a compartment,
++   so it is one of the sheet's eight nouns and it reads the same three tokens: the printed face,
++   the group rung, the printed weight. The lane stays `flex: 0 0 3.75rem` — a FLOOR, since
++   `min-width: auto` lets min-content win, which is what keeps `candidates` on one line at the
++   larger rung. The quiet rung it used to wear said "under the tape"; the face says it now. */
+ .zone-row-label {
+   flex: 0 0 3.75rem;
+   text-align: right;
+-  font-family: var(--font-hand);
+-  font-size: var(--type-tag);
+-  line-height: 1.1;
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
++  line-height: var(--type-leading-heading);
++  text-transform: lowercase;
+   letter-spacing: var(--type-tracking-wide);
+-  /* The quiet rung (Lane D ship 4's ledgered token): 68% graphite, 5.23:1 light / 6.06:1
+-     dark on --color-card. Below it (60% = 4.10:1) the caption fails AA. */
+-  color: var(--ink-press-quiet);
++  color: var(--printed-ink);
+ }
+ 
+ .zone-row :deep(.options-row) {
+@@ -2406,16 +2446,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   font-size: var(--type-tag);
+   line-height: 1;
+   letter-spacing: var(--type-tracking-wide);
+-  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5). The 68% that
+-     cleared it IS --ink-press-quiet; the literal is now the token. Pixel-identical. */
+-  color: var(--ink-press-quiet);
++  /* T9-W7 — the value is WRITTEN, and a written word is lowercase by CSS, never by its
++     author: `Easy` painted its E in the system cursive (the hand's capitals are C R S), a
++     mid-word fallback nothing measured until the option labels entered the coverage gate. */
++  text-transform: lowercase;
++  transition: color 150ms var(--ease-standard);
+ }
+ 
+-.mobile-heading-btn .section-heading.is-active {
+-  text-decoration: underline;
+-  text-decoration-thickness: 2px;
+-  text-underline-offset: 4px;
+-}
++/* ITS INK LIVES IN `index.css` (T9-W7), beside the crayon hoist that explains why. The value
++   word wears its tier's crayon when the section has one, and `.crayon-*` is UNLAYERED — so the
++   quiet default has to be LAYERED to lose to it, and a layer declared inside a scoped SFC block
++   is a cascade hazard, not a cascade fix: Vite appends component styles at module-eval time, so
++   the FIRST `@layer components` the document sees can be this one, which registers the layer
++   ahead of `base` and hands Tailwind's `h2 { font-size: inherit }` preflight the win over
++   `.section-heading`. Measured: every desk eyebrow dropped to 16px/400 (2 voices) while the
++   dock's spans, which no preflight rule names, kept the rung. */
+ 
+ /* T8-W1 (agent C's M5 census, R2) — THE TABS ANSWER THE POINTER. The staged tab heads are the
+    card's largest interactive text and they had exactly one state to read: the underline on the
+@@ -2439,9 +2484,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+    The fence is load-bearing and it was witnessed: under `isMobile`/`hasTouch` emulation
+    `(hover: hover)` resolves FALSE and neither head moves, which is the rule doing its job on a
+-   thumb rather than the rule failing. */
++   thumb rather than the rule failing.
++
++   T9-W7 CTRL-FACE — AND IT ONLY ANSWERS WHEN THERE IS SOMETHING TO ANSWER. The open head is at
++   full press and a repeat press is a no-op, so the lift now fences to `[aria-expanded="false"]`:
++   pointing at the shut tab promises the switch it performs, pointing at the open one promises
++   nothing. That also retires the second reading above — the crayon-tinted head is no longer
++   overridden mid-hover, because the head that carries a crayon is the OPEN one. */
+ @media (hover: hover) {
+-  .mobile-heading-btn:hover .section-heading {
++  .mobile-heading-btn[aria-expanded="false"]:hover .section-heading {
+     color: var(--color-foreground);
+   }
+ }
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..ea33c4ac 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -49,11 +49,11 @@ function scribbleSeed(val: string | number): number {
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       :aria-pressed="selected === opt.value"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
++      class="ctrl-btn px-3 pt-1.5 pb-0 text-center transition-colors duration-150"
+       :class="[
+-        mobile ? '' : 'md:py-0.5 md:text-left',
++        mobile ? '' : 'md:pt-0.5 md:pb-0 md:text-left',
+         selected === opt.value
+-          ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
++          ? `selected-item ${opt.colorClass ?? 'text-foreground'}`
+           : 'text-muted-foreground hover:text-foreground hover-item',
+       ]"
+       :style="
+@@ -71,18 +71,22 @@ function scribbleSeed(val: string | number): number {
+                 scribbleSeed(opt.value) + (boilFrame + 1) * 1000,
+                 inkColor(),
+               ),
+-              '--scribble-width': `${opt.label.length + 1}ch`,
+             }
+           : {
+               '--ghost-underline': ghostUnderline(
+                 scribbleSeed(opt.value) + 500,
+                 inkColor(),
+               ),
+-              '--ghost-width': `${opt.label.length + 1}ch`,
+             }
+       "
+     >
+-      {{ opt.label }}
++      <!-- THE PENCIL FOLLOWS THE WORD (T9-W7 CTRL-FACE). The mark's length was
++           `${label.length + 1}ch`, and a `ch` is the advance of "0" — the same for every glyph
++           in a monospace face and for nothing in a written one, so the scribble stopped
++           tracking its word the moment the chips left Fira Code (measured: 1.46× under "ask").
++           The span is the word's own box, so the mark is priced off the RENDERED advance and
++           the two ch-count variables die. -->
++      <span class="ctrl-word">{{ opt.label }}</span>
+     </button>
+   </div>
+ </template>
+@@ -99,11 +103,31 @@ function scribbleSeed(val: string | number): number {
+    `--type-option` carries those literals verbatim at every rung this component
+    renders (typography.css prices them), so the desk and the 768–1023 stacked card
+    are byte-identical; the phone's arm is the one that moves, 16 → 20px.
+-   What stays in the template is layout — `md:py-0.5 md:text-left` — because that
+-   is not type. */
++   What stays in the template is layout — `md:pt-0.5 md:pb-0 md:text-left` — because
++   that is not type. The bottom padding is ZERO at both arms now: the scribble's 6px
++   of room moved onto the word's own span (T9-W7), and a button that kept its own
++   would pay for it twice — measured 38 → 40px at the rail before the md arm split. */
++/* WRITTEN (T9-W7 CTRL-FACE). An option value is what a pencil put there, so it is the hand's,
++   and the face arrives by TOKEN: the literal `"Fira Code", monospace` here was unreachable from
++   any voice and outlived three type re-cuts because of it. Weight 400 in every state — Patrick
++   Hand ships one weight, so the selected chip's `font-bold` was synthetic bold on a static face
++   (the P1-W3 defect class); what marks a selection is its ink and its scribble. */
+ .ctrl-btn {
+-  font-family: "Fira Code", monospace;
++  font-family: var(--face-written);
+   font-size: var(--type-option);
++  font-weight: 400;
++  text-transform: lowercase;
++}
++
++/* The word's own box, and the only thing the marks hang off. `display: inline-block` makes it
++   shrink to the rendered advance; the 6px that used to pad the BUTTON pads this instead, so the
++   chip's outer height is what it always was. */
++.ctrl-word {
++  display: inline-block;
++  padding-bottom: 6px;
++  background-repeat: no-repeat;
++  background-origin: content-box;
++  background-position: left bottom;
+ }
+ 
+ /* The `.ctrl-btn:hover` wobble is DELETED (P1-W3, r3 §3.2), and `transition-all` narrowed to
+@@ -114,20 +138,17 @@ function scribbleSeed(val: string | number): number {
+ .selected-item,
+ .hover-item {
+   text-decoration: none;
+-  background-repeat: no-repeat;
+-  background-origin: content-box;
+-  background-position: left bottom;
+-  padding-bottom: 6px;
+ }
+ 
+-.selected-item {
++/* THE OVERSHOOT IS A SHARE OF THE WORD, not a constant (T9-W7, and the gate refuted the
++   constant before the crop did): with the chips in the hand, `calc(100% + 6px)` reads 1.347×
++   under `off` and 1.116× under `normal` — an absolute overshoot cannot hold a RATIO band across
++   words 17 to 52px wide (the arithmetic is empty: ≤5.13px for the shortest, ≥5.16px for the
++   longest). 120% is one number, 1.200 on every chip in both engines, and the pencil's tail
++   grows with the stroke it is finishing. */
++.selected-item .ctrl-word {
+   background-image: var(--scribble-underline);
+-  background-size: var(--scribble-width, 4ch) 8px;
+-}
+-
+-.hover-item {
+-  background-image: none;
+-  background-size: var(--ghost-width, 4ch) 8px;
++  background-size: 120% 8px;
+ }
+ 
+ /* The ghost underline is a hover preview — gated so it neither appears nor sticks on
+@@ -143,11 +164,12 @@ function scribbleSeed(val: string | number): number {
+    changing (grid, logo, celestial), and `transition-colors` never touched background-image
+    anyway. Same fence as the ghost, so neither sticks after a tap. */
+ @media (hover: hover) {
+-  .hover-item:hover {
++  .hover-item:hover .ctrl-word {
+     background-image: var(--ghost-underline);
++    background-size: 120% 8px;
+   }
+ 
+-  .selected-item:hover {
++  .selected-item:hover .ctrl-word {
+     background-image: var(--scribble-underline-hover, var(--scribble-underline));
+   }
+ }
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..ef091d98 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -158,6 +158,12 @@ const geom = computed(() => {
+    rather than inherited so the pull is exact arithmetic on the tape's own box — 1.5 is what it
+    already computes to, so nothing moves, and a later type re-cut (W7's voice) scales the pull
+    with the font instead of stranding it.
++   THE PULL READS THE TAG'S OWN LEADING (T9-W7 CTRL-FACE). It was `-1.5em` against a declared
++   `line-height: 1.5` — true only while both say 1.5, and the moment a voice sets the leading to
++   anything else the pull under-lifts by the difference (measured: 5.65px per tape at leading
++   1.2, against the 0.23px of iPad headroom `visual-regression` test 10 will not spend). One
++   variable read twice makes the net flow height zero BY ARITHMETIC at any font-size and any
++   leading, which is what this covenant always claimed.
+    The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+    rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+    offset with it. */
+@@ -167,13 +173,18 @@ const geom = computed(() => {
+   bottom: auto;
+   left: auto;
+   align-self: flex-start;
+-  line-height: 1.5;
+-  margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
++  line-height: var(--washi-tag-lh, 1.5);
++  margin: calc(-1em * var(--washi-tag-lh, 1.5) - 0.04rem - var(--washi-tag-lift, 0px)) 0
+     calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+     var(--washi-tag-inset, 0.85rem);
+   padding: 0.02rem 0.4rem;
+-  font-size: var(--type-tag);
+-  font-weight: 500;
++  /* PRINTED (T9-W7): a compartment's name is the sheet's own printing, at the same rank the
++     staged eyebrows carry — one face, one rung, one weight across all eight names. The 500 it
++     asked of a static 400 face went with it; that ask painted the same ink and counted as a
++     second voice in the census. */
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
+   letter-spacing: var(--type-tracking-wide);
+   text-transform: lowercase;
+   opacity: 1;

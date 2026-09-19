@@ -1,0 +1,261 @@
+// PRM: live, because nothing here is animated — every reading is a canvas fill of a colour the
+// module computes, and freezing motion would change no byte of it.
+/**
+ * THE PLAYER'S COLOUR, READ OFF THE ENGINE'S OWN PIXELS (T9-W7 §11c, tier 3).
+ *
+ * The arcs gate has three tiers and this is the last one. Tier 1 (`scripts/check-peer-arcs.mjs`)
+ * holds the CONSTANT against `index.css`. Tier 2 (`useSession.test.ts`) holds the MODULE's
+ * emitted hues against the sheet and prices the capacity in ΔE. Neither of them paints: a
+ * requested `oklch()` is not a colour until an engine clips it into sRGB and rounds it to three
+ * bytes, and that round trip is where every earlier version of this claim died — a flat chroma
+ * rotated hues by 15.33° and walked a hand back inside crayon-blue's arc while the arithmetic
+ * said it was 12° clear.
+ *
+ * So this asks the ENGINE. It imports the product's own `playerIdentity` in page context, paints
+ * every ink onto a canvas at the band the live stylesheet is serving, and reads the bytes back.
+ * Both themes, both engines. Nothing here re-derives the walk.
+ *
+ * The retired gate is worth naming where its replacement lives: pass 1 booked hue exactness at
+ * ±0.5°, and the 8-bit round trip alone moves a hue up to 0.96° — a gate that can only fail. It
+ * is deleted rather than loosened, and the ±1° margin inside the arcs' GUARD is what pays for
+ * the rounding instead.
+ */
+import { test, expect, type Page } from "@playwright/test";
+
+/** the house's two nearest crayons (`--color-crayon-*`, light): what "a different colour"
+ *  costs in this product, and the bar every hand must keep from every house ink. */
+const CRAYON_REFERENCE = 0.0764;
+const SOLO = "./?size=3&difficulty=EASY&wire=local";
+
+interface Reading {
+  band: string;
+  /** painted bytes per index, and the hue/chroma they read back at. */
+  hands: { i: number; h: number; C: number; rgb: number[] }[];
+  /** worst ΔE from any hand to any chromatic token declared for this arm, and who. */
+  nearest: { dE: number; i: number; token: string };
+  underReference: number;
+  /** worst WCAG ratio over hands × grounds, and where. */
+  aa: { ratio: number; i: number; ground: string }[];
+  /** the peer cursor ring, drawn at its own opacity over its own 4% fill. */
+  ring: { worst: number; i: number };
+  peerVsPeer: Record<string, number>;
+}
+
+async function settled(page: Page): Promise<void> {
+  await page.waitForSelector("svg.handwritten-logo", { timeout: 40000 });
+  await expect
+    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 40000 })
+    .toBeGreaterThan(0);
+}
+
+/** One theme's whole reading, taken inside the page so the bytes are the engine's. */
+async function read(page: Page, theme: "light" | "dark"): Promise<Reading> {
+  await page.evaluate((t) => {
+    document.documentElement.classList.toggle("dark", t === "dark");
+  }, theme);
+  await page.evaluate(
+    () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))),
+  );
+  return page.evaluate(async (): Promise<Reading> => {
+    // The module the BOARD imports, in the page's own graph — a served path rather than a
+    // static specifier, because this file is typechecked from `e2e/` where that path does not
+    // resolve, and because the point is to ask the running product rather than a copy of it.
+    const served = "/src/games/shared/playerIdentity.ts";
+    const m = (await import(/* @vite-ignore */ served)) as {
+      inkFor: (i: number) => Record<string, string>;
+    };
+    const cs = getComputedStyle(document.documentElement);
+    const band = cs.getPropertyValue("--peer-ink-l").trim();
+    const inks = Array.from({ length: 144 }, (_, i) =>
+      m.inkFor(i)["--color-user-ink"].replace("var(--peer-ink-l)", band),
+    );
+    // EVERY CUSTOM PROPERTY THE SHEET NAMES, RESOLVED THROUGH THE CASCADE — which is what
+    // "reserved per arm" means and what a regex over the source cannot do: in dark, the light
+    // block's hexes are text in a stylesheet and paint nothing, and comparing a night-time hand
+    // against a daytime token is a number about nobody.
+    const names = new Set<string>();
+    for (const s of document.styleSheets) {
+      let rules: CSSRuleList;
+      try {
+        rules = s.cssRules;
+      } catch {
+        continue; // a cross-origin sheet has nothing to say about this product's tokens
+      }
+      for (const r of rules)
+        for (const m of r.cssText.matchAll(/(--[a-z0-9-]+):/g)) names.add(m[1]);
+    }
+
+    const c = document.createElement("canvas");
+    c.width = c.height = 1;
+    const g = c.getContext("2d", { willReadFrequently: true })!;
+    const paint = (ground: string, css: string, alpha: number): number[] => {
+      g.globalAlpha = 1;
+      g.globalCompositeOperation = "copy";
+      g.fillStyle = ground;
+      g.fillRect(0, 0, 1, 1);
+      g.globalCompositeOperation = "source-over";
+      g.globalAlpha = alpha;
+      g.fillStyle = css;
+      g.fillRect(0, 0, 1, 1);
+      const d = g.getImageData(0, 0, 1, 1).data;
+      return [d[0], d[1], d[2]];
+    };
+    const lin = (v: number): number =>
+      v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
+    const oklab = ([R, G, B]: number[]): number[] => {
+      const [r, gg, b] = [R, G, B].map((v) => lin(v / 255));
+      const l = Math.cbrt(0.4122214708 * r + 0.5363325363 * gg + 0.0514459929 * b);
+      const mm = Math.cbrt(0.2119034982 * r + 0.6806995451 * gg + 0.1073969566 * b);
+      const s = Math.cbrt(0.0883024619 * r + 0.2817188376 * gg + 0.6299787005 * b);
+      return [
+        0.2104542553 * l + 0.793617785 * mm - 0.0040720468 * s,
+        1.9779984951 * l - 2.428592205 * mm + 0.4505937099 * s,
+        0.0259040371 * l + 0.7827717662 * mm - 0.808675766 * s,
+      ];
+    };
+    const dE = (a: number[], b: number[]): number => {
+      const [x, y] = [oklab(a), oklab(b)];
+      return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+    };
+    const lum = ([r, gg, b]: number[]): number =>
+      0.2126 * lin(r / 255) + 0.7152 * lin(gg / 255) + 0.0722 * lin(b / 255);
+    const ratio = (a: number[], b: number[]): number => {
+      const [x, y] = [lum(a), lum(b)].sort((p, q) => q - p);
+      return (x + 0.05) / (y + 0.05);
+    };
+
+    const hands = inks.map((css, i) => {
+      const rgb = paint("#808080", css, 1);
+      const [, A, B] = oklab(rgb);
+      const h = (Math.atan2(B, A) * 180) / Math.PI;
+      return { i, h: h < 0 ? h + 360 : h, C: Math.hypot(A, B), rgb };
+    });
+
+    // THE TOKENS THIS ARM ACTUALLY SERVES, found by chroma in the live cascade — the same rule
+    // tier 1 reads the source with, so a rename cannot hide a hue here either.
+    const tokens = [...names]
+      .map((name) => ({ name, value: cs.getPropertyValue(name).trim() }))
+      .filter((t) => /^(#|rgb|hsl|oklch|color\()/i.test(t.value))
+      .map((t) => ({ name: t.name, rgb: paint("#808080", t.value, 1) }))
+      .filter((t) => {
+        const [, A, B] = oklab(t.rgb);
+        return Math.hypot(A, B) > 0.06;
+      });
+    let nearest = { dE: Infinity, i: -1, token: "" };
+    let underReference = 0;
+    for (const hand of hands) {
+      let best = { dE: Infinity, token: "" };
+      for (const t of tokens) {
+        const d = dE(hand.rgb, t.rgb);
+        if (d < best.dE) best = { dE: d, token: t.name };
+      }
+      if (best.dE < 0.0764) underReference++;
+      if (best.dE < nearest.dE) nearest = { dE: best.dE, i: hand.i, token: best.token };
+    }
+
+    // THE GROUNDS A DIGIT IS ACTUALLY PAINTED ON, and no others. The board sits on the card
+    // over the paper; the roster row sits in the controls card, which is the dock sheet's
+    // popover on a phone; and the fourth is not a token but the COMPOSITE a selected cell
+    // makes — the 8% crayon-blue wash over the card, which is what your own digit reads
+    // against the moment you select the cell you are writing in.
+    //
+    // `--color-accent` is deliberately NOT a ground. It is the icon-button hover fill
+    // (`GameControlPanel.vue:1966`), a solver note and two gallery bands, and no node carrying
+    // `--color-user-ink` ever sits on one. It is measured anyway and reported, because the
+    // coupling is real and cheap to watch: the worst hand reads 4.19:1 on the dark accent, so
+    // a future wave that paints a player's slug on an accent-filled chip lands under AA.
+    const cardCssBase = cs.getPropertyValue("--color-card").trim();
+    const wash = paint(cardCssBase, cs.getPropertyValue("--color-crayon-blue").trim(), 0.08);
+    const grounds: Record<string, string> = {
+      background: cs.getPropertyValue("--color-background").trim(),
+      card: cardCssBase,
+      popover: cs.getPropertyValue("--color-popover").trim(),
+      "selection-wash": `rgb(${wash[0]},${wash[1]},${wash[2]})`,
+    };
+    const watched: Record<string, string> = {
+      "accent (watched, not a ground)": cs.getPropertyValue("--color-accent").trim(),
+    };
+    const aa: Reading["aa"] = [];
+    for (const [name, gcss] of Object.entries({ ...grounds, ...watched })) {
+      if (!gcss) continue;
+      const bg = paint(gcss, "rgba(0,0,0,0)", 0);
+      let worst = { ratio: Infinity, i: -1, ground: name };
+      for (const hand of hands) {
+        const r = ratio(paint(gcss, inks[hand.i], 1), bg);
+        if (r < worst.ratio) worst = { ratio: r, i: hand.i, ground: name };
+      }
+      aa.push(worst);
+    }
+
+    // THE RING, against its OWN fill — the thing a reader actually has to see it against, which
+    // is the 4% wash of the same ink inside the same cell (`gameCell.css` .cell-ghost-path).
+    const ringOpacity = 0.8;
+    const cardCss = grounds.card || grounds.background;
+    let ring = { worst: Infinity, i: -1 };
+    for (const hand of hands) {
+      const fill = paint(cardCss, inks[hand.i], 0.04);
+      const stroke = paint(
+        `rgb(${fill[0]},${fill[1]},${fill[2]})`,
+        inks[hand.i],
+        ringOpacity,
+      );
+      const r = ratio(stroke, fill);
+      if (r < ring.worst) ring = { worst: r, i: hand.i };
+    }
+
+    const peerVsPeer: Record<string, number> = {};
+    for (const n of [3, 4, 8, 16]) {
+      let min = Infinity;
+      for (let i = 0; i < n; i++)
+        for (let k = i + 1; k < n; k++)
+          min = Math.min(min, dE(hands[i].rgb, hands[k].rgb));
+      peerVsPeer[String(n)] = min;
+    }
+    return { band, hands, nearest, underReference, aa, ring, peerVsPeer };
+  });
+}
+
+test("the painted law — no hand is a house colour, on the engine's own bytes", async ({
+  page,
+}, info) => {
+  await page.goto(SOLO);
+  await settled(page);
+  for (const theme of ["light", "dark"] as const) {
+    const r = await read(page, theme);
+    const say = (s: string): void => console.log(`[${info.project.name}/${theme}] ${s}`);
+    say(`band ${r.band} · nearest token ${r.nearest.token} ΔE ${r.nearest.dE.toFixed(4)} at i=${r.nearest.i}`);
+    say(`hands under the crayon reference ${CRAYON_REFERENCE}: ${r.underReference}/144`);
+
+    // 1 — THE LAW, in the only units it is felt in. Every hand keeps at least the distance the
+    // house's own two nearest crayons keep from each other.
+    expect(r.nearest.dE).toBeGreaterThanOrEqual(0.07);
+    expect(r.underReference).toBeLessThanOrEqual(5);
+
+    // 2 — no two hands paint the same bytes over the first 16, 24 and 40.
+    for (const n of [16, 24, 40]) {
+      const bytes = r.hands.slice(0, n).map((h) => h.rgb.join(","));
+      expect(new Set(bytes).size, `${n} hands, ${theme}`).toBe(n);
+    }
+
+    // 3 — AA on the four grounds a digit is painted on, worst of 144. A digit is text. The
+    // watched row is printed and NOT asserted: see the ground set's note above.
+    for (const w of r.aa) {
+      say(`AA ${w.ground}: worst ${w.ratio.toFixed(2)}:1 at i=${w.i}`);
+      if (!w.ground.includes("watched")) expect(w.ratio).toBeGreaterThanOrEqual(4.5);
+    }
+
+    // 4 — the peer cursor ring against its own 4% fill: a non-text control owes 3:1 (1.4.11).
+    say(`ring worst ${r.ring.worst.toFixed(2)}:1 at i=${r.ring.i}`);
+    expect(r.ring.worst).toBeGreaterThanOrEqual(3);
+
+    // 5 — THE CAPACITY, painted and pinned to what it is rather than what would be nicer:
+    // four hands read as four people, eight do not, sixteen is one colour said sixteen times.
+    say(
+      `peer-vs-peer ${[3, 4, 8, 16].map((n) => `N=${n} ${r.peerVsPeer[String(n)].toFixed(4)}`).join(" · ")}`,
+    );
+    expect(r.peerVsPeer["4"]).toBeGreaterThan(0.05);
+    expect(r.peerVsPeer["8"]).toBeLessThan(0.05);
+    expect(r.peerVsPeer["16"]).toBeLessThan(0.02);
+  }
+  await page.evaluate(() => document.documentElement.classList.remove("dark"));
+});

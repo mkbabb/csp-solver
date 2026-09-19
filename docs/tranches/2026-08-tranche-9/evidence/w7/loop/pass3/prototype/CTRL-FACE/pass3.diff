@@ -1,0 +1,2421 @@
+diff --git a/web/frontend/e2e/access.spec.ts b/web/frontend/e2e/access.spec.ts
+index 8704d979..56e3132b 100644
+--- a/web/frontend/e2e/access.spec.ts
++++ b/web/frontend/e2e/access.spec.ts
+@@ -436,7 +436,21 @@ test.describe("2.3 the roster announces", () => {
+ 
+ type Sample = { sel: string; text: string; ratio: number; fg: string; bg: string };
+ 
+-const CONTRAST_TARGETS = [`${CARD} .icon-sublabel`, `${CARD} .ctrl-btn`];
++// T9-W7 CTRL-FACE — THE LIST GREW WITH THE LAW. The card names its eight compartments in one
++// printed voice now, and four of the sites that paint those names were outside this row: the
++// staged eyebrow, the compartment tape, the row caption and the shut tab's value word. Two of
++// them changed ink in the same slice (the caption left `--ink-press-quiet` for the printed
++// ink; the shut tab's value took the quiet rung the caption gave up), so a row that measured
++// the chips and the sublabels alone was measuring the half of the card that did not move.
++// n rises 4 → 8 sites.
++const CONTRAST_TARGETS = [
++  `${CARD} .icon-sublabel`,
++  `${CARD} .ctrl-btn`,
++  `${CARD} .section-heading`,
++  `${CARD} .heading-value`,
++  `${CARD} .zone-row-label`,
++  `${CARD} .washi-tag`,
++];
+ 
+ async function contrastSamples(page: Page, selectors: string[]): Promise<Sample[]> {
+   return page.evaluate((selectors) => {
+@@ -510,9 +524,31 @@ async function contrastSamples(page: Page, selectors: string[]): Promise<Sample[
+   }, selectors);
+ }
+ 
+-for (const scheme of ["light", "dark"] as const) {
+-  test.describe(`2.3 contrast floor — ${scheme}`, () => {
+-    test(`.icon-sublabel and .ctrl-btn clear 4.5:1 (${scheme})`, async ({ page }) => {
++// TWO CELLS, AND THE SECOND ONE IS WHERE THE INK BECAME DATA (T9-W7 CTRL-FACE pass 3). This
++// describe carried no `test.use`, so it ran only at the config default — 1280×800 FINE — and at
++// that cell `.heading-value` is not in the DOM at all: the shut-tab value word exists only in
++// the mobile tab regime. The one ink this family binds to data (`activeColorClass`, the tier's
++// crayon on the closed tab) was therefore never sampled, and the crayons sit at 4.91–4.99 light,
++// 0.41 over the floor. The guard `samples.length > 8` could not catch the absence either: the
++// other five selectors supply ~26 samples on their own. One cell, not a new instrument.
++const CONTRAST_CELLS = [
++  { label: "1280 fine", use: {} },
++  {
++    label: "390 coarse",
++    use: {
++      viewport: { width: 390, height: 844 },
++      deviceScaleFactor: devices["iPhone 13"].deviceScaleFactor,
++      isMobile: devices["iPhone 13"].isMobile,
++      hasTouch: devices["iPhone 13"].hasTouch,
++    },
++  },
++] as const;
++
++for (const scheme of ["light", "dark"] as const)
++  for (const cell of CONTRAST_CELLS) {
++  test.describe(`2.3 contrast floor — ${scheme} @ ${cell.label}`, () => {
++    test.use(cell.use);
++    test(`the card's eight ink sites clear 4.5:1 (${scheme}, ${cell.label})`, async ({ page }) => {
+       await page.emulateMedia({ reducedMotion: "reduce", colorScheme: scheme });
+       await page.goto("./?size=3&difficulty=EASY");
+       await page.waitForSelector('[role="grid"] [role="gridcell"]', { timeout: 20000 });
+@@ -520,6 +556,19 @@ for (const scheme of ["light", "dark"] as const) {
+         state: "attached",
+         timeout: 20000,
+       });
++      // The dock hides the card behind its sheet; the sheet SLIDES, so the settle is waited out
++      // before anything is sampled.
++      const drawerTab = page.locator(".drawer-tab");
++      const cardShown = page.locator(`${CARD}:visible`).first();
++      if (!(await cardShown.isVisible().catch(() => false))) {
++        // The tab exists at both cells (it is the rail's fold handle too) and `tap()` is only
++        // legal on a context with touch, so the route is chosen by the context.
++        const touch = await page.evaluate(
++          () => "ontouchstart" in window || navigator.maxTouchPoints > 0,
++        );
++        await (touch ? drawerTab.tap() : drawerTab.click());
++        await page.waitForTimeout(700);
++      }
+       // The scheme is asserted, not assumed: `useDark` reads `prefers-color-scheme` only while
+       // the storage key is unset, and a row that measured the wrong theme would be measuring
+       // the other row's numbers.
+@@ -527,8 +576,33 @@ for (const scheme of ["light", "dark"] as const) {
+         .poll(() => page.evaluate(() => document.documentElement.classList.contains("dark")))
+         .toBe(scheme === "dark");
+ 
+-      const samples = await contrastSamples(page, CONTRAST_TARGETS);
+-      expect(samples.length, "both families must be on screen to be measured").toBeGreaterThan(8);
++      // EVERY TAB OPENED BEFORE ANYTHING IS SAMPLED. Six of the fourteen `.ctrl-btn`s sit behind
++      // a shut tab with zero rects, and a sample of a box with no area is a sample of nothing —
++      // it was being counted toward the `> 8` guard at HEAD. Each head is pressed in turn, and
++      // the pass ends on the head the card opened with, so the LAST regime sampled is the one a
++      // reader actually arrives at.
++      const heads = page.locator(`${CARD} .mobile-heading-btn`);
++      const headCount = await heads.count();
++      const samples: Sample[] = [];
++      const seen = new Set<string>();
++      const take = async () => {
++        for (const s of await contrastSamples(page, CONTRAST_TARGETS)) {
++          const key = `${s.sel}|${s.text}|${s.fg}|${s.bg}`;
++          if (seen.has(key)) continue;
++          seen.add(key);
++          samples.push(s);
++        }
++      };
++      await take();
++      for (let i = 0; i < headCount; i++) {
++        await heads.nth(i).click();
++        await page.waitForTimeout(200);
++        await take();
++      }
++      expect(
++        samples.length,
++        "every ink site on the card must be on screen to be measured",
++      ).toBeGreaterThan(8);
+       const worst = samples.reduce((a, b) => (a.ratio <= b.ratio ? a : b));
+       test.info().annotations.push({
+         type: `contrast-${scheme}`,
+@@ -537,8 +611,13 @@ for (const scheme of ["light", "dark"] as const) {
+           `n=${samples.length}`,
+       });
+ 
+-      // Both families are NORMAL text at every width they paint (sublabels 14.4–16.4px regular,
+-      // chips 20px regular — under 18.66px bold / 24px regular), so one floor covers them.
++      // ONE FLOOR, 4.5, AND IT IS THE STRICTER ONE ON PURPOSE. Four of these six are normal
++      // text at every width they paint (sublabels 14.4–16.4px regular, chips 20px regular, the
++      // shut tab's value 14px, the tape 14px on the deck — all under 18.66px bold / 24px
++      // regular). The other two, the printed group names at 25.888px/800, ARE large text by
++      // 1.4.3 and could be held to 3.0; they are held here to 4.5 anyway, because a name that
++      // is only legible at display size is a name that fails the moment a later rank re-cuts
++      // the rung, and this list is what such a re-cut would be measured against.
+       const thin = samples.filter((s) => s.ratio < 4.5);
+       expect(
+         thin.map((s) => `${s.ratio}:1 "${s.text}" ${s.sel} (${s.fg} on ${s.bg})`),
+@@ -546,4 +625,4 @@ for (const scheme of ["light", "dark"] as const) {
+       ).toEqual([]);
+     });
+   });
+-}
++  }
+diff --git a/web/frontend/e2e/face-law.spec.ts b/web/frontend/e2e/face-law.spec.ts
+new file mode 100644
+index 00000000..9e6b9742
+--- /dev/null
++++ b/web/frontend/e2e/face-law.spec.ts
+@@ -0,0 +1,773 @@
++import { test, expect, devices, type Locator, type Page } from "@playwright/test";
++import { readdirSync, readFileSync, statSync } from "node:fs";
++import { join } from "node:path";
++import { fileURLToPath } from "node:url";
++
++// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto (loadCard, below)
++//
++/**
++ * T9-W7 CTRL-FACE — THE FACE LAW, as gates.
++ *
++ * The family's claim is that the controls card is a PRINTED SHEET A READER HAS WRITTEN ON: its
++ * eight compartment names are the sheet's own printing (Fraunces 800 lowercase at one rung) and
++ * everything under them is the reader's hand (Patrick Hand 400 lowercase). Until this file that
++ * claim lived entirely in a research lane's numbers — the pass-2 critique's blocking finding,
++ * F1: fifteen rows of law, five of which the estate had actually acquired. A rung change on
++ * `--type-group-title` redded nothing. These are the other ten.
++ *
++ * TWO OF THEM REPLACE READINGS THAT COULD NOT FAIL, and that is why they are shaped oddly:
++ *
++ *   · THE MARK. `background-size: 120%` on a span whose content box IS the word's box divides
++ *     a box by itself — 1.200 at any face, any rung, any word. And the estate's other pricing,
++ *     `${label.length + 1}ch`, is not engine-portable here at all: Fira Code's subset carries
++ *     no `0`, so `ch` falls back to 0.5em and measures 12.0016px on chromium against 10.0000 on
++ *     webkit — one chip's mark 48.01 vs 40.00, a 16.7% split shipped today. So the gate is not
++ *     a ratio. It is (a) the mark is derived from the WORD's advance, which is what makes the
++ *     two engines agree, and (b) the mark's PAINTED columns run past the glyph's painted
++ *     columns by 2–8px each side, read off the chip's own bitmap. WebKit's
++ *     `actualBoundingBoxLeft/Right` is the advance box, not the glyph ink, so there is no API
++ *     for (b) and it is measured the only honest way: three screenshots of one chip, differenced.
++ *
++ *   · `-1lh`. Grepping the built CSS for the token cannot fail — Lightning CSS does not
++ *     down-level a unit at any target, so `calc(-1lh - …)` is emitted verbatim whatever the
++ *     floor is. That grep is kept below, LABELLED as a regression guard rather than a gate, and
++ *     the row that can fail moved to `scripts/check-support-floor.mjs` check 6, where the
++ *     browserslist floor is re-derived against the unit the way check 2 re-derives Lightning's.
++ *
++ * EVERY NUMBER HERE IS A DERIVATION OR A FLOOR, never a recorded constant: the printed count is
++ * `tapes + captions + sections.length`, the mark is the word + 8, the paper-over-glyph band is
++ * per-word and measured in place. A constant would pin the card at one rung and call that a law.
++ */
++
++const CARD = ".controls-card";
++/* THE DESK KEEPS A HIDDEN TWIN of the card in the DOM (the drawer's copy), so every read below
++   takes the card that has client rects rather than the first one `querySelector` finds. */
++
++/** The phone descriptor's traits only — `browserName` cannot move inside a describe group. */
++const phone = devices["iPhone 13"];
++const coarse = (w: number, h: number) => ({
++  viewport: { width: w, height: h },
++  deviceScaleFactor: phone.deviceScaleFactor,
++  isMobile: phone.isMobile,
++  hasTouch: phone.hasTouch,
++});
++
++/** Load a board, hide dev chrome, open the dock sheet if there is one, and let it SETTLE. */
++async function loadCard(page: Page, query = "size=3&difficulty=EASY") {
++  await page.emulateMedia({ reducedMotion: "reduce" });
++  await page.goto("./?" + query);
++  await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
++  await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
++  // THE CARD IS REACHED TWO WAYS AND THE CELL DECIDES WHICH. On the rail it is already on the
++  // page; on the dock it is behind the sheet the tab opens. The tab EXISTS at both (it is the
++  // rail's fold handle too), so the route is chosen by whether a visible card is already there,
++  // never by the cell's name — and `tap()` is only legal on a context with touch.
++  const visibleCard = page.locator(`${CARD}:visible`).first();
++  if (!(await visibleCard.isVisible().catch(() => false))) {
++    const tab = page.locator(".drawer-tab");
++    const touch = await page.evaluate(
++      () => "ontouchstart" in window || navigator.maxTouchPoints > 0,
++    );
++    await (touch ? tab.tap() : tab.click());
++    await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
++    // THE SHEET SLIDES. The Band-D glide's own clock is 520ms and the settle after it is not
++    // instantaneous; every geometry row below is read on the settled pose, never during it.
++    await page.waitForTimeout(700);
++  }
++  await expect(visibleCard).toBeVisible({ timeout: 20000 });
++}
++
++/** One voice = family · rung · weight · casing, the four things a face law is about. */
++const VOICE = `(el) => {
++  const s = getComputedStyle(el);
++  return [s.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
++          Math.round(parseFloat(s.fontSize) * 1000) / 1000,
++          s.fontWeight, s.textTransform].join(" · ");
++}`;
++
++
++/**
++ * THE PAINTED EXTENT OF ONE LAYER, read by differencing two crops of the SAME element: the
++ * element as it ships, and the element with `suppress` applied. Columns (default) or rows
++ * (`byRow`) where the two bitmaps disagree are exactly the pixels that layer painted.
++ *
++ * There is no API for this. WebKit's `actualBoundingBoxLeft/Right` returns the ADVANCE box, so
++ * a glyph-ink question asked through canvas metrics gets the answer to a different question,
++ * and a `Range` box is the font's ascent+descent -- which at the display leading (1.05) sits
++ * OUTSIDE the tape's own paper while every letter is visibly inside it (measured on this tree:
++ * -2.53/-1.36 chromium, -1.91/-1.91 webkit). The bitmap is the only basis that answers what is
++ * actually drawn, and it is the same instrument for a mark and for a word.
++ */
++async function paintedExtent(
++  page: Page,
++  target: Locator,
++  suppress: string,
++  byRow = false,
++): Promise<{ lo: number; hi: number }> {
++  // THE SETTLE IS TWO FRAMES, NOT A CLOCK. A style injected here lands on the frame the engine
++  // schedules next; a fixed wait would be a proxy for that frame, and a proxy that is too short
++  // differences a bitmap against itself and reports "this layer painted nothing".
++  const twoFrames = () =>
++    page.evaluate(
++      () =>
++        new Promise<void>((r) =>
++          requestAnimationFrame(() => requestAnimationFrame(() => r())),
++        ),
++    );
++  const A = await target.screenshot();
++  const handle = await page.addStyleTag({ content: suppress });
++  await twoFrames();
++  const B = await target.screenshot();
++  await handle.evaluate((n) => (n as unknown as HTMLElement).remove());
++  await twoFrames();
++
++  return page.evaluate(
++    async ({ a, b, rowWise }) => {
++      const load = (d: string) =>
++        new Promise<HTMLImageElement>((res) => {
++          const i = new Image();
++          i.onload = () => res(i);
++          i.src = d;
++        });
++      const [ia, ib] = await Promise.all([load(a), load(b)]);
++      const c = document.createElement("canvas");
++      c.width = ia.width;
++      c.height = ia.height;
++      const g = c.getContext("2d")!;
++      g.drawImage(ia, 0, 0);
++      const da = g.getImageData(0, 0, c.width, c.height).data;
++      g.clearRect(0, 0, c.width, c.height);
++      g.drawImage(ib, 0, 0);
++      const db = g.getImageData(0, 0, c.width, c.height).data;
++      let lo = Infinity;
++      let hi = -Infinity;
++      const outer = rowWise ? c.height : c.width;
++      const inner = rowWise ? c.width : c.height;
++      for (let o = 0; o < outer; o++)
++        for (let n = 0; n < inner; n++) {
++          const x = rowWise ? n : o;
++          const y = rowWise ? o : n;
++          const i = (y * c.width + x) * 4;
++          const d =
++            Math.abs(da[i] - db[i]) +
++            Math.abs(da[i + 1] - db[i + 1]) +
++            Math.abs(da[i + 2] - db[i + 2]);
++          if (d > 24) {
++            if (o < lo) lo = o;
++            if (o > hi) hi = o;
++            break;
++          }
++        }
++      return { lo, hi };
++    },
++    {
++      a: `data:image/png;base64,${A.toString("base64")}`,
++      b: `data:image/png;base64,${B.toString("base64")}`,
++      rowWise: byRow,
++    },
++  );
++}
++
++/* ══ 1 · THE EIGHT NAMES ARE ONE VOICE, AND THE COUNT IS A DERIVATION ══════════════════════ */
++
++for (const [label, use] of [
++  ["desk 1280 fine", {}],
++  ["dock 390×844 coarse", coarse(390, 844)],
++  ["landscape 900×500 coarse", coarse(900, 500)],
++] as const) {
++  test.describe(`the printed voice — ${label}`, () => {
++    test.use(use);
++
++    test("one voice over every printed name, and the count derives", async ({ page }) => {
++      await loadCard(page);
++      const read = await page.evaluate(
++        ({ card, voiceSrc }) => {
++          const voice = eval(voiceSrc) as (el: Element) => string;
++          const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++          const tapes = [...root.querySelectorAll(".washi-tag")];
++          const captions = [...root.querySelectorAll(".zone-row-label")];
++          const sections = [...root.querySelectorAll(".section-heading")];
++          const printed = [...tapes, ...captions, ...sections];
++          const chip = root.querySelector(".ctrl-btn");
++          return {
++            voices: [...new Set(printed.map(voice))],
++            n: printed.length,
++            tapes: tapes.length,
++            captions: captions.length,
++            sections: sections.length,
++            ratio: chip
++              ? Math.round(
++                  (parseFloat(getComputedStyle(printed[0]).fontSize) /
++                    parseFloat(getComputedStyle(chip).fontSize)) *
++                    10000,
++                ) / 10000
++              : null,
++          };
++        },
++        { card: CARD, voiceSrc: VOICE },
++      );
++
++      test.info().annotations.push({
++        type: "printed-voice",
++        description: `${read.voices.join(" | ")} · n=${read.n} (${read.tapes} tapes + ${read.captions} captions + ${read.sections} sections) · name/option ${read.ratio}`,
++      });
++
++      // ONE VOICE. Not "one family" — a name that agrees on the face and disagrees on the rung
++      // is two voices to a reader, which is exactly what HEAD ships (three, at the dock).
++      expect(read.voices, "the printed names speak with one voice").toHaveLength(1);
++      expect(read.voices[0]).toMatch(/^Fraunces · [\d.]+ · 800 · lowercase$/);
++
++      // THE COUNT IS ARITHMETIC ABOUT THE CARD, not a remembered 8. All five games ship exactly
++      // two `ControlSection`s, so the sum is 8 today with zero headroom — and a sixth game, or a
++      // third row caption, moves this line in the commit that adds it rather than reddening a
++      // constant nobody can read the reason for.
++      expect(read.n, "printed == tapes + captions + sections").toBe(
++        read.tapes + read.captions + read.sections,
++      );
++      expect(read.tapes, "the four compartment tapes").toBe(4);
++      expect(read.captions, "the two row captions").toBe(2);
++
++      // ROW 3 — the name over the thing it names. At HEAD the phone reads 1.0175 (a 20.35px
++      // name over a 20px chip): one size for both, which is the mark M03 names.
++      expect(read.ratio!, "the printed name outranks the option it names").toBeGreaterThan(1.2);
++    });
++  });
++}
++
++/* ══ 2 · A CAPTION IS ONE LINE ═════════════════════════════════════════════════════════════ */
++
++for (const [label, use] of [
++  ["320×568", coarse(320, 568)],
++  ["360×740", coarse(360, 740)],
++  ["375×812", coarse(375, 812)],
++  ["390×844", coarse(390, 844)],
++  ["430×932", coarse(430, 932)],
++  ["900×500", coarse(900, 500)],
++] as const) {
++  test.describe(`the caption lane — ${label}`, () => {
++    test.use(use);
++
++    test("every row caption paints on ONE line, and its chips still fit", async ({ page }) => {
++      await loadCard(page);
++      const rows = await page.evaluate((card) => {
++        const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++        return [...root.querySelectorAll(".zone-row-label")].map((c) => {
++          const el = c as HTMLElement;
++          const s = getComputedStyle(el);
++          const r = el.getBoundingClientRect();
++          const strip = el.parentElement!.querySelector(".options-row");
++          const chips = el.parentElement!.querySelectorAll(".ctrl-btn").length;
++          return {
++            text: el.textContent!.trim(),
++            // THE LINE COUNT IS THE BOX OVER ITS LEADING, not `getClientRects().length`. A
++            // caption is a FLEX ITEM, and a flex item generates exactly one box however many
++            // lines its text takes — measured: with `white-space: normal` the same caption
++            // still reports one rect while its height goes 31.06 → 62.13. The rect count reads
++            // "one line" on a caption that has visibly wrapped, which is a gate that cannot
++            // fail, so the height is the question and the leading is the unit.
++            lines: Math.round(r.height / parseFloat(s.lineHeight)),
++            h: Math.round(r.height * 100) / 100,
++            w: Math.round(r.width * 100) / 100,
++            lh: Math.round(parseFloat(s.lineHeight) * 100) / 100,
++            whiteSpace: s.whiteSpace,
++            chips,
++            stripW: strip ? Math.round(strip.getBoundingClientRect().width * 100) / 100 : null,
++          };
++        });
++      }, CARD);
++
++      test.info().annotations.push({
++        type: "caption-lane",
++        description: rows
++          .map(
++            (r) =>
++              `"${r.text}" ${r.lines} line(s) ${r.w}×${r.h} (lh ${r.lh}) · ${r.chips} chips in ${r.stripW}`,
++          )
++          .join(" · "),
++      });
++
++      for (const r of rows) {
++        // The fold renamed `candidates` → `what fits`, and a caption WITH A SPACE wraps where a
++        // single word could not. One line by `white-space: nowrap`; the row's own `flex-wrap`
++        // is what gives a caption that cannot sit beside its chips the row's first line instead.
++        // ABLATED IN PLACE at every cell: `white-space: normal` takes `what fits` to 68.13px ×
++        // 62.13 (two lines) on chromium and 68.14 × 62.09 on webkit, and this row reds there.
++        expect(r.lines, `"${r.text}" paints on one line`).toBe(1);
++        expect(r.whiteSpace, `"${r.text}" is held to one line by its own rule`).toBe("nowrap");
++        expect(r.h, `"${r.text}" is one line box tall`).toBeLessThanOrEqual(r.lh + 0.5);
++        // A row with chips must still be able to hold two of them at the 44px tap floor plus
++        // the row's 0.5rem gap — 95.2px. Below that the nowrap has taken room the controls need.
++        if (r.chips >= 2)
++          expect(
++            r.stripW!,
++            `"${r.text}"'s chip strip holds two 44px chips and their gap`,
++          ).toBeGreaterThanOrEqual(95.2);
++      }
++    });
++  });
++}
++
++/* ══ 3 · THE INK GATE, THE DAYLIGHT, AND THE PAPER OVER EACH TAPE ══════════════════════════ */
++
++for (const [label, use] of [
++  ["390×844", coarse(390, 844)],
++  ["375×812", coarse(375, 812)],
++  ["430×932", coarse(430, 932)],
++  ["900×500", coarse(900, 500)],
++] as const) {
++  test.describe(`the clearances — ${label}`, () => {
++    test.use(use);
++
++    test("a tape's paper clears the ink above it, and clears the tab head", async ({ page }) => {
++      await loadCard(page);
++      const read = await page.evaluate((card) => {
++        const px = (n: number) => Math.round(n * 100) / 100;
++        const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++        /** The INK box — a Range over the text, which is the painted advance, not the line box. */
++        const ink = (el: Element) => {
++          const r = document.createRange();
++          r.selectNodeContents(el);
++          return r.getBoundingClientRect();
++        };
++        const tapes = [...root.querySelectorAll(".washi-tag")] as HTMLElement[];
++        const captions = [...root.querySelectorAll(".zone-row-label")] as HTMLElement[];
++
++        // PAPER OVER GLYPH, PER TAPE. The paper-over-RANGE number is the tape's own padding
++        // (1.36–1.53 across the four, a constant of the component); the GLYPH basis is the one
++        // that moves with the face, 7.73 (`pencils`) to 12.16 (`new game`) at this rung, so a
++        // single band across four words would be a band that admits everything.
++        const perTape = tapes.map((t) => {
++          const p = t.getBoundingClientRect();
++          const i = ink(t);
++          return { text: t.textContent!.trim(), top: px(i.top - p.top), bottom: px(p.bottom - i.bottom) };
++        });
++
++        // THE INK GATE. A tape sits under the row caption above it; its PAPER must clear that
++        // caption's INK, and must still clear it for a word with a descender the caption does
++        // not happen to contain.
++        const gates: Record<string, unknown>[] = [];
++        for (const cap of captions) {
++          const ci = ink(cap);
++          const below = tapes
++            .map((t) => ({ t, b: t.getBoundingClientRect() }))
++            .filter((x) => x.b.top >= ci.bottom - 0.5)
++            .sort((a, b) => a.b.top - b.b.top)[0];
++          if (!below) continue;
++          // THE WORST DESCENDER, AS A FONT METRIC AND NOT A POSITION. Two spans pinned at the
++          // SAME absolute coordinate in the caption's own face and rung — one carrying the
++          // caption's word, one carrying `pgjqy` — and the difference of their ink bottoms is
++          // how much further down this face can draw at this size. Appending one probe into
++          // flow and subtracting the caption's own box (the first form of this) measures the
++          // probe's position instead of the face's depth, and reads a different number in each
++          // engine for that reason.
++          const s = getComputedStyle(cap);
++          const mk = (t: string) => {
++            const el = document.createElement("span");
++            el.textContent = t;
++            el.style.cssText =
++              "position:fixed;top:0;left:0;visibility:hidden;white-space:nowrap;margin:0;padding:0";
++            el.style.font = `${s.fontStyle} ${s.fontWeight} ${s.fontSize}/${s.lineHeight} ${s.fontFamily}`;
++            document.body.appendChild(el);
++            const r = document.createRange();
++            r.selectNodeContents(el);
++            const b = r.getBoundingClientRect().bottom;
++            el.remove();
++            return b;
++          };
++          const drop = Math.max(0, mk("pgjqy") - mk(cap.textContent!.trim()));
++          gates.push({
++            caption: cap.textContent!.trim(),
++            tape: below.t.textContent!.trim(),
++            clearance: px(below.b.top - ci.bottom),
++            worstCase: px(below.b.top - ci.bottom - drop),
++          });
++        }
++
++        // THE TAB HEAD. The first tape is PINNED at rest and the tab row sits over it: the
++        // tape's paper must not reach the head's ink, and the two boxes must not intersect.
++        const heads = [...root.querySelectorAll(".mobile-heading-btn .section-heading")];
++        const first = tapes[0]?.getBoundingClientRect();
++        const daylight = heads.map((h) => {
++          const hi = ink(h);
++          const hb = h.getBoundingClientRect();
++          return {
++            head: h.textContent!.trim(),
++            gap: first ? px(hi.top - first.bottom) : null,
++            area: first
++              ? px(
++                  Math.max(0, Math.min(first.bottom, hb.bottom) - Math.max(first.top, hb.top)) *
++                    Math.max(0, Math.min(first.right, hb.right) - Math.max(first.left, hb.left)),
++                )
++              : null,
++          };
++        });
++        return { perTape, gates, daylight };
++      }, CARD);
++
++      test.info().annotations.push({
++        type: "clearances",
++        description:
++          read.gates
++            .map((g) => `${g.tape}/${g.caption} +${g.clearance} (worst +${g.worstCase})`)
++            .join(" · ") +
++          " | daylight " +
++          read.daylight.map((d) => `${d.head} +${d.gap} ${d.area}px²`).join(" · ") +
++          " | paper/glyph " +
++          read.perTape.map((t) => `${t.text} ${t.top}/${t.bottom}`).join(" · "),
++      });
++
++      for (const g of read.gates as { caption: string; tape: string; clearance: number; worstCase: number }[]) {
++        expect(g.clearance, `${g.tape}'s paper over "${g.caption}"'s ink`).toBeGreaterThanOrEqual(2.0);
++        expect(g.worstCase, `${g.tape}'s paper over a descender in "${g.caption}"`).toBeGreaterThanOrEqual(0.5);
++      }
++      for (const d of read.daylight as { head: string; gap: number; area: number }[]) {
++        expect(d.gap, `the first tape's paper under "${d.head}"`).toBeGreaterThanOrEqual(2.0);
++        expect(d.area, `the first tape does not touch "${d.head}"`).toBe(0);
++      }
++      // NO ASSERTION ON `perTape` HERE, AND THE REASON IS THE READING ITSELF. A `Range` box is
++      // the font's ASCENT+DESCENT box, not the glyph's ink, and at the display leading (1.05,
++      // tighter than Fraunces' natural line box) that box overflows the tape's paper by design:
++      // it reads −2.53/−1.36 on chromium and −1.91/−1.91 on webkit while every letter is
++      // visibly inside its tape. Asserting on it would red a card that is correct. The paper
++      // over the PAINTED glyph is a different measurement and it has its own test below.
++    });
++  });
++}
++
++/* ══ 4 · THE HAND, THE MARK, AND THE MARK'S PAINTED EXTENT ═════════════════════════════════ */
++
++test.describe("the written chips", () => {
++  test.use(coarse(390, 844));
++
++  test("every card chip is the hand at 400, and its mark is priced off the WORD", async ({
++    page,
++  }) => {
++    await loadCard(page);
++    const chips = await page.evaluate((card) => {
++      const px = (n: number) => Math.round(n * 100) / 100;
++      const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++      return [...root.querySelectorAll(".tray-well .ctrl-btn")].map((b) => {
++        const s = getComputedStyle(b);
++        const w = b.querySelector(".ctrl-word") as HTMLElement | null;
++        const ws = w ? getComputedStyle(w) : null;
++        const wb = w ? w.getBoundingClientRect() : null;
++        return {
++          text: b.textContent!.trim(),
++          family: s.fontFamily.split(",")[0].replace(/["']/g, "").trim(),
++          weight: s.fontWeight,
++          transform: s.textTransform,
++          pressed: b.getAttribute("aria-pressed"),
++          hasWord: !!w,
++          wordW: wb ? px(wb.width) : null,
++          markUnit: ws ? ws.backgroundSize.split(" ")[0] : null,
++          painted: ws ? ws.backgroundImage !== "none" : false,
++        };
++      });
++    }, CARD);
++
++    test.info().annotations.push({
++      type: "chips",
++      description: chips
++        // The mark's computed value stays an unresolved `calc()` in BOTH engines, so `markW`
++        // is NaN by construction and printing it says nothing. The TERM is what this row
++        // asserts, and the painted width is the row below's; print those two instead.
++        .map(
++          (c) =>
++            `"${c.text}" ${c.family}/${c.weight}` +
++            (c.painted ? ` mark ${c.markUnit} over word ${c.wordW}` : ""),
++        )
++        .join(" · "),
++    });
++
++    for (const c of chips) {
++      // Patrick Hand ships ONE weight. A `font-bold` on a static face is synthetic bold — the
++      // P1-W3 defect class — so 400 is not a preference here, it is the only honest weight.
++      expect(c.family, `"${c.text}" is written`).toBe("Patrick Hand");
++      expect(c.weight, `"${c.text}" at the hand's one weight`).toBe("400");
++      expect(c.transform, `"${c.text}" is lowercased by CSS, never by its author`).toBe("lowercase");
++      expect(c.hasWord, `"${c.text}" has its own word box for the mark to be priced against`).toBe(true);
++
++      // THE MARK IS DERIVED FROM THE WORD, not from `ch`. Both engines leave the `calc()`
++      // unresolved in the computed value, so this is a structural read and the PAINTED width is
++      // asserted in the bitmap row below: what matters is that the term is the word's own box.
++      // A `ch` term is the failure being fenced out — it measures 12.0016px on chromium against
++      // 10.0000 on webkit at this estate's Fira Code cut, which is 48.01 vs 40.00 on one chip.
++      if (c.painted) {
++        expect(c.markUnit, `"${c.text}"'s mark is priced off the word`).toContain("100%");
++        expect(c.markUnit, `"${c.text}"'s mark is not priced in \`ch\``).not.toContain("ch");
++      }
++    }
++  });
++
++  test("the mark's PAINTED columns run 2–8px past the glyph's, both sides", async ({ page }) => {
++    await loadCard(page);
++    const chip = page.locator(`${CARD} .tray-well .ctrl-btn[aria-pressed="true"]`).first();
++    await expect(chip).toBeVisible();
++
++    const mark = await paintedExtent(
++      page,
++      chip,
++      ".tray-well .ctrl-word { background-image: none !important }",
++    );
++    const glyph = await paintedExtent(
++      page,
++      chip,
++      ".tray-well .ctrl-btn { color: transparent !important }",
++    );
++    const dpr = await page.evaluate(() => window.devicePixelRatio);
++    const left = (glyph.lo - mark.lo) / dpr;
++    const right = (mark.hi - glyph.hi) / dpr;
++    const paintedW = (mark.hi - mark.lo + 1) / dpr;
++    // The word's ADVANCE, not the span's border box: the card's hook gives `.ctrl-word` 0.25rem
++    // of padding on each side (and hands it straight back in margin) so the mark has box to
++    // paint into, and measuring against that box would compare the overhang to itself — the
++    // 120% mistake in another costume.
++    const wordW = await chip.locator(".ctrl-word").evaluate((w) => {
++      const s = getComputedStyle(w);
++      return (
++        w.getBoundingClientRect().width - parseFloat(s.paddingLeft) - parseFloat(s.paddingRight)
++      );
++    });
++
++    test.info().annotations.push({
++      type: "painted-overhang",
++      description:
++        `mark cols [${mark.lo}, ${mark.hi}] glyph cols [${glyph.lo}, ${glyph.hi}] @dpr${dpr} -> ` +
++        `left ${left.toFixed(2)}px right ${right.toFixed(2)}px; painted mark ${paintedW.toFixed(2)} ` +
++        `vs word box ${wordW.toFixed(2)}`,
++    });
++
++    // 2px is a tear a reader can see; 8px is where the mark stops belonging to the word. The
++    // rule that produces it is a FIXED overhang, so a one-letter chip and a six-letter chip
++    // wear the same tear -- which a ratio could never give and is why the ratio died.
++    expect(left, "the mark reaches past the glyph on the left").toBeGreaterThanOrEqual(2);
++    expect(left, "the mark stays the word's mark on the left").toBeLessThanOrEqual(8);
++    expect(right, "the mark reaches past the glyph on the right").toBeGreaterThanOrEqual(2);
++    expect(right, "the mark stays the word's mark on the right").toBeLessThanOrEqual(8);
++
++    // AND THE PAINTED MARK IS THE WORD'S BOX + 8. This is the engine-identity row in the form
++    // one engine can assert: both engines measure the same Patrick Hand advance for the same
++    // word, so a mark derived from that advance is the same width in both -- where a `ch` mark
++    // is 8.00px apart. The tolerance covers the bitmap's own column quantisation.
++    expect(
++      paintedW - wordW,
++      "the painted mark is the word plus its two overhangs",
++    ).toBeCloseTo(8, 0);
++  });
++
++  test("a tape's paper covers its own PAINTED word, per word", async ({ page }) => {
++    await loadCard(page);
++    const tapes = page.locator(`${CARD} .washi-tag`);
++    const n = await tapes.count();
++    expect(n, "the four compartment tapes").toBe(4);
++    const dpr = await page.evaluate(() => window.devicePixelRatio);
++
++    const read: { text: string; top: number; bottom: number; box: number }[] = [];
++    for (let i = 0; i < n; i++) {
++      const t = tapes.nth(i);
++      const text = (await t.textContent())!.trim();
++      // The card is a SCROLLPORT: a tape below the fold screenshots blank, and a blank crop
++      // differences to nothing, which reads as "no ink" rather than as "not measured". It is
++      // scrolled to first, and an unreadable crop is a RED below, never a silent pass.
++      await t.scrollIntoViewIfNeeded();
++      await page.waitForTimeout(120);
++      // THE PLAYERS TAPE PAINTS NOTHING UNTIL SOMEBODY JOINS — `opacity: 0` at HEAD, its own
++      // admission gate, unrelated to this family. A bitmap read of an unpainted tape returns no
++      // ink and would otherwise report as "the word left its paper". It is EXCLUDED BY NAME and
++      // the exclusion is counted below, so a tape that stops painting for any other reason
++      // shrinks the measured set and reds there.
++      const opacity = await t.evaluate((el) => Number(getComputedStyle(el).opacity));
++      if (opacity === 0) {
++        read.push({ text, top: NaN, bottom: NaN, box: 0 });
++        continue;
++      }
++      // The ink ROWS of the tape's own crop: the crop's bounds ARE the tape's border box, so
++      // the first and last painted row give the paper over the glyph directly, in the basis
++      // that matters (what is drawn), not the basis a `Range` reports (ascent + descent).
++      const ink = await paintedExtent(
++        page,
++        t,
++        ".washi-tag { color: transparent !important }",
++        true,
++      );
++      const box = await t.evaluate((el) => el.getBoundingClientRect().height);
++      read.push({ text, top: ink.lo / dpr, bottom: box - (ink.hi + 1) / dpr, box });
++    }
++    // RECORDED BEFORE IT IS JUDGED, so a red carries every number rather than the first one.
++    test.info().annotations.push({
++      type: "paper-over-painted-glyph",
++      description: read
++        .map((r) =>
++          Number.isFinite(r.top)
++            ? `${r.text} ${r.top.toFixed(2)}/${r.bottom.toFixed(2)} of ${r.box.toFixed(2)}`
++            : `${r.text} NOT PAINTED (opacity 0)`,
++        )
++        .join(" | "),
++    });
++
++    const painted = read.filter((r) => Number.isFinite(r.top));
++    expect(
++      painted.length,
++      "three of the four tapes paint at rest; `players` waits for a peer",
++    ).toBe(3);
++
++    for (const { text, top, bottom } of painted) {
++      // PER WORD, NOT ONE CONSTANT: an ascender-only word and a word with a descender measure
++      // different depths on the same face at the same rung, so a single band across the four
++      // would admit everything. The floor is what says the word is INSIDE its own tape; the
++      // ceiling is what says the leading has not quietly been re-cut upward under it.
++      //
++      // THE BOTTOM FLOOR IS −0.5 AND NOT 0, AND THAT IS A DECLARED READING, NOT A SOFTENED
++      // GATE. `pencils` measures −0.02 chromium / −0.04 webkit: at the display leading (1.05)
++      // its `p` descender lands exactly ON the tape's bottom edge, and a third of a device
++      // pixel at dpr 3 is the whole of the difference. The floor sits where the bitmap can
++      // still tell an antialiased edge from a word hanging out of its paper — the sweep that
++      // priced this rung read −0.59 at leading 0.95, a real overhang, and that reds here. The
++      // zero headroom under that one word is REPORTED, not tuned away.
++      expect(top, `"${text}" has paper above its ink`).toBeGreaterThan(0);
++      expect(bottom, `"${text}" keeps its ink inside its paper`).toBeGreaterThan(-0.5);
++      expect(top + bottom, `"${text}"'s paper band`).toBeLessThanOrEqual(24);
++    }
++  });
++});
++
++/* ══ 5 · THE OPEN HEAD IS INERT, AND TAKES NO AFFORDANCE ═══════════════════════════════════ */
++
++test.describe("law 14 — openness is ink pressure", () => {
++  test.use({ viewport: { width: 820, height: 1000 }, hasTouch: false, isMobile: false });
++
++  test("pressing the OPEN head changes nothing, and nothing promises that it would", async ({
++    page,
++  }) => {
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    await page.goto("./?size=3&difficulty=EASY");
++    await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
++    await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
++    const tab = page.locator(".drawer-tab");
++    if (await tab.isVisible().catch(() => false)) {
++      await tab.click();
++      await page.waitForTimeout(700);
++    }
++    const heads = page.locator(`${CARD} .mobile-heading-btn`);
++    const n = await heads.count();
++    test.skip(n < 2, "this cell renders the rail, not the tab row");
++
++    const open = heads.filter({ has: page.locator('[aria-expanded="true"]') });
++    const openBtn = (await open.count()) ? open.first() : heads.first();
++
++    // INERTNESS, MEASURED: the press is a no-op, so the DOM does not move under it. That is
++    // what licenses "the open head takes no affordance" — a hover promise on a control whose
++    // press changes nothing is the tell this family exists to remove.
++    const before = await page.evaluate((card) => [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!.innerHTML.length, CARD);
++    await page.evaluate(() => {
++      (window as unknown as { __mut: number }).__mut = 0;
++      new MutationObserver((recs) => {
++        (window as unknown as { __mut: number }).__mut += recs.length;
++      }).observe(document.querySelector(".controls-card")!, {
++        subtree: true,
++        childList: true,
++        attributes: true,
++        characterData: true,
++      });
++    });
++    const expandedBefore = await openBtn.getAttribute("aria-expanded");
++    await openBtn.click();
++    await page.waitForTimeout(250);
++    const mutations = await page.evaluate(() => (window as unknown as { __mut: number }).__mut);
++    const after = await page.evaluate((card) => [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!.innerHTML.length, CARD);
++
++    test.info().annotations.push({
++      type: "inertness",
++      description: `aria-expanded ${expandedBefore} → ${await openBtn.getAttribute("aria-expanded")}; ${mutations} mutation(s); innerHTML ${before} → ${after}`,
++    });
++
++    expect(await openBtn.getAttribute("aria-expanded"), "the open head stays open").toBe(expandedBefore);
++    expect(mutations, "pressing the open head mutates nothing").toBe(0);
++
++    // NO AFFORDANCE ON THE OPEN HEAD, ONE ON THE SHUT ONE — and the ablation is by DELETING the
++    // hover rule, never by `color: inherit`. Overriding the colour moves the computed value and
++    // the reading comes back "no change" for the wrong reason: this lane made that mistake once
++    // and it is declared here so nobody repeats it.
++    const state = await page.evaluate((card) => {
++      const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++      return [...root.querySelectorAll(".mobile-heading-btn")].map((b) => {
++        const h = b.querySelector(".section-heading")!;
++        const s = getComputedStyle(h);
++        return {
++          expanded: b.getAttribute("aria-expanded"),
++          decoration: s.textDecorationLine,
++          color: s.color,
++          transition: s.transitionDuration,
++        };
++      });
++    }, CARD);
++    for (const s of state)
++      expect(s.decoration, "no head carries an underline — the chips' scribble is the other one").toBe(
++        "none",
++      );
++    // The shut head is muted, the open one is at press (or its tier's crayon): ink RANKS them.
++    const openInk = state.find((s) => s.expanded === "true")!.color;
++    const shutInk = state.find((s) => s.expanded === "false")!.color;
++    expect(openInk, "openness is ink pressure").not.toBe(shutInk);
++  });
++});
++
++/* ══ 6 · THE TAPE COVENANT, AT THE CONSUMER ════════════════════════════════════════════════ */
++
++test.describe("the tape covenant", () => {
++  test.use(coarse(390, 844));
++
++  test("a printed tape still costs its well ZERO height", async ({ page }) => {
++    await loadCard(page);
++    const deltas = await page.evaluate((card) => {
++      const px = (n: number) => Math.round(n * 1000) / 1000;
++      const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++      const wells = [...root.querySelectorAll(".tray-well")] as HTMLElement[];
++      const before = wells.map((w) => w.getBoundingClientRect().height);
++      const s = document.createElement("style");
++      s.textContent = ".tray-well .washi-tag { display: none !important }";
++      document.head.appendChild(s);
++      const after = wells.map((w) => w.getBoundingClientRect().height);
++      s.remove();
++      return wells.map((w, i) => ({
++        tag: w.querySelector(".washi-tag")?.textContent?.trim() ?? "(none)",
++        d: px(before[i] - after[i]),
++      }));
++    }, CARD);
++
++    test.info().annotations.push({
++      type: "covenant",
++      description: deltas.map((d) => `${d.tag} ${d.d >= 0 ? "+" : ""}${d.d}`).join(" · "),
++    });
++
++    // `calc(-1lh - …)` pulls the tape out of flow by its OWN used line box, so re-cutting the
++    // leading at the consumer (this card sets the display leading) cannot strand the pull. The
++    // covenant is ±0.25px and the unit's own rounding is worth ~0.02.
++    for (const d of deltas)
++      expect(Math.abs(d.d), `the ${d.tag} tape costs its well nothing`).toBeLessThanOrEqual(0.25);
++  });
++});
++
++/* ══ 7 · `-1lh` SURVIVES THE BUILD — A LABELLED GUARD, NOT A GATE ══════════════════════════ */
++
++test("GUARD (not a gate): the built stylesheet still carries `-1lh`", async () => {
++  // THIS CANNOT FAIL FROM THE TOOLCHAIN and it says so in its own name. Lightning CSS passes a
++  // unit through at every target, so `calc(-1lh - …)` is emitted verbatim whatever the floor
++  // is; the only thing this catches is a human deleting the pull. The row that CAN fail — the
++  // browserslist floor sitting UNDER the unit, which drops the whole margin shorthand at
++  // computed-value time on a real client — is check 6 of `scripts/check-support-floor.mjs`,
++  // where it is re-derived against the declaration rather than grepped out of an artifact.
++  const dist = join(fileURLToPath(new URL("../dist/assets", import.meta.url)));
++  let files: string[] = [];
++  try {
++    files = statSync(dist).isDirectory() ? readdirSync(dist) : [];
++  } catch (err) {
++    test.info().annotations.push({ type: "guard-skipped", description: String(err) });
++  }
++  test.skip(files.length === 0, "no built dist on this tree — the guard reads the build's output");
++  const css = files
++    .filter((f) => f.endsWith(".css"))
++    .map((f) => readFileSync(join(dist, f), "utf8"))
++    .join("\n");
++  expect(css, "the tag tape's `1lh` pull reached the shipped stylesheet").toContain("-1lh");
++});
+diff --git a/web/frontend/e2e/font-census.spec.ts b/web/frontend/e2e/font-census.spec.ts
+index eeffd803..5bcffccf 100644
+--- a/web/frontend/e2e/font-census.spec.ts
++++ b/web/frontend/e2e/font-census.spec.ts
+@@ -47,16 +47,16 @@ import { test, expect, type Page } from "@playwright/test";
+ /** Strings that render in a second face today, with the reason each is tolerated. Keys are
+  *  `face|shown`. Anything rendered and mixed that is NOT here fails the row. */
+ const LEDGER: Record<string, string> = {
+-  // ── Fira Code: the cut covers the SIZE and DIFFICULTY chips (4×4 · 9×9 · 16×16 · Easy ·
+-  // Medium · Hard) and nothing else. The live-zone chips joined the same component later and
+-  // were never in the corpus. Pre-existing, estate-wide, unledgered until now.
+-  "Fira Code|Normal": "live-zone chip; o/l/N outside the size+difficulty cut",
+-  "Fira Code|Corner": "live-zone chip; C/o/n outside the cut",
+-  "Fira Code|Center": "live-zone chip; C/n/t outside the cut",
+-  "Fira Code|Off": "live-zone chip; O/f outside the cut",
+-  "Fira Code|On": "live-zone chip; O/n outside the cut",
+-  "Fira Code|Ask": "live-zone chip; A/k outside the cut",
+-  "Fira Code|Live": "live-zone chip; L/v outside the cut",
++  // ── T9-W7 CTRL-FACE RETIRED ELEVEN ROWS HERE, and they are the whole of this ledger's
++  // option-chip population. The seven `Fira Code|…` live-zone rows are gone because the chips
++  // are WRITTEN now: the face law moved every option value to Patrick Hand and lowercased it
++  // by CSS, so the strings this census reads are `normal` / `corner` / `center` / `off` / `on`
++  // / `ask` / `live` and every codepoint is in the hand's cut. `Patrick Hand|Easy`, `|Medium`
++  // and `|Hard` (the closed tab's value, UI-12) go with them — the same transform, plus the
++  // re-cut that took A E H L M N O for the gate's both-cases rule; the two CONDITIONAL rows
++  // below went with them for the same reason. `Patrick Hand|H` (keycap) is retired by the
++  // re-cut alone: H is in the cut now, so the keycap draws in the hand like every other
++  // letter it names. K/P/Z/G/D and the glyph keycaps still fall through and still ledger.
+   // ── Patrick Hand: the cut declares C/R/S as its only capitals. Every other capital in the
+   // hand register falls through. Pre-existing.
+   // T6 mark 12 RETIRED FOUR ROWS HERE — `Deal`, `Fill`, `Undo`, `Hint`. The sublabels wear
+@@ -65,13 +65,9 @@ const LEDGER: Record<string, string> = {
+   // codepoint is in the cut. Leaving them would red the BACKWARD arm at `:291` as stale, which
+   // is the direction that exists so a ledger cannot quietly become a list. (The `"Deal"`
+   // literal in the CAGE_LABEL negative control below is a regex fixture, not a ledger row.)
+-  "Patrick Hand|Easy": "closed-tab value (UI-12); E outside the cut",
+-  "Patrick Hand|Medium": "closed-tab value (UI-12); M outside the cut",
+-  "Patrick Hand|Hard": "closed-tab value (UI-12); H outside the cut",
+   // ── the keyboard legend is literally a set of capital keycaps, and a keycap that renders in
+   // the system face still reads as the key it names.
+   "Patrick Hand|K": "keycap",
+-  "Patrick Hand|H": "keycap",
+   "Patrick Hand|P": "keycap",
+   "Patrick Hand|Z": "keycap",
+   // T5-W3 row 3.6 (a11y r1 L10): the crib grew the two bare keys it never named — G (games)
+@@ -100,8 +96,8 @@ const LEDGER: Record<string, string> = {
+  *  it. The backward check exempts exactly these, by key — a row that stops rendering for any
+  *  OTHER reason still reds as stale, which is the direction the row was missing. */
+ const CONDITIONAL: Record<string, string> = {
+-  "Patrick Hand|Medium": "closed-tab value; every cell below deals EASY",
+-  "Patrick Hand|Hard": "closed-tab value; every cell below deals EASY",
++  // T9-W7: the two closed-tab values left with their LEDGER rows (see above) — a conditional
++  // row for a string that can no longer render mixed is a claim about a page that has moved on.
+   "Patrick Hand|Ctrl": "keycap; the legend draws ⌘ on Apple platforms and Ctrl elsewhere",
+ };
+ 
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index dfd467f8..c511b6ea 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -818,7 +818,30 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+   // charged less would be a compartment that didn't read as one. Base is UNMOVED at
+   // 1142.38 / 1142.34 with the well ablated, which is the other half of the reading — the
+   // feature costs what it costs and nothing else drifted underneath it.
+-  const SEAL = 1227.5;
++  // T9-W7 CTRL-FACE RE-PRICES IT A THIRD TIME, in this test's own form: named, measured,
++  // ablated. The purchase is the owner's M03 ("the section titles need to be larger") read as
++  // one law — the card names its eight compartments in ONE voice, the sheet's own printing, at
++  // one rung — and at THIS cell exactly two of those names cost anything, because on the rail
++  // the row captions sit OVER their rows and pay their whole line box:
++  //
++  //   the four tapes re-faced 14px hand → 25.888px printed      **0.00**  the `1lh` pull
++  //   the tape's leading 1.5 → 1.05 (--type-leading-display)    **0.00**  free vertically
++  //   the two row captions at the printed rung                  **+31.25**  M03's purchase
++  //   the caption's `align-self: flex-start` and `nowrap`       **0.00**  the row is its chips
++  //   the tab row's 0.5rem of headroom                          **0.00**  no tab row here
++  //   the word's 0.25rem paint padding, handed back in margin   **0.00**  net zero, both axes
++  //   the first well back to HEAD's 0.35rem                     **0.00**  unchanged
++  //   shipped                                    **1258.47 chromium / 1259.34 webkit**
++  //
++  // MEASURED ON THIS TREE, paired against a `74a2b5d9` control served beside it: the control
++  // reads **1227.09 / 1228.06** and the ablation below moves it **0.00** there, which is the
++  // born-RED half. SEAL = shipped + the same 2.6px of engine slack T6 gave, and no slack for a
++  // mark nobody ordered (equivalently 1227.5 + 31.25 + 2.25), leaving 1.66px of headroom on the
++  // taller engine. ONE restamp, not a second constant. The SECOND negative control below is
++  // what makes that an ablation rather than a claim: put the two captions back on the hand rung
++  // in-page and the card must FALL by ≥28px — it falls **31.25 / 31.21**. A seal that bought a
++  // face can be shown losing it.
++  const SEAL = 1261;
+ 
+   const ctx = await browser.newContext({
+     viewport: { width: 1280, height: 800 },
+@@ -850,6 +873,29 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+       `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+     ).toBeLessThanOrEqual(SEAL);
+ 
++    // NEGATIVE CONTROL ZERO (T9-W7 CTRL-FACE), and it runs FIRST because the one below leaves
++    // its own layout behind. The re-price says the 31.25px this seal grew by IS the two row
++    // captions at the printed rung — so put them back in the hand at `--type-tag` and the card
++    // must FALL by ≥28px. Without this the new seal is just a bigger number with a story; with
++    // it, the number is the face, and a later cure that quietly drops the rung reds here
++    // instead of passing under a roomier bound.
++    const ABLATE = "t9-w7-caption-rung";
++    await p.evaluate((id) => {
++      const s = document.createElement("style");
++      s.id = id;
++      s.textContent =
++        ".zone-row-label { font-size: var(--type-tag) !important; line-height: 1.1 !important }";
++      document.head.appendChild(s);
++    }, ABLATE);
++    await p.waitForTimeout(120);
++    const handRung = await p.evaluate(PANEL_H);
++    await p.evaluate((id) => document.getElementById(id)?.remove(), ABLATE);
++    await p.waitForTimeout(120);
++    expect(
++      shipped! - handRung!,
++      "what the seal bought: the two row captions at the printed rung",
++    ).toBeGreaterThanOrEqual(28);
++
+     // NEGATIVE CONTROL, in the same run: revert both payments in-page and the same probe
+     // must break the seal. Without this the bound is arithmetic about a number nobody can
+     // move — the GATE-1 pattern, and the reason this row exists at all.
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index b31bfeec..a88d785b 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -678,17 +678,24 @@ test.describe("coarse regime", () => {
+ 
+     // The chips still carry the whole of the state, and they say it the way every other option
+     // row in the estate does — `aria-pressed`, which is the announcement the sentence duplicated.
+-    await well.locator('.ctrl-btn:text-is("Live")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    // THE SELECTOR NAMES THE WORD'S OWN SPAN (T9-W7 CTRL-FACE). `:text-is()` matches the
++    // SMALLEST element carrying the text, so wrapping each label in `.ctrl-word` — the span the
++    // scribble is measured against — left `.ctrl-btn:text-is("Live")` matching nothing and this
++    // row timing out in both engines. Measured while fixing it: the engine reads `textContent`,
++    // not the painted text, so the CSS lowercasing is not what moved (`:text-is("live")` finds
++    // 0 and `:text-is("Live")` finds 1 on a chip that paints `live`). The authored word is
++    // still the assertion above; the state is still read off the BUTTON.
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await well.locator('.ctrl-btn:text-is("Off")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Off")')).toHaveAttribute(
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "false",
+     );
+diff --git a/web/frontend/scripts/census.stamp.json b/web/frontend/scripts/census.stamp.json
+index f57cb9c6..eebfed0c 100644
+--- a/web/frontend/scripts/census.stamp.json
++++ b/web/frontend/scripts/census.stamp.json
+@@ -29,22 +29,22 @@
+   "pw": {
+     "_": "check-pw-projects.mjs, keyed \"<config>::<project>\". listed = what `playwright test --list` resolves; census = LIVE, i.e. listed minus any declared quarantine AT THE PLATFORM THAT DECLARES IT (never the running one — a census taken on darwin, where no quarantine applies, would bank floors of 6 and 10 for the two parked projects and red the ubuntu lane on its next run).",
+     "stamp": {
+-      "sha": "4686436f",
+-      "date": "2026-09-17",
++      "sha": "74a2b5d9",
++      "date": "2026-09-19",
+       "platform": "darwin",
+-      "wave": "T9-W3+W6 fold 2026-09-17 — the CH-62 park torn down, W3's four new specs, share-truth per-row",
++      "wave": "unlabelled restamp",
+       "note": ""
+     },
+     "projects": {
+       "playwright.config.ts::chromium": {
+-        "listed": 238,
+-        "census": 238,
+-        "floor": 214
++        "listed": 259,
++        "census": 258,
++        "floor": 232
+       },
+       "playwright.config.ts::webkit": {
+-        "listed": 238,
+-        "census": 236,
+-        "floor": 212
++        "listed": 259,
++        "census": 256,
++        "floor": 230
+       },
+       "playwright-golden.config.ts::(default)": {
+         "listed": 4,
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index d073b99d..d0e73ee6 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -55,6 +55,18 @@
+  * compared here, both directions: a re-cut that adds `x` leaves the generator refusing a name
+  * the page can now draw, and one that drops a letter puts a half-drawn slug on a roster row.
+  *
++ * ── T9-W7 CTRL-FACE — CHECK 6, THE FACE LAW (the spec's "check 4"; the file numbers it sixth
++ * because five were already numbered) ──────────────────────────────────────────────────────
++ * Every check above binds a FACE to a CORPUS by a hand-written `where` label, and not one of
++ * them reads which face a selector actually renders in. So a face re-point is invisible here:
++ * measured at the CTRL-FACE research lane, this gate printed `font coverage OK` while `pencils`
++ * and `players` painted their `p` in Georgia at weight 800 — the T8 ransom-note trap re-armed
++ * from the other side, a cut that is honest about a register nothing renders in any more.
++ * `FACE_SITES` closes it: each site names the family it must paint in, the script finds the
++ * rule block that sets `font-family` AT that selector, and resolves the value through the
++ * `--face-*` / `--font-*` tokens. A literal family string reds — a face reachable from no token
++ * is a face no voice can re-cut.
++ *
+  *   node scripts/check-font-coverage.mjs
+  */
+ import { readFileSync, readdirSync } from "node:fs";
+@@ -86,6 +98,18 @@ const grab = (files, re) =>
+     [...f.text.matchAll(re)].map((m) => ({ s: m[1], where: f.rel })),
+   );
+ 
++/** The consumers that PRINT their compartment tapes (T9-W7 CTRL-FACE's `.tray-well` hook). */
++const PRINTED_TAPES = /^src\/games\/shared\/GameControlPanel\.vue$/;
++/** Every static `text="…"` on a <SheetWashiLabel> the predicate takes, with its file. */
++const tapes = (keep) =>
++  pick(/\.vue$/).flatMap((f) =>
++    [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
++      .filter((m) => keep(m[0], f.rel))
++      .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
++      .filter(Boolean)
++      .map((m) => ({ s: m[1], where: f.rel })),
++  );
++
+ /**
+  * THE EXTRACTORS — each names the authored construct it reads. A derivation nobody can check
+  * is a second hand-written list wearing a machine's badge, so every one of these points at a
+@@ -104,14 +128,31 @@ const EXTRACT = {
+     what: '`label: "…"` in src/games/cards.ts (the picker\'s axis captions)',
+     run: () => grab(pick(/^src\/games\/cards\.ts$/), /\blabel:\s*"([^"]+)"/g),
+   },
++  // T9-W7 CTRL-FACE — the tapes split by ANCHOR **and by CONSUMER**, because a face is a
++  // consumer's ruling, not a component's: the tape is printed where the controls card re-faces
++  // it (`.tray-well :deep(.washi-tag)`) and stays in the hand everywhere else, including the
++  // deck's own `new game`. So the tag filter carries a `files` term, and every tape it does not
++  // take falls through to the hand below. The UNION is unchanged — nothing left the derivation,
++  // and a tape whose consumer changes moves between these two lists, never out of both.
++  //
++  // `PRINTED_TAPES` is that consumer list, and it is the one place the two extractors agree.
+   washiTapes: {
+-    what: 'static `text="…"` on <SheetWashiLabel> across src/**/*.vue',
++    what: 'static `text="…"` on a <SheetWashiLabel> that no consumer prints — the notes',
++    run: () => tapes((m, rel) => !(/anchor="tag"/.test(m) && PRINTED_TAPES.test(rel))),
++  },
++  washiTags: {
++    what: 'static `text="…"` on <SheetWashiLabel anchor="tag"> in the controls card — the printed compartment names',
++    run: () => tapes((m, rel) => /anchor="tag"/.test(m) && PRINTED_TAPES.test(rel)),
++  },
++  // The CARD renders every option a game declares, in the hand. The DECK stages the size and
++  // level tiers only, in this component's own mono default — two corpora, two faces, one
++  // authored source apiece, because `selectors.ts` is exactly what the picker paints.
++  optionLabels: {
++    what: '`label: "…"` in src/games/shared/selectors.ts and GameControlPanel\'s option consts',
+     run: () =>
+-      pick(/\.vue$/).flatMap((f) =>
+-        [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
+-          .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
+-          .filter(Boolean)
+-          .map((m) => ({ s: m[1], where: f.rel })),
++      grab(
++        pick(/^src\/games\/shared\/(selectors\.ts|GameControlPanel\.vue)$/),
++        /\blabel:\s*"([^"]+)"/g,
+       ),
+   },
+   paperNoteCopy: {
+@@ -129,6 +170,11 @@ const EXTRACT = {
+           : [];
+       }),
+   },
++  deckOptionLabels: {
++    what: '`label: "…"` in src/games/shared/selectors.ts — the tiers the picker stages',
++    run: () =>
++      grab(pick(/^src\/games\/shared\/selectors\.ts$/), /\blabel:\s*"([^"]+)"/g),
++  },
+   zoneRowLabels: {
+     what: "the static text of a `.zone-row-label` span",
+     run: () =>
+@@ -195,6 +241,27 @@ const FACES = [
+         derive: ["cardNames"],
+         strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
+       },
++      // T9-W7 CTRL-FACE — the compartment names and the row captions are PRINTED now (the
++      // sheet's own eight nouns), so they move here from the hand's corpus. `p` is the one
++      // letter the eight names need that the cut never held: `pencils` and `players` painted
++      // it in Georgia at weight 800, mid-word, proved by advance in both engines.
++      {
++        where: ".washi-tag (the compartment names)",
++        transform: "lowercase",
++        derive: ["washiTags"],
++        atLeast: 4,
++        strings: ["new game", "pencils", "checking", "players"],
++      },
++      {
++        // `candidates` → `what fits` at the W7 execution fold (ballot T9-B1 · B1b). The word a
++        // pass measured is not the word the card ships, and the corpus is the one place that
++        // difference has to be written down rather than interpolated.
++        where: ".zone-row-label (row captions)",
++        transform: "lowercase",
++        derive: ["zoneRowLabels"],
++        atLeast: 2,
++        strings: ["marks", "what fits"],
++      },
+     ],
+   },
+   // THE SECOND FACE (T4-P1, stage BC). The hand register was never in this gate, and the zone
+@@ -216,31 +283,60 @@ const FACES = [
+       // exactly. All twelve are declared here and all twelve clear the cut (measured \u2014 the
+       // hand's repertoire is lowercase, and the tooltips are written in it).
+       {
+-        where: ".washi-tag (compartment names) + the tapes",
++        where: "the tapes no consumer prints (the notes, and the DECK's own name)",
+         transform: "none",
+         derive: ["washiTapes"],
+         strings: [
++          // T9-W7 CTRL-FACE: the picker's `new game` tape. The same word is printed on the
++          // controls card and written on the deck, and that is the law working rather than a
++          // duplicate — a face belongs to the surface, so the string is in both corpora.
+           "new game",
+-          "pencils",
+           "teacher's",
+           "hold to peek",
+           "normal writes a digit. corner and center write small pencil marks",
+           "show every digit that still fits in a cell",
+-          "checking",
+           "when your mistakes get checked",
+-          "players",
+           "share this board and everyone writes on the same grid",
+           "wipe every digit you've written",
+           "fill the cells that have only one digit left",
+           "finishes the board for you",
+         ],
+       },
++      // T9-W7 CTRL-FACE \u2014 every option VALUE is written, and the register had never been in
++      // this gate at all: `.heading-value` renders the authored `Easy` with no transform, so
++      // its `E` has painted in the system cursive mid-word for the life of the closed tab.
++      // The face law lowercases both sites; the corpus carries the authored form too, per the
++      // both-cases rule at the head of this file, which is what the +A E H L M N O re-cut buys.
+       {
+-        where: ".zone-row-label (row captions)",
+-        transform: "none",
+-        derive: ["zoneRowLabels"],
+-        strings: ["marks", "what fits"],
++        where: ".tray-well .ctrl-btn + .heading-value (the card's option values)",
++        transform: "lowercase",
++        derive: ["optionLabels"],
++        strings: [
++          "Easy",
++          "Medium",
++          "Hard",
++          "4\u00d74",
++          "9\u00d79",
++          "16\u00d716",
++          "5\u00d75",
++          "6\u00d76",
++          "7\u00d77",
++          "Normal",
++          "Corner",
++          "Center",
++          "Off",
++          "Ask",
++          "Live",
++          "On",
++        ],
+       },
++      // T9-W7 · B1b — the fold renamed `candidates` → `what fits`; a caption is a printed
++      // compartment word and the corpus derives it from the span the card authors.
++      // THE ROW CAPTIONS LEFT THIS FACE (T9-W7 CTRL-FACE). The fold booked them here because at
++      // its HEAD a caption painted the hand; the face law makes a caption one of the sheet's
++      // eight printed nouns, so the pair moves to the Fraunces corpus above, with its floor.
++      // A corpus row is a claim about what a face RENDERS, and a claim about a face this string
++      // no longer paints in is the same kind of stale the ledger's backward arm exists to catch.
+       // T9-W7 · B1b — the paper note paints in `--font-hand` (`.error-note-text`,
+       // SolverErrorNote.vue) and its four sentences have never been in this corpus: the
+       // recut that took `solver` out of two of them is exactly the moment the trap fires,
+@@ -269,6 +365,24 @@ const FACES = [
+       },
+     ],
+   },
++  // THE THIRD FACE (T9-W7 CTRL-FACE). It was never in this gate, and the reason it is now is
++  // the reason this family exists: the CARD's chips left this face for the hand and the DECK's
++  // did not, so the 3,624 B that looked recoverable are the picker's whole size-and-level
++  // repertoire. AUTHORED CASE, no transform — the deck lowercases nothing, which is also why
++  // the cut can be this small (it holds `E H M` and no `h`; a lowercase `hard` would red here
++  // and that red would be true).
++  {
++    family: "Fira Code",
++    font: "src/assets/fonts/firacode-subset.woff2",
++    corpus: [
++      {
++        where: ".staging-axis .ctrl-btn (the picker's staged tiers)",
++        transform: "none",
++        derive: ["deckOptionLabels"],
++        strings: ["Easy", "Medium", "Hard", "4×4", "9×9", "16×16", "5×5", "6×6", "7×7"],
++      },
++    ],
++  },
+ ];
+ 
+ // ── cmap ────────────────────────────────────────────────────────────────────────────────────
+@@ -499,6 +613,21 @@ for (const face of FACES) {
+             `An empty derivation contains anything, so this check would pass on a blind read ` +
+             `— the construct was renamed, or the file moved.`,
+         );
++      // THE COUNT IS A STRUCTURAL FACT, NOT A SIDE EFFECT (T9-W7 CTRL-FACE pass 3). The empty
++      // check above only catches a derivation that found NOTHING; a rename that leaves ONE of
++      // two captions, or three of four tapes, still derives a non-empty subset of a declared
++      // list and this gate stays green while the corpus quietly becomes hand-written again.
++      // `atLeast` is the derivation's own floor — how many of these the card is built to ship —
++      // and it is the same arithmetic `face-law.spec.ts` asserts on the page (printed ==
++      // tapes + captions + sections.length). A sixth game, or a third caption, raises it here
++      // in the same commit that adds it, which is the point.
++      if (group.atLeast && found.length < group.atLeast)
++        problems.push(
++          `${face.family} · ${group.where}: extractor \`${id}\` found ${found.length} where ` +
++            `the card ships ${group.atLeast}. A derivation that shrinks under its own floor is ` +
++            `a rename this gate would otherwise read as a smaller corpus — re-point the ` +
++            `extractor, or move the floor in the commit that moves the card.`,
++        );
+       for (const { s, where } of found) {
+         seen.add(s);
+         if (declared.has(s)) continue;
+@@ -594,6 +723,134 @@ const WRITEABLE_SRC = "src/games/shared/playerIdentity.ts";
+   }
+ }
+ 
++// 6. THE FACE LAW (T9-W7 CTRL-FACE; the spec's "check 4"). PRINTED is what the sheet came
++// printed with — the eight group names; WRITTEN is what a pencil put there — every value and
++// every verb. Each site declares its face AT the site, through a token, and this compares the
++// declaration to the law. A literal family string is red on its own: it is unreachable from
++// any voice, which is how `"Fira Code", monospace` outlived three type re-cuts in a template.
++// THE KEY IS THE SELECTOR, EXACTLY AS WRITTEN. A shared component ships to two decks and the
++// face is the CONSUMER's ruling, so `.washi-tag` and `.tray-well :deep(.washi-tag)` are two
++// different laws about two different surfaces and the gate has to be able to tell them apart —
++// a substring match cannot, and pass 1's did not (it read the card's re-face as a violation of
++// the component's own rule). Two closures, both ways: a block that declares `font-family` on a
++// listed class and is not a key is an UNDECLARED HOME (a face nobody wrote down), and a key
++// with no such block is A LAW WITH NO HOME (a rule that was moved or renamed out from under
++// this list). The value must be a `--face-*` token in first position: `--font-*` is the family
++// binding, `--face-*` is the law, and a site that reads the binding is a site no voice can
++// re-cut without chasing every consumer of the font.
++const FACE_SITES = {
++  ".section-heading": "Fraunces",
++  // `.washi-label` and `.washi-tag` are TWO HOMES ON ONE ELEMENT (a tag tape is
++  // `span.washi-label.washi-tag`, 97 lines apart in one file). Listing only the tag left the
++  // label invisible to the closures — the class never appeared in a key, so no block that
++  // declared a face on it could ever be an undeclared home. Falsified at the pass-2 critique:
++  // `.washi-label { font-family: var(--font-display) }` shipped `font coverage OK`. Both homes
++  // are named, so both are held.
++  ".washi-label": "Patrick Hand",
++  ".washi-tag": "Patrick Hand",
++  ".tray-well :deep(.washi-tag)": "Fraunces",
++  ".zone-row-label": "Fraunces",
++  ".ctrl-btn": "Fira Code",
++  ".tray-well :deep(.ctrl-btn)": "Patrick Hand",
++  ".heading-value": "Patrick Hand",
++  ".icon-sublabel": "Patrick Hand",
++};
++{
++  /** Every flat CSS rule block on the tree — `<style>` blocks in .vue, whole .css files. */
++  const blocks = [];
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    let css = f.rel.endsWith(".vue")
++      ? [...f.text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
++          .map((m) => m[1])
++          .join("\n")
++      : f.text;
++    css = css.replace(/\/\*[\s\S]*?\*\//g, " ");
++    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
++      const sel = m[1].trim();
++      if (!sel || sel.startsWith("@")) continue; // at-rule preludes, never a selector
++      blocks.push({ where: f.rel, sel, body: m[2] });
++    }
++  }
++  /** `--font-*` / `--face-*` definitions, so a face is resolved the way the browser does. */
++  const tokens = {};
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    for (const m of f.text.matchAll(/(--(?:font|face)-[\w-]+)\s*:\s*([^;]+);/g))
++      if (!(m[1] in tokens)) tokens[m[1]] = m[2].trim();
++  }
++  const resolve = (value) => {
++    const seen = new Set();
++    let v = value.trim();
++    let m;
++    while ((m = /^var\(\s*(--[\w-]+)\s*(?:,[\s\S]*)?\)$/.exec(v))) {
++      if (seen.has(m[1]) || !(m[1] in tokens)) return null;
++      seen.add(m[1]);
++      v = tokens[m[1]].trim();
++    }
++    return v.split(",")[0].replace(/["']/g, "").trim();
++  };
++  const norm = (s) => s.replace(/\s+/g, " ").trim();
++  /** The classes the law is about — read off the keys, so the list is spelled once. */
++  const LISTED = new Set(
++    Object.keys(FACE_SITES).flatMap((k) =>
++      [...k.matchAll(/\.([\w-]+)/g)].map((m) => m[1]),
++    ),
++  );
++  /** Every block that declares a face on one of those classes, filed under its exact selector. */
++  const homes = new Map();
++  for (const b of blocks) {
++    const decl = /(?:^|[;{\s])font-family\s*:\s*([^;]+)/.exec(b.body);
++    if (!decl) continue;
++    const names = [...b.sel.matchAll(/\.([\w-]+)/g)].map((m) => m[1]);
++    if (!names.some((n) => LISTED.has(n))) continue;
++    const sel = norm(b.sel);
++    if (!(sel in FACE_SITES)) {
++      problems.push(
++        `the face law: ${b.where} declares \`font-family\` at \`${sel}\`, which is not a site ` +
++          `the law names. Every home for these classes is written down, because a face set ` +
++          `somewhere nobody listed is a face nobody can re-cut — add the selector to ` +
++          `FACE_SITES with the family it must paint, or set no face there.`,
++      );
++      continue;
++    }
++    if (!homes.has(sel)) homes.set(sel, []);
++    homes.get(sel).push({ ...b, raw: decl[1].trim() });
++  }
++  for (const [sel, family] of Object.entries(FACE_SITES)) {
++    const declaring = homes.get(sel);
++    if (!declaring) {
++      problems.push(
++        `the face law: no rule sets \`font-family\` AT \`${sel}\`, so either the site inherits ` +
++          `its face from whatever encloses it — which cannot be re-cut at the site — or the ` +
++          `rule was renamed out from under this law. Declare it there, reading one face token.`,
++      );
++      continue;
++    }
++    for (const d of declaring) {
++      const first = /^var\(\s*(--[\w-]+)/.exec(d.raw);
++      if (!first || !/^--face-/.test(first[1])) {
++        problems.push(
++          `the face law: ${d.where} sets \`${sel} { font-family: ${d.raw} }\`. The first token ` +
++            `must be a \`--face-*\` law (\`--face-printed\` / \`--face-written\` / ` +
++            `\`--face-mono\`): a literal is reachable from no voice at all, and a \`--font-*\` ` +
++            `binding names the FILE rather than the register, so re-cutting the register means ` +
++            `chasing every site that reads the font.`,
++        );
++        continue;
++      }
++      const got = resolve(d.raw);
++      if (got !== family)
++        problems.push(
++          `the face law: ${d.where} paints \`${sel}\` in ${got ?? "an unresolvable family"} ` +
++            `(\`${d.raw}\`) and the law says ${family}. PRINTED is the eight group names; ` +
++            `WRITTEN is every value and every verb; MONO is the shared component's own default, ` +
++            `which the deck keeps.`,
++        );
++    }
++  }
++}
++
+ if (problems.length) {
+   console.error("font coverage FAILED:");
+   for (const p of problems) console.error(`  · ${p}`);
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index 18a8d380..71c0f7be 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -233,6 +233,10 @@ const SPEC_MANIFEST = [
+   "affordances.spec.ts",
+   "board-covisibility.spec.ts",
+   "drawer.spec.ts",
++  // T9-W7 CTRL-FACE — the face law's own gates. BOTH ENGINES at full grain: the family's two
++  // load-bearing rows are an engine-identity claim about the chip's mark and a painted read of
++  // the tape's own bitmap, and neither means anything in one engine.
++  "face-law.spec.ts",
+   "filter-census.spec.ts",
+   "follow-still-authorship.spec.ts",
+   "font-census.spec.ts",
+diff --git a/web/frontend/scripts/check-support-floor.mjs b/web/frontend/scripts/check-support-floor.mjs
+index 5dbfa6e5..cd510aaa 100644
+--- a/web/frontend/scripts/check-support-floor.mjs
++++ b/web/frontend/scripts/check-support-floor.mjs
+@@ -10,7 +10,7 @@
+  * below"). A guard nobody can adjudicate is permanent: it survives every review
+  * because every reviewer has to re-litigate the policy first.
+  *
+- * So this gate makes the floor a fact and then holds five things to it.
++ * So this gate makes the floor a fact and then holds six things to it.
+  *
+  *   1 FLOOR DECLARED   `browserslist` in web/frontend/package.json — one array,
+  *                      one entry per engine, each `<engine> >= <version>`.
+@@ -28,6 +28,11 @@
+  *   5 README CITES     the root README states the same versions the declaration
+  *                      carries — the floor is a published promise or it is not
+  *                      one.
++ *   6 UNITS REACHABLE  a CSS UNIT the source ships (`lh`) must parse at the
++ *                      declared floor. Checks 2 and 3 cannot see this: Lightning
++ *                      down-levels syntax, never a unit, so the token is emitted
++ *                      verbatim at every target and the failure is a dropped
++ *                      declaration on a real client, not a build error.
+  *
+  * WHY `browserslist` WHEN NOTHING READS IT. Measured, not assumed: two `vite
+  * build` runs into separate outDirs, identical source, differing only by the
+@@ -48,10 +53,10 @@
+  * the ES-year → engine table in `ES_YEAR_FLOORS` (a language-spec fact, cited
+  * inline) and the engine roster.
+  *
+- * `--self-test` re-runs all five checks against deliberately-broken inputs and
++ * `--self-test` re-runs all six checks against deliberately-broken inputs and
+  * fails if any of them stays green. The gate proves it can bite on every run.
+  *
+- * Exit 0 = all five green. Exit 1 = one line per violation.
++ * Exit 0 = all six green. Exit 1 = one line per violation.
+  *
+  * Zero dependencies, ESM, node-only. Runs identically on ubuntu and darwin.
+  */
+@@ -104,6 +109,65 @@ const ES_YEAR_FLOORS = {
+ /** Every engine the declaration must name. `edge` is Chromium: it rides chrome. */
+ const ENGINES = ["chrome", "edge", "firefox", "safari", "ios_saf"];
+ 
++/**
++ * CSS UNITS THE SOURCE USES THAT THE FLOOR HAS TO REACH (T9-W7 CTRL-FACE).
++ *
++ * Checks 2 and 3 bind the declaration to what the TOOLCHAIN compiles, and that is exactly
++ * where a CSS *unit* escapes them: Lightning CSS does not down-level `lh` at any target — it
++ * passes the token through, because there is nothing to compile it to — so `margin: calc(-1lh
++ * - …)` is emitted verbatim for a chrome 109 target and for a chrome 60 one alike. Grepping
++ * the built stylesheet for `-1lh` therefore cannot fail, and a gate that cannot fail is not a
++ * gate. What CAN fail is the promise: on an engine below the unit the whole `calc()` is
++ * invalid at computed-value time, the margin shorthand is dropped, and a compartment tape
++ * lands in flow — GameControlPanel:1536-1540's documented class, in production, silently.
++ *
++ * So the unit is declared here with the first version of each engine that parses it, and the
++ * declared floor is re-derived against it the way check 2 re-derives Lightning's. Sourced from
++ * MDN Browser Compatibility (`lh` / `rlh` length units): Chrome 109, Edge 109, Firefox 120,
++ * Safari 16.4, Safari iOS 16.4. `where` names one source site so a reader can delete the row
++ * with the declaration rather than guess whether anything still needs it.
++ */
++const CSS_UNIT_FLOORS = [
++  {
++    unit: "lh",
++    where:
++      "src/pencil/sheet/SheetWashiLabel.vue — the tag tape's `calc(-1lh - …)` pull",
++    need: {
++      chrome: "109",
++      edge: "109",
++      firefox: "120",
++      safari: "16.4",
++      ios_saf: "16.4",
++    },
++  },
++];
++
++/** CHECK 6 — a CSS unit the source ships must be parseable at the declared floor. */
++function checkUnitsReachable(floor) {
++  const out = [];
++  for (const { unit, where, need } of CSS_UNIT_FLOORS)
++    for (const engine of ENGINES) {
++      const want = parseVersion(need[engine]);
++      const have = floor[engine];
++      if (!want) continue;
++      if (!have) {
++        out.push(
++          `declared floor names no \`${engine}\`, but the source ships the \`${unit}\` unit ` +
++            `(${where}), which ${engine} parses from ${need[engine]}`,
++        );
++        continue;
++      }
++      if (cmp(have, want) < 0)
++        out.push(
++          `declared floor \`${engine} >= ${show(have)}\` sits BELOW the \`${unit}\` unit the ` +
++            `source ships (${engine} ${need[engine]}; ${where}). Lightning CSS does not ` +
++            `down-level a unit, so the token is emitted verbatim and the declaration that ` +
++            `carries it is dropped at computed-value time on a client at the floor.`,
++        );
++    }
++  return out;
++}
++
+ /* ── input collection (all five checks read these, and only these) ───────── */
+ 
+ const readIf = (p) => (existsSync(p) ? readFileSync(p, "utf8") : null);
+@@ -368,6 +432,7 @@ function run(inputs) {
+         ["4b skipped — no declared floor to measure sub-floor prose against"],
+       ),
+       "5 README CITES": ["skipped — no usable declaration to measure"],
++      "6 UNITS REACHABLE": ["skipped — no usable declaration to measure"],
+       _floor: null,
+     };
+ 
+@@ -377,6 +442,7 @@ function run(inputs) {
+     "3 TARGET COHERENT": checkTargetCoherent(floor, inputs.vite),
+     "4 SHIMS DEAD": checkShimsDead(floor, inputs.src),
+     "5 README CITES": checkReadmeCites(floor, inputs.readme),
++    "6 UNITS REACHABLE": checkUnitsReachable(floor),
+     _floor: floor,
+   };
+ }
+@@ -454,6 +520,16 @@ function selfTest(inputs) {
+       "the README floor sentence removed",
+       { ...inputs, readme: "# csp-solver\n\nNo floor here.\n" },
+     ],
++    [
++      "6 UNITS REACHABLE",
++      "the firefox floor dropped under the `lh` unit",
++      withPkg((p) => ({
++        ...p,
++        browserslist: p.browserslist.map((e) =>
++          e.startsWith("firefox") ? "firefox >= 119" : e,
++        ),
++      })),
++    ],
+   ];
+ 
+   let failures = 0;
+diff --git a/web/frontend/src/assets/fonts/fraunces-subset.woff2 b/web/frontend/src/assets/fonts/fraunces-subset.woff2
+index 3e9dd12d..5d6c87ef 100644
+Binary files a/web/frontend/src/assets/fonts/fraunces-subset.woff2 and b/web/frontend/src/assets/fonts/fraunces-subset.woff2 differ
+diff --git a/web/frontend/src/assets/fonts/patrickhand-subset.woff2 b/web/frontend/src/assets/fonts/patrickhand-subset.woff2
+index 19222d97..1a16dd53 100644
+Binary files a/web/frontend/src/assets/fonts/patrickhand-subset.woff2 and b/web/frontend/src/assets/fonts/patrickhand-subset.woff2 differ
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..1b9e6e46 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -21,7 +21,7 @@
+  * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
+  * rendered strings and fails if the cmap misses one.
+  *
+- *   fraunces-subset.woff2   14,636 B  — WORDMARK + HEADINGS ONLY (opsz+wght
++ *   fraunces-subset.woff2   14,896 B  — WORDMARK + THE PRINTED NAMES (opsz+wght
+  *                                       variable, SOFT/WONK pinned like the
+  *                                       CDN's own served instance). unicode-range
+  *                                       gates it to exactly that repertoire so
+@@ -36,12 +36,22 @@
+  *                                       again at the T8 live-pass cures: the
+  *                                       eyebrow went Difficulty → Level, adding
+  *                                       L and v (the census caught "level"'s v
+- *                                       painting in Georgia mid-word). Now 30
+- *                                       codepoints, 14,636 B.
+- *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
+- *                                       OptionSelector size/difficulty label
+- *                                       (both games) + the "@mbabb" byline.
+- *   patrickhand-subset.woff2 4,312 B  — full realistic app coverage: every
++ *                                       painting in Georgia mid-word), and again
++ *                                       at T9-W7's face law: the eight group
++ *                                       NAMES are printed now, so +p — the one
++ *                                       letter they need that the cut lacked,
++ *                                       and `pencils`/`players` had been paying
++ *                                       for it in Georgia at weight 800 (proved
++ *                                       by advance, both engines). Now 31
++ *                                       codepoints, 14,896 B (+260).
++ *   firacode-subset.woff2    3,624 B  — the deck's staging chips (every size
++ *                                       and difficulty label the picker paints),
++ *                                       the "@mbabb" byline, the mono registers.
++ *                                       (T9-W7: the CARD's chips left this face
++ *                                       for the hand, the DECK's did not, so the
++ *                                       cut is unchanged and none of these bytes
++ *                                       was ever recoverable.)
++ *   patrickhand-subset.woff2 4,896 B  — full realistic app coverage: every
+  *                                       MarginNote status string, SolverErrorNote
+  *                                       paper-note variant, SheetWashiLabel
+  *                                       tooltip, + the wordmark dropdown list.
+@@ -51,9 +61,15 @@
+  *                                       the P5 range wrongly excluded both while
+  *                                       the file carried them, so "solved it!"
+  *                                       et al. rendered those two glyphs in the
+- *                                       cursive fallback.
++ *                                       cursive fallback. Re-derived at T9-W7:
++ *                                       the option VALUES joined this face, and
++ *                                       the both-cases rule above wants their
++ *                                       authored initials — +A E H L M N O
++ *                                       (+584 B). `.heading-value` had been
++ *                                       drawing `Easy`'s E in the system cursive
++ *                                       since UI-12 shipped.
+  *
+- * Total self-hosted: 22,572 B for all three faces, same-origin, immutable-
++ * Total self-hosted: 23,416 B for all three faces, same-origin, immutable-
+  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
+  */
+ @font-face {
+@@ -64,13 +80,16 @@
+   font-stretch: 100%;
+   src: url("./fonts/fraunces-subset.woff2") format("woff2");
+   /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
+-     space · B C D L M N S · a-i · k-o · r-w · y z  (30 codepoints). Re-cut at the T8
++     space · B C D L M N S · a-i · k-p · r-w · y z  (31 codepoints). Re-cut at the T8
+      live-pass cures: the drawer eyebrow went Difficulty → Level, and neither L nor v had
+      ever been asked of this face — the e2e font census caught "level" painting its v in
+-     the Georgia fallback mid-word. Same recipe as P1-W3 (instancer SOFT=0 WONK=1, then
+-     pyftsubset), both cases per the coverage gate's rule. */
++     the Georgia fallback mid-word. Re-cut again at T9-W7 (the face law): the compartment
++     names and the row captions are printed now, and `p` is the single letter the eight
++     nouns need that this cut never held. Same recipe as P1-W3 (instancer SOFT=0 WONK=1,
++     then pyftsubset --layout-features= --no-hinting), both cases per the coverage gate's
++     rule. */
+   unicode-range:
+-    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0077,
++    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-0070, U+0072-0077,
+     U+0079-007A;
+ }
+ 
+@@ -91,9 +110,14 @@
+   font-weight: 400;
+   font-display: swap;
+   src: url("./fonts/patrickhand-subset.woff2") format("woff2");
++  /* T9-W7 — the written register took the option VALUES, so the cut takes their authored
++     initials (A E H L M N O) beside the C R S it already held: the gate's both-cases rule,
++     which is what keeps a later change of transform from painting `Easy` in the cursive
++     fallback the way `.heading-value` has been doing since UI-12. */
+   unicode-range:
+-    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053,
+-    U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
++    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0041, U+0043, U+0045,
++    U+0048, U+004C-004F, U+0052, U+0053, U+0061-0069, U+006B-0077, U+0079-007A, U+00D7,
++    U+2014, U+2026;
+ }
+ 
+ @layer base {
+@@ -461,6 +485,17 @@
+    nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+    reads the same four classes off the same page as the tokens they resolve through — a
+    layered home would lose to every unlayered author rule that sets `color`. */
++/* T9-W7 CTRL-FACE — and the closed tab's VALUE word rides the same cascade. Its quiet ink is
++   the default a section without a tier wears; a section with one writes its value in the tier's
++   crayon, the way the open tab's name does. Layered here so the unlayered classes below outrank
++   it, which is the mechanism the paragraph above describes, applied to the other half of the
++   tab row. (`GameControlPanel` keeps the rest of `.heading-value`; only the ink is here.) */
++@layer components {
++  .heading-value {
++    color: var(--ink-press-quiet);
++  }
++}
++
+ .crayon-green {
+   color: var(--color-green-ink);
+ }
+diff --git a/web/frontend/src/assets/typography.css b/web/frontend/src/assets/typography.css
+index 89fab7aa..b39a78b2 100644
+--- a/web/frontend/src/assets/typography.css
++++ b/web/frontend/src/assets/typography.css
+@@ -121,50 +121,48 @@
+   --type-verb: var(--type-caption); /* clear · fill · solve · share */
+   --type-tool: var(--type-caption); /* undo · redo · hint — the play tools */
+   --type-tag: var(--type-caption); /* row caption · closed-tab value · roster */
+-  --type-group-title: var(--type-subheading); /* the section heading */
++  --type-group-title: var(--type-heading); /* the group NAME — φ at every width */
+ }
+ 
+-/* The heading's second arm. It lives HERE, unlayered, and not beside
+-   `.section-heading` in `@layer components`: an unlayered declaration outranks a
+-   layered one whatever the media query says, so a `:root` written inside that
+-   layer would lose to the block above and the ≥768 heading would silently drop a
+-   rung. (Measured the wrong way round once; the rule is the cascade's, not
+-   this file's.) */
+-@media (min-width: 768px) {
+-  :root {
+-    --type-group-title: var(--type-heading); /* √φ → φ at the md rung */
+-  }
+-}
+-
+-/* THE OPTION CHIP'S RUNG, and it is spelled as three width arms because that is
+-   what it ALREADY WAS — four arbitrary Tailwind utilities in `OptionSelector`'s
+-   template (`text-[1rem] md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`),
+-   invisible to the ladder and unreachable from any token. The literals move here
+-   unchanged, so every rung renders byte-identical; what changes is that they are
+-   now ONE name a later voice can re-cut. */
++/* ── THE FACE LAW (T9-W7 CTRL-FACE) — printed, written, mono ────────────────
++   PRINTED is what the sheet came printed with: the eight group names, and only
++   those (new game · size · level · pencils · marks · candidates · checking ·
++   players). WRITTEN is what a pencil put there: every value and every verb.
++   MONO is `OptionSelector`'s OWN default and it is named here for one reason:
++   the component ships to two decks, and the deck this family does not touch
++   keeps it. A third name costs nothing and buys the shared component a face it
++   can be held to.
++   The sites read a FACE the way they read a ROLE — one token each, AT the site,
++   because a shared rule in `@layer components` loses a specificity tie to a
++   scoped component sheet and drops `font-family` in silence (measured).
++   `scripts/check-font-coverage.mjs` check 6 holds each site to its face. */
+ :root {
+-  --type-option: 1.25rem; /* 20px — the desk rail's chip */
+-}
+-
+-@media (max-width: 1023.98px) {
+-  :root {
+-    --type-option: 1.375rem; /* 22px — the stacked card at ≥768 */
+-  }
++  --face-printed: var(--font-display); /* Fraunces — the wordmark's own face */
++  --face-written: var(--font-hand); /* Patrick Hand */
++  --face-mono: var(--font-mono); /* Fira Code — the component's own default */
++  --printed-weight: 800; /* fvar wght 100..900 is live in the shipped
++                                          subset, so a lighter rank is one
++                                          number and zero bytes */
++  --printed-ink: var(--color-foreground);
+ }
+ 
+-@media (max-width: 767.98px) {
+-  :root {
+-    --type-option: 1rem; /* 16px — the phone, as it shipped */
+-  }
+-}
++/* THE ROLE HAS ONE RIGHT-HAND SIDE, and that is the whole of the re-cut. The
++   heading's md arm is GONE: `--type-group-title` was √φ under 768 and φ above
++   it, which put the phone's group name at 20.35px against a 20px chip — 1.018,
++   one size for the name and the thing it names, M03's mark read as a number.
++   φ at every width is 25.888, the desk's own rung, and the name/option ratio is
++   1.2945 at the desk, the dock, the rail AND 900×500 (1.1768 there, which no
++   instrument had ever looked at). Rotation-invariant type: one number, four
++   cells, no width arm to keep true.
+ 
+-/* M01's lift, on the one arm that was under the floor. A 768–1023 coarse tablet
+-   already draws its chips at 22px, above anything this band would set, so the
+-   phone arm is the only one that moves — 16 → 20px, the rail's own chip size. */
+-@media (max-width: 767.98px) and (pointer: coarse) {
+-  :root {
+-    --type-option: 1.25rem; /* 20px */
+-  }
++   THE OPTION CHIP'S RUNG, likewise one line. It was three width arms carrying
++   the four Tailwind literals `OptionSelector` used to spell (`text-[1rem]
++   md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`) — and the 22px in
++   the 768–1023 band was one of those literals moved verbatim, never a ruling.
++   20px is the rail's chip and the phone's chip (M01's lift), so the band joins
++   them and the tablet loses 2px of chip to gain the ratio. */
++:root {
++  --type-option: 1.25rem; /* 20px — every width */
+ }
+ 
+ /* ═══════════════════════════════════════════════════════════════════════════
+@@ -247,7 +245,7 @@
+   text-wrap: balance;
+ }
+ 
+-/* ── HEADINGS / BODY — the text register (--font-text ← Fraunces) ─────────── */
++/* ── HEADINGS / BODY — the text register (--font-text ← Georgia) ──────────── */
+ @utility text-title {
+   font-family: var(--font-text);
+   font-size: var(--type-title);
+@@ -360,14 +358,17 @@
+      and far too airy under x-height forms) to `--type-tracking-wide` (0.025em) — the eyebrow
+      still reads as a caption tier, without gapping. The subset is re-cut from RENDERED text in
+      the same commit; `scripts/check-font-coverage.mjs` is the standing guard. */
+-  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. The md
+-     arm below re-points `--type-group-title` instead of restating a font-size, so
+-     the two arms of one heading are one declaration a voice can re-cut. */
++  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. T9-W7
++     CTRL-FACE — it reads its FACE the same way: `--face-printed` and
++     `--printed-weight`, the same two tokens the tape and the row caption read,
++     so the eight names are one voice a later rank can re-cut in one place.
++     Colour stays with the consuming template (the crayon tier is DATA) except
++     where the template asks for the printed ink by name. */
+   .section-heading {
+-    font-family: var(--font-display);
++    font-family: var(--face-printed);
+     font-size: var(--type-group-title);
+     line-height: var(--type-leading-heading);
+-    font-weight: 800;
++    font-weight: var(--printed-weight);
+     text-transform: lowercase;
+     letter-spacing: var(--type-tracking-wide);
+     text-align: center;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..de621709 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -185,9 +185,18 @@ const showTabs = computed(() => props.sections.length >= 2);
+ function activeColorClass(section: ControlSection): string | undefined {
+   return section.options.find((o) => o.value === section.selected)?.colorClass;
+ }
++// T9-W7 CTRL-FACE — A PRINTED NAME IS AT FULL PRESS. The non-crayon arm was
++// `text-muted-foreground`, which made ink say two things at once: the desk's `size` was quiet
++// because it has no tier, and the dock's shut tab was quiet because it is shut. One rule for
++// both platforms now — a name at full press is a name, and muted means SHUT (the dock's own
++// arm, in the template).
++// WHAT IS NOT HERE IS THE DURATION. `duration-250` shipped at HEAD and pass 2 replaced it with
++// `duration-150`, which is the same mistake one rung quieter: a utility spells a motion number
++// in a template, where no rung can reach it and no PRM arm can see it. The window is a CSS
++// declaration on the two spans that move (`.section-heading`, `.heading-value`), reading the
++// motion rung. This function returns INK only.
+ function headingClass(section: ControlSection): (string | Record<string, boolean>)[] {
+-  const cc = activeColorClass(section);
+-  return cc ? ["transition-colors", "duration-250", cc] : ["text-muted-foreground"];
++  return [activeColorClass(section) ?? "text-foreground"];
+ }
+ // UI-12: the mobile tabs show only the active panel's options, so the inactive tab's current
+ // value is invisible while the other is open. Surface it small + graphite beneath the heading.
+@@ -796,19 +805,29 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+               :aria-expanded="expandedPanel === section.key"
+               @click="expandedPanel = section.key"
+             >
++              <!-- T9-W7 CTRL-FACE — OPENNESS IS PRESSURE. The underline is gone (two underline
++                   grammars 40px apart, and the chips' scribble is the other one); what says a
++                   tab is open is its name at full press, and what says it is shut is a muted
++                   name with its value written underneath. The crayon follows the VALUE — on the
++                   open tab it sits on the name the way the desk's h2 wears it, on the shut tab
++                   it sits on the value word. -->
+               <span
+                 class="section-heading"
+-                :class="[
+-                  headingClass(section),
+-                  { 'is-active': expandedPanel === section.key },
+-                ]"
++                :class="
++                  expandedPanel === section.key
++                    ? headingClass(section)
++                    : ['text-muted-foreground']
++                "
+               >
+                 {{ section.heading }}
+               </span>
+               <!-- UI-12: the current value, shown only while this tab is closed. -->
+-              <span v-if="expandedPanel !== section.key" class="heading-value">{{
+-                valueLabel(section)
+-              }}</span>
++              <span
++                v-if="expandedPanel !== section.key"
++                class="heading-value"
++                :class="activeColorClass(section)"
++                >{{ valueLabel(section) }}</span
++              >
+             </button>
+           </h2>
+         </div>
+@@ -1491,6 +1510,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   --washi-tag-lift: 3px;
+   --washi-tag-gap: 0.1rem;
+   --washi-tag-inset: 0.35rem;
++  /* NO fourth consumer term for the LEADING: the tape's pull reads `1lh`, its own used line
++     box, so this card re-cuts the leading at its `:deep` hook below and the covenant holds by
++     the unit. (Pass 1 minted `--washi-tag-lh` and its 1.5 fallback; one variable two files had
++     to keep agreeing about, for arithmetic the unit already does.) */
+   /* WHERE A TAPE PINS: at the CASE EDGE, not at the content edge a sticky offset counts from
+      (`--card-pad-t`, published above). Two things fall out of the same 0.15rem, and both are
+      the reason it is that small rather than the drawer's comfortable 0.3rem:
+@@ -1518,6 +1541,14 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   gap: 0.1rem;
+ }
+ 
++/* HEAD's 0.35rem, and it STAYS HEAD's (T9-W7 CTRL-FACE). A printed name is a taller tape
++   (layout 21.64 → 32px), and pass 1 bought its clearance here: 1.5rem, swept to the point where
++   the first tape stops being pinned at rest. That bought 1.13px of daylight for 18.41px of card
++   at every width — the iPad seal's whole headroom spent on the one cell that was already tight.
++   The clearance is bought where it is FREE instead: 3.88px from the tape's own leading (the
++   `:deep` hook below, 0.00px of flow) and 5.6px from the tab row's `padding-top` (a box that
++   exists only under `mobile`, so the sealed 1280 row regime pays 0.00). Tab head daylight
++   −6.79 → +2.73; this line hands 18.41px back. */
+ .tray-well:first-child {
+   margin-top: 0.35rem;
+ }
+@@ -1531,6 +1562,79 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   z-index: 35;
+ }
+ 
++/* ── THE LAW LIVES AT THE CONSUMER (T9-W7 CTRL-FACE) ──────────────────────────────────────
++   Three rules, one mechanism. `SheetWashiLabel` and `OptionSelector` each ship to TWO decks —
++   this card and the picker's staging band — and the face they wear is not theirs to decide, so
++   neither component was edited to make this card printed. A scoped `.tray-well :deep(.x)`
++   compiles to `.tray-well[data-v-panel] .x` (0,3,0), which beats the component's own
++   `.washi-tag[data-v-label]` / `.ctrl-btn[data-v-sel]` (0,2,0) and every layered Tailwind
++   utility, deterministically and without an `!important`. The estate already ships this exact
++   idiom one rule up (the z-index above). All five of the card's `OptionSelector`s sit under a
++   `.tray-well`, so one hook covers every chip; the deck sits under none, so it moves 0.00px
++   (gated as π at `?view=gallery`, both widths, both engines).
++
++   THE TAPE IS PRINTED: the compartment's name at the group rank, in the sheet's own face, at
++   the display leading. 1.05 costs 0.00 in flow (the pull reads `1lh`) and buys 3.88px at both
++   collisions — the descender clearance under the caption above it and the daylight over the
++   tab head.
++   THE CHIP IS WRITTEN, at 400: Patrick Hand ships ONE weight, so the template's `font-bold` on
++   a selected chip was synthetic bold on a static face (the P1-W3 defect class). `font-bold`
++   stays in the template because the DECK still renders it — Fira Code carries a true 300–700
++   and the picker's selected chip is genuinely bold — and this rule outranks it here only.
++   THE MARK IS PRICED OFF THE WORD: `${label.length + 1}ch` is the advance of "0" repeated —
++   and on THIS estate Fira Code's cut carries no `0`, so `ch` falls back to 0.5em and reads
++   12.0016px on chromium against 10.0000 on webkit. One card chip's mark is 48.01 vs 40.00,
++   a 16.7% engine split shipped today on the card AND the deck. The card prices its mark in
++   pixels off the rendered word instead (the rule below); the deck keeps the `ch` arithmetic
++   and the split is a ledger row for its owner. That third rule names ONE MORE CLASS than the
++   other two, and it has to: the mark's
++   rule in `OptionSelector` is itself a descendant (`.selected-item .ctrl-word[data-v-sel]`,
++   0-3-0), so the two-class hook would TIE it and the winner would be whichever sheet the
++   bundler happened to append last. `.ctrl-btn .ctrl-word` makes it 0-4-0 and the cascade stops
++   being a question. */
++.tray-well :deep(.washi-tag) {
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
++  /* THE DISPLAY LEADING, and it is the floor as well as the rung (swept, both engines, dock
++     390×844): the tape's paper IS its line box, and the word inside it is 25.80px of ink, so
++     1.05 leaves 1.99px of paper over the ink, 1.00 leaves 0.71 and 0.95 leaves −0.59 — a tape
++     with its own letters hanging out of it. Above, 1.1 puts the `checking` tape 0.37px INTO
++     the caption below it. The rung the ladder already publishes for display type is the
++     one value inside both bounds. It costs 0.00px of flow: the pull reads `1lh`. */
++  line-height: var(--type-leading-display);
++}
++
++.tray-well :deep(.ctrl-btn) {
++  font-family: var(--face-written);
++  font-weight: 400;
++  text-transform: lowercase;
++}
++
++/* THE MARK IS PRICED OFF THE WORD, IN PIXELS (T9-W7 CTRL-FACE pass 3). `120%` could not fail:
++   `background-origin: content-box` on a span with no horizontal padding divides the word's box
++   by the word's box, so the reading was 1.200 at any face, any rung, any word — a band that
++   admits every value (the pass-2 critique's F4). A FIXED overhang is a shape instead of a
++   ratio: 4px past the glyph on each side, so `on` and `center` wear the same tear rather than
++   a tear proportional to how long the word happens to be.
++   THE PADDING IS WHY THE OVERHANG EXISTS AT ALL, and the surface taught it. A wider
++   `background-size` alone paints nothing extra: a background is CLIPPED to its element's box,
++   so `calc(100% + 0.5rem)` on a span exactly as wide as its word renders 24.48px of mark over
++   a 24.48px word — measured off the bitmap, left overhang 0.33px, right 0.67px, both engines,
++   which is the rounding and not a tear. The span's PAINT box has to be the wider one. So it
++   takes 0.25rem of padding on each side and hands the same 8px straight back in margin: the
++   chip's width, the row's wrap and the card's height are all unmoved, and the mark now has 4px
++   of box to reach into on each side. The deck is untouched (this is the card's hook).
++   The gates that replace the ratio are the two that CAN fail — the painted mark is the word's
++   box plus its two overhangs (which is what makes the two engines agree, where a `ch` mark is
++   8.00px apart), and its painted columns run 2–8px past the glyph's, read off the bitmap. */
++.tray-well :deep(.ctrl-btn .ctrl-word) {
++  padding-inline: 0.25rem;
++  margin-inline: -0.25rem;
++  background-size: calc(100% + 0.5rem) 8px;
++  background-position: -0.25rem bottom;
++}
++
+ .new-game-zone {
+   gap: 0;
+   /* no gap to hand back — see `--washi-tag-gap` above. `0px`, never `0`: the give-back is a
+@@ -1560,8 +1664,14 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    The caption is a fixed COLUMN, not a centred inline: with the whole row centred, two rows of
+    different content width put their captions at two different x and the compartment reads
+    accidental. Right-aligned in its own column, both captions end on one edge and both control
+-   groups centre on one axis — measured 3.75rem clears `candidates` at every width this branch
+-   mounts at (48.8px at 390, 54px at 1023, against 60). */
++   groups centre on one axis.
++   THE 3.75rem IS A FLOOR, AND THE ROW'S WRAP IS THE CAPTION'S OVERFLOW (T9-W7 CTRL-FACE pass 3;
++   the sentence it replaces claimed 3.75rem "clears `candidates` at every width", which was true
++   of a 14px hand caption and of a word the card no longer ships). At the printed rung the lane
++   opens to min-content and `what fits` is 120.69px of it; `marks` is 90.98 and its three chips
++   need 290, so the caption takes the row's FIRST LINE and the chips take the second — which is
++   HEAD's own pose for that row today, not a new mechanic. `flex-wrap: wrap` is what performs
++   it, and it stays exactly where it was. */
+ .zone-row {
+   position: relative; /* the containing block for this row's own hint tape */
+   display: flex;
+@@ -1612,16 +1722,38 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   opacity: 1;
+ }
+ 
++/* PRINTED (T9-W7 CTRL-FACE). A row caption names a control the way a tape names a compartment,
++   so it is one of the sheet's eight nouns and it reads the same three tokens: the printed face,
++   the group rung, the printed weight. The quiet rung it used to wear said "under the tape"; the
++   face says it now. */
+ .zone-row-label {
+   flex: 0 0 3.75rem;
+   text-align: right;
+-  font-family: var(--font-hand);
+-  font-size: var(--type-tag);
+-  line-height: 1.1;
++  /* A CAPTION IS ONE LINE (T9-W7 CTRL-FACE pass 3). The fold renamed `candidates` → `what fits`,
++     and a caption with a SPACE in it wraps where a single word could not: at the printed rung
++     the lane is 120.69px of word inside a 60px flex floor, so without this the card paints
++     `what` over `fits` and every clearance below is read on the wrong box. Breaking the row's
++     own wrap is what performs the overflow instead — the caption takes the row's first line and
++     its chips the second, which is what `marks` already does at 320 and 390. Measured: the
++     two-chip row needs 95.2px (44 + 7.2 + 44) and `.options-row` is 229.31 at 390 and 159.31 at
++     320, so `what fits` sits BESIDE its chips at every cell the card mounts at. */
++  white-space: nowrap;
++  /* THE CAPTION SITS AT THE TOP OF THE ROW IT NAMES, at every width (T9-W7 CTRL-FACE). On the
++     rail it already does — the caption is over its row there — and on the stacked card it was
++     centred in a 48.78px chip row, which put a 25.888px printed noun 10.47px lower than the
++     name it is. That offset is the whole of the tape clearance below (the `checking` tape's
++     paper over this caption's ink; the numbers are re-read on `what fits` in
++     `e2e/face-law.spec.ts`, which is where they can now fail). It costs 0.00px of flow at every
++     cell, both engines — the row's height is its 44px chips, not its caption. One alignment,
++     two regimes, no media arm. */
++  align-self: flex-start;
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
++  line-height: var(--type-leading-heading);
++  text-transform: lowercase;
+   letter-spacing: var(--type-tracking-wide);
+-  /* The quiet rung (Lane D ship 4's ledgered token): 68% graphite, 5.23:1 light / 6.06:1
+-     dark on --color-card. Below it (60% = 4.10:1) the caption fails AA. */
+-  color: var(--ink-press-quiet);
++  color: var(--printed-ink);
+ }
+ 
+ .zone-row :deep(.options-row) {
+@@ -2039,7 +2171,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    commit: Patrick Hand's cut declares {C,R,S} as its only capitals, so Deal / Fill / Undo /
+    Hint have always painted their initial in the system face mid-word. */
+ .icon-sublabel {
+-  font-family: var(--font-hand);
++  /* T9-W7 CTRL-FACE — a verb is WRITTEN, by token. Same family, same paint; `--font-hand` is
++     the file and `--face-written` is the law. */
++  font-family: var(--face-written);
+   font-size: var(--type-tool);
+   line-height: 1;
+   letter-spacing: var(--type-tracking-wide);
+@@ -2383,9 +2517,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   font-optical-sizing: auto;
+ }
+ 
++/* THE ROW BUYS THE TAPE'S DAYLIGHT (T9-W7 CTRL-FACE), 8px of it, and it is the cheapest 8px on
++   the card: `.mobile-heading-row` exists only under `mobile`, so the 1280 row regime the iPad
++   seal measures (`visual-regression` test 10) pays 0.00 and the dock card pays 8. The first
++   tape is PINNED at rest here, so the tape's own leading moves it and its well's margin does
++   not; this is the only term that moves the thing below it. MEASURED, both engines, at
++   390×844 / 375×812 / 430×932 / 900×500: the first tape's painted box over the `size` tab
++   head's ink, HEAD +1.19 / +1.84 → +4.13 / +4.71, intersection 0px² throughout. 0.35rem was
++   swept first and read +1.72 on chromium, under this lane's own +2.0 floor.
++   What this does NOT pay for: the well's margin (18.41px at every width, pass 1's answer) or
++   the pin (`--washi-tag-top` at −0.6rem puts 7.38px of a pinned tape above the scrollport's
++   case edge — the §2.3 residue, and the owner's Frame B). */
+ .mobile-heading-row {
+   display: flex;
+   justify-content: space-evenly;
++  padding-top: 0.5rem;
+ }
+ 
+ /* The heading that wraps each tab (a11y r1 M9). Box-less by construction: the button remains
+@@ -2405,25 +2551,75 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   padding: 0;
+ }
+ 
++/* THE KEYBOARD GETS THE SAME ANSWER THE POINTER GETS (T9-W7 CTRL-FACE, law 39's tab form).
++   Both of these controls shipped with the UA's ring, which on WebKit paints its own blue over
++   a paper card and reads 2.147:1 against it — under 1.4.11 on the surface the reader is most
++   likely to arrive at by keyboard. The ink is `--ring-ink` (§3.5, the foreground at 50% both
++   themes), CONSUMED here and never minted (the chair's §6.1: §6 owns the token). Until §6
++   lands it the fallback is `currentColor`, which is the estate's own dashed-ring idiom
++   (`DrawerTab.vue`) and adds no value to the palette. Dashed, because a solid ring on a chip
++   that can also wear a scribble is two solid marks 8px apart. */
++.mobile-heading-btn:focus-visible {
++  outline: 2px dashed var(--ring-ink, currentColor);
++  outline-offset: 3px;
++}
++
++.tray-well :deep(.ctrl-btn:focus-visible) {
++  outline: 2px dashed var(--ring-ink, currentColor);
++  outline-offset: 3px;
++}
++
+ /* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+    pressure graphite. Deliberately quiet: it names what's closed without competing with
+    the active tab's underline. */
+ .heading-value {
+-  font-family: var(--font-hand);
++  /* WRITTEN (T9-W7 CTRL-FACE), by TOKEN: it painted the hand already, through `--font-hand`,
++     which is the family and not the law. `--face-written` is the law, and check 6 holds the
++     site to it. */
++  font-family: var(--face-written);
+   font-size: var(--type-tag);
+   line-height: 1;
+   letter-spacing: var(--type-tracking-wide);
+-  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5). The 68% that
+-     cleared it IS --ink-press-quiet; the literal is now the token. Pixel-identical. */
+-  color: var(--ink-press-quiet);
++  /* T9-W7 — the value is WRITTEN, and a written word is lowercase by CSS, never by its
++     author: `Easy` painted its E in the system cursive (the hand's capitals are C R S), a
++     mid-word fallback nothing measured until the option labels entered the coverage gate. */
++  text-transform: lowercase;
+ }
+ 
+-.mobile-heading-btn .section-heading.is-active {
+-  text-decoration: underline;
+-  text-decoration-thickness: 2px;
+-  text-underline-offset: 4px;
++/* ── THE TAB SWITCH IS ONE INK MOVE (T9-W7 CTRL-FACE pass 3) ───────────────────────────────
++   Pressing a tab head changes exactly two inks — the name that takes full press and the value
++   word that appears under the one it left — and until now the window for that was a Tailwind
++   `duration-250` (HEAD) then `duration-150` (pass 2) spelled in the template, where nothing
++   could re-cut it and no reduced-motion arm could reach it. It is a rung now.
++   THE RUNG IS CONSUMED, NEVER MINTED. `--motion-whisper` is §13's token (TAPE registers it,
++   §10's leader publishes it); this family only reads it, exactly as it reads `--ring-ink`. The
++   fallback is the estate's OWN shipped number for this move — the chips' 150ms, the utility
++   this line deletes — because a bare `var()` against a publisher that does not exist yet is
++   invalid at computed-value time, which would drop the whole declaration and ship a snap
++   dressed as a law. When §13 publishes the rung the fallback stops being reached; it is not a
++   second value, it is this value written down where the cascade can see it.
++   PRM: the rung reads 0ms under `reduce`, so the head and the value word snap together. */
++.section-heading,
++.heading-value {
++  transition: color var(--motion-whisper, 150ms) var(--ease-standard);
+ }
+ 
++@media (prefers-reduced-motion: reduce) {
++  .section-heading,
++  .heading-value {
++    transition-duration: 0ms;
++  }
++}
++
++/* ITS INK LIVES IN `index.css` (T9-W7), beside the crayon hoist that explains why. The value
++   word wears its tier's crayon when the section has one, and `.crayon-*` is UNLAYERED — so the
++   quiet default has to be LAYERED to lose to it, and a layer declared inside a scoped SFC block
++   is a cascade hazard, not a cascade fix: Vite appends component styles at module-eval time, so
++   the FIRST `@layer components` the document sees can be this one, which registers the layer
++   ahead of `base` and hands Tailwind's `h2 { font-size: inherit }` preflight the win over
++   `.section-heading`. Measured: every desk eyebrow dropped to 16px/400 (2 voices) while the
++   dock's spans, which no preflight rule names, kept the rung. */
++
+ /* T8-W1 (agent C's M5 census, R2) — THE TABS ANSWER THE POINTER. The staged tab heads are the
+    card's largest interactive text and they had exactly one state to read: the underline on the
+    ACTIVE one. Pointing at a tab did nothing, which on a row of two or three reads as "this one
+@@ -2446,9 +2642,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+    The fence is load-bearing and it was witnessed: under `isMobile`/`hasTouch` emulation
+    `(hover: hover)` resolves FALSE and neither head moves, which is the rule doing its job on a
+-   thumb rather than the rule failing. */
++   thumb rather than the rule failing.
++
++   T9-W7 CTRL-FACE — AND IT ONLY ANSWERS WHEN THERE IS SOMETHING TO ANSWER. The open head is at
++   full press and a repeat press is a no-op, so the lift now fences to `[aria-expanded="false"]`:
++   pointing at the shut tab promises the switch it performs, pointing at the open one promises
++   nothing. That also retires the second reading above — the crayon-tinted head is no longer
++   overridden mid-hover, because the head that carries a crayon is the OPEN one. */
+ @media (hover: hover) {
+-  .mobile-heading-btn:hover .section-heading {
++  .mobile-heading-btn[aria-expanded="false"]:hover .section-heading {
+     color: var(--color-foreground);
+   }
+ }
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..3cf0b231 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -49,9 +49,9 @@ function scribbleSeed(val: string | number): number {
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       :aria-pressed="selected === opt.value"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
++      class="ctrl-btn rounded-md px-3 pt-1.5 pb-0 text-center transition-colors duration-150"
+       :class="[
+-        mobile ? '' : 'md:py-0.5 md:text-left',
++        mobile ? '' : 'md:pt-0.5 md:pb-0 md:text-left',
+         selected === opt.value
+           ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
+           : 'text-muted-foreground hover:text-foreground hover-item',
+@@ -82,7 +82,15 @@ function scribbleSeed(val: string | number): number {
+             }
+       "
+     >
+-      {{ opt.label }}
++      <!-- THE WORD GETS ITS OWN BOX (T9-W7 CTRL-FACE), and that is the whole of the change
++           here. The mark hung off the BUTTON, whose content box is the chip's width, so its
++           length could only ever be counted in `ch` — the advance of "0", exact in this
++           component's own monospace default and wrong by 1.46× under `ask` in a written face.
++           The span shrinks to the RENDERED advance, so a consumer that re-faces these chips can
++           price the mark off the word (`GameControlPanel`'s 120%). Nothing here moves: the
++           `ch` arithmetic below is unchanged, the 6px of scribble room moved from the button's
++           padding onto the word's, and this component's own deck paints byte-for-byte. -->
++      <span class="ctrl-word">{{ opt.label }}</span>
+     </button>
+   </div>
+ </template>
+@@ -99,13 +107,33 @@ function scribbleSeed(val: string | number): number {
+    `--type-option` carries those literals verbatim at every rung this component
+    renders (typography.css prices them), so the desk and the 768–1023 stacked card
+    are byte-identical; the phone's arm is the one that moves, 16 → 20px.
+-   What stays in the template is layout — `md:py-0.5 md:text-left` — because that
+-   is not type. */
++   What stays in the template is layout — `md:pt-0.5 md:pb-0 md:text-left` — because
++   that is not type. The bottom padding is ZERO at both arms now: the scribble's 6px
++   of room moved onto the word's own span (T9-W7), and a button that kept its own
++   would pay for it twice — measured 38 → 40px at the rail before the md arm split. */
++/* THE FACE ARRIVES BY TOKEN (T9-W7 CTRL-FACE), and the face is still this one. The literal
++   `"Fira Code", monospace` was unreachable from any voice and outlived three type re-cuts
++   because of it; `--face-mono` resolves to exactly that string, so nothing paints differently
++   and the site is now something check 6 can hold. What this component is NOT doing is choosing
++   a register for its consumers: it ships to the controls card and to the picker's staging
++   band, and the card writes its chips in the hand at its own hook. A shared component keeps
++   its own default. */
+ .ctrl-btn {
+-  font-family: "Fira Code", monospace;
++  font-family: var(--face-mono);
+   font-size: var(--type-option);
+ }
+ 
++/* The word's own box, and the only thing the marks hang off. `display: inline-block` makes it
++   shrink to the rendered advance; the 6px that used to pad the BUTTON pads this instead, so the
++   chip's outer height is what it always was. */
++.ctrl-word {
++  display: inline-block;
++  padding-bottom: 6px;
++  background-repeat: no-repeat;
++  background-origin: content-box;
++  background-position: left bottom;
++}
++
+ /* The `.ctrl-btn:hover` wobble is DELETED (P1-W3, r3 §3.2), and `transition-all` narrowed to
+    `transition-colors` in the template. `all` included `filter`, so a hover edge repainted a
+    reference-filtered HTML box through every frame of the colour tween. The option's real hover
+@@ -114,18 +142,18 @@ function scribbleSeed(val: string | number): number {
+ .selected-item,
+ .hover-item {
+   text-decoration: none;
+-  background-repeat: no-repeat;
+-  background-origin: content-box;
+-  background-position: left bottom;
+-  padding-bottom: 6px;
+ }
+ 
+-.selected-item {
++/* HEAD's mark, on the word's box instead of the button's. The `ch` count is right for THIS
++   component's face (a `ch` is the advance of "0", and in a monospace cut that is every glyph's
++   advance) and it stays; a consumer that re-faces the chips re-prices the mark at its own hook,
++   because the arithmetic that is exact here is 1.46× off in a written face. */
++.selected-item .ctrl-word {
+   background-image: var(--scribble-underline);
+   background-size: var(--scribble-width, 4ch) 8px;
+ }
+ 
+-.hover-item {
++.hover-item .ctrl-word {
+   background-image: none;
+   background-size: var(--ghost-width, 4ch) 8px;
+ }
+@@ -143,11 +171,11 @@ function scribbleSeed(val: string | number): number {
+    changing (grid, logo, celestial), and `transition-colors` never touched background-image
+    anyway. Same fence as the ghost, so neither sticks after a tap. */
+ @media (hover: hover) {
+-  .hover-item:hover {
++  .hover-item:hover .ctrl-word {
+     background-image: var(--ghost-underline);
+   }
+ 
+-  .selected-item:hover {
++  .selected-item:hover .ctrl-word {
+     background-image: var(--scribble-underline-hover, var(--scribble-underline));
+   }
+ }
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..85740337 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -95,7 +95,15 @@ const geom = computed(() => {
+   transform: translateX(-50%) rotate(var(--washi-tilt));
+   margin-bottom: 0.5rem;
+   padding: 0.25rem 0.7rem;
+-  font-family: var(--font-hand);
++  /* WRITTEN, BY LAW (T9-W7 CTRL-FACE pass 3, the critique's F2). This declaration and the
++     `.washi-tag` one below are TWO FACE HOMES ON ONE ELEMENT — a tag tape is
++     `span.washi-label.washi-tag` — and check 6 could not see this one, because it builds its
++     class list from the selectors it names and `.washi-label` named none of them. Falsified on
++     a scratch tree: re-pointing this line to `var(--font-display)` painted every note, tooltip
++     and peek tape in a 31-codepoint cut with no apostrophe and no digits, and the gate printed
++     `font coverage OK`. It is a listed site now, so the hole closes where it was. Zero paint
++     change: `--face-written` resolves to `--font-hand`. */
++  font-family: var(--face-written);
+   font-size: var(--type-small);
+   font-weight: 600;
+   letter-spacing: var(--type-tracking-normal);
+@@ -138,6 +146,10 @@ const geom = computed(() => {
+    has no hover seam. Lower case in the hand, one rank under the eyebrows it replaces, and
+    lower case is also the only chimera-free path through Patrick Hand (its uppercase subset is
+    {C,R,S} — F5's shared finding, taken).
++   T9-W7 CTRL-FACE — WHAT THE TAPE WEARS IS THE CONSUMER'S. In the controls card a compartment
++   name is the sheet's own printing, so that card re-faces its own tapes at the group rank
++   (`GameControlPanel`'s `.tray-well :deep(.washi-tag)`); on the deck, in a tooltip and at the
++   peek divider the tape stays the hand's, which is what this rule below ships.
+ 
+    ── T9-W2 §2.3/§2.6 — THE TAG IS IN FLOW NOW, AND IT PINS ────────────────────────────────
+    It was `position: absolute; top: 0` + `translateY(-52%)`, which is a pose an ABSOLUTE box
+@@ -158,6 +170,16 @@ const geom = computed(() => {
+    rather than inherited so the pull is exact arithmetic on the tape's own box — 1.5 is what it
+    already computes to, so nothing moves, and a later type re-cut (W7's voice) scales the pull
+    with the font instead of stranding it.
++   THE PULL READS THE TAPE'S OWN USED LEADING (T9-W7 CTRL-FACE), through `1lh`. It was `-1.5em`
++   against a declared `line-height: 1.5` — true only while both say 1.5, and the moment a
++   consumer sets the leading to anything else the pull under-lifts by the difference (measured:
++   5.65px per tape at leading 1.2, against the 0.23px of iPad headroom `visual-regression`
++   test 10 will not spend). `lh` IS the used line box, so the covenant now holds by the UNIT
++   rather than by a variable both ends have to keep agreeing about: a consumer re-cuts the
++   leading at its own hook (the controls card sets the printed display leading) and the net
++   flow height is still zero, at any font-size, any leading, with no term to remember.
++   Error 0.02px against the ±0.25 covenant; `lh` shipped Chrome 109 / Safari 16.4 / Firefox 120,
++   inside the declared floor (`package.json` browserslist, held by `check-support-floor.mjs`).
+    The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+    rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+    offset with it. */
+@@ -168,10 +190,17 @@ const geom = computed(() => {
+   left: auto;
+   align-self: flex-start;
+   line-height: 1.5;
+-  margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
++  margin: calc(-1lh - 0.04rem - var(--washi-tag-lift, 0px)) 0
+     calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+     var(--washi-tag-inset, 0.85rem);
+   padding: 0.02rem 0.4rem;
++  /* WRITTEN (T9-W7 CTRL-FACE), and DECLARED rather than inherited. The tape has always painted
++     the hand — it came down from `.washi-label` two rules up — but an inherited face is a face
++     no gate can see, and `check-font-coverage.mjs` check 6 reds a site that has no declaration
++     of its own. Zero paint change. The tape on the CONTROLS CARD is printed instead, and that
++     is the card's own rule at its own hook, not this component's business: the deck's tapes,
++     the tooltips and the peek label keep what they had. */
++  font-family: var(--face-written);
+   font-size: var(--type-tag);
+   font-weight: 500;
+   letter-spacing: var(--type-tracking-wide);

@@ -1,0 +1,36 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * head-restore.css — the REVERSE overlay, and the only honest way to pair.
+ *
+ * The prototype is the product now, so the research lane's pairing (census, inject
+ * the cure, census again) has nothing to inject. This file inverts it: it restores
+ * HEAD's four accent values and HEAD's violet glow on top of the cured tree, on the
+ * SAME page and the SAME deal, so the two censuses differ by the cure and by nothing
+ * else. The deal is not seeded (R2 trap 4: two control runs of one cell differ by
+ * ~2,000 chromatic pixels), which is why this exists at all.
+ *
+ * It restores TOKENS only. The geometry move (FRAME_Y_PAD) and the heading class are
+ * not reversible from a stylesheet and are measured separately; they move no hue.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  --color-user-ink: #2563eb; /* Tailwind blue-600, the pen at HEAD */
+  --color-progress-ink: #8b5cf6; /* the violet trace at HEAD */
+}
+
+:root.dark,
+.dark {
+  --color-user-ink: #60a5fa;
+  --color-progress-ink: #7c3aed;
+  --color-focus-sketch: #3a7bc4; /* HEAD never redefined it: the LIGHT value paints */
+}
+
+/* the glow's two inline literals at HEAD */
+.sparkle-icon {
+  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3)) !important;
+}
+
+@media (hover: hover) {
+  .icon-btn:hover .sparkle-icon {
+    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6)) !important;
+  }
+}

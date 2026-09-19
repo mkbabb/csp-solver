@@ -1,0 +1,47 @@
+===== check-theme-selectors
+EXIT check-theme-selectors = 0
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+  ✓ 0 POPULATION CANARY — a planted `[data-canary-theme]` rule over the live 142-file corpus reds check 1
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+===== check-copy-register
+EXIT check-copy-register = 0
+copy register scanned across 138 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 0 hit(s), 0 admitted, 0 unadmitted (lexicon: 25 entries)
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+===== check-font-coverage
+EXIT check-font-coverage = 0
+  Fraunces: 30 codepoints, 14636 B, 5 declared strings over 1 group(s), each derived
+  Patrick Hand: 46 codepoints, 4312 B, 24 declared strings over 5 group(s), each derived
+  bound tapes: 3 pinned · WRITEABLE == the hand cut, both directions
+  departures (declared, no longer rendered — the cut stays a superset on purpose):
+    Patrick Hand · .washi-tag (compartment names) + the tapes: "teacher's"
+    Patrick Hand · .section-heading (the staged names, authored in the case they paint in): "board size"
+===== lint-motion
+EXIT lint-motion = 0
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+===== prettier
+EXIT prettier = 0
+Checking formatting...
+All matched files use Prettier code style!
+===== vue-tsc
+EXIT vue-tsc = 0
+===== vitest
+EXIT vitest = 1
+        at _createServer (file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/vite/dist/node/chunks/node.js:25975:84)
+  }
+}
+
+
+
+BATTERY DONE

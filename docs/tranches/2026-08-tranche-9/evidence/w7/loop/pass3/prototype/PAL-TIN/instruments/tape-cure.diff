@@ -1,0 +1,40 @@
+PROPOSED, NOT APPLIED — the attribution tape is the W7 execution fold's surface (pick 3B-1 put
+the peer's ink on the label; 3C-4 put the tape on every pointer). This lane measured it and does
+not own it.
+
+THE READING, off both engines' bytes on this tree (`e2e/peer-tin.spec.ts`, the AA row):
+
+  ground: --sheet-washi-neutral composited over --color-background
+  light   worst stick 6.511   ·   HEAD's own --color-user-ink 4.514     both clear 4.5
+  dark    worst stick 2.977   ·   HEAD's own --color-user-ink 4.231     BOTH UNDER 4.5
+
+The dark tape fails with the tin's ink AND with the ink the estate ships today. It is an estate
+row, not a palette row: no assignment of five hues at any lightness the tin can use clears 4.5
+on a ground that light without leaving the band that separates a player from the solver.
+
+THE CURE, which costs the tape nothing it is using:
+
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@
+-        :style="{ ...tapeAnchor.style, ...hoveredAuthor.ink }"
++        :style="tapeAnchor.style"
++        :data-author-ink="hoveredAuthor.ink['--color-user-ink']"
+
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ .washi-label
+   color: var(--color-foreground);
++  /* THE STICK IS A RULE, NOT THE LETTERS. A name on washi is TEXT and text is held to 4.5; the
++     dark tape's paper is light enough that no player ink clears it (2.977 with the tin, 4.231
++     with the estate's own blue). So the words take `--color-foreground`, which clears by
++     construction on both arms, and the player's colour becomes a 2 px rule under the slug — a
++     NON-TEXT boundary, held to 3:1, which every stick clears on this ground with room to
++     spare. The tape still says whose hand it was; it just stops saying it in a weight the
++     paper cannot carry. */
++  border-bottom: 2px solid var(--tape-stick, transparent);
+
+WHY IT IS NOT LANDED HERE: the `:style` on `.attribution-tape` is the fold's own hunk, the tape
+is shared furniture (five tapes in the controls card ride the same component), and re-cutting a
+component five consumers use to fix one consumer's ground is a wave decision rather than a
+family's. The section's leader or the fold takes it, once.

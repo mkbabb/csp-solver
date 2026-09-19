@@ -1,0 +1,172 @@
+
+Running 4 tests using 4 workers
+
+[1/4] e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose
+[2/4] e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack
+[3/4] e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light)
+[4/4] e2e/visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer
+  1) e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) ───────────────
+
+    Error: expect(locator).toHaveScreenshot(expected) failed
+
+    Locator: locator('.sudoku-cell').first()
+      Expected an image 144px by 144px, received 142px by 144px. 763 pixels (ratio 0.04 of all image pixels) are different.
+
+      Snapshot: cell-light.png
+
+    Call log:
+      - Expect "toHaveScreenshot(cell-light.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - waiting for locator('.sudoku-cell').first()
+        - locator resolved to <div role="gridcell" aria-rowindex="1" aria-colindex="1" data-v-1b355f9d="" data-v-2adef980="" class="game-cell relative flex items-center justify-center sudoku-cell">…</div>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - Expected an image 144px by 144px, received 142px by 144px. 763 pixels (ratio 0.04 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - waiting for locator('.sudoku-cell').first()
+        - locator resolved to <div role="gridcell" aria-rowindex="1" aria-colindex="1" data-v-1b355f9d="" data-v-2adef980="" class="game-cell relative flex items-center justify-center sudoku-cell">…</div>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - captured a stable screenshot
+      - Expected an image 144px by 144px, received 142px by 144px. 763 pixels (ratio 0.04 of all image pixels) are different.
+
+
+      377 | test("golden · single cell with given glyph (light)", async ({ page }) => {
+      378 |   await loadSettled(page, { pinBoard: true });
+    > 379 |   await expect(page.locator(".sudoku-cell").first()).toHaveScreenshot(
+          |                                                      ^
+      380 |     "cell-light.png",
+      381 |     FLOOR,
+      382 |   );
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-30/web/frontend/e2e/visual-golden.spec.ts:379:54
+
+    attachment #1: cell-light (image/png) ──────────────────────────────────────────────────────────
+    Expected: e2e/goldens/cell-light-darwin.png
+    Received: test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/cell-light-actual.png
+    Diff:     test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/cell-light-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/error-context.md
+
+
+  2) e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+
+    Error: expect(page).toHaveScreenshot(expected) failed
+
+      529 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: toggle-crest-dark.png
+
+    Call log:
+      - Expect "toHaveScreenshot(toggle-crest-dark.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - 529 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - taking page screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - captured a stable screenshot
+      - 529 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      368 |   clip.x -= 12;
+      369 |   clip.y += 16;
+    > 370 |   await expect(page).toHaveScreenshot("toggle-crest-dark.png", {
+          |                      ^
+      371 |     ...CREST_FLOOR,
+      372 |     clip,
+      373 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-30/web/frontend/e2e/visual-golden.spec.ts:370:22
+
+    attachment #1: toggle-crest-dark (image/png) ───────────────────────────────────────────────────
+    Expected: e2e/goldens/toggle-crest-dark-darwin.png
+    Received: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-actual.png
+    Diff:     test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/toggle-crest-dark-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/error-context.md
+
+
+  3) e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+
+    Error: expect(locator).toHaveScreenshot(expected) failed
+
+    Locator: locator('svg.handwritten-logo')
+      Expected an image 768px by 226px, received 766px by 226px. 4691 pixels (ratio 0.03 of all image pixels) are different.
+
+      Snapshot: logo-light.png
+
+    Call log:
+      - Expect "toHaveScreenshot(logo-light.png)" with timeout 15000ms
+        - verifying given screenshot expectation
+      - waiting for locator('svg.handwritten-logo')
+        - locator resolved to <svg data-v-da22e681="" aria-hidden="true" viewBox="0 0 205 60" class="handwritten-logo is-drawn" xmlns="http://www.w3.org/2000/svg">…</svg>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - Expected an image 768px by 226px, received 766px by 226px. 4691 pixels (ratio 0.03 of all image pixels) are different.
+      - waiting 100ms before taking screenshot
+      - waiting for locator('svg.handwritten-logo')
+        - locator resolved to <svg data-v-da22e681="" aria-hidden="true" viewBox="0 0 205 60" class="handwritten-logo is-drawn" xmlns="http://www.w3.org/2000/svg">…</svg>
+      - taking element screenshot
+        - disabled all CSS animations
+      - waiting for fonts to load...
+      - fonts loaded
+      - attempting scroll into view action
+        - waiting for element to be stable
+      - captured a stable screenshot
+      - Expected an image 768px by 226px, received 766px by 226px. 4691 pixels (ratio 0.03 of all image pixels) are different.
+
+
+      324 | }) => {
+      325 |   await loadSettled(page);
+    > 326 |   await expect(page.locator("svg.handwritten-logo")).toHaveScreenshot(
+          |                                                      ^
+      327 |     "logo-light.png",
+      328 |     LOGO_FLOOR,
+      329 |   );
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-30/web/frontend/e2e/visual-golden.spec.ts:326:54
+
+    attachment #1: logo-light (image/png) ──────────────────────────────────────────────────────────
+    Expected: e2e/goldens/logo-light-darwin.png
+    Received: test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/logo-light-actual.png
+    Diff:     test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/logo-light-diff.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/error-context.md
+
+
+  3 failed
+    e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+    e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) ────────────────
+  1 passed (4.4s)
+EXIT=1

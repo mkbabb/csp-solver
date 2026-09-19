@@ -1,0 +1,70 @@
+/* MRK-WASH pass-1 prototype overlay — THE BOARD WASH.
+ *
+ * Injected with `addStyleTag` against the lane's own dev server (127.0.0.1:4240). Touches no
+ * product file. It re-declares the tier-2 rule at a higher specificity than
+ * `gameCell.css:245` (`.game-cell:has(input:focus-visible) .cell-ghost-path`, (0,3,1)) by
+ * adding `:not(#never)` twice, because the product rule is scoped ([data-v-*]) and a bare
+ * copy would lose the cascade.
+ *
+ * ONE STYLESHEET, ONE SWEEP. Every number the arms differ by is a custom property set on
+ * :root by the probe, so a sweep is a `setProperty` and never a re-injection.
+ *
+ *   --wash-a        the wash's fill-opacity (the body)
+ *   --wash-rim-w    the wax rim's stroke-width in viewBox units (0 = the charter's
+ *                   "drop its stroke" arm)
+ *   --wash-rim-o    the rim's stroke-opacity
+ *   --wash-ink      the wash's ink
+ *   --peer-wash-a / --peer-rim-w / --peer-rim-o   the same three for a peer's cell
+ *
+ * WHY paint-order. `paint-order: stroke` puts the fill ON TOP of the stroke, so the inner
+ * half of a wide rim is covered by the body and only the outer half shows: a crayon that
+ * pressed harder where the hand turned. Zero new nodes, zero filters, one path — the same
+ * path `wobbleRect` already seeded, so the rim is as jagged as the body's edge.
+ */
+.game-cell:has(input:focus-visible):not(#never):not(#never) .cell-ghost-path {
+  fill: var(--wash-ink, var(--color-focus-sketch, var(--color-crayon-blue)));
+  fill-opacity: var(--wash-a, 0.18);
+  stroke: var(--wash-ink, var(--color-focus-sketch, var(--color-crayon-blue)));
+  stroke-width: var(--wash-rim-w, 0);
+  stroke-opacity: var(--wash-rim-o, 0);
+  stroke-dasharray: none;
+  paint-order: stroke;
+  /* The 180ms `ghost-draw-on` becomes a wax fill-in on the same beat and the same ease.
+     `backwards` per the house law (R6 §2 motion 6); the end state IS the cascade value. */
+  animation: wash-fill-in 180ms var(--ease-ghostDraw) backwards;
+}
+
+/* A PEER'S CELL IS A WASH TOO (the family's second term). Same material, lighter hand. */
+.game-cell.is-peer-cursor:not(#never):not(#never) .cell-ghost-path {
+  fill: var(--color-peer-cursor-ink, var(--color-user-ink));
+  fill-opacity: var(--peer-wash-a, 0.12);
+  stroke: var(--color-peer-cursor-ink, var(--color-user-ink));
+  stroke-width: var(--peer-rim-w, 0);
+  stroke-opacity: var(--peer-rim-o, 0);
+  stroke-dasharray: none;
+  paint-order: stroke;
+  animation: wash-fill-in 180ms var(--ease-ghostDraw) backwards;
+}
+
+@keyframes wash-fill-in {
+  from {
+    fill-opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .game-cell:has(input:focus-visible) .cell-ghost-path,
+  .game-cell.is-peer-cursor .cell-ghost-path {
+    animation: none;
+  }
+}
+
+/* Forced colors keeps a REAL outline — a translucent ground is unrenderable there.
+   This restates `gameCell.css:352-357` unchanged; the arm exists so the probe can prove the
+   overlay did not take it away. */
+@media (forced-colors: active) {
+  .game-cell:has(input:focus-visible) {
+    outline: 2px solid Highlight;
+    outline-offset: -2px;
+  }
+}

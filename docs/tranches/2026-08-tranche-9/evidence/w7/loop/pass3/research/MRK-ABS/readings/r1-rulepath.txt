@@ -1,0 +1,110 @@
+T9-W7 pass 3 · MRK-ABS R1 — ring vs the RULE'S OWN PATH, per side, per rule kind
+gap > 0 = clean paper between the two inks; gap < 0 = the two inks overlap, in BOARD units.
+
+### PROTOTYPE (pass 2 shipped) · 4x4 · f=0.86 wander 5.4u
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell       29.767        12.264          7.025   0/32
+  peer  .is-peer-cursor             subgrid    25.407        10.468          5.996   0/16
+  peer  .is-peer-cursor             frame      13.116         5.404          3.095   0/16
+  hover .cell-ghost-path            cell       29.383        12.106          6.934   0/32
+  hover .cell-ghost-path            subgrid    25.022        10.309          5.905   0/16
+  hover .cell-ghost-path            frame      12.731         5.245          3.005   0/16
+  focus :has(input:focus-visible)   cell       28.614        11.789          6.753   0/32
+  focus :has(input:focus-visible)   subgrid    24.253         9.992          5.724   0/16
+  focus :has(input:focus-visible)   frame      11.962         4.928          2.823   0/16
+  invalid .is-invalid               cell       27.844        11.472          6.571   0/32
+  invalid .is-invalid               subgrid    23.484         9.675          5.542   0/16
+  invalid .is-invalid               frame      11.193         4.612          2.642   0/16
+  invalid+focus                     cell       27.460        11.313          6.481   0/32
+  invalid+focus                     subgrid    23.099         9.517          5.451   0/16
+  invalid+focus                     frame      10.808         4.453          2.551   0/16
+
+### HEAD 74a2b5d9 · 4x4 · f=1 (HEAD roughness 0.4)
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell       19.004         7.830          4.485   0/32
+  peer  .is-peer-cursor             subgrid    13.248         5.458          3.126   0/16
+  peer  .is-peer-cursor             frame       2.266         0.934          0.535   0/16
+  hover .cell-ghost-path            cell       18.619         7.671          4.394   0/32
+  hover .cell-ghost-path            subgrid    12.863         5.300          3.036   0/16
+  hover .cell-ghost-path            frame       1.882         0.775          0.444   0/16
+  focus :has(input:focus-visible)   cell       17.850         7.354          4.213   0/32
+  focus :has(input:focus-visible)   subgrid    12.094         4.983          2.854   0/16
+  focus :has(input:focus-visible)   frame       1.112         0.458          0.263   0/16
+  invalid .is-invalid               cell       17.081         7.037          4.031   0/32
+  invalid .is-invalid               subgrid    11.325         4.666          2.673   0/16
+  invalid .is-invalid               frame       0.343         0.141          0.081   0/16
+  invalid+focus                     cell       16.696         6.879          3.940   0/32
+  invalid+focus                     subgrid    10.940         4.507          2.582   0/16
+  invalid+focus                     frame      -0.041        -0.017         -0.010   1/16
+
+### PROTOTYPE (pass 2 shipped) · 9x9 · f=0.86 wander 5.4u
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell        5.402         3.436          1.972   0/216
+  peer  .is-peer-cursor             subgrid     0.467         0.297          0.170   0/72
+  peer  .is-peer-cursor             frame     -10.649        -6.773         -3.887   14/36
+  hover .cell-ghost-path            cell        5.018         3.191          1.831   0/216
+  hover .cell-ghost-path            subgrid     0.082         0.052          0.030   0/72
+  hover .cell-ghost-path            frame     -11.034        -7.017         -4.027   14/36
+  focus :has(input:focus-visible)   cell        4.248         2.702          1.551   0/216
+  focus :has(input:focus-visible)   subgrid    -0.687        -0.437         -0.251   1/72
+  focus :has(input:focus-visible)   frame     -11.803        -7.507         -4.308   14/36
+  invalid .is-invalid               cell        3.479         2.213          1.270   0/216
+  invalid .is-invalid               subgrid    -1.456        -0.926         -0.531   3/72
+  invalid .is-invalid               frame     -12.572        -7.996         -4.589   17/36
+  invalid+focus                     cell        3.095         1.968          1.130   0/216
+  invalid+focus                     subgrid    -1.841        -1.171         -0.672   3/72
+  invalid+focus                     frame     -12.957        -8.240         -4.729   18/36
+
+### HEAD 74a2b5d9 · 9x9 · f=1 (HEAD roughness 0.4)
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell        2.836         1.804          1.035   0/216
+  peer  .is-peer-cursor             subgrid    -2.274        -1.446         -0.830   10/72
+  peer  .is-peer-cursor             frame     -13.233        -8.416         -4.830   19/36
+  hover .cell-ghost-path            cell        2.451         1.559          0.895   0/216
+  hover .cell-ghost-path            subgrid    -2.658        -1.691         -0.970   14/72
+  hover .cell-ghost-path            frame     -13.618        -8.661         -4.971   19/36
+  focus :has(input:focus-visible)   cell        1.682         1.070          0.614   0/216
+  focus :has(input:focus-visible)   subgrid    -3.427        -2.180         -1.251   16/72
+  focus :has(input:focus-visible)   frame     -14.387        -9.150         -5.251   20/36
+  invalid .is-invalid               cell        0.913         0.581          0.333   0/216
+  invalid .is-invalid               subgrid    -4.197        -2.669         -1.532   17/72
+  invalid .is-invalid               frame     -15.157        -9.640         -5.532   21/36
+  invalid+focus                     cell        0.528         0.336          0.193   0/216
+  invalid+focus                     subgrid    -4.581        -2.914         -1.672   18/72
+  invalid+focus                     frame     -15.541        -9.884         -5.673   22/36
+
+### PROTOTYPE (pass 2 shipped) · 16x16 · f=0.86 wander 5.4u
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell       -2.228        -1.417         -0.813   70/768
+  peer  .is-peer-cursor             subgrid    -8.085        -5.142         -2.951   62/192
+  peer  .is-peer-cursor             frame     -18.941       -12.047         -6.914   50/64
+  hover .cell-ghost-path            cell       -2.613        -1.662         -0.954   87/768
+  hover .cell-ghost-path            subgrid    -8.470        -5.387         -3.091   66/192
+  hover .cell-ghost-path            frame     -19.326       -12.291         -7.054   53/64
+  focus :has(input:focus-visible)   cell       -3.382        -2.151         -1.234   134/768
+  focus :has(input:focus-visible)   subgrid    -9.239        -5.876         -3.372   78/192
+  focus :has(input:focus-visible)   frame     -20.095       -12.780         -7.335   55/64
+  invalid .is-invalid               cell       -4.151        -2.640         -1.515   187/768
+  invalid .is-invalid               subgrid   -10.008        -6.365         -3.653   92/192
+  invalid .is-invalid               frame     -20.864       -13.270         -7.615   59/64
+  invalid+focus                     cell       -4.536        -2.885         -1.656   225/768
+  invalid+focus                     subgrid   -10.393        -6.610         -3.793   100/192
+  invalid+focus                     frame     -21.249       -13.514         -7.756   61/64
+
+### HEAD 74a2b5d9 · 16x16 · f=1 (HEAD roughness 0.4)
+  tier                              kind     worst_u   worst_px(desk) worst_px(phone)  neg/total
+  peer  .is-peer-cursor             cell       -2.521        -1.603         -0.920   121/768
+  peer  .is-peer-cursor             subgrid    -8.182        -5.204         -2.986   78/192
+  peer  .is-peer-cursor             frame     -18.638       -11.854         -6.803   58/64
+  hover .cell-ghost-path            cell       -2.906        -1.848         -1.061   143/768
+  hover .cell-ghost-path            subgrid    -8.566        -5.448         -3.127   82/192
+  hover .cell-ghost-path            frame     -19.022       -12.098         -6.943   58/64
+  focus :has(input:focus-visible)   cell       -3.675        -2.337         -1.341   204/768
+  focus :has(input:focus-visible)   subgrid    -9.335        -5.937         -3.407   94/192
+  focus :has(input:focus-visible)   frame     -19.791       -12.587         -7.224   61/64
+  invalid .is-invalid               cell       -4.444        -2.827         -1.622   270/768
+  invalid .is-invalid               subgrid   -10.105        -6.427         -3.688   128/192
+  invalid .is-invalid               frame     -20.561       -13.077         -7.505   63/64
+  invalid+focus                     cell       -4.829        -3.071         -1.763   310/768
+  invalid+focus                     subgrid   -10.489        -6.671         -3.829   132/192
+  invalid+focus                     frame     -20.945       -13.321         -7.645   63/64

@@ -1,0 +1,52 @@
+SET: 6 verbs — LAY DOWN · LIFT · TURN · SLIDE · WRITE IN · RUB OUT
+rows total 81 | in-set 61 | RESIST 15 | DUSK? 1 | dev-rig OUT 4 | UNASSIGNED 0
+
+STRICT (one duration per verb): 44/57 timed rows RETIMED
+  worst: 950ms, 520ms, 440ms, 360ms, 290ms
+LADDER (verb owns curve+fill+PRM; duration is a named rung): 26/57 timed rows RETIMED
+  worst: 950ms, 280ms, 250ms, 200ms, 130ms
+CURVE CHANGES either way: 51/61
+
+LADDER DELTA, bucketed by what an eye can see (60Hz frame = 16.7ms)
+  exact                    31/57
+  <=1 frame (invisible)     4/57
+  <=50ms (marginal)        12/57
+  VISIBLE                  10/57
+     ! src/assets/index.css:590                             WRITE IN  500 -> 250 (-250)
+     ! src/games/shared/GameControlPanel.vue:1728           WRITE IN  380 -> 250 (-130)
+     ! src/games/shared/GameControlPanel.vue:1739           WRITE IN  320 -> 250 (-70)
+     ! src/games/shared/GameControlPanel.vue:1744           LIFT      320 -> 250 (-70)
+     ! src/games/shared/GameControlPanel.vue:2473           LAY DOWN  400 -> 520 (+120)
+     ! src/pencil/celestial/DarkModeToggle.vue:795          LIFT      340 -> 250 (-90)
+     ! src/pencil/celestial/DarkModeToggle.vue:810          LAY DOWN  800 -> 520 (-280)
+     ! src/pencil/celestial/DarkModeToggle.vue:888          LAY DOWN  640 -> 520 (-120)
+     ! src/pencil/celestial/DarkModeToggle.vue:891          LAY DOWN  720 -> 520 (-200)
+     ! src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:560 WRITE IN  1200 -> 250 (-950)
+
+PER VERB
+  LIFT      12 rows | --verb-lift-ease (= --ease-fadeOut control points; --ease-accelIn retires INTO it) | strict 200ms | rungs breath/mark/touch | fill none
+  WRITE IN  14 rows | --ease-noteWrite | strict 250ms | rungs mark/breath/touch | fill backwards
+  LAY DOWN  27 rows | --ease-glassGlide | strict 280ms | rungs page/sheet/mark/touch | fill backwards
+  SLIDE      5 rows | --ease-glassGlide | strict 440ms | rungs page/step/sheet/touch | fill none
+  TURN       2 rows | --ease-glassGlide | strict 520ms | rungs page | fill none (WAAPI, composite replace)
+  RUB OUT    1 rows | --verb-lift-ease | strict 200ms | rungs breath/mark | fill none
+
+ROWS THAT RESIST
+  src/assets/index.css:679                                 refuse-shake: a SHAPE verb (T6 ERROR family)
+  src/assets/index.css:721                                 cell-reveal: a SHAPE verb (T6 incumbent)
+  src/assets/index.css:722                                 cell-reveal's delay token
+  src/assets/index.css:746                                 the global PRM duration kill, not a gesture
+  src/assets/index.css:990                                 celebration crest window, bound from CELEBRATION
+  src/games/shared/GameControlPanel.vue:2082               `transition: all 200ms`, no property set a verb can own
+  src/games/shared/GameControlPanel.vue:2284               grid-template-rows: the one LAYOUT animation; no verb's property set
+  src/pencil/celestial/DarkModeToggle.vue:822              toggle-squash: a SHAPE verb (T6 vocabulary), not a timing verb
+  src/pencil/celestial/DarkModeToggle.vue:843              plush-land: a SHAPE verb (T6 vocabulary)
+  src/pencil/chrome/ScribbleLoader.vue:81                  a LOOP, not a gesture: 1000ms linear, perpetual
+  src/pencil/chrome/icons/DiceIcon.vue:113                 icon SHAPE keyframe
+  src/pencil/chrome/icons/DiceIcon.vue:134                 icon SHAPE keyframe
+  src/pencil/chrome/icons/FillForcedIcon.vue:72            icon SHAPE keyframe
+  src/pencil/chrome/icons/SolveIcon.vue:55                 icon SHAPE keyframe
+  src/pencil/chrome/icons/SolveIcon.vue:70                 icon SHAPE keyframe
+
+THE CLOSED-SET TEST
+  src/assets/index.css:667                                 THE DUSK — the closed-set test (shipped 350ms, ease ease)

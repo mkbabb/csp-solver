@@ -1,0 +1,42 @@
+/* MRK-WASH pass-1 prototype overlay — THE INVERTED GROUND.
+ *
+ * The one door the arithmetic leaves open for §6. A translucent ground cannot be both findable
+ * (3:1 against the card it sits on) and readable (4.5:1 under near-black label text), because
+ * both floors move the same way with alpha and in opposite directions. The escape is to stop
+ * asking one ink to do both jobs: the ground goes heavy and THE LABEL FLIPS to the paper's own
+ * colour, so the control reads as a word cut out of wax.
+ *
+ * Loaded ON TOP of `wax-ground.css`; it changes only the ink.
+ */
+.icon-btn:focus-visible,
+.icon-btn.wax-probe-focus,
+.ctrl-btn:focus-visible,
+.ctrl-btn.wax-probe-focus,
+.info-btn:focus-visible,
+.info-btn.wax-probe-focus,
+.attribution-trigger:focus-visible,
+.attribution-trigger.wax-probe-focus,
+.logo-trigger:focus-visible,
+.logo-trigger.wax-probe-focus,
+.invite-btn:focus-visible,
+.invite-btn.wax-probe-focus,
+header a:focus-visible,
+header a.wax-probe-focus {
+  color: var(--color-card) !important;
+}
+
+.icon-btn:focus-visible .icon-sublabel,
+.icon-btn.wax-probe-focus .icon-sublabel,
+.ctrl-btn:focus-visible .icon-sublabel,
+.ctrl-btn.wax-probe-focus .icon-sublabel {
+  color: var(--color-card) !important;
+}
+
+@media (forced-colors: active) {
+  .icon-btn:focus-visible,
+  .ctrl-btn:focus-visible,
+  .info-btn:focus-visible,
+  header a:focus-visible {
+    color: CanvasText !important;
+  }
+}

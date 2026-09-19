@@ -1,0 +1,184 @@
+{
+  "family": "NOTE-LEDGER",
+  "stage": "pass1/prototype",
+  "runs": true,
+  "worktree": "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_e58b4764-0fc-54",
+  "branch": "worktree-wf_e58b4764-0fc-54",
+  "head": "aab67b92",
+  "devServer": "http://127.0.0.1:4236 (vite, worktree; 4243 was taken by a sibling lane)",
+  "previewServer": "http://127.0.0.1:4238 (vite preview on the worktree's own dist, for the goldens)",
+  "engines": [
+    "chromium",
+    "webkit"
+  ],
+  "gates": {
+    "L1": {
+      "verdict": "GREEN",
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "log": "logs/L1-*.json"
+    },
+    "L2": {
+      "verdict": "GREEN",
+      "engines": [
+        "chromium",
+        "webkit"
+      ],
+      "log": "logs/L2-*.json"
+    },
+    "L3": {
+      "verdict": "GREEN",
+      "boardDeltaPx": 0,
+      "rigs": 6,
+      "themes": 2,
+      "log": "logs/geom-*.json"
+    },
+    "L4": {
+      "verdict": "GREEN after the ballot fired",
+      "scrollHeight": {
+        "1280x800": "800 -> 800",
+        "900x500": "500 -> 500 (depth one on that pose)"
+      },
+      "preBallot": {
+        "900x500": "500 -> 506"
+      }
+    },
+    "L5": {
+      "verdict": "GREEN",
+      "clearancePx": {
+        "390x844": {
+          "chromium": 4.8,
+          "webkit": 4.79
+        },
+        "393x699": {
+          "chromium": 4.8,
+          "webkit": 4.79
+        },
+        "390x664": {
+          "chromium": 4.8,
+          "webkit": 4.79
+        },
+        "360x740": {
+          "chromium": 4.79,
+          "webkit": 4.8
+        }
+      },
+      "paintedLines": {
+        "live": 1,
+        "aged": 1,
+        "afterThreeRecords": "still 1 + 1"
+      }
+    },
+    "L6": {
+      "verdict": "GREEN",
+      "roleStatusInStrip": 1,
+      "ariaLiveInStrip": 1,
+      "previousInsideRegion": false,
+      "mutationBatchesPerPush": 1
+    },
+    "L7": {
+      "verdict": "GREEN",
+      "paintedCore": {
+        "light": {
+          "lineOne": 14.52,
+          "lineTwo": 5.17
+        },
+        "dark": {
+          "lineOne": 12.25,
+          "lineTwoChromium": 6.07,
+          "lineTwoWebkit": 6.13
+        }
+      },
+      "lineTwoCoreChroma": {
+        "light": 1,
+        "dark": 7
+      }
+    },
+    "L8": {
+      "verdict": "GREEN after the deal cure",
+      "headOnProductionPath": "RED - a sudoku re-deal left BOTH lines standing (logs/deal-chromium.json)"
+    },
+    "L9": {
+      "verdict": "GREEN",
+      "log": "logs/L8-L9-*.json"
+    },
+    "L10": {
+      "verdict": "GREEN",
+      "lineTwoBoxPx": {
+        "390": 20.8,
+        "900": 22.3,
+        "1280": 23.61
+      }
+    }
+  },
+  "push": {
+    "declaredMs": 250,
+    "settledMs": {
+      "chromium": "205.4-206.7 (two runs)",
+      "webkit": "212-217 (two runs)"
+    },
+    "keyframeTravelPx": {
+      "chromium": 20.7969,
+      "webkit": 20.796875
+    },
+    "observedTravelPx": {
+      "chromium": "17.84-17.95",
+      "webkit": "15.18-16.16"
+    },
+    "fill": "backwards",
+    "easing": "cubic-bezier(0.22, 1, 0.36, 1)",
+    "colourFrom": "rgb(38, 38, 38)",
+    "colourTo": "color(srgb 0.15 0.15 0.15 / 0.68)",
+    "boardTravelPx": 0,
+    "glyphFilter": "none",
+    "glyphTransform": "none",
+    "prm": {
+      "durationMs": 0,
+      "travelPx": 0,
+      "settledMs": 0
+    }
+  },
+  "ballot": {
+    "pose": "below 1024, landscape (900x500)",
+    "stripWidthPx": 332,
+    "twoLongestPlusGapPx": 457.52,
+    "fired": "depth one on that pose (B6 split grammar, stated)"
+  },
+  "desk": {
+    "stripWidthPx": 632,
+    "twoLongestPlusGapPx": 484.3,
+    "berth": "trailing, scroll unchanged"
+  },
+  "censuses": {
+    "R3-d": "GREEN (md5 62b2a326...), ten acts leave line one; DELTA: 'type a digit' HEAD empty -> stands",
+    "R3-g": "GREEN (md5 5b848cbc...); DELTA: the second-H press and fill-forced stand instead of retracting; deal empty and clear/solve unchanged",
+    "wobble": "grid sigma 1.443 / frame 1.145 / ring 0.092 - identical to r0",
+    "budget": "liveFilterTotal 9 at 4x4, 9x9, 16x16 - identical to r0",
+    "hue-census": "24+24 site rows identical to r0 but for .progress-trace (fill-meter state, deal variance)",
+    "heading-voice": "born-RED unmoved: 8 groups in 3 voices, the same three voice strings, 2 of 8 headings"
+  },
+  "batteries": {
+    "vue-tsc": "0 errors",
+    "vitest": "66 files / 813 tests passed (HEAD 810 + 3 new rows)",
+    "lints": [
+      "lint:ink",
+      "lint:live-regions",
+      "lint:copy",
+      "lint:motion",
+      "lint:theme-tokens",
+      "lint:theme-selectors",
+      "test:font-coverage"
+    ],
+    "prettier": "clean",
+    "eslint": "clean on the touched files",
+    "goldens": "4/4 against the worktree's own dist - DELTA none",
+    "board-covisibility": "16/16 both engines"
+  },
+  "gaps": [
+    "the error card over a two-line column is UNMEASURED on the real surface: route-aborting the wasm and the worker module intercepted 0 requests, so the fault never came. The CSS rule is proven on the live element (display block -> none, board y and scrollHeight unchanged, both engines) and the binding is gated in the unit battery.",
+    "the dock sheet open over a two-line column was not re-measured (r0 read it: the sheet covers the strip whole).",
+    "a hint followed by silence still stands at full pressure until the next sentence - the family's own declared residual."
+  ]
+}

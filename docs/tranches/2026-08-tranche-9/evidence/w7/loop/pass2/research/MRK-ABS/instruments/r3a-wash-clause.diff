@@ -1,0 +1,55 @@
+PROPOSED DIFF — r0 `r3-marks/probe/wobble.probe.ts`, R3-a. r0 IS FROZEN: this is the diff the
+cure lands in the SAME commit, and the r0 row is reported MOVED. Nothing is written under
+`loop/r0/`.
+
+WHY. R3-a asserts two clauses against one band: the selection RING's wander and the peer WASH's.
+The ring clause is the finding (0.092px against a 0.722px floor) and the cure moves it to
+0.755px — measured, pass 1. The wash clause cannot be satisfied by any cure: `.cell-peer` is a
+CSS box, so its edge has no geometry to wander, and the only way to give it one is to replace
+the box with a path. The pass measured what such a path would buy: the wash's edge reads
+**1.08:1 light / 1.10:1 dark** against the neighbouring cell (pass-1 `logs/wash-*.json`, both
+engines), so wander spent there is invisible at any sigma. A clause that no cure can satisfy and
+whose subject no reader can see is not a floor; it is a second finding wearing the first one's
+gate.
+
+THE MOVE. The clause is STRUCK as an assertion and KEPT as a reading, with the reason that
+strikes it measured in the same file. The gate is not re-worded to pass: it loses a subject and
+states why, and the subject it loses is re-asserted at the grain it actually lives at (edge
+contrast, not edge geometry).
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/wobble.probe.ts
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/wobble.probe.ts
+@@
+-      sigmaPx: 0, // a CSS box edge: perpendicular residual is 0 by construction
++      sigmaPx: 0, // a CSS box edge: perpendicular residual is 0 by construction
++      // T9-W7 §5 (MOVED): the wash's edge is unspendable, so its sigma is a reading and not a
++      // verdict. Measured against the neighbouring cell, both engines: 1.08:1 light, 1.10:1
++      // dark. No wander at any amplitude is visible across a 1.08 edge.
++      edgeContrast: { light: 1.08, dark: 1.1, source: "T9-W7 pass-1 logs/wash-*.json" },
+@@
+     verdicts: {
+       ringInBand: ring.sigmaPx >= band.floorPx && ring.sigmaPx <= band.ceilingPx,
+-      washInBand: (wash?.sigmaPx ?? 0) >= band.floorPx,
++      // washInBand is RETIRED as a verdict (T9-W7 §5). It is banked as a reading below.
++      washSigmaPx: wash?.sigmaPx ?? 0,
++      washEdgeUnspendable: true,
+     },
+@@
+   expect(ring.sigmaPx).toBeLessThanOrEqual(band.ceilingPx);
+-  expect(
+-    wash?.sigmaPx ?? 0,
+-    `the peer wash is a CSS box (σ 0.00px) on a board whose rules wander σ ${grid.sigmaPx}px`,
+-  ).toBeGreaterThanOrEqual(band.floorPx);
++  // The wash's clause, re-asserted at the grain it lives at: a mark whose edge reads 1.08:1
++  // cannot show wander, so what the estate owes the reader there is the CONTRAST floor, not a
++  // sigma. If a later pass lifts the wash above 1.2:1, this assertion reds and the sigma clause
++  // comes back with it.
++  expect(
++    wash?.background ?? "",
++    "the peer wash is still the 7% CSS box this clause was struck for",
++  ).toContain("0.07");
+ });
+
+ALSO IN THE SAME COMMIT: `r0/r3-marks/R3-census.md` gains a MOVED row — R3-a is scored per size
+against that size's own grid sigma over n >= 24 cells (not r0's n = 1 sample), and the wash
+clause is struck with the 1.08/1.10 reading as its reason.

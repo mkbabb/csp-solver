@@ -78,8 +78,15 @@ law(
   "GREEN",
   () => {
     const g = read("scripts/check-copy-register.mjs");
-    const admitted = (g.match(/since:\s*"/g) ?? []).length;
-    return { ok: admitted === 2, detail: `${admitted} ADMITTED entries standing (B1's two)` };
+    // The law is UNADMITTED = 0; an ADMITTED row is a debt with a cure's seam, and the count
+    // may only ever FALL. Pinning it at 2 made the probe red on the commit that paid it
+    // (T9-W7 · B1/B1b at the fold `74a2b5d9`). The ceiling stays, the floor goes. The count
+    // also reads the ADMITTED ARRAY, not every `since:` in the file — the self-test's
+    // synthetic stale-admission fixture is not a standing debt. (CTRL-COST's pass-3 PROPOSED
+    // diff, landed by the chair — registry-v3 §2.12; pass4/CHAIR-RULINGS.md §1.)
+    const table = /const ADMITTED = \[([\s\S]*?)\n\];/.exec(g)?.[1] ?? "";
+    const admitted = (table.match(/since:\s*"/g) ?? []).length;
+    return { ok: admitted <= 2, detail: `${admitted} ADMITTED entries standing (of B1's two)` };
   },
 );
 

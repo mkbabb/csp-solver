@@ -1,0 +1,416 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..81560f84 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -339,9 +339,9 @@
+      should never be prose.
+ 
+      --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+-     but the curve is shared across the laminate leave, ScribbleLoader, and
+-     DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+-     (census C4 reconciliation).
++     but the curve is shared across the laminate leave, ScribbleLoader,
++     DarkModeToggle, and the margin note's rub-out — so it mints as ONE role token,
++     not a laminate-scoped mis-name (census C4 reconciliation).
+      --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+      identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+      answer-key laminate's lay-down joins the one glass curve instead of the retired
+@@ -1121,6 +1121,28 @@ html {
+     }
+   }
+ 
++  /* …and the hand rubs back from the end of the line (T9-W7 §7). The write-in run
++     backwards, on the erase family's own curve, half the arrival. NO fill: the node is
++     REMOVED when the verb ends (a Vue leave), so there is no end pose to retain and the
++     `forwards` allowlist gains no row. The twin fade hides the anti-aliased tail. */
++  @keyframes ink-rub-out {
++    from {
++      clip-path: inset(0 0 0 0);
++    }
++    to {
++      clip-path: inset(0 100% 0 0);
++    }
++  }
++
++  @keyframes ink-rub-out-fade {
++    from {
++      opacity: 1;
++    }
++    to {
++      opacity: 0;
++    }
++  }
++
+   @keyframes note-in {
+     from {
+       transform: translateY(8px);
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 9f4ed306..0cd620a0 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -35,7 +35,7 @@ import {
+ } from "@games/shared/useJoinWash";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+ import { generateCellRects } from "@pencil/grid/gridPaths";
+-import { revealStaggerMs } from "@pencil/config/pencilConfig";
++import { revealStaggerMs, MOTION } from "@pencil/config/pencilConfig";
+ import {
+   setMurmurSeed,
+   notifyUserEdit,
+@@ -618,11 +618,37 @@ const marginTone = ref<"graphite" | "teacher-red" | "gold-star">("graphite");
+  *  by the hint arm alone — so the retraction below can only ever wipe what the hint wrote. */
+ let hintNoteLive = false;
+ let refusalNoteLive = false;
++/** The refusal's own clock (T9-W7 §7): the one line on the strip whose act is over. Every
++ *  writer clears it through `setMargin`, and each fresh refusal re-arms it. */
++let refusalHoldTimer: ReturnType<typeof setTimeout> | null = null;
++function clearRefusalHold() {
++  if (refusalHoldTimer) clearTimeout(refusalHoldTimer);
++  refusalHoldTimer = null;
++}
++/**
++ * Write the strip, INCLUDING when it is the same sentence twice.
++ *
++ * T9-W7 §7 — the margin takes the board's own `announce()` idiom. A live region announces
++ * mutations to itself, and writing the string the ref already holds is not one: refusing the
++ * same clue a second time re-rendered nothing, replayed no write-in and said nothing at all
++ * (measured 0 mutations, both engines). The repeat empties first and writes on the next flush,
++ * which under `mode="out-in"` is a rub-out and a fresh write-in — the note actually leaves, so
++ * the same sentence can be said again.
++ */
+ function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star") {
+-  marginText.value = text;
+-  marginTone.value = tone;
+   hintNoteLive = false;
+   refusalNoteLive = false;
++  clearRefusalHold();
++  if (text && text === marginText.value) {
++    marginText.value = "";
++    void nextTick(() => {
++      marginText.value = text;
++      marginTone.value = tone;
++    });
++    return;
++  }
++  marginText.value = text;
++  marginTone.value = tone;
+ }
+ 
+ // ── T9-W3 §3.5 · THE BOARD'S SECOND VOICE, AND IT DRAWS NOTHING ──────────────────────────
+@@ -716,6 +742,14 @@ watch(
+     if (r) {
+       setMargin("that's a given clue", "teacher-red");
+       refusalNoteLive = true;
++      // T9-W7 §7 — AND IT LEAVES. A refusal answered one keystroke; that keystroke is over, and
++      // what it leaves behind is the loudest ink in the product with nothing to be about. The
++      // clock runs from the LAST attempt (a fresh `refusal` object per press re-enters here), so
++      // refusing twice restarts it rather than cutting the second line short.
++      refusalHoldTimer = setTimeout(() => {
++        refusalHoldTimer = null;
++        if (refusalNoteLive) setMargin("", "graphite");
++      }, MOTION.note.refusalHoldBeats * MOTION.beatMs);
+     } else if (refusalNoteLive) {
+       setMargin("", "graphite");
+     }
+@@ -930,6 +964,7 @@ onMounted(() => {
+ 
+ onUnmounted(() => {
+   if (slowSolveTimer) clearTimeout(slowSolveTimer);
++  clearRefusalHold();
+   stopMarksReveal();
+ });
+ 
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+index b59e6e7f..9bede8aa 100644
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -101,6 +101,17 @@ interface CommonPersistPayload<TDiff extends string> {
+  */
+ export type CellWriteOutcome = "written" | "refused-given";
+ 
++/**
++ * WHOSE HAND WROTE IT (T9-W7 §7).
++ *
++ * The board's one write primitive is shared by three callers and only two of them are the
++ * reader: a keystroke and an undo replay are `self`, a digit off the wire is `peer`. The
++ * margin's voices are ADDRESSED TO THE READER, so what retracts them is the reader's own act —
++ * or a peer's act on the square the sentence is about, which is the one case where someone
++ * else's keystroke changes what the note said.
++ */
++export type WriteOrigin = "self" | "peer";
++
+ /** The refusal, published for the surfaces that draw it and say it. `seq` counts attempts, so
+  *  the same clue refused twice is two events a watcher can tell apart. */
+ export interface CellRefusal {
+@@ -372,7 +383,7 @@ export function useGameState<
+ 
+   const sessionSource = {
+     applyValue: (pos: number, value: number, solved: boolean) =>
+-      solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
++      solved ? applyHintInk(pos, value, "peer") : applyCellValue(pos, value, "peer"),
+     snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
+     size: () => solverSize.value,
+     restore: (blob: unknown, size: number) => {
+@@ -471,7 +482,21 @@ export function useGameState<
+   // A given is inviolable, and an ERASE IS A WRITE, so both are refused at the same gate. The
+   // refusal is returned rather than swallowed: the caller records nothing, and `lastRefusal`
+   // carries the event to the surfaces that draw it and say it.
+-  function applyCellValue(pos: number, value: number): CellWriteOutcome {
++  /**
++   * Does this square carry the armed hint's sentence? The cell it names, or one of the cells its
++   * argument turns on (`becauseCells`, the set the board already highlights). Measured at 9×9:
++   * 1 cell for "only N fits here", 9 for "N goes nowhere else in this <house>".
++   */
++  function armedHintTurnsOn(pos: number): boolean {
++    const h = hintReasoning.value;
++    return !!h && (h.cell === pos || h.becauseCells.includes(pos));
++  }
++
++  function applyCellValue(
++    pos: number,
++    value: number,
++    origin: WriteOrigin = "self",
++  ): CellWriteOutcome {
+     const key = String(pos);
+     if (givenCells.value.has(key)) {
+       lastRefusal.value = { pos, reason: "given", seq: ++refusalSeq };
+@@ -484,8 +509,13 @@ export function useGameState<
+       solvedValues.value = rest;
+     }
+     values.value[key] = value;
+-    hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
+-    lastRefusal.value = null; // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal
++    // T4-W7 / T9-W7 §7 — an edit disarms a stale armed hint. A PEER's edit disarms it only when
++    // it lands on the square the hint's sentence is about; their digit in the far corner is not
++    // news about your note.
++    if (origin === "self" || armedHintTurnsOn(pos)) hintReasoning.value = null;
++    // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal. YOUR ink: the refusal answered
++    // YOUR keystroke, and a peer cannot write the given it was about.
++    if (origin === "self") lastRefusal.value = null;
+     // Revert solve state so the board no longer shows success/failure.
+     if (solveState.value !== "idle") {
+       solveState.value = "idle";
+@@ -534,8 +564,12 @@ export function useGameState<
+ 
+   // Redo of hint ink — write the digit in the solver's own tone (no record); the reveal draw-in
+   // path, factored so `inkReveal` and the undo-replay share it.
+-  function applyHintInk(pos: number, value: number) {
++  function applyHintInk(pos: number, value: number, origin: WriteOrigin = "self") {
+     const key = String(pos);
++    // A revealed digit is a write like any other: it can land on the square your note names.
++    // (This function nulled neither voice, so a peer's REVEAL left a note standing that its own
++    // square had just answered — the same defect with the sign flipped.)
++    if (origin === "peer" && armedHintTurnsOn(pos)) hintReasoning.value = null;
+     values.value[key] = value;
+     solvedValues.value = { ...solvedValues.value, [key]: value };
+     animatingCells.value = new Set([key]);
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..69be0ab0 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -22,9 +22,21 @@
+  * - The inline star (F2-C, ratified): on the gold-star tone the verdict line opens
+  *   with a 1.1em hand-wonky star — ★ solved it! — the sticker's own geometry demoted
+  *   to punctuation. In flow inside the ink span, so it wipes in with the note's own
+- *   250ms clip-path write-in: zero subscribers, collision impossible by construction.
++ *   clip-path write-in: zero subscribers, collision impossible by construction.
++ *
++ * T9-W7 §7 — THE NOTE GAINS AN EXIT AND AN AGE. The write-in was the estate's one arrival
++ * with no departure (R4's M2 row): a note vanished on a frame, mid-sentence. It leaves the
++ * way it came now — the same clip run backwards from the END of the line, one beat, on the
++ * erase family's curve — carried by a `<Transition>` rather than a listener, because PRM
++ * deletes the animation outright and `animationend` then never fires on either engine. And a
++ * graphite line settles to the quiet rung eight beats after it arrives: it stops being the
++ * loudest ink and waits for an act. Verdict tones never settle (teacher-red at that rung is
++ * 3.04:1 light, gold 2.70:1 — a grade you can barely read is a grade you doubt).
+  */
+-withDefaults(
++import { onUnmounted, ref, watch } from "vue";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++const props = withDefaults(
+   defineProps<{
+     text: string;
+     tone?: "graphite" | "teacher-red" | "gold-star";
+@@ -47,10 +59,40 @@ withDefaults(
+ // scale — the same star, demoted to punctuation. viewBox 0 0 24 24.
+ const NOTE_STAR_D =
+   "M11.8,2.1 L14.5,8.7 L21.6,9.1 L15.7,13.3 L18,20.2 L12.1,15.9 L6,20 L8.3,13.2 L2.4,8.8 L9.6,8.9 Z";
++
++// The lifecycle, published to the stylesheet in the `--card-step-ms` idiom: the beats live in
++// MOTION, the milliseconds are derived here, and no duration is written twice.
++const ms = (beats: number) => `${beats * MOTION.beatMs}ms`;
++const noteVars = {
++  "--note-write-ms": ms(MOTION.note.writeInBeats),
++  "--note-rub-ms": ms(MOTION.note.rubOutBeats),
++  "--note-settle-ms": ms(MOTION.note.settleBeats),
++};
++
++// THE AGE. One timer, re-armed by every line and cleared by the next — the component that
++// renders the note owns how it ages, the way it already owns how it arrives.
++const settled = ref(false);
++let settleTimer: ReturnType<typeof setTimeout> | null = null;
++watch(
++  () => [props.text, props.tone] as const,
++  ([text, tone]) => {
++    if (settleTimer) clearTimeout(settleTimer);
++    settled.value = false;
++    if (!text || tone !== "graphite") return;
++    settleTimer = setTimeout(
++      () => (settled.value = true),
++      MOTION.note.settleAfterBeats * MOTION.beatMs,
++    );
++  },
++  { immediate: true },
++);
++onUnmounted(() => {
++  if (settleTimer) clearTimeout(settleTimer);
++});
+ </script>
+ 
+ <template>
+-  <div class="margin-note-block" :class="{ 'is-quiet': quiet }">
++  <div class="margin-note-block" :class="{ 'is-quiet': quiet }" :style="noteVars">
+     <p
+       class="margin-note"
+       :class="tone"
+@@ -58,27 +100,36 @@ const NOTE_STAR_D =
+       aria-live="polite"
+       aria-atomic="true"
+     >
+-      <span v-if="text" :key="text" class="margin-note-ink">
+-        <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
+-        <svg
+-          v-if="tone === 'gold-star'"
+-          class="note-star"
+-          viewBox="0 0 24 24"
+-          aria-hidden="true"
+-          focusable="false"
+-          xmlns="http://www.w3.org/2000/svg"
++      <!-- out-in: a replacement rubs the old line out before the new one writes in, which is
++           also what gives the live region two mutations when the same sentence is said twice. -->
++      <Transition name="note" mode="out-in">
++        <span
++          v-if="text"
++          :key="text"
++          class="margin-note-ink"
++          :data-note-age="settled ? 'settled' : null"
+         >
+-          <path
+-            :d="NOTE_STAR_D"
+-            fill="#FDE68A"
+-            fill-opacity="0.9"
+-            stroke="#F0B030"
+-            stroke-width="1.8"
+-            stroke-linecap="round"
+-            stroke-linejoin="round"
+-          /></svg
+-        >{{ text }}
+-      </span>
++          <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
++          <svg
++            v-if="tone === 'gold-star'"
++            class="note-star"
++            viewBox="0 0 24 24"
++            aria-hidden="true"
++            focusable="false"
++            xmlns="http://www.w3.org/2000/svg"
++          >
++            <path
++              :d="NOTE_STAR_D"
++              fill="#FDE68A"
++              fill-opacity="0.9"
++              stroke="#F0B030"
++              stroke-width="1.8"
++              stroke-linecap="round"
++              stroke-linejoin="round"
++            /></svg
++          >{{ text }}
++        </span>
++      </Transition>
+     </p>
+     <!-- The tally: plain text, deliberately OUTSIDE the live region. -->
+     <p v-if="meta" :key="meta" class="margin-note-meta">{{ meta }}</p>
+@@ -146,7 +197,48 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++}
++
++/* THE ARRIVAL — the hand writes left to right. It was a bare animation on the ink span, which
++   is why a note could arrive and never leave; it belongs to the Transition's enter now, and the
++   duration comes from MOTION (the file's last timing literal). */
++.note-enter-active {
++  animation: ink-write-in var(--note-write-ms) var(--ease-noteWrite) backwards;
++}
++
++/* THE EXIT (T9-W7 §7) — the same clip run backwards from the END of the line, plus a twin fade
++   for the anti-aliased tail. Clip and opacity only: no glyph moves, nothing filters, no fill
++   (the node is REMOVED when the verb ends, so there is no end pose to retain and the forwards
++   allowlist gains no row).
++
++   `transition: none` is load-bearing. Vue decides when to drop the node by reading this
++   element's computed durations, and a SETTLED note carries a 500ms colour transition — which
++   would hold a rubbed-out line on the page for four beats after the verb finished, and with no
++   fill the ink snaps back to full at that point. It is also what makes the PRM arm free: the
++   stylesheet already deletes the animation under reduced motion, so both durations read 0 and
++   the removal is same-frame with nothing to listen for (`animationend` never fires there). */
++.note-leave-active {
++  animation:
++    ink-rub-out var(--note-rub-ms) var(--ease-accelIn),
++    ink-rub-out-fade var(--note-rub-ms) var(--ease-accelIn);
++  transition: none;
++}
++
++/* THE SETTLE — eight beats in, a graphite line stops being the loudest ink and waits. Colour
++   only: no opacity, no geometry, nothing that could promote a layer. The quiet rung measures
++   5.17:1 light and 6.07:1 dark on the note's real backdrop at 16px, DPR 1 and 3. Only graphite
++   arrives here (the age timer is gated on the tone): red at this rung is 3.04:1, gold 2.70:1. */
++.margin-note-ink[data-note-age="settled"] {
++  color: var(--ink-press-quiet);
++  transition: color var(--note-settle-ms) var(--ease-standard);
++}
++
++/* Reduced motion takes the settle as a step — the hand lifting, with no tween. (The write-in
++   and the rub-out are already deleted by the estate's own PRM block in index.css.) */
++@media (prefers-reduced-motion: reduce) {
++  .margin-note-ink[data-note-age="settled"] {
++    transition: none;
++  }
+ }
+ 
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..891a1075 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,28 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** THE MARGIN NOTE'S LIFE (T9-W7 §7), in beats of `beatMs` — so the constant IS the beat.
++   *  The write-in was a `250ms` literal in MarginNote's own stylesheet, the one timing constant
++   *  outside this file; it comes home as two beats and brings the rest of the lifecycle with it.
++   *  `MarginNote` publishes the first three to CSS as `--note-write-ms` / `--note-rub-ms` /
++   *  `--note-settle-ms` (the `--card-step-ms` precedent); the refusal hold is a JS timer in
++   *  GameBoard and never reaches the stylesheet.
++   *
++   *  RATIFY-ME (T9-W7 §7 ballot): `refusalHoldBeats`, band 24–40. 24 beats = 3.0s is the house's
++   *  own moment (CELEBRATION's ≤3.2s crest cap); 40 (5.0s) is what a reading-time heuristic
++   *  gives a four-word line. The owner's eye settles it at the re-look. */
++  note: {
++    /** 250ms — the incumbent write-in, named. */
++    writeInBeats: 2,
++    /** 125ms — the exit: half the arrival, the erase asymmetry. */
++    rubOutBeats: 1,
++    /** 1000ms after a graphite note arrives it stops being the loudest ink on the page. */
++    settleAfterBeats: 8,
++    /** 500ms colour step, full pressure → `--ink-press-quiet`. */
++    settleBeats: 4,
++    /** 3000ms from the LAST refusal, then the line is rubbed out. */
++    refusalHoldBeats: 24,
++  },
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a

@@ -1,0 +1,149 @@
+# CSS roster — 106 terms in 28 files
+  terms with a duration: 85
+  DURATION histogram (ms × count):
+       150 × 18
+       200 × 14
+       250 × 8
+       500 × 6
+       240 × 4
+       350 × 4
+       280 × 3
+       320 × 3
+         0 × 2
+       100 × 2
+       120 × 2
+       180 × 2
+       300 × 2
+       440 × 2
+      2650 × 2
+      0.01 × 1
+       160 × 1
+       260 × 1
+       340 × 1
+       380 × 1
+       400 × 1
+       600 × 1
+       800 × 1
+      1000 × 1
+      1010 × 1
+      1200 × 1
+  DELAY histogram (ms × count):
+         0 × 3
+        60 × 2
+       150 × 2
+       560 × 2
+       120 × 1
+       140 × 1
+       240 × 1
+       260 × 1
+       420 × 1
+       640 × 1
+       720 × 1
+  terms reading a var(--motion-*): 0
+  terms with a bare UA ease keyword: 28
+  terms with NO --ease-* and no bare keyword: 27
+
+## every CSS site at 520ms (0)
+
+## every CSS site at 500ms (6)
+  src/assets/index.css:590  DUR  stroke 500ms
+  src/assets/index.css:607  DUR  box-shadow 500ms
+  src/games/shared/GameControlPanel.vue:2459  DUR  sharePop 500ms ease
+  src/pencil/chrome/icons/DiceIcon.vue:113  DUR  diceRoll 500ms var(--ease-springPop) forwards
+  src/pencil/chrome/icons/SolveIcon.vue:70  DUR  sparkleGrow 500ms var(--ease-springPop) forwards
+  src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue:588  DUR  opacity 500ms ease
+
+## every CSS site at 600ms (1)
+  src/assets/index.css:679  DUR  refuse-shake 0.6s linear
+
+## every CSS site at 440ms (2)
+  src/pencil/chrome/GameGallery/GameCard.vue:410  DUR  transform var(--card-step-ms, 440ms) var(--ease-glassGlide)
+  src/pencil/chrome/GameGallery/GameCard.vue:410  DUR  opacity var(--card-step-ms, 440ms) var(--ease-glassGlide)
+
+# CODE roster — 77 clocks in 24 files
+  const: 23
+  setTimeout: 16
+  durationMs: 15
+  duration: 12
+  delay: 6
+  delayMs: 5
+  of those, a BARE NUMERIC LITERAL: 19
+
+## every code clock (kind · value · site)
+  src/App.vue:220  setTimeout  900
+  src/App.vue:292  setTimeout  1200
+  src/App.vue:83  delay       300 + loadingComponent) — never a
+  src/App.vue:114  delay       300
+  src/App.vue:376  durationMs  MOTION.boardFoldMs
+  src/games/shared/DifficultyTally.vue:148  durationMs  DRAW_IN_PRESETS.glyph.duration
+  src/games/shared/DifficultyTally.vue:149  delayMs     i * DRAW_STAGGER_MS
+  src/games/shared/DifficultyTally.vue:77  const       DRAW_STAGGER_MS = 90
+  src/games/shared/GameControlPanel.vue:96  setTimeout  120
+  src/games/shared/GameControlPanel.vue:98  setTimeout  120
+  src/games/shared/GameControlPanel.vue:323  setTimeout  copied ? 1600 : 3600
+  src/games/shared/GameControlPanel.vue:520  setTimeout  2500
+  src/games/shared/GameControlPanel.vue:555  setTimeout  2500
+  src/games/shared/GameControlPanel.vue:219  const       PEEK_HOLD_MS = 350
+  src/games/shared/GameShell.vue:86  setTimeout  1
+  src/games/shared/relayWire.ts:268  setTimeout  wait
+  src/games/shared/relayWire.ts:67  const       RETRY_MS = [250, 500, 1000, 2000, 4000]
+  src/games/shared/solver/client.ts:56  const       DEAL_LEASH_MS = 30_000
+  src/games/shared/solver/solver.worker.ts:232  const       elapsedMs = performance.now() - t0
+  src/games/shared/useButtonAnimation.ts:8  setTimeout  duration
+  src/games/shared/useControlsDrawer.ts:233  durationMs  GLIDE_MS
+  src/games/shared/useControlsDrawer.ts:86  const       GLIDE_MS = 520
+  src/games/shared/useFlipGlide.ts:182  setTimeout  guardMs
+  src/games/shared/useFlipGlide.ts:192  setTimeout  guardMs
+  src/games/shared/useFlipGlide.ts:88  durationMs  number;
+  src/games/shared/useFlipGlide.ts:165  duration    options.durationMs
+  src/games/shared/useFlipGlide.ts:116  const       guardMs = options.settleGuardMs ?? options.durat
+  src/games/shared/useGameCell.ts:190  setTimeout  REFUSE_MS
+  src/games/shared/useGameCell.ts:184  const       REFUSE_MS = 600
+  src/games/shared/useJoinWash.ts:106  durationMs  1180
+  src/games/shared/useJoinWash.ts:116  durationMs  880
+  src/games/shared/useJoinWash.ts:125  durationMs  740
+  src/games/shared/useJoinWash.ts:223  durationMs  c.durationMs
+  src/games/shared/useJoinWash.ts:244  durationMs  c.durationMs
+  src/games/shared/useLongPress.ts:40  const       delayMs = options.delayMs ?? 450
+  src/games/shared/useSession.ts:499  duration    `sendState`/`applyValue` already guard on it
+  src/games/shared/useSession.ts:616  const       HEARTBEAT_MS = 15000
+  src/games/shared/useSession.ts:624  const       PRESENCE_EXPIRY_MS = 45000
+  src/games/shared/useSession.ts:910  const       CUR_MS = 120
+  src/pencil/celestial/DarkModeToggle.vue:676  setTimeout  1100
+  src/pencil/chrome/AttributionCard/useHoverCard.ts:53  setTimeout  closeDelay
+  src/pencil/chrome/GameGallery/GameCard.vue:190  durationMs  GLYPH_ANIM.hoverWiggleDuration
+  src/pencil/chrome/GameGallery/GameGallery.vue:377  durationMs  DRAW_IN_PRESETS.gridFrame.duration
+  src/pencil/chrome/GameGallery/GameGallery.vue:378  delayMs     base + (dist - 1) * stagger
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:392  setTimeout  90
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:331  duration    GLIDE_MS
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:27  const       GLIDE_MS = MOTION.cardStepMs
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:31  const       SETTLE_GUARD_MS = GLIDE_MS + 200
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:41  const       SAMPLE_MS = 8
+  src/pencil/chrome/GameGallery/useCarouselGlide.ts:512  const       legMs = (e?.timeStamp ?? d.t) - d.t
+  src/pencil/config/pencilConfig.ts:480  duration    350
+  src/pencil/config/pencilConfig.ts:487  duration    280
+  src/pencil/config/pencilConfig.ts:494  duration    200
+  src/pencil/config/pencilConfig.ts:501  duration    350
+  src/pencil/glyph/HandwrittenGlyph.vue:201  durationMs  DRAW_IN_PRESETS.glyph.duration
+  src/pencil/glyph/HandwrittenGlyph.vue:202  delayMs     props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDe
+  src/pencil/glyph/HandwrittenGlyph.vue:230  durationMs  150
+  src/pencil/glyph/HandwrittenGlyph.vue:255  duration    GLYPH_ANIM.hoverWiggleDuration
+  src/pencil/glyph/HandwrittenGlyph.vue:139  const       delayMs = CELEBRATION.beat2StartMs + (row + col)
+  src/pencil/glyph/glyphAnimations.ts:69  durationMs  cycles * cycleDurationMs
+  src/pencil/glyph/glyphAnimations.ts:70  delayMs     options.delayMs ?? 0
+  src/pencil/glyph/glyphAnimations.ts:58  const       cycleDurationMs = options.cycleDurationMs ?? 600
+  src/pencil/glyph/glyphAnimations.ts:107  const       intervalMs = Math.max(1, Math.round(duration / M
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:49  duration    number;
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:50  delay       number;
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:67  durationMs  spec.duration
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:68  delayMs     spec.delay
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:111  duration    number;
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:112  delay       number;
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:123  duration    preset.duration
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:124  delay       Math.max(0
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:163  duration    150
+  src/pencil/grid/HandDrawnGrid/usePathAnimation.ts:164  delay       i * 4
+  src/pencil/sheet/AnswerKeyLaminate.vue:34  const       LIFT_MS = 200
+  src/pencil/sheet/AnswerKeyLaminate.vue:144  const       KEY_DRAW_MS = 180
+  src/pencil/sheet/AnswerKeyLaminate.vue:145  const       KEY_DELAY_LEAD_MS = 80
+  src/pencil/sheet/AnswerKeyLaminate.vue:148  const       keyBucketMs = computed(() =>

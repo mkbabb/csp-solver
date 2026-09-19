@@ -1,0 +1,64 @@
+KEYFRAMES AND WHAT THEY MOVE
+  bloom-in                 opacity, transform
+  bloom-out                opacity, transform
+  cell-reveal              opacity, transform
+  controls-fade-in         opacity
+  diceRoll                 transform
+  drawIn                   stroke-dashoffset
+  eraserScrub              transform
+  ghost-draw-on            stroke-dashoffset
+  ink-rub-out              clip-path, opacity
+  ink-write-in             clip-path
+  markDraw                 stroke-dashoffset
+  marks-fade-in            opacity
+  note-in                  opacity, transform
+  outline-flash            opacity
+  pencil-draw-on           opacity, stroke-dashoffset
+  pipPop                   opacity, transform
+  player-name-quiet        color
+  player-row-close         grid-template-rows
+  player-row-open          grid-template-rows
+  plush-blink              transform
+  plush-bounce             transform
+  plush-land               scale
+  plush-murmur             transform
+  refuse-shake             transform
+  scribble-cycle           stroke-dashoffset
+  sharePop                 transform
+  sparkleGrow              opacity, transform
+  sticker-pop              opacity, transform
+  toggle-squash            scale
+
+WHAT THE TWO RULES WOULD SAY
+  RULE1? assets/index.css:769                           animation shorthand names --ease-anticipatePop (shorthand, not an inner step) [cell-reveal 0.3s var(--ease-anticipatePo]
+  RULE1? assets/index.css:816                           animation shorthand names --ease-drawOn (shorthand, not an inner step) [pencil-draw-on var(--draw-dur, 160ms) va]
+  RULE1? assets/index.css:1056                          animation shorthand names --ease-drawOn (shorthand, not an inner step) [var(--ease-drawOn)]
+  RULE1? assets/index.css:1063                          animation shorthand names --ease-standard (shorthand, not an inner step) [var(--ease-standard)]
+  RULE1? assets/index.css:1090                          animation shorthand names --ease-accelIn (shorthand, not an inner step) [var(--ease-accelIn)]
+  RULE1? assets/index.css:1102                          animation shorthand names --ease-drawOn (shorthand, not an inner step) [var(--ease-drawOn)]
+  RULE1? assets/index.css:1109                          animation shorthand names --ease-standard (shorthand, not an inner step) [var(--ease-standard)]
+  RULE1? assets/index.css:1124                          animation shorthand names --ease-drawOn (shorthand, not an inner step) [var(--ease-drawOn)]
+  RULE1? assets/index.css:1128                          animation shorthand names --ease-drawOn (shorthand, not an inner step) [var(--ease-drawOn)]
+  RULE1? assets/index.css:1132                          animation shorthand names --ease-drawOn (shorthand, not an inner step) [var(--ease-drawOn)]
+  RULE5  games/shared/GameControlPanel.vue:1724         layDown does not own grid-template-rows  (keyframe player-row-open; layDown owns opacity, transform, background-color, color, box-shadow, stroke)
+  RULE5  games/shared/GameControlPanel.vue:1736         layDown does not own grid-template-rows  (keyframe player-row-open; layDown owns opacity, transform, background-color, color, box-shadow, stroke)
+  RULE5  games/shared/GameControlPanel.vue:1746         lift does not own grid-template-rows  (keyframe player-row-close; lift owns opacity, transform, scale)
+  RULE5  games/shared/GameControlPanel.vue:2086         layDown does not own filter  (property filter; layDown owns opacity, transform, background-color, color, box-shadow, stroke)
+  RULE1  games/shared/GameControlPanel.vue:2290         transition names --ease-drawOn, not a verb   [grid-template-rows 200ms var(--ease-drawOn)]
+  RULE5  games/shared/SolverErrorNote.vue:63            writeIn does not own transform  (keyframe note-in; writeIn owns clip-path, stroke-dashoffset, opacity)
+  RULE5  games/shared/SolverErrorNote.vue:97            layDown does not own background  (property background; layDown owns opacity, transform, background-color, color, box-shadow, stroke)
+  RULE1  pencil/celestial/DarkModeToggle.vue:810        transition names --ease-springPop, not a verb   [transform 800ms var(--ease-springPop) 60ms !important]
+  RULE1? pencil/celestial/DarkModeToggle.vue:832        animation shorthand names --ease-springPop (shorthand, not an inner step) [var(--ease-springPop)]
+  RULE1  pencil/chrome/GameGallery/GameCard.vue:410     transition names --ease-glassGlide, not a verb   [transform var(--card-step-ms, 440ms) var(--ease-glassG]
+  RULE1  pencil/chrome/GameGallery/GameCard.vue:410     transition names --ease-glassGlide, not a verb   [opacity var(--card-step-ms, 440ms) var(--ease-glassGli]
+  RULE1  pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:560 transition names --ease-noteWrite, not a verb   [clip-path 1.2s var(--ease-noteWrite)]
+  RULE5  pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue:647 writeIn does not own transform  (property transform; writeIn owns clip-path, stroke-dashoffset, opacity)
+  RULE1? pencil/chrome/ScribbleLoader.vue:90            animation shorthand names --ease-loaderScrub (shorthand, not an inner step) [var(--ease-loaderScrub)]
+  RULE1? pencil/chrome/ScribbleLoader.vue:98            animation shorthand names --ease-accelIn (shorthand, not an inner step) [var(--ease-accelIn)]
+  RULE1? pencil/chrome/icons/DiceIcon.vue:113           animation shorthand names --ease-springPop (shorthand, not an inner step) [diceRoll 500ms var(--ease-springPop) for]
+  RULE1? pencil/chrome/icons/DiceIcon.vue:134           animation shorthand names --ease-springPop (shorthand, not an inner step) [pipPop 250ms var(--ease-springPop) forwa]
+  RULE1? pencil/chrome/icons/FillForcedIcon.vue:72      animation shorthand names --ease-standard (shorthand, not an inner step) [markDraw 350ms var(--ease-standard) forw]
+  RULE1? pencil/chrome/icons/SolveIcon.vue:55           animation shorthand names --ease-standard (shorthand, not an inner step) [drawIn 350ms var(--ease-standard) forwar]
+  RULE1? pencil/chrome/icons/SolveIcon.vue:70           animation shorthand names --ease-springPop (shorthand, not an inner step) [sparkleGrow 500ms var(--ease-springPop) ]
+
+declarations read 100 · rule 1′ reds 23 · rule 5 reds 7 · rule 5 unreadable 0

@@ -1,0 +1,102 @@
+THE AUTHORSHIP-AND-CELL SEAM — SPECIFIED, NOT CUT.
+NOT APPLIED to this tree. Pass-1 research lanes are read-only on product files; this is the
+patch a synthesizer hands to W1's file, written out so the next pass argues with code rather
+than with prose. Line numbers are HEAD at 2026-09-17 (`useGameState.ts` 1,2xx lines).
+
+WHY IT IS NEEDED. `applyCellValue` is the one primitive every digit passes through — a
+keystroke, an undo replay, and a PEER's move, which arrives at `useGameState.ts:375`
+(`sessionSource.applyValue` → `applyCellValue`) from `useSession.ts:792`. Two lines inside it
+null the margin's two graphite/red voices:
+
+    487:  hintReasoning.value = null;   // T4-W7 — an edit disarms a stale armed hint
+    488:  lastRefusal.value  = null;    // T9-W1 §1.1 — ink that LANDS retracts the refusal
+
+Neither line knows whose hand wrote the digit, so a peer typing in the opposite corner takes
+YOUR hint note and YOUR refusal note off your page. Measured, both engines, two live pages on
+`?wire=local`: `logs/e4-peer-*.json` — a peer's digit elsewhere leaves `""` where
+"only 6 fits here" was (chromium) / "only 5 fits here" (webkit). A JOIN leaves the note
+standing, because a join touches no value.
+
+THE RULE THE FAMILY WANTS. Your own write always retracts (unchanged). A peer's write retracts
+only when it changes what the note SAID — the cell the note names, or a cell its argument
+turns on. A peer's write anywhere else leaves it standing, and a peer's write never touches
+your refusal at all (a refusal is about YOUR keystroke on a given, and no peer can write a
+given either).
+
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -102,6 +102,16 @@ export type CellWriteOutcome = "written" | "refused-given";
+
++/**
++ * WHOSE HAND WROTE IT (T9-W7 §7).
++ *
++ * The board's one write primitive is shared by three callers and only two of them are the
++ * reader: a keystroke and an undo replay are `self`, a digit off the wire is `peer`. The
++ * margin's voices are ADDRESSED TO THE READER, so what retracts them is the reader's own act
++ * — or a peer's act on the square the sentence is about, which is the one case where someone
++ * else's keystroke changes what the note said.
++ */
++export type WriteOrigin = "self" | "peer";
++
+ /** The refusal, published for the surfaces that draw it and say it. `seq` counts attempts, so
+  *  the same clue refused twice is two events a watcher can tell apart. */
+ export interface CellRefusal {
+@@ -373,8 +383,9 @@ const sessionSource = {
+   const sessionSource = {
+     applyValue: (pos: number, value: number, solved: boolean) =>
+-      solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
++      solved ? applyHintInk(pos, value, "peer") : applyCellValue(pos, value, "peer"),
+     snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
+@@ -470,6 +481,17 @@
++  /**
++   * Does this square carry the armed hint's sentence? The cell it names, or one of the cells
++   * its argument turns on (`becauseCells`, the set the board already highlights in the
++   * peek-laminate tone). Measured cardinality at 9×9: 1 for "only N fits here", 9 for
++   * "N goes nowhere else in this <house>" (logs/e1-lives-*.json, `becauseCells`).
++   */
++  function armedHintTurnsOn(pos: number): boolean {
++    const h = hintReasoning.value;
++    return !!h && (h.cell === pos || h.becauseCells.includes(pos));
++  }
++
+-  function applyCellValue(pos: number, value: number): CellWriteOutcome {
++  function applyCellValue(
++    pos: number,
++    value: number,
++    origin: WriteOrigin = "self",
++  ): CellWriteOutcome {
+     const key = String(pos);
+     if (givenCells.value.has(key)) {
+       lastRefusal.value = { pos, reason: "given", seq: ++refusalSeq };
+@@ -487,8 +509,12 @@
+-    hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
+-    lastRefusal.value = null; // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal
++    // T4-W7 / T9-W7 §7 — an edit disarms a stale armed hint. A PEER's edit disarms it only
++    // when it lands on the square the hint's sentence is about; their digit in the far corner
++    // is not news about your note.
++    if (origin === "self" || armedHintTurnsOn(pos)) hintReasoning.value = null;
++    // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal. YOUR ink: the refusal answered
++    // YOUR keystroke, and a peer cannot write the given it was about.
++    if (origin === "self") lastRefusal.value = null;
+
+@@ -537,7 +563,12 @@
+-  function applyHintInk(pos: number, value: number) {
++  function applyHintInk(pos: number, value: number, origin: WriteOrigin = "self") {
+     const key = String(pos);
++    // A revealed digit is a write like any other: it can land on the square your note names.
++    // (At HEAD this function nulls neither voice, so a peer's REVEAL leaves a note standing
++    // that its own square has just answered — the same defect with the sign flipped.)
++    if (origin === "peer" && armedHintTurnsOn(pos)) hintReasoning.value = null;
+     values.value[key] = value;
+
+WHAT DOES NOT CHANGE. `setCell` (:498) and the undo effects (:298) call with no third
+argument and stay `self` — an undo replay is the reader's own act. `useSession.ts:217`'s
+`SessionSource.applyValue` signature is untouched; the origin is supplied at the one call site
+that knows it.
+
+THE UNIT ROWS THIS EARNS (for W1's own suite, not this lane's):
+  · a peer's write at a cell outside the armed hint leaves `hintReasoning` non-null
+  · a peer's write at `hint.cell` nulls it
+  · a peer's write at a `becauseCells` member nulls it
+  · a peer's write anywhere leaves `lastRefusal` untouched
+  · a local `setCell` still nulls both (the incumbent behaviour, pinned)

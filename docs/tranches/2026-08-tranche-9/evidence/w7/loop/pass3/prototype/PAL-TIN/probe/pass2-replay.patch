@@ -1,0 +1,923 @@
+diff --git a/web/frontend/e2e/multiplayer.spec.ts b/web/frontend/e2e/multiplayer.spec.ts
+--- a/web/frontend/e2e/multiplayer.spec.ts
++++ b/web/frontend/e2e/multiplayer.spec.ts
+@@ -187,8 +187,9 @@
+   expect(new Set(names).size).toBe(2);
+   expect(names.every((n) => /^[a-ik-wyz]+-[a-ik-wyz]+$/.test(n))).toBe(true);
+ 
+-  // A's row and B's row are two colours on the same screen: you are the incumbent blue and
+-  // everyone else walks the golden angle.
++  // A's row and B's row are two colours on the same screen: everyone in a room takes a pencil
++  // out of the tin of five, in tin order, and a sixth player takes the first one again with a
++  // tally tick beside it (T9-W7 PAL-TIN).
+   const swatches = await roster(a)
+     .locator(".player-swatch")
+     .evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
+@@ -214,9 +215,10 @@
+   await write(b, cellB, "4");
+   await expect.poll(() => digitAt(a, cellB)).toBe("4");
+ 
+-  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote carries the rebound
+-  // `--color-user-ink`; the cell B wrote itself does not, and reads the incumbent blue. Both
+-  // resolve to a colour — this is the one place the whole ink story is observable at once.
++  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote and the cell B wrote
++  // carry two different sticks out of the tin — in a room your own hand takes a pencil too
++  // (T9-W7 PAL-TIN §1.6), so both cells are rebound and the two must still differ. This is the
++  // one place the whole ink story is observable at once.
+   const inks = await b.evaluate(
+     ([mine, theirs]) => {
+       // The index is bound to a name rather than chained onto the line above it: a `[i]`
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -31,6 +31,7 @@
+     "typecheck:relay": "tsc -p ../relay/tsconfig.json --noEmit",
+     "lint:knip": "knip",
+     "lint:ink": "node scripts/check-ink-pressure.mjs --self-test",
++    "lint:tin": "node scripts/check-peer-tin.mjs --self-test",
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
+     "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -150,16 +150,35 @@
+   /* Handwritten glyph colors */
+   --color-user-ink: #2563eb;
+ 
+-  /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+-     scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+-     hue)` with `hue = i × 137.5°` (playerIdentity.ts), so there is no palette to run out of
+-     and no player cap to enforce — but a hue walk alone says nothing about contrast, and the
+-     band is what makes the AA claim structural instead of a table of hand-checked hexes.
+-     Measured over 40 indices at chroma 0.11: worst 5.26:1 on --color-background here, 9.56:1
+-     on --color-card in the dark block below. The crayon tiers above are DIFFICULTY's
+-     vocabulary and stay there; no player is ever assigned wax, and no player is ever assigned
+-     the solver's rainbow, so the three inks never compete. */
+-  --peer-ink-l: 0.5;
++  /* THE TIN (T9-W7 PAL-TIN) — five pencils a player writes in, cut out of the arcs the
++     reserved inks leave. The golden-angle walk it replaces spread ANY number of players
++     around the circle, which sounds like no cap and measures as two people in one colour:
++     twelve sticks come out at min ΔE 0.024 and five of them are the same teal. Five is the
++     number this paper holds. Sharing rides the drawn TICK instead (playerIdentity.ts
++     `tallyFor`), so the palette is finite and running out is a designed state.
++
++     WHAT SEPARATES A HAND FROM THE MACHINE IS LIGHTNESS, NOT HUE — measured, and it is why
++     the band sits where it does. The solver's dark rainbow is five pastels at L 0.81–0.92 and
++     the estate's own dark blue is 0.714; a tin at L 0.78 sits INSIDE that crowd, where no hue
++     assignment separates ten inks at the chroma sRGB holds there (the first cut measured
++     ΔE 0.046 to `--color-solver-ink-2`, which is two inks a reader cannot tell apart). So the
++     dark band drops to L 0.650, two steps under the pastels, and the light band to L 0.440,
++     one step under the solver's light inks (0.50–0.55) and the estate's blue (0.546).
++     Chroma is `min(0.215, chromaAt(L, h))` — 0.215 is `--color-user-ink`'s own, so a stick is
++     never louder than the ink it replaces; six of the ten arms therefore sit ON the gamut's
++     own ceiling, which the gate prints.
++     Measured on the arithmetic (`evidence/w7/loop/pass2/synthesize/PAL-TIN/tokens.txt`) and
++     re-read off engine bytes: worst AA 7.15:1 here, 5.18:1 in the dark block below; worst
++     ΔE to a CELL ink 0.082 / 0.100; min pairwise ΔE 0.116 / 0.172.
++     `scripts/check-peer-tin.mjs` resolves these ten declarations per ARM and re-derives all
++     three, so the tin cannot move without saying so.
++     The crayon tiers above are DIFFICULTY's vocabulary and stay there; no player is ever
++     assigned wax, and no player is ever assigned the solver's rainbow. */
++  --color-peer-1: #853900; /* amber  h 48.4  C 0.119 */
++  --color-peer-2: #455c00; /* green  h 124.6 C 0.110 */
++  --color-peer-3: #005f63; /* teal   h 200.6 C 0.075 */
++  --color-peer-4: #3e32c5; /* violet h 276.6 C 0.215 */
++  --color-peer-5: #8b0081; /* pink   h 332.2 C 0.198 */
+ 
+   /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
+      dark variants PRESERVE hue (±3°), RAISE lightness +7…+13 (OKLCH L +0.06…0.10), and let
+@@ -371,8 +390,17 @@
+ 
+   --color-user-ink: #60a5fa;
+ 
+-  /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+-  --peer-ink-l: 0.8;
++  /* The paper darkens and the ink lightens — but only to L 0.650, which is BELOW the crayon
++     step and below the solver's pastels (0.81–0.92) on purpose: the players sit two steps
++     under the machine's rainbow and one under this block's own --color-user-ink (0.714), and
++     that gap is the whole of what tells a hand from a hint at night. Worst AA 5.18:1 (the pink
++     on --color-card, the floor this band spends its margin on), worst ΔE to a CELL ink 0.100,
++     min pairwise ΔE 0.172. See the light block's note for the mechanism. */
++  --color-peer-1: #e06600; /* amber  h 48.7  C 0.175 */
++  --color-peer-2: #799f00; /* green  h 124.7 C 0.163 */
++  --color-peer-3: #00a3aa; /* teal   h 200.3 C 0.111 */
++  --color-peer-4: #747eff; /* violet h 276.2 C 0.188 */
++  --color-peer-5: #d64fc8; /* pink   h 332.1 C 0.215 */
+ 
+   /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
+   --color-crayon-green: #3dd968;
+@@ -923,7 +951,9 @@
+       stroke: #000 !important;
+     }
+ 
+-    .glyph-svg path {
++    .glyph-svg path,
++    .glyph-tick path,
++    .roster-tick path {
+       stroke: #000 !important;
+       filter: none !important;
+     }
+@@ -945,7 +975,9 @@
+  * ink is the whole point of the mode; the players' colours yield to it. */
+ @media (forced-colors: active) {
+   @layer base {
+-    .glyph-svg path {
++    .glyph-svg path,
++    .glyph-tick path,
++    .roster-tick path {
+       stroke: CanvasText;
+     }
+   }
+diff --git a/web/frontend/src/games/posters.test.ts b/web/frontend/src/games/posters.test.ts
+--- a/web/frontend/src/games/posters.test.ts
++++ b/web/frontend/src/games/posters.test.ts
+@@ -202,7 +202,7 @@
+    * ink while the board under the card drew them apart, which is the defect this row is.
+    */
+   it("every poster hands the still's per-cell authorship down", () => {
+-    const authorInk = { "1": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
++    const authorInk = { "1": { "--color-user-ink": "var(--color-peer-2)" } };
+     for (const [P, p] of [
+       [SudokuPoster, preview({ size: 3, values: { "1": 4 }, authorInk })],
+       [
+diff --git a/web/frontend/src/games/shared/BoardHost.vue b/web/frontend/src/games/shared/BoardHost.vue
+--- a/web/frontend/src/games/shared/BoardHost.vue
++++ b/web/frontend/src/games/shared/BoardHost.vue
+@@ -297,6 +297,7 @@
+           }"
+           :is-peer-cursor="String(pos) in peerCursorInk"
+           :author-name="authorNameAt(pos)"
++          :author-ticks="model.authorLap.value[String(pos)] ?? 0"
+           :ghost-path="s.cellRects[pos] ?? ''"
+           :marks="s.marksFor(pos)"
+           :corner-marks="model.cornerMarks.value[String(pos)]"
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -23,7 +23,7 @@
+  *    the SHARED boil beat (`useBeatFrame`). Steady-state raster is zero — no live `filter=` to
+  *    invalidate, the beat toggles opacity only (compositor-only), the geometry never mutates.
+  *  - DRAW-IN with the glyph grammar: the inked strokes tick in on the shared sequence chain
+- *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via
++ *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.tally) via
+  *    stroke-dashoffset — the identical primitive/easing glyphAnimations rides, retargeted to a
+  *    reactive reveal so all four pose copies of a stroke draw as one. Transient, one-shot; at
+  *    rest the reveal is constant, so the only per-beat change is the opacity swap.
+@@ -74,7 +74,6 @@
+   { x1: 6, y1: 37, x2: 55, y2: 7, seed: 71 }, // the fifth: the diagonal that binds the four
+ ];
+ const TALLY_BOIL = 0.6; // perturbation in viewBox units — subtle, in-family with the frame
+-const DRAW_STAGGER_MS = 90; // the hand ticking strokes off one at a time
+ 
+ // Grain-static baked into the pose geometry (the pencil's own tooth in this small-element
+ // regime — the same preset the glyphs ride). Reactive on the preset so FilterTuner stays live.
+@@ -145,8 +144,8 @@
+     }
+     reveal[i] = 0;
+     const seq = createSequenceSubscription({
+-      durationMs: DRAW_IN_PRESETS.glyph.duration,
+-      delayMs: i * DRAW_STAGGER_MS,
++      durationMs: DRAW_IN_PRESETS.tally.duration,
++      delayMs: i * DRAW_IN_PRESETS.tally.stagger,
+       easing: easeOutCubic,
+       onProgress: (eased) => {
+         reveal[i] = eased;
+diff --git a/web/frontend/src/games/shared/DigitCell.vue b/web/frontend/src/games/shared/DigitCell.vue
+--- a/web/frontend/src/games/shared/DigitCell.vue
++++ b/web/frontend/src/games/shared/DigitCell.vue
+@@ -15,6 +15,7 @@
+  */
+ import { computed, ref, watch } from "vue";
+ import HandwrittenGlyph from "@pencil/glyph/HandwrittenGlyph.vue";
++import PlayerTick from "@games/shared/PlayerTick.vue";
+ import { useGameCell } from "@games/shared/useGameCell";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+ 
+@@ -74,8 +75,11 @@
+      *  hover to spend on the washi tape, so the name rides the cell's own name instead. Named as
+      *  a real asymmetry rather than papered over — a sighted touch user still gets nothing. */
+     authorName?: string;
++    /** T9-W7 PAL-TIN — the author's laps round the tin of five. 0 (the first five players,
++     *  and every solo board) mounts nothing at all. */
++    authorTicks?: number;
+   }>(),
+-  { constraintLabel: "", authorName: "" },
++  { constraintLabel: "", authorName: "", authorTicks: 0 },
+ );
+ 
+ const emit = defineEmits<{
+@@ -399,6 +403,18 @@
+       :position="position"
+       :board-size="boardSize"
+       :is-hovered="isHovered"
++    />
++
++    <!-- T9-W7 PAL-TIN — WHICH amber. The tin is five pencils, so the sixth player writes in
++         the first one again and the tally under the digit is what tells the two apart. It is a
++         SIBLING of the glyph, not a child: `.glyph-svg` is 65% of the cell under
++         `contain: paint`, so a mark below the baseline would be clipped away. Mounted only when
++         somebody is actually sharing a pencil — solo binds nothing and draws nothing. -->
++    <PlayerTick
++      v-if="authorTicks > 0 && value !== 0"
++      :ticks="authorTicks"
++      :seed="position"
++      :board-size="boardSize"
+     />
+ 
+     <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -76,6 +76,10 @@
+ import { leaveSession, session } from "@games/shared/useSession";
+ import { useLiveRegion } from "@/composables/useLiveRegion";
+ import { arriving, departing } from "@games/shared/useJoinWash";
++import PlayerTick from "@games/shared/PlayerTick.vue";
++// The row mark's wobble seed is the id's own hash — `p.id.length` was the same integer for
++// every peer this estate mints, so sixteen rows drew sixteen identical ticks.
++import { seedFor } from "@games/shared/playerIdentity";
+ 
+ // Underline boil: brief burst on selection change, then settle
+ const boilFrame = ref(0);
+@@ -1148,6 +1152,16 @@
+           <span class="player-row-cells">
+             <span class="player-swatch" aria-hidden="true"></span>
+             <span class="player-name">{{ p.slug }}</span>
++            <!-- T9-W7 PAL-TIN — THE ROW IS THE LEGEND. The tin holds five pencils, so the
++                 sixth player takes the first one again with one tick; the SAME drawn mark sits
++                 here beside the name and under that player's digits on the board, which is why
++                 the sharing never has to be explained in a sentence. -->
++            <PlayerTick
++              v-if="p.lap > 0"
++              :ticks="p.lap"
++              :seed="seedFor(p.id)"
++              mode="row"
++            />
+             <span v-if="p.self" class="player-self">you</span>
+           </span>
+         </li>
+@@ -1765,8 +1779,14 @@
+    the utility's own. `connecting…` below keeps the quiet rung it used to share; that one is
+    still drawn, because a wire that has not come up is a thing no list can show. */
+ 
++/* T9-W7 PAL-TIN — THE ROW IS THE LEGEND, so the tick sits AGAINST THE WORD rather than at the
++   row's far edge: `1 1 auto` grew the name to fill the row and pushed the mark across a gap it
++   had nothing to do with. `0 1 auto` still shrinks and still ellipses a long slug (the
++   `min-width: 0` below is what allows that), and the swatch was already `0 0 auto`. The
++   right-aligned tally COLUMN is the owner's alternative (B-TIN-3): easier to count down, and a
++   weaker legend, because the pairing with the name is what teaches the board's mark. */
+ .player-name {
+-  flex: 1 1 auto;
++  flex: 0 1 auto;
+   min-width: 0;
+   overflow: hidden;
+   text-overflow: ellipsis;
+diff --git a/web/frontend/src/games/shared/PosterBoard.test.ts b/web/frontend/src/games/shared/PosterBoard.test.ts
+--- a/web/frontend/src/games/shared/PosterBoard.test.ts
++++ b/web/frontend/src/games/shared/PosterBoard.test.ts
+@@ -85,7 +85,7 @@
+ }) => w.findAll(".poster-cell .g").map((g) => g.attributes("style") ?? "");
+ 
+ describe("PosterBoard — a peer's digit keeps a peer's ink", () => {
+-  const PEER = { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" };
++  const PEER = { "--color-user-ink": "var(--color-peer-2)" };
+   const props = {
+     boardSize: 4,
+     subgridSize: 2,
+@@ -100,7 +100,7 @@
+     });
+     const [given, peer, mine] = inkOf(w);
+     expect(given).toBe("");
+-    expect(peer).toContain("--color-user-ink: oklch(0.6 0.11 137.5deg)");
++    expect(peer).toContain("--color-user-ink: var(--color-peer-2)");
+     // Yours keeps the incumbent binding — the session holds an entry only for cells a PEER
+     // wrote, and a still that painted your own ink explicitly would be the same lie inverted.
+     expect(mine).toBe("");
+diff --git a/web/frontend/src/games/shared/defineGame.ts b/web/frontend/src/games/shared/defineGame.ts
+--- a/web/frontend/src/games/shared/defineGame.ts
++++ b/web/frontend/src/games/shared/defineGame.ts
+@@ -89,6 +89,10 @@
+    *  separate consumers: a style binding and a word are not one thing wearing two hats.
+    *  Empty off-session. */
+   cellAuthors: ReadRef<Record<string, { slug: string; self: boolean }>>;
++  /** T9-W7 PAL-TIN — laps round the tin of five for the cells whose author is sharing a
++   *  pencil, drawn as tally ticks under the digit. Absent for laps of zero and off-session,
++   *  which is what keeps a solo board byte-identical. */
++  authorLap: ReadRef<Record<string, number>>;
+ 
+   setCell: (position: number, value: number) => void;
+   toggleUserMark: (position: number, value: number) => void;
+diff --git a/web/frontend/src/games/shared/playerIdentity.ts b/web/frontend/src/games/shared/playerIdentity.ts
+--- a/web/frontend/src/games/shared/playerIdentity.ts
++++ b/web/frontend/src/games/shared/playerIdentity.ts
+@@ -3,13 +3,11 @@
+  * (T6 mark 13).
+  *
+  * A slug is a pure function of the peer's own id, so a name costs no wire traffic and no
+- * round trip: the roster row is drawn the instant the connection opens. Ink is the
+- * golden-angle walk — `hue_i = i × 137.5°` at a lightness the theme bands — which spreads
+- * ANY number of players as far apart around the circle as a sequence can, so there is no
+- * palette to run out of and no player cap to enforce. The band is what makes the contrast
+- * claim structural rather than a table of hand-checked hexes: `--peer-ink-l` is 0.5 on paper
+- * and 0.8 at night, and at chroma 0.11 the whole walk clears AA on both grounds (worst
+- * 5.26:1 light, 9.56:1 dark, measured over 40 indices).
++ * round trip: the roster row is drawn the instant the connection opens. Ink is THE TIN —
++ * five named pencils in `index.css`, taken in order, with `tallyFor` ticks for the lap
++ * (T9-W7 PAL-TIN): thirty players the BOARD tells apart, and the roster after that. Two
++ * visible facts out of one arithmetic, and both are pure in the index the epoch already
++ * carries in `k`, so nothing new goes on the wire.
+  *
+  * The crayon tiers are DIFFICULTY's vocabulary and stay there; this module mints no token
+  * and touches no wax.
+@@ -46,8 +44,17 @@
+  * growing a numeric suffix: "brave-otter" and "brave-otter-2" are one name said twice, and the
+  * whole point of a slug is that it is a word you can say out loud.
+  */
++/**
++ * THE SEED, HOISTED (T9-W7 PAL-TIN §1.3). One id, one number — the slug's first line, now also
++ * the roster tick's wobble seed, so a player's name and their mark are decorrelated from every
++ * other row by the same arithmetic rather than by `p.id.length`, which is the same integer for
++ * every peer this estate mints.
++ */
++export const seedFor = (peerId: string): number =>
++  parseInt(hashBlob(peerId).slice(0, 8), 16);
++
+ export function slugFor(peerId: string, taken: ReadonlySet<string>): string {
+-  const seed = parseInt(hashBlob(peerId).slice(0, 8), 16);
++  const seed = seedFor(peerId);
+   for (let salt = 0; ; salt++) {
+     const slug = uniqueNamesGenerator({
+       dictionaries: DICTIONARIES,
+@@ -60,15 +67,47 @@
+ }
+ 
+ /**
+- * The remote player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is
+- * the whole of the mechanism, because `HandwrittenGlyph` already strokes with that var
+- * (`HandwrittenGlyph.vue:85`). The local player keeps the incumbent blue — nothing is bound
+- * on their cells, so solo is byte-identical.
++ * THE TIN (T9-W7 PAL-TIN) — five pencils, taken in tin order, and a TICK for the lap.
++ *
++ * Still ONE binding: rebinding `--color-user-ink` is the whole of the mechanism, because
++ * `HandwrittenGlyph` already strokes with that var (`HandwrittenGlyph.vue:85`). What changes
++ * is what the binding names — `var(--color-peer-N)` off the table in `index.css` rather than
++ * a hue the walk computed. The walk's claim ("no palette to run out of") measured as two
++ * people in one colour: twelve golden-angle sticks come out at min ΔE 0.024 on this paper,
++ * and no second COLOUR axis carries sharing either (a lightness step big enough to see is
++ * bigger than the gap between two different pencils). So the palette is finite and the
++ * sharing axis is a drawn mark: the sixth player takes amber again with one tick.
+  */
++/** WRITTEN OUT, not minted. `var(--color-peer-${n})` would work and would be invisible to
++ *  `check-theme-tokens`, which counts a token nobody names as dead — and a palette with a
++ *  dead-looking member is how the next hand talks itself into a sixth. */
++const TIN = [
++  "var(--color-peer-1)",
++  "var(--color-peer-2)",
++  "var(--color-peer-3)",
++  "var(--color-peer-4)",
++  "var(--color-peer-5)",
++] as const;
++
+ export const inkFor = (index: number): Record<string, string> => ({
+-  "--color-user-ink": `oklch(var(--peer-ink-l) 0.11 ${((index * 137.5) % 360).toFixed(1)}deg)`,
++  "--color-user-ink": TIN[((Math.trunc(index) % TIN.length) + TIN.length) % TIN.length],
+ });
+ 
++/** How many times round the tin. Unbounded — the raw arithmetic, which `tallyFor` caps. */
++export const lapFor = (index: number): number =>
++  Math.floor(Math.max(0, Math.trunc(index)) / TIN.length);
++
++/**
++ * WHAT IS DRAWN — the lap capped at the gate of five, because a hand-drawn tally stops being
++ * countable after one gate and the mark has to stay one glance.
++ *
++ * THE BOARD THEREFORE TELLS 30 PLAYERS APART: five inks × six drawn states {0,1,2,3,4,gate},
++ * and index 30 is the first true collision on the board, separated in the roster by slug.
++ * That number is the design's, and it is not `IDENTITY_CAP` below (8), which bounds the
++ * identity STORE's pruned map of rooms and is unrelated to how many pencils the tin holds.
++ */
++export const tallyFor = (index: number): number => Math.min(5, lapFor(index));
++
+ // ── THE BINDING (T8-W3 §2.9) — who you are in a room, kept ──────────────────────────────
+ //
+ // The owner's ruling: "your slug name and session should be preserved, such that if you switch
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -16,6 +16,7 @@
+ import { registerDirtySource, clearDirtySource } from "./useDirtyBoard";
+ import {
+   authorInk,
++  authorLap,
+   cellAuthors,
+   clearSessionSource,
+   joinSession,
+@@ -1195,6 +1196,7 @@
+     /** T8-W3 M1 — who wrote each cell, by name. The `authorInk` precedent exactly: one
+      *  session-level read passed through five games by the shell's read contract. */
+     cellAuthors,
++    authorLap,
+     flushSave,
+     linkError,
+     pencilMarks,
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -1,6 +1,6 @@
+ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+ import { wins, type Handlers, type Msg, type Wire } from "./useSession";
+-import { inkFor, slugFor } from "./playerIdentity";
++import { inkFor, lapFor, slugFor, tallyFor } from "./playerIdentity";
+ 
+ /**
+  * FE-unit layer for the two claims the multiplayer session rests on (T6 mark 13). Both are
+@@ -123,23 +123,39 @@
+     expect(taken.size).toBe(400); // 400 distinct names, no cap, no suffix
+   });
+ 
+-  it("ink is the golden-angle walk, and it never repeats a hue inside a room", () => {
+-    expect(inkFor(0)["--color-user-ink"]).toBe("oklch(var(--peer-ink-l) 0.11 0.0deg)");
+-    expect(inkFor(1)["--color-user-ink"]).toBe(
+-      "oklch(var(--peer-ink-l) 0.11 137.5deg)",
++  it("ink is the tin taken in order, and the lap is the tick count", () => {
++    // Five pencils, then the sixth player takes the first one again with one tick. The walk
++    // this replaced spread any number of players round the circle, which reads as no cap and
++    // measures as two people in one colour: twelve golden-angle sticks land at ΔE 0.024.
++    expect(inkFor(0)["--color-user-ink"]).toBe("var(--color-peer-1)");
++    expect(inkFor(4)["--color-user-ink"]).toBe("var(--color-peer-5)");
++    expect(inkFor(5)["--color-user-ink"]).toBe("var(--color-peer-1)");
++    expect(inkFor(13)["--color-user-ink"]).toBe("var(--color-peer-4)");
++
++    // Sixteen players, five pencils, every one of them tellable from every other: the stick
++    // tells the five apart, the tick tells the laps apart, so the PAIR is what is unique.
++    const marks = Array.from(
++      { length: 16 },
++      (_, i) => `${inkFor(i)["--color-user-ink"]}+${tallyFor(i)}`,
+     );
+-    expect(inkFor(2)["--color-user-ink"]).toBe(
+-      "oklch(var(--peer-ink-l) 0.11 275.0deg)",
+-    );
+-    // Sixteen players, sixteen hues, and the closest two are still 12.5° apart: the golden
+-    // angle's whole property is that no prefix of the walk clusters. A table of hexes would
+-    // have run out eleven players ago.
+-    const hues = Array.from({ length: 16 }, (_, i) => (i * 137.5) % 360).sort(
+-      (a, b) => a - b,
++    expect(new Set(marks).size).toBe(16);
++    expect(new Set(marks.map((m) => m.split("+")[0])).size).toBe(5);
++    expect([0, 4, 5, 15].map(lapFor)).toEqual([0, 0, 1, 3]);
++  });
++
++  it("the board tells THIRTY apart, and says so when it stops", () => {
++    // THE CAPACITY IS A FACT, not a claim in a header: five inks × six drawn states
++    // {0,1,2,3,4,gate-of-five}. A hand-drawn tally stops being countable past one gate, so the
++    // tick caps — and index 30 is therefore the first true collision ON THE BOARD, which the
++    // roster then separates by slug. Running out is a designed state; it is not a surprise.
++    const states = Array.from(
++      { length: 30 },
++      (_, i) => `${inkFor(i)["--color-user-ink"]}+${tallyFor(i)}`,
+     );
+-    const gaps = hues.slice(1).map((h, i) => h - hues[i]);
+-    expect(new Set(hues).size).toBe(16);
+-    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(12.5);
++    expect(new Set(states).size).toBe(30);
++    expect(tallyFor(30)).toBe(tallyFor(25));
++    expect(inkFor(30)).toEqual(inkFor(25));
++    expect(lapFor(30)).toBe(6); // the raw lap keeps counting; only the DRAWN mark caps
+   });
+ });
+ 
+@@ -349,6 +365,101 @@
+     expect(inkOf("peer-3")).toEqual(inkFor(6));
+   });
+ 
++  // ── THE WIRE RULE (T9-W7 PAL-TIN §1.1) ────────────────────────────────────────────────
++  //
++  // An index is AGREED when, and only when, it arrives in an `st` whose SENDER IS THE EPOCH'S
++  // AUTHOR. A page's own publish agrees nothing, and an agreement dies with its epoch. Three
++  // rows, because the rule has three halves that fail in different directions: it must HOLD
++  // against a rival, it must not OVER-REACH onto this page's own publish, and the two together
++  // must leave the room with one colour per person.
++
++  it("an agreed index survives a non-author's rival `st`", async () => {
++    // U1, born RED at HEAD: the first cut wrote `k` in unconditionally, so the last frame heard
++    // won and a person changed colour in front of you whenever any page answered a `hi`.
++    const p = await bootPage();
++    await p.session.joinSession("room-u1");
++    const inkOf = (id: string) =>
++      p.session.session.players.value.find((r) => r.id === id)?.ink;
++    // the epoch's own author speaks: peer-9 takes index 3
++    p.hear(
++      "st",
++      stFrame({ e: 5, ea: "peer-1", g: "sudoku", z: 3, k: { "peer-9": 3 } }),
++      "peer-1",
++    );
++    p.peer("peer-9", true);
++    expect(inkOf("peer-9")).toEqual(inkFor(3));
++    // a NON-author answers a newcomer's `hi` with its own view, under the same epoch…
++    p.hear(
++      "st",
++      stFrame({ e: 6, ea: "peer-1", g: "sudoku", z: 3, k: { "peer-9": 7 } }),
++      "peer-2",
++    );
++    expect(inkOf("peer-9")).toEqual(inkFor(3)); // …and moves nobody
++  });
++
++  it("a joiner's own publish agrees nothing", async () => {
++    // U2, the OVER-REACH guard: RED against the pass-1 rider, which marked `k` agreed on the
++    // sending side whenever this page held the epoch. A page that deals its own board and then
++    // answers a stranger's `hi` holds an epoch it authored — and then refuses the real table.
++    const p = await bootPage();
++    await p.session.joinSession("room-u2", true); // this page opens the epoch, as its author
++    p.session.publishBoard(); // …and publishes `k` under it
++    p.peer("peer-1", true);
++    p.peer("peer-2", true); // the room exists, so this page's own stick is bound (§1.6)
++    const inkOf = (id: string) =>
++      p.session.session.players.value.find((r) => r.id === id)?.ink;
++    const me = p.selfId();
++    // a non-author's frame fills the gap it names and agrees nothing
++    p.hear(
++      "st",
++      stFrame({ e: 9, ea: "peer-1", g: "sudoku", z: 3, k: { [me]: 7 } }),
++      "peer-2",
++    );
++    // the author of the new epoch then speaks, and it is the author who is obeyed
++    p.hear(
++      "st",
++      stFrame({ e: 10, ea: "peer-1", g: "sudoku", z: 3, k: { [me]: 3 } }),
++      "peer-1",
++    );
++    expect(inkOf(me)).toEqual(inkFor(3));
++  });
++
++  it("no two known ids share an ink across two epochs by two authors", async () => {
++    // U3, PAL-WALK's row: the tin is five pencils and a tick, so two people in one colour is a
++    // reading error rather than an aesthetic one. RED at the pass-1 rider.
++    const p = await bootPage();
++    await p.session.joinSession("room-u3");
++    p.hear(
++      "st",
++      stFrame({
++        e: 2,
++        ea: "peer-1",
++        g: "sudoku",
++        z: 3,
++        k: { "peer-1": 0, "peer-2": 1 },
++      }),
++      "peer-1",
++    );
++    p.peer("peer-1", true);
++    p.peer("peer-2", true);
++    // a newer epoch by a DIFFERENT author re-seats the whole room, and it is entitled to
++    p.hear(
++      "st",
++      stFrame({
++        e: 8,
++        ea: "peer-2",
++        g: "sudoku",
++        z: 3,
++        k: { "peer-1": 2, "peer-2": 0, [p.selfId()]: 1 },
++      }),
++      "peer-2",
++    );
++    const rows = p.session.session.players.value;
++    const inks = rows.map((r) => r.ink["--color-user-ink"]);
++    expect(inks.every(Boolean)).toBe(true); // in a room every hand has a stick, yours included
++    expect(new Set(inks).size).toBe(rows.length);
++  });
++
+   it("names a peer who left before this page arrived", async () => {
+     const p = await bootPage();
+     await p.session.joinSession("room-departed");
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -76,7 +76,13 @@
+  * puzzle's traffic. The room simply isn't capped.
+  */
+ import { computed, reactive, ref } from "vue";
+-import type { claimIdentity, inkFor, releaseIdentity, slugFor } from "./playerIdentity";
++import type {
++  claimIdentity,
++  inkFor,
++  releaseIdentity,
++  slugFor,
++  tallyFor,
++} from "./playerIdentity";
+ import { mountedGameId, stageBoardFollow } from "./useStagingBridge";
+ 
+ /**
+@@ -312,8 +318,12 @@
+ interface Player {
+   id: string;
+   slug: string;
+-  /** the `--color-user-ink` rebinding; EMPTY for you, who keep the incumbent blue. */
++  /** the `--color-user-ink` rebinding; EMPTY only when there is no room to agree with you. */
+   ink: Record<string, string>;
++  /** T9-W7 PAL-TIN — the DRAWN lap (`tallyFor`): laps round the tin of five, capped at the
++   *  gate of five, because a hand-drawn tally stops being countable past one gate. 0 for the
++   *  first five players and for every solo board. */
++  lap: number;
+   self: boolean;
+ }
+ 
+@@ -353,6 +363,7 @@
+ let ident: {
+   slugFor: typeof slugFor;
+   inkFor: typeof inkFor;
++  tallyFor: typeof tallyFor;
+   claimIdentity: typeof claimIdentity;
+   releaseIdentity: typeof releaseIdentity;
+ } | null = null;
+@@ -367,6 +378,10 @@
+  * which is the whole of why a rejoiner cannot arrive to find somebody else in their colour.
+  */
+ let inkIndex: Record<string, number> = {};
++/** The ids whose index the ROOM has spoken — adopted off an `st`, or published in one by this
++ *  page while it held the epoch. Everything else in `inkIndex` is this page's provisional
++ *  arrival order, which a room is entitled to overwrite exactly once. */
++let inkAgreed = new Set<string>();
+ /** One suppressed publish per adopted board — a flag rather than a timer, because the
+  *  generation watch that would echo it runs on Vue's own flush, not on ours. */
+ let adopted = 0;
+@@ -402,10 +417,26 @@
+ export const authorInk = computed(() => {
+   const out: Record<string, Record<string, string>> = {};
+   for (const pos of Object.keys(ledger.clock)) {
+-    const author = ledger.clock[pos][1];
+-    if (author === selfId.value) continue;
+-    const p = known.value[author];
+-    if (p) out[pos] = p.ink;
++    const p = known.value[ledger.clock[pos][1]];
++    // An EMPTY ink is not a binding — it is the answer for your own cells before a second
++    // player is known (§1.6), and writing `{}` onto 81 cells would put a `style` attribute on
++    // a solo board that has never carried one.
++    if (p && Object.keys(p.ink).length) out[pos] = p.ink;
++  }
++  return out;
++});
++
++/**
++ * THE TICK (T9-W7 PAL-TIN §1.3) — `authorInk`'s second half, off the same clock and the same
++ * index: how many laps round the tin of five the cell's author is on. The tin is finite by
++ * design, so the sixth player takes amber again and the tally under the digit is what tells
++ * them apart. Zero for the first five and for a solo board, which mounts nothing at all.
++ */
++export const authorLap = computed(() => {
++  const out: Record<string, number> = {};
++  for (const pos of Object.keys(ledger.clock)) {
++    const p = known.value[ledger.clock[pos][1]];
++    if (p && p.lap > 0) out[pos] = p.lap;
+   }
+   return out;
+ });
+@@ -524,49 +555,96 @@
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+-  // EVERY id takes an index, including your own. You still keep `--color-user-ink` — nothing is
+-  // bound on your cells, so solo is byte-identical — but the OTHER pages ink you from `k`, and
+-  // a publisher with no index of its own would be the one player the room could not agree
+-  // about. Everyone else walks the golden angle from where the roster last stopped, so an early
+-  // peer never re-inks because a late one arrived.
++  // EVERY id takes an index, including your own: the OTHER pages ink you from `k`, and a
++  // publisher with no index of its own would be the one player the room could not agree about.
++  // The cursor only ever goes FORWARD, from where the roster last stopped, so an early peer
++  // never changes pencil because a late one arrived — and when the tin is exhausted the index
++  // keeps counting, because the mark is the ink AND the tick (`tallyFor`).
+   const index = inkIndex[id] ?? inkCursor++;
+   inkIndex[id] = index;
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+-    ink: id === selfId.value ? {} : ident!.inkFor(index),
++    ink: inkOf(id, index),
++    lap: ident!.tallyFor(index),
+   };
+ }
+ 
+ /**
++ * THE GATE IS THE ROOM, NOT THE PLAYER (T9-W7 PAL-TIN §1.6). You take a pencil out of the tin
++ * too — the room already agreed which one, because `mint` has always put your index on the wire
++ * in `k`, and a tin where your own page paints you a colour nobody else sees is a page's colour
++ * rather than a player's. WHEN is `withSelfInk`'s one question and it is asked in one place:
++ * your own ink is never written here, so this stays the peers' rule and the self rule has a
++ * name of its own.
++ */
++const inkOf = (id: string, index: number): Record<string, string> =>
++  id === selfId.value ? {} : ident!.inkFor(index);
++
++/**
+  * Adopt the epoch holder's ink assignment (`k`). Idempotent, and it never reassigns: an index
+  * already agreed is written back as itself, the cursor continues from `max+1`, and an id we
+  * have never met enters `known` WITHOUT entering the roster — which is how the tape names a
+  * peer who left before you sat down.
++ *
++ * THE ONE RULE (T9-W7 PAL-TIN §1.1, shared with PAL-WALK §3a), and it is not a colour question:
++ *
++ *   An index is AGREED when, and only when, it arrives in an `st` whose SENDER IS THE EPOCH'S
++ *   AUTHOR. A page's own publish agrees nothing. An agreement is made under an epoch and dies
++ *   with it: a newer epoch by a different author clears the set before adoption.
++ *
++ * `authoritative` is that sender test, made at the one call site. A non-authoritative frame
++ * FILLS GAPS ONLY — it may name a peer this page has never heard of, and it may not move one
++ * the author has already spoken for. Measured before it was written: every page answers a
++ * newcomer's `hi` with a snapshot, so a page that agreed its OWN publish (the first cut did)
++ * froze its arrival order and then refused the true author, ending a three-page room with two
++ * ambers and no tick on the last screen. Convergence needs no second order: non-authors
++ * adopt-and-agree the author's `k`, the author adopts from nobody, and its own index stays
++ * provisional until a newer epoch takes it by `newer()`'s `[lamport, author]` tie-break.
+  */
+-function adoptInk(k: Record<string, number>): void {
++function adoptInk(k: Record<string, number>, authoritative: boolean): void {
+   let top = inkCursor - 1;
+   const next = { ...known.value };
+   const taken = new Set(Object.values(next).map((p) => p.slug));
+   for (const [id, raw] of Object.entries(k)) {
+     if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
+-    const index = Math.trunc(raw);
++    const index =
++      !authoritative && inkAgreed.has(id) ? inkIndex[id] : Math.trunc(raw);
+     inkIndex[id] = index;
++    if (authoritative) inkAgreed.add(id);
+     if (index > top) top = index;
+-    const ink = id === selfId.value ? {} : ident!.inkFor(index);
++    const ink = inkOf(id, index);
++    const lap = ident!.tallyFor(index);
+     const held = next[id];
+     if (held) {
+-      next[id] = { ...held, ink };
++      next[id] = { ...held, ink, lap };
+     } else {
+       const slug = ident!.slugFor(id, taken);
+       taken.add(slug);
+-      next[id] = { id, slug, ink };
++      next[id] = { id, slug, ink, lap };
+     }
+   }
+-  known.value = next;
++  known.value = withSelfInk(next);
+   inkCursor = top + 1;
+ }
+ 
++/**
++ * YOUR OWN STICK BINDS WHEN THE ROOM EXISTS (T9-W7 PAL-TIN §1.6) — a second id known, which is
++ * not the same instant as the invite press. Pressing invite opens a room of one, and a room of
++ * one has nobody to be told apart from: your board would turn amber the moment you copied a
++ * link nobody had opened. Solo and the empty table therefore bind nothing and stay
++ * byte-identical; the tin arrives with the second player, on the join trace's own frame.
++ */
++function withSelfInk(
++  next: Record<string, Omit<Player, "self">>,
++): Record<string, Omit<Player, "self">> {
++  const me = next[selfId.value];
++  if (!me) return next;
++  const ink =
++    Object.keys(next).length > 1 ? ident!.inkFor(inkIndex[selfId.value] ?? 0) : {};
++  return { ...next, [selfId.value]: { ...me, ink } };
++}
++
+ // ── PRESENCE, SAID ON A CLOCK (T9-W6 §3.7, 2026-09-17) ────────────────────────────────────
+ //
+ // THE ROSTER USED TO LIE, and two files wrote it down as a known lie with a named owner —
+@@ -662,7 +740,8 @@
+   // `known` RETAINS departures, so an id it already holds is somebody coming BACK — the whole
+   // of the rejoin detection, and it costs a lookup the roster was doing anyway.
+   const returning = !!known.value[id];
+-  if (!returning) known.value = { ...known.value, [id]: mint(id) };
++  if (!returning)
++    known.value = withSelfInk({ ...known.value, [id]: mint(id) }); // §1.6 — the room now exists
+   if (!present.value.includes(id)) {
+     present.value = [...present.value, id];
+     emitSession(returning ? "rejoin" : "join", id);
+@@ -695,6 +774,12 @@
+   // the undo pool content-hashes it with `JSON.stringify` — so saying so once here gives both
+   // arms one payload rather than two behaviours.
+   const plain = <T>(v: T): T => JSON.parse(JSON.stringify(v)) as T;
++  // A PAGE'S OWN PUBLISH AGREES NOTHING (PAL-TIN §1.1). The first cut marked `k` agreed here
++  // whenever this page held the epoch, which sounds like the same rule read from the sending
++  // end and is not: a page that deals its own board and then answers a stranger's `hi` holds
++  // an epoch it authored, freezes its own arrival order, and refuses the true author's `k`
++  // when the real table speaks. Agreement is a property of what ARRIVES; the test lives at
++  // `adoptInk`'s one call site and nowhere else.
+   wire.send(
+     "st",
+     plain({
+@@ -758,9 +843,15 @@
+     const e: Stamp = [d.e as number, d.ea as string];
+     ledger.lamport = Math.max(ledger.lamport, e[0]);
+     if (!newer(e, ledger.epoch)) return; // an older board than the one this page holds
++    // AN AGREEMENT DIES WITH ITS EPOCH (§1.1). Read BEFORE the epoch is written, because the
++    // question is whether this board comes from a different hand than the one this page was
++    // holding: a new author is a new assignment, and the set that remembered the old one would
++    // otherwise refuse it id by id.
++    const fresh = e[1] !== ledger.epoch[1];
++    if (fresh) inkAgreed.clear();
+     ledger.epoch = e;
+     ledger.clock = (d.c as Record<string, Stamp>) ?? {};
+-    adoptInk((d.k as Record<string, number>) ?? {});
++    adoptInk((d.k as Record<string, number>) ?? {}, from === e[1]);
+     clearCursors(); // a new board is a new set of things to be looking at
+     // THE FOLLOW (T8-W3, BAL-T8-1 — the owner's word). A switch is a board-replacing act, and
+     // board-replacing acts already converge by epoch, so the whole table follows the switcher
+@@ -836,6 +927,7 @@
+     : await loadRelayWire(room, handlers, id);
+   roomId.value = room;
+   known.value = { [id]: mint(id) };
++  stampSoloWrites(id);
+   // The claim is held for as long as this page holds the id, and handed back when it goes —
+   // otherwise a tab that closed would keep its own name out of its own reach.
+   releaseOnHide = () => ident!.releaseIdentity(id);
+@@ -847,6 +939,35 @@
+   beat = setInterval(() => wire?.send("hi", {}), HEARTBEAT_MS);
+ }
+ 
++/**
++ * ONE HAND, ONE COLOUR (T9-W7 PAL-TIN §1.6). `noteWrite` returns before `mintOp` when there is
++ * no wire, so every digit you wrote before the invite has NO clock entry — and a cell nobody
++ * authored cannot be inked or named. Half your board would keep the incumbent blue and half
++ * would take your stick, on your own screen and on every peer's. So at the one seam a session
++ * starts, every user entry the board already holds that the clock does not name is stamped
++ * `[0, selfId]`: honest (you did write them), lamport 0 so any real op outranks it, and one
++ * loop over a board that has at most a few dozen filled cells. Givens are the sheet's and the
++ * solver's reveals are the machine's; neither is anybody's hand.
++ */
++function stampSoloWrites(id: string): void {
++  const snap = source?.snapshot() as
++    | {
++        b?: {
++          values?: Record<string, number>;
++          origGiven?: string[];
++          solved?: Record<string, number>;
++        };
++      }
++    | undefined;
++  const b = snap?.b;
++  if (!b?.values) return;
++  const given = new Set(b.origGiven ?? []);
++  const solved = b.solved ?? {};
++  for (const pos of Object.keys(b.values))
++    if (!given.has(pos) && !(pos in solved) && !ledger.clock[pos])
++      ledger.clock[pos] = [0, id];
++}
++
+ /** The invite act: mint a room, write `?s=` SYNCHRONOUSLY (so the link is whole the instant
+  *  it is copied), then open the wire. */
+ export function startSession(): void {
+@@ -878,6 +999,7 @@
+   ownTable = false;
+   inkCursor = 0;
+   inkIndex = {};
++  inkAgreed = new Set();
+   clearCursors();
+   stopPresenceClocks(); // the beat and every peer's expiry belong to the room that just left
+   adopted = 0;
+diff --git a/web/frontend/src/games/shared/useStagingBridge.test.ts b/web/frontend/src/games/shared/useStagingBridge.test.ts
+--- a/web/frontend/src/games/shared/useStagingBridge.test.ts
++++ b/web/frontend/src/games/shared/useStagingBridge.test.ts
+@@ -321,7 +321,7 @@
+     { id: "sudoku", persistKey: "sudoku-board-state" },
+     { id: "futoshiki", persistKey: "futoshiki-board-state" },
+   ];
+-  const PEER = { "9": { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" } };
++  const PEER = { "9": { "--color-user-ink": "var(--color-peer-2)" } };
+ 
+   beforeEach(() => {
+     for (const s of SOURCES)
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -500,6 +500,16 @@
+   glyph: {
+     duration: 350,
+     stagger: 0,
++    jitter: 0,
++    baseDelay: 0,
++    timing: "easeOutCubic",
++  },
++  /** The gate-five tally's hand, ticking strokes off one at a time. Hoisted out of
++   *  `DifficultyTally` when a second consumer arrived (T9-W7 PAL-TIN's board tick): one
++   *  constant, two readers, and no timing literal left in a component. */
++  tally: {
++    duration: 350,
++    stagger: 90,
+     jitter: 0,
+     baseDelay: 0,
+     timing: "easeOutCubic",
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -598,8 +598,11 @@
+   /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+      A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+      the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+-     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+-     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
++     hypothetical — the tin's INDEX 3 is the VIOLET (`--color-peer-4`, h 276.6 light / 276.2
++     dark), a hand's breadth from `--color-progress-ink` and the closest of the five to it
++     (ΔE 0.177 light, 0.137 dark — the nearest pair the palette holds). Looked at, co-located,
++     it read as ONE ring, and the offset is what keeps the fill gauge readable while a violet
++     player is joining.
+      So the second pass is offset, which is what the estate's own retrace idiom always was
+      (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+      stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.

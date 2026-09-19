@@ -1,0 +1,28 @@
+MOTION BANDS — 77 declarations carry a duration (73 shipped, 4 dev rig); 35 distinct literals (35 shipped); 1 read a named rung; MOTION names 4 durations (beatMs 125, cardStepMs 440, boardFoldMs 520, chromeLeaveMs 200)
+  top literals: 150ms×21, 200ms×16, 250ms×9, 500ms×6, 240ms×5, 350ms×4
+  ✗ B1 NAMED — 76
+  ✓ B2 CLOSED
+  ✗ B3 MIRROR — 6
+  ✗ B4 NO-ALL — 1
+
+SELF-TEST — each check against a known-bad model:
+  [B1 NAMED] a cured site regresses to a literal
+      → RED (as it must)
+  [B2 CLOSED] the ladder grows past a short closed set
+      → RED (as it must)
+  [B2 CLOSED] a rung lands with no ruling
+      → RED (as it must)
+  [B3 MIRROR] the two layers diverge (CSS retuned, TS not)
+      → RED (as it must)
+  [B4 NO-ALL] `transition: all` returns
+      → RED (as it must)
+
+83 failure(s). Re-run with --list for each.
+  • [B1 NAMED] src/App.vue:1142  200ms   opacity 200ms var(--ease-glassGlide)
+  • [B1 NAMED] src/assets/index.css:590  500ms   stroke 500ms
+  • [B1 NAMED] src/assets/index.css:607  500ms   box-shadow 500ms
+  • [B1 NAMED] src/assets/index.css:667  350ms 350ms   background-color 350ms ease, color 350ms ease !important
+  • [B1 NAMED] src/assets/index.css:679  0.6s   refuse-shake 0.6s linear
+  • [B1 NAMED] src/assets/index.css:721  0.3s   cell-reveal 0.3s var(--ease-anticipatePop)
+  • [B1 NAMED] src/assets/index.css:722  0ms   var(--reveal-delay, 0ms)
+  • [B1 NAMED] src/assets/index.css:746  0.01ms   0.01ms !important

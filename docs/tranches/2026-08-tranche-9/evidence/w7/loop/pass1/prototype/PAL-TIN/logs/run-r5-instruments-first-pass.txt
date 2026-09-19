@@ -1,0 +1,127 @@
+
+Running 8 tests using 1 worker
+
+R5-I2|self=rgb(178, 79, 0)|room=rgb(95, 125, 0)
+  ✘  1 [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees (1.9s)
+R5-I3|candidates=0
+  ✘  2 [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby (15.9s)
+R5-I4|{"was":{"p-235d9bb7b5d5":0,"p-597bc40bb835":1},"now":{"p-235d9bb7b5d5":5,"p-597bc40bb835":6}}
+R5-I4|before=rgb(95, 125, 0)|after=rgb(95, 125, 0)
+  ✓  3 [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:96:5 › I4 — an agreed ink index is never reassigned (2.0s)
+R5-I5|{"first":"p-3fad2ae12676","tenth":"p-2915c6109143","collided":false}
+  ✓  4 [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:159:5 › I5 — a live identity claim is never handed to a second page (786ms)
+R5-I2|self=rgb(178, 79, 0)|room=rgb(95, 125, 0)
+  ✘  5 [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees (3.2s)
+R5-I3|candidates=0
+  ✘  6 [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby (16.7s)
+R5-I4|{"was":{"p-ad8e38f46246":0,"p-aebca023a6a5":1},"now":{"p-ad8e38f46246":5,"p-aebca023a6a5":6}}
+R5-I4|before=rgb(95, 125, 0)|after=rgb(95, 125, 0)
+  ✓  7 [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:96:5 › I4 — an agreed ink index is never reassigned (2.8s)
+R5-I5|{"first":"p-07ec79decec3","tenth":"p-12efd4f894bb","collided":false}
+  ✓  8 [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:159:5 › I5 — a live identity claim is never handed to a second page (1.3s)
+
+
+  1) [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees 
+
+    Error: the player's own swatch must be the colour the room sees
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(95, 125, 0)"
+    Received: "rgb(178, 79, 0)"
+
+      65 |   // T9-M14: "each player should have a unique colour". A colour that is one thing on your
+      66 |   // screen and another on everybody else's is not a player's colour; it is a page's.
+    > 67 |   expect(mine, "the player's own swatch must be the colour the room sees").toBe(theirs);
+         |                                                                            ^
+      68 |   await ctx.close();
+      69 | });
+      70 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:67:76
+
+    Error Context: test-results/instruments-I2-—-a-player--5d368-is-the-colour-the-room-sees-chromium/error-context.md
+
+  2) [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby 
+
+    Error: a player mark lives in the head
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByRole('button', { name: /player|lobby|who.s (here|on this board)/i })
+    Expected: 1
+    Received: 0
+    Timeout:  15000ms
+
+    Call log:
+      - a player mark lives in the head with timeout 15000ms
+      - waiting for getByRole('button', { name: /player|lobby|who.s (here|on this board)/i })
+        34 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      82 |   const mark = a.getByRole("button", { name: /player|lobby|who.s (here|on this board)/i });
+      83 |   console.log(`R5-I3|candidates=${await mark.count()}`);
+    > 84 |   await expect(mark, "a player mark lives in the head").toHaveCount(1);
+         |                                                         ^
+      85 |   const box = await mark.first().boundingBox();
+      86 |   expect(box!.x, "it is in the LEFT of the head").toBeLessThan(200);
+      87 |   expect(box!.y, "it is in the head, not the card").toBeLessThan(120);
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:84:57
+
+    Error Context: test-results/instruments-I3-—-the-top-l-02faa-yer-mark-that-opens-a-lobby-chromium/error-context.md
+
+  3) [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees 
+
+    Error: the player's own swatch must be the colour the room sees
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgb(95, 125, 0)"
+    Received: "rgb(178, 79, 0)"
+
+      65 |   // T9-M14: "each player should have a unique colour". A colour that is one thing on your
+      66 |   // screen and another on everybody else's is not a player's colour; it is a page's.
+    > 67 |   expect(mine, "the player's own swatch must be the colour the room sees").toBe(theirs);
+         |                                                                            ^
+      68 |   await ctx.close();
+      69 | });
+      70 |
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:67:76
+
+    Error Context: test-results/instruments-I2-—-a-player--5d368-is-the-colour-the-room-sees-webkit/error-context.md
+
+  4) [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby 
+
+    Error: a player mark lives in the head
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  getByRole('button', { name: /player|lobby|who.s (here|on this board)/i })
+    Expected: 1
+    Received: 0
+    Timeout:  15000ms
+
+    Call log:
+      - a player mark lives in the head with timeout 15000ms
+      - waiting for getByRole('button', { name: /player|lobby|who.s (here|on this board)/i })
+        34 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      82 |   const mark = a.getByRole("button", { name: /player|lobby|who.s (here|on this board)/i });
+      83 |   console.log(`R5-I3|candidates=${await mark.count()}`);
+    > 84 |   await expect(mark, "a player mark lives in the head").toHaveCount(1);
+         |                                                         ^
+      85 |   const box = await mark.first().boundingBox();
+      86 |   expect(box!.x, "it is in the LEFT of the head").toBeLessThan(200);
+      87 |   expect(box!.y, "it is in the head, not the card").toBeLessThan(120);
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:84:57
+
+    Error Context: test-results/instruments-I3-—-the-top-l-02faa-yer-mark-that-opens-a-lobby-webkit/error-context.md
+
+  4 failed
+    [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees 
+    [chromium] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby 
+    [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:50:5 › I2 — a player's own colour is the colour the room sees 
+    [webkit] › ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tinproto/spec/instruments.spec.ts:71:5 › I3 — the top-left carries a player mark that opens a lobby 
+  4 passed (1.1m)

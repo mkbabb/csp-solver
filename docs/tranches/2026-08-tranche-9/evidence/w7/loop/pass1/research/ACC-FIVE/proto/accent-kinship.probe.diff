@@ -1,0 +1,24 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r2-accent-family/probe/accent-kinship.probe.ts	2026-09-17 13:37:17
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass1/research/ACC-FIVE/probe/accent-kinship.probe.ts	2026-09-17 16:45:45
+@@ -60,7 +60,8 @@
+ import { rgbToOklch, hueDist, parseCss, over, ratio } from "./oklch";
+ 
+ const OUT =
+-  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r2-accent-family/census";
++  (process.env.ACC_FIVE_OUT ??
++    "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass1/research/ACC-FIVE/readings/control");
+ mkdirSync(OUT, { recursive: true });
+ 
+ /** The house's own loosest hue-lock, re-derived above. */
+@@ -95,8 +96,11 @@
+ 
+ const SOLO = "./?size=3&difficulty=EASY";
+ 
++const OVERLAY = process.env.ACC_FIVE_OVERLAY;
++
+ async function boot(page: Page) {
+   await page.goto(SOLO);
++  if (OVERLAY) await page.addStyleTag({ path: OVERLAY });
+   await page.waitForSelector(".sudoku-cell", { timeout: 25000 });
+   await expect
+     .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 25000 })

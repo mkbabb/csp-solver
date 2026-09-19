@@ -1,0 +1,30 @@
+    548|     await flushPromises();
+    549|     await w.vm.$nextTick();
+    550|     return shareBtn(w).get(".icon-sublabel").text();
+       |                        ^
+    551|   };
+    552|
+ ❯ src/games/shared/GameControlPanel.test.ts:598:5
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[21/23]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > the outcome is spoken at BOTH pointer classes, failure sentence and all
+Error: Unable to get .icon-sublabel within: <button data-v-fa75191a="" class="icon-btn peek-chip" type="button"><span data-v-fa75191a="" class="peek-chip-word">peek</span></button>
+ ❯ DOMWrapper.get ../../../../../web/frontend/node_modules/@vue/test-utils/dist/vue-test-utils.cjs.js:7182:15
+ ❯ pressShare src/games/shared/GameControlPanel.test.ts:550:24
+    548|     await flushPromises();
+    549|     await w.vm.$nextTick();
+    550|     return shareBtn(w).get(".icon-sublabel").text();
+       |                        ^
+    551|   };
+    552|
+ ❯ src/games/shared/GameControlPanel.test.ts:618:7
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[22/23]⎯
+
+
+ Test Files  1 failed | 65 passed (66)
+      Tests  23 failed | 787 passed (810)
+   Start at  22:14:19
+   Duration  5.35s (transform 9.74s, setup 1.08s, import 16.74s, tests 8.10s, environment 47.49s)
+

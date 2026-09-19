@@ -1,0 +1,44 @@
+MODEL CHECK against pass-1's measured MA-C (boundary A, desktop):
+  4x4  margin 11.885px  headroom_A 9.064px   (pass-1 measured 9.071)
+  9x9  margin 8.154px  headroom_A 3.800px   (pass-1 measured 3.809)
+  16x16  margin 4.587px  headroom_A 0.233px   (pass-1 measured 0.233)
+
+THE THREE BOUNDARIES, at ringSigmaUnits 1.75 / ringK 0.3241 / stroke 7 / ring on the cell box:
+  N     cellSize  margin_u  A_units  A_px    B_units  B_px     C_units  C_px
+  4     250.00    37.500    28.600   9.064   25.350   8.034    31.850   10.094
+  9     111.11    16.667    7.767    3.800   4.517    2.210    11.017   5.390
+  12    83.33     12.500    3.600    1.761   0.350    0.171    6.850    3.351
+  16    62.50     9.375     0.475    0.233   -2.775   -1.357   3.725    1.823
+  17    58.82     8.824     -0.076   -0.037  -3.326   -1.627   3.174    1.553
+
+WHERE EACH BOUNDARY REACHES ZERO (the law's ceiling on board size):
+  A  nominal cell box                zero at cellSize 59.33 -> boardSize 16.85  (largest whole board 16)
+  B  rule's inner painted edge       zero at cellSize 81.00 -> boardSize 12.35  (largest whole board 12)
+  C  neighbour (rule's outer edge)   zero at cellSize 37.66 -> boardSize 26.55  (largest whole board 26)
+
+THE LEVERS AT 16x16, scored on boundary B (the re-cut MA-C). Deficit to close: 2.774 units / 1.357px.
+  HEAD of this family (f=1.00, stroke 7, sigma 1.75)   A   0.233px   B  -1.357px  RED
+  stroke 7 -> 5 at 16x16 only                          A   0.722px   B  -0.868px  RED
+  sigma 1.75 -> 1.476 (the grid band's 0.722px floor)  A   0.646px   B  -0.944px  RED
+  stroke 5 AND sigma at the band floor                 A   1.135px   B  -0.455px  RED
+  ring at 0.911*cellSize (the minimum that clears B)   A   1.593px   B   0.003px  GREEN
+  ring at 0.90*cellSize                                A   1.761px   B   0.171px  GREEN
+  ring at 0.88*cellSize                                A   2.067px   B   0.477px  GREEN
+  ring at 0.86*cellSize (pass-1's named lever)         A   2.373px   B   0.783px  GREEN
+  ring 0.86 + stroke 5                                 A   2.862px   B   1.272px  GREEN
+
+WHAT LEVER f COSTS THE OTHER TWO BOARDS (the ring's inset from its cell edge):
+  f=0.911   4x4 3.53px  9x9 2.42px  16x16 1.36px
+  f=0.9   4x4 3.96px  9x9 2.72px  16x16 1.53px
+  f=0.88   4x4 4.75px  9x9 3.26px  16x16 1.83px
+  f=0.86   4x4 5.55px  9x9 3.81px  16x16 2.14px
+
+PHONE (393x699, boardPx 365) on boundary B:
+  4x4  A 8.030px   B 7.118px
+  9x9  A 2.181px   B 1.268px
+  16x16  A 0.133px   B -0.779px
+
+SIGMA IN PX (what a reader judges) and the grid's own widened band, per size:
+  4x4  ring 0.543px  grid 0.813px  ratio 0.668  band [0.406, 1.626]
+  9x9  ring 0.859px  grid 1.07px  ratio 0.803  band [0.535, 2.140]
+  16x16  ring 0.892px  grid 1.262px  ratio 0.707  band [0.631, 2.524]

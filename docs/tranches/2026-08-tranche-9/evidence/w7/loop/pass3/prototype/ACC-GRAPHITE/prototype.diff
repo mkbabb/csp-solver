@@ -1,0 +1,1768 @@
+diff --git a/web/frontend/e2e/multiplayer.spec.ts b/web/frontend/e2e/multiplayer.spec.ts
+index 8cb5d341..4a7680db 100644
+--- a/web/frontend/e2e/multiplayer.spec.ts
++++ b/web/frontend/e2e/multiplayer.spec.ts
+@@ -187,8 +187,8 @@ test("the invite carries the board, and both pages sit at one table", async ({
+   expect(new Set(names).size).toBe(2);
+   expect(names.every((n) => /^[a-ik-wyz]+-[a-ik-wyz]+$/.test(n))).toBe(true);
+ 
+-  // A's row and B's row are two colours on the same screen: you are the incumbent blue and
+-  // everyone else walks the golden angle.
++  // A's row and B's row are two colours on the same screen: every hand in the room walks the
++  // golden angle from its own index, yours included.
+   const swatches = await roster(a)
+     .locator(".player-swatch")
+     .evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
+@@ -214,9 +214,11 @@ test("a digit crosses both ways, and it arrives in its author's ink", async ({
+   await write(b, cellB, "4");
+   await expect.poll(() => digitAt(a, cellB)).toBe("4");
+ 
+-  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote carries the rebound
+-  // `--color-user-ink`; the cell B wrote itself does not, and reads the incumbent blue. Both
+-  // resolve to a colour — this is the one place the whole ink story is observable at once.
++  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote and the cell B wrote
++  // carry two different `--color-user-ink` rebindings — in a room every hand has its own,
++  // yours included. The assertion is RELATIONAL (they differ, both resolve) rather than a
++  // named colour, so it survives whatever index the room deals: this is the one place the
++  // whole ink story is observable at once.
+   const inks = await b.evaluate(
+     ([mine, theirs]) => {
+       // The index is bound to a name rather than chained onto the line above it: a `[i]`
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index dfd467f8..b0ebd7f1 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -147,20 +147,24 @@ test("light mode: layout, styles, filters, DOM contract", async ({ page }) => {
+     .evaluate((el) => getComputedStyle(el).alignItems);
+   expect(alignItems).toBe("center");
+ 
+-  // Crayon CSS vars exist on :root
++  // Crayon CSS vars exist on :root — the FOUR with jobs. Blue retired with the states it
++  // inked (T9-W7 ACC-GRAPHITE): a wax whose three consumers were a focus ring, a selection
++  // wash and your own notes, all of which are the pencil now.
+   const crayonVars = await page.evaluate(() => {
+     const s = getComputedStyle(document.documentElement);
+     return {
+       green: s.getPropertyValue("--color-crayon-green").trim(),
+       orange: s.getPropertyValue("--color-crayon-orange").trim(),
+       rose: s.getPropertyValue("--color-crayon-rose").trim(),
++      gold: s.getPropertyValue("--color-crayon-gold").trim(),
+       blue: s.getPropertyValue("--color-crayon-blue").trim(),
+     };
+   });
+   expect(crayonVars.green).toBeTruthy();
+   expect(crayonVars.orange).toBeTruthy();
+   expect(crayonVars.rose).toBeTruthy();
+-  expect(crayonVars.blue).toBeTruthy();
++  expect(crayonVars.gold).toBeTruthy();
++  expect(crayonVars.blue).toBe("");
+ 
+   // Control panel uses Fraunces font (desktop sidebar)
+   const fontFamily = await page
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b6e2d9a0..aeca0c18 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -620,6 +620,143 @@ function gateRank({ light, dark }, ruling) {
+   return fails;
+ }
+ 
++/* ── the GROUNDS, ranked (T9-W7 ACC-GRAPHITE) ──────────────────────────────
++ *
++ * The LADDER above governs MARKS — a stop has a contrast floor and the rungs climb. A GROUND is
++ * what a mark sits on: tinted paper, whose only job is to stay under the thing it backs. A 6%
++ * wash has no 3:1 floor to clear and never will, so `gateFloors` and `gateMonotone` are the
++ * wrong instruments and the ground token lives outside `LADDER` for exactly that reason.
++ *
++ * What a ground CAN be gated on is its place in the order, which is the one thing the estate
++ * has a ruling about: four grounds compose on the board — your selection's own body, a peer's
++ * cursor, the hint laminate, and the unit wash that marks your selection's reach — and they are
++ * pitched against each other, not against a floor. The order is read off the live cascade on
++ * every run (the rungs' own discipline: nothing here restates a constant), so re-pitching any
++ * one of them re-prices the rank instead of leaving this gate printing yesterday's digits.
++ *
++ * CLOSED BOTH WAYS, `gateRank`'s form: the order moving reds; the admitted TIE breaking reds
++ * (the tie is a design sentence — the unit wash IS tier 1's own 6%, "one number, not a second
++ * value", gameCell.css `.cell-peer` — so if the two ever stop being one number the ruling has
++ * outlived its condition and the reader needs to know); a ground whose two themes disagree reds
++ * (a ground that is not one value across themes is a new fact, not a re-pitch).
++ */
++const GAME_CELL_CSS = readFileSync(join(SRC, "games/shared/gameCell.css"), "utf8");
++
++/** The alpha a ground paints at, resolved: a literal `fill-opacity`, or a `color-mix` percent,
++ *  or a `var()` chased into the theme scope it is declared in. Never a restated constant. */
++function groundAlpha(scope, css, g) {
++  const body = bodiesOf(css, g.selector)[0];
++  if (!body) return null;
++  const decl = body.match(new RegExp(`${g.decl}:\\s*([^;]+);`));
++  if (!decl) return null;
++  const raw = decl[1].trim();
++  if (/^[\d.]+$/.test(raw)) return Number(raw);
++  let chased = raw;
++  if (raw.startsWith("var(")) {
++    const token = raw.slice(4).split(/[,)]/)[0];
++    // The theme scope first, then the file: a ground token declared ONCE serves both themes
++    // (its pressure is one number; only the ink it mixes flips), and a per-scope redeclaration
++    // must win over it. Not finding it either way leaves the row `?`, which reds.
++    const re = new RegExp(`${token}:\\s*([^;]+);`);
++    chased = (scope.match(re) ?? INDEX_CSS.match(re) ?? [])[1];
++  }
++  const pct = String(chased ?? "").match(/([\d.]+)%/);
++  return pct ? Number(pct[1]) / 100 : null;
++}
++
++const GROUNDS = [
++  {
++    name: "peer-cursor",
++    selector: ".game-cell.is-peer-cursor .cell-ghost-path",
++    decl: "fill-opacity",
++    why: "a peer is present, never competing — the lightest ground on the board",
++  },
++  {
++    name: "selection",
++    selector: ".cell-ghost-path",
++    decl: "fill-opacity",
++    why: "your own selection's body (tier 1)",
++  },
++  {
++    name: "unit",
++    selector: ".cell-peer",
++    decl: "background",
++    why: "your selection's REACH — the same 6% as the body it belongs to, by design",
++  },
++  {
++    name: "laminate",
++    selector: ".cell-because",
++    decl: "background",
++    why: "the hint's teacher-red square, the one ground that is asked to be seen",
++  },
++];
++
++/**
++ * The admitted ground order, pinned to the strings this run produces. `=` is the admitted tie.
++ *
++ * REPORTED, not smoothed: the synthesis asked for `selection > peer cursor > hint laminate >
++ * unit`. That is not what the cascade ranks — the laminate is the LOUDEST ground at 15% and the
++ * unit wash ties the selection body at 6%. The ruling below is the measured order; the
++ * synthesis's string is a form claim about which ground OUTRANKS which in meaning, which is
++ * MRK-WASH's to land and is not an alpha.
++ */
++const GROUND_RULING = {
++  order: "peer-cursor 0.04 < selection 0.06 = unit 0.06 < laminate 0.15",
++  cite: "src/assets/index.css §INK PRESSURE 'THE GROUND WASH, AND IT IS NOT A RUNG'; src/games/shared/gameCell.css `.cell-peer`",
++  why:
++    "a ground is pitched against the other grounds, never against a floor; the unit wash is " +
++    "tier 1's own 6% rather than a second value, so the tie is the design and not a collision",
++};
++
++/** One theme's ground rank, equal neighbours joined by `=` so a tie is stated, never ordered. */
++function groundRank(scope, cellCss) {
++  const rows = GROUNDS.map((g) => ({ n: g.name, a: groundAlpha(scope, cellCss, g) })).sort(
++    (x, y) => (x.a ?? 0) - (y.a ?? 0),
++  );
++  return rows
++    .map(
++      (r, i) =>
++        (i === 0 ? "" : r.a === rows[i - 1].a ? " = " : " < ") +
++        `${r.n} ${r.a === null ? "?" : r.a.toFixed(2)}`,
++    )
++    .join("");
++}
++
++/** Both themes' ground-rank strings, from the two stylesheets that declare them. */
++const groundRanksOf = (cellCss) =>
++  Object.fromEntries(
++    Object.entries(SCOPES).map(([name, scope]) => [name, groundRank(scope, cellCss)]),
++  );
++
++function gateGroundRank(ranks, ruling) {
++  const fails = [];
++  const [light, dark] = [ranks.light, ranks.dark];
++  if (light !== dark)
++    fails.push(
++      `the grounds rank \`${light}\` light and \`${dark}\` dark. A ground is ONE value across ` +
++        `themes — the ink flips, the pressure does not — so a per-theme ground is a new fact ` +
++        `and wants a ruling of its own (${ruling.cite}).`,
++    );
++  if (!light.includes("=") && ruling.order.includes("="))
++    fails.push(
++      `the admitted TIE is gone — the grounds now rank \`${light}\`. The ruling this gate ` +
++        `admits (${ruling.cite}) says the unit wash IS the selection body's own 6%, "one ` +
++        `number, not a second value". Two numbers now. Either put them back on one, or strike ` +
++        `GROUND_RULING and the gameCell.css sentence it cites, in this commit.`,
++    );
++  for (const [theme, got] of Object.entries(ranks)) {
++    if (got === ruling.order) continue;
++    if (light !== dark && theme === "dark") continue;
++    fails.push(
++      `${theme} ranks the grounds \`${got}\`, and the admitted order is \`${ruling.order}\` ` +
++        `(${ruling.cite}). A ground was re-pitched and the reading order moved with it: a wash ` +
++        `that climbs over the mark it backs stops being paper. Re-derive the ruling against the ` +
++        `change and say why where it is declared, or put the pitch back.`,
++    );
++  }
++  return fails;
++}
++
+ /* ── self-test: every gate shown able to fail ───────────────────────────── */
+ 
+ /**
+@@ -714,6 +851,45 @@ function selfTest() {
+           dark: "muted-foreground < rule < quiet",
+         }),
+     ],
++    // THE GROUND GATE, three modes, the same shape as closure 5's. `ground-planted`: the unit
++    // wash is pressed to 12% — a wash climbing over the selection body it is the reach of, the
++    // exact defect the token exists to make impossible. `ground-tie-broken`: the two 6%s become
++    // two numbers, so the admitted tie's own sentence is stale. `ground-per-theme`: a ground
++    // that reads differently in the two themes, which is a new fact and not a re-pitch.
++    [
++      "ground-planted",
++      () =>
++        gateGroundRank(
++          groundRanksOf(
++            GAME_CELL_CSS.replace(
++              /(\.cell-peer\s*\{[\s\S]*?background:\s*)var\(--ground-wash-unit\)/,
++              "$1color-mix(in srgb, var(--color-pencil-graphite) 12%, transparent)",
++            ),
++          ),
++          GROUND_RULING,
++        ),
++    ],
++    [
++      "ground-tie-broken",
++      () =>
++        gateGroundRank(
++          groundRanksOf(
++            GAME_CELL_CSS.replace(
++              /(\.cell-peer\s*\{[\s\S]*?background:\s*)var\(--ground-wash-unit\)/,
++              "$1color-mix(in srgb, var(--color-pencil-graphite) 9%, transparent)",
++            ),
++          ),
++          GROUND_RULING,
++        ),
++    ],
++    [
++      "ground-per-theme",
++      () =>
++        gateGroundRank(
++          { light: GROUND_RULING.order, dark: "selection 0.06 = unit 0.06 < laminate 0.15" },
++          GROUND_RULING,
++        ),
++    ],
+   ];
+   const mute = [];
+   for (const [name, run] of cases) {
+@@ -747,6 +923,7 @@ const fails = [
+   ...gateShip4(SHIP4),
+   ...gateTape(INDEX_CSS, TAPE),
+   ...gateRank(ranksOf(INDEX_CSS), RANK_RULING),
++  ...gateGroundRank(groundRanksOf(GAME_CELL_CSS), GROUND_RULING),
+ ];
+ const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
+ 
+@@ -828,3 +1005,13 @@ console.log(
+     `one ruling is admitted (${RANK_RULING.cite}), pinned to both rank strings above, and it ` +
+     `reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.`,
+ );
++
++/* The GROUNDS, printed: four washes, one order, read off the cascade on every run. */
++const liveGrounds = groundRanksOf(GAME_CELL_CSS);
++console.log(
++  `\ngrounds — what a mark sits ON, ranked against each other rather than against a floor:` +
++    `\n  light  ${liveGrounds.light}\n  dark   ${liveGrounds.dark}` +
++    GROUNDS.map((g) => `\n  ${g.name.padEnd(12)} ${g.selector.padEnd(38)} ${g.why}`).join("") +
++    `\n  the order is GATED: it reds on a re-pitch that moves it, on the admitted tie breaking ` +
++    `(${GROUND_RULING.why}), and on a ground that reads differently in the two themes.`,
++);
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..f417b611 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -147,8 +147,11 @@
+      hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+      third name for a colour that already has two. */
+ 
+-  /* Handwritten glyph colors */
+-  --color-user-ink: #2563eb;
++  /* Handwritten glyph colors. THE DEFAULT IS THE PENCIL (T9-W7 ACC-GRAPHITE): a digit you
++     wrote is graphite, because colour on this board means WHO made the mark and a solo board
++     has one hand on it. The 24 `var(--color-user-ink)` sites are untouched — a room still
++     rebinds this per cell and per roster row, and the print arm below still inks it #000. */
++  --color-user-ink: var(--color-pencil-graphite);
+ 
+   /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+      scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+@@ -170,7 +173,10 @@
+   --color-crayon-green: #2dc653;
+   --color-crayon-orange: #f4a236;
+   --color-crayon-rose: #e8315b;
+-  --color-crayon-blue: #4a90d9;
++  /* The fourth crayon RETIRED (T9-W7 ACC-GRAPHITE): blue was the focus wax, the unit wash and
++     your own pencil marks, and all three are states rather than authors — they are graphite
++     now. An alias with no consumer is a third name for a colour that already has two; a wax
++     with no job is the same thing one step earlier. */
+   --color-crayon-gold: #c99a2e; /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+      earned light: it lives in the sky and comes to the page only when the work is done. Wax
+      tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
+@@ -216,13 +222,15 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+-     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+-     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++  /* §6 hunk (MRK-LIVE's to dispose) — `--color-focus-sketch: #3a7bc4` stood here as the
++     keyboard focus ring's ink, a crayon-blue darkened one step to clear 1.4.11 over the card.
++     The focus ring is the pencil pressed twice now (T9-W7 ACC-GRAPHITE), so the token has no
++     `var()` and no class left; `check-theme-tokens` reds on a dead token, so this family
++     applies the deletion to keep the gate honest and hands §6 the ruling: retire it, or
++     re-point it at a consumer it earns. Nothing in this palette reads it either way. */
+   --color-pencil-graphite: var(
+     --grid-line-color
+-  ); /* the pencil: grid, ghost ring, hover sketch */
++  ); /* the pencil: grid, ghost ring, hover sketch, YOUR hand, the focus ring, the tally */
+ 
+   /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+@@ -264,18 +272,26 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+-     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+-     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+-     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+-     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+-     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+-     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+-     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+-     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+-     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+-     4.16/3.85. */
+-  --color-progress-ink: #8b5cf6;
++
++  /* THE GROUND WASH, AND IT IS NOT A RUNG (T9-W7 ACC-GRAPHITE). The ladder above governs
++     MARKS — a stop has a contrast floor and the rungs climb. This governs what a mark sits
++     ON: tinted paper, whose only job is to stay under the digit it backs. It lives in this
++     file because `check-ink-pressure`'s ownership gate is right that an open-coded graphite
++     `color-mix` anywhere else is the ladder re-typed by hand; it lives OUTSIDE the LADDER
++     list because a floor of 3:1 on a 6% wash would be a category error.
++     One ground, one value, and the rank it sits in is MRK-WASH's: selection > peer cursor >
++     hint laminate > unit. 12% under `prefers-contrast: more`, the pressure the unit wash has
++     always gone to. */
++  --ground-wash-unit: color-mix(
++    in srgb,
++    var(--color-pencil-graphite, var(--grid-line-color)) 6%,
++    transparent
++  );
++  /* The SIXTH crayon is retired with the gauge it inked (T9-W7 ACC-GRAPHITE). Its ledger was
++     wrong besides — 3.57/3.35 was hex arithmetic against --grid-line-color, and the painted
++     bytes read 2.92:1 over the rule the trace actually covered, under the 1.4.11 floor. The
++     fill gauge is a graphite TALLY now: the board's own pencil, a tick per written cell,
++     offset one stroke width inside the frame so it never retraces the rule. */
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -369,7 +385,7 @@
+   --color-border: hsl(24 4% 16%);
+   --color-ring: hsl(48 8% 83%);
+ 
+-  --color-user-ink: #60a5fa;
++  --color-user-ink: var(--color-pencil-graphite);
+ 
+   /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+   --peer-ink-l: 0.8;
+@@ -378,7 +394,6 @@
+   --color-crayon-green: #3dd968;
+   --color-crayon-orange: #f5b35c;
+   --color-crayon-rose: #ff5c7c;
+-  --color-crayon-blue: #6aabeb;
+   --color-crayon-gold: #e5c74d; /* the moon's own outline gold — 11.48:1 on dark paper */
+ 
+   /* Dark ink collapses into wax — the glowing crayon is already AA at night
+@@ -400,12 +415,6 @@
+ 
+   --grid-line-color: hsl(48 10% 80%);
+ 
+-  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+-     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+-     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+-     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+-  --color-progress-ink: #7c3aed;
+-
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+ 
+@@ -440,6 +449,18 @@
+   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+ }
+ 
++/* The ground wash presses with everything else that presses (T9-W7 ACC-GRAPHITE). One place,
++   both themes — the token resolves through --color-pencil-graphite, which already flips. */
++@media (prefers-contrast: more) {
++  :root {
++    --ground-wash-unit: color-mix(
++      in srgb,
++      var(--color-pencil-graphite, var(--grid-line-color)) 12%,
++      transparent
++    );
++  }
++}
++
+ @layer base {
+   * {
+     @apply border-border outline-ring/50;
+@@ -453,13 +474,12 @@
+    the ink tier above rather than the raw wax, which fails AA as light-mode text (green 2.22 /
+    orange 2.05 / rose 4.11 on --color-card); the ink aliases the wax in dark, where the crayon
+    already glows AA. Gate 1, T4-W10; the hexes and their measurements are the ledger above.
+-   crayon-blue is the focus wax and takes no ink tier (no text use).
+ 
+    UNLAYERED, and that is the point of the T6 hoist. These lived in `GameControlPanel`'s
+    SCOPED block, where a selector could never reach a child component's internals: the
+    drawer's selected difficulty chip has rendered `crayon-orange` since T4-P1 and painted
+    nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+-   reads the same four classes off the same page as the tokens they resolve through — a
++   reads the same three classes off the same page as the tokens they resolve through — a
+    layered home would lose to every unlayered author rule that sets `color`. */
+ .crayon-green {
+   color: var(--color-green-ink);
+@@ -470,9 +490,6 @@
+ .crayon-rose {
+   color: var(--color-red-ink);
+ }
+-.crayon-blue {
+-  color: var(--color-crayon-blue);
+-}
+ 
+ /* ── T4-WM (lane C) — iOS/mobile platform discipline ───────────────────────────
+  * Deliberate, single-home touch hygiene for the E8 recut — unlayered so it beats the
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+index 0fd9a20c..86b1e92c 100644
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -23,10 +23,11 @@
+  *    the SHARED boil beat (`useBeatFrame`). Steady-state raster is zero — no live `filter=` to
+  *    invalidate, the beat toggles opacity only (compositor-only), the geometry never mutates.
+  *  - DRAW-IN with the glyph grammar: the inked strokes tick in on the shared sequence chain
+- *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via
+- *    stroke-dashoffset — the identical primitive/easing glyphAnimations rides, retargeted to a
+- *    reactive reveal so all four pose copies of a stroke draw as one. Transient, one-shot; at
+- *    rest the reveal is constant, so the only per-beat change is the opacity swap.
++ *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via a front
++ *    CUT at the reveal fraction (`poseFronts`) — the identical primitive/easing glyphAnimations
++ *    rides, retargeted to a reactive reveal so all four pose copies of a stroke draw as one.
++ *    Transient, one-shot; at rest the reveal is constant, so the only per-beat change is the
++ *    opacity swap.
+  *  - PRM: the sequence chain's central gate no-ops `start()` under reduced motion; the reveal
+  *    snaps to inked and the beat freezes (the grid's own PRM discipline, inherited).
+  */
+@@ -37,7 +38,7 @@ import {
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { generateLineBoilFrames } from "@pencil/grid/gridPaths";
++import { generateLineBoilFrames, poseFronts } from "@pencil/grid/gridPaths";
+ import {
+   BOIL_CONFIG,
+   FILTER_PRESETS,
+@@ -118,9 +119,12 @@ const boilFrame = useBeatFrame(
+   () => beatsFor(BOIL_CONFIG.intervalMs),
+ );
+ 
+-// ── The draw-in reveal (stroke-dashoffset, one-shot on the shared sequence chain) ──────────
++// ── The draw-in reveal (a CUT front, one-shot on the shared sequence chain) ────────────────
+ // reveal[i] ∈ [0,1] — the inked arc-length fraction of stroke i, shared across its four poses.
+-// pathLength=100 normalises the dash, so strokeDashoffset = 100·(1−reveal).
++// The front is `poseFronts` (gridPaths), the same arc-length cut the board's tally and join
++// ring take. These strokes are 12 segments, comfortably inside the ~128 where WebKit restarts
++// a dash phase, so this is hygiene rather than a defect: ONE grammar for every front the
++// estate draws, so nobody has to remember which surfaces the dash law reaches.
+ const reveal = reactive<number[]>(Array(TALLY_TOTAL).fill(1));
+ const reducedMotion = usePrefersReducedMotion();
+ let draws: SequenceHandle[] = [];
+@@ -160,7 +164,7 @@ function runDrawIn(filled: number) {
+   }
+ }
+ 
+-const dashOffset = (i: number) => 100 * (1 - reveal[i]);
++const frontOf = (d: string, i: number) => poseFronts([d], reveal[i])[0];
+ const strokeState = (i: number) => (i < props.descriptor.filled ? "inked" : "ghost");
+ 
+ // Re-ink whenever the measured grade changes (graded flips, or the tier moves). A same-tier
+@@ -221,15 +225,12 @@ onUnmounted(stopDraws);
+           <path
+             v-for="(d, i) in pose"
+             :key="i"
+-            :d="d"
++            :d="frontOf(d, i)"
+             class="dt-stroke"
+             :class="strokeState(i)"
+             fill="none"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+-            pathLength="100"
+-            stroke-dasharray="100 100"
+-            :style="{ strokeDashoffset: dashOffset(i) }"
+           />
+         </g>
+       </template>
+diff --git a/web/frontend/src/games/shared/DigitCell.test.ts b/web/frontend/src/games/shared/DigitCell.test.ts
+index fc634eaa..cb13e00d 100644
+--- a/web/frontend/src/games/shared/DigitCell.test.ts
++++ b/web/frontend/src/games/shared/DigitCell.test.ts
+@@ -253,7 +253,7 @@ describe("DigitCell (boxed) — user marks render distinctly from the engine mar
+ });
+ 
+ // Peer-unit wash (T4-W8 ROW 4). The board derives the peer set over `focusedPos` and hands each
+-// cell an `isPeer` flag; the cell lights a faint crayon-blue wash on its OWN layer (never the
++// cell an `isPeer` flag; the cell lights a faint graphite wash on its OWN layer (never the
+ // conflict / hint tiers), whether the cell is filled or blank — the whole unit reads at a glance.
+ describe("DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4)", () => {
+   it("renders the peer wash when isPeer, on its own `.cell-peer` layer", () => {
+diff --git a/web/frontend/src/games/shared/DigitCell.vue b/web/frontend/src/games/shared/DigitCell.vue
+index a67ef078..4e45ff90 100644
+--- a/web/frontend/src/games/shared/DigitCell.vue
++++ b/web/frontend/src/games/shared/DigitCell.vue
+@@ -49,7 +49,7 @@ const props = withDefaults(
+      *  answer key visibly points here before the digit inks. */
+     isBecause?: boolean;
+     /** T4-W8 ROW 4 — this cell shares a unit (row / column / box) with the focused cell: a faint
+-     *  crayon-blue wash lights on selection so the active unit reads at a glance. */
++     *  graphite wash lights on selection so the active unit reads at a glance. */
+     isPeer?: boolean;
+     /** The clue clauses touching this cell, folded into the accessible name (F6) — e.g.
+      *  "greater than the cell to the right". Empty for a game whose clues are off-cell (or
+@@ -58,7 +58,8 @@ const props = withDefaults(
+     /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from the solver's own
+      *  propagation, present only while the peek gesture is held. Rendered only while empty. */
+     marks?: number[];
+-    /** T4-W8 ROW 1 — the player's OWN corner (Snyder) pencil marks (crayon-blue). Empty cells only. */
++    /** T4-W8 ROW 1 — the player's OWN corner (Snyder) pencil marks (graphite, full pressure).
++     *  Empty cells only. */
+     cornerMarks?: number[];
+     /** T4-W8 ROW 1 — the player's own center marks, a centred row in the same tone. Empty cells only. */
+     centerMarks?: number[];
+@@ -106,6 +107,7 @@ const {
+   isFocused,
+   isActive,
+   cellViewBox,
++  ghostRetracePath,
+   displayValue,
+   glyphChar,
+   ariaLabel,
+@@ -255,7 +257,7 @@ defineExpose({ focus: focusInput, position: props.position });
+       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+     />
+ 
+-    <!-- Peer-unit wash (T4-W8 ROW 4): a faint crayon-blue fill over every cell sharing the
++    <!-- Peer-unit wash (T4-W8 ROW 4): a faint graphite fill over every cell sharing the
+          focused cell's row / column (and, on a boxed board, its box), so the active unit reads
+          at a glance on selection. Its own layer, behind the glyph + marks + ghost; decorative
+          (the value carries the name). -->
+@@ -320,7 +322,7 @@ defineExpose({ focus: focusInput, position: props.position });
+     </div>
+ 
+     <!-- User pencil marks — CORNER slot (T4-W8 ROW 1): the player's own notes in a 3×3 Snyder
+-         grid hugging the cell, crayon-blue so they never read as the engine's graphite peek
++         grid hugging the cell, at full pressure so they never read as the engine's half-pressure peek
+          marks. Its own layer + class (never `.pencil-marks`) — the two mark systems share the
+          cell but never the store or the render. Decorative (the value carries the a11y name). -->
+     <div
+@@ -403,7 +405,8 @@ defineExpose({ focus: focusInput, position: props.position });
+     />
+ 
+     <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
+-         Hover = graphite (instant); :focus-visible = crayon-blue sketched-on; conflict = the
++         Hover = graphite (instant); :focus-visible = the same graphite taken TWICE round
++         (the retrace path below, sketched on in the other direction); conflict = the
+          teacher's red circle (doubles as the aria-invalid indicator). Decorative (T5-W3 3.5):
+          one bare `<svg>` per cell mapped to an unnamed `image` — 81 of them on a 9×9 — and the
+          states it draws are all spoken elsewhere (focus by the input, the conflict by
+@@ -420,6 +423,7 @@ defineExpose({ focus: focusInput, position: props.position });
+         xmlns="http://www.w3.org/2000/svg"
+       >
+         <path :d="ghostPath" pathLength="1" class="cell-ghost-path" />
++        <path :d="ghostRetracePath" pathLength="1" class="cell-ghost-retrace" />
+       </svg>
+     </div>
+   </div>
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..bf63091f 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -351,13 +351,15 @@ const conflicts = computed<Conflicts>(() =>
+ // A pure derivation over `values`/`givenCells` (re-evaluated on a fill/clear, NEVER on
+ // the boil beat): filled non-given cells / fillable cells. FILL, not correctness — wrong
+ // digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render.
++const fillable = computed(() =>
++  Math.max(1, props.totalCells - props.givenCells.size),
++);
+ const fillProgress = computed(() => {
+   let filled = 0;
+   for (const [pos, v] of Object.entries(props.values)) {
+     if (v !== 0 && !props.givenCells.has(pos)) filled++;
+   }
+-  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+-  return Math.max(0, Math.min(1, filled / fillable));
++  return Math.max(0, Math.min(1, filled / fillable.value));
+ });
+ 
+ // Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
+@@ -1028,6 +1030,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+         :subgrid-size="subgridSize"
+         :anim-state="gridAnimState"
+         :progress="fillProgress"
++        :writable="fillable"
+         :solve-success="solveState === 'solved'"
+         :join-progress="traceProgress"
+         :join-opacity="traceOpacity"
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..06f62092 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1684,8 +1684,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ }
+ 
+ /* The swatch is the digit's own ink, not a legend for it: `--color-user-ink` is what the
+-   handwritten glyph strokes with, so a row inherits the peer's inline rebinding and YOUR row
+-   — which rebinds nothing — draws the incumbent blue. One value, two places, no mapping. */
++   handwritten glyph strokes with, so a row inherits the player's inline rebinding and YOUR row
++   draws whatever your digits draw — the pencil's graphite while you are alone at the table,
++   your own room colour from the moment a second hand arrives (`selfInk`, T9-W7). One value,
++   two places, no mapping. */
+ .player-swatch {
+   flex: 0 0 auto;
+   width: 0.7rem;
+@@ -2084,16 +2086,12 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   fill: url(#sparkle-rainbow) !important;
+ }
+ 
+-.sparkle-icon {
+-  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
+-}
+-
+-@media (hover: hover) {
+-  .icon-btn:hover .sparkle-icon {
+-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+-  }
+-}
++/* NO GLOW (T9-W7 ACC-GRAPHITE). The sparkle wore two violet drop-shadows reachable by no
++   token — a lilac nobody had declared, sitting beside a rainbow gradient that is the icon's
++   own statement — and a `transition: all` to swap between them on hover. The rainbow says
++   "the machine will write this" on its own; the halo said nothing and cost the filter census
++   a row. Deleted, with its allowlist row (`filterBudget.ts`) in the same commit: the census
++   goes 9 -> 8, which is the direction that law travels. */
+ 
+ /* ── T6 mark 5 · the sticky action bar ─────────────────────────────────────────
+    The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..5088490d 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -17,6 +17,7 @@
+  *   .pencil-marks .mark-slot .mark-glyph        engine-domains peek marks
+  *   .user-marks .user-corner-marks .user-center-marks .user-mark-slot .user-mark-glyph
+  *   .cell-ghost .cell-ghost-path                the four-tier hover/focus/invalid/peer-cursor ring
++ *   .cell-ghost-retrace    the focus ring's second pass (hidden at every other tier)
+  */
+ 
+ /* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
+@@ -68,13 +69,14 @@
+ }
+ 
+ /* ── User pencil marks (T4-W8 ROW 1) — the player's own notes ─────────
+-   Crayon-blue, the player's own hand — deliberately a DIFFERENT tone from the engine's
+-   graphite peek marks so the solver's domains and the player's notes never read as one, and
+-   a different placement (corners / centred row) besides. Their own layer; they compose over
+-   the engine grid without ever sharing its store. */
++   The same pencil as the grid, pressed all the way down (T9-W7 ACC-GRAPHITE). The seam
++   against the engine's peek marks is PRESSURE, not tone: yours at opacity 1, the solver's
++   thinking at 0.5 — and a different placement (corners / centred row) besides. A note you
++   made is your hand; the engine's is the engine's; neither is a colour. Their own layer;
++   they compose over the engine grid without ever sharing its store. */
+ .user-marks {
+-  color: var(--color-crayon-blue);
+-  opacity: 0.9;
++  color: var(--color-pencil-graphite, var(--grid-line-color));
++  opacity: 1;
+ }
+ 
+ /* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
+@@ -110,30 +112,25 @@
+   overflow: visible;
+ }
+ 
+-@media (prefers-contrast: more) {
+-  .user-marks {
+-    opacity: 1;
+-  }
+-}
+ 
+ /* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach ─────────
+-   A faint crayon-blue fill over the focused cell's row / column / box, tying the unit to the
+-   blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
++   The hover tint laid flat over the reach: the pencil's own 6% (tier 1's `fill-opacity`, one
++   number, not a second value), tying the unit to the graphite focus ring as one selection
++   system. A selection is not an author, so it takes no colour (T9-W7 ACC-GRAPHITE).
+    Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+ .cell-peer {
+-  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+-}
+-
+-@media (prefers-contrast: more) {
+-  .cell-peer {
+-    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
+-  }
++  /* The pencil laid flat at 6%, as ONE ground token (`--ground-wash-unit`, index.css). An
++     `opacity` here would be the same painted value and twenty new stacking contexts on a 9x9
++     selection — every washed cell promoted to its own layer for a tint. The token keeps the
++     mix in the one file `check-ink-pressure`'s ownership gate allows, and presses to 12% under
++     `prefers-contrast: more` where it is declared, so this rule has no second arm. */
++  background: var(--ground-wash-unit);
+ }
+ 
+ /* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────
+    A translucent teacher-red square with a soft inset border, faded in on the EXISTING marks
+    cadence (marks-fade-in, 250ms — no new timing constant). Its own layer, behind the glyph +
+-   focus ghost, so it composes with a filled cell's digit and the keyboard-focus blue ring
++   focus ghost, so it composes with a filled cell's digit and the keyboard-focus graphite ring
+    rather than colliding with the ghost's focus/invalid tiers — the tone shows even on the cell
+    you focused to ask. */
+ .cell-because {
+@@ -205,7 +202,7 @@
+    competing), fill 0.04 below tier 1's 0.06.
+ 
+    A RING, NOT A WASH. A filled peer cursor would collide with `.cell-peer` above — the
+-   crayon-blue 7% wash that marks YOUR selection's row/column/box reach. That wash belongs to
++   graphite 6% wash that marks YOUR selection's row/column/box reach. That wash belongs to
+    your own selection and must never be read as someone else's position.
+ 
+    IT DOES NOT TWEEN BETWEEN CELLS. It jumps and redraws its sketch, which is the existing
+@@ -239,15 +236,37 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
+-/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+-   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+-   gets the drawn-on ring. */
++/* THE SECOND PASS (T9-W7 ACC-GRAPHITE) — hidden everywhere but your own keyboard focus.
++   A pencil makes a heavy line by going round twice, not by changing colour, so the ring's
++   weight is bought in the estate's own retrace idiom (`scribbleUnderline`, `.join-pose`) on
++   its own seed one stroke width in. Two 12-unit passes 10 units apart fuse into one 22-unit
++   band — and a unit here is the CELL GHOST's unit, not the board's: the ghost <svg> is a
++   144.444-unit box, the board a 1000-unit one, so 22 ghost units come to 10.76 px at
++   1280x800 against the frame line's 12 board units = 7.63 px. 1.41x, a ratio between two
++   coordinate spaces taken in px. That makes the selected cell the heaviest mark on the board
++   instead of its 49th-heaviest. It is a <path>, never an `outline`, so the forced-colors
++   `Highlight` ring at the foot of this sheet still stands. */
++.cell-ghost-retrace {
++  display: none;
++  fill: none;
++  stroke-linecap: round;
++  stroke-linejoin: round;
++}
++
++/* Tier 2 — keyboard focus: the pencil, pressed hard and taken round twice, sketched on over
++   180ms. Driven by real :focus-visible so a mouse click keeps the instant graphite tier and
++   only keyboard focus gets the drawn-on ring.
++   NO FILL, and that is the mark's sentence rather than a taste: a pencil pressed twice draws
++   a RING; it does not tint the paper inside. A 22-unit band around an 8%-tinted square reads
++   as a filled chip at phone scale, which is the stock-UI mark this family exists to replace,
++   and it fuses the band and the tint into one run at the eye. The cell inside stays the
++   cleanest paper on the board. (§6 hunk — MRK-LIVE lands it. The 0.08 graphite fill stays
++   buildable as the U-10 fallback arm; it is one declaration.) */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
+-  fill-opacity: 0.08;
+-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
+-  stroke-width: 7;
+-  stroke-opacity: 0.9;
++  fill: none;
++  stroke: var(--color-pencil-graphite, var(--grid-line-color));
++  stroke-width: 12;
++  stroke-opacity: 1;
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+      value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an
+@@ -257,6 +276,19 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
++/* The second pass, on the same beat. The path string itself is REVERSED (`gridPaths.ts`), so
++   the two strokes draw on in opposite directions round the cell — a hand coming back over its
++   own line — with no second keyframe and no second timing constant. */
++.game-cell:has(input:focus-visible) .cell-ghost-retrace {
++  display: block;
++  stroke: var(--color-pencil-graphite, var(--grid-line-color));
++  stroke-width: 12;
++  stroke-opacity: 1;
++  stroke-dasharray: 1;
++  stroke-dashoffset: 0;
++  animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
++}
++
+ @keyframes ghost-draw-on {
+   from {
+     stroke-dashoffset: 1;
+@@ -280,17 +312,24 @@
+ 
+ /* Tier 2×3 — focused AND conflicting: the teacher's red pencil, pressed harder.
+    (0,4,1) beats tier-2's (0,3,1); every tier-2 paint property is re-asserted —
+-   partial overrides leak blue through the higher-specificity focus rule.
++   partial overrides leak graphite through the higher-specificity focus rule.
+    ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
+-   focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
++   focus cue (the ghost is this cell's only focus affordance; PRM block governs).
++   Fill `none` with its graphite sibling: the focus band may not become a chip because the
++   digit in it is wrong. (§6 hunk.) */
+ .game-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-teacher-red, var(--color-crayon-rose));
+-  fill-opacity: 0.16;
++  fill: none;
+   stroke: var(--color-teacher-red, var(--color-crayon-rose));
+-  stroke-width: 10;
++  stroke-width: 12;
+   stroke-opacity: 1;
+ }
+ 
++/* …and the second pass goes round in red too: focused AND wrong is the teacher's pencil
++   pressed hard and taken twice round, which is the same sentence the graphite ring says. */
++.game-cell.is-invalid:has(input:focus-visible) .cell-ghost-retrace {
++  stroke: var(--color-teacher-red, var(--color-crayon-rose));
++}
++
+ /* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+    affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+    Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+@@ -312,12 +351,14 @@
+      inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+      pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+      owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+-     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
++     focus RING stays lane A's graphite :focus-visible ghost (tap = no ring, key = ring). */
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+   .game-cell:has(input:focus-visible) .cell-ghost-path,
++  /* Both passes land drawn — the second is the same ring, not a second flourish. */
++  .game-cell:has(input:focus-visible) .cell-ghost-retrace,
+   /* T8-W3: the peer's ghost LANDS DRAWN. Same rule, same reason — the sketch is a flourish on
+      a ring whose job is to be there. */
+   .game-cell.is-peer-cursor .cell-ghost-path {
+@@ -342,12 +383,13 @@
+ }
+ 
+ /* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+-   Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
++   Normal mode's graphite ring is the SVG .cell-ghost-path + .cell-ghost-retrace, but
++   forced-color-adjust strips
+    SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
+    HC keyboard focus had no ring. Draw a real system-color outline the UA keeps. It rides the
+    CELL, not the input: the input is opacity-0 and an opacity-0 element renders no outline. The
+    UA forces its own color under forced-colors (`Highlight`, the system focus color — never gold;
+-   crayon-blue is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
++   an author colour is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
+    without overlapping neighbours. Gated on :focus-visible → keyboard only, matching normal mode. */
+ @media (forced-colors: active) {
+   .game-cell:has(input:focus-visible) {
+diff --git a/web/frontend/src/games/shared/playerIdentity.ts b/web/frontend/src/games/shared/playerIdentity.ts
+index 4739417a..63e49fbc 100644
+--- a/web/frontend/src/games/shared/playerIdentity.ts
++++ b/web/frontend/src/games/shared/playerIdentity.ts
+@@ -60,10 +60,11 @@ export function slugFor(peerId: string, taken: ReadonlySet<string>): string {
+ }
+ 
+ /**
+- * The remote player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is
+- * the whole of the mechanism, because `HandwrittenGlyph` already strokes with that var
+- * (`HandwrittenGlyph.vue:85`). The local player keeps the incumbent blue — nothing is bound
+- * on their cells, so solo is byte-identical.
++ * A player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is the whole of
++ * the mechanism, because `HandwrittenGlyph` already strokes with that var. Every id takes an
++ * index here, including your own; what your own index is SPENT on is `selfInk`'s condition —
++ * alone on the board you are the pencil's graphite and nothing is bound on your cells, so solo
++ * stays byte-identical, and the moment a second hand is live your digits take this colour too.
+  */
+ export const inkFor = (index: number): Record<string, string> => ({
+   "--color-user-ink": `oklch(var(--peer-ink-l) 0.11 ${((index * 137.5) % 360).toFixed(1)}deg)`,
+diff --git a/web/frontend/src/games/shared/useGameCell.ts b/web/frontend/src/games/shared/useGameCell.ts
+index a4754ead..bb19e1db 100644
+--- a/web/frontend/src/games/shared/useGameCell.ts
++++ b/web/frontend/src/games/shared/useGameCell.ts
+@@ -1,5 +1,6 @@
+ import { computed, onUnmounted, ref, useTemplateRef } from "vue";
+ import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
++import { generateCellRetraceRects } from "@pencil/grid/gridPaths";
+ import { useLongPress } from "@games/shared/useLongPress";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+ 
+@@ -96,6 +97,15 @@ export function useGameCell(
+     return `${x} ${y} ${w} ${h}`;
+   });
+ 
++  // THE SECOND PASS (T9-W7 ACC-GRAPHITE). Derived here rather than plumbed: the retrace is a
++  // pure function of (boardSize, position) on the board's own seed — the same two numbers the
++  // viewBox above is derived from — and `generateCellRetraceRects` memoizes the whole record
++  // through the shared boil LRU, so 81 cells cost one generation and 81 lookups, and no board
++  // has to carry a second prop for a mark only the focused cell ever shows.
++  const ghostRetracePath = computed(
++    () => generateCellRetraceRects(props.boardSize, 1000, 42)[props.position] ?? "",
++  );
++
+   // Hidden input keeps the raw numeric string; the glyph overlay renders the display CHARACTER
+   // (hex A–G for 16×16 via toDisplayChar). Wiring this is what lets values 10–16 render a glyph
+   // at all — String(10) has no key in glyphPaths, so those cells rendered blank AND registered
+@@ -337,7 +347,8 @@ export function useGameCell(
+   const marksGridStyle = computed(() => furniture.marksGridStyle());
+ 
+   // ── User pencil marks (T4-W8 ROW 1) — the player's own notes ──────────
+-  // Distinct from the engine peek marks above in tone (crayon-blue) AND placement, so the two
++  // Distinct from the engine peek marks above in PRESSURE (opacity 1 against 0.5) AND
++  // placement, so the two
+   // never read as one: CORNER marks hug the cell in a 3×3 Snyder grid (order below), CENTER marks
+   // sit in a centred row. Both reuse the hand-drawn glyph paths and, like the engine marks, show
+   // only on an empty cell (a filled cell hides its notes; erasing the digit brings them back).
+@@ -370,6 +381,7 @@ export function useGameCell(
+     isFocused,
+     isActive,
+     cellViewBox,
++    ghostRetracePath,
+     displayValue,
+     glyphChar,
+     ariaLabel,
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 52c0a3c1..4f1ccebd 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -324,6 +324,58 @@ describe("the epoch names its worksheet — `st` gains g, z and k", () => {
+   });
+ });
+ 
++describe("your own ink arrives with the second hand (T9-W7 ACC-GRAPHITE §5)", () => {
++  it("binds nothing while you are alone, your own ink once a peer is live, and lets go", async () => {
++    const p = await bootPage();
++    const me = () => p.session.session.players.value.find((r) => r.self);
++    // READ THE ROSTER BEFORE THE JOIN, deliberately: the ink computed is evaluated here, while
++    // the identity module is still unloaded, and a getter that tested that module before it
++    // read `present` would collect no dependency and stay frozen at {} for the life of the tab.
++    // This line is the regression, and it cost a live two-page probe to find.
++    expect(me()).toBeUndefined();
++    await p.session.joinSession("room-self", true);
++
++    // Alone at the table: your row binds NOTHING, so your digits stay the pencil's graphite
++    // and a solo board is byte-identical to the one that shipped.
++    expect(me()?.ink).toEqual({});
++    expect(p.session.authorInk.value).toEqual({});
++
++    // A second hand arrives: you take the colour the room already knows you by.
++    p.peer("peer-1", true);
++    expect(me()?.ink).toEqual(inkFor(0));
++
++    // …and the last one leaving gives the pencil back.
++    p.peer("peer-1", false);
++    expect(me()?.ink).toEqual({});
++  });
++});
++
++describe("your own ink is the ROOM's too — adoption after the join (T9-W7 ACC-GRAPHITE §6)", () => {
++  it("moves your own digits when the epoch holder says your index is another", async () => {
++    const p = await bootPage();
++    await p.session.joinSession("room-adopt", true);
++    p.peer("peer-1", true);
++    const me = () => p.session.session.players.value.find((r) => r.self);
++
++    // A second hand is here, so you have a colour: the index this page minted for itself.
++    expect(me()?.ink).toEqual(inkFor(0));
++
++    // The epoch holder's board says otherwise, and the room is right — every OTHER page has
++    // been drawing you at index 3 since it adopted the same frame. Against a plain `let` the
++    // index map is invisible to the computed and your own screen keeps inkFor(0) forever.
++    p.hear(
++      "st",
++      stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3, k: { [p.selfId()]: 3 } }),
++      "peer-1",
++    );
++    expect(me()?.ink).toEqual(inkFor(3));
++
++    // …and your cells go with your row: one value, the roster chip and the digit both.
++    p.session.noteWrite(40, 7, false);
++    expect(p.session.authorInk.value["40"]).toEqual(inkFor(3));
++  });
++});
++
+ describe("ink is the room's, not the page's — `k` adoption", () => {
+   it("rebinds from the assignment, continues the cursor past it, and is idempotent", async () => {
+     const p = await bootPage();
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..a052f3ac 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -312,7 +312,8 @@ function asksLocalWire(): boolean {
+ interface Player {
+   id: string;
+   slug: string;
+-  /** the `--color-user-ink` rebinding; EMPTY for you, who keep the incumbent blue. */
++  /** the `--color-user-ink` rebinding; EMPTY for you while you are the only hand on the
++   *  board, where your digits are the pencil's own graphite (`selfInk`). */
+   ink: Record<string, string>;
+   self: boolean;
+ }
+@@ -365,8 +366,14 @@ let inkCursor = 0;
+  * nobody attached to it. The epoch holder's assignment ships with the board it names, an
+  * adopting page rebinds from it and extends from `max+1`, and the index is never reassigned —
+  * which is the whole of why a rejoiner cannot arrive to find somebody else in their colour.
++ *
++ * A REF since T9-W7, because `selfInk` reads it and a plain `let` is invisible to a computed:
++ * you join, a peer arrives, your digits ink `inkFor(0)`; the epoch holder's board then says
++ * your index is 3, `adoptInk` writes it here, every OTHER page repaints you — and your own
++ * screen keeps the colour nobody else can see you in. The map was only ever read by the wire
++ * before, which is why the `let` held.
+  */
+-let inkIndex: Record<string, number> = {};
++const inkIndex = ref<Record<string, number>>({});
+ /** One suppressed publish per adopted board — a flag rather than a timer, because the
+  *  generation watch that would echo it runs on Vue's own flush, not on ours. */
+ let adopted = 0;
+@@ -385,7 +392,7 @@ export const session = {
+   /** you first, then everyone else in the order this page met them. */
+   players: computed<Player[]>(() => {
+     const me = known.value[selfId.value];
+-    const rows: Player[] = me ? [{ ...me, self: true }] : [];
++    const rows: Player[] = me ? [{ ...me, self: true, ink: selfInk.value }] : [];
+     for (const id of present.value) {
+       const p = known.value[id];
+       if (p) rows.push({ ...p, self: false });
+@@ -395,15 +402,57 @@ export const session = {
+ };
+ 
+ /**
+- * Per-cell `--color-user-ink` rebindings for every cell a PEER authored. One `:style` at
+- * `BoardHost`'s single cell-mount site inks all five games; your own cells bind nothing, so
+- * a solo board is byte-identical to the one that shipped.
++ * YOUR OWN INK, AND WHEN YOU HAVE ONE (T9-W7 ACC-GRAPHITE §5).
++ *
++ * Your digits are the pencil's graphite while you are the only hand on the board, and they
++ * take the colour the room already knows you by the moment a second live player is in the
++ * roster. That is the family's whole sentence made mechanical: colour on the BOARD means more
++ * than one of us is here. The index is not minted here — `mint()` has always given every id an
++ * index INCLUDING your own, because the other pages ink you from `k` — so this is a condition
++ * on WHEN that index is spent on your own screen, and nothing on the wire changes.
++ *
++ * Empty while solo and empty in a room you are alone in: zero cells bound, zero rows bound,
++ * byte-identical to the board that shipped. Without it, re-pointing `--color-user-ink` to
++ * graphite would make you the one player in the room without a colour — the roster's swatch IS
++ * the digit's own ink, so your chip would go grey in a list of coloured ones.
++ */
++/** F1 — the owner's ruling, kept as ONE condition so both arms are a build away (chair §6.8).
++ *  ON: your digits take your room ink the moment a second live player is in the roster. OFF:
++ *  your hand stays the pencil in every room and only peers carry colour. The default leans YES
++ *  on the artifacts; U-10 disposes. Nothing downstream branches — every consumer reads the
++ *  empty map the OFF arm returns, which is the solo board's own state. */
++const F1_SELF_INK = true;
++
++const selfInk = computed<Record<string, string>>(() => {
++  if (!F1_SELF_INK) return {};
++  // THE REACTIVE READS COME FIRST, AND THAT ORDER IS THE WHOLE RULE. `ident` is a plain `let`
++  // (the identity module is `import()`ed at the join), so a getter that tests it before it
++  // touches `present` short-circuits on a SOLO page, collects no dependency at all, and is then
++  // frozen at `{}` for the life of the tab — the roster's own row stayed graphite in a live
++  // two-page room with `ident` set, `present` holding the peer and the index minted. Measured,
++  // not reasoned: `evidence/.../prototype/ACC-GRAPHITE/readings/room-*.json`.
++  const peers = present.value.length;
++  const me = selfId.value;
++  if (!ident || peers === 0) return {};
++  const index = inkIndex.value[me];
++  return index === undefined ? {} : ident.inkFor(index);
++});
++
++/**
++ * Per-cell `--color-user-ink` rebindings for every cell an author's colour is owed to. One
++ * `:style` at `BoardHost`'s single cell-mount site inks all five games; a solo board binds
++ * nothing at all, so it stays byte-identical to the one that shipped.
+  */
+ export const authorInk = computed(() => {
+   const out: Record<string, Record<string, string>> = {};
++  const mine = selfInk.value;
++  const haveMine = Object.keys(mine).length > 0;
+   for (const pos of Object.keys(ledger.clock)) {
+     const author = ledger.clock[pos][1];
+-    if (author === selfId.value) continue;
++    if (author === selfId.value) {
++      if (haveMine) out[pos] = mine;
++      continue;
++    }
+     const p = known.value[author];
+     if (p) out[pos] = p.ink;
+   }
+@@ -524,13 +573,13 @@ function writeSessionParam(id: string | null): void {
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+-  // EVERY id takes an index, including your own. You still keep `--color-user-ink` — nothing is
+-  // bound on your cells, so solo is byte-identical — but the OTHER pages ink you from `k`, and
+-  // a publisher with no index of its own would be the one player the room could not agree
+-  // about. Everyone else walks the golden angle from where the roster last stopped, so an early
+-  // peer never re-inks because a late one arrived.
+-  const index = inkIndex[id] ?? inkCursor++;
+-  inkIndex[id] = index;
++  // EVERY id takes an index, including your own. What that index is SPENT on is `selfInk`'s
++  // question, not this one — alone you keep the pencil and nothing binds — but the OTHER pages
++  // ink you from `k` from the first moment, and a publisher with no index of its own would be
++  // the one player the room could not agree about. Everyone else walks the golden angle from
++  // where the roster last stopped, so an early peer never re-inks because a late one arrived.
++  const index = inkIndex.value[id] ?? inkCursor++;
++  inkIndex.value[id] = index;
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+@@ -551,7 +600,7 @@ function adoptInk(k: Record<string, number>): void {
+   for (const [id, raw] of Object.entries(k)) {
+     if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
+     const index = Math.trunc(raw);
+-    inkIndex[id] = index;
++    inkIndex.value[id] = index;
+     if (index > top) top = index;
+     const ink = id === selfId.value ? {} : ident!.inkFor(index);
+     const held = next[id];
+@@ -709,7 +758,7 @@ function sendState(to?: string): void {
+       // cap (`relay.ts`), which is not a number this design has to think about twice.
+       g: mountedGameId() ?? "",
+       z: source.size(),
+-      k: { ...inkIndex },
++      k: { ...inkIndex.value },
+     }),
+     to,
+   );
+@@ -877,7 +926,7 @@ function teardown(): void {
+   live.value = false;
+   ownTable = false;
+   inkCursor = 0;
+-  inkIndex = {};
++  inkIndex.value = {};
+   clearCursors();
+   stopPresenceClocks(); // the beat and every peer's expiry belong to the room that just left
+   adopted = 0;
+diff --git a/web/frontend/src/pencil/config/filterBudget.ts b/web/frontend/src/pencil/config/filterBudget.ts
+index 6d5d0726..376e0918 100644
+--- a/web/frontend/src/pencil/config/filterBudget.ts
++++ b/web/frontend/src/pencil/config/filterBudget.ts
+@@ -153,13 +153,9 @@ const TRANSIENT: readonly FilterBudgetRow[] = [
+     reason:
+       "the toggle's two live bodies (sun + moon) — the Bloom's warped instances, one raster each",
+   },
+-  {
+-    selector: "button.icon-btn svg.sparkle-icon",
+-    count: 1,
+-    filter: "drop-shadow",
+-    reason:
+-      "the Solve button's sparkle, one per mounted panel (was 2 — the P1-W4 twin `v-if`); built-in interpolable drop-shadow, not a reference filter — GPU path, benign (r3 §3.2)",
+-  },
++  // The Solve sparkle's drop-shadow RETIRED (T9-W7 ACC-GRAPHITE): a violet halo reachable by
++  // no token, deleted rather than re-inked grey. The census travels 9 -> 8 and the union sheds
++  // the 30x30 box the shadow filtered.
+ ];
+ 
+ /**
+@@ -207,12 +203,19 @@ export const FILTER_BUDGET_CEILING = 14;
+  * the 2% tolerance had been carrying silently: a constant whose docstring calls it "the measured
+  * union" has to be the measured union, so it is re-derived here rather than left approximately
+  * right. Shipped: row 45572, coarse 6673 — chromium and webkit byte-identical.
++ *
++ * T9-W7 ACC-GRAPHITE RE-DERIVED BOTH DOWNWARD, which is the direction this law had never
++ * travelled: the Solve sparkle's drop-shadow is deleted, so its box leaves the union with it.
++ * Measured by the same instrument (`e2e/filter-census.spec.ts`'s own `unionArea`, read off a
++ * deliberately-failed budget) on the same scene, both engines identical: row 45572 -> 44642
++ * (-930), coarse 6673 -> 5743 (-930). The same 930 px^2 in both regimes, which is the 30x30
++ * icon box plus its shadow spread and nothing else.
+  */
+ export const FILTER_BUDGET_UNION_AREA = {
+   /** ≥1024, 1280×800 dpr1 — the row regime every config in this repo runs at. */
+-  row: 45572,
++  row: 44642,
+   /** <1024, 393×699 dpr3 coarse — the mobile arm of the same one card. */
+-  coarse: 6673,
++  coarse: 5743,
+ } as const;
+ 
+ /** Sub-pixel tolerance on the union, both directions. Not a growth allowance. */
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..a54e78d3 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -82,11 +82,21 @@ const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
+ const strokeColor = computed(() => {
+   if (props.isSolved) return "url(#solver-ink)";
+   if (isGivenOriginal.value) return "var(--color-foreground)";
+-  return "var(--color-user-ink, #2563eb)";
++  // No fallback: `--color-user-ink` is declared in BOTH themes (index.css) and a room rebinds
++  // it per cell rather than unsetting it, so the second argument could only ever fire on a
++  // page with no stylesheet. A fallback that cannot be reached is a second value to keep in
++  // step with the first.
++  return "var(--color-user-ink)";
+ });
+ 
++// AUTHORSHIP IS WEIGHT (T9-W7 ACC-GRAPHITE). A clue came PRINTED on the sheet and a digit you
++// wrote is DRAWN, so the clue is the heavier of the two: 6 units against 4.5 = 1.33x, where 5
++// against 4.5 was 1.11x — a tenth of a stroke, which no reader can use. The clue moves, never
++// your hand: 4.5 units is the hand the owner has read for nine tranches, and on a 393 phone it
++// is already at the legibility floor. The solver's own answer keeps 5 and its rainbow ink.
+ const strokeWidth = computed(() => {
+-  return props.isGiven || props.isSolved ? 5 : 4.5;
++  if (props.isSolved) return 5;
++  return props.isGiven ? 6 : 4.5;
+ });
+ 
+ // Reactive display path — Vue restores this via :d on re-render; animations setAttribute over it
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..f4222699 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,7 +1,13 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+-import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
++import {
++  generateGridBoilFrames,
++  generateFrameTraceFrames,
++  tickMarksAlong,
++  poseLengths,
++  poseFronts,
++} from "../gridPaths";
+ import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+@@ -23,6 +29,12 @@ const props = defineProps<{
+    *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+    *  twin is automatic: there is no second implementation to keep in sync. */
+   progress?: number;
++  /** How many cells the board is WRITABLE in (`totalCells - givens`). REQUIRED: the tally
++   *  needs the denominator, not just the fraction, and a default would be a lie about the
++   *  board it is drawn on — the measured spread is 10-12 cells at 4x4 against 161-165 at
++   *  16x16, so a 51 fallback would mis-count every board but one. One caller (`GameBoard`,
++   *  `fillable`), so requiring it costs nothing and cannot go quietly wrong. */
++  writable: number;
+   /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+    *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+    *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+@@ -88,11 +100,52 @@ const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+ const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
+ const progressPercent = computed(() => Math.round(progress.value * 100));
+ 
+-// pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+-// every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+-// top-left. A fill event mutates exactly this one custom value — a cheap paint, never the
+-// beat, never a filter re-raster.
+-const traceDashOffset = computed(() => 1000 * (1 - progress.value));
++// THE TALLY (T9-W7 ACC-GRAPHITE) — one tick per written cell, laid round the inside of the
++// frame. The gauge was a violet second pencil retracing the frame line in registration, which
++// measured 2.92:1 over the rule it covered (under the 1.4.11 floor) and read as a slightly
++// thicker frame edge; ink alone could never have fixed that, because a retrace of a rule IS a
++// rule. So the form changes and the ink goes home to graphite: the `dealt ⊪` tally the reader
++// already knows, wrapped round the board, offset one stroke width inward by `.progress-pose`.
++//
++// LAW A — ONE MARK, EVERY BOARD. A tick per cell is a rule written for a 9x9 and never priced
++// anywhere else: at 16x16 the pitch is 6.7 units and the "tick" comes out 4.5 x 4.2 px, a
++// square blob; at 4x4 it is 100 units long and the tally reads as a dashed rule. So the INK is
++// the constant and the COUNT is what gives: 45 units of graphite and 25 of paper, at every
++// board size, and where the frame cannot hold one slot per writable cell the ticks stand for
++// groups. What a tick MEANS changes with the board — one cell at 4x4, `writable/slots` cells
++// once the frame runs out of room — and the spoken layer carries the exact number regardless
++// (`aria-valuetext`, unchanged).
++//
++// THE RATIO, NOT AN INTEGER. `k` is `written · slots / writable`, rounded. The obvious form —
++// a tick stands for `m = ceil(writable/slots)` whole cells — is honest for one deal and a
++// cliff for the next: at 9x9 Hard, writable 56 fills 56 ticks and writable 57 fills 29, a
++// 1.93x jump in the mark for one cell of difference in the deal. The ratio form is continuous
++// across that boundary by construction (56 -> 56, 57 -> 56, 58 -> 56) and the price is that a
++// tick stands for a real number of cells (1.018 at writable 57) rather than a whole one.
++//
++// A fill event re-cuts exactly these four path strings — a cheap paint, never the beat, never
++// a re-raster.
++//
++// NO DASHOFFSET AND NO TWEEN. A tick is one stroke of a pencil; you do not watch it grow, and
++// there is no interpolable value left in the layer to watch: the mechanism is PRM-identical by
++// construction rather than by a second no-preference arm.
++const TICK_INK = 45;
++const TICK_GAP = 25;
++const writable = computed(() => Math.max(1, Math.round(props.writable)));
++const written = computed(() =>
++  Math.min(writable.value, Math.round(progress.value * writable.value)),
++);
++
++// THE TICKS ARE CUT, NOT DASHED, AND SEGMENT COUNT IS WHY. WebKit restarts a polyline's dash
++// phase roughly every 128 segments where Chromium dashes the path whole, and a grain-baked
++// ring is 493 segments: the gauge that stood here, `stroke-dasharray="1000 1000"` at offset
++// 750 under `pathLength="1000"`, painted 0.228 of the ring in Chromium and 0.921 in WebKit off
++// the same markup. Decimating the pose to 123 segments walks it back in both engines; a
++// straight 599-segment rectangle breaks the same way, so it is not the wobble. Declaring the
++// same list in CSS rather than as an attribute agrees (0.249 / 0.251) — the syntax bounds the
++// fault, it does not cause it, which is why no dash survives in this layer at all:
++// `tickMarksAlong` (gridPaths) returns the marks as GEOMETRY, k subpaths cut out of the pose's
++// own points, with no dash, no offset and no `pathLength` for an engine to normalise.
+ 
+ // Grain-static baked in (the grid's own tooth, in the 1000-unit viewBox regime the trace
+ // lives in — the T3-W13 grain-in-geometry discipline reused verbatim). Reactive on
+@@ -107,6 +160,24 @@ const traceFrames = computed(() =>
+   ),
+ );
+ 
++// The drawn poses: the same four grain-baked rings, cut down to the ticks that are written.
++// Law A, at the caller, on each pose's OWN measured perimeter (`poseLengths` — the four wobble
++// apart by a fraction of a unit and the ring is not a rectangle): `slots` is as many 70-unit
++// pitches as the frame holds, never more than there are cells to count; `k` is `written`
++// scaled into those slots. `duty` is what LAW A's 45 units of ink come to as a fraction of
++// THIS pose's pitch, so the mark is the same mark on every board and every pose.
++const tallyFrames = computed(() =>
++  traceFrames.value.map((d) => {
++    const perimeter = poseLengths([d])[0];
++    const slots = Math.max(
++      1,
++      Math.min(writable.value, Math.floor(perimeter / (TICK_INK + TICK_GAP))),
++    );
++    const k = Math.min(slots, Math.round((written.value * slots) / writable.value));
++    return tickMarksAlong(d, k, slots, (TICK_INK * slots) / perimeter);
++  }),
++);
++
+ // ── T8-W3 join trace: the SECOND hand on the same rectangle ──
+ //
+ // The estate's own retrace idiom, the one `scribbleUnderline`'s selected state uses: a second
+@@ -116,7 +187,6 @@ const traceFrames = computed(() =>
+ // pencil rather than a thicker first one. Filterless and grain-baked like its sibling: no
+ // `filter=` is minted, so the census is unmoved.
+ const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?? 0)));
+-const joinDashOffset = computed(() => 1000 * (1 - joinProgress.value));
+ 
+ const joinTraceFrames = computed(() =>
+   generateFrameTraceFrames(
+@@ -128,6 +198,12 @@ const joinTraceFrames = computed(() =>
+   ),
+ );
+ 
++// The join ring's front, CUT rather than dashed (`poseFronts`, the tally's own arc-length
++// walk). It was `pathLength="1000"` + `stroke-dasharray="1000 1000"` over a moving offset,
++// which is the 493-segment fault above: at a quarter of the way round, WebKit painted 92%.
++// The one-shot drives the fraction every frame, so there was never a tween here to lose.
++const joinFrontFrames = computed(() => poseFronts(joinTraceFrames.value, joinProgress.value));
++
+ // Current frame's path data (transition layer — draw-in/erase only, see template)
+ const currentPaths = computed(() => {
+   const f = activeFrame.value;
+@@ -446,20 +522,24 @@ onUnmounted(() => {
+       </g>
+     </template>
+ 
+-    <!-- Progress trace (T4-W9): the violet second-pencil FILL gauge. Its own filterless
+-             grain-baked sibling layer (never gated on animState — the fill is orthogonal to
+-             draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
+-             and painted LAST so it sits over the graphite. The dash draws it to the current
+-             fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
++    <!-- Progress tally (T4-W9, re-formed T9-W7): one graphite tick per written cell, laid
++             round the INSIDE of the frame. Its own filterless grain-baked sibling layer (never
++             gated on animState — the fill is orthogonal to draw-in/erase), opacity-swapped on
++             the SAME boilFrame beat as the frame it hugs and painted LAST so it sits over the
++             graphite. `.solve-success` hides `.progress-trace` (index.css) so gold owns the
+              win. Zero steady-state raster: filterless static geometry, compositor-only swap.
+              P1-W3 / r3 §4.4 — the stack used to render and flip 8/s UNCONDITIONALLY. At
+-             `progress === 0` the dash offset is 1000, so the path draws nothing and four
+-             invisible <g>s traded opacity over the whole board box forever; now they are not
+-             rendered at all. At the win the trace is opacity 0 but must still FADE, so the
+-             stack is PINNED to pose 0 rather than unmounted (the logo's during-bake idiom) —
+-             the trade stops and the 500 ms bow-out survives. -->
++             `progress === 0` there are no ticks, so the whole stack is not rendered at all —
++             a tally with no marks is nothing, honestly. At the win the trace is opacity 0 but
++             must still FADE, so the stack is PINNED to pose 0 rather than unmounted (the
++             logo's during-bake idiom) — the trade stops and the 500 ms bow-out survives.
++             `stroke-linecap` is BUTT and that is load-bearing: a round cap adds half a stroke
++             width at each end of every tick, which on a 16x16 (pitch 6.67) closes the gap and
++             fuses the tally back into one continuous run — the very thing this form exists to
++             stop being. The ticks are CUT (`tickMarksAlong`), never dashed: the dash is the one
++             mechanism here the two engines disagree about. -->
+     <g
+-      v-for="(d, f) in progress > 0 ? traceFrames : []"
++      v-for="(d, f) in progress > 0 ? tallyFrames : []"
+       :key="'trace-' + f"
+       class="progress-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -468,14 +548,11 @@ onUnmounted(() => {
+         :d="d"
+         class="progress-trace"
+         fill="none"
+-        stroke="var(--color-progress-ink)"
+-        stroke-width="8"
+-        stroke-opacity="0.95"
+-        stroke-linecap="round"
++        stroke="var(--color-pencil-graphite)"
++        stroke-width="10"
++        stroke-opacity="1"
++        stroke-linecap="butt"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: traceDashOffset }"
+       />
+     </g>
+ 
+@@ -483,7 +560,7 @@ onUnmounted(() => {
+              Everything the progress trace is — filterless grain-baked poses, opacity-swapped on
+              the SAME beat, unmounted whole at rest — with three differences that are the whole
+              feature: its own `baseSeed` (a second hand, in registration), its ink rebound to the
+-             peer's `--color-user-ink` off the group, and a dash driven by a finite one-shot
++             peer's `--color-user-ink` off the group, and a front CUT by a finite one-shot
+              instead of the fill fraction. Painted last, over the graphite AND over the fill
+              gauge, because for its 1180ms it is the thing being said.
+              At `joinProgress === 0` — at rest, and under PRM, where the wash never runs — the
+@@ -491,7 +568,7 @@ onUnmounted(() => {
+              its sibling's, verbatim: the win freezes the stack on pose 0 rather than trading
+              opacity 8/s under gold that owns the frame. -->
+     <g
+-      v-for="(d, f) in joinProgress > 0 ? joinTraceFrames : []"
++      v-for="(d, f) in joinProgress > 0 ? joinFrontFrames : []"
+       :key="'join-' + f"
+       class="join-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -506,9 +583,6 @@ onUnmounted(() => {
+         :stroke-opacity="joinOpacity ?? 0"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: joinDashOffset }"
+       />
+     </g>
+   </svg>
+@@ -571,23 +645,33 @@ onUnmounted(() => {
+ .progress-pose {
+   opacity: 0;
+   will-change: opacity;
++  /* OFF THE RULE, INWARD — the `.join-pose` ruling below, applied to the gauge that needed it
++     first. A trace in registration with the frame line is not a gauge: it measured 1.05–1.15:1
++     over the graphite it covered and read as a thicker frame edge.
++     TWO stroke widths in, not one, and that is measured rather than reasoned: at 0.984 the
++     ticks still sat 2-4 px INSIDE the painted rule across all 220 sampled columns, because the
++     rule is 7.6 px wide and the offset only buys 5.1. 0.968 — the constant `.join-pose` below
++     already carries — buys 16 units = 10.2 px and puts the whole tick on PAPER at 14.87:1
++     light / 11.99:1 dark. A static transform on a static group: composited, no re-raster, no
++     filter, no beat. */
++  transform: scale(0.968);
++  transform-origin: 50% 50%;
+ }
+ 
+ .progress-pose.is-active {
+   opacity: 1;
+ }
+ 
+-/* The fill-front advances on FILL events only (progress is a computed over the game's
+-   values, never the beat). No-preference-gated: under PRM there is NO transition — the
+-   offset snaps to its correct static value and the beat is already frozen (boilBeat.ts),
+-   so the layer freezes on pose 0 with the right offset (PRM-safe by construction). The
+-   opacity term is the .solve-success bow-out (index.css asserts the end state); it lives
+-   here, unlayered, so a CSS-layer `transition` can't win over it. */
++/* The tally gains a tick per fill event and nothing tweens it — the dash LIST changes length,
++   which is not an interpolable value, and a tick is one stroke of a pencil besides. What is
++   left is the .solve-success bow-out (index.css asserts the end state), and it is no longer
++   gated on PRM because there is no motion left in this layer to gate: the tally is identical
++   under both preferences by construction. The bow-out keeps its no-preference gate verbatim —
++   under PRM the win still snaps. It lives here, unlayered, so a CSS-layer `transition` can't
++   win over it. */
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+-    transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++    transition: opacity 500ms ease;
+   }
+ }
+ 
+@@ -596,10 +680,10 @@ onUnmounted(() => {
+   opacity: 0;
+   will-change: opacity;
+   /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+-     A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+-     the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+-     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+-     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
++     A second seed on the same rect is not a second ring: two strokes at one offset fuse into a
++     single fringed band and the fill gauge is simply gone. That was measured against a violet
++     gauge and holds harder now the gauge is graphite — a peer's ink over the board's own
++     pencil, in registration, would read as ONE ring.
+      So the second pass is offset, which is what the estate's own retrace idiom always was
+      (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+      stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.
+@@ -607,6 +691,9 @@ onUnmounted(() => {
+      card's live face clips (`.live-face-slot { overflow: hidden }`) and a join landing while
+      the deck is open has to ring THAT face (M13 row 13). An outward ring reads beautifully on
+      the playing view and is cut off in the card; an inward one is whole in both.
++     UNMOVED by T9-W7: the join ring keeps the offset it shipped with, and the tally goes
++     further in (0.968) rather than pushing this ring off its measured seat. The two are told
++     apart by form (continuous against ticked), by offset and by ink.
+      A static transform on a static group: composited, no re-raster, no filter, no beat. */
+   transform: scale(0.984);
+   transform-origin: 50% 50%;
+@@ -616,12 +703,12 @@ onUnmounted(() => {
+   opacity: 1;
+ }
+ 
+-/* NO TRANSITION ON THE DASH, and that is the load-bearing difference from `.progress-trace`.
+-   The fill gauge's front moves on FILL EVENTS, so a 240ms tween is what carries it between two
+-   resting values. The join ring's front is driven every frame by a `sequence` handle that is
+-   already the easing — laying a second 240ms tween over it would smear the beat's own curve and
+-   leave the ring un-arrived ~240ms after J3's window has closed. The one-shot owns the motion;
+-   the paint just follows it. */
++/* NO TRANSITION ON THE FRONT, in either stack, and for the same reason at each. The join
++   ring's front is driven every frame by a `sequence` handle that is already the easing — a
++   tween laid over it would smear the beat's own curve and leave the ring un-arrived after J3's
++   window has closed. The tally's front is a tick appearing where a mark was placed, and there
++   is no interpolable value left in either layer to tween: both are geometry now. The one-shot
++   owns the motion; the paint follows it. */
+ 
+ /* FILL-gauge a11y mirror — visually hidden, still announced (the sr-only clip). */
+ .progress-trace-a11y {
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..01c57c1f 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -69,6 +69,142 @@ export function generateCellRects(
+   );
+ }
+ 
++/** Inset of the retrace rect from the cell rect, in board-viewBox units — one focus stroke
++ *  width (12) less the half-widths that already overlap. Two 12-unit passes 10 apart fuse
++ *  into a 22-unit band; see gameCell.css's `.cell-ghost-retrace`. */
++const RETRACE_INSET = 10;
++
++/**
++ * THE SECOND PASS (T9-W7 ACC-GRAPHITE) — the same rect, one stroke width in, on its own seed.
++ *
++ * A pencil makes a heavy line by going round twice. This emits the inner pass of the focus
++ * ring: `generateCellRects`' geometry inset by `RETRACE_INSET`, seeded `+3` off the same
++ * lattice so the two passes wander independently (the `scribbleUnderline` / `.join-pose`
++ * retrace idiom, in the cell's own viewBox), and REVERSED so the draw-on runs the other way
++ * round — no second keyframe, no second timing constant.
++ *
++ * Subgrid-independent like its sibling and memoized through the same LRU under its own key.
++ */
++export function generateCellRetraceRects(
++  boardSize: number,
++  viewBoxSize: number,
++  seed: number = 42,
++): Record<number, string> {
++  return useBoilCache<Record<number, string>>(
++    ["cellRetraceRects", boardSize, viewBoxSize, seed],
++    () => {
++      const cellSize = viewBoxSize / boardSize;
++      const cellSegments = boardSize >= 16 ? 2 : 4;
++      const inset = Math.min(RETRACE_INSET, cellSize / 4);
++      const rects: Record<number, string> = {};
++      for (let r = 0; r < boardSize; r++) {
++        for (let c = 0; c < boardSize; c++) {
++          const pos = r * boardSize + c;
++          rects[pos] = reverseLinearPath(
++            wobbleRect(
++              c * cellSize + inset,
++              r * cellSize + inset,
++              cellSize - inset * 2,
++              cellSize - inset * 2,
++              {
++                roughness: 0.4,
++                segments: cellSegments,
++                seed: seed + 500 + pos * 7 + 3,
++                jagged: true,
++              },
++            ),
++          );
++        }
++      }
++      return rects;
++    },
++  );
++}
++
++/** Reverse a jagged (`M x,y L x,y … Z`) closed path so the pencil's second pass travels the
++ *  other way round. `wobbleRect({ jagged: true })` serializes through `pointsToLinear`, so the
++ *  path is exactly a move plus lines and the point list is the whole of it. */
++function reverseLinearPath(d: string): string {
++  const points = d.match(/-?\d[\d.e+-]*,-?\d[\d.e+-]*/g);
++  if (!points || points.length < 2) return d;
++  return `M${points.reverse().join(" L")} Z`;
++}
++
++/**
++ * THE TALLY'S TICKS, AS GEOMETRY (T9-W7 ACC-GRAPHITE).
++ *
++ * `k` marks laid along a baked polyline: the ring is divided into `slots` equal pitches and
++ * each of the first `k` carries an ink mark `duty` of the pitch long. The marks are cut out of
++ * the ring's own points, so every tick wanders exactly as the frame it sits inside does.
++ *
++ * The CALLER owns the law (`HandDrawnGrid`, LAW A: 45 units of ink and 25 of paper on every
++ * board, so `duty` is 45·slots/perimeter and `slots` is what the frame can hold). This
++ * function knows only how to cut; the default duty is the shape of the mark, not a policy.
++ *
++ * IT IS GEOMETRY AND NOT A DASH, and the reason is SEGMENT COUNT rather than syntax. WebKit
++ * restarts a dash phase every ~128 segments of a polyline where Chromium dashes the path
++ * whole; a grain-baked ring is 493 segments by construction, so the gauge this replaced
++ * painted 0.228 of the ring in Chromium and 0.921 in WebKit off identical markup, and
++ * decimating the same pose walks it back (123 segments agree). A cut path has no phase for an
++ * engine to restart, so both engines paint the same k, and no board size or grain setting can
++ * push the count past somebody's chunk boundary and regress it.
++ *
++ * It cuts over `posePoints` / `poseLengths` — the arc-length walk `poseFronts` uses — rather
++ * than a scanner of its own: one grammar for every front this file cuts.
++ *
++ * Pure of its arguments and cheap (one pass over ~350 points per pose, on a FILL event only).
++ */
++export function tickMarksAlong(
++  d: string,
++  k: number,
++  slots: number,
++  duty: number = 0.57,
++): string {
++  const pts = posePoints(d);
++  if (k <= 0 || slots <= 0 || pts.length < 2) return "";
++  const cum: number[] = [0];
++  for (let i = 1; i < pts.length; i++) {
++    cum.push(cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]));
++  }
++  const total = cum[cum.length - 1];
++  if (total <= 0) return "";
++  const pitch = total / slots;
++  const ink = pitch * duty;
++  /** The point at arc length `s`, and the index of the vertex after it. */
++  const at = (s: number): { p: [number, number]; next: number } => {
++    let lo = 0;
++    let hi = cum.length - 1;
++    while (lo < hi) {
++      const mid = (lo + hi) >> 1;
++      if (cum[mid] < s) lo = mid + 1;
++      else hi = mid;
++    }
++    const i = Math.max(1, lo);
++    const seg = cum[i] - cum[i - 1] || 1;
++    const t = Math.min(1, Math.max(0, (s - cum[i - 1]) / seg));
++    return {
++      p: [
++        pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t,
++        pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t,
++      ],
++      next: i,
++    };
++  };
++  const out: string[] = [];
++  for (let m = 0; m < Math.min(k, slots); m++) {
++    const a = m * pitch;
++    const b = Math.min(total, a + ink);
++    const start = at(a);
++    const end = at(b);
++    const mid = pts.slice(start.next, end.next);
++    const chain = [start.p, ...mid, end.p]
++      .map((p) => `${+p[0].toFixed(2)},${+p[1].toFixed(2)}`)
++      .join(" L");
++    out.push(`M${chain}`);
++  }
++  return out.join(" ");
++}
++
+ // ── Grain bake (T3-W13 §1-P2) ─────────────────────────────────────
+ //
+ // The booked geometric bake (pencilConfig.ts, grain-static disposition) EXECUTED for
+@@ -346,8 +482,8 @@ const FRAME_Y_PAD = 0;
+  * grammar, NOT the grid's live-filter grammar. The consumer renders these as filterless
+  * static siblings, opacity-swapped on the shared boil beat: steady-state raster zero.
+  *
+- * pathLength normalisation, dash draw, and the fill-front tween live at the consumer
+- * (HandDrawnGrid) — this function owns only the ring geometry.
++ * This function owns only the ring geometry; `poseLengths` below measures it and
++ * `poseFronts` / `tickMarksAlong` cut it. Nothing here declares a dash.
+  */
+ export function generateFrameTraceFrames(
+   viewBoxSize: number,
+@@ -369,6 +505,83 @@ export function generateFrameTraceFrames(
+   );
+ }
+ 
++/** A closed linear pose (`pointsToLinear` + ` Z`) back to its points, the close made explicit. */
++function posePoints(d: string): [number, number][] {
++  const nums = d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
++  if (!nums || nums.length < 4) return [];
++  const pts: [number, number][] = [];
++  for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), Number(nums[i + 1])]);
++  if (/z\s*$/i.test(d) && pts.length) pts.push(pts[0]);
++  return pts;
++}
++
++/**
++ * Arc length of each pose, in the poses' own user units. Pure, geometry-only.
++ *
++ * The poses differ from one another by 3.59 units in 3,965 (0.091%), so anything measured on
++ * one pose is within ~2.3 px of the others on a 2,513-px perimeter. Measured, not assumed.
++ *
++ * Callers: `poseFronts` below, `tickMarksAlong` above, and the §10 tally — one arc-length
++ * walk for every front this estate cuts, rather than one scanner per consumer.
++ */
++export function poseLengths(frames: string[]): number[] {
++  return frames.map((d) => {
++    const pts = posePoints(d);
++    let total = 0;
++    for (let i = 1; i < pts.length; i++)
++      total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
++    return total;
++  });
++}
++
++/**
++ * Each pose CUT at `fraction` of its own arc length — a continuous front, as geometry.
++ *
++ * THE DASH IS GONE, AND THAT IS THE CURE (T9-W7 §1). The join ring drew its front with
++ * `stroke-dasharray` over `pathLength="1000"`, and WebKit read 92% filled at a quarter. The
++ * cause is SEGMENT COUNT, measured on this ring in both engines: WebKit restarts the dash
++ * phase every ~128 segments of a polyline, Chromium dashes the path whole, and a grain-baked
++ * ring is 493 segments. Decimating the same pose walks it back (123 → agreement); a perfectly
++ * straight 599-segment rectangle breaks identically, so it is not the wobble; the same list
++ * declared in CSS rather than as an attribute agrees (0.249 / 0.251), so the syntax bounds it
++ * but does not cause it.
++ *
++ * So the front is not dashed. It is DRAWN: the pose is truncated at `fraction · length` with
++ * the final point interpolated. Engine-independent by construction, and it cannot regress when
++ * a board size or a grain setting moves the segment count past somebody's chunk boundary.
++ *
++ * The price, declared: `stroke-dashoffset` was tweenable and a truncated `d` is not, so a
++ * front now STEPS per event instead of easing. The join ring's front is driven every frame by
++ * its own one-shot, so it has no tween to lose.
++ */
++export function poseFronts(frames: string[], fraction: number): string[] {
++  const f = Math.max(0, Math.min(1, fraction));
++  if (f >= 1) return frames;
++  if (f <= 0) return frames.map(() => "");
++  const lengths = poseLengths(frames);
++  return frames.map((d, i) => {
++    const pts = posePoints(d);
++    const target = lengths[i] * f;
++    if (!pts.length || target <= 0) return "";
++    const out = [pts[0]];
++    let run = 0;
++    for (let k = 1; k < pts.length; k++) {
++      const seg = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
++      if (run + seg >= target) {
++        const t = seg === 0 ? 0 : (target - run) / seg;
++        out.push([
++          pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * t,
++          pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * t,
++        ]);
++        break;
++      }
++      run += seg;
++      out.push(pts[k]);
++    }
++    return pointsToLinear(out);
++  });
++}
++
+ /**
+  * Generate boil frame variants for a standalone line segment.
+  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.

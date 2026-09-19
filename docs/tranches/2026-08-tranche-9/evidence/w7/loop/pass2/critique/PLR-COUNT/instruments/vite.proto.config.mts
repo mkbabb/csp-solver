@@ -1,0 +1,3 @@
+// CRITIC lane (PLR-COUNT pass 2): the prototype worktree, private cacheDir, :4243.
+import base from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-53/web/frontend/vite.config.ts";
+export default { ...base, cacheDir: "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/vc-proto" };

@@ -1,0 +1,133 @@
+/* ─────────────────────────────────────────────────────────────────────────────
+ * ACC-FIVE · pass 1 · the prototype overlay. Injected with `addStyleTag`; NOT a
+ * patch, and no product file is touched by it.
+ *
+ * FOUR token names, six declarations, both themes — plus three rules that are not
+ * tokens at all (the sparkle's inline glow, the confirm's destructive face, the
+ * heading tint that retires to the chip).
+ *
+ * THE NUMBERS EACH VALUE WAS DERIVED FROM live in `readings/ink-search.json` and
+ * `readings/separation.json`; the derivation is `probe/search-inks.mjs` +
+ * `probe/separation.mjs`, run on the grounds the engine actually painted
+ * (`readings/grounds.json`), never on a hex read out of a stylesheet.
+ *
+ * THE ONE PLACE THIS OVERLAY IS NOT THE CURE (stated so the record cannot lie):
+ * `addStyleTag` appends to <head> AFTER index.css, so the print block at
+ * index.css:934-936 — which re-points `--color-user-ink` to #000 — would lose to
+ * this file on source order. In the real cure the alias sits at index.css:151 and
+ * print still wins. The overlay therefore RE-STATES the print arm at its foot, so
+ * the prototype measures the cure's behaviour rather than the injection's.
+ * ───────────────────────────────────────────────────────────────────────────── */
+
+:root {
+  /* THE PEN'S INK TIER — crayon-blue's own hue (251.4° OKLCH), darkened until it
+     clears the AA text floor on both papers. The lightness step is the whole move;
+     the hue does not travel. Round-trip hue 251.2°, 0.17° off the anchor.
+     Measured: 5.065:1 on --color-card, 4.945:1 on --color-background.
+     Today's blue-600 reads 5.078 / 4.958 — the digit's weight moves by 0.013 of a
+     contrast ratio, which is the whole point of picking THIS L and not a darker one. */
+  --color-blue-ink: #026fc4;
+
+  /* AUTHORSHIP IS THE BLUE CRAYON'S INK, not a stock blue. 24 consumers across 13
+     files read --color-user-ink and every one of them stands. */
+  --color-user-ink: var(--color-blue-ink);
+
+  /* PROGRESS IS GOLD. crayon-gold's hue (83.7°), at the one lightness that clears
+     3:1 against BOTH of the two grounds the trace straddles — the graphite frame it
+     retraces and the paper beside it. Round-trip 83.6°, 0.12° off the anchor.
+     Measured at stroke-opacity 0.95: 3.59:1 over --grid-line-color, 3.59:1 over
+     --color-card. The violet it replaces reads 3.36 / 3.85.
+     The WAX cannot do this job: crayon-gold at 0.95 reads 2.41:1 on the light card. */
+  --color-progress-ink: #a47903;
+}
+
+:root.dark,
+.dark {
+  /* The pen at night. Same crayon, same hue lock (249.3°, round-trip 0.07° off).
+     Measured 7.341:1 on --color-card against today's 7.360 — again the weight holds.
+     THE ONE CRAYON WHOSE INK MAY NOT COLLAPSE INTO ITS WAX AT NIGHT: every other ink
+     tier aliases the crayon in .dark, but crayon-blue's wax is already spoken for by
+     the unit wash and the focus ring, so a collapse would make the pen and the ring
+     the same token. */
+  --color-blue-ink: #47a7ff;
+  --color-user-ink: var(--color-blue-ink);
+
+  /* THE FOCUS RING'S DARK ARM — the one index.css:222 already claims in prose and the
+     cascade never delivered ("Dark mode keeps crayon-blue"). Measured at the ring's own
+     stroke-opacity 0.9 over --color-card: 6.42:1, against the 3.69:1 the unredefined
+     light value actually paints tonight. The comment becomes true. */
+  --color-focus-sketch: var(--color-crayon-blue);
+
+  /* Progress at night INVERTS, exactly as the violet's own ledger says it must: the dark
+     frame line is a LIGHT warm-grey, so the trace DEEPENS instead of glowing. crayon-gold
+     dark's hue (95.2°, round-trip 0.59° off). Measured at 0.95: 3.22:1 over
+     --grid-line-color, 3.25:1 over --color-card. The violet reads 3.46 / 3.07.
+     THE FIRST KILL, cleared on this line: crayon-gold dark itself (#e5c74d) reads
+     1.07:1 over the dark frame. The wax is invisible there; only the ink tier survives. */
+  --color-progress-ink: #7d6902;
+}
+
+/* ── THE SPARKLE'S GLOW — the estate's one inline chromatic literal on an interactive
+   surface (GameControlPanel.vue:2081, :2087, `rgba(196,181,253,…)` = Tailwind violet-300,
+   reachable by no token and by no theme). It becomes the gold crayon at the same two
+   alphas, so the solver's own button glows in the colour the solved board wears. */
+.sparkle-icon {
+  filter: drop-shadow(
+    0 0 2px color-mix(in srgb, var(--color-crayon-gold) 30%, transparent)
+  ) !important;
+}
+
+@media (hover: hover) {
+  .icon-btn:hover .sparkle-icon {
+    filter: drop-shadow(
+      0 0 5px color-mix(in srgb, var(--color-crayon-gold) 60%, transparent)
+    ) !important;
+  }
+}
+
+/* ── THE CONFIRM'S DESTRUCTIVE FACE — the one surface in the product whose whole job is
+   stop and think, measured at zero chromatic content (R2 §4.3). The house already owns a
+   danger ink and every other refusal uses it. The 8% ground stays a ground; it just stops
+   being made of the foreground. */
+/* Specificity note: the incumbent ground is a SCOPED SFC rule, `.guard-leave .guard-face`
+   at (0,2,1) with its `[data-v-…]`. An overlay at (0,2,0) wins the `color` (which only
+   `.guard-btn` (0,1,0) sets) and LOSES the `background` — measured, and the first run of
+   row 9 priced red ink over the incumbent GREY ground because of it. The selector below
+   carries the ribbon's own container so both properties land. */
+/* AND THE GROUND DROPS 8% -> 5%, because the first run priced it: --color-red-ink over
+   its OWN 8% wash on the ribbon's paper reads 4.35:1 (chromium) / 4.36 (webkit), UNDER
+   the AA text floor; over the incumbent foreground 8% wash it reads 4.14. The ink is AA
+   on the bare paper (4.92) and AA at a 5% ground (4.56). So the ground and the danger ink
+   can both be there — at five per cent, not eight. The alternative (a darker rose ink,
+   #d40249 at 4.53 over its own 8%) re-prices --color-red-ink's three consumers and the
+   whole danger family with it; this does not. */
+.gallery-guard .guard-btn.guard-leave .guard-face {
+  color: var(--color-red-ink);
+  background: color-mix(in srgb, var(--color-red-ink) 5%, transparent);
+}
+
+@media (hover: hover) {
+  .guard-btn.guard-leave:hover .guard-face {
+    color: var(--color-red-ink);
+    background: color-mix(in srgb, var(--color-red-ink) 14%, transparent);
+  }
+}
+
+/* ── CHROME STAYS ACHROMATIC — the active section heading's crayon tint retires to the
+   chip that is already wearing it (OptionSelector.vue:56 puts `colorClass` on the selected
+   option). One tint per decision, on the thing that was decided. */
+.controls-card h2.section-heading.crayon-green,
+.controls-card h2.section-heading.crayon-orange,
+.controls-card h2.section-heading.crayon-rose,
+.controls-card h2.section-heading.crayon-blue {
+  color: var(--color-muted-foreground);
+}
+
+/* ── THE PRINT ARM, RE-STATED (see the header note). index.css:934-936 owns this in the
+   real cure; here it has to be repeated because the injection inverts source order. */
+@media print {
+  :root,
+  .dark {
+    --color-user-ink: #000;
+  }
+}

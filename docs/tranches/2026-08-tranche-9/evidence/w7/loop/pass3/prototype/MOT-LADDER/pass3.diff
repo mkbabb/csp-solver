@@ -1,0 +1,3066 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..acb91060 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1060,6 +1060,18 @@ jobs:
+             - name: motion contract (every spec declares its PRM posture, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:motion
++            # T9-W7 §13 gate — THE DURATION LADDER. Every first time value in a CSS
++            # transition/animation term is a rung on `MOTION.rungs` or a content-anchored
++            # ADMITTED row; the ladder is published ONCE, registered with `@property` at
++            # initial-value 0ms, and read with NO fallback, so an absent publisher reads as
++            # `reduce` rather than as a page of `transition: all`. The CODE roster is fenced
++            # by KIND (TRAVEL / WINDOW / CADENCE / POLICY), the ratchet is keyed on the RUNG
++            # as well as on `file :: selector :: term`, and `--self-test` fires every
++            # negative control before falling through to the census. B8's bare-keyword count
++            # is MOT-VERB's cure and is carried here as a reported red.
++            - name: motion bands (the duration ladder, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:bands
+             # T8-W6 gate — M16's one machine-checkable clause. Every template text node and
+             # every user-string literal in src/** (+ index.html's head) must carry no em or
+             # en dash. Comments are masked; two allowlisted files carry their reason.
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index 32ea521e..47947d64 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -37,6 +37,7 @@
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
++    "lint:bands": "node scripts/check-motion-bands.mjs --self-test",
+     "lint:copy": "node scripts/check-copy-register.mjs --self-test",
+     "lint:live-regions": "node scripts/check-live-regions.mjs --self-test",
+     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..908b17e1 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -14,6 +14,7 @@ import {
+ import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+ import { MOTION } from "@pencil/config/pencilConfig";
+ import {
++  FLIP_GLIDE_ANIM_ID,
+   flipTransform,
+   useFlipGlide,
+   type FlipMover,
+@@ -217,6 +218,7 @@ function setGame(val: string | number, opts?: { cut?: boolean }) {
+   // placeholder (no board mounted, so no `erased` will ever come) — force the seam late
+   // rather than never. A page-turn that degrades to a hard cut is a blemish; a switch
+   // that deadlocks (`next === game.value` guards re-selects) is a bug.
++  // window: the erase seam — held 900ms over the gallery's leave (leave 200 + throw 520 + the paint that lands last); a WINDOW derives from the gesture it covers, never from taste.
+   seamGuard = window.setTimeout(onSceneErased, 900);
+ }
+ 
+@@ -289,6 +291,7 @@ function scheduleWarmPosters() {
+   const ric = (window as Window & { requestIdleCallback?: (cb: () => void) => void })
+     .requestIdleCallback;
+   ric?.(warmPosters);
++  // policy: idle
+   window.setTimeout(warmPosters, 1200);
+ }
+ 
+@@ -373,7 +376,10 @@ const coarse = useCoarsePointer();
+ // (`setLiveFaceTarget`); the board itself is the FLIP mover, folding from its full pose into the
+ // face. Every view/URL/game transition still fires as Wave B, so a missing rect / PRM degrades
+ // to the same-frame cut and no state/visibility assertion sees mid-glide pixels.
+-const foldCtl = useFlipGlide({ durationMs: MOTION.boardFoldMs });
++// A full sheet: the board folds into the card face on the throw rung (was boardFoldMs).
++// PINNED (T9-W7 §2.3): this value IS T4-W12 Wave C's ruling, so retuning `throw` re-auditions
++// that ruling by name before the number moves.
++const foldCtl = useFlipGlide({ durationMs: MOTION.rungs.throw });
+ 
+ // Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+ // Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+@@ -422,9 +428,17 @@ function animKey(a: Animation): string {
+   return css.animationName ?? css.transitionProperty ?? "";
+ }
+ 
++/** The board subtree's animations, MINUS the fold's own movers (T9-W8 C06). The exit parks the
++ *  board home a second time as the deck unmounts, and that snapshot is taken one tick before
++ *  `runFold` starts the fold's board mover — so the restore read the deliberate fold as
++ *  something the move had invented and finished it 0.3ms after birth. The board cut where the
++ *  wordmark glided 520ms beside it, on every engine. `useFlipGlide` tags what it starts; the
++ *  custodian doesn't custody it. The entry, which happened to order its fold after the last
++ *  restore, is unaffected — it just stops depending on that luck. */
+ function boardAnimations(): Animation[] {
+   const host = document.querySelector<HTMLElement>(".board-peek-host");
+-  return host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
++  const all = host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
++  return all.filter((a) => a.id !== FLIP_GLIDE_ANIM_ID);
+ }
+ 
+ /** What is genuinely mid-flight in the board subtree, keyed by (element, animation). */
+@@ -599,7 +613,7 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
+ }
+ 
+ // ENTRY — §BEAT 0 then §BEAT 1/2. `g` / the wordmark folds the live board into the center card.
+-// Beat 0: the scene chrome fades out (`html.gallery-leaving`, MOTION.chromeLeaveMs) while the
++// Beat 0: the scene chrome fades out (`html.gallery-leaving`, MOTION.rungs.leave) while the
+ // board HOLDS — it never erases. Then openGallery mounts the deck; the center card's face mounts
+ // live and `onLiveFace` runs the fold (beat 1); the deal fires on the deck's mount (beat 2). PRM
+ // cuts every beat.
+@@ -627,7 +641,7 @@ function enterGallery() {
+   window.setTimeout(() => {
+     document.documentElement.classList.remove("gallery-leaving");
+     openGallery(game.value); // BEAT 1 (fold via onLiveFace) + BEAT 2 (deal via deck mount)
+-  }, MOTION.chromeLeaveMs);
++  }, MOTION.rungs.leave);
+ }
+ 
+ // EXIT unfold: the chosen card unfolds back to a full board. Park the live board home FIRST
+@@ -1137,9 +1151,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+   --logo-scale: 0.72;
+ }
+ 
+-/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
++/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock
++   AND, from T9-W7 §13, on the same curve. It was the one declared twin riding two curves:
++   BEAT 0 leaves on `--ease-fadeOut` (the house's leave curve — things accelerate off the
++   page) and this rode the glass glide, whose job is a sheet arriving. One leave, one curve. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--motion-leave) var(--ease-fadeOut);
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..11a4fb46 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -495,6 +495,31 @@ html {
+   overscroll-behavior: contain;
+ }
+ 
++/* TAILWIND'S DEFAULT TIER JOINS THE LADDER (T9-W7 §13 · B7). Every `transition-*` utility
++   with no explicit duration spends Tailwind's own 150ms — 17 `.transition-colors` elements
++   tweening on a number the ladder never saw, and one that kept breathing under `reduce`.
++   Pointed at `whisper`, those elements collapse with everything else, because a rung reads
++   0ms under reduce. The fallback is the same number, so a missed publish is a no-op. */
++:root {
++  --default-transition-duration: var(--motion-whisper);
++  /* THE LADDER'S REGISTRATIONS (T9-W7 §1.2, chair §6.5). Seven, one per rung, here in the
++     FIRST stylesheet rather than in the publisher's node — because a registration emitted
++     beside the values dies with them, and the born-RED row then reads `transition-property:
++     all` exactly as it does at HEAD (measured both engines). Registered, a rung survives an
++     absent publisher AT ITS INITIAL, and `0ms` makes absence read exactly as `reduce` does.
++     `initial-value` is never the rung's own value: with the real value here, deleting the
++     publisher reads 0.52s and PASSES, which re-silences the row the law exists to arm.
++     The VALUES stay `publishMotionRungs`'s alone; B3 asserts this set and `MOTION.rungs`
++     are the same set, closed both ways, so the two can never drift. */
++  @property --motion-whisper { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-leave { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-note { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-dusk { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-step { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-throw { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++  @property --motion-rise { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++}
++
+ .board-cells {
+   -webkit-touch-callout: none;
+   -webkit-user-select: none;
+@@ -587,7 +612,7 @@ html {
+      tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
+   .solve-success .grid-line {
+     stroke: var(--color-gold-star) !important;
+-    transition: stroke 500ms;
++    transition: stroke var(--motion-throw) var(--ease-drawOn);
+   }
+ 
+   /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+@@ -604,7 +629,7 @@ html {
+       8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+       0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+       8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
+-    transition: box-shadow 500ms;
++    transition: box-shadow var(--motion-throw) var(--ease-drawOn);
+   }
+ 
+   /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+@@ -664,9 +689,11 @@ html {
+     html.theme-turning .bg-card,
+     html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
++      /* LENGTH only. The curve is MOT-VERB's row (registry §2.1 gives curves to the verbs);
++         this family never mints `--ease-dusk` and never re-eases the turn. */
+       transition:
+-        background-color 350ms ease,
+-        color 350ms ease !important;
++        background-color var(--motion-dusk) ease,
++        color var(--motion-dusk) ease !important;
+     }
+   }
+ 
+@@ -676,7 +703,10 @@ html {
+      design-refinement.md §3.3.1/§3.4). !important is defensive — the grid strokes
+      via a presentation attribute, which any CSS rule already beats. */
+   .solve-failure {
+-    animation: refuse-shake 0.6s linear;
++    /* The length is `MOTION.characters.refuse`, bound by the board host as `--refuse-dur`
++       (T9-W7 §1.5). The cell's own refusal reads the same property from the same export;
++       before this the verdict typed 0.6s here and the cell typed 600 in TS. */
++    animation: refuse-shake var(--refuse-dur) linear;
+     box-shadow:
+       8px 5px 0px color-mix(in srgb, var(--color-teacher-red) 25%, transparent),
+       0 8px 0px color-mix(in srgb, var(--color-teacher-red) 20%, transparent),
+@@ -738,9 +768,13 @@ html {
+     letter-spacing: 0.02em;
+   }
+ 
+-  /* Reduced motion: kill looping animations but allow brief transitions
+-     so that components can provide their own graceful reduced-motion fallback
+-     (e.g. DarkModeToggle keeps a 200ms opacity fade). */
++  /* Reduced motion: the FLOOR, for anything outside the ladder. Every rung reads 0ms under
++     reduce (the publisher's own arm, T9-W7 §3), so every rung consumer — transitions
++     included, Tailwind's default tier included — already collapses to a same-frame swap.
++     This reset catches what the ladder does not govern: a third-party keyframe, a stray
++     loop. Two shipped fallbacks are deliberately NOT rung consumers and keep breathing:
++     DarkModeToggle's 200ms rest-stack crossfade and the answer-key laminate's 150ms linear
++     fade, both admitted PRM-FALLBACK in `scripts/check-motion-bands.mjs`. */
+   @media (prefers-reduced-motion: reduce) {
+     * {
+       animation-duration: 0.01ms !important;
+diff --git a/web/frontend/src/games/futoshiki/CaretOverlay.vue b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+index 1fdd193a..1a49ccb8 100644
+--- a/web/frontend/src/games/futoshiki/CaretOverlay.vue
++++ b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+@@ -61,7 +61,7 @@ defineProps<{
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .caret-layer {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--ease-fadeOut);
+   }
+ }
+ </style>
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+index 0fd9a20c..29b949e2 100644
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -74,6 +74,7 @@ const STROKES: { x1: number; y1: number; x2: number; y2: number; seed: number }[
+   { x1: 6, y1: 37, x2: 55, y2: 7, seed: 71 }, // the fifth: the diagonal that binds the four
+ ];
+ const TALLY_BOIL = 0.6; // perturbation in viewBox units — subtle, in-family with the frame
++// graded: §2.2 GRADED — the pips draw in a sequence whose spacing IS the reading; a rung would flatten it.
+ const DRAW_STAGGER_MS = 90; // the hand ticking strokes off one at a time
+ 
+ // Grain-static baked into the pose geometry (the pencil's own tooth in this small-element
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index b961a8c8..279ab84c 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -141,7 +141,7 @@ defineExpose({
+   padding: 0.5rem 0.15rem;
+   clip-path: polygon(4% 2%, 96% 0%, 100% 50%, 97% 94%, 5% 100%, 0% 52%);
+   transform: rotate(1.4deg);
+-  transition: transform 150ms ease-out;
++  transition: transform var(--motion-whisper) var(--ease-drawOn);
+ }
+ 
+ .drawer-tab:hover .drawer-tab-text {
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..7084e067 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -33,6 +33,7 @@ import {
+   traceOpacity,
+   traceProgress,
+ } from "@games/shared/useJoinWash";
++import { MOTION } from "@pencil/config/pencilConfig";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+ import { generateCellRects } from "@pencil/grid/gridPaths";
+ import { revealStaggerMs } from "@pencil/config/pencilConfig";
+@@ -326,12 +327,21 @@ const boardSizeClasses = computed(() => {
+ // for (index.css solve-success/-failure) — `transition-all` volunteered every future
+ // property change (the drawer's transforms included) into surprise 500ms tweens.
+ const boardClasses = computed(() => {
+-  const base = "transition-[box-shadow] duration-500";
++  const base = "transition-[box-shadow] duration-[var(--motion-throw)]";
+   if (props.solveState === "solved") return `${base} solve-success`;
+   if (props.solveState === "failed") return `${base} solve-failure`;
+   return base;
+ });
+ 
++// The verdict's shake reads the CHARACTER's one home (T9-W7 §1.5) — `index.css`'s
++// `.solve-failure` used to type `0.6s` while `useGameCell` typed `600`. Bound only while the
++// shake can run, so a resting board's markup is byte-identical to what it was.
++const boardVars = computed(() =>
++  props.solveState === "failed"
++    ? { "--refuse-dur": `${MOTION.characters.refuse}ms` }
++    : undefined,
++);
++
+ // ── Conflict detection — the teacher's red pencil (§1.4) + error-check MODE (T4-W8 ROW 2) ──
+ // The SAME pure derivation over `values` (per-game adjacency closed over), un-gated from the
+ // 'failed'-only gate: it feeds the cells (aria-invalid + the red ghost) + the marginalia (the
+@@ -1020,6 +1030,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+     <div
+       class="board-wrapper cartoon-shadow-md bg-card aspect-square w-full rounded-xl"
+       :class="boardClasses"
++      :style="boardVars"
+     >
+       <!-- Hand-drawn SVG grid overlay — subgridSize keys the box lines (Sudoku bands /
+            Futoshiki plain Latin). -->
+@@ -1290,7 +1301,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+   .board-leaving .board-margin,
+   .board-leaving .completion-vignette {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--ease-fadeOut);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..553cbe1b 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -187,7 +187,9 @@ function activeColorClass(section: ControlSection): string | undefined {
+ }
+ function headingClass(section: ControlSection): (string | Record<string, boolean>)[] {
+   const cc = activeColorClass(section);
+-  return cc ? ["transition-colors", "duration-250", cc] : ["text-muted-foreground"];
++  return cc
++    ? ["transition-colors", "duration-[var(--motion-note)]", cc]
++    : ["text-muted-foreground"];
+ }
+ // UI-12: the mobile tabs show only the active panel's options, so the inactive tab's current
+ // value is invisible while the other is open. Surface it small + graphite beneath the heading.
+@@ -1814,7 +1816,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+      snapped, so the two quiet words in the players well answered the pointer in two different
+      languages. One property, the same 150ms, on the estate's standard curve — and NOT `all`,
+      which is the exact width P1-W3 measured the cost of. */
+-  transition: color 150ms var(--ease-standard);
++  transition: color var(--motion-whisper) var(--ease-standard);
+ }
+ 
+ .players-leave:hover {
+@@ -1961,8 +1963,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+      ±1.25-unit nudge, not a tooth, and CrayonHeart already rules grain sub-perceptual below
+      20 px). Only what actually moved on hover is still allowed to tween. */
+   transition:
+-    background-color 150ms,
+-    color 150ms;
++    background-color var(--motion-whisper) var(--ease-standard),
++    color var(--motion-whisper) var(--ease-standard);
+ }
+ 
+ /* T4-WM §2: the icon-btn hover paint stuck after a tap on touch (r2 §4) — fenced to
+@@ -2086,7 +2088,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ .sparkle-icon {
+   filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  transition: filter var(--motion-leave) var(--ease-standard);
+ }
+ 
+ @media (hover: hover) {
+@@ -2136,7 +2138,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ @media (prefers-reduced-motion: no-preference) {
+   .action-bar::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper) var(--ease-standard);
+   }
+ }
+ 
+@@ -2288,7 +2290,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   display: grid;
+   grid-template-rows: 0fr;
+   clip-path: inset(0);
+-  transition: grid-template-rows 200ms var(--ease-drawOn);
++  transition: grid-template-rows var(--motion-leave) var(--ease-drawOn);
+ }
+ 
+ .legend-fold.is-open {
+diff --git a/web/frontend/src/games/shared/GameScene.vue b/web/frontend/src/games/shared/GameScene.vue
+index 75d02d5d..5c1dbe43 100644
+--- a/web/frontend/src/games/shared/GameScene.vue
++++ b/web/frontend/src/games/shared/GameScene.vue
+@@ -60,7 +60,18 @@ const { drawerOpen, drawerInert, toggleDrawer, closeDrawer } = useControlsDrawer
+  *      row already exercises.
+  *
+  *  `defer` because all three berths are minted later in this same template (or, for
+- *  `#board-edge`, inside the board slot below it). */
++ *  `#board-edge`, inside the board slot below it).
++ *
++ *  THE SWAP IS NOT A JUMP TO BE HIDDEN — T9-W7 pass 2 PROPOSED keying the open branch on
++ *  `phase === "idle"` so the swap would land at settle, "under the risen sheet", and the
++ *  prototype REFUTED it on the real geometry at 390x844, both engines. Two readings kill it:
++ *  the `#drawer-handle` berth is 92px ABOVE the risen sheet's top edge, never under it
++ *  (`tabInsideSheet` false at every frame of the open), and at HEAD the tongue swaps at
++ *  onset and then RIDES the sheet up, frame by frame (163.6px at t=1.1ms, then 41.6, 51.4,
++ *  35.4 … 4.2px, always 92px above the sheet's edge). Deferring the swap to settle removed
++ *  the onset jump and bought a 371.7px jump at t=595ms instead — into a place the eye had
++ *  already settled on. The onset swap is the one to cure, and a timing key is not the cure.
++ *  W8 G7's row goes back with these numbers. */
+ const tongueBerth = computed(() =>
+   mobileDock.value && drawerOpen.value
+     ? "#drawer-handle"
+diff --git a/web/frontend/src/games/shared/SolverErrorNote.vue b/web/frontend/src/games/shared/SolverErrorNote.vue
+index 4bcc8e34..63cbe27b 100644
+--- a/web/frontend/src/games/shared/SolverErrorNote.vue
++++ b/web/frontend/src/games/shared/SolverErrorNote.vue
+@@ -60,7 +60,7 @@ onMounted(async () => {
+ <style scoped>
+ .error-note {
+   pointer-events: auto; /* the strip container passes events through; the card takes them back */
+-  animation: note-in 250ms var(--ease-noteWrite) backwards;
++  animation: note-in var(--motion-note) var(--ease-noteWrite) backwards;
+ }
+ 
+ .error-note-card {
+@@ -94,7 +94,7 @@ onMounted(async () => {
+   padding: 0.15rem 0.6rem;
+   cursor: pointer;
+   filter: url(#grain-static);
+-  transition: background 150ms;
++  transition: background var(--motion-whisper) var(--ease-standard);
+ }
+ 
+ .error-note-retry:hover {
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..4db3a586 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -32,7 +32,7 @@
+   opacity: 0.5;
+   /* `backwards`, not `both` (P1-W3): `marks-fade-in` is a FROM-ONLY keyframe, so its 100%
+      value IS the cascade value and the forwards half retains an effect for nothing. */
+-  animation: marks-fade-in 250ms ease-out backwards;
++  animation: marks-fade-in var(--motion-note) ease-out backwards;
+ }
+ 
+ .mark-slot {
+@@ -151,7 +151,7 @@
+       transparent
+     );
+   /* `backwards`, not `both` — same from-only keyframe as `.pencil-marks` above. */
+-  animation: marks-fade-in 250ms ease-out backwards;
++  animation: marks-fade-in var(--motion-note) ease-out backwards;
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+diff --git a/web/frontend/src/games/shared/relayWire.ts b/web/frontend/src/games/shared/relayWire.ts
+index cb1b7f0e..f3508926 100644
+--- a/web/frontend/src/games/shared/relayWire.ts
++++ b/web/frontend/src/games/shared/relayWire.ts
+@@ -64,6 +64,7 @@ const EVENT_KIND = 20411;
+ 
+ /** Backoff for a socket that drops, in ms — capped, because a table left open overnight must
+  *  not walk itself out to a ten-minute retry. */
++// policy: retry
+ const RETRY_MS = [250, 500, 1000, 2000, 4000];
+ 
+ const hex = (n: number): string =>
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..70372bd0 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -375,7 +375,7 @@
+    went with the sentinel's own — T9-W2 §2.2, above.) */
+ @media (prefers-reduced-motion: no-preference) {
+   .controls-card::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper) var(--ease-standard);
+   }
+ }
+ 
+@@ -609,24 +609,25 @@
+   /* One card now, so one selector: `.mobile-board-width` was the other twin's name in each of
+      these three rules and it named the same fade. */
+   .scene-controls {
+-    animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
++    animation: controls-fade-in var(--motion-note) var(--ease-drawOn) 150ms
++      backwards;
+   }
+ 
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--ease-fadeOut);
+     animation: none;
+   }
+ 
+   /* T4-W12 Wave C2 §BEAT 0 — chrome leaves. The gallery entry fades the controls/drawer out on
+      this SAME 200ms scene-leaving fade WITHOUT erasing the board — the board folds into the
+      center card, it never erases (the one departure from the page-turn: no erase beat on entry).
+-     App holds `html.gallery-leaving` for the beat-0 window (MOTION.chromeLeaveMs), then the fold
++     App holds `html.gallery-leaving` for the beat-0 window (MOTION.rungs.leave), then the fold
+      begins. Global-html + scoped-descendant, the `html.drawer-closed` pattern above. PRM: this
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--ease-fadeOut);
+     animation: none;
+   }
+ }
+diff --git a/web/frontend/src/games/shared/useControlsDrawer.ts b/web/frontend/src/games/shared/useControlsDrawer.ts
+index 5831150d..9e82cc58 100644
+--- a/web/frontend/src/games/shared/useControlsDrawer.ts
++++ b/web/frontend/src/games/shared/useControlsDrawer.ts
+@@ -1,5 +1,7 @@
+ import { computed, nextTick, ref, watch } from "vue";
+ 
++import { MOTION } from "@pencil/config/pencilConfig";
++
+ import { mediaRef, useRowRegime } from "./useCoarsePointer";
+ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
+ 
+@@ -80,10 +82,13 @@ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
+ type DrawerPhase = "idle" | "closing" | "opening";
+ 
+ const STORAGE_KEY = "csp-drawer-open";
+-/** Band-D one-shot — the movers' shared WAAPI clock (scene.css arms no transitions).
+- *  520ms: the glass settle wants a touch more breath than the dead spring's 480
+- *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
+-const GLIDE_MS = 520;
++/** THE GESTURE'S CLOCK, one per pose (T9-W7 §13). The desk takes `throw` — PINNED: the
++ *  value IS R6 standing ruling 1's (audit 4, 2026-07-11, auditioned 480/520/560 by eye at
++ *  :3001), so retuning `throw` re-auditions that ruling by name. The dock takes `rise`,
++ *  which is the same gesture over a different distance: 302px at 844x390 against 681px at
++ *  768x1024, where 520ms was a desk number the dock inherited and nobody ever saw. One
++ *  curve either way — the glass glide is never re-eased (R6 ruling 2). */
++const glideMsFor = (dock: boolean) => (dock ? MOTION.rungs.rise : MOTION.rungs.throw);
+ 
+ const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
+ 
+@@ -225,12 +230,14 @@ let targetOpen = drawerOpen.value;
+ // origin) — the host rides `flipTransform`, so `cx` is all that survives here.
+ const cx = (r: DOMRect) => r.left + r.width / 2;
+ 
+-/** The drawer's glide controller — 520ms on the ONE glass curve (the primitive's default
+- *  easing = `MOTION.curves.drawerGlide`), one clock, the never-never guard at 520+220.
+- *  `onSettle` is the drawer's own settle: demote the gesture layers, re-flip the layout to
+- *  the (possibly reversal-flipped) target, land idle, and focus the panel on open. */
++/** The drawer's glide controller — the ONE glass curve (the primitive's default easing =
++ *  `MOTION.curves.drawerGlide`), one clock, the never-never guard at duration +
++ *  `MOTION.settleGuardMs`. The clock itself is passed PER RUN, because the desk and the
++ *  dock are one gesture over two distances. `onSettle` is the drawer's own settle: demote
++ *  the gesture layers, re-flip the layout to the (possibly reversal-flipped) target, land
++ *  idle, and focus the panel on open. */
+ const glideCtl = useFlipGlide({
+-  durationMs: GLIDE_MS,
++  durationMs: MOTION.rungs.throw,
+   onSettle: () => {
+     document.documentElement.classList.remove("drawer-gesturing");
+     applyLayout(targetOpen);
+@@ -323,7 +330,7 @@ function glide(toOpen: boolean, scene: DrawerSceneEls) {
+   }
+ 
+   // The primitive pins one clock, wires `finished → settle`, and arms the guard.
+-  glideCtl.run(specs);
++  glideCtl.run(specs, glideMsFor(mobileDock.value));
+ }
+ 
+ /** Force an in-flight glide to settle instantly — a thin, hoisted delegator so the
+diff --git a/web/frontend/src/games/shared/useFlipGlide.ts b/web/frontend/src/games/shared/useFlipGlide.ts
+index 161a96f6..cb0948d3 100644
+--- a/web/frontend/src/games/shared/useFlipGlide.ts
++++ b/web/frontend/src/games/shared/useFlipGlide.ts
+@@ -50,6 +50,15 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * the rest pose is CSS `translate:`, the gesture writes `transform:` and only `transform:`.
+  */
+ 
++/**
++ * The tag every mover this engine starts carries (T9-W8 C06). A caller that custodies a
++ * subtree across a DOM move snapshots what is in flight, moves, and puts the subtree back —
++ * and anything it did not snapshot reads as invented by the move. A glide this engine started
++ * one tick ago is not an invention, and WAAPI's own `Animation.id` is the handle that says so:
++ * one string at start, one compare at the custodian, nothing at runtime.
++ */
++export const FLIP_GLIDE_ANIM_ID = "flip-glide";
++
+ /** The FLIP rect inputs — `DOMRect` (from `getBoundingClientRect`) assigns straight in. */
+ export interface FlipRect {
+   readonly left: number;
+@@ -89,7 +98,8 @@ export interface FlipGlideOptions {
+   /** The easing — defaults to the ONE house glass curve (`MOTION.curves.drawerGlide`). */
+   easing?: string;
+   /** Never-never backstop: a glide whose `finished` can't resolve settles late, never
+-   *  never. Defaults to `durationMs + 220` (the drawer's `SETTLE_GUARD_MS`). */
++   *  never. Defaults to this run's duration + `MOTION.settleGuardMs` — ONE constant, read
++   *  by both FLIP engines (T9-W7 §1.6). */
+   settleGuardMs?: number;
+   /** Run at settle (natural finish, reversed finish, or the guard) AFTER the movers are
+    *  cancelled + origins cleared. The domain's layout re-flip / focus lives here. */
+@@ -100,7 +110,7 @@ export interface FlipGlideController {
+   /** Start a glide: one WAAPI animation per mover (`composite: replace`, `fill: none`)
+    *  on the glass curve, ALL pinned to one clock. Supersedes any in-flight glide
+    *  silently (no `onSettle` — the new gesture owns the settle). */
+-  run(movers: FlipMover[]): void;
++  run(movers: FlipMover[], durationMs?: number): void;
+   /** Mid-glide retarget: each mover plays its own curve backwards from its current
+    *  pose. Resets the settle guard; a no-op when nothing is in flight. */
+   reverse(): void;
+@@ -113,7 +123,9 @@ export interface FlipGlideController {
+ 
+ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+   const easing = options.easing ?? MOTION.curves.drawerGlide;
+-  const guardMs = options.settleGuardMs ?? options.durationMs + 220;
++  const guardFor = (ms: number) => options.settleGuardMs ?? ms + MOTION.settleGuardMs;
++  /** The clock the CURRENT gesture is running on — `reverse()` re-arms the same guard. */
++  let lastDuration = options.durationMs;
+ 
+   let movers: { el: HTMLElement; anim: Animation }[] = [];
+   let settleTimer: number | null = null;
+@@ -151,7 +163,8 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     options.onSettle?.();
+   }
+ 
+-  function run(specs: FlipMover[]) {
++  function run(specs: FlipMover[], durationMs = options.durationMs) {
++    lastDuration = durationMs;
+     // A fresh gesture supersedes any prior one WITHOUT firing its settle side-effects
+     // (the new gesture owns the settle): clear the guard + old animations, then build.
+     // From idle (the drawer's only entry) `movers` is already empty — a strict no-op.
+@@ -162,11 +175,12 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+       if (spec.transformOrigin != null)
+         spec.el.style.transformOrigin = spec.transformOrigin;
+       const anim = spec.el.animate([{ transform: spec.from }, { transform: spec.to }], {
+-        duration: options.durationMs,
++        duration: durationMs,
+         easing,
+         composite: "replace",
+         fill: "none",
+       });
++      anim.id = FLIP_GLIDE_ANIM_ID; // whose mover this is (§FLIP_GLIDE_ANIM_ID)
+       movers.push({ el: spec.el, anim });
+     }
+     // One clock, literally (§3-S3): every mover pinned to the same startTime — zero
+@@ -179,7 +193,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     void Promise.allSettled(movers.map((m) => m.anim.finished)).then(() => {
+       if (myGen === gen) settle();
+     });
+-    settleTimer = window.setTimeout(settle, guardMs);
++    settleTimer = window.setTimeout(settle, guardFor(durationMs));
+   }
+ 
+   /** Re-click mid-glide (§3-S4): retarget by REVERSAL — each mover plays its own curve
+@@ -189,7 +203,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     if (!active) return;
+     for (const m of movers) m.anim.reverse();
+     clearGuard();
+-    settleTimer = window.setTimeout(settle, guardMs);
++    settleTimer = window.setTimeout(settle, guardFor(lastDuration));
+   }
+ 
+   return {
+diff --git a/web/frontend/src/games/shared/useGameCell.ts b/web/frontend/src/games/shared/useGameCell.ts
+index a4754ead..4ead5efc 100644
+--- a/web/frontend/src/games/shared/useGameCell.ts
++++ b/web/frontend/src/games/shared/useGameCell.ts
+@@ -1,6 +1,7 @@
+ import { computed, onUnmounted, ref, useTemplateRef } from "vue";
+ import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+ import { useLongPress } from "@games/shared/useLongPress";
++import { MOTION } from "@pencil/config/pencilConfig";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+ 
+ /**
+@@ -181,7 +182,9 @@ export function useGameCell(
+   // already shakes with — worn for one window and then dropped: a pulse, not a state, so no
+   // cell can be left wearing a refusal it has finished saying. No new keyframes, no new
+   // filters; the duration rides out as a bound custom property (the `--draw-dur` precedent).
+-  const REFUSE_MS = 600;
++  // The length is the CHARACTER's, typed once (T9-W7 §1.5): the verdict's shake and this one
++  // are the same gesture, and before `MOTION.characters.refuse` each carried its own 600.
++  const REFUSE_MS = MOTION.characters.refuse;
+   const refuseArmed = ref(false);
+   let refuseTimer: ReturnType<typeof setTimeout> | null = null;
+   function armRefusal() {
+diff --git a/web/frontend/src/games/shared/useLongPress.ts b/web/frontend/src/games/shared/useLongPress.ts
+index c2121ec6..4bd9a2fc 100644
+--- a/web/frontend/src/games/shared/useLongPress.ts
++++ b/web/frontend/src/games/shared/useLongPress.ts
+@@ -37,6 +37,7 @@ interface LongPressOptions {
+ }
+ 
+ export function useLongPress(options: LongPressOptions) {
++  // policy: long-press
+   const delayMs = options.delayMs ?? 450;
+   const slopPx = options.slopPx ?? 10;
+   const haptic = options.haptic ?? vibrateOnce;
+diff --git a/web/frontend/src/games/shared/usePencilMarks.ts b/web/frontend/src/games/shared/usePencilMarks.ts
+index 487b6081..010b7e56 100644
+--- a/web/frontend/src/games/shared/usePencilMarks.ts
++++ b/web/frontend/src/games/shared/usePencilMarks.ts
+@@ -28,6 +28,7 @@ export function usePencilMarks(
+   const pencilMasks = ref<Uint32Array | null>(null);
+   let marksTimer: ReturnType<typeof setTimeout> | null = null;
+   let marksSeq = 0;
++  // policy: idle
+   function refreshMarks(delayMs = 150) {
+     if (marksTimer) clearTimeout(marksTimer);
+     marksTimer = setTimeout(async () => {
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..07aa9c86 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -613,6 +613,7 @@ function adoptInk(k: Record<string, number>): void {
+ // arms call on every frame they carry), and the beat is what a page with nothing to say sends.
+ 
+ /** The pulse. Every live page says "still here" this often, whether or not anything happened. */
++// policy: heartbeat
+ const HEARTBEAT_MS = 15000;
+ /**
+  * How long a peer may say NOTHING before the roster stops claiming them — three missed beats.
+@@ -621,6 +622,7 @@ const HEARTBEAT_MS = 15000;
+  * about the same silence, and two constants at the same value are two constants that can drift:
+  * a ghost outliving its row, or a row outliving its ghost, on a number nobody meant to move.
+  */
++// policy: leash
+ const PRESENCE_EXPIRY_MS = 45000;
+ 
+ let beat: ReturnType<typeof setInterval> | null = null;
+@@ -907,6 +909,7 @@ export function noteWrite(pos: number, value: number, solved: boolean): void {
+ 
+ /** ~8 Hz. The leading edge is what makes the first glance instant; the trailing edge is what
+  *  makes the last one land. */
++// policy: wire
+ const CUR_MS = 120;
+ /**
+  * A silent peer's ghost expires. The socket that stays OPEN behind a dead page is nobody's
+diff --git a/web/frontend/src/games/thermo/ThermoTube.vue b/web/frontend/src/games/thermo/ThermoTube.vue
+index ff009dff..0a674c67 100644
+--- a/web/frontend/src/games/thermo/ThermoTube.vue
++++ b/web/frontend/src/games/thermo/ThermoTube.vue
+@@ -111,7 +111,7 @@ const tubes = computed<Tube[]>(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .thermo-tube-overlay {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--ease-fadeOut);
+   }
+ }
+ 
+diff --git a/web/frontend/src/main.ts b/web/frontend/src/main.ts
+index 1c533ff0..d67064c5 100644
+--- a/web/frontend/src/main.ts
++++ b/web/frontend/src/main.ts
+@@ -8,6 +8,11 @@ if (import.meta.env.DEV) {
+ 
+ import { createApp } from "vue";
+ import App from "./App.vue";
++import { publishMotionRungs } from "@pencil/config/pencilConfig";
+ import "./assets/index.css";
+ 
++// The duration ladder reaches CSS from ONE place, before the first paint (T9-W7 §13) —
++// one <style> node carrying the rungs and their reduce arm.
++publishMotionRungs();
++
+ createApp(App).mount("#app");
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..ad89562f 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -714,7 +714,7 @@ onUnmounted(() => {
+   padding: 0;
+   border-radius: 50%;
+   background: transparent;
+-  transition: transform 200ms ease;
++  transition: transform var(--motion-leave) ease;
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+@@ -973,6 +973,8 @@ onUnmounted(() => {
+   .toggle-rest {
+     visibility: visible;
+     opacity: 0;
++    /* PRM-FALLBACK (T9-W7 §2.2): NOT a rung. Every rung reads 0ms under reduce, so a
++       fallback that read one would be the same-frame cut it exists to replace. */
+     transition: opacity 200ms ease;
+   }
+ 
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+index c3adf396..b441a7aa 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+@@ -42,7 +42,7 @@ defineExpose({ close });
+   >
+     <button
+       type="button"
+-      class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"
++      class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-[var(--motion-leave)]"
+       :aria-expanded="isOpen"
+       aria-label="Show attribution card"
+       @click.stop="toggle"
+@@ -181,8 +181,8 @@ defineExpose({ close });
+   pointer-events: none;
+   transform: scale(0.9) translateY(8px);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--motion-whisper) var(--ease-standard),
++    transform var(--motion-whisper) var(--ease-standard),
+     visibility 0s linear 150ms;
+   z-index: 50;
+   min-width: 16rem;
+@@ -203,8 +203,8 @@ defineExpose({ close });
+   pointer-events: auto;
+   transform: scale(1) translateY(0);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--motion-whisper) var(--ease-standard),
++    transform var(--motion-whisper) var(--ease-standard),
+     visibility 0s linear 0s;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+index f662c045..d09605b0 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+@@ -326,7 +326,7 @@ const filterUrl = computed(() => {
+    no motion, PRM-safe by construction. Triggered by the hosting `.group`'s
+    hover/focus-within (the attribution trigger), with a self-hover fallback. */
+ .face {
+-  transition: opacity 240ms ease;
++  transition: opacity var(--motion-note) ease;
+ }
+ .face-b {
+   opacity: 0;
+diff --git a/web/frontend/src/pencil/chrome/CompletionVignette.vue b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+index c33a0905..f47d91b0 100644
+--- a/web/frontend/src/pencil/chrome/CompletionVignette.vue
++++ b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+@@ -130,7 +130,7 @@ withDefaults(
+    star needs nothing here: it plays its own landing. */
+ .vignette-voice,
+ .vignette-meta {
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--ease-noteWrite) backwards;
+ }
+ 
+ /* ── Row regime base (≥1024): the corner-press sticker over the board's top-RIGHT
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..29e8c8de 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -408,8 +408,8 @@ const dealStyle = computed(() => {
+   opacity: var(--d-opacity, 0.58);
+   transform-origin: center center;
+   transition:
+-    transform var(--card-step-ms, 440ms) var(--ease-glassGlide),
+-    opacity var(--card-step-ms, 440ms) var(--ease-glassGlide);
++    transform var(--motion-step) var(--ease-glassGlide),
++    opacity var(--motion-step) var(--ease-glassGlide);
+   will-change: transform, opacity;
+ }
+ 
+@@ -590,7 +590,7 @@ const dealStyle = computed(() => {
+   line-height: 1.1;
+   color: var(--color-muted-foreground);
+   letter-spacing: 0.01em;
+-  transition: color 150ms var(--ease-standard);
++  transition: color var(--motion-whisper) var(--ease-standard);
+ }
+ 
+ /* THE SUB-LINE ROW (T9-W2 §2.1) — the range line and the roster echo on ONE line. The echo
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..165f550e 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -368,7 +368,10 @@ function startDeal() {
+     for (let i = 0; i < props.cards.length; i++) dealReveal[i] = 1; // PRM: settled, no motion
+     return;
+   }
+-  const base = Math.round(MOTION.boardFoldMs * 0.42); // after the fold has begun
++  // FOLLOWS (T9-W7 §2.3) + THE DELAY FENCE (B9): the deal begins at 42% of the fold, so a
++  // fold retune moves it BY DESIGN and nobody re-auditions anything; the coefficient stays a
++  // literal, because the ladder governs travel and never a beat alignment.
++  const base = Math.round(MOTION.rungs.throw * 0.42);
+   const stagger = 90; // outward-from-center step
+   props.cards.forEach((_, i) => {
+     if (i === center) return;
+@@ -923,12 +926,7 @@ onMounted(async () => {
+ </script>
+ 
+ <template>
+-  <div
+-    ref="rootEl"
+-    class="game-gallery"
+-    :class="{ 'is-coarse': coarse }"
+-    :style="{ '--card-step-ms': `${MOTION.cardStepMs}ms` }"
+-  >
++  <div ref="rootEl" class="game-gallery" :class="{ 'is-coarse': coarse }">
+     <div
+       ref="viewport"
+       class="gallery-viewport"
+@@ -1317,7 +1315,7 @@ onMounted(async () => {
+   border-radius: 50%;
+   border: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+   background: transparent;
+-  transition: background-color 200ms var(--ease-standard);
++  transition: background-color var(--motion-leave) var(--ease-standard);
+ }
+ 
+ .gallery-pip.is-inked {
+@@ -1418,8 +1416,8 @@ onMounted(async () => {
+   padding: 0.32rem 0.9rem;
+   border-radius: 0.3rem;
+   transition:
+-    background-color 150ms var(--ease-standard),
+-    color 150ms var(--ease-standard);
++    background-color var(--motion-whisper) var(--ease-standard),
++    color var(--motion-whisper) var(--ease-standard);
+ }
+ 
+ /* THE GROUND FORM (T8 M5, agent C's boil census — R2 in this fence). These are the two most
+@@ -1471,8 +1469,8 @@ onMounted(async () => {
+ .guard-ribbon-enter-active,
+ .guard-ribbon-leave-active {
+   transition:
+-    transform 240ms var(--ease-glassGlide),
+-    opacity 240ms var(--ease-glassGlide);
++    transform var(--motion-note) var(--ease-glassGlide),
++    opacity var(--motion-note) var(--ease-glassGlide);
+ }
+ 
+ .guard-ribbon-enter-from,
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+index da66f430..01ef0ec0 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+@@ -151,7 +151,7 @@ function onKeydown(e: KeyboardEvent) {
+           <div class="staging-axis" role="group" :aria-labelledby="diffLabelId">
+             <span
+               :id="diffLabelId"
+-              class="section-heading staging-axis-label transition-colors duration-250"
++              class="section-heading staging-axis-label transition-colors duration-[var(--motion-note)]"
+               :class="diffTone"
+               >{{ staging.difficulty.label }}</span
+             >
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+index f85e4b67..90e23ceb 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
++++ b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+@@ -24,11 +24,14 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * PRM: `glideTo` collapses to an instant `jumpTo` (no tween frames).
+  */
+ 
+-const GLIDE_MS = MOTION.cardStepMs;
++/** One card slot, the step rung. PINNED: the value IS RATIFY-ME T4-W12 ballot row 4's, so
++ *  retuning `step` re-auditions that ruling by name before the number moves. */
++const GLIDE_MS = MOTION.rungs.step;
+ const GLIDE_EASING = MOTION.curves.drawerGlide;
+ /** Never-never backstop (App.vue's seam-guard grammar): a glide whose `finished` can't
+- *  resolve (unmounted mid-flight) settles late, never never. */
+-const SETTLE_GUARD_MS = GLIDE_MS + 200;
++ *  resolve (unmounted mid-flight) settles late, never never. The constant is
++ *  `useFlipGlide`'s — two engines, ONE backstop (T9-W7 §1.6). */
++const SETTLE_GUARD_MS = GLIDE_MS + MOTION.settleGuardMs;
+ /** Below this the press is a CLICK, not a drag — the deck never moves and the card selects. */
+ const DRAG_SLOP = 5;
+ /** Release velocity (px/ms) above which the deck takes the flick as a card step. */
+@@ -389,6 +392,7 @@ export function useCarouselGlide(
+   }
+   function onScroll() {
+     if (scrollDebounce !== null) clearTimeout(scrollDebounce);
++    // policy: idle
+     scrollDebounce = window.setTimeout(reportSnap, 90);
+   }
+ 
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 1f4a357c..ac43e1fd 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -644,7 +644,7 @@ span.logo-trigger {
+   height: var(--caret-size);
+   color: var(--color-foreground);
+   transform: translateY(var(--caret-nudge)) rotate(90deg);
+-  transition: transform 200ms var(--ease-noteWrite);
++  transition: transform var(--motion-leave) var(--ease-noteWrite);
+ }
+ 
+ @media (min-width: 640px) {
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..032c9d22 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -146,7 +146,7 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--ease-noteWrite) backwards;
+ }
+ 
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+@@ -177,6 +177,6 @@ const NOTE_STAR_D =
+      .dt-label for this exact reason never reached the note. */
+   color: var(--ink-press-quiet);
+   pointer-events: auto;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--ease-noteWrite) backwards;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..3b7b7eea 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -49,7 +49,7 @@ function scribbleSeed(val: string | number): number {
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       :aria-pressed="selected === opt.value"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
++      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-[var(--motion-whisper)]"
+       :class="[
+         mobile ? '' : 'md:py-0.5 md:text-left',
+         selected === opt.value
+diff --git a/web/frontend/src/pencil/chrome/icons/DiceIcon.vue b/web/frontend/src/pencil/chrome/icons/DiceIcon.vue
+index 87e3590d..9910619d 100644
+--- a/web/frontend/src/pencil/chrome/icons/DiceIcon.vue
++++ b/web/frontend/src/pencil/chrome/icons/DiceIcon.vue
+@@ -110,7 +110,7 @@ defineProps<{ size?: number; playing?: boolean }>();
+ <style scoped>
+ .dice-roll {
+   transform-origin: center;
+-  animation: diceRoll 500ms var(--ease-springPop) forwards;
++  animation: diceRoll var(--motion-throw) var(--ease-springPop) forwards;
+ }
+ 
+ @keyframes diceRoll {
+@@ -131,7 +131,7 @@ defineProps<{ size?: number; playing?: boolean }>();
+ .pip-pop {
+   transform-origin: center;
+   transform-box: fill-box;
+-  animation: pipPop 250ms var(--ease-springPop) forwards;
++  animation: pipPop var(--motion-note) var(--ease-springPop) forwards;
+ }
+ 
+ @keyframes pipPop {
+diff --git a/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue b/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
+index 455d41ca..f89f0fb9 100644
+--- a/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
++++ b/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
+@@ -69,7 +69,7 @@ defineProps<{ size?: number; playing?: boolean }>();
+ /* The forced-fill mark draws itself in — the icon echo of the board's reveal-wave draw-in
+    (stroke-dashoffset → 0 on the same 350ms curve SolveIcon's check uses; one grammar). */
+ .mark-draw {
+-  animation: markDraw 350ms var(--ease-standard) forwards;
++  animation: markDraw var(--motion-dusk) var(--ease-standard) forwards;
+ }
+ 
+ @keyframes markDraw {
+diff --git a/web/frontend/src/pencil/chrome/icons/SolveIcon.vue b/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
+index cd40fcf2..b3a6ef53 100644
+--- a/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
++++ b/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
+@@ -52,7 +52,7 @@ defineProps<{ size?: number; playing?: boolean }>();
+ <style scoped>
+ /* Check draw-in: stroke-dashoffset → 0 */
+ .check-draw {
+-  animation: drawIn 350ms var(--ease-standard) forwards;
++  animation: drawIn var(--motion-dusk) var(--ease-standard) forwards;
+ }
+ 
+ @keyframes drawIn {
+@@ -67,7 +67,7 @@ defineProps<{ size?: number; playing?: boolean }>();
+ /* Star sparkle: scale up + glow pulse */
+ .star-sparkle {
+   transform-origin: 5px 5.5px;
+-  animation: sparkleGrow 500ms var(--ease-springPop) forwards;
++  animation: sparkleGrow var(--motion-throw) var(--ease-springPop) forwards;
+ }
+ 
+ @keyframes sparkleGrow {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..ad3ace85 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -134,33 +134,159 @@ export const MOTION = {
+     /** The moon's, 8Hz → 5.33Hz — the mark's 1.5× on the same stack. */
+     moon: 1.5,
+   },
+-  /** Carousel card-step glide (T4-W12) — a keyboard/button step of the gallery
+-   *  track rides the ONE glass curve (`curves.drawerGlide`) as a WAAPI FLIP transform
+-   *  at this duration, one clock, monotone, zero overshoot. A shorter throw than the
+-   *  drawer's 520ms ceiling (a card step travels one slot, not a full sheet): 440ms,
+-   *  auditioned by eye at the local preview, inside the glass band. Lands HERE, not as
+-   *  a mover-local literal, per the wave covenant (no new timing constants outside
+-   *  pencilConfig). PRM collapses the glide to an instant snap (no tween).
++  /** The FLIP engines' never-never backstop: a glide whose `finished` cannot resolve
++   *  (unmounted mid-flight) settles late, never never. Not a rung — nothing paints for
++   *  220ms, and nobody ever sees it. Both engines read THIS constant (T9-W7 §1.6): before
++   *  it, `useFlipGlide` guarded at duration + 220 and `useCarouselGlide` at its own + 200,
++   *  two backstops for one idea, one of them unruled. EXEMPT by this cite. */
++  settleGuardMs: 220,
++  /** THE DURATION LADDER (T9-W7 §13 · M09) — a short closed set of LENGTHS, not
++   *  meanings. What a rung is spent on is the call site's business; the ladder only says
++   *  how long a thing may take. Six rungs the product already ships, so nothing the owner
++   *  ruled moves, plus ONE proposed. A call site reads as a sentence:
++   *  `opacity var(--motion-leave) var(--ease-fadeOut)` — "leave, fading out".
+    *
+-   *  RATIFY-ME (T4-W12 ballot row 4): the card-step glide duration. 440ms auditioned at
+-   *  the Wave-D preview (:4788) against 380/440/520 — 380 read clipped for a one-slot
+-   *  throw, 520 (the drawer's full-sheet ceiling) dragged for the shorter travel; 440
+-   *  is the settled read, monotone on the glass curve with zero overshoot (`snap-glide-
+-   *  trace.json`). Inside the glass band, no new named curve. */
+-  cardStepMs: 440,
+-  /** Board⇄card FOLD (T4-W12 Wave C) — the gallery entry folds the live board INTO the
+-   *  center card (and the exit unfolds it back) as a classic FLIP on the ONE glass curve
+-   *  (`curves.drawerGlide`) via the extracted `useFlipGlide` engine. A FULL-sheet throw
+-   *  (board → card-face, not one card slot), so it takes the drawer's glass ceiling 520ms
+-   *  — longer than the 440ms card-step. Lands HERE, not as an App-local literal, per the
+-   *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap). */
+-  boardFoldMs: 520,
+-  /** BEAT 0 — chrome leaves (T4-W12 Wave C2 §ENTRY). The gallery entry opens by fading the
+-   *  scene's controls/drawer out on the EXISTING scene-leaving beat (scene.css, 200ms) — the
+-   *  board itself never erases (we fold it, not discard it). This is that band, so the fold
+-   *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+-   *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+-  chromeLeaveMs: 200,
++   *    whisper 150  the estate's most-used length: a hover, a tape, a hint. No prior
++   *                 ruling; the ladder ratifies what shipped. Tailwind's own default tier
++   *                 joins it through `--default-transition-duration` (index.css).
++   *    leave   200  chrome leaving the page — was `chromeLeaveMs` (T4-W12 Wave C2 §ENTRY,
++   *                 the beat-0 window App holds `html.gallery-leaving` for). Both declared
++   *                 twins ride it: scene.css's chrome fade and the deck's dissolve. It is
++   *                 also §13's one RUB OUT (§1.5): the incumbent, two consumers. 125 was
++   *                 REJECTED for the beat collision with `beatMs` (R6 law 7), not taste.
++   *    note    250  a written note arriving (MarginNote, SolverErrorNote, the vignette,
++   *                 controls-fade-in). 250 is exactly two boil beats; 240 was not, which
++   *                 is the argument FOR moving the guard ribbon and the progress trace.
++   *    dusk    350  the theme's colour turn (index.css, T3-W10 disposition keep).
++   *    step    440  one card slot — was `cardStepMs`. PINNED: RATIFY-ME T4-W12 ballot
++   *                 row 4, auditioned 380/440/520 at the Wave-D preview; 380 read clipped,
++   *                 520 dragged for a one-slot travel.
++   *    throw   520  a full sheet — was `boardFoldMs` and useControlsDrawer's GLIDE_MS
++   *                 literal. PINNED: R6 standing ruling 1 (audit 4, 2026-07-11 —
++   *                 auditioned 480/520/560 by eye at :3001, the glass family's settle).
++   *    rise    600  PROPOSED (U-10) — see the rung's own line below.
++   *
++   *  NOT ON THE LADDER — the ADMITTED ledger in `scripts/check-motion-bands.mjs`, closed
++   *  both ways and CONTENT ANCHORED (`file :: literal :: a nearby stable string`, never a
++   *  line: line cites rotted four times inside one pass). CHARACTER: a keyframed gesture
++   *  auditioned whole — the dark toggle admitted as ONE character with its beat table as
++   *  the cite, cell-reveal, the eraser scrub, sharePop, refuse-shake, the loader's loop,
++   *  the wordmark's 1.2s write-on. The ladder governs a gesture's LENGTH, never its
++   *  interior. GRADED: a set whose differences ARE the design — the players well ("a
++   *  return is lighter than an arrival", 40ms), the laminate's lay-down against its lift,
++   *  `--draw-dur`'s own default, the ghost draw-on, and `DRAW_IN_PRESETS` (the
++   *  stagger/jitter/baseDelay tuple IS the design). PRM-FALLBACK: the two reduced-motion
++   *  fallbacks that must NOT read a rung, because a rung reads 0 there. RETUNE: empty, and
++   *  the class exists so a shortening the owner cites has a lawful door instead of a
++   *  silent one.
++   *
++   *  PRM IS A VALUE OF THE LADDER (§3). Under `reduce` every `--motion-*` resolves 0ms, so
++   *  every rung consumer — transitions included, Tailwind's `.transition-colors` included —
++   *  collapses to a same-frame swap (R6 law 43's direction). index.css's universal
++   *  `animation` reset stays as the floor for anything outside the ladder.
++   *
++   *  THE DELAY FENCE (B9). The ladder governs TRAVEL. The second and later time values in
++   *  a term are LITERALS: a delay is a beat alignment against another gesture's clock, and
++   *  a shared rung would make one retune move two unrelated things.
++   *
++   *  THE RETUNE POLICY, pin by cite (§2.3). A site whose length carries its own ruling is
++   *  PINNED and says so at the site: `useControlsDrawer` (throw, R6 standing ruling 1),
++   *  `App.vue`'s fold (throw, T4-W12 Wave C), `useCarouselGlide` (step, RATIFY-ME row 4).
++   *  Retuning one of those rungs re-auditions that ruling BY NAME before the number moves.
++   *  Every other site FOLLOWS silently — the five 500 → 520 rows and the deal's derived
++   *  delay. The gate's banked inventory is the ratchet that makes a silent shortening
++   *  visible.
++   *
++   *  THE CHOREOGRAPHY the marks asked to see defined, as it RUNS on W8 C06 (the exit's
++   *  fold mover is tagged, so the board's park-home restore no longer finishes it 0.3ms
++   *  after birth). HEAD's cut is the paired control and reads NO TRAVEL 6/6.
++   *    gallery IN   beat 0          chrome leaves                  leave · --ease-fadeOut
++   *                 beat 1, +leave  board + wordmark fold          throw · glass
++   *                 the deal, +round(0.42 · throw)                 — (a DERIVED delay: the
++   *                                 deal begins at 42% of the fold, so a fold retune moves
++   *                                 it by design; the coefficient stays a literal)
++   *    gallery OUT  frame 0         board + wordmark unfold        throw · glass
++   *                 frame 0         the deck's leave-only dissolve leave · --ease-fadeOut
++   *                 +150ms literal  controls-fade-in               note  · --ease-drawOn
++   *                 frame 0         washi label + action bar fade  whisper · --ease-standard
++   *                                 (masked under .scene-controls at opacity 0)
++   *                 chrome lands at 400, the paper settles at 520. The paper stops last.
++   *                 That is the definition; nothing moves to make it true.
++   *    card step    track FLIP + three card faces                  step  · glass
++   *    drawer desk  sheet · case · masthead · tab, ONE WAAPI clock throw · glass (PINNED)
++   *    dock <1024   the sheet alone, 302…681px                     rise  · glass
++   *                 (the tongue swaps berth UNDER COVER — DrawerTab keys the berth on
++   *                 `phase === "idle"`, so on open the swap lands at settle, occluded)
++   *    dusk         the five narrowed selectors                    dusk  · (the curve is
++   *                 MOT-VERB's `--verb-dusk-ease`; this family spends the LENGTH only)
++   *
++   *  ONE HOME, NO FALLBACK (chair §6.5). `publishMotionRungs` emits ONE
++   *  `<style data-motion-rungs>` node carrying the REGISTRATIONS, the rungs, and their
++   *  reduce arm. Never inline properties — an inline declaration outranks every author
++   *  rule, so a reduce arm could never reach it (measured both engines). Never
++   *  `!important`. There is no `@theme` copy and no per-component publisher: a second home
++   *  is a retune waiting to happen (the `--card-step-ms` `:style` binding this replaces was
++   *  exactly that, and it was single-quoted, which is how it hid from the gate).
++   *
++   *  Every site writes `var(--motion-<rung>)` with NO fallback, and the 59 fallbacks pass 2
++   *  shipped are struck. A fallback was the thing that made the ladder able to lie: it made
++   *  a DELETED publisher invisible in both engines (research row B), so the one row that
++   *  proves the publisher matters could never fire. What replaces it is the registration:
++   *
++   *    @property --motion-<rung> { syntax: "<time>"; inherits: true; initial-value: 0ms }
++   *
++   *  A registered `<time>` cannot take the shorthand to `all`, and its initial 0ms means an
++   *  ABSENT publisher reads EXACTLY as `reduce` does — the honest failure for a ladder, and
++   *  one B5's roster and B12 can both see. `initial-value` is `0ms` and not the rung's own
++   *  value: with the real value as the initial, the delete-the-publisher row reads 0.52s and
++   *  passes, which re-silences the born-RED the law exists to arm (probe row D). */
++  rungs: {
++    whisper: 150,
++    leave: 200,
++    note: 250,
++    dusk: 350,
++    step: 440,
++    throw: 520,
++    /** PROPOSED (U-10) — the dock sheet's own clock, `<1024` both orientations. The dock
++     *  inherited the desk's 520ms and nobody ever saw it against the distance it actually
++     *  travels: `travel: 293px @844x390 … 642px @768x1024 (sheet) · 0.488…1.070 px/ms`.
++     *
++     *  MEASURED ON THIS BUILD against the paired HEAD control `74a2b5d9`, full per-frame
++     *  series, matched travel per pose (pass3/prototype/MOT-LADDER/readings/e-dock-band-*):
++     *    webkit  768x1024  worst frame 108.76 → 71.90 px (−33.9 %) · excess area over 40px
++     *                      180.36 → 123.54 (−31.5 %) · frames >40 7 → 7
++     *            390x844   worst 72.63 → 67.00 (−7.8 %) · excess 129.55 → 80.49 (−37.9 %)
++     *            390x844 dark  worst 88.50 → 66.24 (−25.2 %) · excess 126.20 → 86.35 (−31.6 %)
++     *    chromium 768x1024 worst 43.24 → 34.95 (−19.2 %) · excess 3.24 → 0 · >40 1 → 0
++     *            390x844   worst 44.21 → 32.99 (−25.4 %) · excess 6.35 → 0 · >40 2 → 0
++     *            844x390   worst 20.58 → 17.21 (−16.4 %)
++     *  The DESK is untouched: 1440x900 rest rect is identical to the pixel on both arms
++     *  (top 176.98 left 710 330x640), travel 2.81 → 2.70 px. Settle is clean everywhere —
++     *  0 running animations 700 ms after the tap, rest rect equal to the control's.
++     *
++     *  Both statistics fall at every pose and in both engines; that is the claim. The BAND
++     *  pass 2 declared (worst −11…14 %, excess −20…26 %) is NOT what this build reads — the
++     *  excess-area fall is larger everywhere and the worst-frame fall ranges wider — so the
++     *  band above is the re-derived one and the old ends are struck. `framesOver40px` is not
++     *  a criterion: it is a count, and in webkit it does not move at all.
++     *
++     *  A shorter clock is not available: it raises the worst frame, and the QUALITY LAW
++     *  forbids buying anything with one. If the owner keeps 520 at the re-look this rung
++     *  dies in one line and the dock reads `throw` again. */
++    rise: 600,
++  },
++  /** KEYFRAMED CHARACTERS whose length has a TS reader (T9-W7 §1.5). A character is
++   *  auditioned WHOLE and is never a rung; what this member fixes is that its number was
++   *  typed in two languages and nothing held them equal. ONE home, bound at the consumer as
++   *  a custom property (the `--draw-dur` precedent); the CSS site reads the binding, never
++   *  a literal. Admitted as a TS class by B2, closed by G-REFUSE-ONE-HOME. */
++  characters: {
++    /** `refuse-shake`, the house's ERROR verb — the cell's refusal and the solve verdict's
++     *  shake are ONE gesture at one length. Was `useGameCell.ts`'s `REFUSE_MS = 600` and
++     *  `index.css`'s `.solve-failure { animation: refuse-shake 0.6s linear }`, two hands
++     *  typing 600 and 0.6s with nothing between them. Zero paint moves: 600 = 600. */
++    refuse: 600,
++  },
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+@@ -194,6 +320,39 @@ export const MOTION = {
+   },
+ } as const;
+ 
++/** THE LADDER'S VALUES, rendered from the object — pure, testable, one string.
++ *
++ *  THE REGISTRATION IS NOT HERE, and the prototype is why. Emitting
++ *  `@property --motion-<rung>` from this same node makes the registration die WITH the
++ *  publisher, so the born-RED row reads `transition-property: all` exactly as it does at
++ *  HEAD and chair §6.5 buys nothing (measured both engines: pass3/readings/b-b12-*). The
++ *  registrations live in `index.css`, in the first stylesheet, at `initial-value: 0ms`;
++ *  this function emits the VALUES and the reduce arm, which is the one home. Absence then
++ *  reads as reduce — the honest failure for a ladder — and B3 asserts the registered set
++ *  and the rung set are the same set, closed both ways, so the two cannot drift. */
++function motionRungsCss(rungs: Record<string, number> = MOTION.rungs): string {
++  const rows = Object.entries(rungs);
++  const live = rows.map(([n, ms]) => `--motion-${n}:${ms}ms`).join(";");
++  const still = rows.map(([n]) => `--motion-${n}:0ms`).join(";");
++  return `:root{${live}}@media (prefers-reduced-motion: reduce){:root{${still}}}`;
++}
++
++/** THE ONE PUBLISHER. Appends ONE `<style data-motion-rungs>` node carrying the ladder, its
++ *  registrations and its reduce arm, so the CSS layer and the TS layer can never disagree:
++ *  the text is GENERATED from `MOTION.rungs`, so it is byte-equal by construction and there
++ *  is no second copy to retune. Called once from main.ts before mount.
++ *
++ *  A `<style>` node, never inline properties: an inline declaration outranks every author
++ *  rule, so `@media (prefers-reduced-motion: reduce) { :root { --motion-*: 0ms } }` could
++ *  never reach a rung written onto `<html>.style` (measured both engines). And no
++ *  `!important`: a bang in the sheet is a workaround wearing a home. */
++export function publishMotionRungs(doc: Document = document): void {
++  const el = doc.createElement("style");
++  el.dataset.motionRungs = "";
++  el.textContent = motionRungsCss();
++  doc.head.append(el);
++}
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+diff --git a/web/frontend/src/pencil/dev/DebugToggle.vue b/web/frontend/src/pencil/dev/DebugToggle.vue
+index 8b547479..ff79a0cc 100644
+--- a/web/frontend/src/pencil/dev/DebugToggle.vue
++++ b/web/frontend/src/pencil/dev/DebugToggle.vue
+@@ -26,7 +26,7 @@ const debug = useDebug();
+        `onHoverEnter` cancels BEFORE the coarse gate rather than after it. -->
+   <button
+     type="button"
+-    class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs transition-colors duration-200"
++    class="text-muted-foreground hover:text-foreground mt-1 block font-mono text-xs transition-colors duration-[var(--motion-leave)]"
+     :aria-pressed="debug"
+     @click.stop="debug = !debug"
+   >
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..dc291595 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -15,6 +15,7 @@ import {
+   CELEBRATION,
+   DRAW_IN_PRESETS,
+   GLYPH_ANIM,
++  MOTION,
+   wavefrontStepMs,
+ } from "@pencil/config/pencilConfig";
+ 
+@@ -227,7 +228,7 @@ function setupReveal() {
+   if (!props.isGiven && !props.isSolved) {
+     drawInAnim = createStrokeDrawIn(el, {
+       pathLength: glyph.value.length,
+-      durationMs: 150,
++      durationMs: MOTION.rungs.whisper,
+     });
+     drawInAnim.start();
+     return;
+diff --git a/web/frontend/src/pencil/glyph/glyphAnimations.ts b/web/frontend/src/pencil/glyph/glyphAnimations.ts
+index 34bd170c..383dfa63 100644
+--- a/web/frontend/src/pencil/glyph/glyphAnimations.ts
++++ b/web/frontend/src/pencil/glyph/glyphAnimations.ts
+@@ -55,6 +55,7 @@ export function createGlyphFlourish(
+   if (reducedMotion.value || variantPaths.length < 2) return null;
+ 
+   const cycles = options.cycles ?? 2;
++  // graded: §2.2 GRADED — GLYPH_ANIM's own loop; the handwriting's grade is the design.
+   const cycleDurationMs = options.cycleDurationMs ?? 600;
+   const n = variantPaths.length;
+ 
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..68b2aa40 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -586,8 +586,8 @@ onUnmounted(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+     transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++      stroke-dashoffset var(--motion-note) var(--ease-drawOn),
++      opacity var(--motion-throw) ease;
+   }
+ }
+ 
+@@ -617,11 +617,13 @@ onUnmounted(() => {
+ }
+ 
+ /* NO TRANSITION ON THE DASH, and that is the load-bearing difference from `.progress-trace`.
+-   The fill gauge's front moves on FILL EVENTS, so a 240ms tween is what carries it between two
+-   resting values. The join ring's front is driven every frame by a `sequence` handle that is
+-   already the easing — laying a second 240ms tween over it would smear the beat's own curve and
+-   leave the ring un-arrived ~240ms after J3's window has closed. The one-shot owns the motion;
+-   the paint just follows it. */
++   The fill gauge's front moves on FILL EVENTS, so the `note` rung (250ms) is what carries it
++   between two resting values. The join ring's front is driven every frame by a `sequence`
++   handle that is already the easing — laying a second 250ms tween over it would smear the
++   beat's own curve and leave the ring un-arrived ~250ms after J3's window has closed. The
++   one-shot owns the motion; the paint just follows it. (250 is two boil beats; the 240 this
++   comment used to quote was not, and a comment that contradicts its own declaration is the
++   defect T9-W7 §13 exists to kill.) */
+ 
+ /* FILL-gauge a11y mirror — visually hidden, still announced (the sr-only clip). */
+ .progress-trace-a11y {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+index ead7c1db..b96f91dc 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+@@ -6,7 +6,7 @@ import {
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { DRAW_IN_PRESETS } from "@pencil/config/pencilConfig";
++import { DRAW_IN_PRESETS, MOTION } from "@pencil/config/pencilConfig";
+ 
+ // Grid draw-in/erase — stroke-dashoffset tweens on the unified scheduler (W8 4th workstream).
+ // Each grid line was its own keyframes.js `KeyframesAnimation` → its own `RAFPlayback` → its
+@@ -156,11 +156,14 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+       el.style.strokeDashoffset = "0";
+       el.style.strokeDasharray = String(len);
+       // easeInCubic — erasing leaves the page fast and careless (design §1.2 canon).
++      // THE RUB OUT reads `whisper` (T9-W7 §1.5): this erases STROKES, not a note. 125
++      // was rejected for the beat collision with `MOTION.beatMs` (R6 law 7), so if §7 ever
++      // wants the erase faster than the write, the lawful answer is still this rung.
+       return {
+         el,
+         from: 0,
+         to: len,
+-        duration: 150,
++        duration: MOTION.rungs.whisper,
+         delay: i * 4,
+         easing: "easeInCubic",
+       };
+diff --git a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+index 48de51d2..1f0f7f03 100644
+--- a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
++++ b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+@@ -21,6 +21,7 @@
+ import { computed, ref, watch, onMounted, onUnmounted } from "vue";
+ import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+ import { acquireHold, releaseHold } from "@mkbabb/pencil-boil";
++import { MOTION } from "@pencil/config/pencilConfig";
+ 
+ const props = defineProps<{
+   active: boolean;
+@@ -31,7 +32,9 @@ const props = defineProps<{
+   originalGivenCells: Set<string>;
+ }>();
+ 
+-const LIFT_MS = 200;
++// The laminate's lift is chrome leaving the page — the ladder's own `leave` (200 = 200,
++// zero paint moves). Its lay-down against it is the GRADED pair R6 §1.2 rules.
++const LIFT_MS = MOTION.rungs.leave;
+ 
+ // prefers-reduced-transparency OR prefers-contrast: more — index.css flips the
+ // sheet to opaque construction paper under BOTH arms, so the ref must track
+@@ -141,6 +144,7 @@ const keyCells = computed<KeyCell[]>(() => {
+ // byte-identical. N=256 → 130ms buckets (window 80–860, last stroke done ~1040ms;
+ // ≤ two buckets ≈ 2N/7 strokes ever concurrent) — the write stretches, the
+ // noise ordering and the 180ms per-glyph red-pen stroke keep.
++// graded: §2.2 GRADED — the key's draw-on against `ghost-draw-on` 180 (R6 law 39); the pair is the design.
+ const KEY_DRAW_MS = 180;
+ const KEY_DELAY_LEAD_MS = 80; // lets the 280ms lay-down land first
+ const KEY_STAGGER_BUCKETS = 7;
+@@ -222,8 +226,8 @@ const keyBucketMs = computed(() =>
+   opacity: 0;
+   transform: scale(1.02);
+   transition:
+-    opacity 200ms var(--ease-accelIn),
+-    transform 200ms var(--ease-accelIn);
++    opacity var(--motion-leave) var(--ease-accelIn),
++    transform var(--motion-leave) var(--ease-accelIn);
+ }
+ 
+ .answer-key-laminate.is-shown {
+@@ -268,6 +272,7 @@ const keyBucketMs = computed(() =>
+   .answer-key-laminate,
+   .answer-key-laminate.is-shown {
+     transform: none;
++    /* PRM-FALLBACK (T9-W7 §2.2): NOT a rung, for the reason above the toggle's twin. */
+     transition: opacity 150ms linear;
+   }
+   /* Key glyphs: PRM-instant at 0.9 is inherited from the primitive itself
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..0dab672b 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -106,7 +106,7 @@ const geom = computed(() => {
+   border: none;
+   opacity: 0;
+   pointer-events: none;
+-  transition: opacity 150ms;
++  transition: opacity var(--motion-whisper) var(--ease-standard);
+   /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+      the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+      controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+new file mode 100644
+index 00000000..f1ff53bb
+--- /dev/null
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -0,0 +1,1489 @@
++#!/usr/bin/env node
++/**
++ * T9-W7 §13 · THE DURATION LADDER GATE.  BORN RED.
++ *
++ * The estate's easing half is a system and its duration half is not: `pencilConfig.ts`
++ * MOTION named four durations and the shipped rules spelled their lengths as literals
++ * (I6 at HEAD: 77 declarations, 35 distinct literals, 1 reading a named rung). This gate
++ * is the duration twin of `check-motion-contract.mjs`'s PRM contract. It never judges
++ * whether a length is RIGHT — only whether it is a NAMED DECISION.
++ *
++ *   B1 NAMED        every DURATION position inside a shipped transition/animation term
++ *                   reads a rung (`var(--motion-*)`, `MOTION.rungs.*`) or sits in the
++ *                   ADMITTED ledger with a class, a cite and a CONTENT ANCHOR. Position
++ *                   aware: a term's 2nd time is a DELAY, a separate axis (B9 fences it).
++ *   B2 CLOSED       the ladder is a short closed set (<= LADDER_MAX), every rung carries a
++ *                   ruling, and every other numeric MOTION member is EXEMPT by cite or an
++ *                   admitted GRADED TS class.
++ *   B3 MIRROR       ONE publisher emits ONE `<style data-motion-rungs>` node whose text is
++ *      +FALLBACK    GENERATED from `MOTION.rungs` (so it is byte-equal by construction),
++ *      +ONE HOME    carrying the live arm AND the reduce arm; main.ts calls it before
++ *                   mount; no `@theme` copy; no second publisher in ["'].
++ *   B4 NO-ALL       `transition: all` is banned in shipped source.
++ *   B5 PRM          the posture, rule level: the publisher's reduce arm zeroes EVERY rung,
++ *                   the only live nonzero transition lengths outside a reduce block read a
++ *                   rung, and exactly the PRM-FALLBACK rows sit inside a reduce block.
++ *                   (Its RUNTIME twin walks the CSSOM on the built dist — see §RUNTIME.)
++ *   B6 NO-SHORTEN   a RATCHET against the banked inventory (`motion-inventory.base.json`):
++ *                   a duration may rise, never fall. A fall needs a RETUNE ledger row with
++ *                   a cite. Git `BASE_REF` is the fallback when the bank is missing.
++ *   B7 TAILWIND     no `duration-N` class attribute; `--default-transition-duration` reads
++ *                   `var(--motion-whisper)`; each override is an arbitrary-value utility
++ *                   naming a rung; no `transition-all` utility.
++ *   B8 CURVE        (i2 folded in) no bare `ease`/`ease-in`/`ease-out`/`ease-in-out`/
++ *                   `linear`, and no missing timing function, on a transition clause that
++ *                   spends a real length. `linear` stays legal on an `animation:` whose
++ *                   keyframes carry per-step easing.
++ *   B9 DELAY FENCE  the second and later time values in a term are LITERALS. The ladder
++ *                   governs travel; it never governs a beat alignment.
++ *   G-DOCK-BAND     `rungs.rise`'s docstring declares the band it governs, both ends.
++ *   G-GUARD         ONE settle-guard constant, read by both FLIP engines.
++ *
++ * The ADMITTED ledger is closed BOTH ways (the `check-copy-register.mjs` shape): a row
++ * nothing consumes reds the gate, so an admission cannot outlive its reason. Rows are
++ * CONTENT ANCHORED — `file :: literal :: a nearby stable string` — because line cites
++ * rotted four times inside one pass.
++ *
++ * Run:  node scripts/check-motion-bands.mjs             (verdict)
++ *       node scripts/check-motion-bands.mjs --list      (every offending position)
++ *       node scripts/check-motion-bands.mjs --inventory (the ground table, JSON)
++ *       node scripts/check-motion-bands.mjs --bank      (write the B6 ratchet bank)
++ *       node scripts/check-motion-bands.mjs --self-test (each check shown able to fail)
++ */
++import {
++  readFileSync,
++  readdirSync,
++  statSync,
++  existsSync,
++  writeFileSync,
++} from "node:fs";
++import { execFileSync } from "node:child_process";
++import { join, resolve, relative, dirname } from "node:path";
++import { fileURLToPath } from "node:url";
++import process from "node:process";
++
++const HERE = dirname(fileURLToPath(import.meta.url));
++const ROOT = resolve(process.env.ROOT ?? join(HERE, ".."));
++const SRC = join(ROOT, "src");
++const CONFIG = join(SRC, "pencil/config/pencilConfig.ts");
++const THEME = join(SRC, "assets/index.css");
++const MAIN = join(SRC, "main.ts");
++const BANK = join(HERE, "motion-bank.json");
++/** The wave's base commit — the git fallback when the bank is unreadable. */
++const BASE_REF = process.env.BASE_REF ?? "74a2b5d9";
++
++/** A ladder is short or it is a list. */
++const LADDER_MAX = 8;
++/** The duration constants that are NOT rungs, each exempt by its own cite. */
++const EXEMPT_KEYS = {
++  beatMs:
++    "the boil beat — a raster-swap cadence, never painted as a gesture (R6 law 7)",
++  settleGuardMs:
++    "the FLIP engines' never-never backstop — a timeout, never a length on screen (§1.6)",
++};
++/** Numeric TS members outside MOTION that are an admitted GRADED SET, not stray lengths. */
++const ADMITTED_TS = {
++  DRAW_IN_PRESETS:
++    "GRADED — the draw-in tuple (duration/stagger/jitter/baseDelay) IS the design; a rung would erase the grade",
++  WASH: "GRADED — §12's join-wash furniture, fifteen constants tuned against each other (§1.9); the ladder NAMES it and does not re-home it",
++  GLYPH_ANIM: "GRADED — the handwriting's own grade",
++  CELEBRATION: "CHARACTER — the crest, auditioned whole",
++};
++
++/**
++ * THE ADMITTED LEDGER — content anchored. Each row is
++ *   { file, ms: [...], anchor: "<a nearby stable string>", cls, why }
++ * and matches a duration position when the row's file holds it and the anchor appears in
++ * the text WINDOW around that declaration. No line numbers: they rot.
++ */
++const ANCHOR_BACK = 1400;
++const ANCHOR_FWD = 200;
++
++const ADMITTED = [
++  // ── CHARACTER — a keyframed gesture auditioned whole. The ladder sets a gesture's
++  // LENGTH; the keyframe owns its interior. The dark toggle is ONE character: its beat
++  // table is the cite, and every beat of it is admitted under that one ruling.
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [100],
++    anchor: "outgoing icon: fade only in the last wring beat",
++    cls: "CHARACTER",
++    why: "the toggle's beat table, beat 240-340 — the outgoing icon's fade",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [300],
++    anchor: "incoming icon: 60-360ms rise",
++    cls: "CHARACTER",
++    why: "the toggle's beat table, beat 60-360 — the incoming icon's rise",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [340],
++    anchor: "Wring-down 0-340ms",
++    cls: "CHARACTER",
++    why: "the toggle's beat table, beat 0-340 — the wring",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [800],
++    anchor: "The bloom: 60-860ms",
++    cls: "CHARACTER",
++    why: "the toggle's protagonist beat, auditioned as itself",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [120],
++    anchor: "SQUASH (0-120ms)",
++    cls: "CHARACTER",
++    why: "the toggle's beat table, beat 0-120 — the squash",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [1010],
++    anchor: "PLUSH FLEX (860-1010ms)",
++    cls: "CHARACTER",
++    why: "the toggle's landing, the last beat of the one gesture",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [150, 100, 120],
++    anchor: "STAR POP (~560/640/720ms)",
++    cls: "CHARACTER",
++    why: "the star pop, in and out — four positions of the one gesture's beat table",
++  },
++  // The refuse-shake's CHARACTER row LEFT this ledger at pass 3: its two consumers now read
++  // `var(--refuse-dur)`, bound from `MOTION.characters.refuse`, so there is no literal here
++  // to admit. G-REFUSE-ONE-HOME holds it instead, and the row is closed by its own absence.
++  {
++    file: "src/assets/index.css",
++    ms: [300],
++    anchor: ".cell-reveal-animated",
++    cls: "CHARACTER",
++    why: "cell-reveal on --ease-anticipatePop — an overshoot keyframe",
++  },
++  {
++    file: "src/games/shared/GameControlPanel.vue",
++    ms: [500],
++    anchor: "Share pop — a small tape-press flourish",
++    cls: "CHARACTER",
++    why: "sharePop — a press flourish",
++  },
++  {
++    file: "src/games/shared/GameControlPanel.vue",
++    ms: [400],
++    anchor: "Eraser scrub animation",
++    cls: "CHARACTER",
++    why: "eraserScrub — a scrub",
++  },
++  {
++    file: "src/pencil/chrome/ScribbleLoader.vue",
++    ms: [1000],
++    anchor: ".scribble-path",
++    cls: "CHARACTER",
++    why: "a loop cadence, not a length",
++  },
++  {
++    file: "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue",
++    ms: [1200],
++    anchor: "clip-path: inset(0 100% 0 0)",
++    cls: "CHARACTER",
++    why: "the wordmark writing itself",
++  },
++  // ── GRADED — a set whose differences ARE the design; a rung would erase them.
++  {
++    file: "src/games/shared/GameControlPanel.vue",
++    ms: [320, 380],
++    anchor: ".player-row.is-arriving",
++    cls: "GRADED",
++    why: "the arrival — the heaviest row of the players-well set",
++  },
++  {
++    file: "src/games/shared/GameControlPanel.vue",
++    ms: [280, 320],
++    anchor: "A RETURN IS LIGHTER THAN AN ARRIVAL",
++    cls: "GRADED",
++    why: "the return, 40ms lighter than the arrival — the grade IS the sentence",
++  },
++  {
++    file: "src/games/shared/GameControlPanel.vue",
++    ms: [320, 260],
++    anchor: ".player-row.is-leaving",
++    cls: "GRADED",
++    why: "the close and the quiet — the lightest rows of the set",
++  },
++  {
++    file: "src/pencil/sheet/AnswerKeyLaminate.vue",
++    ms: [280],
++    anchor: "onto the audit-4 monotone glass curve",
++    cls: "GRADED",
++    why: "lay-down 280 against lift-away 200 — the erase-family asymmetry (R6 §1.2)",
++  },
++  {
++    file: "src/assets/index.css",
++    ms: [160],
++    anchor: ".pencil-draw-on",
++    cls: "GRADED",
++    why: "--draw-dur's own default; every write-in overrides it with its own grade",
++  },
++  {
++    file: "src/games/shared/gameCell.css",
++    ms: [180],
++    anchor: "ghost-draw-on",
++    cls: "GRADED",
++    why: "the ghost draw-on, both tiers (R6 law 39) — §6's surface, handed to MRK-LIVE",
++  },
++  // ── PRM-FALLBACK — a reduced-motion fallback never reads a rung, BECAUSE the ladder
++  // reads 0 there (§3). These two are what the index.css:744 comment protects.
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    ms: [200],
++    anchor: ".toggle-rest",
++    cls: "PRM-FALLBACK",
++    why: "the rest-stack crossfade — the T3-W10 PRM contract's own 200ms",
++    inReduce: true,
++  },
++  {
++    file: "src/pencil/sheet/AnswerKeyLaminate.vue",
++    ms: [150],
++    anchor: "prefers-reduced-motion: reduce",
++    cls: "PRM-FALLBACK",
++    why: "the laminate's linear fade — the laminate's own reduced-motion answer",
++    inReduce: true,
++  },
++  // ── RETUNE — empty by design. An owner-cited SHORTENING lands here with its cite and
++  // B6 reads it. The class exists so a shortening has a lawful door instead of a silent one.
++];
++
++/** `--empty-ledger` reads the tree as if nothing were admitted: the HEAD-truth count. */
++const LEDGER = process.argv.includes("--empty-ledger") ? [] : ADMITTED;
++
++const NO_DEV = process.argv.includes("--no-dev");
++const LIST = process.argv.includes("--list");
++const INVENTORY = process.argv.includes("--inventory");
++const WRITE_BANK = process.argv.includes("--bank");
++const SELF_TEST = process.argv.includes("--self-test");
++
++/* ── collection ────────────────────────────────────────────────────────────── */
++
++function* walk(dir) {
++  for (const name of readdirSync(dir).sort()) {
++    const p = join(dir, name);
++    if (statSync(p).isDirectory()) {
++      if (NO_DEV && name === "dev") continue;
++      yield* walk(p);
++    } else if (/\.(vue|css|ts|html)$/.test(name)) yield p;
++  }
++}
++
++const DECL = /(?<![\w-])(transition|animation)([a-z-]*):\s*([^;{}]+);/g;
++const RUNG_VAR = /var\(\s*--motion-([A-Za-z]+)\s*(?:,\s*(\d+(?:\.\d+)?m?s)\s*)?\)/g;
++const OTHER_VAR = /var\(\s*(--[A-Za-z-]+)\s*(?:,\s*(\d+(?:\.\d+)?m?s)\s*)?\)/g;
++const MOTION_TS = /\bMOTION\.rungs\.[A-Za-z]+|v-bind\([^)]*MOTION[^)]*\)/;
++const BARE_EASE = /(^|[\s)])(ease-in-out|ease-out|ease-in|ease|linear)(\s|$|!)/;
++
++const toMs = (n, unit) => (unit === "s" ? Number(n) * 1000 : Number(n));
++
++/**
++ * Position-aware read of one declaration body. Returns the ordered time positions per
++ * comma-separated clause, each tagged duration|delay and named|literal.
++ */
++function positions(prop, body) {
++  const longhand = /-duration$/.test(prop)
++    ? "duration"
++    : /-delay$/.test(prop)
++      ? "delay"
++      : null;
++  // 1 · MASK FIRST — a var()'s own comma is not a clause boundary. Rung reads become
++  //     opaque tokens so their fallback text is never mistaken for a bare literal.
++  const toks = [];
++  let masked = body.replace(RUNG_VAR, (_m, name, fb) => {
++    toks.push({ kind: "rung", rung: name, fallback: fb ?? null });
++    return `«${toks.length - 1}»`;
++  });
++  // 2 · a house curve read becomes its own token (B8 reads it); any OTHER var() with a
++  //     time fallback is a LOCAL (--draw-dur), ruled at its own site.
++  masked = masked.replace(OTHER_VAR, (_m, name, fb) => {
++    if (name.startsWith("--ease-")) {
++      toks.push({ kind: "ease", raw: name });
++      return `«${toks.length - 1}»`;
++    }
++    if (fb) {
++      const [, n, u] = /^(\d+(?:\.\d+)?)(ms|s)$/.exec(fb);
++      toks.push({ kind: "local", ms: toMs(n, u), raw: fb });
++      return `«${toks.length - 1}»`;
++    }
++    return "§";
++  });
++  // 3 · one clause per comma, then walk each clause in order
++  const out = [];
++  for (const clause of masked.split(",")) {
++    const seq = [];
++    let house = false;
++    const re = /«(\d+)»|(\d+(?:\.\d+)?)(ms|s)(?![\w-])/g;
++    for (let m; (m = re.exec(clause));) {
++      if (m[1] !== undefined) {
++        const t = toks[Number(m[1])];
++        if (t.kind === "ease") house = true;
++        else seq.push(t);
++      } else seq.push({ kind: "literal", ms: toMs(m[2], m[3]), raw: m[2] + m[3] });
++    }
++    const pretty = clause
++      .replace(/«(\d+)»/g, (_m, i) => {
++        const t = toks[Number(i)];
++        return t.kind === "rung"
++          ? `var(--motion-${t.rung}, ${t.fallback ?? "—"})`
++          : t.kind === "ease"
++            ? `var(${t.raw})`
++            : `var(…, ${t.raw})`;
++      })
++      .replace(/§/g, "var(…)")
++      .replace(/\s+/g, " ")
++      .trim();
++    // B8's reading of the clause: a house curve, a bare keyword, or nothing at all.
++    const curve = house
++      ? "house"
++      : BARE_EASE.test(clause.replace(/«\d+»/g, ""))
++        ? "bare"
++        : "none";
++    // THE TERM (§2.2's key) — the property a transition moves, or the keyframes an
++    // animation runs. It survives a retune, which a line number and a millisecond do not:
++    // research §7 row 13 measured `file :: line` colliding 15× and `file :: prop :: ms` 23×
++    // over the same rows, against 0 for `file :: selector :: term`.
++    const term = (/^\s*([A-Za-z-]+)/.exec(pretty)?.[1] ?? "—").trim();
++    seq.forEach((t, i) => {
++      let role = longhand ?? (i === 0 ? "duration" : i === 1 ? "delay" : "extra");
++      // NOT A LENGTH: a `0s` visibility swap, the global PRM nuke's 0.01ms. Six at HEAD.
++      if (role === "duration" && t.kind === "literal" && t.ms <= 1) role = "notALength";
++      out.push({ ...t, role, curve, term, clause: pretty.slice(0, 90) });
++    });
++  }
++  return out;
++}
++
++/**
++ * The rule head this declaration sits under — the other half of §2.2's key. Walked back
++ * from the declaration to its own opening brace, so a selector that moves down the file
++ * keeps its identity and a bank row survives a rebase.
++ */
++function selectorOf(text, at) {
++  const before = text.slice(0, at);
++  const open = before.lastIndexOf("{");
++  if (open < 0) return "—";
++  const head = before.slice(0, open);
++  const cut = Math.max(head.lastIndexOf("}"), head.lastIndexOf("{"), head.lastIndexOf(";"));
++  return head
++    .slice(cut + 1)
++    .replace(/\/\*[^]*?\*\//g, " ")
++    .replace(/\s+/g, " ")
++    .trim()
++    .slice(0, 80) || "—";
++}
++
++function collectText(text, rel) {
++  const decls = [];
++  // PROSE IS NOT CODE. Comments are masked to spaces — offsets preserved, so every window
++  // and line number still reads against the ORIGINAL text — before the declaration scan. A
++  // sentence about a 520ms transition is a sentence; the pass-3 parser learned this when its
++  // own docstring about the absence row was read as a live rule spending 520ms.
++  const scan = text.replace(/\/\*[^]*?\*\//g, (m) => m.replace(/[^\n]/g, " "));
++  for (const m of scan.matchAll(DECL)) {
++    const prop = m[1] + m[2];
++    const body = m[3];
++    const line = text.slice(0, m.index).split("\n").length;
++    const before = text.slice(0, m.index);
++    const lineStart = before.lastIndexOf("\n") + 1;
++    const head = text.slice(lineStart, m.index).trim();
++    if (head.startsWith("*") || head.startsWith("//") || head.startsWith("/*"))
++      continue; // prose
++    const pos = positions(prop, body);
++    if (!pos.length) continue;
++    decls.push({
++      file: rel,
++      line,
++      rel: `${rel}:${line}`,
++      selector: selectorOf(text, m.index),
++      prop,
++      body: body.replace(/\s+/g, " ").trim().slice(0, 120),
++      pos,
++      // the text window an ADMITTED row's anchor is read against
++      window: text.slice(
++        Math.max(0, m.index - ANCHOR_BACK),
++        m.index + body.length + ANCHOR_FWD,
++      ),
++      named: pos.some((p) => p.kind === "rung") || MOTION_TS.test(body),
++      dev: rel.includes("/pencil/dev/"),
++      all: /^transition$/.test(prop) && /^\s*all\b/.test(body),
++    });
++  }
++  return decls;
++}
++
++function collect() {
++  const decls = [];
++  for (const file of walk(SRC))
++    decls.push(...collectText(readFileSync(file, "utf8"), relative(ROOT, file)));
++  return decls;
++}
++
++/** The row of the ledger that admits this position, or null. Content anchored. */
++function admits(d, ms) {
++  for (const row of LEDGER)
++    if (row.file === d.file && row.ms.includes(ms) && d.window.includes(row.anchor))
++      return row;
++  return null;
++}
++
++/** The ladder itself: MOTION.rungs, plus whether each rung carries a ruling. */
++function ladder() {
++  const src = readFileSync(CONFIG, "utf8");
++  const start = src.indexOf("rungs: {");
++  const rungs = [];
++  let rungDoc = "";
++  if (start >= 0) {
++    const block = src.slice(start, src.indexOf("\n  },", start));
++    rungDoc = block;
++    // A rung is a key in the object, never a number inside the comment that rules it —
++    // `travel: 302px @844x390` in `rise`'s own docstring is prose, not a ladder entry.
++    const code = block.replace(/\/\*[^]*?\*\//g, "");
++    const doc = src.slice(Math.max(0, start - 9000), start);
++    for (const m of code.matchAll(/([A-Za-z][A-Za-z0-9]*)\s*:\s*(\d+)/g))
++      rungs.push({
++        key: m[1],
++        value: Number(m[2]),
++        // a rung is a named DECISION: its name must appear in a ruling, above or inline
++        documented:
++          new RegExp(`\\*\\s+${m[1]}\\s+${m[2]}\\b`).test(doc) ||
++          new RegExp(`${m[1]}\\b[^]{0,400}?travel:`).test(block),
++      });
++  }
++  const motionStart = src.indexOf("export const MOTION");
++  const motionBlock = src.slice(motionStart, src.indexOf("\n} as const;", motionStart));
++  const strays = [];
++  for (const m of motionBlock.matchAll(
++    /^\s{2}([A-Za-z][A-Za-z0-9]*)\s*:\s*(\d+)\s*,/gm,
++  ))
++    if (!(m[1] in EXEMPT_KEYS)) strays.push({ key: m[1], value: Number(m[2]) });
++  // TS sets outside MOTION that spend a duration: admitted GRADED classes, or strays.
++  const tsSets = [];
++  for (const m of src.matchAll(/export const ([A-Z_]+) = \{/g))
++    if (/duration:\s*\d+/.test(src.slice(m.index, src.indexOf("} as const;", m.index))))
++      tsSets.push(m[1]);
++  return { rungs, strays, tsSets, src, rungDoc };
++}
++
++/** Where a rung reaches CSS from. */
++function published(cfg) {
++  const theme = readFileSync(THEME, "utf8");
++  const second = [...theme.matchAll(/^\s*--motion-([A-Za-z-]+)\s*:\s*([^;]+);/gm)].map(
++    (m) => ({
++      token: `--motion-${m[1]}`,
++      value: m[2].trim(),
++      where: "index.css @theme (a SECOND home)",
++    }),
++  );
++  // the seven registrations, read off the static sheet — the set B3 closes both ways
++  const regSet = new Set(
++    [...theme.matchAll(/@property\s+--motion-([a-z]+)\s*\{/g)].map((m) => m[1]),
++  );
++  const fn = cfg.slice(cfg.indexOf("export function publishMotionRungs"));
++  const body = fn.slice(0, fn.indexOf("\n}\n") + 1);
++  // The RENDER is a pure function of the rungs; the PUBLISHER only appends its one node.
++  const rf = cfg.slice(cfg.indexOf("function motionRungsCss"));
++  const render = rf.startsWith("function") ? rf.slice(0, rf.indexOf("\n}\n") + 1) : "";
++  const pub = {
++    // the text is GENERATED from the rungs, so it is byte-equal by construction
++    generated:
++      /Object\.entries\(\s*MOTION\.rungs\s*\)/.test(body) ||
++      (/motionRungsCss\(\)/.test(body) && /Object\.entries\(\s*rungs\s*\)/.test(render)),
++    // chair §6.5 — every measured token is REGISTERED, and a rung's initial is 0ms so an
++    // ABSENT publisher reads exactly as reduce does. A registered <time> also cannot take
++    // the shorthand to `all`, which is B4's live half and B12's whole reason. The
++    // registration is READ OFF THE STATIC SHEET: emitted beside the values it would die with
++    // them, and the born-RED row would read `all` again (measured, both engines).
++    registered: regSet.size > 0,
++    initialStill: [...theme.matchAll(/@property\s+--motion-[a-z]+\s*\{([^}]*)\}/g)].every((m) =>
++      /initial-value:\s*0ms\s*;?/.test(m[1]),
++    ),
++    regSet,
++    styleNode: /createElement\(\s*"style"\s*\)/.test(body),
++    marked: /data-motion-rungs|motionRungs/.test(body),
++    liveArm: /--motion-\$\{[A-Za-z]+\}:\$\{[A-Za-z]+\}ms/.test(render + body),
++    reduceArm:
++      /@media \(prefers-reduced-motion: reduce\)/.test(render + body) &&
++      /--motion-\$\{[A-Za-z]+\}:0ms/.test(render + body),
++    noBang: !/!important/.test(render + body),
++    noInline: !/style\.setProperty/.test(body),
++  };
++  const main = existsSync(MAIN) ? readFileSync(MAIN, "utf8") : "";
++  const calledBeforeMount =
++    /publishMotionRungs\(\s*\)/.test(main) &&
++    main.indexOf("publishMotionRungs()") < main.indexOf(".mount(");
++  // ONE HOME, and the shadow reader is widened to ["'] — a single-quoted :style binding
++  // published `--card-step-ms` under the pass-1 gate's nose (research F6).
++  const componentPublishers = [];
++  for (const file of walk(SRC)) {
++    const rel = relative(ROOT, file);
++    if (rel.endsWith("pencil/config/pencilConfig.ts")) continue;
++    const text = readFileSync(file, "utf8");
++    for (const m of text.matchAll(
++      /["'](--(?:motion|card|dock)-[a-z-]+)["']\s*:\s*([^,\n]+)/g,
++    ))
++      componentPublishers.push({ token: m[1], value: m[2].trim(), where: rel });
++  }
++  return { second, pub, calledBeforeMount, componentPublishers };
++}
++
++/* ── the checks ────────────────────────────────────────────────────────────── */
++
++function b1Named(decls, rungKeys) {
++  const bad = [];
++  const seen = new Set();
++  for (const d of decls) {
++    if (d.dev) continue; // the debug rig is not shipped (i2's scope)
++    for (const p of d.pos) {
++      if (p.role !== "duration") continue; // delays are B9's axis
++      if (p.kind === "rung") {
++        if (!rungKeys.has(p.rung))
++          bad.push(`${d.rel}  var(--motion-${p.rung}) is not a rung on the ladder`);
++        continue;
++      }
++      const row = admits(d, p.ms);
++      if (row) {
++        seen.add(row);
++        continue;
++      }
++      bad.push(`${d.rel}  ${p.ms}ms unadmitted   ${p.clause}`);
++    }
++  }
++  // closed the other way: a row nothing consumes is an admission outliving its reason
++  for (const row of LEDGER)
++    if (!seen.has(row))
++      bad.push(
++        `ADMITTED ${row.file} :: ${row.ms.join("/")}ms :: "${row.anchor}" (${row.cls}) admits nothing — the anchor or the literal left the tree`,
++      );
++  return bad;
++}
++
++function b2Closed({ rungs, strays, tsSets }) {
++  const bad = [];
++  if (!rungs.length)
++    bad.push(
++      "MOTION declares no `rungs` — there is no closed set to read a length from.",
++    );
++  if (rungs.length > LADDER_MAX)
++    bad.push(
++      `the ladder is ${rungs.length} rungs; over ${LADDER_MAX} it is a list of literals with nicknames.`,
++    );
++  for (const r of rungs)
++    if (!r.documented)
++      bad.push(
++        `MOTION.rungs.${r.key} = ${r.value} carries no ruling — a rung is a named DECISION.`,
++      );
++  for (const s of strays)
++    bad.push(
++      `MOTION.${s.key} = ${s.value} is a duration outside the ladder and outside the exemptions (${Object.keys(EXEMPT_KEYS).join(", ")}).`,
++    );
++  for (const t of tsSets)
++    if (!(t in ADMITTED_TS))
++      bad.push(
++        `${t} spends a duration in TS and is neither a rung nor an admitted GRADED class.`,
++      );
++  return bad;
++}
++
++function b3Mirror({ rungs }, p, decls) {
++  const bad = [];
++  const { pub } = p;
++  if (!pub.styleNode)
++    bad.push("no <style> publisher: no duration reaches CSS from config.");
++  if (!pub.generated)
++    bad.push(
++      "the publisher does not emit from Object.entries(MOTION.rungs) — the mirror is typed, not generated.",
++    );
++  if (!pub.marked) bad.push("the published node carries no data-motion-rungs mark.");
++  if (!pub.registered)
++    bad.push(
++      'index.css registers no `@property --motion-<rung> { syntax: "<time>" }` — an unregistered rung reads as an unknown token, so an absent publisher takes the shorthand to `all` and the born-RED row cannot fire (chair §6.5).',
++    );
++  if (!pub.initialStill)
++    bad.push(
++      "a registration's `initial-value` is not 0ms — with the rung's real value as the initial, deleting the publisher reads 0.52s and PASSES, which re-silences the row the law exists to arm (probe row D).",
++    );
++  // the registered set and the rung set are the SAME set, closed both ways
++  for (const r of rungs)
++    if (pub.regSet && !pub.regSet.has(r.key))
++      bad.push(
++        `MOTION.rungs.${r.key} is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as \`all\` for that one rung alone.`,
++      );
++  for (const k of pub.regSet ?? [])
++    if (!rungs.some((r) => r.key === k))
++      bad.push(
++        `@property --motion-${k} is registered and is not a rung — a registration outliving its rung is a token with an initial and no home.`,
++      );
++  if (!pub.liveArm)
++    bad.push("the publisher emits no live `:root{--motion-*: Nms}` arm.");
++  if (!pub.reduceArm)
++    bad.push(
++      "the publisher emits no reduce arm — PRM must be a VALUE of the ladder (§3).",
++    );
++  if (!pub.noBang)
++    bad.push("the publisher writes !important — a bang in the sheet is not a home.");
++  if (!pub.noInline)
++    bad.push(
++      "the publisher writes inline properties — an inline declaration outranks every author rule, so the reduce arm could never reach it.",
++    );
++  if (!p.calledBeforeMount)
++    bad.push("publishMotionRungs() is not called before mount (main.ts).");
++  for (const s of p.second)
++    bad.push(
++      `${s.token}: ${s.value} — ${s.where}; the ladder is published, never typed twice.`,
++    );
++  for (const c of p.componentPublishers)
++    bad.push(`${c.token} published from ${c.where} — one publisher, one node.`);
++  // NO FALLBACK (chair §6.5). A fallback is what made the ladder able to lie: research row B
++  // measured a DELETED publisher as invisible in both engines, so the one row that proves
++  // the publisher matters could never fire. The registration replaces it.
++  for (const d of decls)
++    for (const q of d.pos)
++      if (q.kind === "rung" && q.fallback !== null)
++        bad.push(
++          `${d.rel}  var(--motion-${q.rung}, ${q.fallback}) carries a fallback — a fallback hides an absent publisher, which is the failure this ladder exists to expose.  ${q.clause}`,
++        );
++  return bad;
++}
++
++function b4NoAll(decls) {
++  return decls.filter((d) => d.all && !d.dev).map((d) => `${d.rel}  ${d.body}`);
++}
++
++/**
++ * B5 — THE PRM POSTURE, RULE LEVEL (§3). A rung reads 0ms under reduce, so every rung
++ * consumer collapses to a same-frame swap. Three clauses:
++ *   1 the publisher's reduce arm zeroes EVERY rung (read off B3's parse);
++ *   2 every live TRANSITION length outside a reduce block reads a rung — a literal there
++ *     is a rule the reduce arm can never reach;
++ *   3 the PRM-FALLBACK rows really do sit inside a reduce block, and nothing else does.
++ * Its RUNTIME twin walks the built dist's CSSOM under `reduce`; this is the half a
++ * browserless CI lane can run (O-12).
++ */
++function b5Prm(decls, pub) {
++  const bad = [];
++  if (!pub.pub.reduceArm)
++    bad.push(
++      "the publisher emits no reduce arm: the ladder has no PRM value, so 28 rules keep tweening.",
++    );
++  const fallbackRows = LEDGER.filter((r) => r.cls === "PRM-FALLBACK");
++  for (const d of decls) {
++    if (d.dev || !/^transition/.test(d.prop)) continue;
++    const inReduce = /prefers-reduced-motion:\s*reduce/.test(d.window);
++    for (const q of d.pos) {
++      if (q.role !== "duration" || q.kind !== "literal") continue;
++      const row = admits(d, q.ms);
++      if (inReduce) {
++        if (!row || row.cls !== "PRM-FALLBACK")
++          bad.push(
++            `${d.rel}  a reduce-block transition spends ${q.ms}ms and is not an admitted PRM-FALLBACK row.  ${q.clause}`,
++          );
++        continue;
++      }
++      if (row && row.cls === "PRM-FALLBACK")
++        bad.push(
++          `${d.rel}  PRM-FALLBACK admitted outside a reduce block.  ${q.clause}`,
++        );
++      else if (!row)
++        bad.push(
++          `${d.rel}  a live transition spends the literal ${q.ms}ms — the reduce arm can never reach it.  ${q.clause}`,
++        );
++    }
++  }
++  if (fallbackRows.length !== 2)
++    bad.push(
++      `the PRM-FALLBACK class holds ${fallbackRows.length} rows; §2.2 rules exactly 2 (the toggle's crossfade, the laminate's linear fade).`,
++    );
++  return bad;
++}
++
++/**
++ * The ratchet's ground table, keyed `file :: selector :: term` — NO ordinal. Research §7
++ * row 13 over the same rows: `file :: line` collides 15×, `file :: prop :: ms` 23×,
++ * `file :: term` 6×, `file :: selector :: term` 0×. An ordinal key is what made the pass-2
++ * bank re-align silently when a diff added a length above an existing one.
++ */
++function inventoryRows(decls, { rungs }) {
++  const byName = new Map(rungs.map((r) => [r.key, r.value]));
++  const rows = [];
++  for (const d of decls) {
++    if (d.dev) continue;
++    for (const q of d.pos) {
++      if (q.role !== "duration") continue;
++      rows.push({
++        key: `${d.file} :: ${d.selector} :: ${q.term}`,
++        ms: q.kind === "rung" ? (byName.get(q.rung) ?? 0) : q.ms,
++        clause: q.clause,
++      });
++    }
++  }
++  return rows;
++}
++
++/**
++ * B6 — NO-SHORTEN, as a RATCHET against a BANKED table. A value may rise; it may only
++ * fall through a RETUNE ledger row with a cite. The bank is the primary evidence (it
++ * survives a rebase); `BASE_REF` is the fallback. A gate that greens when its evidence is
++ * unreachable is not a gate — with neither, this REDS.
++ */
++function b6NoShorten(rows, bank, lad) {
++  const bad = [];
++  if (!bank)
++    return [
++      "NO BANK and no BASE_REF tree — the ratchet has nothing to ratchet against.",
++    ];
++  const retuned = new Set(LEDGER.filter((r) => r.cls === "RETUNE").map((r) => r.file));
++  // 1 · THE RUNG ITSELF. `throw` had ZERO CSS consumers at HEAD (520 × 0 in the histogram),
++  //     which is exactly why pass 2's 520 → 500 sabotage was invisible to a site-keyed bank.
++  for (const r of lad.rungs) {
++    const was = bank.rungs?.[r.key];
++    if (was === undefined) continue;
++    if (r.value < was)
++      bad.push(
++        `MOTION.rungs.${r.key}  ${was}ms → ${r.value}ms — the RUNG shortened (W8 QUALITY LAW). A shortening needs a RETUNE row with a cite.`,
++      );
++  }
++  // 2 · the sites, keyed file :: selector :: term
++  const sites = bank.sites ?? {};
++  for (const r of rows) {
++    const was = sites[r.key];
++    if (was === undefined) continue; // a new position has nothing to shorten
++    if (r.ms < was && !retuned.has(r.key.split(" :: ")[0]))
++      bad.push(
++        `${r.key}  ${was}ms → ${r.ms}ms — SHORTENED (W8 QUALITY LAW). A shortening needs a RETUNE row with a cite.  ${r.clause}`,
++      );
++  }
++  return bad;
++}
++
++/** The bank — `{ rungs, sites }` — read off disk or rebuilt from BASE_REF. */
++function readBank(decls, lad) {
++  if (existsSync(BANK)) {
++    try {
++      const j = JSON.parse(readFileSync(BANK, "utf8"));
++      if (j.rungs || j.sites) return j;
++    } catch {
++      /* fall through to git */
++    }
++  }
++  try {
++    const sites = {};
++    for (const f of new Set(decls.filter((d) => !d.dev).map((d) => d.file))) {
++      let text;
++      try {
++        text = execFileSync("git", ["show", `${BASE_REF}:web/frontend/${f}`], {
++          cwd: ROOT,
++          encoding: "utf8",
++          maxBuffer: 32e6,
++          stdio: ["ignore", "pipe", "ignore"],
++        });
++      } catch {
++        continue;
++      }
++      for (const r of inventoryRows(collectText(text, f), lad)) sites[r.key] = r.ms;
++    }
++    return Object.keys(sites).length ? { rungs: {}, sites } : null;
++  } catch {
++    return null;
++  }
++}
++
++/**
++ * B7 — TAILWIND. Its default tier is a duration the ladder never saw: 17 `.transition-colors`
++ * elements tween at Tailwind's own 150ms, and six class attributes name a literal.
++ */
++function b7Tailwind() {
++  const bad = [];
++  const theme = readFileSync(THEME, "utf8");
++  if (!/--default-transition-duration:\s*var\(--motion-whisper\)/.test(theme))
++    bad.push(
++      "index.css declares no `--default-transition-duration: var(--motion-whisper)` (bare, no fallback) — Tailwind's default tier is off the ladder.",
++    );
++  for (const file of walk(SRC)) {
++    const rel = relative(ROOT, file);
++    if (!/\.(vue|html)$/.test(rel)) continue;
++    // Prose about a retired utility is not a utility. Mask comments, keep the line count.
++    const text = readFileSync(file, "utf8").replace(
++      /\/\*[^]*?\*\/|<!--[^]*?-->|^\s*\/\/.*$/gm,
++      (m) => m.replace(/[^\n]/g, " "),
++    );
++    for (const m of text.matchAll(/\bduration-(\d+)\b/g))
++      bad.push(
++        `${rel}:${text.slice(0, m.index).split("\n").length}  class duration-${m[1]} — a Tailwind literal, not a rung.`,
++      );
++    for (const m of text.matchAll(/\btransition-all\b/g))
++      bad.push(
++        `${rel}:${text.slice(0, m.index).split("\n").length}  class transition-all — the utility form of "transition: all".`,
++      );
++    for (const m of text.matchAll(/\bduration-\[([^\]]+)\]/g))
++      if (!/^var\(--motion-[a-z]+\)$/.test(m[1]))
++        bad.push(`${rel}  duration-[${m[1]}] does not name a bare rung.`);
++  }
++  return bad;
++}
++
++/**
++ * B8 — THE CURVE, PROHIBITION ONLY. Registry §2.1 gives CURVES to the verbs: MOT-VERB owns
++ * the assignment half (`--verb-<verb>-ease`), and the ladder never reads a curve name. What
++ * stays here is the prohibition — a bare UA keyword on a `transition:` is the UA's taste
++ * standing in for a decision. `linear` on an `animation:` remains legal; its keyframes carry
++ * per-step easing. Pass 2's 16-site `--ease-standard` row was Material's curve under
++ * Material's name on this estate's grounds, and it LEFT this family with the row.
++ *
++ * This check is INHERITED-RED by design: its cure is MOT-VERB's, not the ladder's, and the
++ * count is reported rather than hidden. `MOTION_LADDER_B8_OWNED=1` demotes it to a census
++ * line for the section's fold, when the verbs land and the number is owned.
++ */
++function b8Curve(decls) {
++  const bad = [];
++  for (const d of decls) {
++    if (d.dev || !/^transition$/.test(d.prop)) continue;
++    const seen = new Set();
++    for (const q of d.pos) {
++      if (q.role !== "duration") continue;
++      if (q.curve !== "bare" || seen.has(q.clause)) continue;
++      seen.add(q.clause);
++      bad.push(`${d.rel}  a bare UA keyword on a transition.  ${q.clause}`);
++    }
++  }
++  return bad;
++}
++
++/**
++ * B10 — THE PINNED CITE. Three sites carry a length that is itself a RULING, and a retune
++ * there has to re-audition the ruling by name. The check asserts three things per site, on
++ * CONTENT and never on a line: the cite string is present at the site; the value IS the rung
++ * (never a literal); and the rung's own docstring names the same ruling.
++ */
++const PINNED = [
++  {
++    file: "src/games/shared/useControlsDrawer.ts",
++    rung: "throw",
++    cite: /auditioned 480\/520\/560/,
++    doc: /R6 standing ruling 1|audit 4, 2026-07-11/,
++    what: "the desk drawer's throw",
++  },
++  {
++    file: "src/App.vue",
++    rung: "throw",
++    cite: /T4-W12 Wave C/,
++    doc: /R6 standing ruling 1|audit 4, 2026-07-11/,
++    what: "the board fold",
++  },
++  {
++    file: "src/pencil/chrome/GameGallery/useCarouselGlide.ts",
++    rung: "step",
++    cite: /RATIFY-ME|T4-W12 ballot\s+\*?\s*row 4|ballot row 4/,
++    doc: /RATIFY-ME T4-W12 ballot/,
++    what: "one card slot",
++  },
++];
++
++function b10PinnedCite({ rungDoc, src }) {
++  const bad = [];
++  for (const p of PINNED) {
++    const f = join(ROOT, p.file);
++    const t = existsSync(f) ? readFileSync(f, "utf8") : "";
++    if (!t) {
++      bad.push(`${p.file} is missing — a PINNED site cannot carry its cite.`);
++      continue;
++    }
++    if (!p.cite.test(t))
++      bad.push(
++        `${p.file}  ${p.what} carries no cite (${p.cite.source}) — a PINNED length says its ruling AT the site.`,
++      );
++    if (!new RegExp(`MOTION\\.rungs\\.${p.rung}`).test(t))
++      bad.push(
++        `${p.file}  ${p.what} does not read MOTION.rungs.${p.rung} — a pinned value is the rung, never a literal beside it.`,
++      );
++    if (!p.doc.test(rungDoc) && !p.doc.test(src))
++      bad.push(
++        `MOTION.rungs.${p.rung}'s docstring does not name ${p.what}'s ruling — the cite at the site and the cite on the rung must be the same ruling.`,
++      );
++  }
++  return bad;
++}
++
++/**
++ * B11 — THE KIND FENCE (the CODE roster). 77 clocks live in .ts/<script>, 19 of them bare
++ * literals at HEAD, against 85 CSS terms: "one home for every length" is only true if the
++ * gate reads BOTH rosters. Four kinds, and every clock is one of them:
++ *   TRAVEL   a painted length — reads the ladder, a rung expression, or an ADMITTED class
++ *   WINDOW   a class held over a gesture — derives from a rung, or says `// window:` and why
++ *   CADENCE  a beat — reads MOTION.beatMs / beatsFor()
++ *   POLICY   a deadline, a backoff, a dwell, a wire rate — carries `// policy: <word>`, and
++ *            is out of scope BY KIND, never by file type
++ * Comments and type annotations are STRIPPED before the read, so the nine instrument
++ * artefacts research named (type positions, prose) are the self-test's negative-negative.
++ */
++const KIND_FILES = /\.(ts|vue)$/;
++const CLOCK = /\b(\d{2,5})\b/;
++const POLICY_TAG = /\/\/\s*policy:\s*\w+/;
++const WINDOW_TAG = /\/\/\s*window:\s*\S+/;
++/** The TS half of §2.2's GRADED class — a set whose differences ARE the design, cited. */
++const GRADED_TAG = /\/\/\s*graded:\s*\S+/;
++const TRAVEL_READ =
++  /MOTION\.rungs\.[A-Za-z]+|MOTION\.characters\.[A-Za-z]+|MOTION\.settleGuardMs|MOTION\.beatMs|beatsFor\(|spend\(/;
++
++/** Strip comments and TS type positions, keeping line numbers. */
++function stripCode(text) {
++  return text
++    .replace(/\/\*[^]*?\*\/|<!--[^]*?-->/g, (m) => m.replace(/[^\n]/g, " "))
++    .replace(/^([^\n"'`]*?)\/\/.*$/gm, (_m, keep) => keep)
++    .replace(/:\s*(?:number|string|boolean)\b/g, "")
++    .replace(/\bas const\b/g, "");
++}
++
++function b11KindFence() {
++  const bad = [];
++  const rows = [];
++  for (const file of walk(SRC)) {
++    const rel = relative(ROOT, file);
++    if (!KIND_FILES.test(rel) || rel.includes("/pencil/dev/")) continue;
++    if (/\.(test|spec)\.ts$/.test(rel)) continue;
++    // pencilConfig IS the home (R6 law 4). B2 rules every number in it, by name and by
++    // cite; B11's business is the lengths that live OUTSIDE it.
++    if (rel.endsWith("pencil/config/pencilConfig.ts")) continue;
++    let text = readFileSync(file, "utf8");
++    if (rel.endsWith(".vue")) {
++      const s = text.indexOf("<script");
++      const e = text.indexOf("</script>");
++      text = s >= 0 && e > s ? text.slice(0, s).replace(/[^\n]/g, "") + text.slice(s, e) : "";
++    }
++    if (!text) continue;
++    const raw = text.split("\n");
++    const code = stripCode(text).split("\n");
++    for (let i = 0; i < code.length; i++) {
++      const line = code[i];
++      // A clock is a millisecond a TIMER, an ANIMATION or a *_MS const spends.
++      const isClock =
++        /setTimeout\s*\(|setInterval\s*\(|duration\s*:|\.animate\s*\(|_MS\b|Ms\b\s*[:=]/.test(line) &&
++        CLOCK.test(line);
++      if (!isClock) continue;
++      if (/MOTION\.rungs|rungs\./.test(line) && !/\d{2,5}/.test(line.replace(/rungs\.\w+/g, "")))
++        continue;
++      const ctx = raw.slice(Math.max(0, i - 4), i + 2).join("\n");
++      // An ADMITTED TS class is admitted WHOLE: a clock inside its object is the class's,
++      // not a stray. Walked back to the nearest `const NAME = {`, so a fifteen-constant
++      // table (`WASH`) is one row and not fifteen reds.
++      let cls = null;
++      for (let j = i; j >= 0 && j > i - 400; j--) {
++        const m = /^\s*(?:export\s+)?const ([A-Z][A-Z0-9_]*)\s*=\s*\{/.exec(code[j]);
++        if (m) {
++          cls = m[1];
++          break;
++        }
++        if (/^\}/.test(code[j])) break;
++      }
++      const kind =
++        TRAVEL_READ.test(line) || TRAVEL_READ.test(ctx) || (cls && cls in ADMITTED_TS)
++          ? "TRAVEL"
++          : GRADED_TAG.test(ctx)
++            ? "TRAVEL"
++            : POLICY_TAG.test(ctx)
++              ? "POLICY"
++              : WINDOW_TAG.test(ctx)
++                ? "WINDOW"
++                : null;
++      rows.push({ rel, line: i + 1, text: line.trim().slice(0, 90), kind, cls });
++      if (!kind)
++        bad.push(
++          `${rel}:${i + 1}  a bare clock, no kind — TRAVEL reads the ladder, WINDOW derives and says so, CADENCE reads beatMs, POLICY carries \`// policy: <word>\`.  ${line.trim().slice(0, 80)}`,
++        );
++    }
++  }
++  return { bad, rows };
++}
++
++/**
++ * B12 (static half) — THE ABSENCE ROW, chair §6.5's born-RED. The runtime half deletes the
++ * publisher call in a scratch build and reads `.icon-btn`: `transition-duration: 0s`,
++ * `transition-property: opacity`. What CI can hold is the two things that make that outcome
++ * possible at all: the registration exists, and its initial is 0ms rather than a rung value.
++ */
++function b12Absence(p) {
++  const bad = [];
++  if (!p.pub.registered)
++    bad.push(
++      "no @property registration: an absent publisher leaves an UNKNOWN token, the transition shorthand falls back to `all`, and the page looks fine while the ladder is gone.",
++    );
++  if (!p.pub.initialStill)
++    bad.push("a registration ships a non-zero initial — absence would read as motion.");
++  return bad;
++}
++
++/** G-REFUSE-ONE-HOME — the character's length is typed ONCE, in TS. */
++function gRefuseOneHome(src) {
++  const bad = [];
++  if (!/characters:\s*\{[^]*?\brefuse:\s*\d+/.test(src))
++    bad.push("MOTION.characters.refuse is not declared — the refuse-shake has no one home.");
++  const theme = readFileSync(THEME, "utf8");
++  for (const m of theme.matchAll(/animation:\s*refuse-shake\s+([^\s;]+)/g))
++    if (!/^var\(--refuse-dur\)$/.test(m[1]))
++      bad.push(
++        `index.css  .solve-failure runs refuse-shake at ${m[1]} — a CSS consumer reads var(--refuse-dur), never a literal twin.`,
++      );
++  const cell = join(SRC, "games/shared/useGameCell.ts");
++  const t = existsSync(cell) ? readFileSync(cell, "utf8") : "";
++  if (t && !/MOTION\.characters\.refuse/.test(t))
++    bad.push(
++      "useGameCell.ts types its own refusal length — the character's number lives in MOTION.characters.",
++    );
++  return bad;
++}
++
++/**
++ * B9 — THE DELAY FENCE (MOT-VERB's rule, adopted section wide). The ladder governs
++ * TRAVEL. A delay is a beat alignment against another gesture's clock, and a shared rung
++ * would make one retune move two unrelated things.
++ */
++function b9DelayFence(decls) {
++  const bad = [];
++  for (const d of decls)
++    for (const q of d.pos)
++      if ((q.role === "delay" || q.role === "extra") && q.kind === "rung")
++        bad.push(
++          `${d.rel}  var(--motion-${q.rung}) in a DELAY position — a delay keeps its literal.  ${q.clause}`,
++        );
++  return bad;
++}
++
++/**
++ * G-DOCK-BAND (static half) — the dock's clock declares the band it governs, both ends.
++ * The dock inherited 520ms from a desk gesture and nobody ever saw it against the 302…681 px
++ * it actually travels. Whatever rung `useControlsDrawer` spends on the dock pose must carry a
++ * `travel: <a>px @WxH … <b>px @WxH` line; the runtime half measures the live sheet against it.
++ */
++function gDockBand({ rungDoc }) {
++  const drawer = join(SRC, "games/shared/useControlsDrawer.ts");
++  const t = existsSync(drawer) ? readFileSync(drawer, "utf8") : "";
++  const dockRung =
++    /mobileDock[^\n]*MOTION\.rungs\.([A-Za-z]+)|rungs\.([A-Za-z]+)\s*:\s*MOTION\.rungs/.exec(
++      t,
++    );
++  const declared = /travel:\s*[\d.]+px @\d+x\d+[^]*?[\d.]+px @\d+x\d+/.test(rungDoc);
++  if (declared && dockRung) return [];
++  return [
++    `the dock's clock declares no band: ${declared ? 1 : 0} of 1 travel line, dock rung ${dockRung ? (dockRung[1] ?? dockRung[2]) : "unnamed"} — a length nobody saw against its distance is what may not ship again.`,
++  ];
++}
++
++/** G-GUARD — one settle-guard constant, read by both FLIP engines. */
++function gGuard() {
++  const bad = [];
++  const flip = join(SRC, "games/shared/useFlipGlide.ts");
++  const car = join(SRC, "pencil/chrome/GameGallery/useCarouselGlide.ts");
++  for (const [f, name] of [
++    [flip, "useFlipGlide"],
++    [car, "useCarouselGlide"],
++  ]) {
++    if (!existsSync(f)) continue;
++    const t = readFileSync(f, "utf8");
++    if (!/MOTION\.settleGuardMs/.test(t))
++      bad.push(
++        `${name} does not read MOTION.settleGuardMs — two engines, two backstops, one unruled.`,
++      );
++    if (/\+\s*200\b/.test(t) && !/MOTION\.settleGuardMs/.test(t))
++      bad.push(`${name} carries its own "+ 200" guard literal.`);
++  }
++  return bad;
++}
++
++/* ── main ──────────────────────────────────────────────────────────────────── */
++
++const decls = collect();
++const lad = ladder();
++const pub = published(lad.src);
++const rungKeys = new Set(lad.rungs.map((r) => r.key));
++
++const shipped = decls.filter((d) => !d.dev);
++const durPos = decls.flatMap((d) => d.pos.filter((p) => p.role === "duration"));
++const literals = new Map();
++for (const p of durPos)
++  if (p.kind === "literal") literals.set(p.raw, (literals.get(p.raw) || 0) + 1);
++
++const rows = inventoryRows(decls, lad);
++
++if (WRITE_BANK) {
++  const sites = {};
++  for (const r of rows) sites[r.key] = Math.max(sites[r.key] ?? 0, r.ms);
++  const rungs = Object.fromEntries(lad.rungs.map((r) => [r.key, r.value]));
++  writeFileSync(
++    BANK,
++    JSON.stringify({ at: new Date().toISOString(), base: BASE_REF, rungs, sites }, null, 1) +
++      "\n",
++  );
++  console.log(
++    `banked ${lad.rungs.length} rungs + ${Object.keys(sites).length} sites → ${relative(ROOT, BANK)}`,
++  );
++  process.exit(0);
++}
++
++if (INVENTORY) {
++  console.log(
++    JSON.stringify(
++      {
++        at: new Date().toISOString(),
++        counts: {
++          declarations: decls.length,
++          shipped: shipped.length,
++          durationPositions: durPos.length,
++          delayPositions: decls.flatMap((d) => d.pos.filter((p) => p.role === "delay"))
++            .length,
++          namedDurationPositions: durPos.filter((p) => p.kind === "rung").length,
++          literalDurationPositions: durPos.filter((p) => p.kind === "literal").length,
++          distinctLiterals: literals.size,
++          rungs: lad.rungs.length,
++          admittedRows: LEDGER.length,
++        },
++        ladder: lad.rungs,
++        histogram: [...literals.entries()].sort((a, b) => b[1] - a[1]),
++        rows,
++        declarations: decls.map(({ window: _w, ...d }) => d),
++      },
++      null,
++      1,
++    ),
++  );
++  process.exit(0);
++}
++
++console.log(
++  `MOTION BANDS — ${decls.length} declarations carry a time (${shipped.length} shipped); ` +
++    `${durPos.length} DURATION positions, ${durPos.filter((p) => p.kind === "rung").length} on a rung, ` +
++    `${durPos.filter((p) => p.kind === "literal").length} literal (${literals.size} distinct); ` +
++    `ladder ${lad.rungs.length} rungs (${lad.rungs.map((r) => `${r.key} ${r.value}`).join(", ") || "none"})`,
++);
++if (literals.size)
++  console.log(
++    `  top literals: ${[...literals.entries()]
++      .sort((a, b) => b[1] - a[1])
++      .slice(0, 6)
++      .map(([k, v]) => `${k}×${v}`)
++      .join(", ")}`,
++  );
++
++const bank = readBank(decls, lad);
++const kinds = b11KindFence();
++console.log(
++  `  code roster: ${kinds.rows.length} clocks in .ts/<script> — ` +
++    `${kinds.rows.filter((r) => r.kind === "TRAVEL").length} TRAVEL, ` +
++    `${kinds.rows.filter((r) => r.kind === "WINDOW").length} WINDOW, ` +
++    `${kinds.rows.filter((r) => r.kind === "POLICY").length} POLICY, ` +
++    `${kinds.rows.filter((r) => !r.kind).length} unkinded`,
++);
++
++// B8's cure is MOT-VERB's (registry §2.1 gives curves to the verbs); the ladder carries the
++// prohibition and REPORTS the count rather than hiding it. Set when the verbs land.
++const B8_OWNED = process.env.MOTION_LADDER_B8_OWNED === "1";
++
++const CHECKS = [
++  ["B1 NAMED", () => b1Named(decls, rungKeys)],
++  ["B2 CLOSED", () => b2Closed(lad)],
++  ["B3 ONE HOME, NO FALLBACK", () => b3Mirror(lad, pub, decls)],
++  ["B4 NO-ALL", () => b4NoAll(decls)],
++  ["B5 PRM", () => b5Prm(decls, pub)],
++  ["B6 RATCHET", () => b6NoShorten(rows, bank, lad)],
++  ["B7 TAILWIND", () => b7Tailwind()],
++  ["B8 CURVE (MOT-VERB's cure)", () => (B8_OWNED ? [] : b8Curve(decls))],
++  ["B9 DELAY FENCE", () => b9DelayFence(decls)],
++  ["B10 PINNED-CITE", () => b10PinnedCite(lad)],
++  ["B11 KIND FENCE", () => kinds.bad],
++  ["B12 ABSENCE (static half)", () => b12Absence(pub)],
++  ["G-DOCK-BAND", () => gDockBand(lad)],
++  ["G-GUARD", () => gGuard()],
++  ["G-REFUSE-ONE-HOME", () => gRefuseOneHome(lad.src)],
++];
++
++const failures = [];
++for (const [name, fn] of CHECKS) {
++  const found = fn();
++  console.log(
++    `  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}`,
++  );
++  if (LIST) for (const f of found) console.log(`      ${f}`);
++  failures.push(...found.map((f) => `[${name}] ${f}`));
++}
++
++if (SELF_TEST) {
++  console.log("\nSELF-TEST — each check against a known-bad model:");
++  const d1 = (rel, body, prop = "transition", extra = {}) => ({
++    ...collectText(`a { ${prop}: ${body}; }`, rel.split(":")[0])[0],
++    rel,
++    file: rel.split(":")[0],
++    dev: false,
++    ...extra,
++  });
++  const okPub = {
++    pub: {
++      generated: true,
++      registered: true,
++      initialStill: true,
++      styleNode: true,
++      marked: true,
++      liveArm: true,
++      reduceArm: true,
++      noBang: true,
++      noInline: true,
++    },
++    calledBeforeMount: true,
++    second: [],
++    componentPublishers: [],
++  };
++  const cases = [
++    [
++      "B1 NAMED",
++      "a cured site regresses to a literal",
++      () => b1Named([d1("x.vue:1", "opacity 150ms var(--ease-standard)")], rungKeys),
++    ],
++    [
++      "B1 NAMED",
++      "an admitted row's anchor leaves the tree (closed the other way)",
++      () => b1Named([], rungKeys),
++    ],
++    [
++      "B2 CLOSED",
++      "the ladder grows past a short closed set",
++      () =>
++        b2Closed({
++          rungs: Array.from({ length: LADDER_MAX + 1 }, (_, i) => ({
++            key: `r${i}`,
++            value: i,
++            documented: true,
++          })),
++          strays: [],
++          tsSets: [],
++        }),
++    ],
++    [
++      "B2 CLOSED",
++      "a bare `dockGlideMs: 600` joins MOTION",
++      () =>
++        b2Closed({
++          rungs: [{ key: "throw", value: 520, documented: true }],
++          strays: [{ key: "dockGlideMs", value: 600 }],
++          tsSets: [],
++        }),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "ONE fallback returns (the thing that made a deleted publisher invisible)",
++      () =>
++        b3Mirror({ rungs: [{ key: "throw", value: 520 }] }, okPub, [
++          d1("x.vue:1", "opacity var(--motion-throw, 520ms) var(--ease-standard)"),
++        ]),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "a SINGLE-QUOTED :style shadow publishes a second home (research F6)",
++      () =>
++        b3Mirror(
++          { rungs: [] },
++          {
++            ...okPub,
++            componentPublishers: [
++              {
++                token: "--card-step-ms",
++                value: "`${MOTION.cardStepMs}ms`",
++                where: "GameGallery.vue",
++              },
++            ],
++          },
++          [],
++        ),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "the publisher writes inline properties again",
++      () =>
++        b3Mirror(
++          { rungs: [] },
++          { ...okPub, pub: { ...okPub.pub, noInline: false, reduceArm: false } },
++          [],
++        ),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "the registration ships the rung's own value as its initial (probe row D)",
++      () =>
++        b3Mirror(
++          { rungs: [] },
++          { ...okPub, pub: { ...okPub.pub, initialStill: false } },
++          [],
++        ),
++    ],
++    [
++      "B4 NO-ALL",
++      "`transition: all` returns",
++      () => b4NoAll([d1("y.vue:2", "all 200ms")]),
++    ],
++    [
++      "B5 PRM",
++      "a live rule spends a literal the reduce arm can never reach",
++      () => b5Prm([d1("z.vue:1", "opacity 200ms var(--ease-fadeOut)")], okPub),
++    ],
++    [
++      "B5 PRM",
++      "the publisher loses its reduce arm",
++      () => b5Prm([], { ...okPub, pub: { ...okPub.pub, reduceArm: false } }),
++    ],
++    [
++      "B6 RATCHET",
++      "THE CRITIC'S EXACT SABOTAGE — `throw` 520 → 500 in the ladder itself, with ZERO CSS consumers to give it away",
++      () =>
++        b6NoShorten(
++          rows,
++          { rungs: { ...Object.fromEntries(lad.rungs.map((r) => [r.key, r.value])), throw: 520 }, sites: {} },
++          { rungs: lad.rungs.map((r) => (r.key === "throw" ? { ...r, value: 500 } : r)) },
++        ),
++    ],
++    [
++      "B6 RATCHET",
++      "a banked SITE is shortened, keyed file :: selector :: term",
++      () =>
++        b6NoShorten(
++          [{ key: "src/assets/index.css :: .icon-btn :: opacity", ms: 200, clause: "opacity 200ms" }],
++          { rungs: {}, sites: { "src/assets/index.css :: .icon-btn :: opacity": 520 } },
++          { rungs: [] },
++        ),
++    ],
++    [
++      "B6 RATCHET",
++      "the bank is unreachable (a gate with no evidence does not green)",
++      () => b6NoShorten(rows, null, lad),
++    ],
++    [
++      "B7 TAILWIND",
++      "a planted duration-300 class",
++      () => {
++        const bad = [];
++        for (const m of `<i class="transition-colors duration-300" />`.matchAll(
++          /\bduration-(\d+)\b/g,
++        ))
++          bad.push(`model  class duration-${m[1]} — a Tailwind literal, not a rung.`);
++        return bad;
++      },
++    ],
++    [
++      "B8 CURVE (MOT-VERB's cure)",
++      "a transition ships on the UA's taste",
++      () => b8Curve([d1("q.vue:1", "opacity var(--motion-leave) ease")]),
++    ],
++    [
++      "B9 DELAY FENCE",
++      "a rung lands in a delay position (MOT-VERB's pass-1 branch)",
++      () =>
++        b9DelayFence([
++          d1(
++            "r.vue:1",
++            "opacity var(--motion-note, 250ms) var(--ease-standard) var(--motion-whisper, 150ms)",
++          ),
++        ]),
++    ],
++    [
++      "G-DOCK-BAND",
++      "the rise rung declares no band",
++      () => gDockBand({ rungs: [{ key: "rise", value: 600 }], rungDoc: "rise: 600," }),
++    ],
++    [
++      "B10 PINNED-CITE",
++      "a PINNED site drops its cite (useControlsDrawer's 480/520/560 audition)",
++      () => b10PinnedCite({ rungDoc: "", src: "" }),
++    ],
++    [
++      "B11 KIND FENCE",
++      "THE THREE PLANTS — `const GLIDE_MS = 600`, `.animate({duration: 777})`, `setTimeout(…, SABOTAGE_MS)`",
++      () => {
++        const planted = [
++          "const GLIDE_MS = 600;",
++          "el.animate(frames, { duration: 777 });",
++          "const SABOTAGE_MS = 340;",
++          "setTimeout(done, SABOTAGE_MS);",
++        ];
++        const bad = [];
++        for (const [i, line] of planted.entries()) {
++          const isClock =
++            /setTimeout\s*\(|setInterval\s*\(|duration\s*:|\.animate\s*\(|_MS\b|Ms\b\s*[:=]/.test(
++              line,
++            ) && CLOCK.test(line);
++          if (!isClock) continue;
++          const kind =
++            TRAVEL_READ.test(line) || POLICY_TAG.test(line) || WINDOW_TAG.test(line)
++              ? "kinded"
++              : null;
++          if (!kind) bad.push(`plant:${i + 1}  a bare clock, no kind.  ${line}`);
++        }
++        return bad;
++      },
++    ],
++    [
++      "B11 KIND FENCE",
++      "THE NEGATIVE-NEGATIVE — the nine instrument artefacts (a comment, a type position) must NOT red",
++      () => {
++        const artefacts = ["// the 520ms fold", "  durationMs: number;", "/* 200ms window */"];
++        const bad = [];
++        for (const a of artefacts) {
++          const line = stripCode(a);
++          const isClock =
++            /setTimeout\s*\(|setInterval\s*\(|duration\s*:|\.animate\s*\(|_MS\b|Ms\b\s*[:=]/.test(
++              line,
++            ) && CLOCK.test(line);
++          if (isClock) bad.push(`artefact read as a clock: ${a}`);
++        }
++        // INVERTED: this case is the one that must stay GREEN, so it returns a red only when
++        // the parser regressed. Reported here so the roster's blindness cannot pass silently.
++        return bad.length ? bad : ["(negative-negative held: 0 of 3 artefacts read as clocks)"];
++      },
++    ],
++    [
++      "B12 ABSENCE (static half)",
++      "the scratch ships `initial-value: 520ms` — absence would read 0.52s and PASS",
++      () => b12Absence({ pub: { registered: true, initialStill: false } }),
++    ],
++    [
++      "B12 ABSENCE (static half)",
++      "the registration is dropped — absence takes the shorthand to `all`",
++      () => b12Absence({ pub: { registered: false, initialStill: true } }),
++    ],
++    [
++      "G-REFUSE-ONE-HOME",
++      "`0.6s` is typed back into index.css beside the character's home",
++      () => {
++        const bad = [];
++        for (const m of `.solve-failure { animation: refuse-shake 0.6s linear; }`.matchAll(
++          /animation:\s*refuse-shake\s+([^\s;]+)/g,
++        ))
++          if (!/^var\(--refuse-dur\)$/.test(m[1]))
++            bad.push(`model  refuse-shake at ${m[1]} — a literal twin.`);
++        return bad;
++      },
++    ],
++  ];
++  const vacuous = [];
++  for (const [target, desc, fn] of cases) {
++    const found = fn();
++    console.log(
++      `  [${target}] ${desc}\n      → ${found.length ? "RED (as it must)" : "GREEN — VACUOUS"}`,
++    );
++    if (!found.length) vacuous.push(`check "${target}" stayed GREEN under: ${desc}.`);
++  }
++  failures.push(...vacuous.map((v) => `[SELF-TEST] ${v}`));
++}
++
++if (failures.length) {
++  console.error(
++    `\n${failures.length} failure(s). ${LIST ? "" : "Re-run with --list for each."}`,
++  );
++  if (!LIST) for (const f of failures.slice(0, 8)) console.error(`  • ${f}`);
++  process.exit(1);
++}
++console.log(
++  "\nOK — every shipped duration reads a rung or a content-anchored admission; the ladder is closed, published once with its reduce arm, mirrored, `all`-free, curved, delay-fenced, banded, and nothing shortened.",
++);
+diff --git a/web/frontend/scripts/motion-bank.json b/web/frontend/scripts/motion-bank.json
+new file mode 100644
+index 00000000..34e1326d
+--- /dev/null
++++ b/web/frontend/scripts/motion-bank.json
+@@ -0,0 +1,94 @@
++{
++ "at": "2026-09-19T05:48:05.898Z",
++ "base": "74a2b5d9",
++ "rungs": {
++  "whisper": 150,
++  "leave": 200,
++  "note": 250,
++  "dusk": 350,
++  "step": 440,
++  "throw": 520,
++  "rise": 600
++ },
++ "sites": {
++  "src/App.vue :: .gallery-fade-leave-active :: opacity": 200,
++  "src/assets/index.css :: .solve-success .grid-line :: stroke": 520,
++  "src/assets/index.css :: .solve-success :: box-shadow": 520,
++  "src/assets/index.css :: html.theme-turning body, html.theme-turning .bg-background, html.theme-turning . :: background-color": 350,
++  "src/assets/index.css :: html.theme-turning body, html.theme-turning .bg-background, html.theme-turning . :: color": 350,
++  "src/assets/index.css :: opacity: 1`. But `scale(1)` does not COMPUTE to `none`, it computes to a matrix, :: cell-reveal": 300,
++  "src/assets/index.css :: the bezier is easeOutCubic, the * draw-in family curve. Consumers parameterize i :: pencil-draw-on": 160,
++  "src/games/futoshiki/CaretOverlay.vue :: .board-leaving .caret-layer :: opacity": 200,
++  "src/games/shared/DrawerTab.vue :: .drawer-tab-text :: transform": 150,
++  "src/games/shared/GameBoard.vue :: .board-leaving .board-cells, .board-leaving .board-margin, .board-leaving .compl :: opacity": 200,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-arriving :: player-row-open": 320,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-arriving .player-name :: ink-write-in": 380,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-returning :: player-row-open": 280,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-returning .player-name :: ink-write-in": 320,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-leaving :: player-row-close": 320,
++  "src/games/shared/GameControlPanel.vue :: .player-row.is-leaving .player-name :: player-name-quiet": 260,
++  "src/games/shared/GameControlPanel.vue :: .players-leave :: color": 150,
++  "src/games/shared/GameControlPanel.vue :: global, the chip inks like the heading over it and the picker's band inks the sa :: background-color": 150,
++  "src/games/shared/GameControlPanel.vue :: global, the chip inks like the heading over it and the picker's band inks the sa :: color": 150,
++  "src/games/shared/GameControlPanel.vue :: .sparkle-icon :: filter": 200,
++  "src/games/shared/GameControlPanel.vue :: .action-bar::before :: opacity": 150,
++  "src/games/shared/GameControlPanel.vue :: .legend-fold :: grid-template-rows": 200,
++  "src/games/shared/GameControlPanel.vue :: .share-pop :: sharePop": 500,
++  "src/games/shared/GameControlPanel.vue :: .eraser-scrub :: eraserScrub": 400,
++  "src/games/shared/SolverErrorNote.vue :: </p> <button v-if=\"retryable\" type=\"button\" class=\"error-note-retry\" @click=\"emi :: note-in": 250,
++  "src/games/shared/SolverErrorNote.vue :: .error-note-retry :: background": 150,
++  "src/games/shared/gameCell.css :: from-only keyframe so the settled opacity is the cascade value — the contrast ar :: marks-fade-in": 250,
++  "src/games/shared/gameCell.css :: .cell-because :: marks-fade-in": 250,
++  "src/games/shared/gameCell.css :: .game-cell.is-peer-cursor .cell-ghost-path :: ghost-draw-on": 180,
++  "src/games/shared/gameCell.css :: .game-cell:has(input:focus-visible) .cell-ghost-path :: ghost-draw-on": 180,
++  "src/games/shared/scene.css :: .controls-card::before :: opacity": 150,
++  "src/games/shared/scene.css :: .scene-controls :: controls-fade-in": 250,
++  "src/games/shared/scene.css :: .app-layout.scene-leaving .scene-controls :: opacity": 200,
++  "src/games/shared/scene.css :: html.gallery-leaving .scene-controls :: opacity": 200,
++  "src/games/thermo/ThermoTube.vue :: .board-leaving .thermo-tube-overlay :: opacity": 200,
++  "src/pencil/celestial/DarkModeToggle.vue :: </script> <style scoped> .sun-moon-toggle :: transform": 200,
++  "src/pencil/celestial/DarkModeToggle.vue :: no mid-air ghost. !important THROUGHOUT THE GESTURE TRANSITIONS: useTheme's disa :: opacity": 100,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon.is-active :: opacity": 300,
++  "src/pencil/celestial/DarkModeToggle.vue :: the twist target is gesture-scoped below. */ .toggle-icon .warp :: transform": 340,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon.is-active .warp :: transform": 800,
++  "src/pencil/celestial/DarkModeToggle.vue :: the accents ride the CSS-layer `scale` property (±8% contract rule 2), which mul :: toggle-squash": 120,
++  "src/pencil/celestial/DarkModeToggle.vue :: .is-turning .toggle-icon.is-active :: plush-land": 1010,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon .twinkle-star, .toggle-icon .dot-star :: scale": 150,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon .twinkle-star, .toggle-icon .dot-star :: opacity": 100,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon.is-active .twinkle-star, .toggle-icon.is-active .dot-star :: scale": 150,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-icon.is-active .twinkle-star, .toggle-icon.is-active .dot-star :: opacity": 120,
++  "src/pencil/celestial/DarkModeToggle.vue :: .toggle-rest :: opacity": 200,
++  "src/pencil/chrome/AttributionCard/AttributionCard.vue :: removed so the no-glass build ships zero blurred-backdrop surfaces). */ .hover-c :: opacity": 150,
++  "src/pencil/chrome/AttributionCard/AttributionCard.vue :: removed so the no-glass build ships zero blurred-backdrop surfaces). */ .hover-c :: transform": 150,
++  "src/pencil/chrome/AttributionCard/AttributionCard.vue :: .hover-card.is-open :: opacity": 150,
++  "src/pencil/chrome/AttributionCard/AttributionCard.vue :: .hover-card.is-open :: transform": 150,
++  "src/pencil/chrome/AttributionCard/CrayonHeart.vue :: .face :: opacity": 250,
++  "src/pencil/chrome/CompletionVignette.vue :: .vignette-voice, .vignette-meta :: ink-write-in": 250,
++  "src/pencil/chrome/GameGallery/GameCard.vue :: the poster falls back to its canned worksheet when there is none, which is the h :: transform": 440,
++  "src/pencil/chrome/GameGallery/GameCard.vue :: the poster falls back to its canned worksheet when there is none, which is the h :: opacity": 440,
++  "src/pencil/chrome/GameGallery/GameCard.vue :: .game-card-range :: color": 150,
++  "src/pencil/chrome/GameGallery/GameGallery.vue :: .gallery-pip :: background-color": 200,
++  "src/pencil/chrome/GameGallery/GameGallery.vue :: .guard-face :: background-color": 150,
++  "src/pencil/chrome/GameGallery/GameGallery.vue :: .guard-face :: color": 150,
++  "src/pencil/chrome/GameGallery/GameGallery.vue :: .guard-ribbon-enter-active, .guard-ribbon-leave-active :: transform": 250,
++  "src/pencil/chrome/GameGallery/GameGallery.vue :: .guard-ribbon-enter-active, .guard-ribbon-leave-active :: opacity": 250,
++  "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue :: .handwritten-logo :: clip-path": 1200,
++  "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue :: .logo-caret :: transform": 200,
++  "src/pencil/chrome/MarginNote.vue :: .margin-note-ink :: ink-write-in": 250,
++  "src/pencil/chrome/MarginNote.vue :: graphite at reduced pressure via ink-level color-mix (a property of the ink, not :: ink-write-in": 250,
++  "src/pencil/chrome/ScribbleLoader.vue :: .scribble-path :: scribble-cycle": 1000,
++  "src/pencil/chrome/icons/DiceIcon.vue :: : undefined\" /> </g> </svg> </template> <style scoped> .dice-roll :: diceRoll": 520,
++  "src/pencil/chrome/icons/DiceIcon.vue :: .pip-pop :: pipPop": 250,
++  "src/pencil/chrome/icons/FillForcedIcon.vue :: one grammar). */ .mark-draw :: markDraw": 350,
++  "src/pencil/chrome/icons/SolveIcon.vue :: \" /> </svg> </template> <style scoped> .check-draw :: drawIn": 350,
++  "src/pencil/chrome/icons/SolveIcon.vue :: .star-sparkle :: sparkleGrow": 520,
++  "src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue :: .progress-trace :: stroke-dashoffset": 250,
++  "src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue :: .progress-trace :: opacity": 520,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: </span> </template> <style scoped> .answer-key-laminate :: opacity": 200,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: </span> </template> <style scoped> .answer-key-laminate :: transform": 200,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: .answer-key-laminate.is-shown :: opacity": 280,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: .answer-key-laminate.is-shown :: transform": 280,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: .answer-key-laminate, .answer-key-laminate.is-shown :: opacity": 150,
++  "src/pencil/sheet/SheetWashiLabel.vue :: </span > </template> <style scoped> .washi-label :: opacity": 150
++ }
++}

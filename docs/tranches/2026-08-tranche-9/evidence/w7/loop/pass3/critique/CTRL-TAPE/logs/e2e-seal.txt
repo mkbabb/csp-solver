@@ -1,0 +1,51 @@
+
+Running 2 tests using 2 workers
+
+  ✘  1 [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for (433ms)
+  ✘  2 [webkit] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for (1.7s)
+
+
+  1) [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+
+    Error: iPad coarse card is 1303.44px against the P1 seal 1283.5px
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1283.5
+    Received:    1303.44
+
+      875 |       shipped,
+      876 |       `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+    > 877 |     ).toBeLessThanOrEqual(SEAL);
+          |       ^
+      878 |
+      879 |     // NEGATIVE CONTROL, in the same run: revert both payments in-page and the same probe
+      880 |     // must break the seal. Without this the bound is arithmetic about a number nobody can
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend/e2e/visual-regression.spec.ts:877:7
+
+    Error Context: ../../../../../../../../test-results/visual-regression-the-iPad-6c4a8-l-the-chip-seam-is-PAID-for-chromium/error-context.md
+
+  2) [webkit] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+
+    Error: iPad coarse card is 1303.31px against the P1 seal 1283.5px
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1283.5
+    Received:    1303.31
+
+      875 |       shipped,
+      876 |       `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+    > 877 |     ).toBeLessThanOrEqual(SEAL);
+          |       ^
+      878 |
+      879 |     // NEGATIVE CONTROL, in the same run: revert both payments in-page and the same probe
+      880 |     // must break the seal. Without this the bound is arithmetic about a number nobody can
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend/e2e/visual-regression.spec.ts:877:7
+
+    Error Context: ../../../../../../../../test-results/visual-regression-the-iPad-6c4a8-l-the-chip-seam-is-PAID-for-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+    [webkit] › e2e/visual-regression.spec.ts:790:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+EXIT=1

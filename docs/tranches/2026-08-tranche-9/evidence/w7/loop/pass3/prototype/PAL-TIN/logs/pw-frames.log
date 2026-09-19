@@ -1,0 +1,61 @@
+
+Running 3 tests using 1 worker
+
+TAPE dark: text="loyal-roadrunner" ticks=1
+RING PAINTED (cascade): {"stroke":"rgb(255, 151, 94)","opacity":"0.55","width":"4px","fill":"rgb(255, 151, 94)","fillOpacity":"0.04"}
+  ✓  1 [chromium] › e2e/tin-frames.scratch.ts:55:1 › frames + the filter census at sixteen (4.4s)
+  ✘  2 [chromium] › e2e/tin-frames.scratch.ts:112:1 › the live-filter census with a sixteen-player roster (1.1m)
+SOLO: cells carrying a style attribute 61 · dev PlayerTick style tags 1
+  ✘  3 [chromium] › e2e/tin-frames.scratch.ts:139:1 › the room of one, and the solo fingerprint (372ms)
+
+
+  1) [chromium] › e2e/tin-frames.scratch.ts:112:1 › the live-filter census with a sixteen-player roster 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 16
+    Received: 15
+    Timeout:  60000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 60000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        123 × locator resolved to 15 elements
+            - unexpected value "15"
+
+
+      43 |     pages.push(p);
+      44 |   }
+    > 45 |   for (const p of pages) await expect(roster(p)).toHaveCount(n, { timeout: 60000 });
+         |                                                  ^
+      46 |   return { ctx, pages };
+      47 | }
+      48 | async function setDark(page: Page, on: boolean) {
+        at room (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin-frames.scratch.ts:45:50)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin-frames.scratch.ts:114:26
+
+    Error Context: test-results/tin-frames.scratch.ts-the--f5d5a-ith-a-sixteen-player-roster-chromium/error-context.md
+
+  2) [chromium] › e2e/tin-frames.scratch.ts:139:1 › the room of one, and the solo fingerprint ──────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 61
+
+      148 |   );
+      149 |   console.log(`SOLO: cells carrying a style attribute ${styled} · dev PlayerTick style tags ${devStyle}`);
+    > 150 |   expect(styled).toBe(0);
+          |                  ^
+      151 | });
+      152 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin-frames.scratch.ts:150:18
+
+    Error Context: test-results/tin-frames.scratch.ts-the--33a47-ne-and-the-solo-fingerprint-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/tin-frames.scratch.ts:112:1 › the live-filter census with a sixteen-player roster 
+    [chromium] › e2e/tin-frames.scratch.ts:139:1 › the room of one, and the solo fingerprint ───────
+  1 passed (1.2m)
+EXIT=1

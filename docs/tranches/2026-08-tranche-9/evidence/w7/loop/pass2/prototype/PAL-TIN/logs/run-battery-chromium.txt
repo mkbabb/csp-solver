@@ -1,0 +1,87 @@
+
+Running 11 tests using 1 worker
+
+TIN-T1|chromium|light|peer-1|#853900|painted=rgb(133, 57, 0)|agree=true|bg=7.8|card=7.989
+TIN-T1|chromium|light|peer-2|#455c00|painted=rgb(69, 92, 0)|agree=true|bg=7.236|card=7.411
+TIN-T1|chromium|light|peer-3|#005f63|painted=rgb(0, 95, 99)|agree=true|bg=7.151|card=7.324
+TIN-T1|chromium|light|peer-4|#3e32c5|painted=rgb(62, 50, 197)|agree=true|bg=8.164|card=8.362
+TIN-T1|chromium|light|peer-5|#8b0081|painted=rgb(139, 0, 129)|agree=true|bg=8.342|card=8.544
+TIN-T1|chromium|dark|peer-1|#e06600|painted=rgb(224, 102, 0)|agree=true|bg=5.526|card=5.409
+TIN-T1|chromium|dark|peer-2|#799f00|painted=rgb(121, 159, 0)|agree=true|bg=6.165|card=6.034
+TIN-T1|chromium|dark|peer-3|#00a3aa|painted=rgb(0, 163, 170)|agree=true|bg=6.208|card=6.076
+TIN-T1|chromium|dark|peer-4|#747eff|painted=rgb(116, 126, 255)|agree=true|bg=5.618|card=5.498
+TIN-T1|chromium|dark|peer-5|#d64fc8|painted=rgb(214, 79, 200)|agree=true|bg=5.291|card=5.178
+TIN-T1|chromium|worst=5.178|disagreed=0
+  ✓   1 [chromium] › tin2-spec/tin2-proto.spec.ts:133:1 › T1 — ten arms, two grounds, declared = painted (1.4s)
+TIN-T2|chromium|drawn=0.8|fill=0.04|0.80worst=3.617|light=4.263|dark=3.617|0.55HEAD=2.316|paintedPixels=6.308
+  ✓   2 [chromium] › tin2-spec/tin2-proto.spec.ts:210:1 › T2 — the ring against the fill it is drawn on (2.7s)
+TIN-T3|chromium|soloTicks=0/0|soloStyled=0|soloStrokes=rgb(37, 99, 235)+rgb(10, 10, 10)|roomStyled=20|afterStyled=20|rectsSame=false
+  ✘   3 [chromium] › tin2-spec/tin2-proto.spec.ts:350:1 › T3 — solo: zero ticks, one fingerprint, and back (3.4s)
+TIN-T4|chromium|digit=1|tick={"x":11.88,"y":84.97,"w":0.26,"h":12.05,"cx":12.01}|glyph={"x":39.54,"y":26.78,"w":12.77,"h":47.58,"cx":45.93}|overlap=0|centreGap=33.92
+TIN-T4|chromium|digit=4|tick={"x":11.84,"y":84.98,"w":0.26,"h":12.06,"cx":11.97}|glyph={"x":31.43,"y":23.3,"w":30.17,"h":51.07,"cx":46.52}|overlap=0|centreGap=34.55
+TIN-T4|chromium|digit=7|tick={"x":11.92,"y":84.98,"w":0.09,"h":12.04,"cx":11.96}|glyph={"x":38.38,"y":25.62,"w":24.37,"h":46.42,"cx":50.57}|overlap=0|centreGap=38.61
+TIN-T4|chromium|rimmed={"invalid":false,"because":false,"ghostBottomPct":88.53,"tickTopPct":84.97,"tickLeftPct":11.88}
+  ✓   4 [chromium] › tin2-spec/tin2-proto.spec.ts:397:1 › T4 — the tick never reads as a stem (4.0s)
+TIN-T5|chromium|9x9-desk|board=640|cell=70.67|units=3|painted=2.12|expected=2.133
+TIN-T5|chromium|9x9-phone|board=366|cell=40.23|units=3|painted=1.207|expected=1.220
+TIN-T5|chromium|16x16-phone|board=366|cell=22.63|units=5.33333|painted=1.207|expected=1.220
+  ✓   5 [chromium] › tin2-spec/tin2-proto.spec.ts:515:1 › T5 — painted stroke is boardWidth/300 at every size (13.3s)
+TIN-T6|chromium|390|rows=16|swatches=5|ticks=11|worstGapRem=0.399|rowH=16.42
+TIN-T6|chromium|1280|rows=16|swatches=5|ticks=11|worstGapRem=0.399|rowH=18.95
+  ✓   6 [chromium] › tin2-spec/tin2-proto.spec.ts:577:1 › T6 — sixteen rows, five swatches, eleven ticks, each against its word (8.3s)
+TIN-T7|chromium|alone=rgb(37, 99, 235)/rgb(37, 99, 235)|aloneTicks=0|joined=rgb(133, 57, 0)/rgb(133, 57, 0)|styled=true/true
+  ✓   7 [chromium] › tin2-spec/tin2-proto.spec.ts:660:1 › T7 — write, invite, write: both strokes are one colour (4.2s)
+TIN-T8|chromium|screen={"tick":"rgb(69, 92, 0)","digit":"rgb(69, 92, 0)","roster":"rgb(133, 57, 0)"}|print={"tick":"rgb(0, 0, 0)","digit":"rgb(0, 0, 0)","roster":"rgb(0, 0, 0)"}|forced={"tick":"rgb(0, 0, 0)","digit":"rgb(0, 0, 0)","roster":"rgb(0, 0, 0)"}
+  ✓   8 [chromium] › tin2-spec/tin2-proto.spec.ts:711:1 › T8 — the tick prints black and yields to CanvasText (3.7s)
+TIN-T9|chromium|filters=15|ticks=11|rosterTicks=11|rows=16
+  ✘   9 [chromium] › tin2-spec/tin2-proto.spec.ts:756:1 › T9 — filterBudget with sixteen players on the board (7.8s)
+TIN-T10|chromium|A=3/0|B=3/0|C=3/0
+  ✓  10 [chromium] › tin2-spec/tin2-proto.spec.ts:787:1 › T10 — the room converges on the author's word (4.6s)
+  ✓  11 [chromium] › tin2-spec/tin2-proto.spec.ts:830:1 › T11 — a dark board with two sticks and a tick (5.0s)
+
+
+  1) [chromium] › tin2-spec/tin2-proto.spec.ts:350:1 › T3 — solo: zero ticks, one fingerprint, and back 
+
+    Error: the leave path comes back to solo geometry
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "70.66,70.66|70.67,70.66|70.66,70.66|70.67,70.66|70.67,70.66|70.66,70.66|70.67,70.66|70.67,70.66|70.66,70.66|70.66,70.67|70.67,70.67|70.66,70.67"
+    Received: "70.66,70.66|70.67,70.66|70.66,70.66|70.67,70.66|70.67,70.66|70.66,70.66|70.02,70|70.67,70.66|70.66,70.66|70.66,70.67|70.67,70.67|70.66,70.67"
+
+      391 |   expect(solo.rosterTicks, "solo mounts no roster tick").toBe(0);
+      392 |   expect(solo.styledCells, "solo binds nothing on a cell").toBe(0);
+    > 393 |   expect(solo.cellRects, "the leave path comes back to solo geometry").toBe(after.cellRects);
+          |                                                                        ^
+      394 | });
+      395 |
+      396 | /* ══ T4 · the corner tick under a 1, a 4 and a 7 ═══════════════════════════════ */
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-58/web/frontend/tin2-spec/tin2-proto.spec.ts:393:72
+
+    Error Context: test-results/tin2-proto-T3-—-solo-zero-ticks-one-fingerprint-and-back-chromium/error-context.md
+
+  2) [chromium] › tin2-spec/tin2-proto.spec.ts:756:1 › T9 — filterBudget with sixteen players on the board 
+
+    Error: filterBudget is exactly 9
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 9
+    Received: 15
+
+      781 |     `TIN-T9|${info.project.name}|filters=${census.filters}|ticks=${census.ticks}|rosterTicks=${census.rosterTicks}|rows=${census.rows}`,
+      782 |   );
+    > 783 |   expect(census.filters, "filterBudget is exactly 9").toBe(9);
+          |                                                       ^
+      784 | });
+      785 |
+      786 | /* ══ T10 · three pages, one author, one assignment ════════════════════════════ */
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-58/web/frontend/tin2-spec/tin2-proto.spec.ts:783:55
+
+    Error Context: test-results/tin2-proto-T9-—-filterBudg-586c6-ixteen-players-on-the-board-chromium/error-context.md
+
+  2 failed
+    [chromium] › tin2-spec/tin2-proto.spec.ts:350:1 › T3 — solo: zero ticks, one fingerprint, and back 
+    [chromium] › tin2-spec/tin2-proto.spec.ts:756:1 › T9 — filterBudget with sixteen players on the board 
+  9 passed (59.6s)
+EXIT=1

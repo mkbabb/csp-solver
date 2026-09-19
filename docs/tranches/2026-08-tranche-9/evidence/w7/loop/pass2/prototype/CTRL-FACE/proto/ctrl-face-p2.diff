@@ -1,0 +1,1972 @@
+diff --git a/web/frontend/e2e/access.spec.ts b/web/frontend/e2e/access.spec.ts
+index 8704d979..e94c2d81 100644
+--- a/web/frontend/e2e/access.spec.ts
++++ b/web/frontend/e2e/access.spec.ts
+@@ -436,7 +436,21 @@ test.describe("2.3 the roster announces", () => {
+ 
+ type Sample = { sel: string; text: string; ratio: number; fg: string; bg: string };
+ 
+-const CONTRAST_TARGETS = [`${CARD} .icon-sublabel`, `${CARD} .ctrl-btn`];
++// T9-W7 CTRL-FACE — THE LIST GREW WITH THE LAW. The card names its eight compartments in one
++// printed voice now, and four of the sites that paint those names were outside this row: the
++// staged eyebrow, the compartment tape, the row caption and the shut tab's value word. Two of
++// them changed ink in the same slice (the caption left `--ink-press-quiet` for the printed
++// ink; the shut tab's value took the quiet rung the caption gave up), so a row that measured
++// the chips and the sublabels alone was measuring the half of the card that did not move.
++// n rises 4 → 8 sites.
++const CONTRAST_TARGETS = [
++  `${CARD} .icon-sublabel`,
++  `${CARD} .ctrl-btn`,
++  `${CARD} .section-heading`,
++  `${CARD} .heading-value`,
++  `${CARD} .zone-row-label`,
++  `${CARD} .washi-tag`,
++];
+ 
+ async function contrastSamples(page: Page, selectors: string[]): Promise<Sample[]> {
+   return page.evaluate((selectors) => {
+@@ -537,8 +551,13 @@ for (const scheme of ["light", "dark"] as const) {
+           `n=${samples.length}`,
+       });
+ 
+-      // Both families are NORMAL text at every width they paint (sublabels 14.4–16.4px regular,
+-      // chips 20px regular — under 18.66px bold / 24px regular), so one floor covers them.
++      // ONE FLOOR, 4.5, AND IT IS THE STRICTER ONE ON PURPOSE. Four of these six are normal
++      // text at every width they paint (sublabels 14.4–16.4px regular, chips 20px regular, the
++      // shut tab's value 14px, the tape 14px on the deck — all under 18.66px bold / 24px
++      // regular). The other two, the printed group names at 25.888px/800, ARE large text by
++      // 1.4.3 and could be held to 3.0; they are held here to 4.5 anyway, because a name that
++      // is only legible at display size is a name that fails the moment a later rank re-cuts
++      // the rung, and this list is what such a re-cut would be measured against.
+       const thin = samples.filter((s) => s.ratio < 4.5);
+       expect(
+         thin.map((s) => `${s.ratio}:1 "${s.text}" ${s.sel} (${s.fg} on ${s.bg})`),
+diff --git a/web/frontend/e2e/font-census.spec.ts b/web/frontend/e2e/font-census.spec.ts
+index eeffd803..5bcffccf 100644
+--- a/web/frontend/e2e/font-census.spec.ts
++++ b/web/frontend/e2e/font-census.spec.ts
+@@ -47,16 +47,16 @@ import { test, expect, type Page } from "@playwright/test";
+ /** Strings that render in a second face today, with the reason each is tolerated. Keys are
+  *  `face|shown`. Anything rendered and mixed that is NOT here fails the row. */
+ const LEDGER: Record<string, string> = {
+-  // ── Fira Code: the cut covers the SIZE and DIFFICULTY chips (4×4 · 9×9 · 16×16 · Easy ·
+-  // Medium · Hard) and nothing else. The live-zone chips joined the same component later and
+-  // were never in the corpus. Pre-existing, estate-wide, unledgered until now.
+-  "Fira Code|Normal": "live-zone chip; o/l/N outside the size+difficulty cut",
+-  "Fira Code|Corner": "live-zone chip; C/o/n outside the cut",
+-  "Fira Code|Center": "live-zone chip; C/n/t outside the cut",
+-  "Fira Code|Off": "live-zone chip; O/f outside the cut",
+-  "Fira Code|On": "live-zone chip; O/n outside the cut",
+-  "Fira Code|Ask": "live-zone chip; A/k outside the cut",
+-  "Fira Code|Live": "live-zone chip; L/v outside the cut",
++  // ── T9-W7 CTRL-FACE RETIRED ELEVEN ROWS HERE, and they are the whole of this ledger's
++  // option-chip population. The seven `Fira Code|…` live-zone rows are gone because the chips
++  // are WRITTEN now: the face law moved every option value to Patrick Hand and lowercased it
++  // by CSS, so the strings this census reads are `normal` / `corner` / `center` / `off` / `on`
++  // / `ask` / `live` and every codepoint is in the hand's cut. `Patrick Hand|Easy`, `|Medium`
++  // and `|Hard` (the closed tab's value, UI-12) go with them — the same transform, plus the
++  // re-cut that took A E H L M N O for the gate's both-cases rule; the two CONDITIONAL rows
++  // below went with them for the same reason. `Patrick Hand|H` (keycap) is retired by the
++  // re-cut alone: H is in the cut now, so the keycap draws in the hand like every other
++  // letter it names. K/P/Z/G/D and the glyph keycaps still fall through and still ledger.
+   // ── Patrick Hand: the cut declares C/R/S as its only capitals. Every other capital in the
+   // hand register falls through. Pre-existing.
+   // T6 mark 12 RETIRED FOUR ROWS HERE — `Deal`, `Fill`, `Undo`, `Hint`. The sublabels wear
+@@ -65,13 +65,9 @@ const LEDGER: Record<string, string> = {
+   // codepoint is in the cut. Leaving them would red the BACKWARD arm at `:291` as stale, which
+   // is the direction that exists so a ledger cannot quietly become a list. (The `"Deal"`
+   // literal in the CAGE_LABEL negative control below is a regex fixture, not a ledger row.)
+-  "Patrick Hand|Easy": "closed-tab value (UI-12); E outside the cut",
+-  "Patrick Hand|Medium": "closed-tab value (UI-12); M outside the cut",
+-  "Patrick Hand|Hard": "closed-tab value (UI-12); H outside the cut",
+   // ── the keyboard legend is literally a set of capital keycaps, and a keycap that renders in
+   // the system face still reads as the key it names.
+   "Patrick Hand|K": "keycap",
+-  "Patrick Hand|H": "keycap",
+   "Patrick Hand|P": "keycap",
+   "Patrick Hand|Z": "keycap",
+   // T5-W3 row 3.6 (a11y r1 L10): the crib grew the two bare keys it never named — G (games)
+@@ -100,8 +96,8 @@ const LEDGER: Record<string, string> = {
+  *  it. The backward check exempts exactly these, by key — a row that stops rendering for any
+  *  OTHER reason still reds as stale, which is the direction the row was missing. */
+ const CONDITIONAL: Record<string, string> = {
+-  "Patrick Hand|Medium": "closed-tab value; every cell below deals EASY",
+-  "Patrick Hand|Hard": "closed-tab value; every cell below deals EASY",
++  // T9-W7: the two closed-tab values left with their LEDGER rows (see above) — a conditional
++  // row for a string that can no longer render mixed is a claim about a page that has moved on.
+   "Patrick Hand|Ctrl": "keycap; the legend draws ⌘ on Apple platforms and Ctrl elsewhere",
+ };
+ 
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index dfd467f8..cef2ae88 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -818,7 +818,25 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+   // charged less would be a compartment that didn't read as one. Base is UNMOVED at
+   // 1142.38 / 1142.34 with the well ablated, which is the other half of the reading — the
+   // feature costs what it costs and nothing else drifted underneath it.
+-  const SEAL = 1227.5;
++  // T9-W7 CTRL-FACE RE-PRICES IT A THIRD TIME, in this test's own form: named, measured,
++  // ablated. The purchase is the owner's M03 ("the section titles need to be larger") read as
++  // one law — the card names its eight compartments in ONE voice, the sheet's own printing, at
++  // one rung — and at THIS cell exactly two of those names cost anything, because on the rail
++  // the row captions sit OVER their rows and pay their whole line box:
++  //
++  //   the four tapes re-faced 14px hand → 25.888px printed      **0.00**  the `1lh` pull
++  //   the tape's leading 1.5 → 1.05 (--type-leading-display)    **0.00**  free vertically
++  //   the two row captions at the printed rung                  **+31.25**  M03's purchase
++  //   the caption's `align-self: flex-start`                    **0.00**  the row is its chips
++  //   the tab row's 0.5rem of headroom                          **0.00**  no tab row here
++  //   the first well back to HEAD's 0.35rem                     **0.00**  unchanged
++  //   shipped                                    **1258.47 chromium / 1258.34 webkit**
++  //
++  // SEAL = shipped + the same 2.6px of engine slack T6 gave, and no slack for a mark nobody
++  // ordered (equivalently 1227.5 + 31.25 + 2.25). The SECOND negative control below is what
++  // makes that an ablation rather than a claim: put the two captions back on the hand rung
++  // in-page and the card must FALL by ≥28px. A seal that bought a face can be shown losing it.
++  const SEAL = 1261;
+ 
+   const ctx = await browser.newContext({
+     viewport: { width: 1280, height: 800 },
+@@ -850,6 +868,29 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+       `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+     ).toBeLessThanOrEqual(SEAL);
+ 
++    // NEGATIVE CONTROL ZERO (T9-W7 CTRL-FACE), and it runs FIRST because the one below leaves
++    // its own layout behind. The re-price says the 31.25px this seal grew by IS the two row
++    // captions at the printed rung — so put them back in the hand at `--type-tag` and the card
++    // must FALL by ≥28px. Without this the new seal is just a bigger number with a story; with
++    // it, the number is the face, and a later cure that quietly drops the rung reds here
++    // instead of passing under a roomier bound.
++    const ABLATE = "t9-w7-caption-rung";
++    await p.evaluate((id) => {
++      const s = document.createElement("style");
++      s.id = id;
++      s.textContent =
++        ".zone-row-label { font-size: var(--type-tag) !important; line-height: 1.1 !important }";
++      document.head.appendChild(s);
++    }, ABLATE);
++    await p.waitForTimeout(120);
++    const handRung = await p.evaluate(PANEL_H);
++    await p.evaluate((id) => document.getElementById(id)?.remove(), ABLATE);
++    await p.waitForTimeout(120);
++    expect(
++      shipped! - handRung!,
++      "what the seal bought: the two row captions at the printed rung",
++    ).toBeGreaterThanOrEqual(28);
++
+     // NEGATIVE CONTROL, in the same run: revert both payments in-page and the same probe
+     // must break the seal. Without this the bound is arithmetic about a number nobody can
+     // move — the GATE-1 pattern, and the reason this row exists at all.
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index f288137a..e79e6adb 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -676,17 +676,24 @@ test.describe("coarse regime", () => {
+ 
+     // The chips still carry the whole of the state, and they say it the way every other option
+     // row in the estate does — `aria-pressed`, which is the announcement the sentence duplicated.
+-    await well.locator('.ctrl-btn:text-is("Live")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    // THE SELECTOR NAMES THE WORD'S OWN SPAN (T9-W7 CTRL-FACE). `:text-is()` matches the
++    // SMALLEST element carrying the text, so wrapping each label in `.ctrl-word` — the span the
++    // scribble is measured against — left `.ctrl-btn:text-is("Live")` matching nothing and this
++    // row timing out in both engines. Measured while fixing it: the engine reads `textContent`,
++    // not the painted text, so the CSS lowercasing is not what moved (`:text-is("live")` finds
++    // 0 and `:text-is("Live")` finds 1 on a chip that paints `live`). The authored word is
++    // still the assertion above; the state is still read off the BUTTON.
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await well.locator('.ctrl-btn:text-is("Off")').tap();
+-    await expect(well.locator('.ctrl-btn:text-is("Off")')).toHaveAttribute(
++    await well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))').tap();
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Off"))')).toHaveAttribute(
+       "aria-pressed",
+       "true",
+     );
+-    await expect(well.locator('.ctrl-btn:text-is("Live")')).toHaveAttribute(
++    await expect(well.locator('.ctrl-btn:has(.ctrl-word:text-is("Live"))')).toHaveAttribute(
+       "aria-pressed",
+       "false",
+     );
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 4a00b36e..a72ca764 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -55,6 +55,18 @@
+  * compared here, both directions: a re-cut that adds `x` leaves the generator refusing a name
+  * the page can now draw, and one that drops a letter puts a half-drawn slug on a roster row.
+  *
++ * ── T9-W7 CTRL-FACE — CHECK 6, THE FACE LAW (the spec's "check 4"; the file numbers it sixth
++ * because five were already numbered) ──────────────────────────────────────────────────────
++ * Every check above binds a FACE to a CORPUS by a hand-written `where` label, and not one of
++ * them reads which face a selector actually renders in. So a face re-point is invisible here:
++ * measured at the CTRL-FACE research lane, this gate printed `font coverage OK` while `pencils`
++ * and `players` painted their `p` in Georgia at weight 800 — the T8 ransom-note trap re-armed
++ * from the other side, a cut that is honest about a register nothing renders in any more.
++ * `FACE_SITES` closes it: each site names the family it must paint in, the script finds the
++ * rule block that sets `font-family` AT that selector, and resolves the value through the
++ * `--face-*` / `--font-*` tokens. A literal family string reds — a face reachable from no token
++ * is a face no voice can re-cut.
++ *
+  *   node scripts/check-font-coverage.mjs
+  */
+ import { readFileSync, readdirSync } from "node:fs";
+@@ -86,6 +98,18 @@ const grab = (files, re) =>
+     [...f.text.matchAll(re)].map((m) => ({ s: m[1], where: f.rel })),
+   );
+ 
++/** The consumers that PRINT their compartment tapes (T9-W7 CTRL-FACE's `.tray-well` hook). */
++const PRINTED_TAPES = /^src\/games\/shared\/GameControlPanel\.vue$/;
++/** Every static `text="…"` on a <SheetWashiLabel> the predicate takes, with its file. */
++const tapes = (keep) =>
++  pick(/\.vue$/).flatMap((f) =>
++    [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
++      .filter((m) => keep(m[0], f.rel))
++      .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
++      .filter(Boolean)
++      .map((m) => ({ s: m[1], where: f.rel })),
++  );
++
+ /**
+  * THE EXTRACTORS — each names the authored construct it reads. A derivation nobody can check
+  * is a second hand-written list wearing a machine's badge, so every one of these points at a
+@@ -104,16 +128,38 @@ const EXTRACT = {
+     what: '`label: "…"` in src/games/cards.ts (the picker\'s axis captions)',
+     run: () => grab(pick(/^src\/games\/cards\.ts$/), /\blabel:\s*"([^"]+)"/g),
+   },
++  // T9-W7 CTRL-FACE — the tapes split by ANCHOR **and by CONSUMER**, because a face is a
++  // consumer's ruling, not a component's: the tape is printed where the controls card re-faces
++  // it (`.tray-well :deep(.washi-tag)`) and stays in the hand everywhere else, including the
++  // deck's own `new game`. So the tag filter carries a `files` term, and every tape it does not
++  // take falls through to the hand below. The UNION is unchanged — nothing left the derivation,
++  // and a tape whose consumer changes moves between these two lists, never out of both.
++  //
++  // `PRINTED_TAPES` is that consumer list, and it is the one place the two extractors agree.
+   washiTapes: {
+-    what: 'static `text="…"` on <SheetWashiLabel> across src/**/*.vue',
++    what: 'static `text="…"` on a <SheetWashiLabel> that no consumer prints — the notes',
++    run: () => tapes((m, rel) => !(/anchor="tag"/.test(m) && PRINTED_TAPES.test(rel))),
++  },
++  washiTags: {
++    what: 'static `text="…"` on <SheetWashiLabel anchor="tag"> in the controls card — the printed compartment names',
++    run: () => tapes((m, rel) => /anchor="tag"/.test(m) && PRINTED_TAPES.test(rel)),
++  },
++  // The CARD renders every option a game declares, in the hand. The DECK stages the size and
++  // level tiers only, in this component's own mono default — two corpora, two faces, one
++  // authored source apiece, because `selectors.ts` is exactly what the picker paints.
++  optionLabels: {
++    what: '`label: "…"` in src/games/shared/selectors.ts and GameControlPanel\'s option consts',
+     run: () =>
+-      pick(/\.vue$/).flatMap((f) =>
+-        [...f.text.matchAll(/<SheetWashiLabel\b[\s\S]*?\/?>/g)]
+-          .map((m) => /(?<![:\w-])text="([^"]*)"/.exec(m[0]))
+-          .filter(Boolean)
+-          .map((m) => ({ s: m[1], where: f.rel })),
++      grab(
++        pick(/^src\/games\/shared\/(selectors\.ts|GameControlPanel\.vue)$/),
++        /\blabel:\s*"([^"]+)"/g,
+       ),
+   },
++  deckOptionLabels: {
++    what: '`label: "…"` in src/games/shared/selectors.ts — the tiers the picker stages',
++    run: () =>
++      grab(pick(/^src\/games\/shared\/selectors\.ts$/), /\blabel:\s*"([^"]+)"/g),
++  },
+   zoneRowLabels: {
+     what: "the static text of a `.zone-row-label` span",
+     run: () =>
+@@ -180,6 +226,22 @@ const FACES = [
+         derive: ["cardNames"],
+         strings: ["sudoku", "futoshiki", "thermo", "killer", "kenken"],
+       },
++      // T9-W7 CTRL-FACE — the compartment names and the row captions are PRINTED now (the
++      // sheet's own eight nouns), so they move here from the hand's corpus. `p` is the one
++      // letter the eight names need that the cut never held: `pencils` and `players` painted
++      // it in Georgia at weight 800, mid-word, proved by advance in both engines.
++      {
++        where: ".washi-tag (the compartment names)",
++        transform: "lowercase",
++        derive: ["washiTags"],
++        strings: ["new game", "pencils", "checking", "players"],
++      },
++      {
++        where: ".zone-row-label (row captions)",
++        transform: "lowercase",
++        derive: ["zoneRowLabels"],
++        strings: ["marks", "candidates"],
++      },
+     ],
+   },
+   // THE SECOND FACE (T4-P1, stage BC). The hand register was never in this gate, and the zone
+@@ -201,30 +263,52 @@ const FACES = [
+       // exactly. All twelve are declared here and all twelve clear the cut (measured \u2014 the
+       // hand's repertoire is lowercase, and the tooltips are written in it).
+       {
+-        where: ".washi-tag (compartment names) + the tapes",
++        where: "the tapes no consumer prints (the notes, and the DECK's own name)",
+         transform: "none",
+         derive: ["washiTapes"],
+         strings: [
++          // T9-W7 CTRL-FACE: the picker's `new game` tape. The same word is printed on the
++          // controls card and written on the deck, and that is the law working rather than a
++          // duplicate — a face belongs to the surface, so the string is in both corpora.
+           "new game",
+-          "pencils",
+           "teacher's",
+           "hold to peek",
+           "normal writes a digit. corner and center write small pencil marks",
+           "show every digit that still fits in a cell",
+-          "checking",
+           "when your mistakes get checked",
+-          "players",
+           "share this board and everyone writes on the same grid",
+           "wipe every digit you've written",
+           "fill the cells that have only one digit left",
+           "the solver finishes the board",
+         ],
+       },
++      // T9-W7 CTRL-FACE \u2014 every option VALUE is written, and the register had never been in
++      // this gate at all: `.heading-value` renders the authored `Easy` with no transform, so
++      // its `E` has painted in the system cursive mid-word for the life of the closed tab.
++      // The face law lowercases both sites; the corpus carries the authored form too, per the
++      // both-cases rule at the head of this file, which is what the +A E H L M N O re-cut buys.
+       {
+-        where: ".zone-row-label (row captions)",
+-        transform: "none",
+-        derive: ["zoneRowLabels"],
+-        strings: ["marks", "candidates"],
++        where: ".tray-well .ctrl-btn + .heading-value (the card's option values)",
++        transform: "lowercase",
++        derive: ["optionLabels"],
++        strings: [
++          "Easy",
++          "Medium",
++          "Hard",
++          "4\u00d74",
++          "9\u00d79",
++          "16\u00d716",
++          "5\u00d75",
++          "6\u00d76",
++          "7\u00d77",
++          "Normal",
++          "Corner",
++          "Center",
++          "Off",
++          "Ask",
++          "Live",
++          "On",
++        ],
+       },
+       // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
+       // them. The cut is NOT re-narrowed: `level` (the picker's difficulty caption, the string
+@@ -239,6 +323,24 @@ const FACES = [
+       },
+     ],
+   },
++  // THE THIRD FACE (T9-W7 CTRL-FACE). It was never in this gate, and the reason it is now is
++  // the reason this family exists: the CARD's chips left this face for the hand and the DECK's
++  // did not, so the 3,624 B that looked recoverable are the picker's whole size-and-level
++  // repertoire. AUTHORED CASE, no transform — the deck lowercases nothing, which is also why
++  // the cut can be this small (it holds `E H M` and no `h`; a lowercase `hard` would red here
++  // and that red would be true).
++  {
++    family: "Fira Code",
++    font: "src/assets/fonts/firacode-subset.woff2",
++    corpus: [
++      {
++        where: ".staging-axis .ctrl-btn (the picker's staged tiers)",
++        transform: "none",
++        derive: ["deckOptionLabels"],
++        strings: ["Easy", "Medium", "Hard", "4×4", "9×9", "16×16", "5×5", "6×6", "7×7"],
++      },
++    ],
++  },
+ ];
+ 
+ // ── cmap ────────────────────────────────────────────────────────────────────────────────────
+@@ -564,6 +666,127 @@ const WRITEABLE_SRC = "src/games/shared/playerIdentity.ts";
+   }
+ }
+ 
++// 6. THE FACE LAW (T9-W7 CTRL-FACE; the spec's "check 4"). PRINTED is what the sheet came
++// printed with — the eight group names; WRITTEN is what a pencil put there — every value and
++// every verb. Each site declares its face AT the site, through a token, and this compares the
++// declaration to the law. A literal family string is red on its own: it is unreachable from
++// any voice, which is how `"Fira Code", monospace` outlived three type re-cuts in a template.
++// THE KEY IS THE SELECTOR, EXACTLY AS WRITTEN. A shared component ships to two decks and the
++// face is the CONSUMER's ruling, so `.washi-tag` and `.tray-well :deep(.washi-tag)` are two
++// different laws about two different surfaces and the gate has to be able to tell them apart —
++// a substring match cannot, and pass 1's did not (it read the card's re-face as a violation of
++// the component's own rule). Two closures, both ways: a block that declares `font-family` on a
++// listed class and is not a key is an UNDECLARED HOME (a face nobody wrote down), and a key
++// with no such block is A LAW WITH NO HOME (a rule that was moved or renamed out from under
++// this list). The value must be a `--face-*` token in first position: `--font-*` is the family
++// binding, `--face-*` is the law, and a site that reads the binding is a site no voice can
++// re-cut without chasing every consumer of the font.
++const FACE_SITES = {
++  ".section-heading": "Fraunces",
++  ".washi-tag": "Patrick Hand",
++  ".tray-well :deep(.washi-tag)": "Fraunces",
++  ".zone-row-label": "Fraunces",
++  ".ctrl-btn": "Fira Code",
++  ".tray-well :deep(.ctrl-btn)": "Patrick Hand",
++  ".heading-value": "Patrick Hand",
++  ".icon-sublabel": "Patrick Hand",
++};
++{
++  /** Every flat CSS rule block on the tree — `<style>` blocks in .vue, whole .css files. */
++  const blocks = [];
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    let css = f.rel.endsWith(".vue")
++      ? [...f.text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)]
++          .map((m) => m[1])
++          .join("\n")
++      : f.text;
++    css = css.replace(/\/\*[\s\S]*?\*\//g, " ");
++    for (const m of css.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
++      const sel = m[1].trim();
++      if (!sel || sel.startsWith("@")) continue; // at-rule preludes, never a selector
++      blocks.push({ where: f.rel, sel, body: m[2] });
++    }
++  }
++  /** `--font-*` / `--face-*` definitions, so a face is resolved the way the browser does. */
++  const tokens = {};
++  for (const f of TREE) {
++    if (!/\.(css|vue)$/.test(f.rel)) continue;
++    for (const m of f.text.matchAll(/(--(?:font|face)-[\w-]+)\s*:\s*([^;]+);/g))
++      if (!(m[1] in tokens)) tokens[m[1]] = m[2].trim();
++  }
++  const resolve = (value) => {
++    const seen = new Set();
++    let v = value.trim();
++    let m;
++    while ((m = /^var\(\s*(--[\w-]+)\s*(?:,[\s\S]*)?\)$/.exec(v))) {
++      if (seen.has(m[1]) || !(m[1] in tokens)) return null;
++      seen.add(m[1]);
++      v = tokens[m[1]].trim();
++    }
++    return v.split(",")[0].replace(/["']/g, "").trim();
++  };
++  const norm = (s) => s.replace(/\s+/g, " ").trim();
++  /** The classes the law is about — read off the keys, so the list is spelled once. */
++  const LISTED = new Set(
++    Object.keys(FACE_SITES).flatMap((k) =>
++      [...k.matchAll(/\.([\w-]+)/g)].map((m) => m[1]),
++    ),
++  );
++  /** Every block that declares a face on one of those classes, filed under its exact selector. */
++  const homes = new Map();
++  for (const b of blocks) {
++    const decl = /(?:^|[;{\s])font-family\s*:\s*([^;]+)/.exec(b.body);
++    if (!decl) continue;
++    const names = [...b.sel.matchAll(/\.([\w-]+)/g)].map((m) => m[1]);
++    if (!names.some((n) => LISTED.has(n))) continue;
++    const sel = norm(b.sel);
++    if (!(sel in FACE_SITES)) {
++      problems.push(
++        `the face law: ${b.where} declares \`font-family\` at \`${sel}\`, which is not a site ` +
++          `the law names. Every home for these classes is written down, because a face set ` +
++          `somewhere nobody listed is a face nobody can re-cut — add the selector to ` +
++          `FACE_SITES with the family it must paint, or set no face there.`,
++      );
++      continue;
++    }
++    if (!homes.has(sel)) homes.set(sel, []);
++    homes.get(sel).push({ ...b, raw: decl[1].trim() });
++  }
++  for (const [sel, family] of Object.entries(FACE_SITES)) {
++    const declaring = homes.get(sel);
++    if (!declaring) {
++      problems.push(
++        `the face law: no rule sets \`font-family\` AT \`${sel}\`, so either the site inherits ` +
++          `its face from whatever encloses it — which cannot be re-cut at the site — or the ` +
++          `rule was renamed out from under this law. Declare it there, reading one face token.`,
++      );
++      continue;
++    }
++    for (const d of declaring) {
++      const first = /^var\(\s*(--[\w-]+)/.exec(d.raw);
++      if (!first || !/^--face-/.test(first[1])) {
++        problems.push(
++          `the face law: ${d.where} sets \`${sel} { font-family: ${d.raw} }\`. The first token ` +
++            `must be a \`--face-*\` law (\`--face-printed\` / \`--face-written\` / ` +
++            `\`--face-mono\`): a literal is reachable from no voice at all, and a \`--font-*\` ` +
++            `binding names the FILE rather than the register, so re-cutting the register means ` +
++            `chasing every site that reads the font.`,
++        );
++        continue;
++      }
++      const got = resolve(d.raw);
++      if (got !== family)
++        problems.push(
++          `the face law: ${d.where} paints \`${sel}\` in ${got ?? "an unresolvable family"} ` +
++            `(\`${d.raw}\`) and the law says ${family}. PRINTED is the eight group names; ` +
++            `WRITTEN is every value and every verb; MONO is the shared component's own default, ` +
++            `which the deck keeps.`,
++        );
++    }
++  }
++}
++
+ if (problems.length) {
+   console.error("font coverage FAILED:");
+   for (const p of problems) console.error(`  · ${p}`);
+diff --git a/web/frontend/src/assets/fonts/fraunces-subset.woff2 b/web/frontend/src/assets/fonts/fraunces-subset.woff2
+index 3e9dd12d2d727fe0e51b7ee745fd1337842072e5..5d6c87effd84ad0addcb05753efe25de193d1a14 100644
+GIT binary patch
+literal 14896
+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
+
+literal 14636
+zcmV+{In%~>Pew8T0RR91068oG5&!@I09q&j064?|0RR9100000000000000000000
+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
+
+diff --git a/web/frontend/src/assets/fonts/patrickhand-subset.woff2 b/web/frontend/src/assets/fonts/patrickhand-subset.woff2
+index 19222d972396a3970343fa3f69c20c0ea6149e3c..1a16dd537aabcd84b94ea4862cb5314384908326 100644
+GIT binary patch
+literal 4896
+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
+S6Vd1`6V6j!!$(;I0002tM^t72
+
+literal 4312
+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
+G0001a`c{<y
+
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..1b9e6e46 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -21,7 +21,7 @@
+  * `scripts/check-font-coverage.mjs` is the standing guard; it enumerates the
+  * rendered strings and fails if the cmap misses one.
+  *
+- *   fraunces-subset.woff2   14,636 B  — WORDMARK + HEADINGS ONLY (opsz+wght
++ *   fraunces-subset.woff2   14,896 B  — WORDMARK + THE PRINTED NAMES (opsz+wght
+  *                                       variable, SOFT/WONK pinned like the
+  *                                       CDN's own served instance). unicode-range
+  *                                       gates it to exactly that repertoire so
+@@ -36,12 +36,22 @@
+  *                                       again at the T8 live-pass cures: the
+  *                                       eyebrow went Difficulty → Level, adding
+  *                                       L and v (the census caught "level"'s v
+- *                                       painting in Georgia mid-word). Now 30
+- *                                       codepoints, 14,636 B.
+- *   firacode-subset.woff2    3,624 B  — full realistic app coverage: every
+- *                                       OptionSelector size/difficulty label
+- *                                       (both games) + the "@mbabb" byline.
+- *   patrickhand-subset.woff2 4,312 B  — full realistic app coverage: every
++ *                                       painting in Georgia mid-word), and again
++ *                                       at T9-W7's face law: the eight group
++ *                                       NAMES are printed now, so +p — the one
++ *                                       letter they need that the cut lacked,
++ *                                       and `pencils`/`players` had been paying
++ *                                       for it in Georgia at weight 800 (proved
++ *                                       by advance, both engines). Now 31
++ *                                       codepoints, 14,896 B (+260).
++ *   firacode-subset.woff2    3,624 B  — the deck's staging chips (every size
++ *                                       and difficulty label the picker paints),
++ *                                       the "@mbabb" byline, the mono registers.
++ *                                       (T9-W7: the CARD's chips left this face
++ *                                       for the hand, the DECK's did not, so the
++ *                                       cut is unchanged and none of these bytes
++ *                                       was ever recoverable.)
++ *   patrickhand-subset.woff2 4,896 B  — full realistic app coverage: every
+  *                                       MarginNote status string, SolverErrorNote
+  *                                       paper-note variant, SheetWashiLabel
+  *                                       tooltip, + the wordmark dropdown list.
+@@ -51,9 +61,15 @@
+  *                                       the P5 range wrongly excluded both while
+  *                                       the file carried them, so "solved it!"
+  *                                       et al. rendered those two glyphs in the
+- *                                       cursive fallback.
++ *                                       cursive fallback. Re-derived at T9-W7:
++ *                                       the option VALUES joined this face, and
++ *                                       the both-cases rule above wants their
++ *                                       authored initials — +A E H L M N O
++ *                                       (+584 B). `.heading-value` had been
++ *                                       drawing `Easy`'s E in the system cursive
++ *                                       since UI-12 shipped.
+  *
+- * Total self-hosted: 22,572 B for all three faces, same-origin, immutable-
++ * Total self-hosted: 23,416 B for all three faces, same-origin, immutable-
+  * cached under /assets/* (public/_headers), precached by the W6 SW glob.
+  */
+ @font-face {
+@@ -64,13 +80,16 @@
+   font-stretch: 100%;
+   src: url("./fonts/fraunces-subset.woff2") format("woff2");
+   /* The file's actual cmap, verified glyph-for-glyph by scripts/check-font-coverage.mjs:
+-     space · B C D L M N S · a-i · k-o · r-w · y z  (30 codepoints). Re-cut at the T8
++     space · B C D L M N S · a-i · k-p · r-w · y z  (31 codepoints). Re-cut at the T8
+      live-pass cures: the drawer eyebrow went Difficulty → Level, and neither L nor v had
+      ever been asked of this face — the e2e font census caught "level" painting its v in
+-     the Georgia fallback mid-word. Same recipe as P1-W3 (instancer SOFT=0 WONK=1, then
+-     pyftsubset), both cases per the coverage gate's rule. */
++     the Georgia fallback mid-word. Re-cut again at T9-W7 (the face law): the compartment
++     names and the row captions are printed now, and `p` is the single letter the eight
++     nouns need that this cut never held. Same recipe as P1-W3 (instancer SOFT=0 WONK=1,
++     then pyftsubset --layout-features= --no-hinting), both cases per the coverage gate's
++     rule. */
+   unicode-range:
+-    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-006F, U+0072-0077,
++    U+0020, U+0042-0044, U+004C-004E, U+0053, U+0061-0069, U+006B-0070, U+0072-0077,
+     U+0079-007A;
+ }
+ 
+@@ -91,9 +110,14 @@
+   font-weight: 400;
+   font-display: swap;
+   src: url("./fonts/patrickhand-subset.woff2") format("woff2");
++  /* T9-W7 — the written register took the option VALUES, so the cut takes their authored
++     initials (A E H L M N O) beside the C R S it already held: the gate's both-cases rule,
++     which is what keeps a later change of transform from painting `Easy` in the cursive
++     fallback the way `.heading-value` has been doing since UI-12. */
+   unicode-range:
+-    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0043, U+0052, U+0053,
+-    U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
++    U+0020-0021, U+0027, U+002D-002E, U+0030-0039, U+003F, U+0041, U+0043, U+0045,
++    U+0048, U+004C-004F, U+0052, U+0053, U+0061-0069, U+006B-0077, U+0079-007A, U+00D7,
++    U+2014, U+2026;
+ }
+ 
+ @layer base {
+@@ -461,6 +485,17 @@
+    nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+    reads the same four classes off the same page as the tokens they resolve through — a
+    layered home would lose to every unlayered author rule that sets `color`. */
++/* T9-W7 CTRL-FACE — and the closed tab's VALUE word rides the same cascade. Its quiet ink is
++   the default a section without a tier wears; a section with one writes its value in the tier's
++   crayon, the way the open tab's name does. Layered here so the unlayered classes below outrank
++   it, which is the mechanism the paragraph above describes, applied to the other half of the
++   tab row. (`GameControlPanel` keeps the rest of `.heading-value`; only the ink is here.) */
++@layer components {
++  .heading-value {
++    color: var(--ink-press-quiet);
++  }
++}
++
+ .crayon-green {
+   color: var(--color-green-ink);
+ }
+diff --git a/web/frontend/src/assets/typography.css b/web/frontend/src/assets/typography.css
+index 89fab7aa..b39a78b2 100644
+--- a/web/frontend/src/assets/typography.css
++++ b/web/frontend/src/assets/typography.css
+@@ -121,50 +121,48 @@
+   --type-verb: var(--type-caption); /* clear · fill · solve · share */
+   --type-tool: var(--type-caption); /* undo · redo · hint — the play tools */
+   --type-tag: var(--type-caption); /* row caption · closed-tab value · roster */
+-  --type-group-title: var(--type-subheading); /* the section heading */
++  --type-group-title: var(--type-heading); /* the group NAME — φ at every width */
+ }
+ 
+-/* The heading's second arm. It lives HERE, unlayered, and not beside
+-   `.section-heading` in `@layer components`: an unlayered declaration outranks a
+-   layered one whatever the media query says, so a `:root` written inside that
+-   layer would lose to the block above and the ≥768 heading would silently drop a
+-   rung. (Measured the wrong way round once; the rule is the cascade's, not
+-   this file's.) */
+-@media (min-width: 768px) {
+-  :root {
+-    --type-group-title: var(--type-heading); /* √φ → φ at the md rung */
+-  }
+-}
+-
+-/* THE OPTION CHIP'S RUNG, and it is spelled as three width arms because that is
+-   what it ALREADY WAS — four arbitrary Tailwind utilities in `OptionSelector`'s
+-   template (`text-[1rem] md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`),
+-   invisible to the ladder and unreachable from any token. The literals move here
+-   unchanged, so every rung renders byte-identical; what changes is that they are
+-   now ONE name a later voice can re-cut. */
++/* ── THE FACE LAW (T9-W7 CTRL-FACE) — printed, written, mono ────────────────
++   PRINTED is what the sheet came printed with: the eight group names, and only
++   those (new game · size · level · pencils · marks · candidates · checking ·
++   players). WRITTEN is what a pencil put there: every value and every verb.
++   MONO is `OptionSelector`'s OWN default and it is named here for one reason:
++   the component ships to two decks, and the deck this family does not touch
++   keeps it. A third name costs nothing and buys the shared component a face it
++   can be held to.
++   The sites read a FACE the way they read a ROLE — one token each, AT the site,
++   because a shared rule in `@layer components` loses a specificity tie to a
++   scoped component sheet and drops `font-family` in silence (measured).
++   `scripts/check-font-coverage.mjs` check 6 holds each site to its face. */
+ :root {
+-  --type-option: 1.25rem; /* 20px — the desk rail's chip */
+-}
+-
+-@media (max-width: 1023.98px) {
+-  :root {
+-    --type-option: 1.375rem; /* 22px — the stacked card at ≥768 */
+-  }
++  --face-printed: var(--font-display); /* Fraunces — the wordmark's own face */
++  --face-written: var(--font-hand); /* Patrick Hand */
++  --face-mono: var(--font-mono); /* Fira Code — the component's own default */
++  --printed-weight: 800; /* fvar wght 100..900 is live in the shipped
++                                          subset, so a lighter rank is one
++                                          number and zero bytes */
++  --printed-ink: var(--color-foreground);
+ }
+ 
+-@media (max-width: 767.98px) {
+-  :root {
+-    --type-option: 1rem; /* 16px — the phone, as it shipped */
+-  }
+-}
++/* THE ROLE HAS ONE RIGHT-HAND SIDE, and that is the whole of the re-cut. The
++   heading's md arm is GONE: `--type-group-title` was √φ under 768 and φ above
++   it, which put the phone's group name at 20.35px against a 20px chip — 1.018,
++   one size for the name and the thing it names, M03's mark read as a number.
++   φ at every width is 25.888, the desk's own rung, and the name/option ratio is
++   1.2945 at the desk, the dock, the rail AND 900×500 (1.1768 there, which no
++   instrument had ever looked at). Rotation-invariant type: one number, four
++   cells, no width arm to keep true.
+ 
+-/* M01's lift, on the one arm that was under the floor. A 768–1023 coarse tablet
+-   already draws its chips at 22px, above anything this band would set, so the
+-   phone arm is the only one that moves — 16 → 20px, the rail's own chip size. */
+-@media (max-width: 767.98px) and (pointer: coarse) {
+-  :root {
+-    --type-option: 1.25rem; /* 20px */
+-  }
++   THE OPTION CHIP'S RUNG, likewise one line. It was three width arms carrying
++   the four Tailwind literals `OptionSelector` used to spell (`text-[1rem]
++   md:text-[1.375rem]`, `text-[1.375rem] md:text-[1.25rem]`) — and the 22px in
++   the 768–1023 band was one of those literals moved verbatim, never a ruling.
++   20px is the rail's chip and the phone's chip (M01's lift), so the band joins
++   them and the tablet loses 2px of chip to gain the ratio. */
++:root {
++  --type-option: 1.25rem; /* 20px — every width */
+ }
+ 
+ /* ═══════════════════════════════════════════════════════════════════════════
+@@ -247,7 +245,7 @@
+   text-wrap: balance;
+ }
+ 
+-/* ── HEADINGS / BODY — the text register (--font-text ← Fraunces) ─────────── */
++/* ── HEADINGS / BODY — the text register (--font-text ← Georgia) ──────────── */
+ @utility text-title {
+   font-family: var(--font-text);
+   font-size: var(--type-title);
+@@ -360,14 +358,17 @@
+      and far too airy under x-height forms) to `--type-tracking-wide` (0.025em) — the eyebrow
+      still reads as a caption tier, without gapping. The subset is re-cut from RENDERED text in
+      the same commit; `scripts/check-font-coverage.mjs` is the standing guard. */
+-  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. The md
+-     arm below re-points `--type-group-title` instead of restating a font-size, so
+-     the two arms of one heading are one declaration a voice can re-cut. */
++  /* T9-W2 §2.6 — the heading reads its ROLE, and the role reads the rung. T9-W7
++     CTRL-FACE — it reads its FACE the same way: `--face-printed` and
++     `--printed-weight`, the same two tokens the tape and the row caption read,
++     so the eight names are one voice a later rank can re-cut in one place.
++     Colour stays with the consuming template (the crayon tier is DATA) except
++     where the template asks for the printed ink by name. */
+   .section-heading {
+-    font-family: var(--font-display);
++    font-family: var(--face-printed);
+     font-size: var(--type-group-title);
+     line-height: var(--type-leading-heading);
+-    font-weight: 800;
++    font-weight: var(--printed-weight);
+     text-transform: lowercase;
+     letter-spacing: var(--type-tracking-wide);
+     text-align: center;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..9dd57639 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -185,9 +185,18 @@ const showTabs = computed(() => props.sections.length >= 2);
+ function activeColorClass(section: ControlSection): string | undefined {
+   return section.options.find((o) => o.value === section.selected)?.colorClass;
+ }
++// T9-W7 CTRL-FACE — A PRINTED NAME IS AT FULL PRESS. The non-crayon arm was
++// `text-muted-foreground`, which made ink say two things at once: the desk's `size` was quiet
++// because it has no tier, and the dock's shut tab was quiet because it is shut. One rule for
++// both platforms now — a name at full press is a name, and muted means SHUT (the dock's own
++// arm, in the template). The tween joins the chips' 150ms so a tab switch answers in one
++// window instead of two.
+ function headingClass(section: ControlSection): (string | Record<string, boolean>)[] {
+-  const cc = activeColorClass(section);
+-  return cc ? ["transition-colors", "duration-250", cc] : ["text-muted-foreground"];
++  return [
++    "transition-colors",
++    "duration-150",
++    activeColorClass(section) ?? "text-foreground",
++  ];
+ }
+ // UI-12: the mobile tabs show only the active panel's options, so the inactive tab's current
+ // value is invisible while the other is open. Surface it small + graphite beneath the heading.
+@@ -796,19 +805,29 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+               :aria-expanded="expandedPanel === section.key"
+               @click="expandedPanel = section.key"
+             >
++              <!-- T9-W7 CTRL-FACE — OPENNESS IS PRESSURE. The underline is gone (two underline
++                   grammars 40px apart, and the chips' scribble is the other one); what says a
++                   tab is open is its name at full press, and what says it is shut is a muted
++                   name with its value written underneath. The crayon follows the VALUE — on the
++                   open tab it sits on the name the way the desk's h2 wears it, on the shut tab
++                   it sits on the value word. -->
+               <span
+                 class="section-heading"
+-                :class="[
+-                  headingClass(section),
+-                  { 'is-active': expandedPanel === section.key },
+-                ]"
++                :class="
++                  expandedPanel === section.key
++                    ? headingClass(section)
++                    : ['transition-colors', 'duration-150', 'text-muted-foreground']
++                "
+               >
+                 {{ section.heading }}
+               </span>
+               <!-- UI-12: the current value, shown only while this tab is closed. -->
+-              <span v-if="expandedPanel !== section.key" class="heading-value">{{
+-                valueLabel(section)
+-              }}</span>
++              <span
++                v-if="expandedPanel !== section.key"
++                class="heading-value"
++                :class="activeColorClass(section)"
++                >{{ valueLabel(section) }}</span
++              >
+             </button>
+           </h2>
+         </div>
+@@ -1484,6 +1503,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   --washi-tag-lift: 3px;
+   --washi-tag-gap: 0.1rem;
+   --washi-tag-inset: 0.35rem;
++  /* NO fourth consumer term for the LEADING: the tape's pull reads `1lh`, its own used line
++     box, so this card re-cuts the leading at its `:deep` hook below and the covenant holds by
++     the unit. (Pass 1 minted `--washi-tag-lh` and its 1.5 fallback; one variable two files had
++     to keep agreeing about, for arithmetic the unit already does.) */
+   /* WHERE A TAPE PINS: at the CASE EDGE, not at the content edge a sticky offset counts from
+      (`--card-pad-t`, published above). Two things fall out of the same 0.15rem, and both are
+      the reason it is that small rather than the drawer's comfortable 0.3rem:
+@@ -1511,6 +1534,14 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   gap: 0.1rem;
+ }
+ 
++/* HEAD's 0.35rem, and it STAYS HEAD's (T9-W7 CTRL-FACE). A printed name is a taller tape
++   (layout 21.64 → 32px), and pass 1 bought its clearance here: 1.5rem, swept to the point where
++   the first tape stops being pinned at rest. That bought 1.13px of daylight for 18.41px of card
++   at every width — the iPad seal's whole headroom spent on the one cell that was already tight.
++   The clearance is bought where it is FREE instead: 3.88px from the tape's own leading (the
++   `:deep` hook below, 0.00px of flow) and 5.6px from the tab row's `padding-top` (a box that
++   exists only under `mobile`, so the sealed 1280 row regime pays 0.00). Tab head daylight
++   −6.79 → +2.73; this line hands 18.41px back. */
+ .tray-well:first-child {
+   margin-top: 0.35rem;
+ }
+@@ -1524,6 +1555,55 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   z-index: 35;
+ }
+ 
++/* ── THE LAW LIVES AT THE CONSUMER (T9-W7 CTRL-FACE) ──────────────────────────────────────
++   Three rules, one mechanism. `SheetWashiLabel` and `OptionSelector` each ship to TWO decks —
++   this card and the picker's staging band — and the face they wear is not theirs to decide, so
++   neither component was edited to make this card printed. A scoped `.tray-well :deep(.x)`
++   compiles to `.tray-well[data-v-panel] .x` (0,3,0), which beats the component's own
++   `.washi-tag[data-v-label]` / `.ctrl-btn[data-v-sel]` (0,2,0) and every layered Tailwind
++   utility, deterministically and without an `!important`. The estate already ships this exact
++   idiom one rule up (the z-index above). All five of the card's `OptionSelector`s sit under a
++   `.tray-well`, so one hook covers every chip; the deck sits under none, so it moves 0.00px
++   (gated as π at `?view=gallery`, both widths, both engines).
++
++   THE TAPE IS PRINTED: the compartment's name at the group rank, in the sheet's own face, at
++   the display leading. 1.05 costs 0.00 in flow (the pull reads `1lh`) and buys 3.88px at both
++   collisions — the descender clearance under `candidates` and the daylight over the tab head.
++   THE CHIP IS WRITTEN, at 400: Patrick Hand ships ONE weight, so the template's `font-bold` on
++   a selected chip was synthetic bold on a static face (the P1-W3 defect class). `font-bold`
++   stays in the template because the DECK still renders it — Fira Code carries a true 300–700
++   and the picker's selected chip is genuinely bold — and this rule outranks it here only.
++   THE MARK IS PRICED OFF THE HAND: `${label.length + 1}ch` is the advance of "0" repeated,
++   exact in a monospace face and off by 1.46× under `ask` in a written one. 120% of the rendered
++   word reads 1.176–1.228 on every card chip; the deck keeps the `ch` arithmetic that is right
++   for it. That third rule names ONE MORE CLASS than the other two, and it has to: the mark's
++   rule in `OptionSelector` is itself a descendant (`.selected-item .ctrl-word[data-v-sel]`,
++   0-3-0), so the two-class hook would TIE it and the winner would be whichever sheet the
++   bundler happened to append last. `.ctrl-btn .ctrl-word` makes it 0-4-0 and the cascade stops
++   being a question. */
++.tray-well :deep(.washi-tag) {
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
++  /* THE DISPLAY LEADING, and it is the floor as well as the rung (swept, both engines, dock
++     390×844): the tape's paper IS its line box, and the word inside it is 25.80px of ink, so
++     1.05 leaves 1.99px of paper over the ink, 1.00 leaves 0.71 and 0.95 leaves −0.59 — a tape
++     with its own letters hanging out of it. Above, 1.1 puts the `checking` tape 0.37px INTO
++     the `candidates` caption. The rung the ladder already publishes for display type is the
++     one value inside both bounds. It costs 0.00px of flow: the pull reads `1lh`. */
++  line-height: var(--type-leading-display);
++}
++
++.tray-well :deep(.ctrl-btn) {
++  font-family: var(--face-written);
++  font-weight: 400;
++  text-transform: lowercase;
++}
++
++.tray-well :deep(.ctrl-btn .ctrl-word) {
++  background-size: 120% 8px;
++}
++
+ .new-game-zone {
+   gap: 0;
+   /* no gap to hand back — see `--washi-tag-gap` above. `0px`, never `0`: the give-back is a
+@@ -1605,16 +1685,31 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   opacity: 1;
+ }
+ 
++/* PRINTED (T9-W7 CTRL-FACE). A row caption names a control the way a tape names a compartment,
++   so it is one of the sheet's eight nouns and it reads the same three tokens: the printed face,
++   the group rung, the printed weight. The lane stays `flex: 0 0 3.75rem` — a FLOOR, since
++   `min-width: auto` lets min-content win, which is what keeps `candidates` on one line at the
++   larger rung. The quiet rung it used to wear said "under the tape"; the face says it now. */
+ .zone-row-label {
+   flex: 0 0 3.75rem;
+   text-align: right;
+-  font-family: var(--font-hand);
+-  font-size: var(--type-tag);
+-  line-height: 1.1;
++  /* THE CAPTION SITS AT THE TOP OF THE ROW IT NAMES, at every width (T9-W7 CTRL-FACE). On the
++     rail it already does — the caption is over its row there — and on the stacked card it was
++     centred in a 48.78px chip row, which put a 25.888px printed noun 10.47px lower than the
++     name it is. That 10.47px is the whole of the tape clearance below: the `checking` tape's
++     paper over the `candidates` caption's own ink reads +2.20 centred and +12.67 here, and the
++     same gap against a WORST-CASE descender (`pgjqy`, 6.34px in this face at this rung) reads
++     −3.79 centred and +6.68 here. It costs 0.00px of flow at every cell, both engines — the
++     row's height is its 44px chips, not its caption — and the sealed 1280 coarse cell reads
++     1258.47 / 1258.34 either way. One alignment, two regimes, no media arm. */
++  align-self: flex-start;
++  font-family: var(--face-printed);
++  font-size: var(--type-group-title);
++  font-weight: var(--printed-weight);
++  line-height: var(--type-leading-heading);
++  text-transform: lowercase;
+   letter-spacing: var(--type-tracking-wide);
+-  /* The quiet rung (Lane D ship 4's ledgered token): 68% graphite, 5.23:1 light / 6.06:1
+-     dark on --color-card. Below it (60% = 4.10:1) the caption fails AA. */
+-  color: var(--ink-press-quiet);
++  color: var(--printed-ink);
+ }
+ 
+ .zone-row :deep(.options-row) {
+@@ -2032,7 +2127,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    commit: Patrick Hand's cut declares {C,R,S} as its only capitals, so Deal / Fill / Undo /
+    Hint have always painted their initial in the system face mid-word. */
+ .icon-sublabel {
+-  font-family: var(--font-hand);
++  /* T9-W7 CTRL-FACE — a verb is WRITTEN, by token. Same family, same paint; `--font-hand` is
++     the file and `--face-written` is the law. */
++  font-family: var(--face-written);
+   font-size: var(--type-tool);
+   line-height: 1;
+   letter-spacing: var(--type-tracking-wide);
+@@ -2376,9 +2473,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   font-optical-sizing: auto;
+ }
+ 
++/* THE ROW BUYS THE TAPE'S DAYLIGHT (T9-W7 CTRL-FACE), 8px of it, and it is the cheapest 8px on
++   the card: `.mobile-heading-row` exists only under `mobile`, so the 1280 row regime the iPad
++   seal measures (`visual-regression` test 10) pays 0.00 and the dock card pays 8. The first
++   tape is PINNED at rest here, so the tape's own leading moves it and its well's margin does
++   not; this is the only term that moves the thing below it. MEASURED, both engines, at
++   390×844 / 375×812 / 430×932 / 900×500: the first tape's painted box over the `size` tab
++   head's ink, HEAD +1.19 / +1.84 → +4.13 / +4.71, intersection 0px² throughout. 0.35rem was
++   swept first and read +1.72 on chromium, under this lane's own +2.0 floor.
++   What this does NOT pay for: the well's margin (18.41px at every width, pass 1's answer) or
++   the pin (`--washi-tag-top` at −0.6rem puts 7.38px of a pinned tape above the scrollport's
++   case edge — the §2.3 residue, and the owner's Frame B). */
+ .mobile-heading-row {
+   display: flex;
+   justify-content: space-evenly;
++  padding-top: 0.5rem;
+ }
+ 
+ /* The heading that wraps each tab (a11y r1 M9). Box-less by construction: the button remains
+@@ -2398,24 +2507,50 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   padding: 0;
+ }
+ 
++/* THE KEYBOARD GETS THE SAME ANSWER THE POINTER GETS (T9-W7 CTRL-FACE, law 39's tab form).
++   Both of these controls shipped with the UA's ring, which on WebKit paints its own blue over
++   a paper card and reads 2.147:1 against it — under 1.4.11 on the surface the reader is most
++   likely to arrive at by keyboard. The ink is `--ring-ink` (§3.5, the foreground at 50% both
++   themes), CONSUMED here and never minted (the chair's §6.1: §6 owns the token). Until §6
++   lands it the fallback is `currentColor`, which is the estate's own dashed-ring idiom
++   (`DrawerTab.vue`) and adds no value to the palette. Dashed, because a solid ring on a chip
++   that can also wear a scribble is two solid marks 8px apart. */
++.mobile-heading-btn:focus-visible {
++  outline: 2px dashed var(--ring-ink, currentColor);
++  outline-offset: 3px;
++}
++
++.tray-well :deep(.ctrl-btn:focus-visible) {
++  outline: 2px dashed var(--ring-ink, currentColor);
++  outline-offset: 3px;
++}
++
+ /* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+    pressure graphite. Deliberately quiet: it names what's closed without competing with
+    the active tab's underline. */
+ .heading-value {
+-  font-family: var(--font-hand);
++  /* WRITTEN (T9-W7 CTRL-FACE), by TOKEN: it painted the hand already, through `--font-hand`,
++     which is the family and not the law. `--face-written` is the law, and check 6 holds the
++     site to it. */
++  font-family: var(--face-written);
+   font-size: var(--type-tag);
+   line-height: 1;
+   letter-spacing: var(--type-tracking-wide);
+-  /* T4-W10 gate 1: 60% graphite was 4.10:1 on --color-card (< AA 4.5). The 68% that
+-     cleared it IS --ink-press-quiet; the literal is now the token. Pixel-identical. */
+-  color: var(--ink-press-quiet);
++  /* T9-W7 — the value is WRITTEN, and a written word is lowercase by CSS, never by its
++     author: `Easy` painted its E in the system cursive (the hand's capitals are C R S), a
++     mid-word fallback nothing measured until the option labels entered the coverage gate. */
++  text-transform: lowercase;
++  transition: color 150ms var(--ease-standard);
+ }
+ 
+-.mobile-heading-btn .section-heading.is-active {
+-  text-decoration: underline;
+-  text-decoration-thickness: 2px;
+-  text-underline-offset: 4px;
+-}
++/* ITS INK LIVES IN `index.css` (T9-W7), beside the crayon hoist that explains why. The value
++   word wears its tier's crayon when the section has one, and `.crayon-*` is UNLAYERED — so the
++   quiet default has to be LAYERED to lose to it, and a layer declared inside a scoped SFC block
++   is a cascade hazard, not a cascade fix: Vite appends component styles at module-eval time, so
++   the FIRST `@layer components` the document sees can be this one, which registers the layer
++   ahead of `base` and hands Tailwind's `h2 { font-size: inherit }` preflight the win over
++   `.section-heading`. Measured: every desk eyebrow dropped to 16px/400 (2 voices) while the
++   dock's spans, which no preflight rule names, kept the rung. */
+ 
+ /* T8-W1 (agent C's M5 census, R2) — THE TABS ANSWER THE POINTER. The staged tab heads are the
+    card's largest interactive text and they had exactly one state to read: the underline on the
+@@ -2439,9 +2574,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+    The fence is load-bearing and it was witnessed: under `isMobile`/`hasTouch` emulation
+    `(hover: hover)` resolves FALSE and neither head moves, which is the rule doing its job on a
+-   thumb rather than the rule failing. */
++   thumb rather than the rule failing.
++
++   T9-W7 CTRL-FACE — AND IT ONLY ANSWERS WHEN THERE IS SOMETHING TO ANSWER. The open head is at
++   full press and a repeat press is a no-op, so the lift now fences to `[aria-expanded="false"]`:
++   pointing at the shut tab promises the switch it performs, pointing at the open one promises
++   nothing. That also retires the second reading above — the crayon-tinted head is no longer
++   overridden mid-hover, because the head that carries a crayon is the OPEN one. */
+ @media (hover: hover) {
+-  .mobile-heading-btn:hover .section-heading {
++  .mobile-heading-btn[aria-expanded="false"]:hover .section-heading {
+     color: var(--color-foreground);
+   }
+ }
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..3cf0b231 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -49,9 +49,9 @@ function scribbleSeed(val: string | number): number {
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       :aria-pressed="selected === opt.value"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
++      class="ctrl-btn rounded-md px-3 pt-1.5 pb-0 text-center transition-colors duration-150"
+       :class="[
+-        mobile ? '' : 'md:py-0.5 md:text-left',
++        mobile ? '' : 'md:pt-0.5 md:pb-0 md:text-left',
+         selected === opt.value
+           ? `selected-item font-bold ${opt.colorClass ?? 'text-foreground'}`
+           : 'text-muted-foreground hover:text-foreground hover-item',
+@@ -82,7 +82,15 @@ function scribbleSeed(val: string | number): number {
+             }
+       "
+     >
+-      {{ opt.label }}
++      <!-- THE WORD GETS ITS OWN BOX (T9-W7 CTRL-FACE), and that is the whole of the change
++           here. The mark hung off the BUTTON, whose content box is the chip's width, so its
++           length could only ever be counted in `ch` — the advance of "0", exact in this
++           component's own monospace default and wrong by 1.46× under `ask` in a written face.
++           The span shrinks to the RENDERED advance, so a consumer that re-faces these chips can
++           price the mark off the word (`GameControlPanel`'s 120%). Nothing here moves: the
++           `ch` arithmetic below is unchanged, the 6px of scribble room moved from the button's
++           padding onto the word's, and this component's own deck paints byte-for-byte. -->
++      <span class="ctrl-word">{{ opt.label }}</span>
+     </button>
+   </div>
+ </template>
+@@ -99,13 +107,33 @@ function scribbleSeed(val: string | number): number {
+    `--type-option` carries those literals verbatim at every rung this component
+    renders (typography.css prices them), so the desk and the 768–1023 stacked card
+    are byte-identical; the phone's arm is the one that moves, 16 → 20px.
+-   What stays in the template is layout — `md:py-0.5 md:text-left` — because that
+-   is not type. */
++   What stays in the template is layout — `md:pt-0.5 md:pb-0 md:text-left` — because
++   that is not type. The bottom padding is ZERO at both arms now: the scribble's 6px
++   of room moved onto the word's own span (T9-W7), and a button that kept its own
++   would pay for it twice — measured 38 → 40px at the rail before the md arm split. */
++/* THE FACE ARRIVES BY TOKEN (T9-W7 CTRL-FACE), and the face is still this one. The literal
++   `"Fira Code", monospace` was unreachable from any voice and outlived three type re-cuts
++   because of it; `--face-mono` resolves to exactly that string, so nothing paints differently
++   and the site is now something check 6 can hold. What this component is NOT doing is choosing
++   a register for its consumers: it ships to the controls card and to the picker's staging
++   band, and the card writes its chips in the hand at its own hook. A shared component keeps
++   its own default. */
+ .ctrl-btn {
+-  font-family: "Fira Code", monospace;
++  font-family: var(--face-mono);
+   font-size: var(--type-option);
+ }
+ 
++/* The word's own box, and the only thing the marks hang off. `display: inline-block` makes it
++   shrink to the rendered advance; the 6px that used to pad the BUTTON pads this instead, so the
++   chip's outer height is what it always was. */
++.ctrl-word {
++  display: inline-block;
++  padding-bottom: 6px;
++  background-repeat: no-repeat;
++  background-origin: content-box;
++  background-position: left bottom;
++}
++
+ /* The `.ctrl-btn:hover` wobble is DELETED (P1-W3, r3 §3.2), and `transition-all` narrowed to
+    `transition-colors` in the template. `all` included `filter`, so a hover edge repainted a
+    reference-filtered HTML box through every frame of the colour tween. The option's real hover
+@@ -114,18 +142,18 @@ function scribbleSeed(val: string | number): number {
+ .selected-item,
+ .hover-item {
+   text-decoration: none;
+-  background-repeat: no-repeat;
+-  background-origin: content-box;
+-  background-position: left bottom;
+-  padding-bottom: 6px;
+ }
+ 
+-.selected-item {
++/* HEAD's mark, on the word's box instead of the button's. The `ch` count is right for THIS
++   component's face (a `ch` is the advance of "0", and in a monospace cut that is every glyph's
++   advance) and it stays; a consumer that re-faces the chips re-prices the mark at its own hook,
++   because the arithmetic that is exact here is 1.46× off in a written face. */
++.selected-item .ctrl-word {
+   background-image: var(--scribble-underline);
+   background-size: var(--scribble-width, 4ch) 8px;
+ }
+ 
+-.hover-item {
++.hover-item .ctrl-word {
+   background-image: none;
+   background-size: var(--ghost-width, 4ch) 8px;
+ }
+@@ -143,11 +171,11 @@ function scribbleSeed(val: string | number): number {
+    changing (grid, logo, celestial), and `transition-colors` never touched background-image
+    anyway. Same fence as the ghost, so neither sticks after a tap. */
+ @media (hover: hover) {
+-  .hover-item:hover {
++  .hover-item:hover .ctrl-word {
+     background-image: var(--ghost-underline);
+   }
+ 
+-  .selected-item:hover {
++  .selected-item:hover .ctrl-word {
+     background-image: var(--scribble-underline-hover, var(--scribble-underline));
+   }
+ }
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..147547b5 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -138,6 +138,10 @@ const geom = computed(() => {
+    has no hover seam. Lower case in the hand, one rank under the eyebrows it replaces, and
+    lower case is also the only chimera-free path through Patrick Hand (its uppercase subset is
+    {C,R,S} — F5's shared finding, taken).
++   T9-W7 CTRL-FACE — WHAT THE TAPE WEARS IS THE CONSUMER'S. In the controls card a compartment
++   name is the sheet's own printing, so that card re-faces its own tapes at the group rank
++   (`GameControlPanel`'s `.tray-well :deep(.washi-tag)`); on the deck, in a tooltip and at the
++   peek divider the tape stays the hand's, which is what this rule below ships.
+ 
+    ── T9-W2 §2.3/§2.6 — THE TAG IS IN FLOW NOW, AND IT PINS ────────────────────────────────
+    It was `position: absolute; top: 0` + `translateY(-52%)`, which is a pose an ABSOLUTE box
+@@ -158,6 +162,16 @@ const geom = computed(() => {
+    rather than inherited so the pull is exact arithmetic on the tape's own box — 1.5 is what it
+    already computes to, so nothing moves, and a later type re-cut (W7's voice) scales the pull
+    with the font instead of stranding it.
++   THE PULL READS THE TAPE'S OWN USED LEADING (T9-W7 CTRL-FACE), through `1lh`. It was `-1.5em`
++   against a declared `line-height: 1.5` — true only while both say 1.5, and the moment a
++   consumer sets the leading to anything else the pull under-lifts by the difference (measured:
++   5.65px per tape at leading 1.2, against the 0.23px of iPad headroom `visual-regression`
++   test 10 will not spend). `lh` IS the used line box, so the covenant now holds by the UNIT
++   rather than by a variable both ends have to keep agreeing about: a consumer re-cuts the
++   leading at its own hook (the controls card sets the printed display leading) and the net
++   flow height is still zero, at any font-size, any leading, with no term to remember.
++   Error 0.02px against the ±0.25 covenant; `lh` shipped Chrome 109 / Safari 16.4 / Firefox 120,
++   inside the declared floor (`package.json` browserslist, held by `check-support-floor.mjs`).
+    The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+    rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+    offset with it. */
+@@ -168,10 +182,17 @@ const geom = computed(() => {
+   left: auto;
+   align-self: flex-start;
+   line-height: 1.5;
+-  margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
++  margin: calc(-1lh - 0.04rem - var(--washi-tag-lift, 0px)) 0
+     calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+     var(--washi-tag-inset, 0.85rem);
+   padding: 0.02rem 0.4rem;
++  /* WRITTEN (T9-W7 CTRL-FACE), and DECLARED rather than inherited. The tape has always painted
++     the hand — it came down from `.washi-label` two rules up — but an inherited face is a face
++     no gate can see, and `check-font-coverage.mjs` check 6 reds a site that has no declaration
++     of its own. Zero paint change. The tape on the CONTROLS CARD is printed instead, and that
++     is the card's own rule at its own hook, not this component's business: the deck's tapes,
++     the tooltips and the peek label keep what they had. */
++  font-family: var(--face-written);
+   font-size: var(--type-tag);
+   font-weight: 500;
+   letter-spacing: var(--type-tracking-wide);

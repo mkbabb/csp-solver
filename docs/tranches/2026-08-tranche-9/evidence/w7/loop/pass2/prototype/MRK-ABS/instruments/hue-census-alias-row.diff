@@ -1,0 +1,48 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/hue-census.mjs	2026-09-17 13:24:03
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-46/web/frontend/.pass2-mrkabs/hue-census.mjs	2026-09-18 16:35:49
+@@ -11,10 +11,10 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ 
+-const CSS = path.join(
+-  import.meta.dirname,
+-  "../../../../../../../../web/frontend/src/assets/index.css",
+-);
++// RE-POINTED (T9-W7 pass 2, MRK-ABS prototype): the r0 copy reads the MAIN tree and banks to
++// r0's own paths. This copy reads THIS LANE'S WORKTREE; the r0 instrument is untouched.
++const FE = process.env.FE_ROOT ?? "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-46/web/frontend";
++const CSS = path.join(FE, "src/assets/index.css");
+ 
+ const srgbToLinear = (c) =>
+   c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+@@ -102,6 +102,30 @@
+     );
+ }
+ 
++// PROPOSED ROW (T9-W7 pass 2, MRK-ABS): a token can carry a dark arm WITHOUT a new hex by
++// aliasing another token, and the hex census is blind to that by construction — it greps for
++// `#rrggbb`. An alias is the cheapest dark arm there is (law 23), so the census has to be able
++// to say so: this section lists every `.dark` re-declaration that resolves to another token and
++// prints the value it resolves to, from the light block, as an ALIAS row.
++{
++  const aliases = [];
++  for (const m of dark.matchAll(/(--color-[a-z-]+):\s*var\((--color-[a-z-]+)\)/g)) {
++    // resolve in the DARK block first: an alias inherits the arm its target wears here
++    const hex = read(dark, m[2]) ?? read(light, m[2]);
++    const o = hex ? hexToOklch(hex) : null;
++    aliases.push({ token: m[1], alias: m[2], hex, o });
++  }
++  console.log("\nalias rows (dark arms that mint no hex):");
++  if (!aliases.length) console.log("  (none)");
++  for (const a of aliases)
++    console.log(
++      `  ${a.token},dark,var(${a.alias})` +
++        (a.o
++          ? ` -> ${a.hex},${a.o.L.toFixed(3)},${a.o.C.toFixed(3)},${a.o.h.toFixed(1)}`
++          : " -> (unresolved)"),
++    );
++}
++
+ // The golden-angle player walk, against the same circle.
+ console.log("\nplayer walk (playerIdentity.inkFor, hue = i * 137.5 mod 360), first 8:");
+ for (let i = 0; i < 8; i++)

@@ -1,0 +1,654 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..878e6a14 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -147,8 +147,23 @@
+      hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+      third name for a colour that already has two. */
+ 
+-  /* Handwritten glyph colors */
+-  --color-user-ink: #2563eb;
++  /* Handwritten glyph colors — your pen is CRAYON-BLUE'S INK TIER (T9-W7 §3). The old
++     pen was Tailwind blue-600 spelled verbatim, 11.5° off crayon-blue in OKLCH, so the
++     one mark a player makes most belonged to no house colour. #026FC4 holds crayon-blue's
++     hue (251.4° → 251.2°, Δ0.17°) and buys its contrast with lightness alone — the exact
++     move red-ink/green-ink/orange-ink/gold-ink already model. Measured on the painted bytes:
++     5.065:1 on --color-card, 4.945:1 on --color-background (the old blue-600 read 5.078 /
++     4.958 — the digit's weight moves by 0.013 of a ratio). Chroma 0.156 against the focus
++     ring's 0.117: the pen and the ring are one hue at two pressures, and what separates them
++     is FORM — an opaque glyph inside the cell versus a wobbled ghost drawn around it.
++
++     NO ALIAS TIER ABOVE IT. The hex lands on this name, not on a `--color-blue-ink` the name
++     then points at: that is the same third name T5-W2 2.3 killed four lines up, and all 24
++     var() consumers want the BINDING — the peer seam (playerIdentity.ts:69) rebinds
++     --color-user-ink per cell, so a consumer reading a constant tier would read the wrong
++     player's pen. If a surface ever needs the CONSTANT (a mark that must stay yours inside a
++     rebound cell), it mints the tier then, with its consumer. */
++  --color-user-ink: #026fc4;
+ 
+   /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+      scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+@@ -172,14 +187,26 @@
+   --color-crayon-rose: #e8315b;
+   --color-crayon-blue: #4a90d9;
+   --color-crayon-gold: #c99a2e; /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+-     earned light: it lives in the sky and comes to the page only when the work is done. Wax
+-     tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
++     earned light. AMENDED (T9-W7 §3): it has TWO MOMENTS on the page, not one. The work in
++     progress is gold INK (--color-progress-ink, one pressure down — the fill gauge); the work
++     done is gold WAX (this, through --color-gold-star). One hue, two pressures, and the win is
++     the lift between them. The old sentence — "comes to the page only when the work is done" —
++     stood contradicted the moment a gauge painted gold at the first digit, so it is amended
++     rather than dodged: gold arrives WITH the work and is spent WHEN it is finished. Wax tier:
++     strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
+ 
+   /* Ink tiers — verdict TEXT only (T3-W9). Every crayon fails AA as light-mode text (green
+      2.16:1, gold wax 2.47:1, rose 4.01:1 on the live papers), so the verdict line writes with
+      a darkened ink of the same hue; washes/strokes/fills keep the wax. Measured on
+      --color-background hsl(48 15% 98%): gold-ink #8C691D 4.85:1, red-ink #D02A52 4.87:1
+-     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below. */
++     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below.
++
++     GOLD NOW HAS THREE TIERS, and they are three jobs with three measured floors, not three
++     names for one colour (T9-W7 §3). --color-crayon-gold is the WAX: strokes, washes, the
++     solved frame, the sticker. --color-gold-ink is the VERDICT TEXT tier, darkened to the
++     4.5:1 body floor. --color-progress-ink (below) is the TRACE tier, which sits between
++     them because it has to clear 3:1 against TWO grounds at once — the frame line it
++     retraces and the card behind it — and those two grounds swap places between themes. */
+   --color-gold-ink: #8c691d;
+   --color-red-ink: #d02a52; /* teacher-red #E8315B hue-locked (346°), darkened to AA */
+ 
+@@ -219,11 +246,20 @@
+   --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+      the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+      lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++     blends to 3.63:1 on the painted bytes. Dark mode keeps crayon-blue. (The dark arm this
++     sentence has promised since T3-W9 does not exist — the ring paints THIS ink on near-black
++     paper. The token has one owner, T9-W7 §6; the fix is that row's, not a palette's.) */
+   --color-pencil-graphite: var(
+     --grid-line-color
+   ); /* the pencil: grid, ghost ring, hover sketch */
+ 
++  /* The solver button's glow, at rest and under a pointer (T9-W7 §3). Two names rather than
++     two inline rgba() literals, and gold rather than violet: the button that fills the board
++     in glows in the colour the finished board wears. Both resolve through --color-crayon-gold,
++     so the dark arm comes free with the crayon. */
++  --sparkle-glow-soft: color-mix(in srgb, var(--color-crayon-gold) 30%, transparent);
++  --sparkle-glow-strong: color-mix(in srgb, var(--color-crayon-gold) 60%, transparent);
++
+   /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+      N, and the T4-W10 gate-1 sweep (which raised .heading-value 60→68 and .dt-label 62→68
+@@ -264,18 +300,27 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+-     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+-     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+-     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+-     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+-     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+-     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+-     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+-     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+-     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+-     4.16/3.85. */
+-  --color-progress-ink: #8b5cf6;
++  /* Progress-ink — GOLD'S INK TIER (T9-W7 §3, retiring the T4-W9 violet). The trace is a
++     coloured pencil that retraces the board frame arc-length-proportional to fill, and it is
++     now the same hue as the sticker the board wears when it is done: crayon-gold 83.7°, held
++     to 83.6° (Δ0.12°). The violet it replaces sat at 292.7°, inside the 122.8° hole between
++     crayon-blue and crayon-rose — 41.3° from the nearest house colour, the one accent on the
++     page that belonged to no family. Progress is not a sixth crayon; progress is gold at
++     pencil pressure, and the win lifts it one pressure into the wax.
++
++     The two-tier direction still INVERTS the crayon "glow brighter at night" doctrine, and
++     for the reason the violet named: the trace sits over the FRAME LINE, which flips value
++     between themes (dark graphite in light, light warm-grey in dark), so the ink goes
++     LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark). That
++     inversion is why gold needs its own ink here and cannot alias either gold it already
++     has: crayon-gold reads 2.41:1 on the light card, gold-ink reads 2.83:1 over the light
++     frame, and in dark both collapse into the wax at 1.07:1 over the frame line.
++
++     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, at stroke-opacity 0.95, read off the painted
++     bytes in both engines): light #A47903 vs --grid-line-color 3.59, vs --color-card 3.59.
++     The worst of the four arms rises 3.35 → 3.57 light and 3.05 → 3.18 dark against the
++     violet it replaces — the hue move is bought, not spent. */
++  --color-progress-ink: #a47903;
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -369,7 +414,14 @@
+   --color-border: hsl(24 4% 16%);
+   --color-ring: hsl(48 8% 83%);
+ 
+-  --color-user-ink: #60a5fa;
++  /* The pen is the ONE ink that may not collapse into its wax: the wax belongs to the focus
++     ring and the unit wash, and a player's own digit cannot be the same colour as the cell
++     it happens to be sitting in. #47A7FF holds crayon-blue's dark hue (249.3°, Δ0.07°) and
++     keeps the weight the old Tailwind blue-400 had — 7.341:1 on --color-card against 7.360:1.
++     The dark ring's own arm is §6's row (T9-W7 chair §6.1: one owner for that token); this
++     palette survives every candidate on §6's table because each sits inside the blue arc
++     244.4–258.3° this family reserves. */
++  --color-user-ink: #47a7ff;
+ 
+   /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+   --peer-ink-l: 0.8;
+@@ -400,11 +452,15 @@
+ 
+   --grid-line-color: hsl(48 10% 80%);
+ 
+-  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+-     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+-     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+-     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+-  --color-progress-ink: #7c3aed;
++  /* Progress-ink (dark) — gold's ink tier DEEPENS at night, the inversion the light-tier
++     comment names: the dark frame line is a LIGHT warm-grey, so a deeper gold is what reads
++     over it. #7D6902 holds dark crayon-gold's hue (95.2°, Δ0.59°) at L 0.524 — one tier
++     DOWN from the wax rather than up, which is the only direction that clears both grounds.
++     Contrast ledger (at stroke-opacity 0.95, painted bytes): vs --grid-line-color 3.22, vs
++     --color-card 3.25 — the worst arm rises from the violet's 3.05 to 3.18. The dark grid
++     line is itself a warm near-gold grey (95.2° at chroma 0.011), so in dark the trace and
++     the frame it retraces are ONE hue and only pressure tells them apart. */
++  --color-progress-ink: #7d6902;
+ 
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+@@ -590,13 +646,25 @@ html {
+     transition: stroke 500ms;
+   }
+ 
+-  /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+-     already 100% — redundant with it. The violet trace bows out so the gold reward owns
+-     the frame alone; the trace led the eye to the gold, it never competes with it. The
+-     500ms bow-out lives in HandDrawnGrid's (unlayered) scoped style so this layered
+-     rule's `transition` isn't the one that wins — here we only assert the end state. */
++  /* Completion hand-off (T9-W7 §4, recut from T4-W9 ROW 1). The trace no longer bows out.
++     It LIFTS: the same rect, the same seed, the same hue, one pressure up — gold ink
++     becomes gold wax, which is the sentence the whole gauge exists to say. At 100% the
++     player has drawn the frame themselves; the win is the board pressing that line down in
++     crayon.
++
++     This is also the only version of the hand-off that PAINTS. The .grid-line recolour
++     above lands on the live vector stack, which is display:none under the grid bake
++     (HandDrawnGrid's .baked-hidden), so the solved frame's gold reaches zero pixels on
++     screen while pre-baked graphite bitmaps hold the surface — measured 0 chromatic px
++     through 5s, both themes. The trace is a grain-baked pose stack that is never hidden, so
++     the stroke swap is the gold the player actually sees. The .grid-line rule stays for
++     print, where the bitmaps drop and the vector stack is what renders.
++
++     Zero filters and zero re-raster: a stroke colour swap on a live pose stack. The
++     duration is v-bound from MOTION.traceWinMs in HandDrawnGrid's scoped style (unlayered,
++     so a layered `transition` can't win over it); here we only assert the end state. */
+   .solve-success .progress-trace {
+-    opacity: 0;
++    stroke: var(--color-gold-star) !important;
+   }
+ 
+   .solve-success {
+@@ -923,6 +991,15 @@ html {
+       stroke: #000 !important;
+     }
+ 
++    /* The fill trace's print arm (T9-W7 §4). It had none: the trace printed in whatever the
++       progress ink resolved to, and at the win the `.solve-success` recolour in @layer
++       utilities would print gold over a black frame. `@layer base` + !important wins both
++       (for important declarations layer precedence inverts — the EARLIER layer wins), so a
++       printed worksheet's gauge is the same graphite as the frame it retraces. */
++    .progress-trace {
++      stroke: #000 !important;
++    }
++
+     .glyph-svg path {
+       stroke: #000 !important;
+       filter: none !important;
+@@ -948,6 +1025,13 @@ html {
+     .glyph-svg path {
+       stroke: CanvasText;
+     }
++
++    /* The gauge yields the same way (T9-W7 §4): a reader who asked for system ink gets the
++       fill trace in system ink, at the win as well as before it. Same layer, same reason —
++       forced colours force `color` and `background-color` and leave SVG `stroke` alone. */
++    .progress-trace {
++      stroke: CanvasText !important;
++    }
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..d0f90f2d 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -2077,14 +2077,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   fill: url(#sparkle-rainbow) !important;
+ }
+ 
++/* The glow is GOLD (T9-W7 §3). It was two inline rgba() literals — Tailwind
++   violet-300 spelled by hand, the third place the retired violet painted and the only one
++   nothing named. The solver's button now glows in the colour the solved board wears. One
++   filter; the budget stays 9. `transition: all` narrows to `filter`, because `all` was also
++   tweening the colour a gate reads and handing back a frame of the tween. */
+ .sparkle-icon {
+-  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  filter: drop-shadow(0 0 2px var(--sparkle-glow-soft));
++  transition: filter 200ms var(--ease-standard);
+ }
+ 
+ @media (hover: hover) {
+   .icon-btn:hover .sparkle-icon {
+-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
++    filter: drop-shadow(0 0 5px var(--sparkle-glow-strong));
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..60fc4abc 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1453,11 +1453,33 @@ onMounted(async () => {
+ }
+ 
+ /* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+-   the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
+-   A reader who can see neither stroke weight nor colour still sees one verb marked and one
+-   bare. */
++   the hand's way of saying weight — and now it takes the DANGER INK too (T9-W7 §3/§15). The
++   two most consequential buttons the deck has had zero chromatic content between them: the
++   armed verb painted rgb(10,10,10), which is the same ink as `keep`. Red is already the house's
++   word for undoing work (the teacher's pencil, the conflict ring, the refusal note), so the
++   verb writes in it — and `HandDrawnOutline` strokes `currentColor`, so the drawn box reddens
++   with the word and the mark is a shape as well as a hue.
++
++   NO GROUND. The 8% graphite wash that used to sit here went with it, and no red one replaced
++   it: red-ink over its own 5% ground reads 4.549:1, four hundredths over the AA floor, which is
++   a number that is true today and false the next time a paper moves. The word and its box carry
++   the mark on bare card — 4.99:1 light, 6.30:1 dark, and 4.69 / 5.08 on the hover ground the
++   rule above paints — with the box stroke over 3:1 everywhere. One verb marked, one bare, and
++   the mark is legible to a reader who sees neither stroke weight nor colour, because the word
++   itself changed value. `keep` is untouched at 19.45:1. */
+ .guard-leave .guard-face {
+-  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
++  color: var(--color-red-ink);
++}
++
++@media (hover: hover) {
++  /* The hover ground belongs to both verbs; the INK does not. This compound selector is (0,4,0)
++     against the hover rule's (0,3,0), so the accent ground arrives under a word that stays red
++     — without it, the one control on the page where a mis-click costs work loses its colour at
++     exactly the moment a pointer is on it. Inside `(hover: hover)`, or a coarse pointer inherits
++     a stuck state from a rule written for a mouse. */
++  .guard-btn.guard-leave:hover .guard-face {
++    color: var(--color-red-ink);
++  }
+ }
+ 
+ @media (pointer: coarse) {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..92a5c342 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,12 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** The fill trace's hand-off at the win (T9-W7 §4). At 100% the trace STAYS and lifts
++   *  one pressure — the gold ink becomes the gold wax on the same rect, same seed, same
++   *  hue — instead of fading out. 500ms names the band the bow-out already used, so the
++   *  win reads at the speed the frame's own recolour reads. PRM swaps the stroke in the
++   *  same frame (no tween). */
++  traceWinMs: 500,
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..8b0527b5 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -82,7 +82,10 @@ const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
+ const strokeColor = computed(() => {
+   if (props.isSolved) return "url(#solver-ink)";
+   if (isGivenOriginal.value) return "var(--color-foreground)";
+-  return "var(--color-user-ink, #2563eb)";
++  // No fallback hex. The old literal was a second spelling of the pen that stopped being
++  // true the moment --color-user-ink moved (T9-W7 §3), and it only ever fired if the token
++  // were undefined — which index.css cannot be, since the glyph is unreachable without it.
++  return "var(--color-user-ink)";
+ });
+ 
+ const strokeWidth = computed(() => {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..98a41a76 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,8 +1,17 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+-import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+-import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
++import {
++  generateGridBoilFrames,
++  generateFrameTraceFrames,
++  poseFronts,
++} from "../gridPaths";
++import {
++  BOIL_CONFIG,
++  FILTER_PRESETS,
++  MOTION,
++  beatsFor,
++} from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   readFilterDefs,
+@@ -23,10 +32,11 @@ const props = defineProps<{
+    *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+    *  twin is automatic: there is no second implementation to keep in sync. */
+   progress?: number;
+-  /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+-   *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+-   *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+-   *  bow-out that hands the frame to the gold has nothing left to fade. Pinned, not deleted. */
++  /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the pose stack must stop
++   *  trading opacity 8/s over the whole board box — but it must NOT be unmounted, because the
++   *  trace is what the win recolours (T9-W7 §4: gold ink lifts to gold wax on the same rect).
++   *  The pin holds the stack on ONE pose for that stroke swap, so the lift reads as a single
++   *  line changing pressure rather than four. Pinned, not deleted. */
+   solveSuccess?: boolean;
+   /** T8-W3 M14 — the JOIN ring's dash front in [0,1] (default 0). A SECOND trace stack, not a
+    *  commandeering of the first: `progress` above is the live fill gauge and is in use whenever
+@@ -78,21 +88,19 @@ const boilFrame = useBeatFrame(
+ // Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
+ const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+ 
+-// ── T4-W9 progress trace: the violet second-pencil FILL gauge ──
++// ── T4-W9 progress trace: the gold second-pencil FILL gauge ──
+ //
+ // A grain-BAKED filterless sibling of the frame — generateFrameTraceFrames emits the SAME
+ // ring geometry as generateGridBoilFrames' frame with the grain folded IN (the
+-// HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the violet retraces the
++// HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the gold retraces the
+ // graphite frame in registration. frameCount static poses, opacity-swapped on the SAME
+ // boilFrame beat as the grid: steady-state raster zero (no live `filter=` to invalidate).
+ const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
+ const progressPercent = computed(() => Math.round(progress.value * 100));
+ 
+-// pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+-// every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+-// top-left. A fill event mutates exactly this one custom value — a cheap paint, never the
+-// beat, never a filter re-raster.
+-const traceDashOffset = computed(() => 1000 * (1 - progress.value));
++// The gauge's one remaining band, v-bound out of pencilConfig (T9-W7 §4) rather than spelled
++// as a literal in the scoped style below: the hand-off at the win.
++const traceWinMs = `${MOTION.traceWinMs}ms`;
+ 
+ // Grain-static baked in (the grid's own tooth, in the 1000-unit viewBox regime the trace
+ // lives in — the T3-W13 grain-in-geometry discipline reused verbatim). Reactive on
+@@ -107,6 +115,14 @@ const traceFrames = computed(() =>
+   ),
+ );
+ 
++// THE FRONT IS GEOMETRY, NOT A DASH (T9-W7 §4). `poseFronts` cuts each pose at its own
++// arc-length fraction, so the path simply ENDS where the player's work has got to. The dash
++// this replaces read 92% filled at a quarter in WebKit, and the cause is not `pathLength` (the
++// synthesis's guess, falsified on the built tree) — WebKit restarts a polyline's dash phase
++// every ~128 segments and a hand-drawn ring is ~490. There is no pattern left for an engine to
++// restart. A fill event re-cuts four short strings: no beat, no filter, no re-raster.
++const traceFront = computed(() => poseFronts(traceFrames.value, progress.value));
++
+ // ── T8-W3 join trace: the SECOND hand on the same rectangle ──
+ //
+ // The estate's own retrace idiom, the one `scribbleUnderline`'s selected state uses: a second
+@@ -116,7 +132,6 @@ const traceFrames = computed(() =>
+ // pencil rather than a thicker first one. Filterless and grain-baked like its sibling: no
+ // `filter=` is minted, so the census is unmoved.
+ const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?? 0)));
+-const joinDashOffset = computed(() => 1000 * (1 - joinProgress.value));
+ 
+ const joinTraceFrames = computed(() =>
+   generateFrameTraceFrames(
+@@ -127,6 +142,9 @@ const joinTraceFrames = computed(() =>
+     FILTER_PRESETS["grain-static"]?.grain,
+   ),
+ );
++// Its sibling's front, verbatim — and cured in the same diff, because the join ring carried
++// the same dash and the same broken front in WebKit.
++const joinFront = computed(() => poseFronts(joinTraceFrames.value, joinProgress.value));
+ 
+ // Current frame's path data (transition layer — draw-in/erase only, see template)
+ const currentPaths = computed(() => {
+@@ -446,20 +464,23 @@ onUnmounted(() => {
+       </g>
+     </template>
+ 
+-    <!-- Progress trace (T4-W9): the violet second-pencil FILL gauge. Its own filterless
++    <!-- Progress trace (T4-W9): the gold second-pencil FILL gauge. Its own filterless
+              grain-baked sibling layer (never gated on animState — the fill is orthogonal to
+              draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
+              and painted LAST so it sits over the graphite. The dash draws it to the current
+-             fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
+-             win. Zero steady-state raster: filterless static geometry, compositor-only swap.
++             fill-front; at the win `.solve-success` lifts its stroke from the gold ink to the
++             gold wax (index.css) and the trace STAYS — it is the gold the win actually paints,
++             because the frame's own recolour lands on the bake-hidden vector stack. Zero
++             steady-state raster: filterless static geometry, compositor-only swap, and the
++             win is a stroke colour change on geometry that is already on screen.
+              P1-W3 / r3 §4.4 — the stack used to render and flip 8/s UNCONDITIONALLY. At
+              `progress === 0` the dash offset is 1000, so the path draws nothing and four
+              invisible <g>s traded opacity over the whole board box forever; now they are not
+-             rendered at all. At the win the trace is opacity 0 but must still FADE, so the
+-             stack is PINNED to pose 0 rather than unmounted (the logo's during-bake idiom) —
+-             the trade stops and the 500 ms bow-out survives. -->
++             rendered at all. At the win the stack is PINNED to pose 0 rather than left on the
++             beat (the logo's during-bake idiom): the boil trade stops, so the wax lands on one
++             held pose and the lift reads as one line changing pressure, not four. -->
+     <g
+-      v-for="(d, f) in progress > 0 ? traceFrames : []"
++      v-for="(d, f) in progress > 0 ? traceFront : []"
+       :key="'trace-' + f"
+       class="progress-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -473,9 +494,6 @@ onUnmounted(() => {
+         stroke-opacity="0.95"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: traceDashOffset }"
+       />
+     </g>
+ 
+@@ -491,7 +509,7 @@ onUnmounted(() => {
+              its sibling's, verbatim: the win freezes the stack on pose 0 rather than trading
+              opacity 8/s under gold that owns the frame. -->
+     <g
+-      v-for="(d, f) in joinProgress > 0 ? joinTraceFrames : []"
++      v-for="(d, f) in joinProgress > 0 ? joinFront : []"
+       :key="'join-' + f"
+       class="join-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -506,9 +524,6 @@ onUnmounted(() => {
+         :stroke-opacity="joinOpacity ?? 0"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: joinDashOffset }"
+       />
+     </g>
+   </svg>
+@@ -577,17 +592,19 @@ onUnmounted(() => {
+   opacity: 1;
+ }
+ 
+-/* The fill-front advances on FILL events only (progress is a computed over the game's
+-   values, never the beat). No-preference-gated: under PRM there is NO transition — the
+-   offset snaps to its correct static value and the beat is already frozen (boilBeat.ts),
+-   so the layer freezes on pose 0 with the right offset (PRM-safe by construction). The
+-   opacity term is the .solve-success bow-out (index.css asserts the end state); it lives
+-   here, unlayered, so a CSS-layer `transition` can't win over it. */
++/* THE WIN, and only the win (T9-W7 §4). At 100% the stroke lifts from gold ink to gold wax
++   (index.css asserts the end state) and this is the tween that carries it. It lives here,
++   unlayered, so a CSS-layer `transition` can't win over it; under PRM the stroke swaps in the
++   same frame, which is the right answer for a colour change. The duration is v-bound from
++   MOTION — no timing literal outside pencilConfig.
++
++   The fill front has no tween any more, and that is a consequence rather than an oversight:
++   the front is the path's own end point now, not a dash offset, and `d` is not animatable
++   across engines. `MOTION.traceFillMs` is retired with the dash. The front still advances on
++   FILL events only — never the beat — so what moves is one step of ~31 px per digit. */
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+-    transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++    transition: stroke v-bind(traceWinMs) var(--ease-noteWrite);
+   }
+ }
+ 
+@@ -596,10 +613,14 @@ onUnmounted(() => {
+   opacity: 0;
+   will-change: opacity;
+   /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+-     A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+-     the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+-     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+-     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
++     A second seed on the same rect is not a second ring: at a peer hue near the ink the other
++     ring is wearing, the two strokes fuse into one fringed band and the fill gauge is simply
++     gone. That is not hypothetical — `inkFor` walks the golden angle and index 2 lands at
++     275deg. The SUBJECT of that reading has moved (T9-W7 §4): the progress ink is gold now, so
++     index 2 is 168deg away from it and its true nearest house accent is the blue arc the pen
++     and the ring reserve, 22-25deg off. The ratio below is unchanged, and so is the finding —
++     a co-located retrace reads as ONE ring whenever two hues land within ~17.7deg, and the
++     peer walk still puts indices there (the sweep is PAL-TIN's gate).
+      So the second pass is offset, which is what the estate's own retrace idiom always was
+      (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+      stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..b61ebafa 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -333,21 +333,27 @@ export function generateRectBoilFrames(
+ // The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom
+ // (top/bottom flush with the card edge, sides pulled in slightly). Module-level so
+ // generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below, same file)
+-// build off ONE source and the violet trace provably hugs the frame (A-1c) — never a
++// build off ONE source and the gold trace provably hugs the frame (A-1c) — never a
+ // re-declared magic number that could drift out of registration.
++//
++// The pads are NOT a colour family's to move: equalising them slides the frame 7.63 CSS px
++// at 1280 on every board, and the board goldens are blind to it (a thin line's 7 px move
++// sits under `maxDiffPixelRatio` 0.02). T9-W7 chair §6.2 — FRAME_PAD is one row of its own,
++// landed with a geometric assertion in viewBox units, a golden re-mint off a built dist, and
++// an owner disposition. This family ships its palette at HEAD's pads.
+ const FRAME_X_PAD = 12;
+ const FRAME_Y_PAD = 0;
+ 
+ /**
+  * The board frame ring as `frameCount` grain-BAKED closed poses — the T4-W9 progress
+  * trace's geometry. Same rect / seed / roughness / boil as `generateGridBoilFrames`'
+- * frame (so the violet trace retraces the graphite frame in registration), but the
++ * frame (so the gold trace retraces the graphite frame in registration), but the
+  * grain is folded INTO the pose geometry (gridPaths §Grain bake) — the HandDrawnOutline
+  * grammar, NOT the grid's live-filter grammar. The consumer renders these as filterless
+  * static siblings, opacity-swapped on the shared boil beat: steady-state raster zero.
+  *
+- * pathLength normalisation, dash draw, and the fill-front tween live at the consumer
+- * (HandDrawnGrid) — this function owns only the ring geometry.
++ * The dash draw and the fill-front tween live at the consumer (HandDrawnGrid) — this
++ * function owns only the ring geometry; `poseLengths` below measures it.
+  */
+ export function generateFrameTraceFrames(
+   viewBoxSize: number,
+@@ -369,6 +375,86 @@ export function generateFrameTraceFrames(
+   );
+ }
+ 
++/** A closed linear pose (`pointsToLinear` + ` Z`) back to its points, the close made explicit. */
++function posePoints(d: string): [number, number][] {
++  const nums = d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
++  if (!nums || nums.length < 4) return [];
++  const pts: [number, number][] = [];
++  for (let i = 0; i + 1 < nums.length; i += 2) pts.push([Number(nums[i]), Number(nums[i + 1])]);
++  if (/z\s*$/i.test(d) && pts.length) pts.push(pts[0]);
++  return pts;
++}
++
++/**
++ * Arc length of each pose, in the poses' own user units. Pure, geometry-only.
++ *
++ * The poses differ from one another by 3.59 units in 3,965 (0.091%), so anything measured on
++ * one pose is within ~2.3 px of the others on a 2,513-px perimeter. Measured, not assumed.
++ *
++ * Callers: `poseFronts` below, and (handed on) ACC-SIX / the §10 tally, which want arc length
++ * for their own gauges and should not each re-derive it.
++ */
++export function poseLengths(frames: string[]): number[] {
++  return frames.map((d) => {
++    const pts = posePoints(d);
++    let total = 0;
++    for (let i = 1; i < pts.length; i++)
++      total += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
++    return total;
++  });
++}
++
++/**
++ * Each pose CUT at `fraction` of its own arc length — the fill gauge's front, as geometry.
++ *
++ * THE DASH IS GONE, AND THAT IS THE CURE (T9-W7 §4). The gauge used to draw its front with
++ * `stroke-dasharray` over `pathLength="1000"`, and in WebKit it read 92% filled at a quarter.
++ * The pass-2 synthesis named `pathLength` as the cause; on the built prototype that is FALSE.
++ * Measured on this ring, both engines, four declaration arms (attribute dash, CSS dash, a
++ * period equal to the path, an offset of zero): every arm reads 4 runs at 0.215 share in
++ * WebKit for a requested 0.05. Decimating the same pose walks it back — 492 segments → 4 runs,
++ * 123 → 1, and a perfectly straight 599-segment rectangle breaks identically, so it is not the
++ * wobble either. WebKit restarts the dash phase every ~128 segments of a polyline; Chromium
++ * dashes the path whole. A hand-drawn ring is ~490 segments by construction.
++ *
++ * So the front is not dashed. It is DRAWN: the pose is truncated at `fraction · length`, with
++ * the final point interpolated, and the renderer paints a path that ends exactly where the
++ * player's work has got to. Engine-independent by construction, because there is no dash
++ * pattern for an engine to restart, and it cannot regress when a board size or a grain setting
++ * moves the segment count past somebody's chunk boundary.
++ *
++ * The price, declared: `stroke-dashoffset` was tweenable and a truncated `d` is not, so the
++ * front now STEPS on each fill event instead of easing 240 ms into place (`MOTION.traceFillMs`
++ * is retired with it). One digit of 81 moves the front ~31 px.
++ */
++export function poseFronts(frames: string[], fraction: number): string[] {
++  const f = Math.max(0, Math.min(1, fraction));
++  if (f >= 1) return frames;
++  if (f <= 0) return frames.map(() => "");
++  const lengths = poseLengths(frames);
++  return frames.map((d, i) => {
++    const pts = posePoints(d);
++    const target = lengths[i] * f;
++    if (!pts.length || target <= 0) return "";
++    const out = [pts[0]];
++    let run = 0;
++    for (let k = 1; k < pts.length; k++) {
++      const seg = Math.hypot(pts[k][0] - pts[k - 1][0], pts[k][1] - pts[k - 1][1]);
++      if (run + seg >= target) {
++        const t = seg === 0 ? 0 : (target - run) / seg;
++        out.push([
++          pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * t,
++          pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * t,
++        ]);
++        break;
++      }
++      run += seg;
++      out.push(pts[k]);
++    }
++    return pointsToLinear(out);
++  });
++}
++
+ /**
+  * Generate boil frame variants for a standalone line segment.
+  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.

@@ -1,0 +1,14 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/budget.probe.ts	2026-09-17 13:35:43
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-46/web/frontend/.pass2-mrkabs/budget.probe.ts	2026-09-18 16:34:09
+@@ -7,7 +7,10 @@
+ import { writeFileSync, mkdirSync } from "node:fs";
+ import { dirname, join } from "node:path";
+ 
+-const OUT = join(dirname(new URL(import.meta.url).pathname), "..", "logs");
++// RE-POINTED (T9-W7 pass 2, MRK-ABS prototype): the r0 copy banks to r0's own logs dir. This
++// copy takes its OUT from the environment and is run against the prototype; r0 is untouched.
++const OUT =
++  process.env.PROBE_OUT ?? join(dirname(new URL(import.meta.url).pathname), "..", "logs");
+ mkdirSync(OUT, { recursive: true });
+ 
+ async function boardReady(page: Page, query: string) {

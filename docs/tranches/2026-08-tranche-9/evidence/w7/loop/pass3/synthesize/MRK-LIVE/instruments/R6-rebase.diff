@@ -1,0 +1,123 @@
+PROPOSED DIFF · r0/r6-idiom-history/law-probe.mjs · rows R1, L3, R2 · each reported MOVED
+
+The record is frozen: this is a PROPOSAL banked beside the pass-3 synthesis, never an edit to
+`loop/r0/`. Three rows moved at `74a2b5d9`; one diff because MRK-LIVE is the only lane holding
+an R6 diff (chair §6.7: R1 is the chair's row, ACCEPTED — the lane lands the token's value and
+returns R1 MOVED with this diff cited). L3 and R2 moved under the W7 execution fold, not under
+this design; they are carried so no pass-3 lane repeats pass 2's "law-probe byte-identical to
+r0", which is false at this base (`../../research/MRK-LIVE/readings/law-probe-74a2b5d9.txt`,
+exit 1).
+
+R1 — the rebased law (pass 2's proposal, unchanged in substance; measured basis
+`pass2/research/MRK-LIVE/instruments/R6-R1-rebase.diff`): a token declared ONLY in :root must
+not claim an arm; a token WITH an arm must name its arm's measured reading. Both directions.
+Under this wording MRK-LIVE's one-value token passes with a truthful comment, and MRK-ABS's
+dark alias passes only with its arm's painted reading in the comment — the law binds both
+routes and cannot be satisfied by silence.
+
+L3 — the incumbent counts `since: "` occurrences in the gate's source and wants exactly 2 (B1's
+two admissions). The fold's B1 cure retired an admission (HEAD: 1) and the proxy went RED while
+the law itself is GREEN with room: `node scripts/check-copy-register.mjs` at HEAD reads 0 em/en
+dashes, 0 jargon hits, 0 admitted, lexicon 25, exit 0. The row re-aims at the gate's own exit
+code and its printed counts, which is the law.
+
+R2 — the incumbent reads useGameCell.ts as a FILE and matches `/solver's answer/`, which now
+hits the comment the fold wrote to record its own cure (`:140-144`, "USED to read"). The shipped
+string is `revealed answer` (`:158`). The row re-aims at the ASSIGNMENT (a template literal or
+string literal in code, comments stripped) and at the gate's discovery of computed accessible
+names (the fold's 937-line `check-copy-register.mjs` reads them).
+
+--- a/law-probe.mjs
++++ b/law-probe.mjs
+@@ L3
+ law(
+   "L3",
+   "no em dash and no unadmitted jargon reaches a reader",
+   "check-copy-register.mjs, M16 (owner 2026-08-03)",
+   "GREEN",
+   () => {
+-    const g = read("scripts/check-copy-register.mjs");
+-    const admitted = (g.match(/since:\s*"/g) ?? []).length;
+-    return { ok: admitted === 2, detail: `${admitted} ADMITTED entries standing (B1's two)` };
++    // The law is the gate's verdict, not a count of its source. Run it bare (never piped —
++    // `cmd | tail` eats the exit code) and read the numbers it prints.
++    const r = spawnSync("node", ["scripts/check-copy-register.mjs"], { cwd: FE, encoding: "utf8" });
++    const out = `${r.stdout}\n${r.stderr}`;
++    const n = (re) => Number(out.match(re)?.[1] ?? NaN);
++    const dashes = n(/(\d+)\s+em/i), jargon = n(/(\d+)\s+jargon/i), unadmitted = n(/(\d+)\s+unadmitted/i);
++    const ok = r.status === 0 && dashes === 0 && (jargon === 0 || unadmitted === 0);
++    return { ok, detail: `exit ${r.status}; ${dashes} dashes, ${jargon} jargon hits, ${unadmitted} unadmitted` };
+   },
+ );
+@@ R1
+ law(
+   "R1",
+-  "every chromatic token that paints in BOTH themes carries a dark arm",
+-  "index.css --color-focus-sketch:219 — its own comment claims 'Dark mode keeps crayon-blue'",
++  "every chromatic token's comment tells the truth about its themes",
++  "index.css --color-focus-sketch:219 — declared once in :root; the comment must say so and carry its readings",
+   "RED",
+   () => {
+     const css = read("src/assets/index.css");
+     const darkAt = css.indexOf("\n.dark");
+     const inDark = css.slice(darkAt).includes("--color-focus-sketch:");
+-    return {
+-      ok: inDark,
+-      detail: inDark
+-        ? "declared in .dark"
+-        : "declared ONLY in :root — the focus ring paints #3a7bc4 at night, and the comment says otherwise",
+-    };
++    const decl = css.indexOf("--color-focus-sketch:");
++    const comment = css.slice(decl, css.indexOf("*/", decl) + 2);
++    const claimsArm = /dark mode|at night|\.dark|dark arm/i.test(comment);
++    const namesReading = /\d\.\d+\s*(:\s*1|light|dark)/i.test(comment);
++    // A token declared ONLY in :root must not claim an arm; a token WITH an arm must name its
++    // arm's measured reading. Both directions, so neither a lying comment nor a silent arm passes.
++    const ok = inDark ? claimsArm && namesReading : namesReading && /both themes|one value|no dark arm/i.test(comment);
++    return {
++      ok,
++      detail: inDark
++        ? `declared in .dark; comment ${claimsArm ? "names the arm" : "is SILENT about it"}, ${namesReading ? "with" : "with NO"} measured reading`
++        : `declared ONLY in :root; comment ${/both themes|one value|no dark arm/i.test(comment) ? "says so" : "does not say so"}, ${namesReading ? "with" : "with NO"} measured reading`,
++    };
+   },
+ );
+@@ R2
+ law(
+   "R2",
+   "the copy register's jargon arm reads EVERY rendered string, including a computed accessible name",
+-  "B1's second string lives at useGameCell.ts:153 (`solver's answer ${…}`), outside the arm's corpus",
++  "B1's second string lived at useGameCell.ts (`solver's answer ${…}`); the fold cured it to `revealed answer` and the gate now discovers computed names",
+   "RED",
+   () => {
+-    const cell = read("src/games/shared/useGameCell.ts");
+-    const shipsIt = /solver's answer/.test(cell);
++    // Read the ASSIGNMENT, not the file: strip comments, then look for the string in code.
++    const cell = read("src/games/shared/useGameCell.ts")
++      .replace(/\/\*[\s\S]*?\*\//g, "")
++      .replace(/(^|[^:])\/\/.*$/gm, "$1");
++    const shipsIt = /["'`][^"'`\n]*solver's answer/.test(cell);
+     const gate = read("scripts/check-copy-register.mjs");
+-    // The arm reads template text, static RENDERED_ATTRS, COPY_KEYS object literals and
+-    // NARRATION_CALLS. A `computed(() => …)` that becomes an `:aria-label` is none of those.
+-    const armWouldSee = /useGameCell|computed|ariaLabel/.test(
+-      /const COPY_KEYS[\s\S]*?\];/.exec(gate)?.[0] ?? "",
+-    );
++    // The fold's gate discovers a declaration whose own NAME says copy (aria*, *Label, …) and
++    // reads computed accessible names; the row asks the gate, not a hard-coded list.
++    const armWouldSee = /aria\*|\*Label|accessible name|computed accessible/i.test(gate);
+     return {
+       ok: !shipsIt || armWouldSee,
+       detail: shipsIt
+-        ? "useGameCell.ts ships `solver's answer` into an aria-label and the gate's corpus cannot reach it"
+-        : "string is gone",
++        ? "useGameCell.ts still ASSIGNS `solver's answer` and the gate cannot see a computed name"
++        : `string is gone from code (${/solver's answer/.test(read("src/games/shared/useGameCell.ts")) ? "a comment still records the cure" : "no trace"}); gate ${armWouldSee ? "reads" : "does NOT read"} computed names`,
+     };
+   },
+ );
+
+NOTE. `spawnSync` needs `import { spawnSync } from "node:child_process";` at the head of the
+probe and `FE` is the probe's existing frontend-root constant. The prototype lane copies r0's
+probe to its own `instruments/law-probe.COPY.mjs`, applies these hunks THERE, re-points OUT,
+and reports the three rows MOVED with the before/after exit code. r0 is never written.

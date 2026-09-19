@@ -1,0 +1,65 @@
+PROPOSED DIFF — r0's `law-probe.mjs`, two rows whose SUBJECT this family moved (T9-W7 pass 2,
+CTRL-COST). Nothing under `loop/r0/` is written by this lane: the copy this lane ran is
+`instruments/law-probe.COPY.mjs` (re-pointed at the lane's worktree), and the two r0 rows below
+are reported MOVED. The adjudicator lands or refuses this; the lane does not re-cut r0 in place
+and does not re-word a gate to pass.
+
+────────────────────────────────────────────────────────────────────────────────────────────
+ROW L3 — MOVED. The law is "no em dash and no unadmitted jargon reaches a reader". Its READ is
+`admitted === 2`, i.e. it asserts that B1's two ADMITTED entries are STILL STANDING in
+`check-copy-register.mjs`. An ADMITTED entry is a DEBT the gate lets through with a cure's seam
+attached; this family paid both (the solve tape's machine-naming string was re-cut to "fills in
+the whole board", and the second went with the deleted compartment tape). So the probe turns RED
+because the cure landed — a probe that reds when a debt is paid is a probe that forbids paying
+it. The law's own sentence is satisfied strictly better at 0 than at 2.
+
+MEASURED on this lane's tree: `check-copy-register.mjs` exit 0 — 0 em/en dashes, 0 unadmitted,
+0 admitted. r0's HEAD reading was 2 admitted.
+
+@@ law("L3", …)
+-    const admitted = (g.match(/since:\s*"/g) ?? []).length;
+-    return { ok: admitted === 2, detail: `${admitted} ADMITTED entries standing (B1's two)` };
++    // The law is UNADMITTED = 0; an ADMITTED row is a debt with a cure's seam, and the count
++    // may only ever FALL. Pinning it at 2 made the probe red on the commit that paid it
++    // (T9-W7 CTRL-COST pass 2: both of B1's strings re-cut). The ceiling stays, the floor goes.
++    const admitted = (g.match(/since:\s*"/g) ?? []).length;
++    return { ok: admitted <= 2, detail: `${admitted} ADMITTED entries standing (of B1's two)` };
+
+────────────────────────────────────────────────────────────────────────────────────────────
+ROW R3 — MOVED, and it is now VACUOUS rather than red. The law is "the mobile floating controls
+bar wears a drawn edge in the house hand", and its subject is `.action-bar` in
+`GameControlPanel.vue`. This family DELETES the bar (§6): its four verbs went to the bands whose
+cost they carry, so there is no floating slab left to draw an edge on. The probe's regex finds
+no rule, falls to its default branch, and prints "no border, no drawn outline — background +
+fade only" about a class that does not exist — a RED nobody can cure and nobody can falsify.
+
+MEASURED on this lane's tree: `.action-bar` population 0 in `src/`, 0 in the rendered DOM at
+desk · dock · landscape, both engines (`readings/p2.json` → `ident.actionBars`).
+
+@@ law("R3", …)
+-  "the mobile floating controls bar wears a drawn edge in the house hand",
+-  "T9-M04 (owner 2026-08-25); GameControlPanel `.action-bar` is a colour-matched slab",
+-  "RED",
++  "no floating slab lies over the card's content without a drawn edge",
++  "T9-M04 (owner 2026-08-25); the bar was a colour-matched slab — T9-W7 CTRL-COST deletes it",
++  "RED",
+   () => {
+     const p = read("src/games/shared/GameControlPanel.vue");
+-    const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
+-    const hasEdge = /border|HandDrawnOutline/.test(bar);
+-    return {
+-      ok: hasEdge,
+-      detail: hasEdge ? "the bar declares an edge" : "no border, no drawn outline — background + fade only",
+-    };
++    const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1];
++    // THE LAW IS SATISFIED TWO WAYS, and the deletion is the better one: either no slab
++    // exists, or the one that does declares an edge. A row whose subject has left the tree
++    // must say so — otherwise it prints a cure-less RED about a class nobody renders.
++    if (bar === undefined)
++      return { ok: true, detail: "no `.action-bar` in the tree — the slab is deleted, not drawn" };
++    const hasEdge = /border|HandDrawnOutline/.test(bar);
++    return {
++      ok: hasEdge,
++      detail: hasEdge ? "the bar declares an edge" : "no border, no drawn outline — background + fade only",
++    };
+   },

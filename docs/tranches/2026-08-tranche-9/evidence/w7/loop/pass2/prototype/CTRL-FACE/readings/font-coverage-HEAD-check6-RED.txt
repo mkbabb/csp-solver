@@ -1,0 +1,19 @@
+font coverage FAILED:
+  · Fraunces · .washi-tag (the compartment names): "pencils" misses "p"
+  · Fraunces · .washi-tag (the compartment names): "players" misses "p"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Easy" misses "E"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Medium" misses "M"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Hard" misses "H"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Normal" misses "N"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Off" misses "O"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Ask" misses "A"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "Live" misses "L"
+  · Patrick Hand · .tray-well .ctrl-btn + .heading-value (the card's option values): "On" misses "O"
+  · the face law: src/assets/typography.css sets `.section-heading { font-family: var(--font-display) }`. The first token must be a `--face-*` law (`--face-printed` / `--face-written` / `--face-mono`): a literal is reachable from no voice at all, and a `--font-*` binding names the FILE rather than the register, so re-cutting the register means chasing every site that reads the font.
+  · the face law: no rule sets `font-family` AT `.washi-tag`, so either the site inherits its face from whatever encloses it — which cannot be re-cut at the site — or the rule was renamed out from under this law. Declare it there, reading one face token.
+  · the face law: no rule sets `font-family` AT `.tray-well :deep(.washi-tag)`, so either the site inherits its face from whatever encloses it — which cannot be re-cut at the site — or the rule was renamed out from under this law. Declare it there, reading one face token.
+  · the face law: src/games/shared/GameControlPanel.vue sets `.zone-row-label { font-family: var(--font-hand) }`. The first token must be a `--face-*` law (`--face-printed` / `--face-written` / `--face-mono`): a literal is reachable from no voice at all, and a `--font-*` binding names the FILE rather than the register, so re-cutting the register means chasing every site that reads the font.
+  · the face law: src/pencil/chrome/OptionSelector/OptionSelector.vue sets `.ctrl-btn { font-family: "Fira Code", monospace }`. The first token must be a `--face-*` law (`--face-printed` / `--face-written` / `--face-mono`): a literal is reachable from no voice at all, and a `--font-*` binding names the FILE rather than the register, so re-cutting the register means chasing every site that reads the font.
+  · the face law: no rule sets `font-family` AT `.tray-well :deep(.ctrl-btn)`, so either the site inherits its face from whatever encloses it — which cannot be re-cut at the site — or the rule was renamed out from under this law. Declare it there, reading one face token.
+  · the face law: src/games/shared/GameControlPanel.vue sets `.heading-value { font-family: var(--font-hand) }`. The first token must be a `--face-*` law (`--face-printed` / `--face-written` / `--face-mono`): a literal is reachable from no voice at all, and a `--font-*` binding names the FILE rather than the register, so re-cutting the register means chasing every site that reads the font.
+  · the face law: src/games/shared/GameControlPanel.vue sets `.icon-sublabel { font-family: var(--font-hand) }`. The first token must be a `--face-*` law (`--face-printed` / `--face-written` / `--face-mono`): a literal is reachable from no voice at all, and a `--font-*` binding names the FILE rather than the register, so re-cutting the register means chasing every site that reads the font.

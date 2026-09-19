@@ -1,0 +1,53 @@
+PROPOSED — r0 row MOVED, never re-cut in place.
+
+`evidence/w7/loop/r0/r6-idiom-history/hue-census.mjs` ends by printing the golden-angle walk
+from a HARDCODED literal (`hue = i * 137.5`), not from `playerIdentity.inkFor`. Under PAL-TIN
+that walk does not exist: the census would keep printing eight hues no page can paint. The
+instrument reads every other row out of `index.css`; the tail is the one row that reads a
+memory. This re-cut makes the tail read the same file as the rest.
+
+The instrument writes NOTHING (stdout only, no `OUT` path), so nothing needed re-pointing
+before it was run — the r0 copy in this lane's dir is byte-identical to r0's and was run
+read-only. The r0 row is reported MOVED because its SUBJECT (the player palette) moves.
+
+--- a/evidence/w7/loop/r0/r6-idiom-history/hue-census.mjs
++++ b/evidence/w7/loop/pass2/research/PAL-TIN/instruments/hue-census.mjs
+@@ -100,9 +100,26 @@
+-// The golden-angle player walk, against the same circle.
+-console.log("\nplayer walk (playerIdentity.inkFor, hue = i * 137.5 mod 360), first 8:");
+-for (let i = 0; i < 8; i++)
+-  console.log(`  player ${i}: h=${((i * 137.5) % 360).toFixed(1)} deg @ C 0.110`);
++// THE PLAYER PALETTE, READ RATHER THAN REMEMBERED. The tail used to print `i * 137.5` from a
++// literal, which said nothing about the tree it was run on: it printed the same eight hues
++// whether the walk shipped, was re-cut, or had been replaced by a table. The census's own
++// discipline is "read the stylesheet"; this row now obeys it.
++const peers = [];
++for (const [regime, block] of [["light", light], ["dark", dark]])
++  for (let i = 1; i <= 16; i++) {
++    const hex = read(block, `--color-peer-${i}`);
++    if (!hex) continue;
++    const { L, C, h } = hexToOklch(hex);
++    peers.push({ i, regime, hex, L: +L.toFixed(3), C: +C.toFixed(3), h: +h.toFixed(1) });
++  }
++if (peers.length) {
++  console.log(`\nplayer palette (--color-peer-N, read from index.css): ${peers.length / 2} sticks, two arms`);
++  for (const p of peers)
++    console.log(`  peer-${p.i} ${p.regime}: ${p.hex}  L=${p.L} C=${p.C} h=${p.h}`);
++} else {
++  // No table: the tree still carries the formula. Print what the MODULE emits, not a literal.
++  const src = fs.readFileSync(path.join(import.meta.dirname, "../../../../../../../../web/frontend/src/games/shared/playerIdentity.ts"), "utf8");
++  const step = /%\s*360|\*\s*([\d.]+)/.exec(src.slice(src.indexOf("export const inkFor")));
++  console.log(`\nplayer walk (playerIdentity.inkFor, step ${step?.[1] ?? "?"} deg), first 8:`);
++  for (let i = 0; i < 8; i++)
++    console.log(`  player ${i}: h=${((i * Number(step?.[1] ?? 0)) % 360).toFixed(1)} deg`);
++}
+
+VERIFIED as banked (`instruments/hue-census.mjs`, runnable):
+- against HEAD's index.css the 30 census rows and the two-blues line are BYTE-IDENTICAL to
+  r0's run, and the tail now prints `step 137.5 deg` READ OUT OF playerIdentity.ts;
+- against the pass-1 prototype's index.css the tail prints the five sticks and their two arms
+  with L/C/h — independently reproducing this lane's own figures (light teal C 0.093, dark
+  violet C 0.112, both at the sRGB ceiling).
+- one addition beyond the tail: an optional `process.argv[2]` CSS override, so the re-cut can
+  be demonstrated against a tree that carries the table without editing the instrument. r0's
+  copy has none and needs none.

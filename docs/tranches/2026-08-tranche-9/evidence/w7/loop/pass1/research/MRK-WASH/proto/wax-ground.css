@@ -1,0 +1,87 @@
+/* MRK-WASH pass-1 prototype overlay — THE CHROME WAX GROUND (§6).
+ *
+ * A focused control takes a ground rather than an outline. The same overlay RETIRES the
+ * invisible hover fill (`GameControlPanel.vue:1965-1968`: `--color-accent` over `--color-card`,
+ * measured a 2.9-point lightness step) by binding hover and focus to ONE ramp — hover the
+ * light stop, focus the heavy one — so the estate stops having two names for one idea.
+ *
+ *   --ground-a        the focus ground's alpha
+ *   --ground-hover-a  the hover ground's alpha
+ *   --ground-ink      the wax (graphite by default; the probe also runs a crayon-blue arm)
+ *
+ * THE PROBE SEAM. `.wax-probe-focus` rides beside `:focus-visible` in every selector because
+ * WebKit's macOS Tab traversal does not stop on buttons at all and programmatic focus does not
+ * always match `:focus-visible` (r0 R3-census §b, measured both engines). The class is set by
+ * the probe on the element it has just focused for real; it changes which SELECTOR matches,
+ * never what is painted, and no product file carries it.
+ */
+.icon-btn:focus-visible,
+.icon-btn.wax-probe-focus,
+.ctrl-btn:focus-visible,
+.ctrl-btn.wax-probe-focus,
+.info-btn:focus-visible,
+.info-btn.wax-probe-focus,
+.attribution-trigger:focus-visible,
+.attribution-trigger.wax-probe-focus,
+.drawer-tab:focus-visible,
+.drawer-tab.wax-probe-focus,
+.logo-trigger:focus-visible,
+.logo-trigger.wax-probe-focus,
+.sun-moon-toggle:focus-visible,
+.sun-moon-toggle.wax-probe-focus,
+.staging-face:focus-visible,
+.staging-face.wax-probe-focus,
+.guard-face:focus-visible,
+.guard-face.wax-probe-focus,
+.game-card:focus-visible,
+.game-card.is-center,
+.invite-btn:focus-visible,
+.invite-btn.wax-probe-focus,
+header a:focus-visible,
+header a.wax-probe-focus {
+  outline: none !important;
+  background-color: color-mix(
+    in srgb,
+    var(--ground-ink, var(--color-pencil-graphite)) var(--ground-a, 18%),
+    transparent
+  ) !important;
+  border-radius: 0.25rem;
+}
+
+@media (hover: hover) {
+  .icon-btn:hover,
+  .ctrl-btn:hover {
+    background-color: color-mix(
+      in srgb,
+      var(--ground-ink, var(--color-pencil-graphite)) var(--ground-hover-a, 7%),
+      transparent
+    ) !important;
+  }
+}
+
+/* Forced colors: a translucent ground renders as nothing, so the real outline returns. */
+@media (forced-colors: active) {
+  .icon-btn:focus-visible,
+  .icon-btn.wax-probe-focus,
+  .ctrl-btn:focus-visible,
+  .ctrl-btn.wax-probe-focus,
+  .info-btn:focus-visible,
+  .info-btn.wax-probe-focus,
+  .attribution-trigger:focus-visible,
+  .attribution-trigger.wax-probe-focus,
+  .drawer-tab:focus-visible,
+  .drawer-tab.wax-probe-focus,
+  .logo-trigger:focus-visible,
+  .logo-trigger.wax-probe-focus,
+  .sun-moon-toggle:focus-visible,
+  .sun-moon-toggle.wax-probe-focus,
+  .staging-face:focus-visible,
+  .guard-face:focus-visible,
+  .game-card.is-center,
+  header a:focus-visible,
+  header a.wax-probe-focus {
+    outline: 2px solid Highlight !important;
+    outline-offset: 2px;
+    background-color: transparent !important;
+  }
+}

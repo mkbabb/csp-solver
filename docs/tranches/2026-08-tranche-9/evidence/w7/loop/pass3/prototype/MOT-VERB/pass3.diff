@@ -1,0 +1,2296 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..5c3c0c23 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1060,6 +1060,18 @@ jobs:
+             - name: motion contract (every spec declares its PRM posture, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:motion
++            # T9-W7 §13 gate — the pencil verbs. Every shipped transition and animation
++            # names a house curve (a verb) and a named duration (a rung), spends only a
++            # rung that verb is allowed to spend, and anything the set cannot take is in
++            # the admission ledger with a ruling. The ledger is closed both ways: a row
++            # whose site has gone reds too. Comments are blanked before anything is read,
++            # so prose about a transition is never counted as one. This also runs the
++            # publisher's own check, so MOTION.rungs/MOTION.verbs and the @theme block can
++            # never drift. Born RED at aab67b92 on 71 declarations (52 of them unadmitted);
++            # this is a step in the lint job, so the sixteen lanes stay sixteen (O-12).
++            - name: pencil verbs (every duration is a rung, every curve a verb)
++              working-directory: web/frontend
++              run: npm run lint:verbs
+             # T8-W6 gate — M16's one machine-checkable clause. Every template text node and
+             # every user-string literal in src/** (+ index.html's head) must carry no em or
+             # en dash. Comments are masked; two allowlisted files carry their reason.
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index 32ea521e..de21163b 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -37,6 +37,7 @@
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
++    "lint:verbs": "node scripts/publish-verbs.mjs --check && node scripts/check-pencil-verbs.mjs --self-test",
+     "lint:copy": "node scripts/check-copy-register.mjs --self-test",
+     "lint:live-regions": "node scripts/check-live-regions.mjs --self-test",
+     "lint:tdz": "node scripts/tdz-probe.mjs --self-test",
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..62537154 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -12,8 +12,9 @@ import {
+   type FunctionalComponent,
+ } from "vue";
+ import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { MOTION, spend } from "@pencil/config/pencilConfig";
+ import {
++  FLIP_GLIDE_ANIM_ID,
+   flipTransform,
+   useFlipGlide,
+   type FlipMover,
+@@ -373,7 +374,13 @@ const coarse = useCoarsePointer();
+ // (`setLiveFaceTarget`); the board itself is the FLIP mover, folding from its full pose into the
+ // face. Every view/URL/game transition still fires as Wave B, so a missing rect / PRM degrades
+ // to the same-frame cut and no state/visibility assertion sees mid-glide pixels.
+-const foldCtl = useFlipGlide({ durationMs: MOTION.boardFoldMs });
++// The fold TURNS the page: the board goes over into the card face and back (T9-W7 §13).
++// `throw` is the only rung TURN may spend, which is the law saying out loud what the fold
++// has always been — a whole sheet, never a slot.
++// The product's ONE genuine TURN: a page goes over, board face to card face. `throw` is
++// the only rung TURN may spend, by type and by the gate.
++const FOLD = spend("turn", "throw");
++const foldCtl = useFlipGlide({ spend: FOLD });
+ 
+ // Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+ // Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+@@ -422,9 +429,17 @@ function animKey(a: Animation): string {
+   return css.animationName ?? css.transitionProperty ?? "";
+ }
+ 
++/** The board subtree's animations, MINUS the fold's own movers (T9-W8 C06). The exit parks the
++ *  board home a second time as the deck unmounts, and that snapshot is taken one tick before
++ *  `runFold` starts the fold's board mover — so the restore read the deliberate fold as
++ *  something the move had invented and finished it 0.3ms after birth. The board cut where the
++ *  wordmark glided 520ms beside it, on every engine. `useFlipGlide` tags what it starts; the
++ *  custodian doesn't custody it. The entry, which happened to order its fold after the last
++ *  restore, is unaffected — it just stops depending on that luck. */
+ function boardAnimations(): Animation[] {
+   const host = document.querySelector<HTMLElement>(".board-peek-host");
+-  return host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
++  const all = host?.getAnimations ? host.getAnimations({ subtree: true }) : [];
++  return all.filter((a) => a.id !== FLIP_GLIDE_ANIM_ID);
+ }
+ 
+ /** What is genuinely mid-flight in the board subtree, keyed by (element, animation). */
+@@ -599,7 +614,7 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
+ }
+ 
+ // ENTRY — §BEAT 0 then §BEAT 1/2. `g` / the wordmark folds the live board into the center card.
+-// Beat 0: the scene chrome fades out (`html.gallery-leaving`, MOTION.chromeLeaveMs) while the
++// Beat 0: the scene chrome fades out (`html.gallery-leaving`, MOTION.rungs.leave) while the
+ // board HOLDS — it never erases. Then openGallery mounts the deck; the center card's face mounts
+ // live and `onLiveFace` runs the fold (beat 1); the deal fires on the deck's mount (beat 2). PRM
+ // cuts every beat.
+@@ -627,7 +642,7 @@ function enterGallery() {
+   window.setTimeout(() => {
+     document.documentElement.classList.remove("gallery-leaving");
+     openGallery(game.value); // BEAT 1 (fold via onLiveFace) + BEAT 2 (deal via deck mount)
+-  }, MOTION.chromeLeaveMs);
++  }, MOTION.rungs.leave);
+ }
+ 
+ // EXIT unfold: the chosen card unfolds back to a full board. Park the live board home FIRST
+@@ -1139,7 +1154,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+ 
+ /* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--motion-leave) var(--verb-lift-ease);
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..cf63ee94 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -325,9 +325,8 @@
+        --ease-noteWrite     easeOutQuint        write-in / reveal / grow
+        --ease-standard      material standard   show-hide fade / slide
+        --ease-springPop     backOut overshoot   icon / toggle pop
+-       --ease-accelIn       easeInCubic         accelerate-away exit
+-       --ease-fadeOut       easeIn flat-tail    solver-dim fade-out
+-       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw
++       --ease-accelIn       easeInCubic         accelerate-away exit (SHAPE only)
++       --ease-ghostDraw     easeOutCubic        pencil-ghost glyph draw (SHAPE, §6's)
+        --ease-drawOn        easeOutCubic'       pencil stroke draw-on / controls
+        --ease-loaderScrub   easeInOutCubic      loader continuous scrub
+        --ease-anticipatePop backInOut           anticipate + overshoot reveal
+@@ -338,10 +337,24 @@
+      observation, then batch B moved it again) and a count the tree can derive
+      should never be prose.
+ 
++     T9-W7 §13, THE OTHER LAYER. This set is now the SHAPE half of the grammar: a
++     curve spent inside `@keyframes` as a per-step timing function, or by the T6
++     motion vocabulary below. WHEN a thing moves is the LADDER's half — `--motion-*`,
++     published by one runtime node with its own reduce arm — and WHICH HAND moves it is
++     the verbs', published under this block as `--verb-*-ease`; a rule names one of each. That is why
++     `--ease-fadeOut` is gone from this ledger: all five of its consumers were the same
++     act — a hand taking something off the page — so its control points became
++     `--verb-lift-ease` and the token folded whole. A token whose last consumer leaves is
++     dead ink — `check-theme-tokens` reads it as such, which is how this one was caught
++     rather than argued. `--ease-ghostDraw` STAYS: pass 1 folded it into WRITE IN, and pass 2
++     hands its two consumers back to §6 with the rest of `gameCell.css` (the chair's §6.11),
++     so the token still has the ring it names.
++
+      --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+      but the curve is shared across the laminate leave, ScribbleLoader, and
+      DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+-     (census C4 reconciliation).
++     (census C4 reconciliation). It keeps its two SHAPE consumers (:1036 and
++     ScribbleLoader) and gives up its two timing ones to LIFT.
+      --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+      identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+      answer-key laminate's lay-down joins the one glass curve instead of the retired
+@@ -350,13 +363,44 @@
+   --ease-standard: cubic-bezier(0.4, 0, 0.2, 1);
+   --ease-springPop: cubic-bezier(0.34, 1.56, 0.64, 1);
+   --ease-accelIn: cubic-bezier(0.55, 0.055, 0.675, 0.19);
+-  --ease-fadeOut: cubic-bezier(0.32, 0, 0.67, 0);
+   --ease-ghostDraw: cubic-bezier(0.215, 0.61, 0.355, 1);
+   --ease-drawOn: cubic-bezier(0.33, 1, 0.68, 1);
+   --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+   --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+   --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
++
++  /* ── THE PENCIL VERBS, PUBLISHED (T9-W7 §13) ── generated, do not hand-edit ──
++     Written by scripts/publish-verbs.mjs from the marker pair in pencilConfig.ts;
++     lint:verbs diffs the two layers byte for byte. CURVES ONLY: no verb owns a number,
++     every length is a rung, and the ladder publishes its own values and its own reduce
++     arm from one node. A verb is what a hand does; a rung is how far. */
++  --verb-layDown-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-lift-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-slide-ease: cubic-bezier(0.32, 0.72, 0, 1);
++  --verb-writeIn-ease: cubic-bezier(0.22, 1, 0.36, 1);
++  --verb-rubOut-ease: cubic-bezier(0.32, 0, 0.67, 0);
++  --verb-dusk-ease: cubic-bezier(0.25, 0.1, 0.25, 1);
+ }
++/* ── end of the published verbs ── */
++
++/* ── THE LADDER'S REGISTRATIONS (T9-W7 §13, chair §6.5) ───────────────────────
++   The VALUES are published at boot by `publishMotionRungs()` from `MOTION.rungs`; the
++   REGISTRATIONS live here, in the first stylesheet, because a registration emitted beside
++   its values dies with them — and then deleting the publisher reads as `transition-property:
++   all`, exactly as it does with no ladder at all, and the born-RED row that proves the
++   publisher matters can never fire (measured both engines, MOT-LADDER pass 3).
++
++   `initial-value: 0ms`, never the rung's own value: with the real value as the initial, an
++   absent publisher still paints and the row re-silences itself. At 0ms an ABSENT publisher
++   reads EXACTLY as `reduce` does, which is the honest failure for a ladder. Consumers write
++   `var(--motion-x)` with NO fallback (chair §6.5), so a missing publisher fails at
++   computed-value time where a gate can see it. */
++@property --motion-whisper { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++@property --motion-leave { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++@property --motion-note { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++@property --motion-dusk { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++@property --motion-step { syntax: "<time>"; inherits: true; initial-value: 0ms; }
++@property --motion-throw { syntax: "<time>"; inherits: true; initial-value: 0ms; }
+ 
+ /* Dark theme */
+ .dark {
+@@ -587,7 +631,9 @@ html {
+      tracks the crayon in both themes — the old hardcoded light-green rgba never shifted dark. */
+   .solve-success .grid-line {
+     stroke: var(--color-gold-star) !important;
+-    transition: stroke 500ms;
++    /* LAY DOWN at the page rung: the gold arrives over the whole board and stays. 500ms
++       was the auditioned length and 520 is the rung it sits on, one frame away. */
++    transition: stroke var(--motion-throw) var(--verb-layDown-ease);
+   }
+ 
+   /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+@@ -604,11 +650,13 @@ html {
+       8px 5px 0px color-mix(in srgb, var(--color-gold-star) 25%, transparent),
+       0 8px 0px color-mix(in srgb, var(--color-gold-star) 20%, transparent),
+       8px 8px 0px color-mix(in srgb, var(--color-gold-star) 15%, transparent) !important;
+-    transition: box-shadow 500ms;
++    /* LAY DOWN at the page rung, the stroke sweep's twin above and on its clock. */
++    transition: box-shadow var(--motion-throw) var(--verb-layDown-ease);
+   }
+ 
+-  /* PRM: the gold lands instantly — the 500ms stroke/shadow sweeps are motion-adjacent
+-     cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source order wins. */
++  /* PRM: the gold lands instantly — the page-rung (520ms) stroke/shadow sweeps are
++     motion-adjacent cross-fades (T3-W9, F2-C / F3 §3.6). Same-specificity, later source
++     order wins. */
+   @media (prefers-reduced-motion: reduce) {
+     .solve-success .grid-line {
+       transition: none;
+@@ -665,8 +713,8 @@ html {
+     html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
+       transition:
+-        background-color 350ms ease,
+-        color 350ms ease !important;
++        background-color var(--verb-dusk-ms) var(--verb-dusk-ease),
++        color var(--verb-dusk-ms) var(--verb-dusk-ease) !important;
+     }
+   }
+ 
+@@ -968,6 +1016,9 @@ html {
+  *             plush-blink     .celebration-heart .eyes
+  *             ink-write-in    .margin-note-ink · .margin-note-meta ·
+  *                             .vignette-voice · .vignette-meta
++ *             ink-rub-out     .margin-note-ink.is-rubbing-out — the write-in's other
++ *                             direction (T9-W7 §13); the note's exit, which until now
++ *                             was a verb the estate had no implementation for
+  *             note-in         .error-note
+  *             (incumbents, kept where they are: cell-reveal, pencil-draw-on)
+  *   ERROR     refuse-shake    .solve-failure (the verdict) · .game-cell.is-refused (the
+@@ -976,7 +1027,10 @@ html {
+  *
+  * NUMBERS DO NOT LIVE HERE. Every duration and delay arrives as a bound custom
+  * property from `CELEBRATION` (the `.pencil-draw-on` --draw-dur/--draw-delay
+- * precedent); what lives here is shape and curve.
++ * precedent); what lives here is shape and curve. Where they DO live, since T9-W7 §13,
++ * is the pencil verbs: `MOTION.rungs` / `MOTION.verbs`, published above this file's
++ * §EASING as `--motion-*` and `--verb-*`. This list names what geometry does; that one
++ * names how long it takes and on which curve. A shape verb consumes a timing verb.
+  *
+  * TWO DISCIPLINES, enforced by construction:
+  *
+@@ -1121,6 +1175,22 @@ html {
+     }
+   }
+ 
++  /* The same hand, going the other way (T9-W7 §13, RUB OUT). The clip retreats from the
++     edge the write-in arrived at and the ink goes with it: one clip-path and one opacity
++     on an inline-block that is already its own paint, so the glyphs never re-lay out and
++     the text never boils. `to` is the consumer's cascade rest pose, which is what lets the
++     fill stay `backwards` like every other verb and makes the reduced-motion cut free. */
++  @keyframes ink-rub-out {
++    from {
++      clip-path: inset(0 0 0 0);
++      opacity: 1;
++    }
++    to {
++      clip-path: inset(0 0 0 100%);
++      opacity: 0;
++    }
++  }
++
+   @keyframes note-in {
+     from {
+       transform: translateY(8px);
+diff --git a/web/frontend/src/games/futoshiki/CaretOverlay.vue b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+index 1fdd193a..97270852 100644
+--- a/web/frontend/src/games/futoshiki/CaretOverlay.vue
++++ b/web/frontend/src/games/futoshiki/CaretOverlay.vue
+@@ -61,7 +61,7 @@ defineProps<{
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .caret-layer {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--verb-lift-ease);
+   }
+ }
+ </style>
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index b961a8c8..5846a995 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -141,7 +141,7 @@ defineExpose({
+   padding: 0.5rem 0.15rem;
+   clip-path: polygon(4% 2%, 96% 0%, 100% 50%, 97% 94%, 5% 100%, 0% 52%);
+   transform: rotate(1.4deg);
+-  transition: transform 150ms ease-out;
++  transition: transform var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ .drawer-tab:hover .drawer-tab-text {
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..e3c84e9e 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -1290,7 +1290,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+   .board-leaving .board-margin,
+   .board-leaving .completion-vignette {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--verb-lift-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..ee189244 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1735,9 +1735,15 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   animation: ink-write-in 380ms var(--ease-drawOn) 140ms backwards;
+ }
+ 
+-/* A RETURN IS LIGHTER THAN AN ARRIVAL. Same shape, less of it: the fold and the write-in both
+-   land 40ms sooner, and the board's ring holds no beat at all. Somebody you already know coming
+-   back is not the same news as somebody new. */
++/* A RETURN IS LIGHTER THAN AN ARRIVAL, and this is by how much: the fold lands 40ms sooner
++   (320 → 280) and the name is written in 60ms shorter and 20ms earlier (380 @140 → 320 @120),
++   so the name finishes 80ms sooner — 520ms after the row opens against 440ms.
++   Somebody you already know coming back is not the same news as somebody new.
++
++   SIX NUMBERS, ONE DECISION (T9-W7 §13 pass 2). The set is admitted whole as `graded` at the
++   literals the owner auditioned: naming them rung by rung would shorten the arriving name by
++   130ms, which is a retune wearing a rename, and the no-shorten law forbids it as a sweep.
++   The rung expression is banked as a pass-3 audition, shown beside this, for the owner. */
+ .player-row.is-returning {
+   animation: player-row-open 280ms var(--ease-glassGlide) backwards;
+ }
+@@ -1812,9 +1818,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   /* T8-W1 (agent C's M5 census, R2) — the lift TWEENS, like every sibling ink lift in this
+      card. `.icon-btn` has carried `color 150ms` since P1-W3 narrowed it off `all`; this one
+      snapped, so the two quiet words in the players well answered the pointer in two different
+-     languages. One property, the same 150ms, on the estate's standard curve — and NOT `all`,
+-     which is the exact width P1-W3 measured the cost of. */
+-  transition: color 150ms var(--ease-standard);
++     languages. One property, the same 150ms — the `whisper` rung, LAY DOWN since T9-W7 §13
++     (the ground answers the pointer; ∆progress 0.548 off Material's standard, declared) — and
++     NOT `all`, which is the exact width P1-W3 measured the cost of. */
++  transition: color var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ .players-leave:hover {
+@@ -1961,8 +1968,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+      ±1.25-unit nudge, not a tooth, and CrayonHeart already rules grain sub-perceptual below
+      20 px). Only what actually moved on hover is still allowed to tween. */
+   transition:
+-    background-color 150ms,
+-    color 150ms;
++    background-color var(--motion-whisper) var(--verb-layDown-ease),
++    color var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ /* T4-WM §2: the icon-btn hover paint stuck after a tap on touch (r2 §4) — fenced to
+@@ -2086,7 +2093,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ .sparkle-icon {
+   filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  transition:
++    filter var(--motion-leave) var(--verb-layDown-ease),
++    transform var(--motion-leave) var(--verb-layDown-ease);
+ }
+ 
+ @media (hover: hover) {
+@@ -2136,7 +2145,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ @media (prefers-reduced-motion: no-preference) {
+   .action-bar::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper) var(--verb-layDown-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/SolverErrorNote.vue b/web/frontend/src/games/shared/SolverErrorNote.vue
+index 4bcc8e34..41793f55 100644
+--- a/web/frontend/src/games/shared/SolverErrorNote.vue
++++ b/web/frontend/src/games/shared/SolverErrorNote.vue
+@@ -60,7 +60,7 @@ onMounted(async () => {
+ <style scoped>
+ .error-note {
+   pointer-events: auto; /* the strip container passes events through; the card takes them back */
+-  animation: note-in 250ms var(--ease-noteWrite) backwards;
++  animation: note-in var(--motion-note) var(--verb-layDown-ease) backwards;
+ }
+ 
+ .error-note-card {
+@@ -94,7 +94,7 @@ onMounted(async () => {
+   padding: 0.15rem 0.6rem;
+   cursor: pointer;
+   filter: url(#grain-static);
+-  transition: background 150ms;
++  transition: background var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ .error-note-retry:hover {
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..7d31e177 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -375,7 +375,7 @@
+    went with the sentinel's own — T9-W2 §2.2, above.) */
+ @media (prefers-reduced-motion: no-preference) {
+   .controls-card::before {
+-    transition: opacity 150ms;
++    transition: opacity var(--motion-whisper) var(--verb-layDown-ease);
+   }
+ }
+ 
+@@ -599,34 +599,34 @@
+ }
+ 
+ /* ── F6 page-turn: the controls chrome follows the grid (T3-W10) ──────────────
+-   Beat 3: fade IN on scene mount — 250ms easeOutCubic, +150ms after the draw-in's
+-   onset (the grid leads, chrome follows). `backwards` fill, NOT `both`: a finished
++   Beat 3: fade IN on scene mount — WRITE IN at the `mark` rung (250ms), +150ms after the
++   draw-in's onset (the grid leads, chrome follows); the delay keeps its own number. `backwards` fill, NOT `both`: a finished
+    fill-forward animation would pin opacity:1 and silently defeat the beat-1 fade.
+-   Beat 1: fade OUT with the erase — 200ms easeInCubic (things leave the page),
++   Beat 1: fade OUT with the erase — LIFT at the `breath` rung (200ms: things leave the page),
+    `animation: none` so the mount fade-in can never fight the leave.
+    PRM: the whole block gates to no-preference — mount and switch are both instant. */
+ @media (prefers-reduced-motion: no-preference) {
+   /* One card now, so one selector: `.mobile-board-width` was the other twin's name in each of
+      these three rules and it named the same fade. */
+   .scene-controls {
+-    animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
++    animation: controls-fade-in var(--motion-note) var(--verb-writeIn-ease) 150ms backwards;
+   }
+ 
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--verb-lift-ease);
+     animation: none;
+   }
+ 
+   /* T4-W12 Wave C2 §BEAT 0 — chrome leaves. The gallery entry fades the controls/drawer out on
+      this SAME 200ms scene-leaving fade WITHOUT erasing the board — the board folds into the
+      center card, it never erases (the one departure from the page-turn: no erase beat on entry).
+-     App holds `html.gallery-leaving` for the beat-0 window (MOTION.chromeLeaveMs), then the fold
++     App holds `html.gallery-leaving` for the beat-0 window (MOTION.rungs.leave), then the fold
+      begins. Global-html + scoped-descendant, the `html.drawer-closed` pattern above. PRM: this
+      whole block is no-preference-gated, so entry stays an instant cut. */
+   html.gallery-leaving .scene-controls {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--verb-lift-ease);
+     animation: none;
+   }
+ }
+diff --git a/web/frontend/src/games/shared/useControlsDrawer.ts b/web/frontend/src/games/shared/useControlsDrawer.ts
+index 5831150d..1d9109bc 100644
+--- a/web/frontend/src/games/shared/useControlsDrawer.ts
++++ b/web/frontend/src/games/shared/useControlsDrawer.ts
+@@ -1,5 +1,7 @@
+ import { computed, nextTick, ref, watch } from "vue";
+ 
++import { spend } from "@pencil/config/pencilConfig";
++
+ import { mediaRef, useRowRegime } from "./useCoarsePointer";
+ import { flipTransform, useFlipGlide, type FlipMover } from "./useFlipGlide";
+ 
+@@ -82,8 +84,17 @@ type DrawerPhase = "idle" | "closing" | "opening";
+ const STORAGE_KEY = "csp-drawer-open";
+ /** Band-D one-shot — the movers' shared WAAPI clock (scene.css arms no transitions).
+  *  520ms: the glass settle wants a touch more breath than the dead spring's 480
+- *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D). */
+-const GLIDE_MS = 520;
++ *  (auditioned 480/520/560 by eye at :3001 — the S3′ retune, within Band D).
++ *
++ *  T9-W7 §13: that number is now a RUNG and that curve is now a VERB. THE DRAWER SLIDES.
++ *  Nothing here turns over: `useFlipGlide` moves four boxes — sheet, case, masthead, tab —
++ *  by translate and scale along a rail, on the desk exactly as in the dock. Pass 2 called it
++ *  TURN on all three poses and pass 3's first plan branched on `portraitDock` so the desk
++ *  could keep the word; both are the same mistake, a verb chosen for where a thing is rather
++ *  than for what it does. ONE verb, ONE rung, three poses, no runtime fork — the audit-4
++ *  ruling verbatim, the same 520 ms on the same glass curve, byte for byte. Whether the dock
++ *  wants a longer `rise` instead is the owner's to dispose (U-10) and it is one word here. */
++const GLIDE = spend("slide", "throw");
+ 
+ const hasDom = typeof window !== "undefined" && typeof document !== "undefined";
+ 
+@@ -225,12 +236,12 @@ let targetOpen = drawerOpen.value;
+ // origin) — the host rides `flipTransform`, so `cx` is all that survives here.
+ const cx = (r: DOMRect) => r.left + r.width / 2;
+ 
+-/** The drawer's glide controller — 520ms on the ONE glass curve (the primitive's default
+- *  easing = `MOTION.curves.drawerGlide`), one clock, the never-never guard at 520+220.
++/** The drawer's glide controller — TURN at the page rung (520ms on the ONE glass curve,
++ *  named above, never typed), one clock, the never-never guard at 520+220.
+  *  `onSettle` is the drawer's own settle: demote the gesture layers, re-flip the layout to
+  *  the (possibly reversal-flipped) target, land idle, and focus the panel on open. */
+ const glideCtl = useFlipGlide({
+-  durationMs: GLIDE_MS,
++  spend: GLIDE,
+   onSettle: () => {
+     document.documentElement.classList.remove("drawer-gesturing");
+     applyLayout(targetOpen);
+diff --git a/web/frontend/src/games/shared/useFlipGlide.ts b/web/frontend/src/games/shared/useFlipGlide.ts
+index 161a96f6..1d85d592 100644
+--- a/web/frontend/src/games/shared/useFlipGlide.ts
++++ b/web/frontend/src/games/shared/useFlipGlide.ts
+@@ -1,4 +1,4 @@
+-import { MOTION } from "@pencil/config/pencilConfig";
++import type { spend } from "@pencil/config/pencilConfig";
+ 
+ /**
+  * useFlipGlide (T4-W12 §8, the M10 distillation) — the FLIP-on-WAAPI mover engine,
+@@ -18,7 +18,7 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  *  · Explicit [from, to] keyframes, `composite: replace`, `fill: none`: the animation
+  *    owns the transform channel outright, then releases to the underlying rest value —
+  *    no "previous committed style" to capture as a phantom-teleport base.
+- *  · ONE glass curve (`MOTION.curves.drawerGlide` by default), ONE clock (every mover
++ *  · ONE curve, the one the caller SPENT (the verb's, never a default), ONE clock (every mover
+  *    pinned to the same `startTime` — zero stagger, no pending-start dead frame).
+  *  · Mid-glide re-click retargets by REVERSAL (`anim.reverse()`, velocity-plausible,
+  *    zero new keyframes).
+@@ -50,6 +50,15 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * the rest pose is CSS `translate:`, the gesture writes `transform:` and only `transform:`.
+  */
+ 
++/**
++ * The tag every mover this engine starts carries (T9-W8 C06). A caller that custodies a
++ * subtree across a DOM move snapshots what is in flight, moves, and puts the subtree back —
++ * and anything it did not snapshot reads as invented by the move. A glide this engine started
++ * one tick ago is not an invention, and WAAPI's own `Animation.id` is the handle that says so:
++ * one string at start, one compare at the custodian, nothing at runtime.
++ */
++export const FLIP_GLIDE_ANIM_ID = "flip-glide";
++
+ /** The FLIP rect inputs — `DOMRect` (from `getBoundingClientRect`) assigns straight in. */
+ export interface FlipRect {
+   readonly left: number;
+@@ -84,12 +93,13 @@ export interface FlipMover {
+ }
+ 
+ export interface FlipGlideOptions {
+-  /** Glide duration (ms). The drawer passes 520; a carousel card-step 440. */
+-  durationMs: number;
+-  /** The easing — defaults to the ONE house glass curve (`MOTION.curves.drawerGlide`). */
+-  easing?: string;
++  /** WHAT THIS GLIDE SPENDS — the whole tuple from `spend(verb, rung)`, never a duration and
++   *  never a curve. A caller can no longer omit the verb and still glide: the options half of
++   *  `element.animate` IS this value, passed through, so the composite and the fill are the
++   *  VERB's arms and not a retyped taste. */
++  spend: ReturnType<typeof spend>;
+   /** Never-never backstop: a glide whose `finished` can't resolve settles late, never
+-   *  never. Defaults to `durationMs + 220` (the drawer's `SETTLE_GUARD_MS`). */
++   *  never. Defaults to the spent rung + 220 (the drawer's `SETTLE_GUARD_MS`). */
+   settleGuardMs?: number;
+   /** Run at settle (natural finish, reversed finish, or the guard) AFTER the movers are
+    *  cancelled + origins cleared. The domain's layout re-flip / focus lives here. */
+@@ -112,8 +122,7 @@ export interface FlipGlideController {
+ }
+ 
+ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+-  const easing = options.easing ?? MOTION.curves.drawerGlide;
+-  const guardMs = options.settleGuardMs ?? options.durationMs + 220;
++  const guardMs = options.settleGuardMs ?? options.spend.duration + 220;
+ 
+   let movers: { el: HTMLElement; anim: Animation }[] = [];
+   let settleTimer: number | null = null;
+@@ -161,12 +170,11 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     for (const spec of specs) {
+       if (spec.transformOrigin != null)
+         spec.el.style.transformOrigin = spec.transformOrigin;
+-      const anim = spec.el.animate([{ transform: spec.from }, { transform: spec.to }], {
+-        duration: options.durationMs,
+-        easing,
+-        composite: "replace",
+-        fill: "none",
+-      });
++      const anim = spec.el.animate(
++        [{ transform: spec.from }, { transform: spec.to }],
++        options.spend,
++      );
++      anim.id = FLIP_GLIDE_ANIM_ID; // whose mover this is (§FLIP_GLIDE_ANIM_ID)
+       movers.push({ el: spec.el, anim });
+     }
+     // One clock, literally (§3-S3): every mover pinned to the same startTime — zero
+diff --git a/web/frontend/src/games/thermo/ThermoTube.vue b/web/frontend/src/games/thermo/ThermoTube.vue
+index ff009dff..b91b524f 100644
+--- a/web/frontend/src/games/thermo/ThermoTube.vue
++++ b/web/frontend/src/games/thermo/ThermoTube.vue
+@@ -111,7 +111,7 @@ const tubes = computed<Tube[]>(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .board-leaving .thermo-tube-overlay {
+     opacity: 0;
+-    transition: opacity 200ms var(--ease-fadeOut);
++    transition: opacity var(--motion-leave) var(--verb-lift-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/main.ts b/web/frontend/src/main.ts
+index 1c533ff0..fb81796c 100644
+--- a/web/frontend/src/main.ts
++++ b/web/frontend/src/main.ts
+@@ -8,6 +8,11 @@ if (import.meta.env.DEV) {
+ 
+ import { createApp } from "vue";
+ import App from "./App.vue";
++import { publishMotionRungs } from "@pencil/config/pencilConfig";
+ import "./assets/index.css";
+ 
++// THE LADDER, published once before mount: one `<style data-motion-rungs>` node carrying the
++// rungs and their reduce arm, generated from `MOTION.rungs` so the two layers cannot disagree.
++publishMotionRungs();
++
+ createApp(App).mount("#app");
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..fde7a575 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -714,7 +714,7 @@ onUnmounted(() => {
+   padding: 0;
+   border-radius: 50%;
+   background: transparent;
+-  transition: transform 200ms ease;
++  transition: transform var(--motion-leave) var(--verb-layDown-ease);
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+@@ -742,6 +742,25 @@ onUnmounted(() => {
+   outline-offset: calc(2px - var(--toggle-bleed, 0px));
+ }
+ 
++/* ── THE WHIRL'S BEAT TABLE (T9-W7 §13 pass 2) — data, beside the gesture ──────────
++   The turn is ONE character, admitted whole: eleven values the owner auditioned and kept,
++   and no verb reaches inside them. The table is written here once, and `npm run lint:verbs`
++   (rule 8) reads each rule's own declaration back off it — the prototype's roster reads the
++   COMPUTED duration and delay off the live element and compares against this same table, so
++   a comment that contradicts its declaration reds on the surface the owner audited most.
++   `delayOnly` marks the two rules that carry a bare `transition-delay`.
++
++   @toggle-beats {
++     "wring":  { "selector": ".toggle-icon .warp", "property": "transform", "duration": 340, "delay": 0 },
++     "bloom":  { "selector": ".toggle-icon.is-active .warp", "property": "transform", "duration": 800, "delay": 60 },
++     "rise":   { "selector": ".toggle-icon.is-active", "property": "opacity", "duration": 300, "delay": 60 },
++     "out":    { "selector": ".toggle-icon", "property": "opacity", "duration": 100, "delay": 240 },
++     "tuck":   { "selector": ".toggle-icon .twinkle-star", "property": "scale", "duration": 150, "delay": 0 },
++     "star1":  { "selector": ".toggle-icon.is-active .twinkle-star", "property": "scale", "duration": 150, "delay": 560 },
++     "star2":  { "selector": ".toggle-icon.is-active .twinkle-star-2", "property": "transition-delay", "duration": 0, "delay": 640, "delayOnly": true },
++     "star3":  { "selector": ".toggle-icon.is-active .twinkle-star-3", "property": "transition-delay", "duration": 0, "delay": 720, "delayOnly": true }
++   } */
++
+ /* ── THE BLOOM (T3-W13 §2) — live instances, gesture only ─────────────────
+    The -270° whirl and the translateX(-50%) slide are DEAD: a pop-up piece doesn't
+    travel, it rises out of the page and sinks back into it. Both live icons are
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+index c3adf396..1700fa69 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+@@ -181,8 +181,8 @@ defineExpose({ close });
+   pointer-events: none;
+   transform: scale(0.9) translateY(8px);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--motion-whisper) var(--verb-layDown-ease),
++    transform var(--motion-whisper) var(--verb-layDown-ease),
+     visibility 0s linear 150ms;
+   z-index: 50;
+   min-width: 16rem;
+@@ -203,8 +203,8 @@ defineExpose({ close });
+   pointer-events: auto;
+   transform: scale(1) translateY(0);
+   transition:
+-    opacity 150ms var(--ease-standard),
+-    transform 150ms var(--ease-standard),
++    opacity var(--motion-whisper) var(--verb-layDown-ease),
++    transform var(--motion-whisper) var(--verb-layDown-ease),
+     visibility 0s linear 0s;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+index f662c045..8f23ae94 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/CrayonHeart.vue
+@@ -326,7 +326,7 @@ const filterUrl = computed(() => {
+    no motion, PRM-safe by construction. Triggered by the hosting `.group`'s
+    hover/focus-within (the attribution trigger), with a self-hover fallback. */
+ .face {
+-  transition: opacity 240ms ease;
++  transition: opacity var(--motion-note) var(--verb-layDown-ease);
+ }
+ .face-b {
+   opacity: 0;
+diff --git a/web/frontend/src/pencil/chrome/CompletionVignette.vue b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+index c33a0905..c5108306 100644
+--- a/web/frontend/src/pencil/chrome/CompletionVignette.vue
++++ b/web/frontend/src/pencil/chrome/CompletionVignette.vue
+@@ -130,7 +130,7 @@ withDefaults(
+    star needs nothing here: it plays its own landing. */
+ .vignette-voice,
+ .vignette-meta {
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--verb-writeIn-ease) backwards;
+ }
+ 
+ /* ── Row regime base (≥1024): the corner-press sticker over the board's top-RIGHT
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..8d7a9170 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -408,8 +408,8 @@ const dealStyle = computed(() => {
+   opacity: var(--d-opacity, 0.58);
+   transform-origin: center center;
+   transition:
+-    transform var(--card-step-ms, 440ms) var(--ease-glassGlide),
+-    opacity var(--card-step-ms, 440ms) var(--ease-glassGlide);
++    transform var(--motion-step) var(--verb-slide-ease),
++    opacity var(--motion-step) var(--verb-slide-ease);
+   will-change: transform, opacity;
+ }
+ 
+@@ -590,7 +590,7 @@ const dealStyle = computed(() => {
+   line-height: 1.1;
+   color: var(--color-muted-foreground);
+   letter-spacing: 0.01em;
+-  transition: color 150ms var(--ease-standard);
++  transition: color var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ /* THE SUB-LINE ROW (T9-W2 §2.1) — the range line and the roster echo on ONE line. The echo
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..167dca79 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -368,7 +368,7 @@ function startDeal() {
+     for (let i = 0; i < props.cards.length; i++) dealReveal[i] = 1; // PRM: settled, no motion
+     return;
+   }
+-  const base = Math.round(MOTION.boardFoldMs * 0.42); // after the fold has begun
++  const base = Math.round(MOTION.rungs.throw * 0.42); // after the fold has begun
+   const stagger = 90; // outward-from-center step
+   props.cards.forEach((_, i) => {
+     if (i === center) return;
+@@ -927,7 +927,6 @@ onMounted(async () => {
+     ref="rootEl"
+     class="game-gallery"
+     :class="{ 'is-coarse': coarse }"
+-    :style="{ '--card-step-ms': `${MOTION.cardStepMs}ms` }"
+   >
+     <div
+       ref="viewport"
+@@ -1317,7 +1316,7 @@ onMounted(async () => {
+   border-radius: 50%;
+   border: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+   background: transparent;
+-  transition: background-color 200ms var(--ease-standard);
++  transition: background-color var(--motion-leave) var(--verb-layDown-ease);
+ }
+ 
+ .gallery-pip.is-inked {
+@@ -1418,8 +1417,8 @@ onMounted(async () => {
+   padding: 0.32rem 0.9rem;
+   border-radius: 0.3rem;
+   transition:
+-    background-color 150ms var(--ease-standard),
+-    color 150ms var(--ease-standard);
++    background-color var(--motion-whisper) var(--verb-layDown-ease),
++    color var(--motion-whisper) var(--verb-layDown-ease);
+ }
+ 
+ /* THE GROUND FORM (T8 M5, agent C's boil census — R2 in this fence). These are the two most
+@@ -1467,12 +1466,14 @@ onMounted(async () => {
+ }
+ 
+ /* The ribbon SLIDES in (a note pulled from the card) — a CSS transition on the Vue
+-   Transition, the app's card idiom (Wave B's depth transition), not a new animation brain. */
++   Transition, the app's card idiom (Wave B's depth transition), not a new animation brain.
++   LAY DOWN at the `mark` rung: 240 → 250ms, the section's length row (MOT-LADDER files it
++   against R6:48; this family cites). */
+ .guard-ribbon-enter-active,
+ .guard-ribbon-leave-active {
+   transition:
+-    transform 240ms var(--ease-glassGlide),
+-    opacity 240ms var(--ease-glassGlide);
++    transform var(--motion-note) var(--verb-layDown-ease),
++    opacity var(--motion-note) var(--verb-layDown-ease);
+ }
+ 
+ .guard-ribbon-enter-from,
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+index f85e4b67..90854285 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
++++ b/web/frontend/src/pencil/chrome/GameGallery/useCarouselGlide.ts
+@@ -1,5 +1,5 @@
+ import { onBeforeUnmount, onMounted, type Ref } from "vue";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { spend } from "@pencil/config/pencilConfig";
+ 
+ /**
+  * The carousel track glide (T4-W12 §6) — the same FLIP-on-WAAPI discipline the drawer
+@@ -24,8 +24,10 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * PRM: `glideTo` collapses to an instant `jumpTo` (no tween frames).
+  */
+ 
+-const GLIDE_MS = MOTION.cardStepMs;
+-const GLIDE_EASING = MOTION.curves.drawerGlide;
++/** A card SLIDES one slot along its rail, which is what the step rung is named for
++ *  (T9-W7 §13). Same 440ms, same glass curve; the tuple is spent by name now. */
++const GLIDE = spend("slide", "step");
++const GLIDE_MS = GLIDE.duration;
+ /** Never-never backstop (App.vue's seam-guard grammar): a glide whose `finished` can't
+  *  resolve (unmounted mid-flight) settles late, never never. */
+ const SETTLE_GUARD_MS = GLIDE_MS + 200;
+@@ -328,10 +330,7 @@ export function useCarouselGlide(
+     anim = t.animate(
+       [{ transform: `translateX(${dx}px)` }, { transform: "translateX(0px)" }],
+       {
+-        duration: GLIDE_MS,
+-        easing: GLIDE_EASING,
+-        composite: "replace",
+-        fill: "none",
++        ...GLIDE,
+       },
+     );
+     // One clock (the drawer's §3-S3 discipline): pin the start so the first painted
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 1f4a357c..6af171c4 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -644,7 +644,7 @@ span.logo-trigger {
+   height: var(--caret-size);
+   color: var(--color-foreground);
+   transform: translateY(var(--caret-nudge)) rotate(90deg);
+-  transition: transform 200ms var(--ease-noteWrite);
++  transition: transform var(--motion-leave) var(--verb-layDown-ease);
+ }
+ 
+ @media (min-width: 640px) {
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..1529430f 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -146,9 +146,18 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--verb-writeIn-ease) backwards;
+ }
+ 
++/* RUB OUT is a VERB, and this file is where its tuple is defined — but nothing in any
++   template, script or test ever writes `.is-rubbing-out`, so the rule it used to carry was ink
++   no player could reach. It is DELETED. WHICH act erases a note is §7's design (NOTE-ERASE),
++   and the rule lands there WITH its writer, reading
++   `var(--motion-whisper) var(--verb-rubOut-ease) backwards`; it also takes NOTE-ERASE's
++   specificity audit with it, since a Vue `<Transition>` leave class is (0,1,0) and loses to
++   `[data-note-age="settled"]` (0,2,0) on the same node. The `ink-rub-out` keyframe stays in
++   index.css beside `ink-write-in`, which is where the verb's shape belongs. */
++
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+    Foil pair kept from the sticker (#FDE68A wax / #F0B030 stroke) — non-text, wax-tier. */
+ .note-star {
+@@ -177,6 +186,6 @@ const NOTE_STAR_D =
+      .dt-label for this exact reason never reached the note. */
+   color: var(--ink-press-quiet);
+   pointer-events: auto;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--verb-writeIn-ease) backwards;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue b/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
+index 455d41ca..1eaf6f1e 100644
+--- a/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
++++ b/web/frontend/src/pencil/chrome/icons/FillForcedIcon.vue
+@@ -67,9 +67,14 @@ defineProps<{ size?: number; playing?: boolean }>();
+ 
+ <style scoped>
+ /* The forced-fill mark draws itself in — the icon echo of the board's reveal-wave draw-in
+-   (stroke-dashoffset → 0 on the same 350ms curve SolveIcon's check uses; one grammar). */
++   (stroke-dashoffset → 0, the same length and the same verb SolveIcon's check uses; one
++   grammar). T9-W7 §1.3: the 350 was the DUSK's number typed twice in two languages, and it is
++   the ladder's `dusk` rung now. The verb is read off what the keyframe moves — a stroke laid
++   onto the page, which is LAY DOWN — so this row leaves the ledger's `shape` class and joins
++   the law. The curve moves with the name: `--ease-standard` was Material's, and a hand is not
++   Material. */
+ .mark-draw {
+-  animation: markDraw 350ms var(--ease-standard) forwards;
++  animation: markDraw var(--motion-dusk) var(--verb-layDown-ease) forwards;
+ }
+ 
+ @keyframes markDraw {
+diff --git a/web/frontend/src/pencil/chrome/icons/SolveIcon.vue b/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
+index cd40fcf2..f35847b8 100644
+--- a/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
++++ b/web/frontend/src/pencil/chrome/icons/SolveIcon.vue
+@@ -50,9 +50,11 @@ defineProps<{ size?: number; playing?: boolean }>();
+ </template>
+ 
+ <style scoped>
+-/* Check draw-in: stroke-dashoffset → 0 */
++/* Check draw-in: stroke-dashoffset → 0. The length is the `dusk` rung (T9-W7 §1.3, where the
++   verb `dusk` gave its number back to the ladder) and the verb is LAY DOWN, read off what the
++   keyframe moves. Its twin is FillForcedIcon's mark-draw, same rung, same verb. */
+ .check-draw {
+-  animation: drawIn 350ms var(--ease-standard) forwards;
++  animation: drawIn var(--motion-dusk) var(--verb-layDown-ease) forwards;
+ }
+ 
+ @keyframes drawIn {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..37faad6a 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -118,6 +118,63 @@ export interface FilterPreset {
+ // the same rAF tick and the pipeline gets idle frames between beats. Cadences quantize
+ // to whole beats (`beatsFor`); amplitudes, seeds, and the boil character are untouched.
+ 
++/** ── THE LADDER (T9-W7 §13 · MOT-LADDER §2.1) ────────────────────────────
++ *  A duration is named for how far a thing TRAVELS, never for how it feels. These six are not
++ *  a scale someone invented: they are the estate's own histogram given names (150 ×21, 200 ×16,
++ *  250 ×9 — 43.8% of every literal shipped; 440 and 520 were already MOTION's own; 350 is the
++ *  dusk). A seventh rung is a diff review, not a freedom.
++ *
++ *  THE NAMES ARE THE LADDER'S, NOT THIS FAMILY'S (pass 3). Pass 2 spelled them
++ *  `page/step/sheet/mark/breath/touch` and published them as `--rung-*`; the ladder's own
++ *  names ship instead and `--rung-*` dies. 45 declarations move a NAME and no number, so the
++ *  paint is preserved by construction. `sheet` 280 had no home on the ladder and was not
++ *  rounded onto one: it is ADMITTED at its site, visible, with its ruling (§1.2).
++ *
++ *  A RUNG IS TRAVEL, NEVER A WAIT (rule 2′). The first time value in a term is how far; the
++ *  second is when, and it keeps its own number. Spelling a delay as a rung is what moved six
++ *  decided beats in pass 1, because a delay that reads a rung is retuned by a ladder it never
++ *  belonged to. */
++const RUNGS = {
++  /** the page answers a pointer */
++  whisper: 150,
++  /** a thing stops being there */
++  leave: 200,
++  /** a mark is made, or unmade */
++  note: 250,
++  /** the light over the whole page changes */
++  dusk: 350,
++  /** one slot of travel along a rail */
++  step: 440,
++  /** a whole sheet, or the whole board, goes over */
++  throw: 520,
++} as const;
++
++/** THE LADDER'S VALUES, rendered from the object — pure, testable, one string. The reduce arm
++ *  is a VALUE of the ladder rather than a block in every file: under reduce every rung reads
++ *  0ms at the root, so every rule that spends one becomes a same-frame swap and a rule is armed
++ *  by naming a rung. The REGISTRATIONS are not here — they are in `index.css`, in the first
++ *  stylesheet, at `initial-value: 0ms`, so an absent publisher reads as reduce rather than as
++ *  `all` (MOT-LADDER measured both engines; that is the only form in which chair §6.5's
++ *  no-fallback law buys anything). */
++function motionRungsCss(rungs: Record<string, number> = MOTION.rungs): string {
++  const rows = Object.entries(rungs);
++  const live = rows.map(([n, ms]) => `--motion-${n}:${ms}ms`).join(";");
++  const still = rows.map(([n]) => `--motion-${n}:0ms`).join(";");
++  return `:root{${live}}@media (prefers-reduced-motion: reduce){:root{${still}}}`;
++}
++
++/** THE ONE PUBLISHER of the ladder. Appends ONE `<style data-motion-rungs>` node carrying the
++ *  values and the reduce arm, generated from `MOTION.rungs`, so the CSS layer and the TS layer
++ *  cannot disagree. Called once from main.ts before mount. A `<style>` node, never inline
++ *  properties: an inline declaration outranks every author rule, so the reduce arm could never
++ *  reach a rung written onto `<html>.style`. */
++export function publishMotionRungs(doc: Document = document): void {
++  const el = doc.createElement("style");
++  el.dataset.motionRungs = "";
++  el.textContent = motionRungsCss();
++  doc.head.append(el);
++}
++
+ export const MOTION = {
+   /** The one beat window every perpetual boil swap lands on (~8Hz). */
+   beatMs: 125,
+@@ -134,33 +191,110 @@ export const MOTION = {
+     /** The moon's, 8Hz → 5.33Hz — the mark's 1.5× on the same stack. */
+     moon: 1.5,
+   },
+-  /** Carousel card-step glide (T4-W12) — a keyboard/button step of the gallery
+-   *  track rides the ONE glass curve (`curves.drawerGlide`) as a WAAPI FLIP transform
+-   *  at this duration, one clock, monotone, zero overshoot. A shorter throw than the
+-   *  drawer's 520ms ceiling (a card step travels one slot, not a full sheet): 440ms,
+-   *  auditioned by eye at the local preview, inside the glass band. Lands HERE, not as
+-   *  a mover-local literal, per the wave covenant (no new timing constants outside
+-   *  pencilConfig). PRM collapses the glide to an instant snap (no tween).
++  /** ── THE PENCIL VERBS (T9-W7 §13) ────────────────────────────────────────────
++   *  Motion here is named by what a HAND DOES ON PAPER. Six hand verbs and one light
++   *  verb, closed. A verb owns its curve, its property set, its fill arm, its PRM arm
++   *  and THE RUNGS IT MAY SPEND; it owns no number, so a call site names a verb and a
++   *  rung and never types a duration or picks a curve. `--verb-*` in @theme is this
++   *  object published byte for byte by `scripts/publish-verbs.mjs`; `npm run lint:verbs`
++   *  diffs the two layers and refuses a declaration that names neither.
+    *
+-   *  RATIFY-ME (T4-W12 ballot row 4): the card-step glide duration. 440ms auditioned at
+-   *  the Wave-D preview (:4788) against 380/440/520 — 380 read clipped for a one-slot
+-   *  throw, 520 (the drawer's full-sheet ceiling) dragged for the shorter travel; 440
+-   *  is the settled read, monotone on the glass curve with zero overshoot (`snap-glide-
+-   *  trace.json`). Inside the glass band, no new named curve. */
+-  cardStepMs: 440,
+-  /** Board⇄card FOLD (T4-W12 Wave C) — the gallery entry folds the live board INTO the
+-   *  center card (and the exit unfolds it back) as a classic FLIP on the ONE glass curve
+-   *  (`curves.drawerGlide`) via the extracted `useFlipGlide` engine. A FULL-sheet throw
+-   *  (board → card-face, not one card slot), so it takes the drawer's glass ceiling 520ms
+-   *  — longer than the 440ms card-step. Lands HERE, not as an App-local literal, per the
+-   *  covenant (no timing constants outside pencilConfig). PRM cuts it (same-frame swap). */
+-  boardFoldMs: 520,
+-  /** BEAT 0 — chrome leaves (T4-W12 Wave C2 §ENTRY). The gallery entry opens by fading the
+-   *  scene's controls/drawer out on the EXISTING scene-leaving beat (scene.css, 200ms) — the
+-   *  board itself never erases (we fold it, not discard it). This is that band, so the fold
+-   *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+-   *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+-  chromeLeaveMs: 200,
++   *  SHAPE vs TIMING, the other half of the grammar: T6's motion vocabulary
++   *  (`assets/index.css` §THE MOTION VOCABULARY) names what geometry DOES — the KIN
++   *  families, and the `--ease-*` set spent inside `@keyframes` as a per-step timing
++   *  function. It says numbers do not live there, and this is where they live. A shape
++   *  verb consumes a timing verb. Neither set is called "the verbs" twice. */
++  rungs: RUNGS,
++  /* @verbs-begin */
++  verbs: {
++    /** a hand puts something on the page and it stays. `breath` is here because a ground
++     *  arriving at 200ms is the estate's second-commonest length: without that rung three
++     *  shipped rows (the sparkle, the gallery pip, the toggle's hover) were silently
++     *  lengthened to `mark` for no reason but the ladder's gaps. `filter` is here because
++     *  the `transition: all` cure names `filter, transform`, and a property law that reds
++     *  its own cure is a law nobody keeps. */
++    layDown: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "opacity, transform, background-color, color, box-shadow, stroke, filter",
++      fill: "none",
++      mechanism: ["transition", "keyframe"],
++      rungs: ["throw", "note", "leave", "whisper", "dusk"],
++    },
++    /** a hand takes something off the page. ONE curve over both declared twins (the
++     *  chrome-leave in `scene.css` and the deck's leave-only dissolve in `App.vue`) and
++     *  over the laminate's lift-away: `--ease-fadeOut` and `--ease-accelIn` are the same
++     *  leave within 2% AUC, so they collapse here instead of arguing. `--ease-fadeOut`
++     *  retires INTO this row; `--ease-accelIn` keeps its two SHAPE consumers and loses
++     *  its two timing ones. */
++    lift: {
++      ease: "cubic-bezier(0.32, 0, 0.67, 0)",
++      props: "opacity, transform, scale",
++      fill: "none",
++      mechanism: ["transition", "keyframe"],
++      rungs: ["leave", "note", "whisper"],
++    },
++    /** the page itself turns; what was here is now there. Fenced to `page` alone — a
++     *  fold is never shorter than a page — which is what makes TURN and SLIDE two verbs
++     *  on one curve rather than one verb with a loose number. Carries the owner's
++     *  audit-4 ruling verbatim: the glass curve at 520ms, scope-fenced to the drawer and
++     *  the fold that borrows its ceiling. */
++    turn: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "transform",
++      fill: "none",
++      mechanism: ["waapi"],
++      rungs: ["throw"],
++      /** The one verb NO stylesheet spends: every turn in the product is a script mover, so
++       *  publishing `--verb-turn-ease` would mint a token with no consumer and the estate's
++       *  dead-token census would red on it (measured — `check-theme-tokens` names it). The
++       *  curve still has a CSS mirror where CSS needs one: `--ease-glassGlide`, byte-identical,
++       *  under the two-layer rule. `published: false` keeps the two layers diffable without
++       *  minting ink nothing reads. */
++      published: false,
++    },
++    /** a thing travels its rail and stays itself */
++    slide: {
++      ease: "cubic-bezier(0.32, 0.72, 0, 1)",
++      props: "transform, opacity",
++      fill: "none",
++      mechanism: ["waapi", "transition"],
++      rungs: ["throw", "step", "whisper"],
++    },
++    /** ink arrives the way a hand writes it */
++    writeIn: {
++      ease: "cubic-bezier(0.22, 1, 0.36, 1)",
++      props: "clip-path, stroke-dashoffset, opacity",
++      fill: "backwards",
++      mechanism: ["keyframe"],
++      rungs: ["note", "leave", "whisper"],
++    },
++    /** ink leaves the way a hand erases it — the write-in run backwards under an
++     *  accelerating hand. §7's hole, given a tuple. The keyframe's `to` equals the
++     *  consumer's cascade rest pose, so the fill is `backwards` like every other verb
++     *  and `FILL_ALLOWLIST` never hears about it. */
++    rubOut: {
++      ease: "cubic-bezier(0.32, 0, 0.67, 0)",
++      props: "clip-path, opacity",
++      fill: "backwards",
++      mechanism: ["keyframe"],
++      rungs: ["whisper"],
++    },
++    /** THE CLOSED-SET TEST. A change of LIGHT over the whole page is not a lay-down, a
++     *  lift, a turn or a slide, so the light gets a verb of its own — and the one own
++     *  number in the set, which the gate counts (exactly one own-ms verb, ever). The
++     *  curve is CSS `ease`'s own control points under a name, so the paint is
++     *  byte-identical to what ships: the memorable thing about the dusk is that it does
++     *  not move at all, it gets a name and a home. Its selectors stay the FIVE narrowed
++     *  ones (`assets/index.css`), never the 46 P1-W3 killed for +23.5 fps. */
++    dusk: {
++      ease: "cubic-bezier(0.25, 0.1, 0.25, 1)",
++      props: "background-color, color",
++      fill: "none",
++      mechanism: ["transition"],
++      rungs: ["dusk"],
++    },
++  },
++  /* @verbs-end */
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+@@ -194,6 +328,31 @@ export const MOTION = {
+   },
+ } as const;
+ 
++/** The verbs a WAAPI mover may spend: DERIVED from each verb's own `mechanism`, never listed
++ *  twice. `spend("writeIn", …)` is a type error rather than a masked fallback — a keyframe
++ *  verb has no options half to hand a mover. */
++type WaapiVerb = {
++  [K in keyof typeof MOTION.verbs]: "waapi" extends (typeof MOTION.verbs)[K]["mechanism"][number]
++    ? K
++    : never;
++}[keyof typeof MOTION.verbs];
++
++/** A WAAPI mover SPENDS a verb at a rung (T9-W7 §13): it never types a number and it
++ *  never picks a curve. Returns the options half of `element.animate(keyframes, …)`;
++ *  the keyframes stay the caller's, because the SHAPE is theirs and the TIMING is ours.
++ *  The fill comes from the VERB (pass 2) — it is the verb's arm, not the mover's taste, and
++ *  no verb fills `forwards`, so `FILL_ALLOWLIST` never hears about a spend. */
++export const spend = <V extends WaapiVerb>(
++  verb: V,
++  rung: (typeof MOTION.verbs)[V]["rungs"][number],
++) =>
++  ({
++    duration: MOTION.rungs[rung],
++    easing: MOTION.verbs[verb].ease,
++    fill: MOTION.verbs[verb].fill,
++    composite: "replace",
++  }) as const;
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..82e21c6c 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -586,8 +586,8 @@ onUnmounted(() => {
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+     transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++      stroke-dashoffset var(--motion-note) var(--verb-writeIn-ease),
++      opacity var(--motion-throw) var(--verb-layDown-ease);
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+index 48de51d2..ea035071 100644
+--- a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
++++ b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+@@ -218,24 +218,33 @@ const keyBucketMs = computed(() =>
+   z-index: 3; /* above the cells layer, a sibling over the board — never inside its <g> */
+   border-radius: 0.75rem; /* match board-wrapper rounded-xl */
+   pointer-events: none;
+-  /* lift-away (leaving): fast + easeInCubic (the erase-family asymmetry) */
++  /* lift-away (leaving): LIFT at the `leave` rung — the erase-family asymmetry, same 200ms,
++     and the curve is the one leave this house has (3.2% of area off easeInCubic, declared) */
+   opacity: 0;
+   transform: scale(1.02);
+   transition:
+-    opacity 200ms var(--ease-accelIn),
+-    transform 200ms var(--ease-accelIn);
++    opacity var(--motion-leave) var(--verb-lift-ease),
++    transform var(--motion-leave) var(--verb-lift-ease);
+ }
+ 
+ .answer-key-laminate.is-shown {
+   /* lay-down (arriving): the glass glide — T4-W10 re-points the retired overshoot
+      spring (0.34, 1.56, 0.64, 1) onto the audit-4 monotone glass curve; 280ms
+      preserved, start/end pose unchanged, only the velocity profile loses the
+-     overshoot (the laminate was the one surface the audit-4 ruling never reached). */
++     overshoot (the laminate was the one surface the audit-4 ruling never reached).
++
++     THE 280 IS ADMITTED, NOT ROUNDED (T9-W7 §1.2). The ladder has no 280 and this pose is
++     the owner's, kept at T4-W10. Shortening it to `note` 250 buys nothing and the quality law
++     forbids buying anything with a shorter clock; lengthening it to `dusk` 350 moves a
++     ratified pose with no audition, which is U-10. So the number stays here where a reader
++     sees it, with a ledger row of kind `signature` naming the one rule it breaks. The
++     lift-away below is 200 and that IS a rung: it reads `leave`, and R6 §1.2's erase
++     asymmetry (280 down, 200 up) survives the rename intact. */
+   opacity: 1;
+   transform: scale(1);
+   transition:
+-    opacity 280ms var(--ease-glassGlide),
+-    transform 280ms var(--ease-glassGlide);
++    opacity 280ms var(--verb-layDown-ease),
++    transform 280ms var(--verb-layDown-ease);
+ }
+ 
+ .key-cell {
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..df515faa 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -106,7 +106,7 @@ const geom = computed(() => {
+   border: none;
+   opacity: 0;
+   pointer-events: none;
+-  transition: opacity 150ms;
++  transition: opacity var(--motion-whisper) var(--verb-layDown-ease);
+   /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+      the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+      controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it
+diff --git a/web/frontend/scripts/check-pencil-verbs.mjs b/web/frontend/scripts/check-pencil-verbs.mjs
+new file mode 100644
+index 00000000..f4ab9b75
+--- /dev/null
++++ b/web/frontend/scripts/check-pencil-verbs.mjs
+@@ -0,0 +1,769 @@
++#!/usr/bin/env node
++/**
++ * THE PENCIL VERBS GATE (T9-W7 §13).  `npm run lint:verbs`
++ *
++ * Motion in this product is named by what a hand does on paper. This reads every shipped
++ * `transition:` and `animation:` under `src/` and asks eight things of it.
++ *
++ *   1′ A VERB        outside a `@keyframes` body a `transition:` curve is `var(--verb-*-ease)`
++ *                    or a `v-bind`. `--ease-*` is the SHAPE layer: legal as
++ *                    `animation-timing-function` inside a keyframe, or on an `animation:`
++ *                    the ledger admits as `shape`. A browser keyword is a red either way.
++ *   2  A RUNG        the DURATION — the first time value in a term — is a named rung
++ *                    (`var(--motion-*)`, another bound token like `--refuse-dur`, or a
++ *                    `v-bind`). A number typed at the call site is a red. No verb owns a
++ *                    number any more: every length is the ladder's.
++ *   2′ THE FENCE     the second and later time values are DELAYS. A delay is a wait, not a
++ *                    gesture: it keeps its own number and may not read a rung. This is the
++ *                    rule that gives the toggle's beats back — pass 1 spelled ten delays as
++ *                    rungs and moved six decided beats doing it.
++ *   3  THE SET       a term may only spend a rung its verb is allowed to spend.
++ *   5  THE PROPERTY  what a declaration MOVES is a subset of its verb's props, through the
++ *                    alias table. For an `animation:` the moved set is read from the
++ *                    `@keyframes` body, so a verb is enforced by what it does, not by taste.
++ *   5b DIRECTION     a keyframe whose end pose REDUCES coverage is a LEAVE and takes
++ *                    lift/rubOut; one that restores it is an ARRIVAL and takes
++ *                    layDown/writeIn. Keyframes are enforced; a transition is read only
++ *                    where the estate's own names carry the direction (`.is-active`,
++ *                    `-enter-active`, `-leave-active`, `.is-leaving`, `.is-rubbing-out`).
++ *   6  THE LEDGER    a row the rules cannot take is ADMITTED below with a KIND, a ruling AND
++ *                    THE RULES THAT RULING COVERS. The key is `${file} :: ${declaration} #${n}`
++ *                    — an occurrence ordinal, so two identical declarations in one file are two
++ *                    rows. Closed three ways: an admission whose site has gone is a red, and so
++ *                    is an offence the ruling does not name.
++ *   7  THE MOVERS,   every `.animate(` options object spends a verb: a `spend(` call, a spread
++ *      AND THE DOOR  of one, or a pass-through; a typed duration or a quoted curve there is the
++ *                    red. And every `spend(verb, rung)` spends a rung that verb is allowed to
++ *                    spend. The walk reads `.ts` AND `.vue` `<script>` blocks, because a script
++ *                    is code wherever it is written.
++ *   8  THE BEATS     `DarkModeToggle.vue` carries its gesture's beat table as data beside the
++ *                    gesture (`@toggle-beats`). Read BOTH ways: every beat must read back off
++ *                    the rule it names, and every `!important` transition/delay in that file's
++ *                    <style> outside the reduce block must be named by a beat. The record
++ *                    verifies the record on the surface the owner audited most.
++ *
++ * Plus the publisher's own check (the two layers, byte for byte) and the DUPLICATE-PAIR row:
++ * two published curve tokens may resolve to the same points only where it is declared.
++ *
++ * Comments are blanked before anything is matched, so prose about a transition is never
++ * counted as one.
++ *
++ *   node scripts/check-pencil-verbs.mjs [--self-test] [--why]\n *\n * `--self-test` runs the negative controls and FALLS THROUGH to the census; `--why` prints\n * what each admitted row actually breaks, which is how the third field is derived.
++ */
++import { readFileSync, readdirSync, statSync } from "node:fs";
++import { join, resolve, relative, dirname } from "node:path";
++import { fileURLToPath } from "node:url";
++import { execFileSync } from "node:child_process";
++import process from "node:process";
++import { readSource, strip } from "./publish-verbs.mjs";
++
++const HERE = dirname(fileURLToPath(import.meta.url));
++const ROOT = resolve(HERE, "..");
++const SRC = resolve(process.env.SRC ?? join(ROOT, "src"));
++
++// ── THE ADMISSION LEDGER ──────────────────────────────────────────────────────────────
++// Closed both ways and exact-matched, like FILL_ALLOWLIST: adding a row is a diff review
++// with a ruling, and a row whose site has moved reds until someone looks at it. The KIND
++// says which law the row is outside of, so a reader can count the classes without reading
++// the prose: shape · signature · graded · layout · loop · prm · elsewhere.
++const ADMITTED = new Map([
++  // ── SHAPE — T6's motion vocabulary spends a raw number at the shorthand. Its own law says
++  // the number must arrive bound; the cure is mechanical (bind it the way CELEBRATION binds
++  // --draw-dur) and lands file by file.
++  ["assets/index.css :: refuse-shake 0.6s linear #1", ["shape", "the error family's own figure", ["curve", "rung"]]],
++  ["assets/index.css :: cell-reveal 0.3s var(--ease-anticipatePop) #1", ["shape", "the cell reveal is a T6 incumbent", ["rung"]]],
++  ["assets/index.css :: var(--reveal-delay, 0ms) #1", ["shape", "the cell reveal's stagger", ["curve"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: toggle-squash 120ms both #1", ["shape", "the toggle's squash", ["rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: plush-land 1010ms both #1", ["shape", "the plush landing", ["rung"]]],
++  ["pencil/chrome/icons/DiceIcon.vue :: diceRoll 500ms var(--ease-springPop) forwards #1", ["shape", "an icon figure", ["rung"]]],
++  ["pencil/chrome/icons/DiceIcon.vue :: pipPop 250ms var(--ease-springPop) forwards #1", ["shape", "an icon figure", ["rung"]]],
++  ["pencil/chrome/icons/SolveIcon.vue :: sparkleGrow 500ms var(--ease-springPop) forwards #1", ["shape", "an icon figure", ["rung"]]],
++  // Two press flourishes, reverted to their auditioned lengths in pass 2: a one-shot figure
++  // on a press is shape, and T6's cure path binds it from CELEBRATION file by file.
++  ["games/shared/GameControlPanel.vue :: sharePop 500ms ease #1", ["shape", "the share press flourish", ["curve", "rung"]]],
++  ["games/shared/GameControlPanel.vue :: eraserScrub 400ms ease #1", ["shape", "the eraser press flourish", ["curve", "rung"]]],
++  // THE REFUSAL SHAKE — the one row the deleted `isShape` carve-out was really covering. A
++  // refusal is a FIGURE, not a travel: `linear` is its per-step timing, deliberately, because a
++  // shake that eases is a wobble. Its length is bound at `--refuse-dur` (MOT-LADDER §1.5, one
++  // home for the cell's refusal and the solve verdict), so the only rule it breaks is the curve.
++  ["games/shared/DigitCell.vue :: refuse-shake var(--refuse-dur) linear #1", ["shape", "a refusal is a figure; `linear` is its per-step timing and `--refuse-dur` is the character's one binding", ["curve"]]],
++  // ── SIGNATURE — a length the owner auditioned and kept. Assigned, never retuned.
++  // THE LAMINATE'S LAY-DOWN, 280ms — admitted rather than rounded (§1.2). The owner kept this
++  // pose at T4-W10 and the ladder has no 280: shortening it to `note` buys nothing under the
++  // quality law and lengthening it to `dusk` moves a ratified pose with no audition (U-10). It
++  // breaks ONE rule, the rung, and it names its curve like everything else.
++  ["pencil/sheet/AnswerKeyLaminate.vue :: opacity 280ms var(--verb-layDown-ease), transform 280ms var(--verb-layDown-ease) #1", ["signature", "the laminate's lay-down, owner-preserved at T4-W10; R6 §1.2's erase asymmetry (280 down, 200 up)", ["rung"]]],
++  ["pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue :: clip-path 1.2s var(--ease-noteWrite) #1", ["signature", "the wordmark's wipe", ["curve", "rung"]]],
++  // THE TOGGLE'S GESTURE, ADMITTED WHOLE (T9-W7 pass 2 §3). Eleven values, one character.
++  // Half-assigning it moved four beats on the owner's most-audited surface; the beat table
++  // beside the gesture is this admission's cite and rule 8's fixture.
++  ["pencil/celestial/DarkModeToggle.vue :: transform 800ms var(--ease-springPop) 60ms !important #1", ["signature", "the bloom", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: opacity 300ms var(--ease-standard) 60ms !important #1", ["signature", "the incoming icon's rise", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: opacity 100ms var(--ease-standard) 240ms !important #1", ["signature", "the outgoing icon's fade, in the last wring beat", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: transform 340ms var(--ease-accelIn) !important #1", ["signature", "the wring-down", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: scale 150ms ease-in, opacity 100ms ease-in !important #1", ["signature", "the stars tuck in, undelayed", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: scale 150ms var(--ease-anticipatePop) 560ms, opacity 120ms ease-out 560ms !important #1", ["signature", "the first star pops onto the crest", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: 640ms !important #1", ["signature", "the second star pops", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: 720ms !important #1", ["signature", "the third star pops", ["curve", "rung"]]],
++  // ── LAYOUT — no verb owns a layout property; the controls re-cut disposes the surface.
++  ["games/shared/GameControlPanel.vue :: grid-template-rows 200ms var(--ease-drawOn) #1", ["layout", "the one animated layout row", ["curve", "rung"]]],
++  // ── GRADED — the players well. Six numbers that are ONE decision: a return is lighter than
++  // an arrival (the fold lands 40ms sooner, the write-in 80ms). Naming them rung by rung
++  // shortens the arriving name by 130ms, which B6/the quality law forbid as a sweep, so the
++  // set is admitted whole at its auditioned literals and the rung expression is a pass-3
++  // audition the owner disposes.
++  ["games/shared/GameControlPanel.vue :: player-row-open 320ms var(--ease-glassGlide) backwards #1", ["graded", "an arrival's fold", ["rung"]]],
++  ["games/shared/GameControlPanel.vue :: ink-write-in 380ms var(--ease-drawOn) 140ms backwards #1", ["graded", "an arrival's name", ["rung"]]],
++  ["games/shared/GameControlPanel.vue :: player-row-open 280ms var(--ease-glassGlide) backwards #1", ["graded", "a return's fold, 40ms lighter", ["rung"]]],
++  ["games/shared/GameControlPanel.vue :: ink-write-in 320ms var(--ease-drawOn) 120ms backwards #1", ["graded", "a return's name, 60ms lighter and 20ms sooner", ["rung"]]],
++  ["games/shared/GameControlPanel.vue :: player-row-close 320ms var(--ease-glassGlide) 420ms backwards #1", ["graded", "the leave, after the ring's beat", ["rung"]]],
++  ["games/shared/GameControlPanel.vue :: player-name-quiet 260ms var(--ease-standard) 260ms backwards #1", ["graded", "the name going quiet", ["rung"]]],
++  // ── LOOP — a loop is not a gesture.
++  ["pencil/chrome/ScribbleLoader.vue :: scribble-cycle 1000ms linear infinite #1", ["loop", "the loader turns for as long as it waits", ["curve", "rung"]]],
++  // ── PRM — the arm itself. The ladder reads zero at the root, so a fallback that IS the
++  // reduced-motion answer carries its own number or there is nothing left to see.
++  ["assets/index.css :: 0.01ms !important #1", ["prm", "the global kill is not a gesture", ["curve", "rung"]]],
++  ["pencil/celestial/DarkModeToggle.vue :: opacity 200ms ease #1", ["prm", "the toggle's own fallback fade", ["curve", "rung"]]],
++  ["pencil/sheet/AnswerKeyLaminate.vue :: opacity 150ms linear #1", ["prm", "the laminate's own fallback fade", ["curve", "rung"]]],
++  // ── ELSEWHERE — §6 owns `gameCell.css` this pass (the chair's §6.11). The marks' fade and
++  // the focus ghost's draw-on are MRK-LIVE's rows and R6 law 39's 180ms ring; this family is
++  // read-only there and hands them over at HEAD's values. Two identical texts per file is
++  // exactly what the occurrence ordinal exists to keep apart.
++  ["games/shared/gameCell.css :: marks-fade-in 250ms ease-out backwards #1", ["elsewhere", "§6's file: the pencil marks' fade", ["curve", "rung"]]],
++  ["games/shared/gameCell.css :: marks-fade-in 250ms ease-out backwards #2", ["elsewhere", "§6's file: the same fade on the mark slot", ["curve", "rung"]]],
++  ["games/shared/gameCell.css :: ghost-draw-on 180ms var(--ease-ghostDraw) backwards #1", ["elsewhere", "§6's file: the focus ghost, R6 law 39's ring", ["rung"]]],
++  ["games/shared/gameCell.css :: ghost-draw-on 180ms var(--ease-ghostDraw) backwards #2", ["elsewhere", "§6's file: the same ghost at tier 2", ["rung"]]],
++]);
++
++/** The pairs of published curve tokens that are allowed to resolve to the same points.
++ *  Four names for the glass curve are grammar because rule 5 makes them mean different
++ *  things; a FIFTH name appearing unannounced is not. */
++const DECLARED_DUPLICATES = new Set([
++  "--ease-glassGlide=--verb-layDown-ease",
++  "--ease-glassGlide=--verb-slide-ease",
++  "--verb-layDown-ease=--verb-slide-ease",
++  "--verb-lift-ease=--verb-rubOut-ease",
++  "--ease-noteWrite=--verb-writeIn-ease",
++]);
++
++// ── THE PROPERTY ALIAS TABLE (rule 5) ────────────────────────────────────────────────
++// A shorthand contains its longhands, and the independent transform properties are the
++// transform family under another spelling.
++const TRANSFORM_FAMILY = new Set(["transform", "scale", "translate", "rotate"]);
++const CONTAINS = { background: ["background-color", "background-image"], inset: ["top", "right", "bottom", "left"], border: ["border-color", "border-width"] };
++
++// The table reads BOTH ways, because a shorthand and its longhand are one decision written
++// two ways: `background` on a card that only ever paints a colour is `background-color`, and
++// a verb that owns the longhand owns the spelling the stylesheet happens to use.
++function covers(props, moved) {
++  if (props.includes(moved)) return true;
++  if (TRANSFORM_FAMILY.has(moved) && props.some((p) => TRANSFORM_FAMILY.has(p))) return true;
++  for (const p of props) {
++    if (moved.startsWith(`${p}-`) || p.startsWith(`${moved}-`)) return true;
++    if ((CONTAINS[p] ?? []).includes(moved) || (CONTAINS[moved] ?? []).includes(p)) return true;
++  }
++  return false;
++}
++
++const HOUSE_CURVE = /var\(--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)\)/;
++const VERB_CURVE = /var\(--verb-([A-Za-z]+)-ease\)/;
++const SHAPE_CURVE = /var\(--ease-([A-Za-z]+)\)/;
++const NAMED_DUR = /var\(--(?:motion-[a-z]+|draw-dur|draw-delay|refuse-dur|reveal-delay|crest-[a-z-]+)[^)]*\)/;
++const RAW_MS = /(?<!\()\b\d+(?:\.\d+)?m?s\b/;
++const VBIND = /v-bind\(/;
++const TIME = /(?<!\()\b\d+(?:\.\d+)?m?s\b|var\(--(?:motion-[a-z]+|draw-dur|draw-delay|refuse-dur|reveal-delay|crest-[a-z-]+)[^)]*\)/g;
++const KEYWORD_CURVE = /\b(?:ease|ease-in|ease-out|ease-in-out|linear|step-start|step-end|cubic-bezier\()/;
++
++function* walk(dir, ext = /\.(vue|css)$/) {
++  for (const n of readdirSync(dir).sort()) {
++    const p = join(dir, n);
++    if (statSync(p).isDirectory()) {
++      if (n === "dev") continue; // the dev rig ships behind a DEV gate
++      yield* walk(p, ext);
++    } else if (ext.test(n)) yield p;
++  }
++}
++
++/** A shorthand's terms: split at top-level commas so `cubic-bezier(…)` stays one value. */
++function terms(body) {
++  const out = [];
++  let depth = 0;
++  let cur = "";
++  for (const ch of body) {
++    if (ch === "(" || ch === "[" || ch === "{") depth++;
++    else if (ch === ")" || ch === "]" || ch === "}") depth--;
++    if (ch === "," && depth === 0) {
++      out.push(cur);
++      cur = "";
++    } else cur += ch;
++  }
++  out.push(cur);
++  return out;
++}
++
++// ── EVERY @keyframes THE TREE DEFINES ────────────────────────────────────────────────
++// The shape set is DERIVED, never a hard-coded list of names (pass 1 carried 29 of them as a
++// second unnamed ledger). What a keyframe MOVES is read from its body, which is what lets
++// rule 5 enforce a verb on an `animation:` at all.
++const KEYFRAMES = new Map();
++function readKeyframes(file, text) {
++  for (const m of text.matchAll(/@keyframes\s+([A-Za-z-]+)\s*\{/g)) {
++    let depth = 0;
++    let end = m.index;
++    for (let i = m.index + m[0].length - 1; i < text.length; i++) {
++      if (text[i] === "{") depth++;
++      else if (text[i] === "}" && --depth === 0) {
++        end = i;
++        break;
++      }
++    }
++    const body = text.slice(m.index + m[0].length, end);
++    const props = new Set();
++    for (const p of body.matchAll(/^\s*([-a-z]+)\s*:/gm))
++      if (p[1] !== "animation-timing-function") props.add(p[1]);
++    // The end pose: the last `to`/`100%` block, or nothing when the keyframe is from-only
++    // (a from-only keyframe ARRIVES at the cascade — that is the estate's own discipline).
++    const lastAt = Math.max(body.lastIndexOf("to {"), body.lastIndexOf("100% {"));
++    const end2 = lastAt < 0 ? "" : body.slice(lastAt);
++    const firstAt = Math.max(body.indexOf("from {"), body.indexOf("0% {"));
++    const start = firstAt < 0 ? "" : body.slice(firstAt, lastAt < 0 ? undefined : lastAt);
++    const reduces = (s) =>
++      /opacity:\s*0\b/.test(s) ||
++      /inset\([^)]*100%/.test(s) ||
++      /scale:\s*0?\.\d/.test(s) ||
++      /scale\(0?\.\d/.test(s) ||
++      /stroke-dashoffset:\s*[1-9]/.test(s);
++    let dir = "either";
++    if (lastAt < 0) dir = reduces(start) ? "arrival" : "either";
++    else if (reduces(end2)) dir = "leave";
++    else if (reduces(start)) dir = "arrival";
++    KEYFRAMES.set(m[1], { props: [...props], dir, file });
++  }
++}
++
++/** The direction the estate's own class names carry (rule 5b, the transition half). A rule
++ *  that serves BOTH directions — the enter/leave pair written once, which is the estate's
++ *  idiom — carries no direction, and the gate says nothing about it. */
++function selectorDirection(sel) {
++  const leaves = /-leave-active|\.is-leaving|\.is-rubbing-out|-leave-to/.test(sel);
++  const arrives = /-enter-active|\.is-active|\.is-arriving|-enter-from|\.is-returning/.test(sel);
++  if (leaves && arrives) return null;
++  if (leaves) return "leave";
++  if (arrives) return "arrival";
++  return null;
++}
++
++const LEAVING_VERBS = new Set(["lift", "rubOut"]);
++const ARRIVING_VERBS = new Set(["layDown", "writeIn"]);
++
++function run({ src = SRC, sabotage = null } = {}) {
++  KEYFRAMES.clear();
++  const files = [...walk(src)];
++  const texts = new Map();
++  const raws = new Map(); // the UNSTRIPPED text, so rule 8 can read a table that lives in a comment
++  for (const f of files) {
++    let r = readFileSync(f, "utf8");
++    if (sabotage) r = sabotage(relative(src, f), r);
++    const t = strip(r);
++    raws.set(f, r);
++    texts.set(f, t);
++    readKeyframes(f, t);
++  }
++
++  const { verbs } = readSource();
++  const VERB = new Map(verbs.map((v) => [v.name, v]));
++
++  const rows = [];
++  const launderers = []; // admitted rows whose live offences are outside their ruling's scope
++  const admittedTags = new Map(); // key → the rules that key actually raises, for --why
++  const seen = new Set();
++  const counts = { curve: 0, rung: 0, fence: 0, fenceTerms: 0, set: 0, props: 0, direction: 0 };
++  const textKeys = new Map(); // `${file} :: ${body}` → how many times it is written there
++
++  for (const file of files) {
++    const lines = texts.get(file).split("\n");
++    const DECL = /(?:transition|animation)(?:-[a-z]+)?\s*:\s*/;
++    let selector = "";
++    let pending = []; // a selector LIST spans lines; a rule that serves both directions has none
++    let kfDepth = 0;
++    let depth = 0;
++    for (let i = 0; i < lines.length; i++) {
++      const line = lines[i];
++      if (/@keyframes/.test(line)) kfDepth = depth + 1;
++      if (/,\s*$/.test(line) && /^[\s.#:[a-zA-Z*>]/.test(line)) pending.push(line.trim());
++      else if (/\{\s*$/.test(line) && !/@|^\s*\}/.test(line)) {
++        selector = [...pending, line.trim().replace(/\{$/, "").trim()].join(" ");
++        pending = [];
++      } else if (!/,\s*$/.test(line)) pending = [];
++      const opens = (line.match(/\{/g) ?? []).length;
++      const closes = (line.match(/\}/g) ?? []).length;
++      const wasInKeyframe = kfDepth > 0 && depth >= kfDepth;
++      depth += opens - closes;
++      if (kfDepth > 0 && depth < kfDepth) kfDepth = 0;
++
++      if (!DECL.test(line)) continue;
++      let buf = line;
++      let j = i;
++      while (!buf.includes(";") && j - i < 8 && j + 1 < lines.length) buf += " " + lines[++j];
++      const isAnimationDecl = /animation(?:-[a-z]+)?\s*:/.test(buf.slice(buf.search(DECL)));
++      const body = buf.slice(buf.search(DECL)).replace(DECL, "").split(";")[0].replace(/\s+/g, " ").trim();
++      const at = `${relative(src, file)}:${i + 1}`;
++      i = j;
++      if (!body || body.startsWith("none")) continue;
++
++      // RULE 6 — the key is the declaration plus its occurrence ordinal in the file, never
++      // the line number (a line moves whenever a comment above it does, and a ledger keyed
++      // on one reds for a reason nobody did).
++      const text = `${relative(src, file)} :: ${body}`;
++      const n = (textKeys.get(text) ?? 0) + 1;
++      textKeys.set(text, n);
++      const key = `${text} #${n}`;
++      seen.add(key);
++
++      const why = [];
++      const tags = [];
++      const inKeyframe = wasInKeyframe;
++      // THE SHAPE SET IS DERIVED (pass 2): an `animation:` whose name is a @keyframes the tree
++      // defines and whose duration arrives bound is a SHAPE row — T6's vocabulary, whose own
++      // law binds the number file by file. Pass 1 carried the 29 names as a second, unnamed
++      // ledger; the tree already knows them.
++      const head0 = body.trim().split(/\s+/)[0];
++
++      // RULE 1′ — the shape layer and the timing layer are not interchangeable.
++      //
++      // THERE IS NO SHAPE CARVE-OUT (pass 3). Pass 2 exempted every `animation:` whose name is
++      // a @keyframes the tree defines and whose duration arrives bound — which is most of them
++      // — from rules 1′, 5 and 5b at once. A blanket exemption is the ledger's own disease
++      // written in code: one condition excusing every offence a row will ever raise. It is
++      // deleted. What it was covering is ONE row on the merged tree, the refusal shake, and
++      // that row is in the ledger with a ruling and the rules the ruling covers.
++      if (!inKeyframe && !VBIND.test(body)) {
++        const shape = SHAPE_CURVE.exec(body);
++        if (!isAnimationDecl && shape && !VERB_CURVE.test(body)) {
++          why.push(`--ease-${shape[1]} is a shape curve; a transition names a verb`);
++          tags.push("curve");
++        } else if (!HOUSE_CURVE.test(body) && (KEYWORD_CURVE.test(body) || !KEYFRAMES.has(head0))) {
++          why.push("no verb names its curve");
++          tags.push("curve");
++        }
++      }
++
++      for (const term of terms(body)) {
++        const times = [...term.matchAll(TIME)].map((m) => m[0]);
++        // RULE 2 — the duration is a rung. A ZERO is not a duration: `visibility 0s` is the
++        // absence of a gesture, which no rung can spell (every rung is nonzero except under
++        // reduce, where the ladder itself reads 0).
++        const zero = (t) => /^0(?:\.0+)?m?s$/.test(t);
++        if (
++          times.length &&
++          RAW_MS.test(times[0]) &&
++          !zero(times[0]) &&
++          !NAMED_DUR.test(times[0]) &&
++          !VBIND.test(term) &&
++          !inKeyframe
++        ) {
++          why.push(`a number is typed here instead of a rung (${times[0]})`);
++          tags.push("rung");
++        }
++        // RULE 2′ THE FENCE — a delay keeps its number.
++        for (const t of times.slice(1))
++          if (/var\(--motion-/.test(t)) {
++            why.push(`${t} is spelled as a rung, but it is a DELAY: a wait is not a gesture`);
++            tags.push("fence");
++          }
++
++        const verbName = VERB_CURVE.exec(term)?.[1];
++        if (!verbName) continue;
++        const verb = VERB.get(verbName);
++        if (!verb) {
++          why.push(`there is no verb called ${verbName}`);
++          tags.push("set");
++          continue;
++        }
++        // RULE 3 — the set.
++        const spent = /var\(--motion-([a-z]+)/.exec(term)?.[1];
++        if (spent && !verb.rungs.includes(spent)) {
++          why.push(`${verbName} may not spend the ${spent} rung (it may spend ${verb.rungs.join(", ") || "none"})`);
++          tags.push("set");
++        }
++        // RULE 5 — what the declaration MOVES.
++        const props = verb.props.split(",").map((p) => p.trim());
++        const head = term.trim().split(/\s+/)[0];
++        const kf = KEYFRAMES.get(head);
++        const moved = kf ? kf.props : /^[-a-z]+$/.test(head) ? [head] : [];
++        for (const p of moved)
++          if (!covers(props, p)) {
++            why.push(`${verbName} does not move ${p} (it moves ${verb.props})`);
++            tags.push("props");
++          }
++        if (head === "all") {
++          why.push(`${verbName} moves ${verb.props}, and \`all\` is not a set`);
++          tags.push("props");
++        }
++        // RULE 5b — direction.
++        const dir = kf ? kf.dir : selectorDirection(selector);
++        if (dir === "leave" && ARRIVING_VERBS.has(verbName)) {
++          why.push(`this is a LEAVE and ${verbName} arrives; a hand taking something off the page is LIFT or RUB OUT`);
++          tags.push("direction");
++        }
++        if (dir === "arrival" && LEAVING_VERBS.has(verbName)) {
++          why.push(`this is an ARRIVAL and ${verbName} leaves; something coming to the page is LAY DOWN or WRITE IN`);
++          tags.push("direction");
++        }
++      }
++      if (!why.length) continue;
++      // RULE 6, THE HONEST LEDGER (pass 3). An admission covers THE RULES ITS RULING NAMES and
++      // no others. Pass 2's two-field row let one sentence excuse every offence the site would
++      // ever raise — 21 of 36 rows were tripping two or more rules under a ruling that argued
++      // one — so a second defect could land on an admitted line and never be seen. The third
++      // field is that ruling's SCOPE, and an offence outside it still reds.
++      const raised = [...new Set(tags)];
++      admittedTags.set(key, raised);
++      if (ADMITTED.has(key)) {
++        const [, ruling, rules = []] = ADMITTED.get(key);
++        const outside = raised.filter((t) => !rules.includes(t));
++        if (!outside.length) continue;
++        for (const t of outside) counts[t]++;
++        launderers.push({
++          at,
++          key,
++          why: `the ruling covers ${rules.join(", ") || "nothing"} — "${ruling}" — but this line also breaks ${outside.join(", ")}. Widen the ruling or fix the line.`,
++          body: body.slice(0, 76),
++        });
++        continue;
++      }
++      // The by-rule tally counts what is UNADMITTED: an admitted row is outside the law by a
++      // ruling, and counting it again as a red would read the ledger as a debt.
++      for (const t of raised) counts[t]++;
++      for (const t of tags) if (t === "fence") counts.fenceTerms++;
++      rows.push({ at, key, why: why.join("; "), body: body.slice(0, 76) });
++    }
++  }
++
++  // RULE 7 — the movers, and THE DOOR. An options object may not type a duration or quote a
++  // curve; it spends, spreads a spend, or passes one through. And every `spend(verb, rung)`
++  // spends a rung that verb is allowed to spend.
++  //
++  // THE WALK IS NOT `.ts`-ONLY (pass 3). Pass 2 read `/\.ts$/`, and `App.vue:380` — one of the
++  // three spends in the tree, the product's one page going over — was invisible to the gate
++  // for the whole pass. A `<script>` block is code wherever it is written, so a .vue file is
++  // read with everything outside its script blanked, which keeps every line number true.
++  const movers = [];
++  const spends = [];
++  const scriptText = (file) => {
++    const raw = raws.get(file) ?? readFileSync(file, "utf8");
++    if (file.endsWith(".ts")) return strip(raw);
++    let out = raw.replace(/[^\n]/g, " ");
++    for (const m of raw.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) {
++      const at = m.index + m[0].indexOf(m[1]);
++      out = out.slice(0, at) + m[1] + out.slice(at + m[1].length);
++    }
++    return strip(out);
++  };
++  for (const file of walk(src, /\.(ts|vue)$/)) {
++    if (/\.(test|spec)\.ts$/.test(file)) continue; // a unit test's illegal spend is its fixture
++    let t = scriptText(file);
++    if (sabotage) t = sabotage(relative(src, file), t);
++    // THE DOOR, read as an argument list. The TYPE narrows it too (`spend<V>(verb, rung)` takes
++    // the verb's own rungs), but a type is checked where TypeScript runs and this gate is what
++    // CI runs on the estate's stylesheets: the same law, said twice, is the point.
++    for (const m of t.matchAll(/\bspend\(\s*"([A-Za-z]+)"\s*,\s*"([A-Za-z]+)"\s*\)/g)) {
++      const [, verbName, rung] = m;
++      const line = t.slice(0, m.index).split("\n").length;
++      const verb = VERB.get(verbName);
++      const at = `${relative(src, file)}:${line}`;
++      if (!verb) spends.push({ at, why: `there is no verb called ${verbName}.` });
++      else if (!verb.rungs.includes(rung))
++        spends.push({
++          at,
++          why: `spends ${verbName} at ${rung}. ${verbName} may spend ${verb.rungs.join(", ") || "no rung at all"}.`,
++        });
++    }
++    for (const m of t.matchAll(/\.animate\(/g)) {
++      let depth = 0;
++      let end = m.index;
++      for (let i = m.index + m[0].length - 1; i < t.length; i++) {
++        if (t[i] === "(") depth++;
++        else if (t[i] === ")" && --depth === 0) {
++          end = i;
++          break;
++        }
++      }
++      const args = t.slice(m.index + m[0].length, end);
++      // The options half is the last argument that is an object; a trailing comma leaves an
++      // empty tail behind it, which is not an argument.
++      const last = terms(args).map((a) => a.trim()).filter(Boolean).pop() ?? "";
++      const line = t.slice(0, m.index).split("\n").length;
++      const bad = [];
++      if (/duration\s*:\s*\d/.test(last)) bad.push("a duration is typed here; spend a rung");
++      if (/easing\s*:\s*["'`]/.test(last)) bad.push("a curve is quoted here; spend a verb");
++      movers.push({ at: `${relative(src, file)}:${line}`, bad });
++    }
++  }
++  const moverReds = movers.filter((m) => m.bad.length);
++  const spendReds = spends;
++
++  // RULE 8 — the toggle's beat table, beside the gesture, as data.
++  const beats = beatTable(texts, raws, src, new Map(readSource().rungs));
++
++  const stale = [...ADMITTED.keys()].filter((k) => !seen.has(k));
++  const collisions = [...textKeys.values()].filter((n) => n > 1).length;
++  return { rows, launderers, admittedTags, stale, counts, movers, moverReds, spendReds, beats, collisions, seen };
++}
++
++/** RULE 8. The table is data in `DarkModeToggle.vue` (`@toggle-beats`), and every beat it
++ *  names must read back off the rule it names. A comment that contradicts its own
++ *  declaration is the defect this catches — on the one surface where it matters most. */
++function beatTable(texts, raws, src, rungs = new Map()) {
++  const file = [...texts.keys()].find((f) => f.endsWith("DarkModeToggle.vue"));
++  if (!file) return { ok: false, rows: [{ beat: "—", why: "DarkModeToggle.vue is not here" }] };
++  const raw = raws.get(file);
++  const m = /@toggle-beats\s*(\{[\s\S]*?\})\s*\*\//.exec(raw);
++  if (!m) return { ok: false, rows: [{ beat: "—", why: "the gesture carries no beat table. Write it beside the gesture." }] };
++  let table;
++  try {
++    table = JSON.parse(m[1]);
++  } catch (e) {
++    return { ok: false, rows: [{ beat: "—", why: `the beat table is not readable: ${String(e.message)}` }] };
++  }
++  const text = texts.get(file);
++  const bad = [];
++  const claimed = []; // the character span of every rule a beat names, for the other direction
++  for (const [beat, want] of Object.entries(table)) {
++    // A selector LIST is one rule written over several lines, which is the estate's idiom:
++    // the table names one member and the rule is whatever that member opens.
++    const at = [`\n${want.selector} {`, `\n${want.selector},`].map((s) => text.indexOf(s)).find((n) => n >= 0);
++    if (at === undefined) {
++      bad.push({ beat, why: `the table names ${want.selector}, which is not a rule here` });
++      continue;
++    }
++    const open = text.indexOf("{", at);
++    const shut = text.indexOf("}", open);
++    claimed.push([open, shut]);
++    const body = text.slice(open, shut);
++    const decl = new RegExp(`transition(?:-delay)?\\s*:\\s*([^;]+);`).exec(body)?.[1] ?? "";
++    const term = terms(decl.replace(/\s+/g, " ")).find((t) => t.includes(want.property)) ?? decl;
++    const times = [...term.matchAll(TIME)].map((t) => {
++      const s = String(t[0]);
++      const rung = /var\(--motion-([a-z]+)/.exec(s);
++      if (rung) return rungs.get(rung[1]) ?? -1;
++      return Number(s.replace(/[^\d.]/g, ""));
++    });
++    const dur = want.delayOnly ? 0 : (times[0] ?? -1);
++    const delay = want.delayOnly ? (times[0] ?? -1) : (times[1] ?? 0);
++    if (dur !== want.duration || delay !== want.delay)
++      bad.push({
++        beat,
++        why: `${want.selector} runs ${dur}ms at ${delay}ms; the beat table says ${want.duration}ms at ${want.delay}ms. Fix the declaration or the table, in the same change.`,
++      });
++  }
++  // THE OTHER DIRECTION (pass 3). Pass 2 read the table and never read the SURFACE, so a beat
++  // could be deleted from the character and the ledger would still pass — the record verifying
++  // the record. The predicate is satisfiable and it is the character's own signature: every
++  // `transition`/`transition-delay` in this file's <style> that carries `!important` outside
++  // `@media (prefers-reduced-motion)` is a beat of the gesture and must be named by the table.
++  // PER DECLARATION, said out loud: the 8 declarations carry 10 property terms, and `tuck`'s
++  // opacity and `star1`'s opacity ride their declaration's beat. Per-TERM completeness would be
++  // born RED at 2 on the surface the owner audited most, which is a U-10 question and not a
++  // thing to ship red.
++  const reduce = [];
++  for (const m of text.matchAll(/@media[^{]*prefers-reduced-motion[^{]*\{/g)) {
++    let depth = 0;
++    for (let i = m.index + m[0].length - 1; i < text.length; i++) {
++      if (text[i] === "{") depth++;
++      else if (text[i] === "}" && --depth === 0) {
++        reduce.push([m.index, i]);
++        break;
++      }
++    }
++  }
++  const unnamed = [];
++  let beatsOnSurface = 0;
++  for (const m of text.matchAll(/transition(?:-delay)?\s*:\s*([^;}]+)[;}]/g)) {
++    if (!/!important/.test(m[1])) continue;
++    if (reduce.some(([a, b]) => m.index > a && m.index < b)) continue;
++    beatsOnSurface++;
++    if (claimed.some(([a, b]) => m.index > a && m.index < b)) continue;
++    const line = text.slice(0, m.index).split("\n").length;
++    const t = [...String(m[1]).matchAll(TIME)].map((x) => String(x[0]));
++    unnamed.push({
++      beat: `${relative(src, file)}:${line}`,
++      why: `has a transition of ${t.join(" then ") || "its own"} that no beat in the table names. Add the beat or remove the declaration, in the same change.`,
++    });
++  }
++  bad.push(...unnamed);
++  return {
++    ok: bad.length === 0,
++    rows: bad,
++    size: Object.keys(table).length,
++    onSurface: beatsOnSurface,
++  };
++}
++
++/** The duplicate-pair row: two published curve tokens may share points only where declared. */
++function duplicatePairs(css = readFileSync(join(ROOT, "src/assets/index.css"), "utf8")) {
++  const tokens = [...css.matchAll(/^\s*(--(?:ease|verb)-[A-Za-z-]+):\s*(cubic-bezier\([^)]*\));/gm)].map((m) => [m[1], m[2]]);
++  const undeclared = [];
++  for (let i = 0; i < tokens.length; i++)
++    for (let j = i + 1; j < tokens.length; j++)
++      if (tokens[i][1] === tokens[j][1] && !DECLARED_DUPLICATES.has(`${tokens[i][0]}=${tokens[j][0]}`))
++        undeclared.push(`${tokens[i][0]} and ${tokens[j][0]} are the same curve, undeclared`);
++  return undeclared;
++}
++
++// ── THE SELF-TEST ─────────────────────────────────────────────────────────────────────
++// Negative controls, run against the real tree with one line moved: a gate nobody has seen
++// fail is a gate nobody has seen.
++function selfTest() {
++  const control = (name, sabotage, expect) => {
++    const r = run({ sabotage });
++    const caught = expect(r);
++    console.log(`  ${caught ? "RED as it must be" : "MISSED"} — ${name}`);
++    return caught;
++  };
++  let ok = true;
++  ok &= control(
++    "A: a legacy --ease-* token on a transition, the rung kept",
++    (f, t) => (f === "games/shared/scene.css" ? t.replace("var(--verb-lift-ease)", "var(--ease-accelIn)") : t),
++    (r) => r.counts.curve > 0,
++  );
++  ok &= control(
++    "B: an erase curve on the note's arrival",
++    (f, t) => (f === "pencil/chrome/MarginNote.vue" ? t.replace(/ink-write-in ([^;]*?)var\(--verb-writeIn-ease\)/, "ink-write-in $1var(--verb-rubOut-ease)") : t),
++    (r) => r.counts.props > 0 || r.counts.direction > 0,
++  );
++  ok &= control(
++    "the delay fence: a delay respelled as a rung",
++    (f, t) => (f === "games/shared/scene.css" ? t.replace("var(--verb-writeIn-ease) 150ms backwards", "var(--verb-writeIn-ease) var(--motion-whisper) backwards") : t),
++    (r) => r.counts.fence > 0,
++  );
++  ok &= control(
++    "rule 7: a mover types its own duration",
++    (f, t) => (f === "pencil/chrome/GameGallery/useCarouselGlide.ts" ? t.replace("...GLIDE,", "duration: 300,") : t),
++    (r) => r.moverReds.length > 0,
++  );
++  ok &= control(
++    "rule 7/THE DOOR: an illegal spend, in a .vue script the pass-2 walk never read",
++    (f, t) => (f === "App.vue" ? t.replace('spend("turn", "throw")', 'spend("turn", "whisper")') : t),
++    (r) => r.spendReds.some((x) => x.at.startsWith("App.vue")),
++  );
++  ok &= control(
++    "1\u2032/5b with no shape carve-out: a bound animation that names no verb",
++    (f, t) =>
++      f === "assets/index.css"
++        ? `${t}\n.probe-escape { animation: ink-write-in var(--motion-note) linear backwards; }\n`
++        : t,
++    (r) => r.rows.some((x) => x.at.startsWith("assets/index.css")),
++  );
++  ok &= control(
++    "rule 6: a SECOND offence planted on an admitted row, its declaration untouched",
++    (f, t) =>
++      f === "pencil/sheet/AnswerKeyLaminate.vue"
++        ? t.replace(".answer-key-laminate.is-shown {", ".answer-key-laminate.is-leaving {")
++        : t,
++    (r) => r.launderers.some((x) => x.at.startsWith("pencil/sheet/AnswerKeyLaminate.vue")),
++  );
++  ok &= control(
++    "rule 8 the OTHER way: star3 deleted from the table, its declaration left on the surface",
++    (f, t) =>
++      f === "pencil/celestial/DarkModeToggle.vue"
++        ? t.replace(/,\n\s*"star3":\s*\{[^}]*\}/, "")
++        : t,
++    (r) => !r.beats.ok && (r.beats.rows ?? []).some((b) => /no beat in the table names/.test(b.why)),
++  );
++  ok &= control(
++    "rule 8: a beat moves and the table does not",
++    (f, t) => (f === "pencil/celestial/DarkModeToggle.vue" ? t.replace("transform 340ms var(--ease-accelIn)", "transform 250ms var(--ease-accelIn)") : t),
++    (r) => !r.beats.ok,
++  );
++  // The publisher's own control: a comment inside the marker pair must still publish.
++  const cfg = readFileSync(join(ROOT, "src/pencil/config/pencilConfig.ts"), "utf8");
++  const commented = cfg.replace(/(const RUNGS = \{\n)/, "$1    /* a reader's note, inserted mid-tuple */\n");
++  let parsed = false;
++  try {
++    const s = readSource(commented);
++    parsed = s.rungs.length === 6 && s.verbs.length === 7;
++  } catch {
++    parsed = false;
++  }
++  console.log(`  ${parsed ? "still publishes" : "THREW"} — a comment inserted inside RUNGS`);
++  ok &= parsed;
++  // And the duplicate row: plant a fifth pair and watch it red.
++  const css = readFileSync(join(ROOT, "src/assets/index.css"), "utf8");
++  const clean = duplicatePairs(css).length === 0;
++  const plantedRed =
++    duplicatePairs(css.replace("  --ease-standard:", "  --ease-planted: cubic-bezier(0.32, 0.72, 0, 1);\n  --ease-standard:")).length > 0;
++  console.log(`  ${clean ? "clean" : "ALREADY DIRTY"} — the declared duplicate pairs`);
++  console.log(`  ${plantedRed ? "RED as it must be" : "MISSED"} — a fifth name for the glass curve, planted`);
++  ok &= clean && plantedRed;
++  return Boolean(ok);
++}
++
++// ── THE RUN ───────────────────────────────────────────────────────────────────────
++// THE SELF-TEST FALLS THROUGH (pass 3). Pass 2 exited on the controls, so the eight of them
++// have never run in the same invocation as the census and CI has never seen both. The estate's
++// idiom is check-motion-contract.mjs's: run the controls, then run the law.
++let selfTestRed = 0;
++if (process.argv.includes("--self-test")) {
++  console.log("the gate's own negative controls:");
++  selfTestRed = selfTest() ? 0 : 1;
++  console.log(selfTestRed ? "the controls: RED" : "the controls: every one fires");
++  console.log("");
++}
++
++const r = run();
++const dupes = duplicatePairs();
++
++if (process.argv.includes("--why")) {
++  console.log("what each admitted row actually breaks:");
++  for (const [key, tags] of r.admittedTags)
++    if (ADMITTED.has(key))
++      console.log(`  ${String(tags.length).padStart(2)}  ${tags.join(", ").padEnd(24)} ${key}`);
++  const many = [...r.admittedTags].filter(([k, t]) => ADMITTED.has(k) && t.length > 1).length;
++  console.log(`rows raising two or more rules under one ruling: ${many} of ${ADMITTED.size}`);
++}
++
++console.log(`declarations that name neither a verb nor a rung: ${r.rows.length}  (budget 0)`);
++console.log(
++  `  by rule — curve ${r.counts.curve} · rung ${r.counts.rung} · the fence ${r.counts.fence} declarations / ${r.counts.fenceTerms} terms · the set ${r.counts.set} · what it moves ${r.counts.props} · direction ${r.counts.direction}`,
++);
++console.log(`admissions in the ledger: ${ADMITTED.size}, stale ${r.stale.length}, laundering ${r.launderers.length}`);
++const kinds = {};
++for (const [, [kind]] of ADMITTED) kinds[kind] = (kinds[kind] ?? 0) + 1;
++console.log(`  by kind — ${Object.entries(kinds).map(([k, n]) => `${k} ${n}`).join(" · ")}`);
++console.log(`declarations written twice in one file (the ordinal keeps them apart): ${r.collisions}`);
++console.log(`movers that spend: ${r.movers.length - r.moverReds.length} of ${r.movers.length}`);
++console.log(`spends that are in their verb's set: ${r.spendReds.length === 0 ? "all" : `RED ${r.spendReds.length}`}`);
++console.log(
++  `the toggle's beat table: ${r.beats.ok ? `${r.beats.size} beats, ${r.beats.onSurface} declarations on the surface, each named by the other` : "RED"}`,
++);
++console.log(`undeclared duplicate curve tokens: ${dupes.length}`);
++
++for (const row of r.rows) console.log(`  · src/${row.at.padEnd(52)} ${row.why}\n      ${row.body}`);
++for (const row of r.launderers) console.log(`  · src/${row.at.padEnd(52)} ${row.why}\n      ${row.body}`);
++for (const k of r.stale) console.log(`  · the ledger admits ${k}, which is not there any more. Read it again.`);
++for (const m of r.moverReds) console.log(`  · src/${m.at.padEnd(52)} ${m.bad.join("; ")}`);
++for (const m of r.spendReds) console.log(`  · src/${m.at.padEnd(52)} ${m.why}`);
++for (const b of r.beats.rows ?? []) console.log(`  · the toggle's ${b.beat}: ${b.why}`);
++for (const d of dupes) console.log(`  · ${d}`);
++
++let publisher = 0;
++try {
++  console.log(execFileSync("node", [join(HERE, "publish-verbs.mjs"), "--check"], { encoding: "utf8" }).trim());
++} catch (e) {
++  publisher = 1;
++  console.log(String(e.stdout ?? "").trim());
++}
++
++const bad =
++  r.rows.length ||
++  r.launderers.length ||
++  r.stale.length ||
++  r.moverReds.length ||
++  r.spendReds.length ||
++  !r.beats.ok ||
++  dupes.length ||
++  publisher ||
++  selfTestRed;
++console.log(bad ? "RED" : "GREEN");
++process.exit(bad ? 1 : 0);
+diff --git a/web/frontend/scripts/publish-verbs.mjs b/web/frontend/scripts/publish-verbs.mjs
+new file mode 100644
+index 00000000..1e7e0621
+--- /dev/null
++++ b/web/frontend/scripts/publish-verbs.mjs
+@@ -0,0 +1,202 @@
++#!/usr/bin/env node
++/**
++ * PUBLISH THE PENCIL VERBS (T9-W7 §13).
++ *
++ * `MOTION.verbs` in `src/pencil/config/pencilConfig.ts` is the ONE source of the CURVES.
++ * This writes their CSS half into `src/assets/index.css` — the verb curves and nothing else —
++ * and `--check` diffs what is there against what it would write, BYTE FOR BYTE.
++ *
++ * CURVES ONLY (T9-W7 pass 3). The rung half of this publisher DIED: rungs and their
++ * reduced-motion arm are the LADDER's node (`publishMotionRungs`, pencilConfig.ts), one home,
++ * and no verb owns a number any more. What is left here is R6 law 3's two-layer partition,
++ * held by a gate instead of by a docstring: TS `MOTION.verbs` for `spend()`, CSS
++ * `--verb-*-ease` for `<style>` consumers, byte-identical by construction.
++ *
++ *   node scripts/publish-verbs.mjs --write    rewrite the block from the TS source
++ *   node scripts/publish-verbs.mjs --check    compare, name the divergent rows, exit 1
++ *
++ * THE PARSE READS A MARKER PAIR, NOT INDENTATION (T9-W7 pass 2). Pass 1 bounded the verbs
++ * by `^ {2}verbs: \{$` and ended them at the next unrelated construct ("House easing"), so a
++ * prettier reflow or a re-worded comment redded the gate for a reason nobody did. The source
++ * region is now `/* @verbs-begin *\/ … /* @verbs-end *\/`, comments are blanked before
++ * anything is matched, and every object is found by brace matching — a comment inserted
++ * inside RUNGS or inside a verb still publishes.
++ */
++import { readFileSync, writeFileSync } from "node:fs";
++import { dirname, resolve, join } from "node:path";
++import { fileURLToPath } from "node:url";
++import process from "node:process";
++
++const HERE = dirname(fileURLToPath(import.meta.url));
++const ROOT = resolve(HERE, "..");
++const CONFIG = join(ROOT, "src/pencil/config/pencilConfig.ts");
++const CSS = join(ROOT, "src/assets/index.css");
++
++const TS_BEGIN = "/* @verbs-begin */";
++const TS_END = "/* @verbs-end */";
++const BEGIN =
++  "  /* ── THE PENCIL VERBS, PUBLISHED (T9-W7 §13) ── generated, do not hand-edit ──";
++const END = "/* ── end of the published verbs ── */";
++
++/** Blank comments in place so line count survives and prose is never a tuple. */
++export function strip(text) {
++  let out = "";
++  for (let i = 0, n = text.length; i < n; ) {
++    if (text[i] === "/" && text[i + 1] === "*") {
++      const e = text.indexOf("*/", i + 2);
++      const end = e < 0 ? n : e + 2;
++      for (let k = i; k < end; k++) out += text[k] === "\n" ? "\n" : " ";
++      i = end;
++    } else if (text[i] === "/" && text[i + 1] === "/") {
++      while (i < n && text[i] !== "\n") {
++        out += " ";
++        i++;
++      }
++    } else out += text[i++];
++  }
++  return out;
++}
++
++/** The `{ … }` that starts at `open`, matched, not guessed. */
++function braces(text, open) {
++  let depth = 0;
++  for (let i = open; i < text.length; i++) {
++    if (text[i] === "{") depth++;
++    else if (text[i] === "}" && --depth === 0) return text.slice(open + 1, i);
++  }
++  throw new Error("publish-verbs: an object in pencilConfig.ts never closes");
++}
++
++/** Read the tuples out of the TS source. One shallow parse, no bundler. */
++export function readSource(raw = readFileSync(CONFIG, "utf8")) {
++  const markers = raw.includes(TS_BEGIN) && raw.includes(TS_END);
++  const text = strip(raw);
++  const region = markers
++    ? text.slice(
++        raw.indexOf(TS_BEGIN) + TS_BEGIN.length,
++        raw.indexOf(TS_END, raw.indexOf(TS_BEGIN)),
++      )
++    : text;
++
++  // THE LADDER IS READ, NEVER PUBLISHED HERE (pass 3). Its object is the leader's node and
++  // lives OUTSIDE the marker pair, so it is found in the whole source: `rungs: {` with a
++  // brace, which a verb's `rungs: [` array cannot be mistaken for. The gate needs the values
++  // to read the toggle's beat table back; this file never writes one of them into CSS.
++  // A tree that still spells the ladder `const RUNGS = {` (before the leader's node lands) is
++  // READ, not thrown at: a born-RED has to be a red, never a crash.
++  const rungsAt = (() => {
++    const a = text.search(/\brungs\s*:\s*\{/);
++    return a >= 0 ? a : text.search(/const RUNGS\s*=\s*\{/);
++  })();
++  if (rungsAt < 0) throw new Error("publish-verbs: MOTION.rungs is not in pencilConfig.ts");
++  const rungsBody = braces(text, text.indexOf("{", rungsAt));
++  const rungs = [...rungsBody.matchAll(/([a-z]+)\s*:\s*(\d+)\s*,/g)].map((m) => [
++    m[1],
++    Number(m[2]),
++  ]);
++
++  const verbsAt = region.search(/\bverbs\s*:\s*\{/);
++  if (verbsAt < 0) throw new Error("publish-verbs: verbs is not in the marked region");
++  const verbsBody = braces(region, region.indexOf("{", verbsAt));
++  const verbs = [];
++  for (let i = 0; i < verbsBody.length; ) {
++    // Each direct child of `verbs` is `name: { … }`; jumping past a matched body is what
++    // keeps the walk at depth 0 without counting braces a second time.
++    const m = /([A-Za-z]+)\s*:\s*\{/.exec(verbsBody.slice(i));
++    if (!m) break;
++    const open = verbsBody.indexOf("{", i + m.index);
++    const body = braces(verbsBody, open);
++    const list = (re) => [...(re.exec(body)?.[1] ?? "").matchAll(/"([a-zA-Z]+)"/g)].map((r) => r[1]);
++    verbs.push({
++      name: m[1],
++      ease: /ease:\s*"([^"]+)"/.exec(body)?.[1],
++      props: /props:\s*"([^"]+)"/.exec(body)?.[1],
++      fill: /fill:\s*"([^"]+)"/.exec(body)?.[1],
++      mechanism: list(/mechanism:\s*\[([^\]]*)\]/),
++      ms: /ms:\s*(\d+)/.test(body) ? Number(/ms:\s*(\d+)/.exec(body)[1]) : null,
++      rungs: list(/rungs:\s*\[([^\]]*)\]/),
++      // A verb no stylesheet spends says so, and no token is minted for it.
++      published: !/published:\s*false/.test(body),
++    });
++    i = open + body.length + 2;
++  }
++  return { rungs, verbs, markers };
++}
++
++/** The custom-property rows the CSS layer must carry, in source order. */
++function rows(src = readSource()) {
++  return src.verbs
++    .filter((v) => v.published)
++    .map((v) => `  --verb-${v.name}-ease: ${v.ease};`);
++}
++
++/** The whole published region: the verb curves, and nothing that carries a number. */
++function block(src = readSource()) {
++  return [
++    BEGIN,
++    "     Written by scripts/publish-verbs.mjs from the marker pair in pencilConfig.ts;",
++    "     lint:verbs diffs the two layers byte for byte. CURVES ONLY: no verb owns a number,",
++    "     every length is a rung, and the ladder publishes its own values and its own reduce",
++    "     arm from one node. A verb is what a hand does; a rung is how far. */",
++    ...rows(src),
++    "}",
++    END,
++  ].join("\n");
++}
++
++/** The CLI half. Importing this file for `rows`/`readSource` runs none of it. */
++if (
++  process.argv[1] &&
++  resolve(process.argv[1]) === resolve(fileURLToPath(import.meta.url))
++) {
++  const css = readFileSync(CSS, "utf8");
++  const b = css.indexOf(BEGIN);
++  const e = css.indexOf(END);
++  const src = readSource();
++  const wanted = block(src);
++
++  if (process.argv.includes("--write")) {
++    if (b < 0 || e < 0) {
++      console.error("publish-verbs: the markers are not in index.css. Add them once by hand.");
++      process.exit(1);
++    }
++    writeFileSync(CSS, css.slice(0, b) + wanted + css.slice(e + END.length));
++    console.log(`published ${rows(src).length} rows into src/assets/index.css`);
++    process.exit(0);
++  }
++
++  const have = b < 0 || e < 0 ? "" : css.slice(b, e + END.length);
++  const want = rows(src);
++  const got = have.split("\n").filter((l) => /^ {2}--/.test(l));
++  const divergent = [
++    ...want.filter((l) => !got.includes(l)).map((l) => `the stylesheet is missing ${l.trim()}`),
++    ...got
++      .filter((l) => !want.includes(l))
++      .map((l) => `the stylesheet carries a row the config does not: ${l.trim()}`),
++  ];
++  const ownMs = src.verbs.filter((v) => v.ms !== null);
++  const bytes = have === wanted;
++
++  console.log(`published rows: ${got.length} of ${want.length} wanted, divergent ${divergent.length}`);
++  console.log(
++    `verbs with a number of their own: ${ownMs.length} (${ownMs.map((v) => v.name).join(", ") || "none"}); none is lawful`,
++  );
++  console.log(`the block matches the config byte for byte: ${bytes ? "yes" : "no"}`);
++  console.log(`the source marker pair is in pencilConfig.ts: ${src.markers ? "yes" : "no"}`);
++  for (const d of divergent) console.log(`  · ${d}`);
++  for (const v of ownMs)
++    console.log(
++      `  · ${v.name} owns a number of its own (${v.ms}ms). No verb owns a number; every length is a rung. Delete the ms key and spend a rung.`,
++    );
++  if (!bytes)
++    console.log(
++      "  · the published block is not what the config says. Run publish-verbs.mjs --write.",
++    );
++  if (!src.markers)
++    console.log(
++      "  · pencilConfig.ts has no /* @verbs-begin */ … /* @verbs-end */ pair. Add it once by hand.",
++    );
++  const bad = divergent.length > 0 || ownMs.length > 0 || !bytes || !src.markers;
++  console.log(bad ? "RED" : "GREEN");
++  process.exit(bad ? 1 : 0);
++}
+diff --git a/web/frontend/src/pencil/config/pencilVerbs.test.ts b/web/frontend/src/pencil/config/pencilVerbs.test.ts
+new file mode 100644
+index 00000000..e570a237
+--- /dev/null
++++ b/web/frontend/src/pencil/config/pencilVerbs.test.ts
+@@ -0,0 +1,78 @@
++import { describe, expect, it } from "vitest";
++import { MOTION, publishMotionRungs, spend } from "./pencilConfig";
++
++/** THE VERBS' OWN LAWS (T9-W7 §13). The gate reads the stylesheets; this reads the tuple —
++ *  the half a text scan cannot see, because it is a type. */
++describe("the pencil verbs", () => {
++  it("hands a mover the verb's own fill, never a string typed at the call site", () => {
++    expect(spend("turn", "throw")).toEqual({
++      duration: 520,
++      easing: "cubic-bezier(0.32, 0.72, 0, 1)",
++      fill: "none",
++      composite: "replace",
++    });
++    // The fill is a VALUE on the verb, so moving it moves every consumer at once.
++    expect(spend("slide", "step").fill).toBe(MOTION.verbs.slide.fill);
++  });
++
++  it("gives every verb one fill out of the closed set, and none of them `forwards`", () => {
++    for (const verb of Object.values(MOTION.verbs)) {
++      expect(["none", "backwards"]).toContain(verb.fill);
++      expect(verb.fill).not.toBe("forwards");
++    }
++    // V5, RESTATED AS THE DATA IT CAN BE. RUB OUT and WRITE IN are the two that fill backwards:
++    // their keyframe's `to` IS the cascade rest pose, which is what keeps `FILL_ALLOWLIST` out
++    // of this.
++    expect(MOTION.verbs.rubOut.fill).toBe("backwards");
++    expect(MOTION.verbs.writeIn.fill).toBe("backwards");
++  });
++
++  it("lets a mover spend only a verb whose mechanism is waapi", () => {
++    // @ts-expect-error writeIn is a keyframe verb: there is no options half to hand a mover.
++    expect(() => spend("writeIn", "note")).not.toThrow();
++    expect(MOTION.verbs.writeIn.mechanism).not.toContain("waapi");
++    expect(MOTION.verbs.turn.mechanism).toContain("waapi");
++  });
++
++  it("narrows the door to the verb's OWN rungs, at the type", () => {
++    // THE DOOR (pass 3). `spend` reads the rung out of the verb it was given, so a rung the
++    // verb may not spend is a compile error at the line that spends it — not a lint message
++    // and not a runtime surprise. This is the half rule 7 cannot see: the gate reads the
++    // argument text, the type reads the set.
++    // @ts-expect-error turn may spend `throw` and nothing else.
++    expect(() => spend("turn", "whisper")).not.toThrow();
++    // @ts-expect-error `sheet` is not a rung at all: the laminate's 280 is admitted, not a rung.
++    expect(() => spend("slide", "sheet")).not.toThrow();
++    expect(MOTION.verbs.turn.rungs).toEqual(["throw"]);
++  });
++
++  it("spends no rung a verb is not allowed to spend", () => {
++    expect(MOTION.verbs.layDown.rungs).toContain("leave");
++    for (const verb of Object.values(MOTION.verbs))
++      for (const rung of verb.rungs) expect(MOTION.rungs).toHaveProperty(rung);
++  });
++
++  it("gives no verb a number of its own", () => {
++    // V11. A verb owns a curve, a property set, a fill and the rungs it may spend. Every
++    // LENGTH is the ladder's — the dusk's 350 was the last one held here and it went home.
++    const own = Object.values(MOTION.verbs).filter((v) => "ms" in v);
++    expect(own).toHaveLength(0);
++    expect(MOTION.verbs.dusk.rungs).toEqual(["dusk"]);
++    expect(MOTION.rungs.dusk).toBe(350);
++  });
++
++  it("publishes the ladder as one node, its values and its reduce arm together", () => {
++    const doc = document.implementation.createHTMLDocument("the ladder");
++    publishMotionRungs(doc);
++    const nodes = doc.head.querySelectorAll("style[data-motion-rungs]");
++    expect(nodes).toHaveLength(1);
++    const css = nodes[0].textContent ?? "";
++    // Every rung, at its own value, and every rung again at zero under reduce — generated from
++    // the object, so the two layers cannot drift apart.
++    for (const [name, ms] of Object.entries(MOTION.rungs)) {
++      expect(css).toContain(`--motion-${name}:${ms}ms`);
++      expect(css).toContain(`--motion-${name}:0ms`);
++    }
++    expect(css).toContain("@media (prefers-reduced-motion: reduce)");
++  });
++});

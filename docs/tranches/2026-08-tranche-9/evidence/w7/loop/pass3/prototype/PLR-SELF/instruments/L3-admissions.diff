@@ -1,0 +1,17 @@
+PROPOSED, NOT APPLIED — r0's law probe L3 at base 74a2b5d9 (T9-W7 pass 3, PLR-SELF).
+
+The row is RED on the FOLD, not on this family's diff: the same probe run against the main
+tree's frontend (src frozen at 74a2b5d9) reads the same 1. Ballot T9-B1b retired `candidates`
+for `what fits`, which retired one of the two standing admissions, and the probe's literal was
+written when there were two. r0 is frozen, so this is the diff rather than an edit.
+
+Reported MOVED-BY-BASE. It is the record's row to take, not a lane's.
+
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+@@ -80,7 +80,10 @@
+-    return { ok: admitted === 2, detail: `${admitted} ADMITTED entries standing (B1's two)` };
++    // ONE since T9-W7 B1b (`candidates` -> `what fits`, 74a2b5d9). The count is the law here,
++    // not the number: an admission is a jargon word a reader still meets, and the estate has
++    // one left.
++    return { ok: admitted === 1, detail: `${admitted} ADMITTED entries standing (B1b's one)` };

@@ -1,0 +1,131 @@
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b6e2d9a0..832557c3 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -533,6 +533,75 @@ function gateTape(css, tape) {
+   return fails;
+ }
+ 
++/**
++ * THE NOTE'S RUNG ON THE PAPER (T9-W7 §7).
++ *
++ * `gateFloors` reads every rung against the CARD, and the quiet rung clears there. The margin
++ * note is not on a card: the strip sits on `--color-background`, the paper, which is a lighter
++ * ground in light and a darker one in dark — so a rung that clears 4.5 on the card is not
++ * thereby cleared where a SETTLED note actually paints. The settle is the first thing to send
++ * running text to that rung on that surface, and this is the row that says it reads.
++ *
++ * ONE row for both note families: NOTE-ERASE ages the live line, NOTE-LEDGER keeps the previous
++ * one; whichever ships, the assertion is the same ink on the same paper. It is deliberately not
++ * a seventh `SHIP4` surface — that census pins six and self-tests on the count.
++ */
++const NOTE_QUIET = {
++  ink: "--ink-press-quiet",
++  surface: "--color-background",
++  floor: 4.5,
++  consumers:
++    ".margin-note-ink[data-note-age='settled'] (NOTE-ERASE) / .margin-note-previous (NOTE-LEDGER)",
++};
++
++function gateNote(css, note) {
++  const fails = [];
++  const p = stopOf(css, note.ink);
++  for (const [name, scope] of Object.entries(SCOPES)) {
++    const paper = colorOf(scope, note.surface);
++    const cr = contrast(press(THEMES[name].graphite, p, paper), paper);
++    if (cr < note.floor) {
++      fails.push(
++        `${note.ink} (${p}%) on ${note.surface} = ${cr.toFixed(3)}:1 in ${name} — under the ` +
++          `text floor ${note.floor}; a settled note is running text on the paper (${note.consumers})`,
++      );
++    }
++  }
++  return fails;
++}
++
++/**
++ * THE DISCOVERY HALF. `consumers` above is prose, and prose goes stale — the block's own law is
++ * that a count the tree can derive is never written down. So the census derives it: every
++ * `var(--ink-press-*)` read in `src/`, asserted to still exist and to still contain the files
++ * the two pinned selectors live in. It fails when the ramp loses its consumers wholesale (the
++ * `--ink-press-firm` shape: a rung nobody reads) and when a pinned row is deleted.
++ */
++const QUIET_FLOOR = 16;
++function gateNoteDiscovery(files, min = QUIET_FLOOR) {
++  const fails = [];
++  const hits = [];
++  for (const f of files) {
++    const body = readFileSync(f, "utf8");
++    const n = (body.match(/var\(--ink-press-(quiet|rule)\)/g) ?? []).length;
++    if (n) hits.push([relative(SRC, f), n]);
++  }
++  const total = hits.reduce((a, [, n]) => a + n, 0);
++  if (total < min)
++    fails.push(
++      `the two rungs have ${total} consumers in src/ (was ${min}) — a rung nobody reads is ` +
++        `unearned abstraction, and the note row above may be asserting over a deleted surface`,
++    );
++  const pinned = ["pencil/chrome/MarginNote.vue"];
++  for (const p of pinned) {
++    if (!hits.some(([f]) => f === p))
++      fails.push(
++        `${p} no longer reads a press rung — the pinned consumer of the note row is gone`,
++      );
++  }
++  return fails;
++}
++
+ /* ── closure 5: the cross-theme rank (T9-W5 §5.4) ────────────────────────── */
+ 
+ /**
+@@ -695,6 +764,12 @@ function selfTest() {
+           TAPE,
+         ),
+     ],
++    // THE NOTE'S ROW, both halves. `note-floor`: the quiet rung at 55% — it still clears on the
++    // card (4.71) and fails on the paper, which is the whole reason the row exists. `note-
++    // discovery`: the census is told to expect more consumers than the tree has, the shape of a
++    // pinned surface being deleted out from under the assertion above it.
++    ["note-floor", () => gateNote(bad, NOTE_QUIET)],
++    ["note-discovery", () => gateNoteDiscovery(sources(SRC), 999)],
+     // CLOSURE 5, three modes. `rank-moved`: the quiet rung drops to 40%, which slides it under
+     // the register in light and re-orders the string the ruling pins. `rank-stale`: the ruling
+     // is told the two themes agree, which is what a CURED crossing looks like — the admission
+@@ -746,6 +821,8 @@ const fails = [
+   ...gateArmed(ARMED),
+   ...gateShip4(SHIP4),
+   ...gateTape(INDEX_CSS, TAPE),
++  ...gateNote(INDEX_CSS, NOTE_QUIET),
++  ...gateNoteDiscovery(sources(SRC)),
+   ...gateRank(ranksOf(INDEX_CSS), RANK_RULING),
+ ];
+ const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
+@@ -799,6 +876,28 @@ console.log(
+   `  ${"washi tape".padEnd(18)}       ${tapeRow.light.toFixed(2)} light / ${tapeRow.dark.toFixed(2)} dark  ≥${TAPE.floor} (${TAPE.ink} on ${TAPE.token})`,
+ );
+ 
++/* The note's row, printed: the quiet rung where a settled note actually paints — the paper,
++ * not the card — with the consumer count the census derived rather than the prose. */
++const noteStop = stopOf(INDEX_CSS, NOTE_QUIET.ink);
++const noteRow = Object.fromEntries(
++  Object.entries(SCOPES).map(([name, scope]) => [
++    name,
++    contrast(
++      press(THEMES[name].graphite, noteStop, colorOf(scope, NOTE_QUIET.surface)),
++      colorOf(scope, NOTE_QUIET.surface),
++    ),
++  ]),
++);
++const noteConsumers = sources(SRC).reduce(
++  (a, f) =>
++    a +
++    (readFileSync(f, "utf8").match(/var\(--ink-press-(quiet|rule)\)/g) ?? []).length,
++  0,
++);
++console.log(
++  `  ${"settled note".padEnd(18)}     ${noteRow.light.toFixed(2)} light / ${noteRow.dark.toFixed(2)} dark  ≥${NOTE_QUIET.floor} (${NOTE_QUIET.ink} on ${NOTE_QUIET.surface}; ${noteConsumers} rung reads in src/)`,
++);
++
+ /* Closure 4, printed: six re-pitched surfaces, six assertions, each naming its rung. */
+ console.log(
+   `\nship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):`,

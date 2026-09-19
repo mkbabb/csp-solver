@@ -1,0 +1,77 @@
+===== lint:bands (self-test + census) =====
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/celestial/DarkModeToggle.vue:717  a bare UA keyword on a transition.  transform var(--motion-leave, —) ease
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/celestial/DarkModeToggle.vue:873  a bare UA keyword on a transition.  scale 150ms ease-in
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/celestial/DarkModeToggle.vue:873  a bare UA keyword on a transition.  opacity 100ms ease-in !important
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/celestial/DarkModeToggle.vue:882  a bare UA keyword on a transition.  opacity 120ms ease-out 560ms !important
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/celestial/DarkModeToggle.vue:978  a bare UA keyword on a transition.  opacity 200ms ease
+  • [B8 CURVE (MOT-VERB's cure)] src/pencil/chrome/AttributionCard/CrayonHeart.vue:329  a bare UA keyword on a transition.  opacity var(--motion-note, —) ease
+exit=1
+===== lint:motion (34 specs) =====
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+exit=0
+===== lint:copy =====
+  jargon · a PLURAL copy table named in SCREAMING_SNAKE for its office  →  1 offence(s), RED as required
+  jargon · a PLURAL TitleCase copy table  →  1 offence(s), RED as required
+  jargon · twin — the same plural table in the player's words  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  1/1, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+exit=0
+===== lint:theme-tokens =====
+unreferenced (corpus only):     0
+unreferenced (transitive rule): 0
+
+negative control (re-add --color-input): RED as required
+
+check-theme-tokens: 0 unreferenced @theme tokens
+exit=0
+===== lint:theme-selectors =====
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+exit=0
+===== lint:lanes (check-lane-membership) =====
+      → GREEN (want GREEN)
+
+1 failure(s):
+
+  • [1 UNCLAIMED SCRIPT] web/frontend/scripts/check-motion-bands.mjs — NO CI LANE names it and it declares nothing. It runs nowhere, so its green means nothing and its red would never be seen. Wire it (a step beside `lint:ink`/`lint:catch`, or a `node scripts/check-motion-bands.mjs` run), delete it, or put `NOT-A-LANE: <reason with a cite>` in its header (first 60 lines).
+
+exit=1
+===== check-font-coverage =====
+  Fraunces: 30 codepoints, 14636 B, 8 declared strings over 2 group(s), each derived
+  Patrick Hand: 46 codepoints, 4312 B, 21 declared strings over 4 group(s), each derived
+  bound tapes: 3 pinned · WRITEABLE == the hand cut, both directions
+  departures (declared, no longer rendered — the cut stays a superset on purpose):
+    Fraunces · .section-heading: "Board Size"
+    Patrick Hand · .washi-tag (compartment names) + the tapes: "teacher's"
+exit=0
+===== lint:ink =====
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes, and the crossing is GATED: exactly one ruling is admitted (src/assets/index.css §INK PRESSURE, 'WHAT THE LADDER DOES NOT GOVERN'), pinned to both rank strings above, and it reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.
+exit=0
+===== lint:sleep =====
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+      → 0 flag(s), expected clean
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+      → 4 stale
+
+OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 34 specs.
+exit=0
+===== knip =====
+Unused exports (1)
+motionRungsCss  function  src/pencil/config/pencilConfig.ts:333:17
+exit=1
+BATTERY DONE

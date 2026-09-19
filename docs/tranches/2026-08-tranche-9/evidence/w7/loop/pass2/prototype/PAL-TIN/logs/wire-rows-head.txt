@@ -1,0 +1,78 @@
+
+ RUN  v4.1.10 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-58/web/frontend
+
+ ❯ src/games/shared/wire.red.test.ts (3 tests | 3 failed) 34ms
+     × U1 an agreed index survives a non-author's rival `st` 31ms
+     × U2 a joiner's own publish agrees nothing 2ms
+     × U3 no two known ids share an ink across two epochs by two authors 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/wire.red.test.ts > the wire rule (PAL-TIN §1.1) > U1 an agreed index survives a non-author's rival `st`
+AssertionError: expected { Object (--color-user-ink) } to deeply equal { Object (--color-user-ink) }
+
+- Expected
++ Received
+
+  {
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.11 52.5deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.11 242.5deg)",
+  }
+
+ ❯ src/games/shared/wire.red.test.ts:81:29
+     79|     expect(inkOf("peer-9")).toEqual(inkFor(3));
+     80|     p.hear("st", stFrame({ e: 6, ea: "peer-1", k: { "peer-9": 7 } }), …
+     81|     expect(inkOf("peer-9")).toEqual(inkFor(3));
+       |                             ^
+     82|   });
+     83|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/shared/wire.red.test.ts > the wire rule (PAL-TIN §1.1) > U2 a joiner's own publish agrees nothing
+AssertionError: expected {} to deeply equal { Object (--color-user-ink) }
+
+- Expected
++ Received
+
+- {
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.11 52.5deg)",
+- }
++ {}
+
+ ❯ src/games/shared/wire.red.test.ts:95:23
+     93|     p.hear("st", stFrame({ e: 9, ea: "peer-1", k: { [me]: 7 } }), "pee…
+     94|     p.hear("st", stFrame({ e: 10, ea: "peer-1", k: { [me]: 3 } }), "pe…
+     95|     expect(inkOf(me)).toEqual(inkFor(3));
+       |                       ^
+     96|   });
+     97|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/shared/wire.red.test.ts > the wire rule (PAL-TIN §1.1) > U3 no two known ids share an ink across two epochs by two authors
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/wire.red.test.ts:119:33
+    117|     const rows = p.session.session.players.value;
+    118|     const inks = rows.map((r) => r.ink["--color-user-ink"]);
+    119|     expect(inks.every(Boolean)).toBe(true);
+       |                                 ^
+    120|     expect(new Set(inks).size).toBe(rows.length);
+    121|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  3 failed (3)
+   Start at  17:59:55
+   Duration  397ms (transform 46ms, setup 12ms, import 37ms, tests 34ms, environment 226ms)
+
+EXIT=1

@@ -1,0 +1,41 @@
+/* ACC-GRAPHITE · ARM G1 — THE CHARTER'S LITERAL PROTOTYPE
+ *
+ * "addStyleTag putting the fill trace at --ink-press-quiet stroke 8, the focus ring on the
+ *  ramp at heavier stroke, user-ink to graphite, the sparkle literals to graphite."
+ *
+ * Injected with page.addStyleTag. Touches no product file. `!important` throughout because
+ * the tier-2 focus rule is (0,3,1) in a scoped sheet and the glyph's stroke is an SVG
+ * PRESENTATION ATTRIBUTE; an overlay that loses the cascade measures nothing.
+ */
+
+/* §4 THE METER — the board's own ink, on the ramp, at the charter's stated rung. */
+.progress-trace {
+  stroke: var(--ink-press-quiet) !important;
+}
+
+/* §3/§6 FOCUS — off crayon-blue, onto graphite, heavier.
+   16 units is not a taste number: the cell's ghost svg renders 0.4893 CSS px per unit at
+   1280x800, so 16 units = 7.83 CSS px, the first weight that out-ranks the board's own
+   heaviest rule (the frame line, 12 units x 0.636 = 7.63 CSS px). See readings/
+   substrate-chromium.json. */
+.game-cell:has(input:focus-visible) .cell-ghost-path {
+  stroke: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  fill: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+  stroke-width: 16 !important;
+  stroke-opacity: 1 !important;
+  fill-opacity: 0.1 !important;
+}
+
+/* §3 AUTHORSHIP — your digits are graphite on a solo board. The token retires; the arm
+   re-points it so every one of the 24 consumers moves at once, which is the point. */
+:root,
+.dark {
+  --color-user-ink: var(--color-pencil-graphite, var(--grid-line-color)) !important;
+}
+
+/* §3 THE SPARKLE LITERALS — the two inline violet drop-shadows, to graphite. */
+.sparkle-icon {
+  filter: drop-shadow(
+    0 0 2px color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 30%, transparent)
+  ) !important;
+}

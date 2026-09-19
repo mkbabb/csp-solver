@@ -1,0 +1,43 @@
+=== i2 UNDER THE DIFF ===
+shipped `transition:` declarations: 40
+carrying a var(--ease-*) token     : 20
+INCIDENTAL (bare keyword / none)   : 20  (budget 0)
+  · src/App.vue:1142                                         opacity var(--rung-breath) var(--verb-lift-ease)
+  · src/assets/index.css:363                                 opacity var(--verb-lift-breath) var(--verb-lift-ease)` -- a duration is a conseq
+  · src/assets/index.css:612                                 stroke 500ms
+  · src/assets/index.css:629                                 box-shadow 500ms
+  · src/assets/index.css:689                                 background-color var(--verb-dusk-ms) var(--verb-dusk-ease), color var(--verb-dus
+  · src/games/shared/DrawerTab.vue:144                       transform 150ms ease-out
+  · src/games/shared/GameControlPanel.vue:1956               background-color 150ms, color 150ms
+  · src/games/shared/GameControlPanel.vue:2082               all 200ms
+  · src/games/shared/GameControlPanel.vue:2132               opacity 150ms
+  · src/games/shared/SolverErrorNote.vue:97                  background 150ms
+  · src/games/shared/scene.css:378                           opacity 150ms
+  · src/games/shared/scene.css:617                           opacity var(--rung-breath) var(--verb-lift-ease)
+  · src/games/shared/scene.css:629                           opacity var(--rung-breath) var(--verb-lift-ease)
+  · src/pencil/celestial/DarkModeToggle.vue:717              transform 200ms ease
+  · src/pencil/celestial/DarkModeToggle.vue:873              scale 150ms ease-in, opacity 100ms ease-in !important
+  · src/pencil/celestial/DarkModeToggle.vue:976              opacity 200ms ease
+  · src/pencil/chrome/AttributionCard/CrayonHeart.vue:329    opacity 240ms ease
+  · src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue:588      stroke-dashoffset 240ms ease, opacity 500ms ease
+  · src/pencil/sheet/AnswerKeyLaminate.vue:271               opacity 150ms linear
+  · src/pencil/sheet/SheetWashiLabel.vue:109                 opacity 150ms
+RED
+
+=== i3 UNDER THE DIFF ===
+A. THE MIRROR
+   MOTION.curves.drawerGlide = cubic-bezier(0.32, 0.72, 0, 1)
+   --ease-glassGlide         = cubic-bezier(0.32, 0.72, 0, 1)
+   GREEN
+B. THE HOME
+   MOTION duration constants : beatMs=125 cardStepMs=440 boardFoldMs=520 chromeLeaveMs=200
+   distinct glass durations  : 5 — 320ms, 280ms, var(--card-step-ms, 440ms), 240ms, MOTION.boardFoldMs
+   homeless spends           : 7
+     · src/games/shared/GameControlPanel.vue:1724           320ms
+     · src/games/shared/GameControlPanel.vue:1735           280ms
+     · src/games/shared/GameControlPanel.vue:1744           320ms
+     · src/pencil/chrome/GameGallery/GameGallery.vue:1474   240ms
+     · src/pencil/chrome/GameGallery/GameGallery.vue:1475   240ms
+     · src/pencil/sheet/AnswerKeyLaminate.vue:237           280ms
+     · src/pencil/sheet/AnswerKeyLaminate.vue:238           280ms
+RED

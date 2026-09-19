@@ -1,0 +1,58 @@
+=== 1 · the chart's pitch, and whether adjacent dots separate ===
+board  pitch    r      dot w   gap between adjacent dots   r/pitch
+4x4    24.000   9      18.00   6.000                       0.375
+9x9    10.667   4      8.00    2.667                       0.375
+16x16  6.000    2.5    5.00    1.000                       0.417
+
+HOLD THE PITCH INSTEAD OF THE BOX: chart = 10.667 * N keeps the 9x9 dot and the 9x9 gap
+   4x4: chart 42.7px, dot 8.00px, gap 2.667px
+   9x9: chart 96.0px, dot 8.00px, gap 2.667px
+  16x16: chart 170.7px, dot 8.00px, gap 2.667px
+  the phone sheet's inner width is 256 - 2*16 = 224px; the 16x16 chart at held pitch is 170.7px
+  and it adds 74.7px of sheet height over the 96px arm.
+
+=== 2 · how far apart two peer inks are, oklab dE, C = 0.11 ===
+  --peer-ink-l 0.5
+    N= 2  closest pair: dE 0.2050  (hue 137.5 deg apart)
+    N= 3  closest pair: dE 0.1486  (hue 85.0 deg apart)
+    N= 4  closest pair: dE 0.0973  (hue 52.5 deg apart)
+    N= 5  closest pair: dE 0.0973  (hue 52.5 deg apart)
+    N= 6  closest pair: dE 0.0616  (hue 32.5 deg apart)
+    N= 8  closest pair: dE 0.0616  (hue 32.5 deg apart)
+    N=10  closest pair: dE 0.0382  (hue 20.0 deg apart)
+    N=15  closest pair: dE 0.0240  (hue 12.5 deg apart)
+    N=20  closest pair: dE 0.0240  (hue 12.5 deg apart)
+  --peer-ink-l 0.8
+    N= 2  closest pair: dE 0.2050  (hue 137.5 deg apart)
+    N= 3  closest pair: dE 0.1486  (hue 85.0 deg apart)
+    N= 4  closest pair: dE 0.0973  (hue 52.5 deg apart)
+    N= 5  closest pair: dE 0.0973  (hue 52.5 deg apart)
+    N= 6  closest pair: dE 0.0616  (hue 32.5 deg apart)
+    N= 8  closest pair: dE 0.0616  (hue 32.5 deg apart)
+    N=10  closest pair: dE 0.0382  (hue 20.0 deg apart)
+    N=15  closest pair: dE 0.0240  (hue 12.5 deg apart)
+    N=20  closest pair: dE 0.0240  (hue 12.5 deg apart)
+
+  A "just noticeable" oklab dE is ~0.02 for large flat fields and rises steeply as the
+  patch shrinks; an 8px dot is not a large flat field. The number the spec needs is not
+  a threshold it can cite but the RANK: the closest pair at N=4 is 3.0x further apart
+  than the closest pair at N=15.
+
+=== 3 · the lap, as a law of two variables (HEAD's board-top measured) ===
+  grid top at 390 wide, coarse, BOTH engines (probe arm B, r2-*.json):
+    vh >= 592:  gridY = 0.5 * vh - 200.27   (webkit -200.58, a 0.31px engine gap)
+    vh <  592:  the board group hits its y = 8 floor and gridY pins at 86.22
+  pass-1's sheet, measured: bottom 216.8 at zero rows, +24.0 per row
+    lap(vh, L) = 216.8 + 24.0*L - (0.5*vh - 200.27) = 417.07 + 24.0*L - 0.5*vh
+    vh  568   L=0: 130.6   L=2: 178.6   L=5: 250.6
+    vh  664   L=0: 85.1   L=2: 133.1   L=5: 205.1
+    vh  740   L=0: 47.1   L=2: 95.1   L=5: 167.1
+    vh  844   L=0: none   L=2: 43.1   L=5: 115.1
+    vh  932   L=0: none   L=2: none   L=5: 71.1
+    vh 1024   L=0: none   L=2: none   L=5: 25.1
+  zero-lap needs vh >= 834.2 + 48*L:
+    L=0: vh >= 834.2
+    L=1: vh >= 882.2
+    L=2: vh >= 930.2
+    L=3: vh >= 978.2
+    L=5: vh >= 1074.2

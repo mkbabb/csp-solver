@@ -1,0 +1,42 @@
+PAL-TIN pass 3 -- THE RING ARMS, priced against gameCell.css's own 0.55 / 0.04
+pin rule: lightest light / darkest dark clearing 3 PAINTED with >= 0.1 headroom
+
+-- LIGHT - walk's scalar 0.32 -> worst PAINTED 3.000  ·  PINNED --peer-ring-l 0.295
+stick    ring hex   ring h     ring C   stick h   dh     PAINTED@0.55  on --color-card  on --color-popover
+amber    #4b1d00    48.25  0.0800   48.23    0.02        3.268           3.287              3.277
+green    #243200   124.81  0.0736  124.71    0.10        3.135           3.154              3.144
+teal     #003436   198.94  0.0502  199.82   -0.88        3.171           3.189              3.179
+violet   #220084   276.76  0.1828  276.45    0.31        3.705           3.724              3.714
+pink     #4f0049   332.19  0.1334  332.24   -0.05        3.568           3.588              3.577
+WORST green 3.135 (headroom 0.135)  ·  teal ring chroma 0.0502  ·  max |dh| 0.879 deg
+css:
+  --color-peer-1-ring: #4b1d00; /* amber  h 48.2 C 0.080 */
+  --color-peer-2-ring: #243200; /* green  h 124.8 C 0.074 */
+  --color-peer-3-ring: #003436; /* teal   h 198.9 C 0.050 */
+  --color-peer-4-ring: #220084; /* violet h 276.8 C 0.183 */
+  --color-peer-5-ring: #4f0049; /* pink   h 332.2 C 0.133 */
+
+-- DARK - walk's scalar 0.79 -> worst PAINTED 3.288  ·  PINNED --peer-ring-l 0.775
+stick    ring hex   ring h     ring C   stick h   dh     PAINTED@0.55  on --color-card  on --color-popover
+amber    #ff975e    48.30  0.1445   48.66   -0.36        3.262           3.241              3.252
+green    #9ac900   124.80  0.1940  124.86   -0.06        3.468           3.445              3.457
+teal     #00ced7   200.39  0.1316  200.21    0.19        3.462           3.438              3.451
+violet   #a2afff   276.30  0.1153  276.45   -0.16        3.335           3.314              3.325
+pink     #ff7cef   332.20  0.2071  332.09    0.11        3.145           3.125              3.136
+WORST pink 3.145 (headroom 0.145)  ·  teal ring chroma 0.1316  ·  max |dh| 0.361 deg
+css:
+  --color-peer-1-ring: #ff975e; /* amber  h 48.3 C 0.144 */
+  --color-peer-2-ring: #9ac900; /* green  h 124.8 C 0.194 */
+  --color-peer-3-ring: #00ced7; /* teal   h 200.4 C 0.132 */
+  --color-peer-4-ring: #a2afff; /* violet h 276.3 C 0.115 */
+  --color-peer-5-ring: #ff7cef; /* pink   h 332.2 C 0.207 */
+
+-- the 6.6 answer, restated: the DIGIT ink on opacity alone ----------------
+light  digit ink @ alpha 0.55  worst 2.437
+light  digit ink @ alpha 0.65  worst 3.005
+light  digit ink @ alpha 0.8  worst 4.210
+dark   digit ink @ alpha 0.55  worst 2.280
+dark   digit ink @ alpha 0.65  worst 2.757
+dark   digit ink @ alpha 0.8  worst 3.632
+
+PINNED: --peer-ring-l 0.295 light / 0.775 dark

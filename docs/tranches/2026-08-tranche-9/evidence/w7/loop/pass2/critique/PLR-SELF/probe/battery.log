@@ -1,0 +1,27 @@
++ D=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe
++ PROTO=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-52/web/frontend
++ MAIN=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
++ export NODE_PATH=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules
++ NODE_PATH=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules
++ P1=30508
++ cd /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-52/web/frontend
++ npx vite --config /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/vite.proto.config.mts --host 127.0.0.1 --port 4245 --strictPort
++ P2=30509
++ sleep 10
++ cd /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend
++ npx vite --config /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/vite.head.config.mts --host 127.0.0.1 --port 4246 --strictPort
++ cd /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_8630d340-e56-52/web/frontend
++ npx playwright test --config /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/crit.config.ts --project=chromium
++ npx playwright test --config /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/crit.config.ts --project=webkit
++ kill 30508 30509
++ sleep 2
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/run-all.sh: line 17: 30508 Terminated: 15          cd $PROTO && npx vite --config $D/vite.proto.config.mts --host 127.0.0.1 --port 4245 --strictPort > $D/serve-proto.log 2>&1  (wd: ~/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch)
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass2/critique/PLR-SELF/probe/run-all.sh: line 17: 30509 Terminated: 15          cd $MAIN && npx vite --config $D/vite.head.config.mts --host 127.0.0.1 --port 4246 --strictPort > $D/serve-head.log 2>&1  (wd: ~/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch)
+++ lsof -ti tcp:4245
+++ wc -l
+++ lsof -ti tcp:4246
+++ wc -l
++ echo 'LISTENERS 4245=       1 4246=       1'
+LISTENERS 4245=       1 4246=       1
++ echo 'BATTERY DONE'
+BATTERY DONE

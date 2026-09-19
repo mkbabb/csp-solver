@@ -1,0 +1,70 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>MRK-LIVE cascade reach</title>
+    <style>
+      /* VERBATIM from the prototype's gameCell.css (worktree wf_e58b4764-0fc-44, lines
+         199-217) — the living mark's swap rules, quoted, nothing added. */
+      .cell-ghost {
+        opacity: 0;
+      }
+      .cell-ghost.is-active {
+        opacity: 1;
+      }
+      .game-cell.is-invalid .cell-ghost {
+        opacity: 1;
+      }
+      .game-cell.is-peer-cursor .cell-ghost {
+        opacity: 1;
+      }
+      .cell-ghost-path:nth-of-type(n + 2) {
+        opacity: 0;
+      }
+      [data-mark-pose="1"] .cell-ghost-path:nth-of-type(1),
+      [data-mark-pose="2"] .cell-ghost-path:nth-of-type(1),
+      [data-mark-pose="3"] .cell-ghost-path:nth-of-type(1) {
+        opacity: 0;
+      }
+      [data-mark-pose="1"] .cell-ghost-path:nth-of-type(2),
+      [data-mark-pose="2"] .cell-ghost-path:nth-of-type(3),
+      [data-mark-pose="3"] .cell-ghost-path:nth-of-type(4) {
+        opacity: 1;
+      }
+    </style>
+  </head>
+  <body>
+    <!-- The grid carries the attribute (GameBoard.vue :1045 `:data-mark-pose="livePose"`). -->
+    <div class="grid" data-mark-pose="0" id="grid">
+      <!-- the FOCUSED cell: four sibling ghost paths (DigitCell.vue :431-440) -->
+      <div class="game-cell" id="focused">
+        <div class="cell-ghost is-active">
+          <svg>
+            <path class="cell-ghost-path" id="f0" />
+            <path class="cell-ghost-path" id="f1" />
+            <path class="cell-ghost-path" id="f2" />
+            <path class="cell-ghost-path" id="f3" />
+          </svg>
+        </div>
+      </div>
+      <!-- a CONFLICTING cell elsewhere on the board: ONE ghost path (the spec: "still") -->
+      <div class="game-cell is-invalid" id="conflict">
+        <div class="cell-ghost">
+          <svg><path class="cell-ghost-path" id="c0" /></svg>
+        </div>
+      </div>
+      <!-- a PEER's cursor: one path (the spec: "still") -->
+      <div class="game-cell is-peer-cursor" id="peer">
+        <div class="cell-ghost">
+          <svg><path class="cell-ghost-path" id="p0" /></svg>
+        </div>
+      </div>
+      <!-- a HOVERED cell: one path (the spec: tier 1, "still") -->
+      <div class="game-cell" id="hover">
+        <div class="cell-ghost is-active">
+          <svg><path class="cell-ghost-path" id="h0" /></svg>
+        </div>
+      </div>
+    </div>
+  </body>
+</html>

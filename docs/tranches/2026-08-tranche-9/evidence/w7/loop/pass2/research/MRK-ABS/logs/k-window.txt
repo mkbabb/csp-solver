@@ -1,0 +1,21 @@
+ringSigmaUnits target 1.75 · ringK shipped 0.3241 · maxDisplace = sigma/k = 5.3996 units
+
+size  n     W1_r0(0.02-0.22,chord)  W2_perimeter        W3_nodes5           W4_declared(mid80,nominal)  excursion
+4     16    1.7145 (CV 32.1%)       2.1914 (CV 12.4%)   2.2064 (CV 27.9%)   2.4007 (CV 12.5%)           5.379
+9     81    1.7562 (CV 33.0%)       2.1704 (CV 14.3%)   2.3737 (CV 27.9%)   2.3784 (CV 14.4%)           5.379
+16    256   1.8228 (CV 33.9%)       2.2063 (CV 14.0%)   2.3811 (CV 29.0%)   2.4154 (CV 14.2%)           5.399
+pop40964096  1.7749 (CV 34.6%)       2.1843 (CV 14.1%)   2.3252 (CV 29.3%)   2.3922 (CV 14.3%)           5.400
+
+The window's shape constant k_w = measured_sigma / maxDisplace, and ringK must EQUAL it
+for the rendered sigma to read the target. Refit per window, off the population run:
+
+  W1_r0          k_w = 0.3287   (shipped 0.3241 is -1.4% off)  -> sigma read at ringK=0.3241: 1.7749 units
+  W2_perimeter   k_w = 0.4045   (shipped 0.3241 is -19.9% off)  -> sigma read at ringK=0.3241: 2.1843 units
+  W3_nodes5      k_w = 0.4306   (shipped 0.3241 is -24.7% off)  -> sigma read at ringK=0.3241: 2.3252 units
+  W4_declared    k_w = 0.4430   (shipped 0.3241 is -26.8% off)  -> sigma read at ringK=0.3241: 2.3922 units
+
+per-size spread of each window at the product's own seeds (max-min)/mean:
+  W1_r0          1.7145 / 1.7562 / 1.8228  spread 6.14%
+  W2_perimeter   2.1914 / 2.1704 / 2.2063  spread 1.64%
+  W3_nodes5      2.2064 / 2.3737 / 2.3811  spread 7.53%
+  W4_declared    2.4007 / 2.3784 / 2.4154  spread 1.54%

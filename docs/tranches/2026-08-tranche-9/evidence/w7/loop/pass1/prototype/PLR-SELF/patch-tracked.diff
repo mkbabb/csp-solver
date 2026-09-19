@@ -1,0 +1,669 @@
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..46529d04 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -24,6 +24,8 @@ import SvgFilters from "@pencil/chrome/SvgFilters.vue";
+ import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+ import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
+ import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
++import PlayerMark from "@pencil/chrome/PlayerMark/PlayerMark.vue";
++import type { MarkRow } from "@pencil/chrome/PlayerMark/types";
+ import GameGallery from "@pencil/chrome/GameGallery/GameGallery.vue";
+ import { registerDrawerMasthead } from "@games/shared/useControlsDrawer";
+ import { useKeyboardViewport } from "@games/shared/useKeyboardViewport";
+@@ -45,6 +47,8 @@ import {
+ import {
+   authorInk,
+   noteFocus,
++  presenceQuietMs,
++  quietMsOf,
+   registerGameFollower,
+   session,
+ } from "@games/shared/useSession";
+@@ -724,6 +728,25 @@ const deckSession = computed(() => ({
+   players: session.players.value,
+ }));
+ 
++// THE TABLE AGAIN, FOR THE HEAD (T9-W7 §11). Same direction, same reason: `PlayerMark` is
++// pencil and may not import `games/**`, so the room crosses here — the rows, this page's own
++// ink, and the count said as a sentence. The count is OTHER players, which is the estate's own
++// idiom (the gallery's "3 other players") and is what the mark is named.
++const markRows = computed<MarkRow[]>(() =>
++  session.players.value.map((p) => ({
++    id: p.id,
++    name: p.slug,
++    ink: p.ink,
++    self: p.self,
++  })),
++);
++const selfInk = computed(() => session.players.value.find((p) => p.self)?.ink ?? {});
++const playersLine = computed(() => {
++  const others = Math.max(0, session.players.value.length - 1);
++  if (!others) return "no other players";
++  return others === 1 ? "1 other player" : `${others} other players`;
++});
++
+ /** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
+  *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
+  *  game → an id-keyed one-shot the incoming `useGameState` consumes BEFORE its init, so the
+@@ -799,7 +822,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+     <component :is="FilterTuner" v-if="FilterTuner" />
+ 
+     <!-- Desktop: fixed corner overlay -->
+-    <AttributionCard ref="desktopAttribution" />
++    <AttributionCard ref="desktopAttribution">
++      <template #mark>
++        <PlayerMark
++          :state-line="playersLine"
++          :ink="selfInk"
++          :rows="markRows"
++          :quiet-after-ms="presenceQuietMs"
++          :quiet-ms-of="quietMsOf"
++        />
++      </template>
++    </AttributionCard>
+ 
+     <!-- Mobile: @mbabb on the head line beside the sun (T6.2 mark C). It sits HERE, beside its
+          desktop twin and before the toggle corner, because DOM order is tab order on this page
+@@ -810,7 +843,17 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+          no ancestor on either path establishes a containing block, so this move costs zero
+          pixels; it is a reading order, not a layout. The `ref` and the `v-show` travel with the
+          tag, so the gallery's hide and `closeAll` keep their one owner. -->
+-    <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'" />
++    <AttributionCard ref="mobileAttribution" mobile v-show="view === 'playing'">
++      <template #mark>
++        <PlayerMark
++          :state-line="playersLine"
++          :ink="selfInk"
++          :rows="markRows"
++          :quiet-after-ms="presenceQuietMs"
++          :quiet-ms-of="quietMsOf"
++        />
++      </template>
++    </AttributionCard>
+ 
+     <div class="corner-right" @click.stop>
+       <DarkModeToggle />
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index c3673628..b5d1f8ea 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -75,7 +75,6 @@ import { useCoarsePointer } from "@games/shared/useCoarsePointer";
+ import { portraitDock, useControlsDrawer } from "@games/shared/useControlsDrawer";
+ import { leaveSession, session } from "@games/shared/useSession";
+ import { useLiveRegion } from "@/composables/useLiveRegion";
+-import { arriving, departing } from "@games/shared/useJoinWash";
+ 
+ // Underline boil: brief burst on selection change, then settle
+ const boilFrame = ref(0);
+@@ -1120,54 +1119,32 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+                and every arrival, the first included, is an addition to a log the reader's AT is
+                already watching. Empty, it wears the same clip the alone line does and costs the
+                well nothing. -->
++      <!-- T9-W7 §11 — THE ROSTER LOSES ITS PIXELS, NOT ITS OFFICE. Who is here is drawn ONCE,
++           in the head's lobby, where the mark that opens it is the thing a reader looks at
++           first; a second drawn list in the card would be the same sentence said twice (W3's
++           one-region law, R6 #9). What may not move is the REGION: a `role="log"` inside a
++           disclosure that is shut 99% of the time announces nothing, so arrivals would stop
++           being spoken the moment the drawing travelled. So the list stays exactly here,
++           unconditionally `sr-only` — the trick `players-alone` has worn since T8-W3 — and
++           keeps its role, its `polite` and its own `aria-label`. Live regions: three, as
++           before. `tabindex` goes with the pixels: an unseen scrollport is not a stop, and the
++           readable surface is now the sheet's plain list. -->
+       <ul
+-        class="players-roster"
+-        :class="{ 'sr-only': !rosterRows.length && !departing.length }"
++        class="players-roster sr-only"
+         role="log"
+         aria-live="polite"
+         aria-label="who's on this board"
+-        :tabindex="rosterRows.length ? 0 : undefined"
+       >
+-        <!-- T8-W3 M14 — THE ROW IS A FOLD NOW, and the ink rides the whole row rather than
+-                 the dot alone. Two changes, one shape: the `<li>` is a `0fr↔1fr` grid so a row
+-                 can arrive and depart without the card reflowing under it (the crib's own
+-                 idiom), and `p.ink` sits on the row so the SWATCH AND THE SLUG are both in the
+-                 colour that player's digits are written in. That is the whole of the "player
+-                 icon" the mark floated: a drawn animal would need 345 drawings or one generic
+-                 glyph that says nothing about which animal you are. -->
+-        <li
+-          v-for="p in rosterRows"
+-          :key="p.id"
+-          class="player-row"
+-          :class="{
+-            'is-arriving': arriving[p.id] === 'join',
+-            'is-returning': arriving[p.id] === 'rejoin',
+-          }"
+-          :style="p.ink"
+-        >
+-          <span class="player-row-cells">
+-            <span class="player-swatch" aria-hidden="true"></span>
+-            <span class="player-name">{{ p.slug }}</span>
+-            <span v-if="p.self" class="player-self">you</span>
+-          </span>
+-        </li>
+-        <!-- A departure needs a row to happen to. The session drops a peer from the roster
+-                 the instant they go, so `useJoinWash` holds the row for its own 740ms and hands
+-                 it back here — the well closes on somebody rather than on a gap.
+-                 `aria-hidden`: this list is `role="log"`, whose office is announcing what was
+-                 ADDED, and a departing row appended to it would be read out as an arrival. The
+-                 shrinking roster is what a reader gets, which is the truth. -->
+-        <li
+-          v-for="r in departing"
+-          :key="`gone-${r.id}`"
+-          class="player-row is-leaving"
+-          :style="r.ink"
+-          aria-hidden="true"
+-        >
+-          <span class="player-row-cells">
+-            <span class="player-swatch" aria-hidden="true"></span>
+-            <span class="player-name">{{ r.slug }}</span>
+-          </span>
++        <!-- The row keeps its grammar and loses its choreography. What the log ANNOUNCES is a
++             name arriving, and that is unchanged; the fold, the arrival one-shots and the held
++             departing row were the DRAWING's, and the drawing is in the head now (a departing
++             row was `aria-hidden` and so was never spoken at all). The swatch stays because it
++             is not a pixel here: it is where the room's colour for a player resolves, and it is
++             what the estate's instruments read that colour off. -->
++        <li v-for="p in rosterRows" :key="p.id" class="player-row" :style="p.ink">
++          <span class="player-swatch" aria-hidden="true"></span>
++          <span class="player-name">{{ p.slug }}</span>
++          <span v-if="p.self" class="player-self">you</span>
+         </li>
+       </ul>
+       <!-- T8-W3 M13 row 18 — said out loud. `live` never going false meant nothing on
+@@ -1634,130 +1611,27 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ }
+ 
+ /* ── T6 mark 13 · the players compartment ──────────────────────────────────────
+-   The roster SCROLLS. The owner's order is 16+ players within reason, and sixteen rows at
+-   ~20px would add ~320px to a card that already overflows its frame at 1039px — the well
+-   would push the action bar's whole scrollport out of reach. `max-height` + `overflow-y` is
+-   the card's own idiom one level down: five rows read at a glance, the rest are a short
+-   scroll, and the card's height stops depending on how many people turned up. */
+-.players-roster {
+-  display: flex;
+-  flex-direction: column;
+-  gap: 0.1rem;
+-  max-height: 7.5rem;
+-  overflow-y: auto;
+-  margin: 0.15rem 0 0;
+-  padding: 0;
+-  list-style: none;
+-}
+-
+-/* T8-W3 M14 — the row is a FOLD. `grid-template-rows: 0fr→1fr` is the crib's own mechanism one
+-   level down: a row can open from nothing and close to nothing without the card ever learning a
+-   height, and the well grows and shrinks in place instead of snapping. At rest it is `1fr` and
+-   costs exactly what a flex row cost. */
++   T9-W7 §11 — THE ROSTER HAS NO PIXELS. It is `sr-only` in every state now (the drawing lives
++   in the head's lobby; the region stays here so arrivals are still spoken), which is what
++   retired the scrollport, the `max-height`, the row fold and the three one-shots that went with
++   them: a clipped 1px box has no height to animate and no overflow to scroll. The well goes
++   284.2 × 109 → 284.2 × 45, and the 64px is the controls card's.
++
++   These two rules are what remain, and neither is a pixel: the row's inline `p.ink` has to LAND
++   somewhere for `--color-user-ink` to resolve, and the swatch is where the room's colour for a
++   player is read — by a reader's AT never, by the estate's instruments always. */
+ .player-row {
+-  display: grid;
+-  grid-template-rows: 1fr;
+-  font-family: var(--font-hand);
+-  font-size: var(--type-tag);
+-  line-height: 1.35;
+-  /* THE SLUG IS IN THEIR INK. The row carries the peer's `--color-user-ink` rebinding inline, so
+-     the name and the dot are the one colour the digits on the board are drawn in — the whole of
+-     the "who is here" the well promises. Your own row rebinds nothing and takes the incumbent. */
+   color: var(--color-user-ink);
+ }
+ 
+-/* `min-height: 0` is what lets a `0fr` track actually collapse (the crib's `> div` rule,
+-   verbatim); `overflow: hidden` is what stops the text spilling out of a closing one. */
+-.player-row-cells {
+-  display: flex;
+-  align-items: center;
+-  gap: 0.4rem;
+-  min-height: 0;
+-  overflow: hidden;
+-}
+-
+-/* The swatch is the digit's own ink, not a legend for it: `--color-user-ink` is what the
+-   handwritten glyph strokes with, so a row inherits the peer's inline rebinding and YOUR row
+-   — which rebinds nothing — draws the incumbent blue. One value, two places, no mapping. */
+ .player-swatch {
+-  flex: 0 0 auto;
+-  width: 0.7rem;
+-  height: 0.7rem;
+-  border-radius: 50%;
+   background: var(--color-user-ink);
+ }
+ 
+-/* ── T8-W3 M14 · THE JOIN, THE LEAVE, AND THE RETURN — the roster's half ───────────────────
+-   The board's half is one `sequence` handle in `useJoinWash`; this half is three CSS one-shots
+-   that ride no subscriber at all. Every window below is the beat table's, verbatim, and every
+-   `to` equals the rule's own cascade so the fill is `backwards` and nothing is retained.
+-
+-   J1  0–320   the well makes room        R1  0–280
+-   J2  140–520 the name writes itself     R2  120–440   (their EXISTING ink: a return, not an
+-   J5  —       the board lets go                         arrival)
+-   L1  0–420   the ring retreats (board)
+-   L2  260–520 the name goes quiet
+-   L3  420–740 the well closes
+-
+-   The order INVERTS on a leave, and that is the sentence rather than a symmetry: on a join the
+-   name arrives before the board says so; on a leave the board says so before the name goes. An
+-   arrival is news. A departure is a settling. */
+-@keyframes player-row-open {
+-  from {
+-    grid-template-rows: 0fr;
+-  }
+-}
+-
+-@keyframes player-row-close {
+-  from {
+-    grid-template-rows: 1fr;
+-  }
+-}
+-
+-@keyframes player-name-quiet {
+-  from {
+-    color: var(--color-user-ink);
+-  }
+-}
+-
+-.player-row.is-arriving {
+-  animation: player-row-open 320ms var(--ease-glassGlide) backwards;
+-}
+-
+-.player-row.is-arriving .player-name {
+-  animation: ink-write-in 380ms var(--ease-drawOn) 140ms backwards;
+-}
+-
+-/* A RETURN IS LIGHTER THAN AN ARRIVAL. Same shape, less of it: the fold and the write-in both
+-   land 40ms sooner, and the board's ring holds no beat at all. Somebody you already know coming
+-   back is not the same news as somebody new. */
+-.player-row.is-returning {
+-  animation: player-row-open 280ms var(--ease-glassGlide) backwards;
+-}
+-
+-.player-row.is-returning .player-name {
+-  animation: ink-write-in 320ms var(--ease-drawOn) 120ms backwards;
+-}
+-
+-.player-row.is-leaving {
+-  grid-template-rows: 0fr;
+-  animation: player-row-close 320ms var(--ease-glassGlide) 420ms backwards;
+-}
+-
+-.player-row.is-leaving .player-name {
+-  color: var(--ink-press-quiet);
+-  animation: player-name-quiet 260ms var(--ease-standard) 260ms backwards;
+-}
+-
+-/* PRM: `useJoinWash` never arms a phase under reduced motion, so none of these classes reaches
+-   the DOM there at all. This block is the second lock on the same door — the row lands open,
+-   the name lands written, a departure is gone same-frame. */
+-@media (prefers-reduced-motion: reduce) {
+-  .player-row,
+-  .player-row .player-name {
+-    animation: none;
+-  }
+-}
++/* T8-W3 M14's three roster one-shots (the fold, the write-in, the held departure) DIED with the
++   drawing they choreographed — T9-W7 §11. The board's half of that beat table is untouched: it
++   is `useJoinWash`'s `sequence` handle, and it still runs on the same `join`, now beside the
++   head mark's own 400ms ink. */
+ 
+ /* `.players-alone` has NO RULE HERE, and that is the cure rather than an omission: the line is
+    `sr-only` now (see its template comment), so ink, rung and the 0.35rem it used to hold under
+@@ -1765,17 +1639,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    the utility's own. `connecting…` below keeps the quiet rung it used to share; that one is
+    still drawn, because a wire that has not come up is a thing no list can show. */
+ 
+-.player-name {
+-  flex: 1 1 auto;
+-  min-width: 0;
+-  overflow: hidden;
+-  text-overflow: ellipsis;
+-  white-space: nowrap;
+-}
+-
+-.player-self,
+ /* T6.1 — the connecting line sits at the roster's own quiet rank: the well says one thing
+-   under the list while the wire is coming up, and nothing once it has. */
++   under the list while the wire is coming up, and nothing once it has. (`.player-self` left
++   this rule with the roster's pixels — it is inside an `sr-only` list now.) */
+ .players-status {
+   font-family: var(--font-hand);
+   font-size: var(--type-tag);
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..165a4999 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -534,7 +534,14 @@ function mint(id: string): Omit<Player, "self"> {
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+-    ink: id === selfId.value ? {} : ident!.inkFor(index),
++    // T9-W7 PLR-SELF F1 — AND YOUR OWN ROW TAKES ITS INDEX TOO. `{}` meant "your page paints
++    // you the incumbent blue while every other page paints you `k`" — one person, two colours,
++    // which is the defect r0's I2 was written to name. `mint` runs ONLY inside a room
++    // (`joinSession` for self, `onPeer` for everyone else), so a SOLO board still binds nothing
++    // anywhere and stays byte-identical; `authorInk` skips self-authored cells by id, so the
++    // board's own digits are untouched either way. What changes is the row, the deck's caption
++    // swatch and the head's mark: all three now say the colour the room says.
++    ink: ident!.inkFor(index),
+   };
+ }
+ 
+@@ -553,7 +560,7 @@ function adoptInk(k: Record<string, number>): void {
+     const index = Math.trunc(raw);
+     inkIndex[id] = index;
+     if (index > top) top = index;
+-    const ink = id === selfId.value ? {} : ident!.inkFor(index);
++    const ink = ident!.inkFor(index); // F1, as in `mint`: your index is the room's, not a page's
+     const held = next[id];
+     if (held) {
+       next[id] = { ...held, ink };
+@@ -622,13 +629,36 @@ const HEARTBEAT_MS = 15000;
+  * a ghost outliving its row, or a row outliving its ghost, on a number nobody meant to move.
+  */
+ const PRESENCE_EXPIRY_MS = 45000;
++/**
++ * Past this much silence a peer is QUIET — still at the table, not yet gone (T9-W7 §11).
++ *
++ * A protocol constant, beside the two it is read against rather than in `pencilConfig`: it is
++ * not a duration anything animates on, it is the point at which "here" stops being the whole
++ * truth about a row. Between this and `PRESENCE_EXPIRY_MS` a row says how long it has been
++ * silent; past the expiry the row does not exist.
++ */
++const PRESENCE_QUIET_MS = 20000;
+ 
+ let beat: ReturnType<typeof setInterval> | null = null;
+ const presenceExpiry: Record<string, ReturnType<typeof setTimeout>> = {};
++/** When each peer last said anything. The timer above already knows this instant; it just
++ *  threw it away. One assignment at the one arming site, and no new message kind. */
++const lastHeard: Record<string, number> = {};
++
++/** How long this peer has been silent, in ms — `null` for a peer nobody has heard at all.
++ *  Read at the moment a reader ASKS (the lobby's open), so nothing here ticks. */
++export function quietMsOf(id: string): number | null {
++  const at = lastHeard[id];
++  return at === undefined ? null : Date.now() - at;
++}
++
++/** The quiet threshold, published for the surface that draws it. */
++export const presenceQuietMs = PRESENCE_QUIET_MS;
+ 
+ /** Rearmed on every frame a peer sends — the beat included, which is the point of the beat. */
+ function armPresenceExpiry(id: string): void {
+   clearTimeout(presenceExpiry[id]);
++  lastHeard[id] = Date.now();
+   // The silence IS the departure, so it goes out the door a `bye` goes out of: the roster loses
+   // the row, the ghost goes with it, the tape says so once, and `known` keeps them.
+   presenceExpiry[id] = setTimeout(() => onPeer(id, false), PRESENCE_EXPIRY_MS);
+@@ -637,6 +667,7 @@ function armPresenceExpiry(id: string): void {
+ function disarmPresence(id: string): void {
+   clearTimeout(presenceExpiry[id]);
+   delete presenceExpiry[id];
++  delete lastHeard[id];
+ }
+ 
+ /** Every clock this page keeps about other pages, stopped — at teardown, and nowhere else. */
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+index c3adf396..8f3d0e9f 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+@@ -1,7 +1,7 @@
+ <script setup lang="ts">
+-import { defineAsyncComponent } from "vue";
++import { defineAsyncComponent, provide, watch } from "vue";
+ import CrayonHeart from "./CrayonHeart.vue";
+-import { useHoverCard } from "./useHoverCard";
++import { headDisclosures, useHoverCard, type HeadDisclosures } from "./useHoverCard";
+ // T4-W8 ROW 5 (FAM-14) — the author avatar, BUNDLED. Imported so Vite emits it content-hashed
+ // under /assets/ (immutable-cached per public/_headers) and serves it same-origin; the resolved
+ // URL is inlined here. This retires the app's SOLE third-party network hit (see the <img> note).
+@@ -13,6 +13,27 @@ defineProps<{
+ 
+ const { isOpen, toggle, close, onHoverEnter, onHoverLeave } = useHoverCard();
+ 
++// The head's disclosure set (T9-W7 §11). This card's own `close` is simply the first member, so
++// "shut everything" and "shut the others" are the same three lines, and `closeAll` below stays
++// the one dismissal `App.vue` already calls.
++const closers = new Set<() => void>([close]);
++const disclosures: HeadDisclosures = {
++  register(c) {
++    closers.add(c);
++    return () => closers.delete(c);
++  },
++  claim(self) {
++    for (const c of closers) if (c !== self) c();
++  },
++};
++provide(headDisclosures, disclosures);
++// Claimed on the STATE, not on each opening path: hover, focus-within and the click toggle all
++// land here, and the coarse gate that stands hover down is respected for free.
++watch(isOpen, (open) => open && disclosures.claim(close));
++function closeAll(): void {
++  for (const c of closers) c();
++}
++
+ // T6 mark 16 — the hidden DEBUG disclosure, DEV-ONLY as of the live pass of 2026-08-04, which
+ // found it on the PRODUCTION site: this card is a hover/focus-within card, so the toggle cost
+ // no new chrome, but it is dev furniture and its label breaks the copy register (M16 bans the
+@@ -29,82 +50,103 @@ const DebugToggle = import.meta.env.DEV
+   ? defineAsyncComponent(() => import("@pencil/dev/DebugToggle.vue"))
+   : null;
+ 
+-defineExpose({ close });
++defineExpose({ close: closeAll });
+ </script>
+ 
+ <template>
+   <div
+-    :class="mobile ? 'mobile-attribution md:hidden' : 'corner-left hidden md:block'"
+-    @mouseenter="onHoverEnter"
+-    @mouseleave="onHoverLeave"
+-    @focusin="onHoverEnter"
+-    @focusout="onHoverLeave"
++    :class="
++      mobile
++        ? 'mobile-attribution flex items-center md:hidden'
++        : 'corner-left hidden items-center md:flex'
++    "
+   >
+-    <button
+-      type="button"
+-      class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"
+-      :aria-expanded="isOpen"
+-      aria-label="Show attribution card"
+-      @click.stop="toggle"
+-      @keydown.enter.stop="toggle"
++    <!-- THE HOVER GRAMMAR IS THE DISCLOSURE'S, NOT THE CORNER'S (T9-W7 §11). These four
++         handlers used to sit on the fixed wrapper, which now also holds the player mark — and
++         `mouseenter` fires on an ancestor when any descendant is entered while `focusin`
++         bubbles, so hovering or tabbing to the MARK would have opened this card. One level in,
++         the disclosure owns exactly its own trigger and its own sheet; the wrapper is a head
++         row and nothing else. The card still hangs `top: 100%; left: 0` off that wrapper (this
++         box is static and establishes no containing block), so the pose is byte-identical. -->
++    <div
++      class="attribution-disclosure"
++      @mouseenter="onHoverEnter"
++      @mouseleave="onHoverLeave"
++      @focusin="onHoverEnter"
++      @focusout="onHoverLeave"
+     >
+-      @mbabb
+-    </button>
+-    <!-- `@click.stop` sits on the DISCLOSURE, not on each control inside it. App.vue's root
++      <button
++        type="button"
++        class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"
++        :aria-expanded="isOpen"
++        aria-label="Show attribution card"
++        @click.stop="toggle"
++        @keydown.enter.stop="toggle"
++      >
++        @mbabb
++      </button>
++      <!-- `@click.stop` sits on the DISCLOSURE, not on each control inside it. App.vue's root
+          carries `@click="closeAll"` as the outside-click dismissal, and a click on anything in
+          here that did not stop reached it and shut the card under the finger — measured on both
+          GitHub links, both engines. The trigger and the debug toggle had each been given their
+          own `.stop`; two links had not, and a per-control stance that has to be remembered per
+          control is the shape of the defect rather than its cure. Closed, this box is
+          `pointer-events: none` (below), so it can never swallow an outside click. -->
+-    <div class="hover-card" :class="{ 'is-open': isOpen }" @click.stop>
+-      <div class="flex items-center gap-3">
+-        <!-- T4-W8 ROW 5 (FAM-14): the author avatar is BUNDLED — a 64px PNG (6 KB) imported
++      <div class="hover-card" :class="{ 'is-open': isOpen }" @click.stop>
++        <div class="flex items-center gap-3">
++          <!-- T4-W8 ROW 5 (FAM-14): the author avatar is BUNDLED — a 64px PNG (6 KB) imported
+              through Vite (above), emitted content-hashed under /assets/ and served same-origin.
+              This retires the app's SOLE third-party network hit: the
+              `avatars.githubusercontent.com` img-src allowance is GONE from the CSP, so the whole
+              app is now `img-src 'self' data:` — zero per-game outbound dependency (ties W3's
+              no-telemetry-by-design). The prior remote-fetch hardening (`?s=64`, `no-referrer`) is
+              moot self-hosted; `loading="lazy"` + `decoding="async"` still keep it off first paint. -->
+-        <img
+-          :src="avatarUrl"
+-          alt="mkbabb"
+-          class="h-10 w-10 rounded-full"
+-          width="40"
+-          height="40"
+-          loading="lazy"
+-          decoding="async"
+-        />
+-        <div class="flex-1">
+-          <a
+-            href="https://github.com/mkbabb"
+-            target="_blank"
+-            rel="noopener noreferrer"
+-            class="text-foreground font-mono text-sm font-semibold hover:underline"
+-            >@mbabb</a
+-          >
+-          <!-- T4-W8 ROW 5 parity: game-agnostic copy. The card mounts app-level (App.vue, both
++          <img
++            :src="avatarUrl"
++            alt="mkbabb"
++            class="h-10 w-10 rounded-full"
++            width="40"
++            height="40"
++            loading="lazy"
++            decoding="async"
++          />
++          <div class="flex-1">
++            <a
++              href="https://github.com/mkbabb"
++              target="_blank"
++              rel="noopener noreferrer"
++              class="text-foreground font-mono text-sm font-semibold hover:underline"
++              >@mbabb</a
++            >
++            <!-- T4-W8 ROW 5 parity: game-agnostic copy. The card mounts app-level (App.vue, both
+                games), so it must name neither — a "Sudoku solver" line lied on Futoshiki. Twin of
+                index.html's game-agnostic social head. -->
+-          <p class="text-muted-foreground mt-0.5 text-xs italic">
+-            logic puzzles, solved in your browser
+-          </p>
++            <p class="text-muted-foreground mt-0.5 text-xs italic">
++              logic puzzles, solved in your browser
++            </p>
++          </div>
++          <CrayonHeart :size="32" />
+         </div>
+-        <CrayonHeart :size="32" />
+-      </div>
+-      <hr class="border-border/50 my-2" />
+-      <a
+-        href="https://github.com/mkbabb/csp-solver"
+-        target="_blank"
+-        rel="noopener noreferrer"
+-        class="text-foreground block text-sm hover:underline"
+-        >View the project on GitHub</a
+-      >
+-      <!-- T6 mark 16 — the DEBUG disclosure, dev tool, env-gated (import.meta.env.DEV) and
++        <hr class="border-border/50 my-2" />
++        <a
++          href="https://github.com/mkbabb/csp-solver"
++          target="_blank"
++          rel="noopener noreferrer"
++          class="text-foreground block text-sm hover:underline"
++          >View the project on GitHub</a
++        >
++        <!-- T6 mark 16 — the DEBUG disclosure, dev tool, env-gated (import.meta.env.DEV) and
+            absent from prod builds. The row itself lives at @pencil/dev/DebugToggle.vue; the
+            gate and the reasoning are in the script block above. -->
+-      <component :is="DebugToggle" v-if="DebugToggle" />
++        <component :is="DebugToggle" v-if="DebugToggle" />
++      </div>
+     </div>
++    <!-- The head's second mark rides here as a FLEX SIBLING of the trigger (T9-W7 §11): it
++         inherits this corner's `position: fixed`, its `--head-rule` line, its z-index and its
++         safe-area padding, so the player mark needs no pose of its own and lands on the same
++         centre line as `@mbabb` at every width. DOM order is tab order on this page, so the
++         slot sits AFTER the disclosure and the head reads @mbabb → mark → sun. -->
++    <slot name="mark" />
+   </div>
+ </template>
+ 
+@@ -131,6 +173,11 @@ defineExpose({ close });
+   position: fixed;
+   top: var(--head-rule, 0.75rem);
+   left: 0;
++  /* THE ROW IS A UTILITY, NOT A DECLARATION HERE (T9-W7 §11). `display: flex` in this scoped
++     block is unlayered and would beat Tailwind's own layered `hidden` / `md:hidden` whatever
++     their specificity — the desktop corner would paint on a phone. So the head row is spelled
++     `flex items-center` in the class strings above, beside the `hidden`/`md:` arms that decide
++     which instance is painted, and this rule keeps only the pose. */
+   /* The left half of the safe area, on the corner that meets it — the twin of `.corner-right`'s
+      `padding-right`. Landscape on notched hardware is the one place it is not zero. */
+   padding-left: env(safe-area-inset-left, 0px);
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts b/web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts
+index a183429e..ad1e8f87 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts
++++ b/web/frontend/src/pencil/chrome/AttributionCard/useHoverCard.ts
+@@ -1,4 +1,23 @@
+-import { ref } from "vue";
++import { ref, type InjectionKey } from "vue";
++
++/**
++ * THE HEAD'S DISCLOSURES ARE ONE ANOTHER'S KEEPERS (T9-W7 §11).
++ *
++ * Two surfaces now hang off the same origin — the attribution card and the player lobby, both
++ * `top: 100%; left: 0` off the one fixed head wrapper — so two open at once would be two sheets
++ * in one place. `AttributionCard` provides the set; every disclosure inside it registers its own
++ * `close` and claims the origin when it opens. `App.vue`'s `closeAll` still calls the card's
++ * exposed `close`, which now empties the whole set: one dismissal, however many disclosures.
++ */
++export interface HeadDisclosures {
++  /** Register a `close`. Returns the removal, for a disclosure that unmounts. */
++  register(close: () => void): () => void;
++  /** "I am opening" — everyone but the caller shuts. */
++  claim(self: () => void): void;
++}
++
++export const headDisclosures: InjectionKey<HeadDisclosures> =
++  Symbol("head-disclosures");
+ 
+ // Coarse-pointer probe, pencil-local by necessity: this composable lives in the pencil layer,
+ // which the boundary lint (eslint.config.js `pencilMayNotImportGames`) forbids from importing
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..7ae5ea66 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,13 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** PRESENCE ARRIVES IN COLOUR (T9-W7 §11) — the head mark's stub crosses from graphite to
++   *  the room's ink for you when the room becomes ≥2, and back when it drops to 1. The only
++   *  thing in the head that ever moves, so it is a colour and nothing else: no travel, no
++   *  scale, no beat. 400ms — slower than the sheet's 150ms disclosure (this is not a response
++   *  to a press) and well inside the board's own 1180ms join wash, which it lands with on the
++   *  same event. PRM: 0s, the transition simply does not run. */
++  presenceInkMs: 400,
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
