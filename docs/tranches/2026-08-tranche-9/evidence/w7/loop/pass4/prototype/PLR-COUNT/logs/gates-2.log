@@ -1,0 +1,210 @@
+### vue-tsc-b :: npx vue-tsc -b
+EXIT[vue-tsc-b]=0
+### typecheck-e2e :: npx vue-tsc --noEmit -p tsconfig.e2e.json
+EXIT[typecheck-e2e]=0
+### eslint :: npx eslint src e2e scripts
+EXIT[eslint]=0
+### prettier :: npx prettier --check --config .prettierrc.json src/ scripts/
+Checking formatting...
+All matched files use Prettier code style!
+EXIT[prettier]=0
+### knip :: npx knip
+EXIT[knip]=0
+### lint-copy :: node scripts/check-copy-register.mjs --self-test
+copy register scanned across 142 files
+allowlisted: src/pencil/dev/FilterTuner.vue (DEV-only tool, gated import.meta.env.DEV — never shipped), src/pencil/config/filterBudget.ts (census reasons read by check-prod-shake, never by a reader)
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 0 hit(s), 0 admitted, 0 unadmitted (lexicon: 25 entries)
+
+self-test (both colours):
+  dash · template text dash  →  1 offence(s), RED as required
+  dash · string literal dash  →  1 offence(s), RED as required
+  dash · dash inside a comment  →  0 offence(s), GREEN as required
+  dash · dash inside a template comment  →  0 offence(s), GREEN as required
+  dash · a header that mentions `<style>`, then a template dash  →  1 offence(s), RED as required
+  jargon · a technique name in an aria-label  →  1 offence(s), RED as required
+  jargon · the machine naming itself on a washi tape  →  1 offence(s), RED as required
+  jargon · solver vocabulary in a script-side copy constant  →  2 offence(s), RED as required
+  jargon · positive control — an ENGINE identifier is not display copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a BOUND attribute is an expression, not a string  →  0 offence(s), GREEN as required
+  jargon · positive control — the player's own verb survives  →  0 offence(s), GREEN as required
+  jargon · positive control — jargon inside a comment is prose about the law  →  0 offence(s), GREEN as required
+  jargon · a narration source speaks the machine's name  →  1 offence(s), RED as required
+  jargon · a narration source in a template literal  →  2 offence(s), RED as required
+  jargon · a narration source whose string carries a close paren  →  1 offence(s), RED as required
+  jargon · a copy table whose name carries the word COPY  →  1 offence(s), RED as required
+  jargon · a copy table whose type says copy and whose NAME does not — the arm is blind  →  0 offence(s), GREEN as required
+  jargon · a spoken core built as a template literal in an accessible-name source  →  1 offence(s), RED as required
+  jargon · a copy table keyed by its domain, its sentence a template literal  →  1 offence(s), RED as required
+  jargon · a copy table keyed by its domain, its sentence a plain string  →  1 offence(s), RED as required
+  jargon · a spoken name written as an object property, not a declaration  →  1 offence(s), RED as required
+  jargon · a copy table named in SCREAMING_SNAKE for its office  →  1 offence(s), RED as required
+  jargon · twin — the same SCREAMING_SNAKE table in the player's words  →  0 offence(s), GREEN as required
+  jargon · a function that RETURNS the sentence, its name and its type both saying copy  →  1 offence(s), RED as required
+  jargon · positive control — a void handler named for messages is not a copy source  →  0 offence(s), GREEN as required
+  jargon · a spoken ref written by ASSIGNMENT, long after it was declared empty  →  1 offence(s), RED as required
+  jargon · positive control — a comparison is not an assignment  →  0 offence(s), GREEN as required
+  jargon · a BOUND accessible name built as a template literal  →  1 offence(s), RED as required
+  jargon · a BOUND accessible name built as a ternary over two quoted strings  →  1 offence(s), RED as required
+  jargon · twin — the same bound accessible name in the player's words  →  0 offence(s), GREEN as required
+  jargon · positive control — a TYPE whose name says copy holds identifiers, not copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a component tag with a bind is not a spoken declaration  →  0 offence(s), GREEN as required
+  jargon · two byte-identical sentences on one line are TWO offences  →  2 offence(s), RED as required
+  jargon · twin — the same spoken core in the player's words  →  0 offence(s), GREEN as required
+  jargon · twin — the same copy table in the player's words  →  0 offence(s), GREEN as required
+  jargon · positive control — an INTERPOLATION is code, not copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a template literal in a declaration that says nothing about copy  →  0 offence(s), GREEN as required
+  jargon · positive control — an utterance region declares no copy at its call  →  0 offence(s), GREEN as required
+  jargon · positive control — a narration source in plain English survives  →  0 offence(s), GREEN as required
+  jargon · an utterance handed to the voice a live region returned  →  1 offence(s), RED as required
+  jargon · twin — the same utterance in the player's words  →  0 offence(s), GREEN as required
+  jargon · an utterance through a local WRAPPER over that voice  →  1 offence(s), RED as required
+  jargon · an utterance through a voice PASSED to a function as a parameter  →  1 offence(s), RED as required
+  jargon · positive control — an IDENTIFIER handed to a voice is code, not copy  →  0 offence(s), GREEN as required
+  jargon · positive control — a wrapper over NO voice is not a voice (the name is not the rule)  →  0 offence(s), GREEN as required
+  jargon · a COPY_KEY whose value is a CALL, not a quote  →  1 offence(s), RED as required
+  jargon · twin — the same key and call in the player's words  →  0 offence(s), GREEN as required
+  jargon · positive control — a COPY_KEY whose value is a bare identifier reads nothing  →  0 offence(s), GREEN as required
+  jargon · a PLURAL copy table named in SCREAMING_SNAKE for its office  →  1 offence(s), RED as required
+  jargon · a PLURAL TitleCase copy table  →  1 offence(s), RED as required
+  jargon · twin — the same plural table in the player's words  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  1/1, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+EXIT[lint-copy]=0
+### font-coverage :: node scripts/check-font-coverage.mjs
+font coverage OK — 2 subset faces, each covered as authored AND as transformed, each corpus a superset of what 155 src files actually render:
+  Fraunces: 30 codepoints, 14636 B, 8 declared strings over 2 group(s), each derived
+  Patrick Hand: 46 codepoints, 4312 B, 26 declared strings over 5 group(s), each derived
+  bound tapes: 3 pinned · WRITEABLE == the hand cut, both directions
+  departures (declared, no longer rendered — the cut stays a superset on purpose):
+    Fraunces · .section-heading: "Board Size"
+    Patrick Hand · .washi-tag (compartment names) + the tapes: "teacher's"
+EXIT[font-coverage]=0
+### pw-projects :: node scripts/check-pw-projects.mjs --self-test
+PW PROJECT MATRIX — 3 configs, 11 projects, 36 manifest specs, 7 declared holdouts (3 single-engine at file scope, 3 engine row + 1 env-gated row), 0 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2 · T9-W3+W6 seal)
+  floors stamped: 4686436f · 2026-09-17 · platform darwin · T9-W3+W6 fold 2026-09-17 — the CH-62 park torn down, W3's four new specs, share-truth per-row
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+  chromium                  listed 262  live 261  derived 234  floor 214  band 222   ← 1 env-gated, dark in both engines
+  webkit                    listed 262  live 258  derived 232  floor 212  band 220   ← 3 row-held out of webkit + 1 env-gated, dark in both engines
+  (default)                 listed   4  live   4  derived   4  floor   4  band   4
+  throttled-void            listed   1  live   1  derived   1  floor   1  band   1
+  filter-census-chromium    listed   6  live   6  derived   6  floor   6  band   6
+  filter-census-webkit      listed   6  live   6  derived   6  floor   6  band   6
+  wordmark-webkit           listed   6  live   6  derived   6  floor   6  band   6
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10  band   9
+  theme-bake-webkit         listed  10  live  10  derived  10  floor  10  band   9
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14  band  12
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14  band  12
+  ✓ 1 DECLARED MATRIX
+  ✓ 2 SPEC OWNERSHIP
+  ✓ 3 ENGINE COVERAGE
+  ✓ 4 HOLDOUTS CLOSED
+  ✓ 5 COUNT FLOORS
+  ✓ 6 SPEC MANIFEST
+  ✓ 7 QUARANTINES CLOSED
+  ✗ 8 FLOOR BAND — 2
+
+SELF-TEST — each check against a known-bad matrix:
+  [1 DECLARED MATRIX] a third project appears (a firefox arm nobody ratified)
+      → RED (as it must)
+  [1 DECLARED MATRIX] the webkit project is quietly re-engined to chromium
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is dropped from every project (the orphan)
+      → RED (as it must)
+  [2 SPEC OWNERSHIP] a spec is claimed by two configs at once
+      → RED (as it must)
+  [3 ENGINE COVERAGE] CH-56 regresses — mobile-affordances loses its webkit arm
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED] throttled-void is widened but the holdout record is left standing
+      → RED (as it must)
+  [5 COUNT FLOORS] the chromium project sheds half its tests
+      → RED (as it must)
+  [8 FLOOR BAND] the estate grows 25% and nothing restamps it (silent slack, the disease)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a whole spec FILE is deleted (green on all 5 checks before T7-W6)
+      → RED (as it must)
+  [6 SPEC MANIFEST] a spec lands on disk that the manifest never sanctioned
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] UNDECLARED — a manifest spec grows a per-row engine skip nobody declared (CH-56 at row grain)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] UNDECLARED · ENV — a manifest spec grows an env-gated skip nobody declared (dark in BOTH engines)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] GUARDED · ENV — the record names a variable the spec does not gate on (two floors lowered for nothing)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] AGNOSTIC · ENV — an env-gated row also claims an engine it runs in (one row, two facts)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] DECLARED — the row is retitled on disk and the subtraction outlives it
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] GUARDED — the record holds a row out of an engine the tree still runs it in (a floor lowered for nothing)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain] COHERENT — per-row grain declared inside a per-file holdout (one fact, two records)
+      → RED (as it must)
+  [4 HOLDOUTS CLOSED · row grain · PROOF] the declared T62 env row is clean at row grain AND subtracts 1 from BOTH engines
+      → GREEN (as it must) · 0 complaint(s); env-gated rows subtracted: chromium 1, webkit 1
+  [7 QUARANTINES CLOSED] the quarantine module is deleted while the floors still subtract its rows
+      → RED (as it must)
+  [8 FLOOR BAND] a census stamped 20% above live (the stamp as a wish)
+      → RED (as it must)
+  [8 FLOOR BAND] a floor hand-lowered one step under the band
+      → RED (as it must)
+  [8 FLOOR BAND] a floor smuggled back into CONFIGS (two homes for one number)
+      → RED (as it must)
+  [8 FLOOR BAND] a stamped floor for a project no config declares (the orphan row)
+      → RED (as it must)
+
+2 failure(s):
+
+  • [8 FLOOR BAND] playwright.config.ts [chromium]: floor 214 is OUT OF BAND — 18.0% under 261 (stamped census 238, live 261), and the band is 85%, so the floor owes 222. The project GREW past its floor and nothing restamped it — silent slack. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+  • [8 FLOOR BAND] playwright.config.ts [webkit]: floor 212 is OUT OF BAND — 17.8% under 258 (stamped census 236, live 258), and the band is 85%, so the floor owes 220. The project GREW past its floor and nothing restamped it — silent slack. Re-derive: node scripts/check-pw-projects.mjs --restamp
+
+EXIT[pw-projects]=1
+### lint-motion :: node scripts/check-motion-contract.mjs --self-test
+MOTION CONTRACT — 36 specs, 36 declaring, 0 silent (head = first 20 lines)
+  ✓ 1 DECLARED
+  ✓ 2 GRAMMAR
+  ✓ 3 ROUTE
+
+SELF-TEST — each check against a known-bad model:
+  [1 DECLARED] the declaration is deleted in a refactor (the silent-by-default state)
+      → RED (as it must)
+  [1 DECLARED] the declaration slides below the head window during a doc-block edit
+      → RED (as it must)
+  [2 GRAMMAR] a third mode is invented (`PRM: reduced`)
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: live` lands with no reason — a declaration that says nothing
+      → RED (as it must)
+  [2 GRAMMAR] `PRM: frozen` lands with an empty cite
+      → RED (as it must)
+  [2 GRAMMAR] two declarations disagree (a merge keeps both sides)
+      → RED (as it must)
+  [3 ROUTE] CH-65 regresses — the freeze is 'restored' as `test.use({ reducedMotion })`
+      → RED (as it must)
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 36 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+EXIT[lint-motion]=0
+### live-regions :: node scripts/check-live-regions.mjs --self-test
+live-region police scanned 54 SFCs under src
+regions declared: 10 — src/games/shared/GameBoard.vue:1182, src/games/shared/GameControlPanel.vue:1093, src/games/shared/GameControlPanel.vue:1139, src/games/shared/GameControlPanel.vue:1172, src/games/shared/GameControlPanel.vue:1357, src/games/shared/SolverErrorNote.vue:43, src/pencil/chrome/GameGallery/GameGallery.vue:1068, src/pencil/chrome/GameGallery/GameGallery.vue:1074, src/pencil/chrome/MarginNote.vue:54, src/pencil/sheet/AnswerKeyLaminate.vue:204
+
+self-test — the rule against a planted defect and its cure
+  violation · a region born under v-if with its sentence already inside  →  1 finding(s), RED as required
+  control   · the cured idiom: unconditional region, conditional content  →  0 finding(s), GREEN as required
+
+check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+EXIT[live-regions]=0
+### theme-tokens :: node scripts/check-theme-tokens.mjs --self-test
+@theme declared: 52
+unreferenced (corpus only):     0
+unreferenced (transitive rule): 0
+
+negative control (re-add --color-input): RED as required
+
+check-theme-tokens: 0 unreferenced @theme tokens
+EXIT[theme-tokens]=0
+### boundary :: npx eslint --no-config-lookup --config eslint.boundary.config.js src/games
+EXIT[boundary]=0
+### DONE

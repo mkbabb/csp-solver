@@ -1,0 +1,81 @@
+
+Running 4 tests using 1 worker
+
+TAPE WITH the tally: {"w":175.05,"h":34.4,"covered":3,"interactiveCovered":3,"tick":1,"text":"burning-ptarmigan"}
+TAPE WITHOUT: {"w":112.7,"h":34.01,"covered":3,"interactiveCovered":3,"tick":0,"text":"attractive-hare"}
+TAPE Δwidth (tally − none) 62.35 px · cells covered 3 → 3 · INTERACTIVE cells covered 3 → 3
+  ✓  1 [chromium] › e2e/tin4-probe.scratch.ts:45:1 › A · the tape's painted box, with the tally and without (3.6s)
+  ✘  2 [chromium] › e2e/tin4-probe.scratch.ts:101:1 › B · the pill at 390x844 hasTouch, five players then seven (6.0m)
+BAND 9x9 desk: {"cell":70.66,"inkTop":18.1,"inkBottom":20.58,"inkH":31.98,"ghostStroke":5,"ghostInset":7.84,"gridStroke":12} → free band under the digit 4.24 px
+BAND 16x16 phone: {"cell":22.63,"inkTop":6.05,"inkBottom":5.81,"inkH":10.76,"ghostStroke":5,"ghostInset":2.59,"gridStroke":12} → free band under the digit -5.28 px
+  ✓  3 [chromium] › e2e/tin4-probe.scratch.ts:139:1 › C · what is left to draw in, on a live 9x9 desk cell and a 16x16 phone cell (645ms)
+  ✘  4 [chromium] › e2e/tin4-probe.scratch.ts:184:1 › D · filterBudget at a sixteen-player room (1.6m)
+
+
+  1) [chromium] › e2e/tin4-probe.scratch.ts:101:1 › B · the pill at 390x844 hasTouch, five players then seven 
+
+    Test timeout of 360000ms exceeded.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for locator('.controls-card button[aria-label="Play together on this board"]')
+        - locator resolved to <button data-v-fa75191a="" class="icon-btn invite-btn" aria-label="Play together on this board">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+          - waiting 100ms
+        699 × waiting for element to be visible, enabled and stable
+            - element is not visible
+          - retrying click action
+            - waiting 500ms
+
+
+      29 |   const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
+      30 |   await expect(verb).toBeEnabled();
+    > 31 |   await verb.click();
+         |              ^
+      32 |   await expect.poll(() => new URL(a.url()).searchParams.get("s")).not.toBeNull();
+      33 |   const link = a.url();
+      34 |   const pages = [a];
+        at room (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:31:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:103:16
+
+    Error Context: test-results/tin4-probe.scratch.ts-B-·--ae955-uch-five-players-then-seven-chromium/error-context.md
+
+  2) [chromium] › e2e/tin4-probe.scratch.ts:184:1 › D · filterBudget at a sixteen-player room ──────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 16
+    Received: 15
+    Timeout:  90000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 90000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        183 × locator resolved to 15 elements
+            - unexpected value "15"
+
+
+      38 |     pages.push(p);
+      39 |   }
+    > 40 |   for (const p of pages) await expect(roster(p)).toHaveCount(n, { timeout: 90000 });
+         |                                                  ^
+      41 |   return { ctx, pages };
+      42 | }
+      43 |
+        at room (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:40:50)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:186:26
+
+    Error Context: test-results/tin4-probe.scratch.ts-D-·--c0c13-et-at-a-sixteen-player-room-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/tin4-probe.scratch.ts:101:1 › B · the pill at 390x844 hasTouch, five players then seven 
+    [chromium] › e2e/tin4-probe.scratch.ts:184:1 › D · filterBudget at a sixteen-player room ───────
+  2 passed (7.7m)

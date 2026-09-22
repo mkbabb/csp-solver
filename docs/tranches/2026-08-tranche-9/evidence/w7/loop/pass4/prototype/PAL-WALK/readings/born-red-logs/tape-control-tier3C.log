@@ -1,0 +1,48 @@
+
+Running 2 tests using 1 worker
+
+[chromium/light] tape name oklch(0.44 0.079 181.79) · ring string oklch(0.32 0.0576 181.79) · 6.564:1 on the worn ground
+  ✘  1 [chromium] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session (3.6s)
+[webkit/light] tape name oklch(0.44 0.079 181.789993) · ring string oklch(0.32 0.0576 181.789993) · 6.559:1 on the worn ground
+  ✘  2 [webkit] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session (4.0s)
+
+
+  1) [chromium] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "oklch(0.32 0.0576 181.79)"
+    Received: "oklch(0.44 0.079 181.79)"
+
+      827 |       `[${info.project.name}/${arm}] tape name ${t.color} · ring string ${t.ring} · ${t.ratio.toFixed(3)}:1 on the worn ground`,
+      828 |     );
+    > 829 |     expect(t.color).toBe(t.ring);
+          |                     ^
+      830 |     expect(t.ratio).toBeGreaterThanOrEqual(4.5);
+      831 |     await a.mouse.move(2, 2);
+      832 |   }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend/e2e/peer-walk.spec.ts:829:21
+
+    Error Context: .pal-walk/test-results/peer-walk-§C-the-name-on-t-0fa6c-s-string-off-a-real-session-chromium/error-context.md
+
+  2) [webkit] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "oklch(0.32 0.0576 181.789993)"
+    Received: "oklch(0.44 0.079 181.789993)"
+
+      827 |       `[${info.project.name}/${arm}] tape name ${t.color} · ring string ${t.ring} · ${t.ratio.toFixed(3)}:1 on the worn ground`,
+      828 |     );
+    > 829 |     expect(t.color).toBe(t.ring);
+          |                     ^
+      830 |     expect(t.ratio).toBeGreaterThanOrEqual(4.5);
+      831 |     await a.mouse.move(2, 2);
+      832 |   }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend/e2e/peer-walk.spec.ts:829:21
+
+    Error Context: .pal-walk/test-results/peer-walk-§C-the-name-on-t-0fa6c-s-string-off-a-real-session-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session 
+    [webkit] › e2e/peer-walk.spec.ts:763:1 › §C the name on the tape is written in the ring's string, off a real session 

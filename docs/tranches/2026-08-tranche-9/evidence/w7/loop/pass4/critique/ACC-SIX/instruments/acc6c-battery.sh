@@ -1,0 +1,8 @@
+#!/bin/bash
+cd /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend
+echo "== golden vs PROTO dist (4237)"
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:4237 npx playwright test --config playwright-golden.config.ts --reporter=line --output=/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/pw-golden-proto > /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/golden-proto.log 2>&1; echo "golden-proto EXIT=$?"
+echo "== golden vs CONTROL dist (4238)"
+PLAYWRIGHT_BASE_URL=http://127.0.0.1:4238 npx playwright test --config playwright-golden.config.ts --reporter=line --output=/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/pw-golden-control > /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/golden-control.log 2>&1; echo "golden-control EXIT=$?"
+echo "== filter census vs PROTO dist, four projects"
+npx playwright test --config .acc6-critic/pw.filter.config.ts --output=/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/pw-filter > /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6-critic/filter.log 2>&1; echo "filter EXIT=$?"

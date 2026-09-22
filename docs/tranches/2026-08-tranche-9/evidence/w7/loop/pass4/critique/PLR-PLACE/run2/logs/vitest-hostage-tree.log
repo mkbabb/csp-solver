@@ -1,0 +1,40 @@
+
+ RUN  v4.1.11 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrplace-crit/fe
+
+ ❯ src/pencil/chrome/PlayerMark/PlayerMark.hostage.test.ts (2 tests | 2 failed) 132ms
+     × p2 moves once while p1 walks every 250 ms: p2 steps 700 ms after ITS move 109ms
+     × your own cell moving (a new place object, same cursors) restarts no peer's clock 21ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/PlayerMark/PlayerMark.hostage.test.ts > the hostage: one peer's clock is its own > p2 moves once while p1 walks every 250 ms: p2 steps 700 ms after ITS move
+AssertionError: p2 at +1000 ms: expected '277.77777777777777' not to be '277.77777777777777' // Object.is equality
+ ❯ src/pencil/chrome/PlayerMark/PlayerMark.hostage.test.ts:68:73
+     66|     }
+     67|     await w.vm.$nextTick();
+     68|     expect(dots().find((d) => d.id === "p2")!.cx, "p2 at +1000 ms").no…
+       |                                                                         ^
+     69|     w.unmount();
+     70|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pencil/chrome/PlayerMark/PlayerMark.hostage.test.ts > the hostage: one peer's clock is its own > your own cell moving (a new place object, same cursors) restarts no peer's clock
+AssertionError: p2 at +1000 ms: expected '277.77777777777777' not to be '277.77777777777777' // Object.is equality
+ ❯ src/pencil/chrome/PlayerMark/PlayerMark.hostage.test.ts:82:73
+     80|     }
+     81|     await w.vm.$nextTick();
+     82|     expect(dots().find((d) => d.id === "p2")!.cx, "p2 at +1000 ms").no…
+       |                                                                         ^
+     83|     w.unmount();
+     84|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed (2)
+   Start at  17:28:34
+   Duration  3.38s (transform 591ms, setup 81ms, import 689ms, tests 132ms, environment 2.17s)
+
+EXIT=1

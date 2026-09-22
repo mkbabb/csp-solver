@@ -1,0 +1,52 @@
+
+Running 2 tests using 2 workers
+
+LEAVE {"afterCaretMoved":"true","afterMarkFocused":"true"}
+  ✘  2 [chromium] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not (1.8s)
+LEAVE {"afterCaretMoved":"true","afterMarkFocused":"true"}
+  ✘  1 [webkit] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not (2.6s)
+
+
+  1) [chromium] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not 
+
+    Error: the caret moving on is a leave
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "false"
+    Received: "true"
+
+      355 |   const afterMarkFocused = await expanded();
+      356 |   console.log("LEAVE", JSON.stringify({ afterCaretMoved, afterMarkFocused }));
+    > 357 |   expect(afterCaretMoved, "the caret moving on is a leave").toBe("false");
+          |                                                             ^
+      358 |   expect(afterMarkFocused, "focus landing on the mark is not a leave").toBe("true");
+      359 | });
+      360 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts:357:61
+
+    Error Context: .plr-count/test-results/player-tally-focus-moving--ae0f6--focus-on-the-mark-does-not-chromium/error-context.md
+
+  2) [webkit] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not 
+
+    Error: the caret moving on is a leave
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "false"
+    Received: "true"
+
+      355 |   const afterMarkFocused = await expanded();
+      356 |   console.log("LEAVE", JSON.stringify({ afterCaretMoved, afterMarkFocused }));
+    > 357 |   expect(afterCaretMoved, "the caret moving on is a leave").toBe("false");
+          |                                                             ^
+      358 |   expect(afterMarkFocused, "focus landing on the mark is not a leave").toBe("true");
+      359 | });
+      360 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts:357:61
+
+    Error Context: .plr-count/test-results/player-tally-focus-moving--ae0f6--focus-on-the-mark-does-not-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not 
+    [webkit] › e2e/player-tally.spec.ts:319:1 › focus moving anywhere else shuts the sheet, and focus on the mark does not 

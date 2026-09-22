@@ -1,0 +1,27 @@
+--- law-probe.copy.mjs	2026-09-22 14:21:57
++++ law-probe.R3.proposed.mjs	2026-09-22 14:22:08
+@@ -182,12 +182,20 @@
+   "T9-M04 (owner 2026-08-25); GameControlPanel `.action-bar` is a colour-matched slab",
+   "RED",
+   () => {
++    // PROPOSED (pass-4 CTRL-RULE, charter row 10) — the subject is the bar's SUBTREE, not its
++    // CSS rule: the drawn edge is a child (`RuledLine class="outline-svg bar-rule"` or a
++    // `HandDrawnOutline`), and a CSS `border` on the bar is RED by R6 L5 (one box grammar).
+     const p = read("src/games/shared/GameControlPanel.vue");
+-    const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
+-    const hasEdge = /border|HandDrawnOutline/.test(bar);
++    const open = p.search(/<div[^>]*class="action-bar"/);
++    const sub = open < 0 ? "" : p.slice(open, open + 600);
++    const rule = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
++    const drawn = /outline-svg|<HandDrawnOutline/.test(sub);
++    const cssBorder = /(^|\s)border(-top|-bottom)?\s*:/.test(rule);
+     return {
+-      ok: hasEdge,
+-      detail: hasEdge ? "the bar declares an edge" : "no border, no drawn outline — background + fade only",
++      ok: drawn && !cssBorder,
++      detail: drawn
++        ? cssBorder ? "a drawn child AND a CSS border (L5 red)" : "the bar's first children carry a drawn edge (outline-svg / HandDrawnOutline)"
++        : "no drawn edge in the bar's subtree",
+     };
+   },
+ );

@@ -1,0 +1,25 @@
+--- law-probe.COPY.mjs	2026-09-22 17:49:03
++++ law-probe.PROPOSED.mjs	2026-09-22 17:49:03
+@@ -40,7 +40,7 @@
+ 
+ law(
+   "L1",
+-  "the live-filter population is exactly 9 and the boil budget never grows",
++  "the live-filter population never grows past 9 (a ceiling; the census holds the exact set)",
+   "filterBudget.ts FILTER_BUDGET_TOTAL, T4-P1 filter-deletion cure",
+   "GREEN",
+   () => {
+@@ -50,7 +50,12 @@
+     const budget = src.slice(0, src.indexOf("SECONDARY CENSUS"));
+     const counts = [...budget.matchAll(/count:\s*(\d+)/g)].map((m) => +m[1]);
+     const total = counts.reduce((a, b) => a + b, 0);
+-    return { ok: total === 9, detail: `FILTER_BUDGET rows sum to ${total}` };
++    // PROPOSED (CTRL-TABS pass 4; the chair lands it, as L3's was landed): the law is "never
++    // grows" — a CEILING at 9, the same form the chair gave L3. The exact population is the
++    // filter-census's job (exact-match allowlist, both directions, on the built dist), so a
++    // surface that LEAVES (the divider's four poses under the index tabs: 9 → 5) is not a
++    // broken law; a surface that ARRIVES still reds here AND in the census.
++    return { ok: total <= 9, detail: `FILTER_BUDGET rows sum to ${total} (ceiling 9)` };
+   },
+ );
+ 

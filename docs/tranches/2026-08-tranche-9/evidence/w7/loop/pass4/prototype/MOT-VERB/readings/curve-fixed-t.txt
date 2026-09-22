@@ -1,0 +1,56 @@
+PER-SITE FIXED-t TABLE — the curve moves, priced
+worst |Δprogress| over 21 samples, and the t it happens at (0..1 of the duration)
+
+site                              what                               ms  worstΔ   at t   verdict
+chrome/AttributionCard.vue        the card's four rows              150  0.5425   0.25   A RE-CURVE
+chrome/GameGallery.vue            the deck's three grounds          150  0.5425   0.25   A RE-CURVE
+chrome/GameGallery.vue            the pip's arrival                 250  0.0000   0.00   a RE-NAME
+chrome/GameCard.vue               the card's step                   440  0.0000   0.00   a RE-NAME
+chrome/GameCard.vue               the card's word                   150  0.5425   0.25   A RE-CURVE
+games/GameControlPanel.vue        the four control grounds          150  0.5425   0.25   A RE-CURVE
+games/DrawerTab.vue               the tab's nudge                   150  0.4020   0.30   A RE-CURVE
+celestial/DarkModeToggle.vue      the toggle's rest                 200  0.3706   0.25   A RE-CURVE
+chrome/CrayonHeart.vue            the heart                         250  0.3706   0.25   A RE-CURVE
+sheet/SheetWashiLabel.vue         the label                         150  0.3706   0.25   A RE-CURVE
+games/SolverErrorNote.vue         the note's arrival                250  0.1313   0.10   A RE-CURVE
+games/SolverErrorNote.vue         the note's ground                 150  0.3706   0.25   A RE-CURVE
+chrome/HandwrittenLogo.vue        the wordmark straightens          200  0.1313   0.10   A RE-CURVE
+assets/index.css                  the gold stroke                   520  0.3706   0.25   A RE-CURVE
+assets/index.css                  the gold shadow                   520  0.3706   0.25   A RE-CURVE
+assets/index.css                  THE DUSK (five grounds)           350  0.0000   0.00   a RE-NAME
+games/scene.css                   the chrome leave                  200  0.0000   0.00   a RE-NAME
+games/scene.css                   beat 3, every scene mount         250  0.1875   0.25   A RE-CURVE
+games/CaretOverlay.vue            the caret leaves                  200  0.0000   0.00   a RE-NAME
+games/GameBoard.vue               the board leaves                  200  0.0000   0.00   a RE-NAME
+games/ThermoTube.vue              the tube leaves                   200  0.0000   0.00   a RE-NAME
+App.vue                           the deck's leave-only dissolve    200  0.8521   0.40   A RE-CURVE
+sheet/AnswerKeyLaminate.vue       the laminate lifts (x2)           200  0.0323   0.85   a nudge
+grid/HandDrawnGrid.vue            the grid's dashoffset             250  0.3787   0.20   A RE-CURVE
+grid/HandDrawnGrid.vue            the grid's opacity                520  0.3706   0.25   A RE-CURVE
+chrome/MarginNote.vue             the note's ink (x2)               250  0.0000   0.00   a RE-NAME
+chrome/CompletionVignette.vue     the vignette's ink                250  0.0000   0.00   a RE-NAME
+chrome/icons/FillForcedIcon.vue   the mark draws                    350  0.5425   0.25   A RE-CURVE
+chrome/icons/SolveIcon.vue        the check draws                   350  0.5425   0.25   A RE-CURVE
+
+sites 29 · worst |Δprogress| 0.8521 · re-names (<0.005) 9 · nudges 1 · re-curves (>=0.05) 19
+
+THE RE-CURVES, which are the rows that need the owner's eye:
+  0.8521 at t=0.40  App.vue — the deck's leave-only dissolve (200ms)
+  0.5425 at t=0.25  chrome/AttributionCard.vue — the card's four rows (150ms)
+  0.5425 at t=0.25  chrome/GameGallery.vue — the deck's three grounds (150ms)
+  0.5425 at t=0.25  chrome/GameCard.vue — the card's word (150ms)
+  0.5425 at t=0.25  games/GameControlPanel.vue — the four control grounds (150ms)
+  0.5425 at t=0.25  chrome/icons/FillForcedIcon.vue — the mark draws (350ms)
+  0.5425 at t=0.25  chrome/icons/SolveIcon.vue — the check draws (350ms)
+  0.4020 at t=0.30  games/DrawerTab.vue — the tab's nudge (150ms)
+  0.3787 at t=0.20  grid/HandDrawnGrid.vue — the grid's dashoffset (250ms)
+  0.3706 at t=0.25  celestial/DarkModeToggle.vue — the toggle's rest (200ms)
+  0.3706 at t=0.25  chrome/CrayonHeart.vue — the heart (250ms)
+  0.3706 at t=0.25  sheet/SheetWashiLabel.vue — the label (150ms)
+  0.3706 at t=0.25  games/SolverErrorNote.vue — the note's ground (150ms)
+  0.3706 at t=0.25  assets/index.css — the gold stroke (520ms)
+  0.3706 at t=0.25  assets/index.css — the gold shadow (520ms)
+  0.3706 at t=0.25  grid/HandDrawnGrid.vue — the grid's opacity (520ms)
+  0.1875 at t=0.25  games/scene.css — beat 3, every scene mount (250ms)
+  0.1313 at t=0.10  games/SolverErrorNote.vue — the note's arrival (250ms)
+  0.1313 at t=0.10  chrome/HandwrittenLogo.vue — the wordmark straightens (200ms)

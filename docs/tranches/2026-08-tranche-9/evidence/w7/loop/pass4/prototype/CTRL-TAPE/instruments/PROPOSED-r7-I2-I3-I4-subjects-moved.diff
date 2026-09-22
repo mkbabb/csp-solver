@@ -1,0 +1,81 @@
+PROPOSED — NOT APPLIED. `r0/` is frozen (LAWS §The record). T9-W7 §10 pass 4 · CTRL-TAPE.
+
+The r0 copy (`p4-owners-eye.mjs`, BASE and OUT re-pointed, nothing else changed) reads on this
+tree, both engines:
+
+  GREEN I1  T9-M03/M05   1 voice at 1440×900: 25.888px | Patrick Hand | 500
+  RED   I2  T9-M04       ownChrome=true (border 0px, shadow none) · worst group coverage 31.2% (pencils)
+  RED   I3  T9-M03       3 violating states: scrollTop 327 "new game" 0.483 · 500 0.161 · 716 0
+  RED   I4  T9-M12       Deal/Clear/Fill/Solve: armed=false wrote=0
+  RED   I5  T9-M14       no player mark in the DOM        (§11's row, not this family's)
+  RED   I6  T9-M09 §13   77 declarations, 35 literals      (§13's row, not this family's)
+  GREEN I7  T8-M20       worst overlap 0px² · min gap 4.4px
+
+EACH OF I2 / I3 / I4 IS THE INSTRUMENT READING A SUBJECT THIS DESIGN MOVED, and each is
+re-read with the subject where it now is in `instruments/p4-i234.mjs` (`logs/p4-i234.log`).
+The law is GREEN under every re-read; the numbers are below, identical in both engines.
+
+── I2 · THE BAR LEFT THE SCROLLPORT, SO THE OVERLAP MUST BE CLIPPED TO IT ─────────────────
+r0 intersects each `.tray-well`'s raw rect with `.action-bar`'s. The bar teleports to
+`#card-foot` now, which is OUTSIDE the card's scrollport — measured at 390×844: bar box
+[769.23, 836.00], scrollport [253.47, 769.23], `barInPort: false`, `barInFoot: true`; the bar's
+top edge IS the port's bottom edge. A well scrolled below the port still has a rect down there,
+and that is the whole of the 31.2 %.
+
+    well        unclipped frac   clipped to the scrollport
+    new game        0.000               0.000
+    pencils         0.312               0.000
+    checking        0.000               0.000
+    players         0.000               0.000
+
+    -      const wb = w.getBoundingClientRect();
+    -      const ov = Math.max(0, Math.min(wb.bottom, bb.bottom) - Math.max(wb.top, bb.top)) * …
+    +      // A surface only exists where its scrollport paints it (CTRL-RULE's critic, pass 3).
+    +      const wb = w.getBoundingClientRect();
+    +      const port = document.querySelector(".controls-card").getBoundingClientRect();
+    +      const vTop = Math.max(wb.top, port.top), vBot = Math.min(wb.bottom, port.bottom);
+    +      const ov = Math.max(0, Math.min(vBot, bb.bottom) - Math.max(vTop, bb.top)) * …
+
+── I3 · A RELEASED TAPE RIDING OUT OF THE PORT IS NOT A PINNED TAPE ───────────────────────
+r0 calls a tape pinned when `b.top <= scb.top + 30`, which a tape that has been RELEASED and is
+scrolling up out of the port also satisfies. Read with the pose and the visibility, at 1440×900:
+
+    scrollTop   tag         r0 "pinned"   position   released   tape visible   well frac
+        0       —           (none)
+      160       new game       true       sticky       false        true         0.794
+      327       new game       true       static       true         FALSE        0.483
+      500       new game       true       static       true         FALSE        0.161
+      717       new game       true       static       true         FALSE        0.000
+      717       pencils        true       sticky       false        true         0.635
+
+Every tape that is actually pinned AND visible names a well ≥ half on screen (0.794, 0.635).
+The three "violations" are one tape that had already released and left the port.
+
+    -        if (b.top > scb.top + 30) continue; // not pinned
+    +        // PINNED means the pose, not the position on screen: a released tape riding up out
+    +        // of the port passes a `top` test and is not pinned to anything.
+    +        if (getComputedStyle(tag).position !== "sticky") continue;
+    +        if (b.bottom <= scb.top || b.top >= scb.bottom) continue; // not in the port at all
+
+── I4 · THE ARMING WITNESS IS THE RIBBON; THE LAW'S OWN CLAUSE WAS ALREADY GREEN ──────────
+r0 witnesses arming by `.icon-sublabel.is-armed` — the `sure?` pose §15 deleted, with the
+question that had no answer on the page. The replacement is `ConfirmRibbon.vue`. Measured at
+390×844 on a dirty board, one tap per verb, both engines:
+
+    verb     r0Armed   ribbonArmed   ask                          role     dialog   cellsWritten
+    Deal      false       true       "start a new board?"         group    false        0
+    Clear     false       true       "clear the board?"           group    false        0
+    Fill      false       true       "fill in the sure cells?"    group    false        0
+    Solve     false       true       "fill in the whole board?"   group    false        0
+
+`cellsWritten` — the law's real clause, "one tap changes nothing" — is 0 on all four already,
+which is why the r0 row's red was never a board that lost work.
+
+    -            armed: !!b.querySelector(".icon-sublabel.is-armed"),
+    +            // §15 replaced the in-control `sure?` sublabel with a named question and two
+    +            // answers in the verb's own row. A group named by the sentence is the arming
+    +            // witness; `role="dialog"` was never this face's claim.
+    +            armed: !!document.querySelector(".confirm-ribbon"),
+
+I5 and I6 are RED and are not this family's rows (§11's player mark, §13's duration vocabulary);
+they are reported unchanged. THE CHAIR RULES ALL THREE MOVES; this lane proposes and measures.

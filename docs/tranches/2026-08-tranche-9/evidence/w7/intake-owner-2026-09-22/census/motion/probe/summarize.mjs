@@ -1,0 +1,9 @@
+import { readdirSync, writeFileSync } from "node:fs";
+import { analyzeToggle } from "./an-toggle.mjs";
+import { analyzeMove } from "./an-move.mjs";
+const out = { lane: "census:motion", tree: "master 1e6cfbbf, vite dev server 127.0.0.1:4250 (private cacheDir), main src/ read-only", dpr: 2, instrument: "rAF sampler (frame-start timestamps), getBoundingClientRect + computed transform/opacity/visibility; Element.animate hook logs each FLIP mover's keyframes + the rect at call; LoAF (chromium only); drawImage hook for bake attribution. Playwright 1.x headless chromium-1223 / webkit; box shared with live pass-4 lanes (frame noise ~±20ms on warm runs).", toggle: [], ablation: [], move: [] };
+const strip = (r) => { const { series, ...rest } = r; return rest; };
+for (const f of readdirSync("runs").filter((f) => /^t-.*\.json$/.test(f) && !f.includes("-shots"))) { const a = analyzeToggle("runs/" + f); out.toggle.push({ file: f, engine: a.engine, view: a.view, viewport: a.vp, boot: a.scheme, prm: a.prm, pointer: a.touch ? "coarse(hasTouch)" : "fine", runs: a.runs.map(strip) }); }
+for (const f of readdirSync("runs").filter((f) => /^abl.*\.json$/.test(f))) { const a = analyzeToggle("runs/" + f); out.ablation.push({ file: f, engine: a.engine, view: a.view, viewport: a.vp, pointer: "fine", arms: a.runs.map((r) => ({ arm: r.label, direction: r.direction, frameMs: r.frameMs, over25: r.over25, over50: r.over50, incomingBornScale: r.incomingBornAt?.scale ?? null, bigFrames: r.bigFrames })) }); }
+for (const f of readdirSync("runs").filter((f) => /^m-.*\.json$/.test(f))) { const a = analyzeMove("runs/" + f); out.move.push({ file: f, engine: a.engine, viewport: a.vp, prm: a.prm, pointer: a.touch ? "coarse(hasTouch)" : "fine", runs: a.runs.map(strip) }); }
+writeFileSync(process.argv[2], JSON.stringify(out, null, 1)); console.log("ok");

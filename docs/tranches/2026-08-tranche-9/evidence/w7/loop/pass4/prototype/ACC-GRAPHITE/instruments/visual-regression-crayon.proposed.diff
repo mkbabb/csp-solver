@@ -1,0 +1,30 @@
+# PROPOSED — not applied (chair §6.11: "ACC-GRAPHITE keeps its retire arm and ships the
+# `visual-regression.spec.ts` change as a PROPOSED diff under its evidence dir, not applied;
+# the eighteen keep the hex. The assertion follows the fold's value, once.")
+#
+# HEAD reading, measured this pass: `e2e/visual-regression.spec.ts:151-163` resolves four crayon
+# vars off the live root and asserts each `toBeTruthy()`. Line :163 is the one this family's
+# retirement reds. The live value at HEAD is `#4a90d9` light / `#6aabeb` dark
+# (readings/denominators-*.json, both engines).
+
+--- a/e2e/visual-regression.spec.ts
++++ b/e2e/visual-regression.spec.ts
+@@ -151,13 +151,16 @@
+   const crayonVars = await page.evaluate(() => {
+     const s = getComputedStyle(document.documentElement);
+     return {
+       green: s.getPropertyValue("--color-crayon-green").trim(),
+       orange: s.getPropertyValue("--color-crayon-orange").trim(),
+       rose: s.getPropertyValue("--color-crayon-rose").trim(),
+-      blue: s.getPropertyValue("--color-crayon-blue").trim(),
++      gold: s.getPropertyValue("--color-crayon-gold").trim(),
+     };
+   });
+   expect(crayonVars.green).toBeTruthy();
+   expect(crayonVars.orange).toBeTruthy();
+   expect(crayonVars.rose).toBeTruthy();
+-  expect(crayonVars.blue).toBeTruthy();
++  expect(crayonVars.gold).toBeTruthy();
++  // The blue wax is retired at the accent fold: selection is a graphite GROUND and the ring is
++  // graphite. Asserting its ABSENCE here would pin this spec to one family's arm; asserting the
++  // four crayons that still have jobs is the row that survives either way.

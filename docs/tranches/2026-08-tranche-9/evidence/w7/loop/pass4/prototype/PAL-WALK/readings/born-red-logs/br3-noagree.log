@@ -1,0 +1,61 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (43 tests | 2 failed) 189ms
+     × U1 — an agreed index survives a non-author's rival `st` 11ms
+     × U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U1 — an agreed index survives a non-author's rival `st`
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1534 320.64deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.2107 320.64deg)",
++   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.0555 189.44deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.0762 189.44deg)",
+  }
+
+ ❯ src/games/shared/useSession.test.ts:557:29
+    555|       "peer-2",
+    556|     );
+    557|     expect(inkOf("peer-1")).toEqual(inkFor(5));
+       |                             ^
+    558|   });
+    559|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1534 320.64deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.2107 320.64deg)",
++   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.0713 112.41deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.0978 112.41deg)",
+  }
+
+ ❯ src/games/shared/useSession.test.ts:653:29
+    651|       "peer-1",
+    652|     );
+    653|     expect(inkOf("peer-1")).toEqual(inkFor(5));
+       |                             ^
+    654|     // a DIFFERENT author's newer board is a new room's worth of assig…
+    655|     p.hear(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 41 passed (43)
+   Start at  14:18:58
+   Duration  750ms (transform 77ms, setup 14ms, import 99ms, tests 189ms, environment 309ms)
+

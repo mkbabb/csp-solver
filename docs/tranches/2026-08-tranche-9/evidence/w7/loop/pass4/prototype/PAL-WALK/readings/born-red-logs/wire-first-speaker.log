@@ -1,0 +1,37 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (43 tests | 1 failed) 109ms
+     × U9 — a non-author's `st` that arrives FIRST does not out-rank the author's later word 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U9 — a non-author's `st` that arrives FIRST does not out-rank the author's later word
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1534 320.64deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.2107 320.64deg)",
++   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.0555 189.44deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.0762 189.44deg)",
+  }
+
+ ❯ src/games/shared/useSession.test.ts:685:29
+    683|       "peer-1", // the author
+    684|     );
+    685|     expect(inkOf("peer-1")).toEqual(inkFor(5));
+       |                             ^
+    686|   });
+    687|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 42 passed (43)
+   Start at  14:18:56
+   Duration  636ms (transform 91ms, setup 22ms, import 114ms, tests 109ms, environment 287ms)
+

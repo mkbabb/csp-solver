@@ -1,0 +1,26 @@
+
+Running 1 test using 1 worker
+
+G13 chromium 20 20 false
+  ✘  1 [chromium] › .plr-count/g13/plrc-g13.spec.ts:7:1 › G13 (791ms)
+
+
+  1) [chromium] › .plr-count/g13/plrc-g13.spec.ts:7:1 › G13 ────────────────────────────────────────
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      23 |   writeFileSync(`${process.env.PLRC_OUT}/g13-${browserName}.json`, JSON.stringify({ n: [out.control.length, out.proto.length], same }));
+      24 |   console.log("G13", browserName, out.control.length, out.proto.length, same);
+    > 25 |   expect(same).toBe(true);
+         |                ^
+      26 | });
+      27 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/.plr-count/g13/plrc-g13.spec.ts:25:16
+
+    Error Context: .plr-count/test-results/plrc-g13-G13-chromium/error-context.md
+
+  1 failed
+    [chromium] › .plr-count/g13/plrc-g13.spec.ts:7:1 › G13 ─────────────────────────────────────────

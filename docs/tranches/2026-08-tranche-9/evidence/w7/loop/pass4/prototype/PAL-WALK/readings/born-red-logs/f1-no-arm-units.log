@@ -1,0 +1,82 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (43 tests | 3 failed) 159ms
+     × U2 — this page's own publish agrees nothing, and a new author's epoch re-seats it 15ms
+     × U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing 5ms
+     × U8 — the room of one: write, invite, write, and only the arrival inks the board 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U2 — this page's own publish agrees nothing, and a new author's epoch re-seats it
+AssertionError: expected {} to deeply equal { …(2) }
+
+- Expected
++ Received
+
+- {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
+- }
++ {}
+
+ ❯ src/games/shared/useSession.test.ts:568:25
+    566|     const inkOf = (id: string) =>
+    567|       p.session.session.players.value.find((r) => r.id === id)?.ink;
+    568|     expect(inkOf(self)).toEqual(inkFor(0));
+       |                         ^
+    569|     // a newer epoch by a DIFFERENT author: the agreement dies with th…
+    570|     // under, so the room's word lands rather than this page's own arr…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing
+AssertionError: expected {} to deeply equal { …(2) }
+
+- Expected
++ Received
+
+- {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
+- }
++ {}
+
+ ❯ src/games/shared/useSession.test.ts:697:25
+    695|     expect(inkOf(self)).toEqual({});
+    696|     p.peer("peer-1", true);
+    697|     expect(inkOf(self)).toEqual(inkFor(0));
+       |                         ^
+    698|   });
+    699|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U8 — the room of one: write, invite, write, and only the arrival inks the board
+AssertionError: expected undefined to deeply equal { …(2) }
+
+- Expected:
+{
+  "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
+  "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
+}
+
++ Received:
+undefined
+
+ ❯ src/games/shared/useSession.test.ts:711:44
+    709|     p.peer("peer-1", true);
+    710|     // BOTH solo-era cells, and they carry the SAME string — your hand…
+    711|     expect(p.session.authorInk.value["4"]).toEqual(inkFor(0));
+       |                                            ^
+    712|     expect(p.session.authorInk.value["7"]).toEqual(inkFor(0));
+    713|     expect(p.session.cellAuthors.value["4"]).toMatchObject({ self: tru…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  3 failed | 50 passed (53)
+   Start at  14:19:02
+   Duration  1.18s (transform 602ms, setup 42ms, import 823ms, tests 199ms, environment 997ms)
+

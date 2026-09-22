@@ -1,0 +1,47 @@
+# CTRL-RULE pass-4 CRITIC — gates re-run bare (summaries; raw logs not banked)
+# prototype dist index-DYckr8SLvCtH.js @127.0.0.1:4238 · control 74a2b5d9 dist index-CubiZsMVSwTc.js @127.0.0.1:4239 (both killed by PID)
+
+## viewport-law.spec.ts, prototype, chromium+webkit
+  1) [chromium] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme 
+  2) [chromium] › e2e/viewport-law.spec.ts:581:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+  3) [chromium] › e2e/viewport-law.spec.ts:616:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 
+  4) [webkit] › e2e/viewport-law.spec.ts:287:3 › §2.4 the toggle stops stealing @ 1024×768 › §2.4 no click on a control that shares the toggle box flips the theme 
+  5) [webkit] › e2e/viewport-law.spec.ts:581:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+  6) [webkit] › e2e/viewport-law.spec.ts:616:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 
+  6 failed
+  22 passed (34.3s)
+[W2-§2.4] toggle=[863.8,59.8,112.3,112.3] overlaps=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.5 text-cen","overlapPx":967.4,"circleFrac":0.375,"at":[920,167.9]}] thefts=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-
+[W2-§2.6 rail] {"max":385,"rows":[{"tag":"size","position":"sticky","wellInView":0.726,"tagVisFrac":1},{"tag":"level","position":"sticky","wellInView":0.727,"tagVisFrac":1},{"tag":"new game","position":"sticky","wellInView":0.596,
+[W2-§2.6 drawer] {"max":361,"rows":[{"tag":"size","position":"sticky","wellInView":0.498,"tagVisFrac":0.9396},{"tag":"level","position":"sticky","wellInView":0.668,"tagVisFrac":1},{"tag":"new game","position":"sticky","wellInView"
+[W2-§2.4] toggle=[863.8,59.8,112.3,112.3] overlaps=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.5 text-cen","overlapPx":999,"circleFrac":0.375,"at":[920,167.7]}] thefts=[{"label":"4×4","cls":"ctrl-btn rounded-md px-3 py-1.
+[W2-§2.6 rail] {"max":402,"rows":[{"tag":"size","position":"sticky","wellInView":0.726,"tagVisFrac":1},{"tag":"level","position":"sticky","wellInView":0.727,"tagVisFrac":1},{"tag":"new game","position":"sticky","wellInView":0.596,
+[W2-§2.6 drawer] {"max":361,"rows":[{"tag":"size","position":"sticky","wellInView":0.513,"tagVisFrac":0.9723},{"tag":"level","position":"sticky","wellInView":0.676,"tagVisFrac":1},{"tag":"new game","position":"sticky","wellInView"
+
+## viewport-law.spec.ts, CONTROL's own spec, webkit
+  14 passed (23.0s)
+EXIT=0
+
+## webkit, prototype: zone-grammar mobile-affordances visual-regression access font-census
+  1) [webkit] › e2e/visual-regression.spec.ts:809:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for 
+  1 failed
+  40 passed (31.4s)
+EXIT=1
+
+## filter-census (throttle config), both engines, built dist
+  12 passed (8.8s)
+EXIT=0
+
+## visual-golden, built dist
+  4 passed (2.8s)
+EXIT=0
+
+## scripts, bare (worktree)
+check-copy-register --self-test: exit 0 · check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+check-theme-tokens --self-test: exit 0 · check-theme-tokens: 0 unreferenced @theme tokens
+check-font-coverage --self-test: exit 0 ·     Patrick Hand · .washi-tag (compartment names) + the tapes: "players"
+check-ink-pressure --self-test: exit 0 ·   the ramp and the register cross between themes, and the crossing is GATED: exactly one ruling is admitted (src/assets/index.css §INK PRESS
+check-motion-contract --self-test: exit 0 · OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+check-copy-register (no flag): exit 0
+
+## R3 PROPOSED re-aim (law-probe.R3.proposed.mjs, FE re-pointed)
+as shipped GREEN · control RED · break A (bar-rule RuledLine deleted) RED · break B (deleted + an HTML comment naming outline-svg inside the 600-char window) GREEN  <- fooled

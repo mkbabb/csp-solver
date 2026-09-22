@@ -1,0 +1,165 @@
+diff -ru a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+--- a/web/frontend/src/assets/index.css	2026-09-22 17:57:11
++++ b/web/frontend/src/assets/index.css	2026-09-22 17:57:11
+@@ -914,7 +914,6 @@
+   /* T5-W4 pass 6: `.mobile-board-width` is deleted — the stacked twin it named is gone and the
+      ONE card is `.controls-card`, already listed above. What replaced it in the portrait fold
+      is the play-verbs band, and a printed worksheet wants no undo button either. */
+-  .fold-tools,
+   .celebration-star,
+   .board-margin,
+   .answer-key-laminate {
+diff -ru a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+--- a/web/frontend/src/games/shared/GameControlPanel.vue	2026-09-22 17:57:11
++++ b/web/frontend/src/games/shared/GameControlPanel.vue	2026-09-22 17:57:11
+@@ -183,12 +183,6 @@
+ const uid = useId();
+ const tabId = (k: TabKey) => `${uid}tab-${k}`;
+ const panelId = (k: TabKey) => `${uid}panel-${k}`;
+-// THE DECLARED FALLBACK KEEPS THE FOUR TAGS (chair §6.3(a)(b), U-10): owner mark T9-M03 is
+-// the sticky section tag, and only the owner retires a mark. Each face-up tray wears its HEAD
+-// tape (same seed, same literal, `anchor="tag"`; static so check-font-coverage can read it).
+-// The deletion arm (the tab alone names the tray) is the ballot's other frame, banked as a
+-// PROPOSED diff under `pass4/prototype/CTRL-TABS/instruments/`.
+-const tagId = (k: TabKey) => `${uid}tag-${k}`;
+ const tabKeys = computed<TabKey[]>(() =>
+   props.mobile
+     ? ["new-game", "pencils", "checking", "players"]
+@@ -624,7 +618,7 @@
+ // landscape gained — so the ballot's YES (the strip everywhere, `#fold-tools` deleted) is a
+ // deletion the owner makes, not one this lane already made.
+ const playToolsBerth = computed(() =>
+-  portraitDock.value ? "#fold-tools" : mobileDock.value ? "#board-edge-tools" : null,
++  mobileDock.value ? "#board-edge-tools" : null,
+ );
+ 
+ // ── T9-W7 §15 · THE CONFIRM IS ONE MECHANISM, AND IT TAKES THE FLOOR'S ROW ───────────────────
+@@ -922,7 +916,6 @@
+         :aria-labelledby="tabId('new-game')"
+         :inert="face !== 'new-game' || undefined"
+       >
+-        <SheetWashiLabel :id="tagId('new-game')" text="new game" :seed="13" anchor="tag" />
+         <div class="control-panel-filtered">
+           <div
+             v-for="section in sections"
+@@ -959,7 +952,6 @@
+         :aria-labelledby="tabId('pencils')"
+         :inert="face !== 'pencils' || undefined"
+       >
+-        <SheetWashiLabel :id="tagId('pencils')" text="pencils" :seed="29" anchor="tag" />
+         <div
+           class="zone-row"
+           :class="{ 'zone-row-stacked': !mobile }"
+@@ -1019,7 +1011,6 @@
+         :aria-labelledby="tabId('checking')"
+         :inert="face !== 'checking' || undefined"
+       >
+-        <SheetWashiLabel :id="tagId('checking')" text="checking" :seed="59" anchor="tag" />
+         <OptionSelector
+           :options="CHECK_OPTIONS"
+           :selected="errorCheckMode"
+@@ -1042,7 +1033,6 @@
+         :aria-describedby="playersHintId"
+         :inert="face !== 'players' || undefined"
+       >
+-        <SheetWashiLabel :id="tagId('players')" text="players" :seed="67" anchor="tag" />
+         <p :id="playersHintId" class="tray-note">
+           share this board and everyone writes on the same grid
+         </p>
+@@ -1549,13 +1539,6 @@
+   visibility: hidden;
+ }
+ 
+-/* The fallback's tag, in flow at the tray's head. HEAD's straddle pull (`margin-top: −1.5em`)
+-   would lift it through the lid into the raised tab's mouth, so the tape pays its own line
+-   here instead; the price is the tape's line box on the face-up tray, measured in the return. */
+-.tray > .washi-tag {
+-  margin: 0 0 0 0.85rem;
+-}
+-
+ /* The row caption's heading host — the same `display: contents` trick the tab wears, so ROW 2's
+    population is the four tab words AND the two row captions (6/6) without a single box moving. */
+ .row-head {
+@@ -2320,30 +2303,6 @@
+   gap: 0.05rem;
+ }
+ 
+-/* ── THE DECLARED FALLBACK'S PORTRAIT ARM (chair §6.3(b), pass 4) ────────────────────────────
+-   In the shipped ribbon the row is HEAD's row: no drawn outline, no card ground, HEAD's 1rem gap
+-   and 0.35rem head room, the icon-btn's own padding. Pass 3 teleported the row in here but left
+-   the edge berth's absolute pose on it, which resolved against the page and hung the four tools
+-   at y −8 (off-screen, measured at 390×844 coarse). The edge pose is now keyed on the edge
+-   berth itself, so the ribbon gets exactly what it had. */
+-.fold-tools > .play-controls {
+-  gap: 1rem;
+-  align-items: flex-start;
+-  margin-top: 0.35rem;
+-}
+-
+-.fold-tools .edge-tools {
+-  display: contents;
+-}
+-
+-.fold-tools .edge-tools :deep(.outline-svg) {
+-  display: none;
+-}
+-
+-.fold-tools .edge-tools .icon-btn {
+-  padding: 0.3rem 0.5rem;
+-  gap: 0.15rem;
+-}
+ 
+ /* ── THE TWO BERTH POSES, the tongue's own two, read on the other end of the same edge ───────
+    Portrait: the paper's BOTTOM edge, tucked 8px under it at `z-index: -1` — `DrawerTab`'s own
+diff -ru a/web/frontend/src/games/shared/GameScene.vue b/web/frontend/src/games/shared/GameScene.vue
+--- a/web/frontend/src/games/shared/GameScene.vue	2026-09-22 17:57:10
++++ b/web/frontend/src/games/shared/GameScene.vue	2026-09-22 17:57:11
+@@ -152,14 +152,8 @@
+       </div>
+     </Teleport>
+ 
+-    <!-- THE FOLD'S RIBBON — STANDS, pending the owner (chair §6.3(b), U-10). Pass 2 deleted it.
+-         It is a shipped berth the owner has marked on, so pass 3 ships the DECLARED FALLBACK
+-         instead and asks: portrait teleports `.play-controls` in here exactly as HEAD does,
+-         while landscape and the flank — where this ribbon is 0×0 and the play tools had no home
+-         at all — take the board's edge berth above. The ballot's YES deletes this div and its
+-         `.fold-tools` rules and lets portrait take the edge too. The DEFAULT is this div
+-         standing (T9-B-TABS, pass4/prototype/CTRL-TABS/README.md); deletion is the owner's. -->
+-    <div id="fold-tools" class="fold-tools" />
++    <!-- BALLOT ARM: DELETION (T9-B-TABS). `#fold-tools` is retired: the play tools take the
++         board's edge berth in every mobile pose, portrait included. -->
+ 
+     <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
+          vertically centered against the board (H8-centering-only). T3-W12 §6: the rail
+diff -ru a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+--- a/web/frontend/src/games/shared/scene.css	2026-09-22 17:57:10
++++ b/web/frontend/src/games/shared/scene.css	2026-09-22 17:57:11
+@@ -339,7 +339,6 @@
+    Portrait <1024 turns them on, below. (`.fold-tools` STANDS pending the ballot — T9-W7 §14,
+    chair §6.3(b): the portrait ribbon is the declared fallback and the board's edge berth is
+    what landscape and the flank gained, so the two partition the mobile poses between them.) */
+-.fold-tools,
+ .drawer-handle {
+   display: none;
+ }
+@@ -548,20 +547,6 @@
+ }
+ 
+ @media (max-width: 1023.98px) and (orientation: portrait) {
+-  /* THE RIBBON — one row of verbs, under the reserved line (T6.2 mark A). RESTORED at pass 3
+-     as the declared fallback (chair §6.3(b)): its children arrive by Teleport exactly as they
+-     shipped — `.play-controls` from `GameControlPanel`, the drawer's own tongue from
+-     `GameScene` while the sheet is shut — and the row is composed rather than authored, so the
+-     verbs and the tongue read as ONE line without either owner reaching into the other's box.
+-     What pass 3 changed here is nothing: the berth this ribbon never had in LANDSCAPE is the
+-     board's edge, one block up, and the ballot asks whether portrait should join it. */
+-  .fold-tools {
+-    display: flex;
+-    align-items: flex-start;
+-    justify-content: center;
+-    gap: 1rem;
+-    width: var(--board-col);
+-  }
+ }
+ 
+ /* ── F6 page-turn: the controls chrome follows the grid (T3-W10) ──────────────

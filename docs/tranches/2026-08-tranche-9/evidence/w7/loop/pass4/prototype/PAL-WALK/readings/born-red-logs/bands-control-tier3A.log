@@ -1,0 +1,86 @@
+
+Running 2 tests using 1 worker
+
+[chromium/light] band 0.44 · ring band 0.2 · ring drawn at alpha 0.55, fill 0.04, width 4
+[chromium/light] nearest token --color-solver-ink-3 ΔE 0.0716 at i=112
+[chromium/light] crayon reference (re-derived) 0.076410 · hands under it 5/144 = 0.0347 · the house crowds itself 78.9% of 19 tokens
+[chromium/light] AA background: worst 7.098:1 at i=35
+[chromium/light] AA card: worst 7.270:1 at i=35
+[chromium/light] AA popover: worst 7.164:1 at i=35
+[chromium/light] AA selection-wash: worst 6.687:1 at i=35
+[chromium/light] AA laminate (reported): worst 5.861:1 at i=35
+[chromium/light] AA accent (watched, not a ground): worst 6.839:1 at i=35
+[chromium/light] AA tape · ring string (shipped): worst 15.330:1 at i=128
+[chromium/light] AA tape · digit string (reported, ballot arm): worst 6.493:1 at i=35
+[chromium/light] AA tape · HEAD 74a2b5d9 (reported): worst 4.777:1 at i=114
+[chromium/light] ring band 0.2: worst 3.836:1 at i=80 · on popover 3.832:1 · min ring chroma 0.0356
+[chromium/light] ring band 0.34: worst 3.000:1 at i=6 · on popover 2.991:1 · min ring chroma 0.0543
+[chromium/light] opacity alone would need alpha ≥ 0.63; at 0.65, 0/144 are under 3:1
+[chromium/light] §6 candidates at the shipped band: α 0.55 → 3.836 · α 0.65 → 5.328 · α 0.8 → 8.768 · digit vs its own ring 1.729:1 at i=14 (priced, not asserted)
+[chromium/light] digit painted hue: nearest house token --color-user-ink 12.906° at i=112 · worst drift from the asked hue 0.892° at i=1
+[chromium/light] ring painted hue: nearest house token --color-crayon-blue 3.417° at i=57 · worst drift from the asked hue 18.258° at i=113
+  ✘  1 [chromium] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands (2.6s)
+[webkit/light] band 0.44 · ring band 0.2 · ring drawn at alpha 0.55, fill 0.04, width 4
+[webkit/light] nearest token --color-solver-ink-3 ΔE 0.0716 at i=112
+[webkit/light] crayon reference (re-derived) 0.076410 · hands under it 5/144 = 0.0347 · the house crowds itself 78.9% of 19 tokens
+[webkit/light] AA background: worst 7.098:1 at i=35
+[webkit/light] AA card: worst 7.270:1 at i=35
+[webkit/light] AA popover: worst 7.164:1 at i=35
+[webkit/light] AA selection-wash: worst 6.730:1 at i=35
+[webkit/light] AA laminate (reported): worst 5.861:1 at i=35
+[webkit/light] AA accent (watched, not a ground): worst 6.839:1 at i=35
+[webkit/light] AA tape · ring string (shipped): worst 15.321:1 at i=128
+[webkit/light] AA tape · digit string (reported, ballot arm): worst 6.489:1 at i=35
+[webkit/light] AA tape · HEAD 74a2b5d9 (reported): worst 4.774:1 at i=114
+[webkit/light] ring band 0.2: worst 3.836:1 at i=80 · on popover 3.832:1 · min ring chroma 0.0356
+[webkit/light] ring band 0.34: worst 3.034:1 at i=61 · on popover 3.004:1 · min ring chroma 0.0543
+[webkit/light] opacity alone would need alpha ≥ 0.63; at 0.65, 0/144 are under 3:1
+[webkit/light] §6 candidates at the shipped band: α 0.55 → 3.836 · α 0.65 → 5.328 · α 0.8 → 8.768 · digit vs its own ring 1.729:1 at i=14 (priced, not asserted)
+[webkit/light] digit painted hue: nearest house token --color-user-ink 12.906° at i=112 · worst drift from the asked hue 0.892° at i=1
+[webkit/light] ring painted hue: nearest house token --color-crayon-blue 3.417° at i=57 · worst drift from the asked hue 18.258° at i=113
+  ✘  2 [webkit] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands (2.9s)
+
+
+  1) [chromium] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands 
+
+    Error: ring: a painted hue inside the law's 12°, light
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 12
+    Received:    3.4174287859759716
+
+      707 |         `${key} painted hue: nearest house token ${a.token} ${a.sep.toFixed(3)}° at i=${a.i} · worst drift from the asked hue ${a.drift.toFixed(3)}° at i=${a.driftAt}`,
+      708 |       );
+    > 709 |       expect(a.sep, `${key}: a painted hue inside the law's 12°, ${arm}`).toBeGreaterThanOrEqual(12);
+          |                                                                           ^
+      710 |     }
+      711 |
+      712 |     // 5 — THE CAPACITY, painted and pinned to what it is rather than what would be nicer.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend/e2e/peer-walk.spec.ts:709:75
+
+    Error Context: .pal-walk/test-results/peer-walk-§A-the-painted-l-6be15-ing-is-priced-at-both-bands-chromium/error-context.md
+
+  2) [webkit] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands 
+
+    Error: ring: a painted hue inside the law's 12°, light
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 12
+    Received:    3.4174287859759716
+
+      707 |         `${key} painted hue: nearest house token ${a.token} ${a.sep.toFixed(3)}° at i=${a.i} · worst drift from the asked hue ${a.drift.toFixed(3)}° at i=${a.driftAt}`,
+      708 |       );
+    > 709 |       expect(a.sep, `${key}: a painted hue inside the law's 12°, ${arm}`).toBeGreaterThanOrEqual(12);
+          |                                                                           ^
+      710 |     }
+      711 |
+      712 |     // 5 — THE CAPACITY, painted and pinned to what it is rather than what would be nicer.
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend/e2e/peer-walk.spec.ts:709:75
+
+    Error Context: .pal-walk/test-results/peer-walk-§A-the-painted-l-6be15-ing-is-priced-at-both-bands-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands 
+    [webkit] › e2e/peer-walk.spec.ts:644:1 › §A the painted law — no hand is a house colour, and the ring is priced at both bands 

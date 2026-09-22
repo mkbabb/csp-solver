@@ -1,0 +1,24 @@
+# PROPOSED, UNAPPLIED — r0 R2 census row MOVED: `--color-user-ink` is re-bound in BOTH themes
+# (index.css:154 #2563eb -> var(--color-pencil-graphite) = hsl(0 0% 15%); :388 #60a5fa -> the same
+# token = hsl(48 10% 80%)). Two hexes retire beyond the synthesis's four (§8's table is six).
+# The 24 var() consumer sites are untouched (consumers.mjs on the work tree: 24 VAR / 0 CLASS, the
+# same count as HEAD); what moves is the SOLO paint of every one of them: your digits, your notes
+# (`.user-marks`, its prefers-contrast arm deleted: opacity 1 always), the roster row's default,
+# the join ring's un-rebound fallback. The room still rebinds per cell (live census: authored
+# peer cell resolves oklch(0.5 0.11 137.5) on both arms). The `pair` rows keyed on user-ink
+# (vs focus-sketch / crayon-blue) become hue angles of a grey and should be read as retired.
+
+--- a/r0/r2-accent-family/probe/hue-census.probe.ts
++++ b/r0/r2-accent-family/probe/hue-census.probe.ts
+@@ -387,8 +387,9 @@
+     "crayon-gold": "#c99a2e",
+   };
+   const accents: Record<string, string> = {
+-    "user-ink (authorship, light)": "#2563eb",
+-    "user-ink (authorship, dark)": "#60a5fa",
++    // MOVED (T9-W7 ACC-GRAPHITE): the solo default is the pencil; a room rebinds per cell/row.
++    "user-ink (authorship, light)": "#262626",
++    "user-ink (authorship, dark)": "#d1cfc7",
+     "focus-sketch (focus)": "#3a7bc4",
+     "progress-ink (progress, light)": "#8b5cf6",
+     "progress-ink (progress, dark)": "#7c3aed",

@@ -1,0 +1,53 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a ten-player room (1.6m)
+
+
+  1) [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a ten-player room ──────────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 10
+    Received: 9
+    Timeout:  90000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 90000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        183 × locator resolved to 9 elements
+            - unexpected value "9"
+
+
+      50 |     pages.push(p);
+      51 |   }
+    > 52 |   for (const p of pages) await expect(roster(p)).toHaveCount(n, { timeout: 90000 });
+         |                                                  ^
+      53 |   return { ctx, pages };
+      54 | }
+      55 |
+        at room (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:52:50)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:238:26
+
+    Error Context: test-results/tin4-probe.scratch.ts-D-·-filterBudget-at-a-ten-player-room-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a ten-player room ───────────
+---WEBKIT---
+
+Running 3 tests using 1 worker
+
+TAPE WITH the tally: {"w":182.79,"h":36.63,"covered":2,"interactiveCovered":2,"tick":1,"text":"interesting-badger"}
+TAPE another author, no tally (slug length differs — NOT the control): {"w":151.85,"h":34.16,"covered":3,"interactiveCovered":3,"tick":0,"text":"outrageous-clownfish"}
+TAPE ABLATION (one tape, its own tick hidden): {"slug":"interesting-badger","widthWith":182.79,"widthWithout":141.19,"tickW":36.4,"tickH":16.91,"marginInlineStart":"5.59375px","em":16,"coveredBefore":2,"coveredAfter":2} · Δwidth 41.60 px · cells crossed 2 → 2
+TAPE two-author reading (CONFOUNDED by slug length, reported not claimed): 182.79 vs 151.85 · covered 3 → 2 · INTERACTIVE covered 3 → 2
+  ✓  1 [webkit] › e2e/tin4-probe.scratch.ts:57:1 › A · the tape's painted box, with the tally and without (6.8s)
+REGIME {"coarse":true,"hover":false,"w":390,"h":844} · page2 coarse true
+PHONE pill x five 356.828125 → seven 356.828125 (Δ 0.000) · ticks 2 · rows5 player-swatch:16.00|player-name:33.58|player-self:356.83|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58 · rows7[0..10] player-swatch:16.00|player-name:33.58|player-self:356.83|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58
+  ✓  2 [webkit] › e2e/tin4-probe.scratch.ts:153:1 › B · the pill at 390x844 hasTouch, five players then seven (18.2s)
+BAND 9x9 desk: {"cell":70.66,"inkTop":18.1,"inkBottom":18.94,"inkH":33.62,"ghostStroke":5,"ghostInset":7.84,"gridStroke":12} → free band under the digit 2.60 px
+BAND 16x16 phone: {"cell":22.63,"inkTop":5.01,"inkBottom":5.08,"inkH":12.54,"ghostStroke":5,"ghostInset":2.59,"gridStroke":12} → free band under the digit -6.01 px
+  ✓  3 [webkit] › e2e/tin4-probe.scratch.ts:191:1 › C · what is left to draw in, on a live 9x9 desk cell and a 16x16 phone cell (1.4s)
+
+  3 passed (26.7s)

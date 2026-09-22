@@ -1,0 +1,48 @@
+
+Running 4 tests using 1 worker
+
+TAPE WITH the tally: {"w":186.78,"h":34.34,"covered":3,"interactiveCovered":3,"tick":1,"text":"cooperative-opossum"}
+TAPE another author, no tally (slug length differs — NOT the control): {"w":86.8,"h":32.48,"covered":3,"interactiveCovered":3,"tick":0,"text":"rising-slug"}
+TAPE ABLATION (one tape, its own tick hidden): {"slug":"cooperative-opossum","widthWith":186.78,"widthWithout":145.19,"tickW":36.2,"tickH":16.45,"marginInlineStart":"5.6px","em":16,"coveredBefore":3,"coveredAfter":3} · Δwidth 41.59 px · cells crossed 3 → 3
+TAPE two-author reading (CONFOUNDED by slug length, reported not claimed): 186.78 vs 86.8 · covered 3 → 3 · INTERACTIVE covered 3 → 3
+  ✓  1 [chromium] › e2e/tin4-probe.scratch.ts:57:1 › A · the tape's painted box, with the tally and without (4.1s)
+REGIME {"coarse":true,"hover":false,"w":390,"h":844} · page2 coarse true
+PHONE pill x five 356.828125 → seven 356.828125 (Δ 0.000) · ticks 2 · rows5 player-swatch:16.00|player-name:33.58|player-self:356.83|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58 · rows7[0..10] player-swatch:16.00|player-name:33.58|player-self:356.83|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58|player-swatch:16.00|player-name:33.58
+  ✓  2 [chromium] › e2e/tin4-probe.scratch.ts:153:1 › B · the pill at 390x844 hasTouch, five players then seven (14.4s)
+BAND 9x9 desk: {"cell":70.66,"inkTop":18.1,"inkBottom":18.94,"inkH":33.62,"ghostStroke":5,"ghostInset":7.89,"gridStroke":12} → free band under the digit 2.55 px
+BAND 16x16 phone: {"cell":22.63,"inkTop":6.32,"inkBottom":6.49,"inkH":9.82,"ghostStroke":5,"ghostInset":2.53,"gridStroke":12} → free band under the digit -4.54 px
+  ✓  3 [chromium] › e2e/tin4-probe.scratch.ts:191:1 › C · what is left to draw in, on a live 9x9 desk cell and a 16x16 phone cell (623ms)
+  ✘  4 [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a twelve-player room (1.6m)
+
+
+  1) [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a twelve-player room ───────
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('.controls-card .players-roster .player-row')
+    Expected: 12
+    Received: 11
+    Timeout:  90000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 90000ms
+      - waiting for locator('.controls-card .players-roster .player-row')
+        183 × locator resolved to 11 elements
+            - unexpected value "11"
+
+
+      50 |     pages.push(p);
+      51 |   }
+    > 52 |   for (const p of pages) await expect(roster(p)).toHaveCount(n, { timeout: 90000 });
+         |                                                  ^
+      53 |   return { ctx, pages };
+      54 | }
+      55 |
+        at room (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:52:50)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-2/web/frontend/e2e/tin4-probe.scratch.ts:238:26
+
+    Error Context: test-results/tin4-probe.scratch.ts-D-·--68221-get-at-a-twelve-player-room-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/tin4-probe.scratch.ts:236:1 › D · filterBudget at a twelve-player room ────────
+  3 passed (1.9m)

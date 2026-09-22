@@ -1,0 +1,56 @@
+
+Running 16 tests using 1 worker
+
+  ✓   1 [chromium] › e2e/player-tally.spec.ts:76:1 › the name counts what the strokes count, and the number takes over at six (4.7s)
+WIDTH TABLE {"1":44,"2":44,"3":51.66,"4":62.28,"5":72.92,"6":44}
+  ✓   2 [chromium] › e2e/player-tally.spec.ts:103:1 › the width table, and the floor at the smallest count (3.9s)
+  ✓   3 [chromium] › e2e/player-tally.spec.ts:133:1 › a departure re-draws no survivor, and a depart-and-arrive draws exactly the newcomer (3.2s)
+INNER LEAVER first frame ["0","0","0","0","100"]
+  ✓   4 [chromium] › e2e/player-tally.spec.ts:192:1 › at six, an inner leaver promotes the sixth and only that stroke draws (2.0s)
+RACE {"frames":85,"rises":0,"afterBye":{"t":96.10000000149012,"off":38.94739502274047,"bye":true},"tail":[97.87241253644315,90.94508564664726,84.4291407860058,78.23210641399419,72.27692646297369,66.69730871603495,61.412499999999994,56.35599759999994,51.640112214577236,47.71642069970845,43.306173275801726,38.94739502274047]}
+  ✓   5 [chromium] › e2e/player-tally.spec.ts:225:1 › a departure during a draw-in neither jumps nor restarts the newcomer (1.8s)
+  ✘   6 [chromium] › e2e/player-tally.spec.ts:284:1 › Space and Escape, and a mouse press that takes no focus (1.2s)
+TAB ROUTE chromium: press 6
+  ✓   7 [chromium] › e2e/player-tally.spec.ts:315:1 › the mark is reachable by Tab (1.1s)
+  ✓   8 [chromium] › e2e/player-tally.spec.ts:342:1 › the deck has no mark (1.3s)
+SOLO STROKE rgb(38, 38, 38)
+  ✓   9 [chromium] › e2e/player-tally.spec.ts:350:1 › solo: one graphite stroke and a register with a row (640ms)
+SHORT ROWS ["slim-guppy"]
+SHORT SHEET H 103.36
+COARSE MARK {"x":75.53125,"y":0,"width":51.65625,"height":44}
+  ✓  10 [chromium] › e2e/player-tally.spec.ts:375:3 › the short phone › the leader's two-row budget: one named row and the compression line (1.3s)
+TALL SHEET {"x":0,"y":44,"width":256,"height":170.53125}
+BOARD TOP 221.734375 SHEET BOTTOM 214.53
+  ✓  11 [chromium] › e2e/player-tally.spec.ts:409:3 › the tall phone › sixteen people: four rows and a foot that counts the rest (1.3s)
+SHEET COLOURS {"ground":"rgb(252, 251, 251)","state":"color(srgb 0.15 0.15 0.15 / 0.68)","more":"color(srgb 0.15 0.15 0.15 / 0.68)","name":"oklch(0.5 0.11 0)","rows":4,"foot":"and 12 more"}
+  ✓  12 [chromium] › e2e/player-tally.spec.ts:446:3 › the sheet's ground › the register's ground is opaque and its quiet rungs are legible on it (1.1s)
+  ✓  13 [chromium] › e2e/player-tally.spec.ts:476:1 › reduced motion: every stroke lands inked, no tween (1.0s)
+AUTHOR INK {"cells":81,"none":0,"selfWrite":0,"peerWrite":1}
+  ✓  14 [chromium] › e2e/player-tally.spec.ts:492:1 › the board binds no ink for your own writes and one cell for a peer's (708ms)
+M19 {"before":{"label":"2 players","expanded":"false","focus":true,"pos":40},"after":{"label":"3 players","expanded":"false","focus":true,"pos":40}}
+  ✓  15 [chromium] › e2e/player-tally.spec.ts:559:1 › a third join re-names the mark and moves nothing else (1.8s)
+QUIET {"early":[],"late":["26 seconds ago"]}
+  ✓  16 [chromium] › e2e/player-tally.spec.ts:602:1 › a peer quiet for 26 seconds reads '26 seconds ago', and one quiet for 5 reads nothing (1.5s)
+
+
+  1) [chromium] › e2e/player-tally.spec.ts:284:1 › Space and Escape, and a mouse press that takes no focus 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "INPUT"
+    Received: "BUTTON"
+
+      309 |   await page.keyboard.press("Escape");
+      310 |   await expect.poll(expanded).toBe("false");
+    > 311 |   expect(await page.evaluate(() => document.activeElement?.tagName)).toBe("INPUT");
+          |                                                                      ^
+      312 | });
+      313 |
+      314 | // ── G11 · the Tab route, declared per row ──────────────────────────────────────────────────
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts:311:70
+
+    Error Context: .plr-count/test-results/player-tally-Space-and-Esc-9b507-e-press-that-takes-no-focus-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/player-tally.spec.ts:284:1 › Space and Escape, and a mouse press that takes no focus 
+  15 passed (29.0s)

@@ -1,0 +1,142 @@
+
+Running 10 tests using 1 worker
+
+  ✘   1 [chromium] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings (1.9s)
+  ✘   2 [chromium] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm (3.4s)
+  ✓   3 [chromium] › e2e/focus-ring.spec.ts:191:1 › G-LIVE-15 · no focus stop rests on a running animation (3.1s)
+  ✓   4 [chromium] › e2e/focus-ring.spec.ts:242:1 › G-LIVE-16 · the UA outline is suppressed and nobody is stranded (1.5s)
+  ✘   5 [chromium] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default (1.5s)
+  ✘   6 [webkit] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings (2.4s)
+  ✘   7 [webkit] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm (4.0s)
+  ✓   8 [webkit] › e2e/focus-ring.spec.ts:191:1 › G-LIVE-15 · no focus stop rests on a running animation (3.5s)
+  ✓   9 [webkit] › e2e/focus-ring.spec.ts:242:1 › G-LIVE-16 · the UA outline is suppressed and nobody is stranded (1.7s)
+  ✘  10 [webkit] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default (1.7s)
+
+
+  1) [chromium] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings 
+
+    Error: the ring lands on the tab before the press
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      104 |   await focusByKeyboard(page, ".drawer-tab");
+      105 |   const before = await framing(page);
+    > 106 |   expect(before.ring, "the ring lands on the tab before the press").toBe(true);
+          |                                                                     ^
+      107 |   expect(before.err).toBeLessThanOrEqual(0.5);
+      108 |
+      109 |   // THE DEFECT'S OWN GESTURE — press the control focus is already on. Nothing moves focus, so
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:106:69
+
+    Error Context: test-results/focus-ring-G-LIVE-4-·-the--9af9e-s-with-the-control-it-rings-chromium/error-context.md
+
+  2) [chromium] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm 
+
+    Error: tier 2 outranks tier 1 in the more arm (a ladder that ties is not a ladder)
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0.9
+    Received:   0.9
+
+      183 |       rank.tier2,
+      184 |       `tier 2 outranks tier 1 in the ${contrast} arm (a ladder that ties is not a ladder)`,
+    > 185 |     ).toBeGreaterThan(rank.tier1!);
+          |       ^
+      186 |   }
+      187 |   await page.emulateMedia({ contrast: "no-preference" });
+      188 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:185:7
+
+    Error Context: test-results/focus-ring-G-LIVE-14-·-the-a11d6-an-order-in-every-media-arm-chromium/error-context.md
+
+  3) [chromium] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default 
+
+    Error: --focus-ring-outset is registered exactly once, in the static sheet
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      347 |   });
+      348 |   for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
+    > 349 |     expect(reg.found[n], `${n} is registered exactly once, in the static sheet`).toBeTruthy();
+          |                                                                                  ^
+      350 |   // The registration types the value: a host declaring a calc() reaches JS as px, not as a
+      351 |   // token stream. This is the half of the row that a plain-length host cannot prove.
+      352 |   if (reg.toggleOutset)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:349:82
+
+    Error Context: test-results/focus-ring-G-LIVE-19-·-the-d4453--home-and-no-masked-default-chromium/error-context.md
+
+  4) [webkit] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings 
+
+    Error: the ring lands on the tab before the press
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      104 |   await focusByKeyboard(page, ".drawer-tab");
+      105 |   const before = await framing(page);
+    > 106 |   expect(before.ring, "the ring lands on the tab before the press").toBe(true);
+          |                                                                     ^
+      107 |   expect(before.err).toBeLessThanOrEqual(0.5);
+      108 |
+      109 |   // THE DEFECT'S OWN GESTURE — press the control focus is already on. Nothing moves focus, so
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:106:69
+
+    Error Context: test-results/focus-ring-G-LIVE-4-·-the--9af9e-s-with-the-control-it-rings-webkit/error-context.md
+
+  5) [webkit] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm 
+
+    Error: tier 2 outranks tier 1 in the more arm (a ladder that ties is not a ladder)
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0.9
+    Received:   0.9
+
+      183 |       rank.tier2,
+      184 |       `tier 2 outranks tier 1 in the ${contrast} arm (a ladder that ties is not a ladder)`,
+    > 185 |     ).toBeGreaterThan(rank.tier1!);
+          |       ^
+      186 |   }
+      187 |   await page.emulateMedia({ contrast: "no-preference" });
+      188 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:185:7
+
+    Error Context: test-results/focus-ring-G-LIVE-14-·-the-a11d6-an-order-in-every-media-arm-webkit/error-context.md
+
+  6) [webkit] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default 
+
+    Error: --focus-ring-outset is registered exactly once, in the static sheet
+
+    expect(received).toBeTruthy()
+
+    Received: undefined
+
+      347 |   });
+      348 |   for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
+    > 349 |     expect(reg.found[n], `${n} is registered exactly once, in the static sheet`).toBeTruthy();
+          |                                                                                  ^
+      350 |   // The registration types the value: a host declaring a calc() reaches JS as px, not as a
+      351 |   // token stream. This is the half of the row that a plain-length host cannot prove.
+      352 |   if (reg.toggleOutset)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:349:82
+
+    Error Context: test-results/focus-ring-G-LIVE-19-·-the-d4453--home-and-no-masked-default-webkit/error-context.md
+
+  6 failed
+    [chromium] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings 
+    [chromium] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm 
+    [chromium] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default 
+    [webkit] › e2e/focus-ring.spec.ts:99:1 › G-LIVE-4 · the ring travels with the control it rings ─
+    [webkit] › e2e/focus-ring.spec.ts:141:1 › G-LIVE-14 · the opacity rank is an order in every media arm 
+    [webkit] › e2e/focus-ring.spec.ts:322:1 › G-LIVE-19 · the outset seam has one home and no masked default 
+  4 passed (26.8s)
+EXIT=1

@@ -1,0 +1,24 @@
+diff --git a/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-PLACE/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 2e1fd72..50e3e24 100644
+--- a/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-PLACE/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -213,6 +213,7 @@ const overflow = computed(() =>
+ // everyone is now and never an empty board (pass 3 opened empty for 804/812 ms, both engines).
+ const settled = ref<Record<string, number | null>>({});
+ const timers: Record<string, ReturnType<typeof setTimeout>> = {};
++const pending: Record<string, number | null> = {};
+ function stopTimers(): void {
+   for (const id of Object.keys(timers)) {
+     clearTimeout(timers[id]);
+@@ -229,9 +230,11 @@ watch(
+       return;
+     }
+     for (const [id, pos] of Object.entries(now)) {
++      if (id in timers && pending[id] === pos) continue; // CRITIC CURE: this peer's clock is its own
+       clearTimeout(timers[id]);
+       delete timers[id];
+       if (settled.value[id] === pos) continue;
++      pending[id] = pos;
+       timers[id] = setTimeout(() => {
+         delete timers[id];
+         settled.value = { ...settled.value, [id]: pos };

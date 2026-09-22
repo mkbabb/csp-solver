@@ -1,0 +1,18 @@
+lint:arcs (check-peer-arcs --self-test)  exit 0
+lint:lanes (check-lane-membership)       exit 0
+lint:copy (check-copy-register)          exit 0
+check-copy-register --self-test          exit 0
+lint:motion (check-motion-contract)      exit 0
+check-pw-projects                        exit 0
+lint:theme-tokens --self-test            exit 0
+lint:theme-selectors --self-test         exit 0
+lint:ink --self-test                     exit 0
+lint:catch --self-test                   exit 0
+lint:live-regions                        exit 0
+lint:sleep                               exit 0
+knip                                     exit 0
+eslint src scripts e2e                   exit 0
+prettier --check src scripts             exit 0
+vue-tsc -b                               exit 0
+vue-tsc -p tsconfig.e2e.json             exit 0
+CENSUS_DONE

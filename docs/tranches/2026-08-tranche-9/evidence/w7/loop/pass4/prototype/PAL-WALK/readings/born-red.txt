@@ -1,0 +1,82 @@
+=== 1 · LANE: the ci.yml step deleted ===
+     control landed
+     lane-control.log → exit 1
+     lane-restored.log → exit 0
+=== 2 · THE INVITED EDIT: --peer-ring-l 0.32 → 0.2 on the sheet alone ===
+     control landed
+     bands-control-tier1.log → exit 1
+  • [3 BANDS AGREE] --peer-ring-l light: index.css says 0.2, playerIdentity.ts RING_BANDS says 0.32 — the chroma is bisected for a lightness the engine is not painting
+     bands-control-L6.log → exit 1
+L6   GREEN  RED   !the per-player ink is
+     bands-control-tier3A.log → exit 1
+[chromium/light] band 0.44 · ring band 0.2 · ring drawn at alpha 0.55, fill 0.04, width 4
+[chromium/light] ring band 0.2: worst 3.836:1 at i=80 · on popover 3.832:1 · min ring chroma 0.0356
+[chromium/light] ring painted hue: nearest house token --color-crayon-blue 3.417° at i=57 · worst drift from the asked hue 18.258° at i=113
+[webkit/light] band 0.44 · ring band 0.2 · ring drawn at alpha 0.55, fill 0.04, width 4
+[webkit/light] ring band 0.2: worst 3.836:1 at i=80 · on popover 3.832:1 · min ring chroma 0.0356
+[webkit/light] ring painted hue: nearest house token --color-crayon-blue 3.417° at i=57 · worst drift from the asked hue 18.258° at i=113
+    Error: ring: a painted hue inside the law's 12°, light
+    Error: ring: a painted hue inside the law's 12°, light
+=== 3 · TIER 2 on ROUNDED bytes: the ring painted at 0.2 while bisected at 0.32 (the runtime ablation, replayed) ===
+     control landed
+     rounded-control.log → exit 1
+      Tests  1 failed | 42 skipped (43)
+       × the ROUNDED bytes of both strings keep the law's 12°, and the ring is the tighter one 22ms
+       FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > the ROUNDED bytes of both strings keep the law's 12°, and the ring is the tighter one
+rounds to 177.153°
+=== 4 · THE WIRE RULE's discriminating case: every st authoritative ===
+     control landed
+     wire-first-speaker.log → exit 1
+      Tests  1 failed | 42 passed (43)
+       × U9 — a non-author's `st` that arrives FIRST does not out-rank the author's later word 5ms
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U9 — a non-author's `st` that arrives FIRST does not out-rank the author's later word
+=== 5a · (round 3 re-run) nothing is ever AGREED ===
+     control landed
+     br3-noagree.log → exit 1
+      Tests  2 failed | 41 passed (43)
+       × U1 — an agreed index survives a non-author's rival `st` 11ms
+       × U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears 4ms
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U1 — an agreed index survives a non-author's rival `st`
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears
+=== 5b · (round 3 re-run) the SOLO page takes a colour ===
+     control landed
+     br3-solo.log → exit 1
+      Tests  2 failed | 41 passed (43)
+       × U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing 6ms
+       × U8 — the room of one: write, invite, write, and only the arrival inks the board 2ms
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U8 — the room of one: write, invite, write, and only the arrival inks the board
+=== 5c · (round 3 re-run) the UNNAMED hand keeps a claimed index ===
+     control landed
+     br3-reseat.log → exit 1
+      Tests  1 failed | 42 passed (43)
+       × U3 — no two known ids share an ink string, across two epochs from two authors 7ms
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U3 — no two known ids share an ink string, across two epochs from two authors
+=== 6 · F1 NO arm: the switch flipped — which units hold the lean ===
+     control landed
+     f1-no-arm-units.log → exit 1
+      Tests  3 failed | 50 passed (53)
+       × U2 — this page's own publish agrees nothing, and a new author's epoch re-seats it 15ms
+       × U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing 5ms
+       × U8 — the room of one: write, invite, write, and only the arrival inks the board 3ms
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U2 — this page's own publish agrees nothing, and a new author's epoch re-seats it
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing
+       FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U8 — the room of one: write, invite, write, and only the arrival inks the board
+=== 7 · THE TAPE: the name back in the digit's string ===
+     control landed
+     tape-control-tier3C.log → exit 1
+[chromium/light] tape name oklch(0.44 0.079 181.79) · ring string oklch(0.32 0.0576 181.79) · 6.564:1 on the worn ground
+[webkit/light] tape name oklch(0.44 0.079 181.789993) · ring string oklch(0.32 0.0576 181.789993) · 6.559:1 on the worn ground
+      827 |       `[${info.project.name}/${arm}] tape name ${t.color} · ring string ${t.ring} · ${t.ratio.toFixed(3)}:1 on the worn ground`,
+      827 |       `[${info.project.name}/${arm}] tape name ${t.color} · ring string ${t.ring} · ${t.ratio.toFixed(3)}:1 on the worn ground`,
+  2 failed
+=== restored; verifying ===
+  src/assets/index.css identical to pre-battery
+  src/games/shared/useSession.ts identical to pre-battery
+  src/games/shared/useSession.test.ts identical to pre-battery
+  src/games/shared/GameBoard.vue identical to pre-battery
+  ci.yml identical
+  tier1 exit 0
+  lanes exit 0
+done
+BATTERY_EXIT=0

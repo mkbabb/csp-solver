@@ -1,0 +1,71 @@
+# PROPOSED, UNAPPLIED — r0 R2 rows 1/2 (the ANCHOR list) + the unit-wash accent row + two
+# instrument defects, reported MOVED (T9-W7 pass 4, ACC-GRAPHITE; §6's leader lands it beside
+# whatever the focus ring ends up as). Supersedes pass3/research's anchor diff, whose hunks are
+# truncated (it does not apply) and which, applied by hand, still RED on the retire arm: an
+# UNDEFINED token resolves through var() to the body's ink (h 89.9) and was scored as a hue, and
+# graphite (C ~ 0) was scored by a meaningless hue angle. The head-anchor copy read GREEN on the
+# work tree only because the retired anchor resolved to the SAME body ink (a row that cannot fail).
+# Run: work tree rows 1(light) 1(dark) 4 5 GREEN, row 3 RED (§6's control ring, not this family's),
+# both engines; control 74a2b5d9 rows 1 1 3 4 RED (born-RED holds), both engines.
+
+--- a/r0/r2-accent-family/probe/accent-kinship.probe.ts
++++ b/r0/r2-accent-family/probe/accent-kinship.probe.ts
+@@ -70,7 +70,6 @@
+   "--color-crayon-green",
+   "--color-crayon-orange",
+   "--color-crayon-rose",
+-  "--color-crayon-blue",
+   "--color-crayon-gold",
+ ];
+ 
+@@ -85,7 +84,6 @@
+   { job: "celebration — the verdict's words", token: "--color-gold-ink" },
+   { job: "difficulty — easy", token: "--color-green-ink" },
+   { job: "difficulty — medium", token: "--color-orange-ink" },
+-  { job: "selection — the unit wash", token: "--color-crayon-blue" },
+   { job: "answer — solver stop 1", token: "--color-solver-ink-1", except: "discriminability" },
+   { job: "answer — solver stop 2", token: "--color-solver-ink-2", except: "discriminability" },
+   { job: "answer — solver stop 3", token: "--color-solver-ink-3", except: "discriminability" },
+@@ -111,6 +109,10 @@
+     document.body.appendChild(probe);
+     const out: Record<string, string> = {};
+     for (const n of ns) {
++      // (re-cut) an UNDEFINED token is RETIRED, not a colour: `var(--gone)` inherits the body's
++      // ink and would be read as a hue (h 89.9 here), which is how a retired token read "kin"
++      // to a retired anchor on the head-anchor copy — a row that could not fail.
++      if (!getComputedStyle(document.documentElement).getPropertyValue(n).trim()) { out[n] = ""; continue; }
+       probe.style.setProperty("color", `var(${n})`);
+       out[n] = getComputedStyle(probe).color;
+     }
+@@ -136,6 +138,9 @@
+     });
+ 
+     const rows = ACCENTS.map((a) => {
++      // (re-cut) RETIRED (undefined on the live root) and ACHROMATIC (C < 0.03: graphite, not an
++      // accent — a hue angle on a grey is noise) rows are REPORTED, never scored as kin or not.
++      if (!vals[a.token]) return { engine: browserName, scheme, ...a, rgb: "", retired: true, kin: true };
+       const p = parseCss(vals[a.token])!;
+       const o = rgbToOklch(p.r, p.g, p.b);
+       let best = "";
+@@ -156,7 +161,8 @@
+         C: +o.C.toFixed(3),
+         nearest: best,
+         hueDist: +bd.toFixed(1),
+-        kin: bd <= KIN_DEG,
++        achromatic: o.C < 0.03,
++        kin: bd <= KIN_DEG || o.C < 0.03,
+       };
+     });
+     findings.push(...rows);
+@@ -320,8 +326,9 @@
+ 
+   // And the wash a selection paints must still clear the 1.4.11 non-text floor against the
+   // paper under it — the 7% crayon-blue that marks your unit.
+-  const blue = parseCss((await resolve(page, ["--color-crayon-blue"]))["--color-crayon-blue"])!;
+-  const wash = over({ ...blue, a: 0.07 }, card);
++  // (re-cut) the wash is graphite at 6 %: `--ground-wash-unit`, a ground, not an accent
++  const blue = parseCss((await resolve(page, ["--color-pencil-graphite"]))["--color-pencil-graphite"])!;
++  const wash = over({ ...blue, a: 0.06 }, card);
+   const washRatio = ratio(wash, card);
+   expect(washRatio, "the 7% unit wash is a WASH, not a boundary — it is not asked to clear 3:1").toBeLessThan(3);
+ });

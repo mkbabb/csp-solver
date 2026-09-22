@@ -1,0 +1,34 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r3-marks/probe/marks2.probe.ts	2026-09-17 13:32:14
++++ marks2.probe.ts	2026-09-19 08:14:33
+@@ -9,7 +9,7 @@
+ import { writeFileSync, mkdirSync } from "node:fs";
+ import { dirname, join } from "node:path";
+ 
+-const OUT = join(dirname(new URL(import.meta.url).pathname), "..", "logs");
++const OUT = "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass4/prototype/NOTE-ERASE/logs";
+ mkdirSync(OUT, { recursive: true });
+ const bank = (n: string, d: unknown) => writeFileSync(join(OUT, n), JSON.stringify(d, null, 2));
+ 
+@@ -152,6 +152,13 @@
+ test("R3-g THE HINT NOTE — the board-changing acts", async ({ page, browserName }) => {
+   await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+ 
++  // THE READER GAINS TWO FIELDS (T9-W7 §7, NOTE-ERASE pass 4 — PROPOSED, `r3g-age.diff`).
++  // r0 wrote this reader against a note that could only be present or absent. The family gives
++  // the note an AGE and an EXIT, so `text` non-empty and `visible` true now describe three
++  // different states: a fresh line, a settled line, and a line halfway through its rub-out. The
++  // row "does act X retract the hint note?" cannot be read off the old three fields — a probe
++  // sampling 40ms into a leave reports the note still up. `age` and `leaving` are what tell them
++  // apart. Nothing is removed; the r0 numbers stay comparable.
+   const note = () =>
+     page.evaluate(() => {
+       const n = document.querySelector(".margin-note");
+@@ -162,6 +169,8 @@
+         text: (n.textContent || "").replace(/\s+/g, " ").trim(),
+         opacity: getComputedStyle(n).opacity,
+         visible: r.width > 0 && r.height > 0,
++        age: ink?.getAttribute("data-note-age") ?? null,
++        leaving: !!ink?.classList.contains("note-leave-active"),
+       };
+     });
+ 

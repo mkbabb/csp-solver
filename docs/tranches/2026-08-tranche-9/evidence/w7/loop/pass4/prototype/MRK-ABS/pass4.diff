@@ -1,0 +1,468 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..53302edd 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -138,7 +138,9 @@
+   --color-muted-foreground: hsl(0 0% 45.1%);
+   --color-accent: hsl(48 8% 96.1%);
+   --color-border: hsl(48 5% 89.8%);
+-  --color-ring: hsl(0 0% 3.9%);
++  /* `--color-ring` died with the rule that was its only reader (T9-W7 §6: the global
++     focus-within ring on the cell family). No Tailwind `ring-*` utility is authored anywhere
++     in `src`, so the token had exactly one consumer and outlived it by nothing. */
+ 
+   /* The difficulty ramp is the CRAYON ramp, with no alias tier between them. T3 aliased
+      --color-easy/medium/hard onto crayon-green/orange/rose to retire a parallel near-duplicate
+@@ -216,10 +218,40 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+-     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+-     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++  --color-focus-sketch: #3a7bc4; /* THE ONE FOCUS INK (T9-W7 §6), ONE VALUE IN BOTH THEMES.
++     Crayon-blue darkened one step. On the board it is the drawn ghost's stroke at
++     stroke-opacity 0.95 (gameCell.css tier 2, the rank MRK-LIVE rules); off the board it is
++     the chrome's outline at full alpha, through `--ring-ink`.
++     Every figure here is PAINTED unless it says arithmetic: the focused frame minus the
++     blurred one, the ink at the 3×3 pixel that changed most, the ground at that same pixel.
++     LEDGER (G-ABS-5 parses it and reds when tier 2's opacity moves) — the board ring read at
++     stroke-opacity 0.95, WORST of 60 samples along one side, chromium / webkit:
++       16×16 paper  light 3.97 / 3.97  dark 3.99 / 4.00
++       16×16 frame  light 2.81 / 2.85  dark 2.40 / 2.40
++       9×9 paper    light 3.92 / 3.97  dark 3.99 / 3.99
++     THE FRAME ROW IS UNDER THE WCAG 1.4.11 3:1 FLOOR. The grid draws its frame 12 units
++     inside every edge cell, so at 16×16 an edge cell's ring is painted ON the frame. A colour
++     does move it, and the direction is opposite per theme (the light frame is dark grey, the
++     dark frame light grey). The search, both engines (pass4 MRK-ABS `board-search-*.json`):
++     light #4589d2 reads 3.33 frame / 3.35 paper at worst, clear of the floor by 0.2; dark
++     tops out at 3.08 on both grounds (#2f68aa), since the frame wants a darker ink and the
++     paper a lighter one. The dark window is real and under 0.1 wide. The price is two new
++     hexes (law 23: a state token is an alias into the crayon system) and R1's one
++     declaration: the owner's ballot (U-10), both arms framed (the two-value arm is a proposed
++     diff, measured by injecting its two lines, not yet built). Until the owner
++     rules, the token stays one value and the frame row stays RED, named here.
++     Off the board, the chrome ring (full alpha), WORST per stop over both engines: page 4.19
++     light / 4.38 dark, card 4.29 / 4.29, the guard's faces 4.15 / 3.92. Two stops miss the
++     floor on a few samples, both ground rows, not ink rows: `.info-btn`'s RIGHT side (2.61
++     light / 2.42 dark chromium, 3/44 samples; 3.60 / 3.00 webkit), where the ring crosses the
++     controls card's drawn case edge; and the deck's centre card in dark (1.81 to 3.78
++     chromium across two runs, 3.56 webkit), whose ring reads on 4 to 13 of 44 sample lines,
++     beside the live board's boiling edge. The figures this comment used to carry (5.3, 2.71, 2.44 "both engines")
++     were arithmetic or one engine's median; none survives here. */
++  --ring-ink: var(
++    --color-focus-sketch
++  ); /* the NAME the chrome consumes; the value is the focus ink's. Retire one, the other
++     follows. (MRK-LIVE's one declaration, copied as cited — pass4 CHAIR-RULINGS §4.) */
+   --color-pencil-graphite: var(
+     --grid-line-color
+   ); /* the pencil: grid, ghost ring, hover sketch */
+@@ -367,7 +399,12 @@
+   --color-muted-foreground: hsl(48 5% 64%);
+   --color-accent: hsl(24 5% 15%);
+   --color-border: hsl(24 4% 16%);
+-  --color-ring: hsl(48 8% 83%);
++
++  /* NO DARK ARM for `--color-focus-sketch` (declared once, in @theme). The alias onto the
++     crayon itself (`var(--color-crayon-blue)`, zero new hex) reads 1.39 against the 16×16
++     frame, WORST of 60, both engines (pass3 MRK-ABS critique `decision-*.json`); the one
++     value reads 2.40 there in both engines. The alias moves the ink the wrong way at night:
++     a darker arm is the direction that helps, and the declaration names its ceiling. */
+ 
+   --color-user-ink: #60a5fa;
+ 
+@@ -442,11 +479,54 @@
+ 
+ @layer base {
+   * {
+-    @apply border-border outline-ring/50;
++    @apply border-border;
+   }
+   body {
+     @apply bg-background text-foreground;
+   }
++
++  /* ── ONE VISIBLE HAND (T9-W7 §6) ────────────────────────────────────────────
++     A thing with focus ON the board wears the house hand — the cell's drawn ghost,
++     `gameCell.css` tier 2. A thing with focus OFF the board wears this token. The
++     browser's own ring appears nowhere: `outline: auto` is engine-defined, and what
++     WebKit paints for it reads 2.15:1 light and 1.78:1 dark, under the 1.4.11 floor.
++     The two marks are one system because they are the same ink doing the same job at
++     the same weight, and they differ only where the page differs.
++
++     Authored at (0,1,0) INSIDE `@layer base` on purpose: every bespoke geometry rule
++     in the product still wins, which is the point. The obvious alternative — a
++     `:is(button, a, [tabindex]):not(…):not(…)` sweep — computes (0,4,0), out-ranks
++     `.sun-moon-toggle:focus-visible`, and put the light toggle's ring back inside the
++     art where the rest stack covers it: zero changed pixels, both engines, the exact
++     defect T9-W2 §2.4 cured.
++
++     Offset 3 is a number the house already draws with (the tongue's
++     `HandDrawnOutline :outset="3"`), and it spends LESS air than the 4 it replaces —
++     the deck card's ring goes from 3.6px of headroom to 4.6. */
++  /* The ink is `--ring-ink`, written BARE at every consumer (registry v3 §2.9) — no second
++     name for it here; only the offset is this block's own token. */
++  :root {
++    --focus-offset: 3px;
++  }
++
++  :focus-visible {
++    outline: 2px solid var(--ring-ink);
++    outline-offset: var(--focus-offset);
++  }
++
++  /* The two exemptions, named. The cell keeps the hand; the deck's scrollport is not
++     the ring's owner (`spoken-gallery.spec.ts` §3.7 — the ring rides the
++     `aria-activedescendant` card, and a second owner cannot say WHICH option is focused). */
++  .cell-native-input:focus-visible,
++  .gallery-viewport:focus-visible {
++    outline: none;
++  }
++
++  @media (forced-colors: active) {
++    :focus-visible {
++      outline-color: Highlight;
++    }
++  }
+ }
+ 
+ /* Crayon color utilities — the difficulty semantic, in ink. The three difficulty tints read
+@@ -723,14 +803,6 @@ html {
+     animation-fill-mode: backwards;
+   }
+ 
+-  /* Sudoku cell focus styling */
+-  .sudoku-cell:focus-within {
+-    background: color-mix(in srgb, var(--color-accent) 50%, transparent);
+-    outline: 1px solid color-mix(in srgb, var(--color-ring) 30%, transparent);
+-    outline-offset: -1px;
+-    border-radius: 2px;
+-  }
+-
+   /* Handwritten font utility — the annotation register (--font-hand ← Patrick
+      Hand); 0.02em ≈ --type-tracking-wide, kept bespoke for the hand voice. */
+   .handwritten {
+diff --git a/web/frontend/src/games/shared/DigitCell.vue b/web/frontend/src/games/shared/DigitCell.vue
+index a67ef078..77da34db 100644
+--- a/web/frontend/src/games/shared/DigitCell.vue
++++ b/web/frontend/src/games/shared/DigitCell.vue
+@@ -31,8 +31,9 @@ const props = withDefaults(
+     boardSize: number;
+     /** The grid family, off `BoardGrammar` — the ONE axis the cell diverges on. It picks the
+      *  family class (`.sudoku-cell` / `.futoshiki-cell`), which is a frozen DOM contract:
+-     *  `index.css`'s `:focus-within` ring and `useKeyboardViewport`'s CELL_SELECTOR key on
+-     *  it, and the e2e estate counts cells through it. */
++     *  `useKeyboardViewport`'s CELL_SELECTOR keys on it and the e2e estate counts cells
++     *  through it. No stylesheet does — the global focus ring that once did died in
++     *  T9-W7 §6; the cell's focus affordance is the drawn ghost. */
+     geometry: "boxed" | "latin";
+     /** Pre-computed ghost rect path in 1000×1000 board viewBox coords */
+     ghostPath: string;
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..7a442610 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -3,12 +3,14 @@
+  * FutoshikiCell) ran byte-identical (T4-W11 Row 3; verified identical modulo the root class).
+  * Consumed via `<style scoped src="@/games/shared/gameCell.css">` in each cell, so every rule
+  * (and the `marks-fade-in` / `ghost-draw-on` keyframes) is re-scoped to the importing
+- * component's own data-v hash — the scoped specificity that wins over index.css's global
+- * `.sudoku-cell:focus-within` ring is preserved exactly, per cell.
++ * component's own data-v hash, per cell. There is nothing global left to outrank: the global
++ * focus-within ring index.css once drew on the cell family, and the scoped rule that existed
++ * only to neutralise it, both died in T9-W7 §6 — the cell's focus affordance is the drawn
++ * ghost, and nothing else paints on it.
+  *
+  * CLASS-NAME CONTRACT — each cell's template MUST carry `game-cell` on its root node (alongside
+  * its own `sudoku-cell` / `futoshiki-cell` class, which stays for useKeyboardViewport's cell
+- * selector, the unit tests, and the index.css focus rule) plus these descendant classes on the
++ * selector, the unit tests and the e2e estate) plus these descendant classes on the
+  * matching nodes (there is no build-time link between this file and the templates):
+  *   .game-cell             the cell root (+ .is-active / .is-invalid / .is-peer-cursor states)
+  *   .cell-native-input     the opacity-0 WM-frozen native entry surface
+@@ -239,15 +241,16 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
+-/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+-   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+-   gets the drawn-on ring. */
++/* Tier 2 — selection: crayon-blue, heavier, sketched on over 180ms. The focus target is a
++   text input, and a text input always matches :focus-visible, so this tier paints on a click,
++   a tap and a key alike — one mark for every pointer (measured, both engines, desk and phone).
++   Tier 1's graphite is the hover-WITHOUT-focus state, not a click state. */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
++  fill: var(--color-focus-sketch);
+   fill-opacity: 0.08;
+-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
++  stroke: var(--color-focus-sketch);
+   stroke-width: 7;
+-  stroke-opacity: 0.9;
++  stroke-opacity: 0.95;
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+      value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an
+@@ -291,17 +294,6 @@
+   stroke-opacity: 1;
+ }
+ 
+-/* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+-   affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+-   Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+-   outline this comment once assumed), so it paints NOTHING under forced-colors — and
+-   forced-color-adjust strips the SVG ghost to a corner fragment. The HC-restorable ring is the
+-   explicit `forced-colors` block at the foot of this sheet. */
+-.game-cell:focus-within {
+-  background: transparent;
+-  outline: none;
+-}
+-
+ /* iOS zoom de-risk (T4-WM §1): mobile Safari zooms a focused input whose computed font-size
+    is <16px. The input is opacity-0 (the SVG glyph is the visible value), so this 16px is a
+    purely structural floor — it costs nothing visually and is never traded for `maximum-scale`
+@@ -312,7 +304,8 @@
+      inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+      pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+      owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+-     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
++     focus RING is the crayon-blue ghost above, and it paints on a tap as well as on a key:
++     the target is a text input, and a text input always matches :focus-visible. */
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..dde23134 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -738,7 +738,9 @@ onUnmounted(() => {
+    104 + 2×54 = 212, which is 208 + 2×2; likewise 44 + 2×20 = 84 = 80 + 4, and 44 + 2×12 = 68 =
+    64 + 4. The border-radius rides out with it, so the ring is still a circle around the sun. */
+ .sun-moon-toggle:focus-visible {
+-  outline: 2px solid var(--color-ring);
++  /* The COLOUR takes the one focus ink (T9-W7 §6); the 54px ornament offset is W2 §2.4's
++     cure and stays — this is the law's one declared exception, and it is geometry, not ink. */
++  outline: 2px solid var(--ring-ink);
+   outline-offset: calc(2px - var(--toggle-bleed, 0px));
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+index c3adf396..5a739038 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/AttributionCard.vue
+@@ -42,7 +42,7 @@ defineExpose({ close });
+   >
+     <button
+       type="button"
+-      class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"
++      class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-[color,background-color] duration-200"
+       :aria-expanded="isOpen"
+       aria-label="Show attribution card"
+       @click.stop="toggle"
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..6a132f35 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -427,16 +427,22 @@ const dealStyle = computed(() => {
+    (`isActive`), and the deck's `aria-activedescendant` names that card's id in the same render.
+ 
+    THE OFFSET IS BOUNDED BY THE SCROLLPORT, not chosen. An outline on a descendant is clipped by
+-   the scroll container that holds it, and the END cards rest with only 9.6px of air at 1280×800
++   the scroll container that holds it, and the END cards rest with only 9.59px of air at 1280×800
+    (index 0 at left, index 4 at right — `useCarouselGlide`'s clamp cannot travel them to true
+-   centre). 4px offset + 2px stroke reaches 6px out, so the ring stays whole with 3.6px to
+-   spare at the tightest rung and ~42px at 390×844. `spoken-gallery.spec.ts` pins WHOLE rather
++   centre). The token reaches 5px out (offset 3 + stroke 2) where the bespoke 4+2 reached 6, so
++   the headroom at the tightest rung goes 3.59px to 4.59px: the one hand spends LESS air than
++   the rule it replaces. `spoken-gallery.spec.ts` pins WHOLE rather
+    than merely PRESENT, at both end cards, so a future offset that overruns the scrollport reds
+    instead of quietly painting a ring nobody can see. */
+ .gallery-viewport:focus-visible .game-card.is-center {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
+-  outline-offset: 4px;
+-  border-radius: 0.5rem;
++  /* The card is published by `aria-activedescendant`, so it never matches `:focus-visible`
++     itself and cannot fall to the base token (T9-W7 §6) — it takes the token's own values
++     instead. No radius: an outline traces its element's OWN corners, and a focus rule that
++     mints one moves a pixel it never declared. `.game-card` has no base radius, and
++     `.live-face-slot` is `overflow: hidden; border-radius: inherit`, so the 0.5rem this rule
++     used to carry rounded the projected live board's clip by 8px on focus alone. */
++  outline: 2px solid var(--ring-ink);
++  outline-offset: var(--focus-offset);
+ }
+ 
+ /* The deal wrapper (Wave C2 §BEAT 2) — its OWN compositor channel (opacity + a small lift),
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..cf0ac8fd 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1448,8 +1448,8 @@ onMounted(async () => {
+ }
+ 
+ .guard-btn:focus-visible .guard-face {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+-  outline-offset: 4px;
++  outline: 2px solid var(--ring-ink);
++  outline-offset: var(--focus-offset);
+ }
+ 
+ /* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+index da66f430..99b4bbfb 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+@@ -429,8 +429,8 @@ function onKeydown(e: KeyboardEvent) {
+ }
+ 
+ .staging-btn:focus-visible .staging-face {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+-  outline-offset: 4px;
++  outline: 2px solid var(--ring-ink);
++  outline-offset: var(--focus-offset);
+ }
+ 
+ .staging-btn:disabled {
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 1f4a357c..c9c70d98 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -541,11 +541,8 @@ span.logo-trigger {
+   cursor: default;
+ }
+ 
+-.logo-trigger:focus-visible {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
+-  outline-offset: 4px;
+-  border-radius: 0.35rem;
+-}
++/* The trigger's own focus rule is DELETED (T9-W7 §6): it fell to the base token, which is
++   the whole point of a token. Its 40% foreground mix read 2.70:1 in both engines. */
+ 
+ .handwritten-logo {
+   /* --logo-scale (default 1) is the drawer's grow hook (T3-W12 §6): the closed
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..efac4dd9 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -49,7 +49,7 @@ function scribbleSeed(val: string | number): number {
+       :key="opt.value"
+       @click="emit('change', opt.value)"
+       :aria-pressed="selected === opt.value"
+-      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-colors duration-150"
++      class="ctrl-btn rounded-md px-3 py-1.5 text-center transition-[color,background-color] duration-150"
+       :class="[
+         mobile ? '' : 'md:py-0.5 md:text-left',
+         selected === opt.value
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..87e41bfc 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -285,6 +285,60 @@ export function resetBoilConfig() {
+   Object.assign(BOIL_CONFIG, { ...DEFAULT_BOIL_CONFIG });
+ }
+ 
++// ── THE FOCUS RING'S GEOMETRY (T9-W7 §5) ──────────────────────────────────────
++//
++// Geometry, not time and not a tuner knob: frozen, beside BOIL_CONFIG rather than in it.
++// (`BoilConfig` is reactive and every field of it is a slider the tuner can drag; these
++// three live inside the `useBoilCache(["cellRects", …])` key's closure, where a mutation
++// could never reach a dealt board anyway.)
++//
++// The library's law is proportional — `maxDisplace = roughness × len × 0.015`
++// (pencil-boil `wobbleLinePoints`) — so at one roughness a 53.75-unit cell edge wanders
++// 15× less than a 948-unit rule and the ring reads as CAD. Naming the wander itself and
++// solving the roughness back out makes it size-free BY CONSTRUCTION, exactly:
++//
++//     roughness(cell) = wanderUnits / (0.015 × inset × cellSize)
++//     maxDisplace     = roughness × (inset × cellSize) × 0.015 = wanderUnits    ← exact
++//
++// σ is a statistic of a WINDOW, so the window is declared with the number: W4 = all four
++// edges, the middle 80% of each edge's own arc, residual to that edge's NOMINAL line,
++// pooled. On W4 the ring reads 2.392 units ±5% at 4×4 / 9×9 / 16×16 with the product's own
++// seeds, against a 4096-cell population of the same primitive — one number, three boards.
++// The grid rule's own W4 σ, re-taken in the SAME run over every rule the board draws, puts
++// the ring-to-rule ratio near 0.66 on screen (the ghost renders at boardPx/1300, the grid
++// at boardPx/1000). Every ratio this family quotes comes from that one run, never from a
++// transposed single row; the shape constant that predicts σ from `wanderUnits` lives with
++// the gate that checks it, not here — the product never read it.
++//
++// σ in the reader's px, named and accepted: 0.758 / 1.023 / 1.023 px at 4×4 / 9×9 / 16×16,
++// which is 1.11% / 2.50% / 4.45% of the drawn edge. Constant in UNITS, so the reader sees
++// it 4× wider at 16×16 than at 4×4 — a hand's tremor is a length, not a fraction, and the
++// grid's own rules carry the same absolute wander. (A fraction-of-edge alternative would
++// need W = 4.0, which puts the σ ratio at 0.54 / 0.53 / 1.20 — two boards on the band's
++// floor — against 5.4's 0.74 / 0.71 / 1.62, mid-band.)
++//
++// WHAT THE INSET BUYS. Not separation from the rule: with the rule's OWN wobble (cell line
++// max displace 5.688 u, subgrid 9.95 u) the ring shares ink with the rule on the worst cell
++// at 16×16 in BOTH geometries, and the FRAME runs 12 u inside every edge cell by the grid's
++// design, so no inset under 40% of the cell can clear it. The two geometries cross at
++// N = 14.07 — the inset helps at ≤ 14 and costs 0.5 u (0.28 px) at 16. The honest ceiling
++// per rule kind, f = 0.86 / f = 1: cell line board 18 / 16, subgrid 15 / 14, frame flush
++// 13 / 12, frame inset 6 / 6. That table is a READING, banked by the probe; it is never a
++// gate. The law the ring is held to is MA-N (below) and legibility on whatever it crosses.
++//
++// MA-N, what the inset IS load-bearing for — the ring stays inside its own square at the
++// heaviest tier the sheet draws (stroke 10, invalid AND selected), 16×16:
++//     f = 1.00 → the ring's outer ink ENTERS the neighbour by 0.788 u = 0.44 px
++//     f = 0.86 → it clears by 2.577 u = 1.43 px
++// (tier 2, stroke 7: f = 1 gives +0.365 u, a hair; f = 0.86 gives +3.731 u.) One lever,
++// one number. 0.90 is the banked alternate for the owner's re-look.
++export const RING_GEOMETRY = Object.freeze({
++  /** the ring's wander in ghost units — `maxDisplace`, one number for every board */
++  wanderUnits: 5.4,
++  /** the ring is drawn at this fraction of the cell, centred: a mark INSIDE the square */
++  inset: 0.86,
++});
++
+ /** Frozen defaults for reset.
+  *  Wobble filters use single-layer feTurbulence+feDisplacementMap (small elements only).
+  *  Grid boil is path-based (see BOIL_CONFIG). */
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..c4ad8ff5 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -12,7 +12,7 @@ import {
+   boilLineFrames,
+   useBoilCache,
+ } from "@mkbabb/pencil-boil";
+-import type { GrainConfig } from "../config/pencilConfig";
++import { RING_GEOMETRY, type GrainConfig } from "../config/pencilConfig";
+ 
+ interface BoilFrames {
+   /** frame[frameIdx] — closed rect path for the outer frame */
+@@ -49,15 +49,28 @@ export function generateCellRects(
+     ["cellRects", boardSize, subgridSize, viewBoxSize, seed],
+     () => {
+       const cellSize = viewBoxSize / boardSize;
+-      const cellSegments = boardSize >= 16 ? 2 : 4;
++      // Segments are PINNED, not derived from boardSize. σ's shape constant belongs to this
++      // primitive at this segment count; let 16×16 drop to 2 and one wander constant no
++      // longer buys one wander (k splits 30%). Price of the pin, paid once per deal into
++      // the LRU: the 16×16 board's resident `d` strings go 58,761 B → 119,894 B (57.4 →
++      // 117.1 KiB). Segments 6 (215,431 B) buys nothing the geometry can spend.
++      const cellSegments = 4;
++      // The ring is drawn INSIDE its square (`inset`, centred) so its ink never meets the
++      // rule's, and its wander is an absolute in ghost units (`wanderUnits`). Inverting
++      // `maxDisplace = roughness × len × 0.015` over the INSET edge makes the wander
++      // size-free exactly — one number, every board:
++      const { wanderUnits, inset } = RING_GEOMETRY;
++      const ringSize = inset * cellSize;
++      const ringPad = ((1 - inset) / 2) * cellSize;
++      const cellRoughness = wanderUnits / (0.015 * ringSize);
+       const cellRects: Record<number, string> = {};
+       for (let r = 0; r < boardSize; r++) {
+         for (let c = 0; c < boardSize; c++) {
+           const pos = r * boardSize + c;
+-          const x = c * cellSize;
+-          const y = r * cellSize;
+-          cellRects[pos] = wobbleRect(x, y, cellSize, cellSize, {
+-            roughness: 0.4,
++          const x = c * cellSize + ringPad;
++          const y = r * cellSize + ringPad;
++          cellRects[pos] = wobbleRect(x, y, ringSize, ringSize, {
++            roughness: cellRoughness,
+             segments: cellSegments,
+             seed: seed + 500 + pos * 7,
+             jagged: true,

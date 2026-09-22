@@ -38,7 +38,7 @@ const law = (id, statement, cite, atHead, fn) => {
 
 law(
   "L1",
-  "the live-filter population is exactly 9 and the boil budget never grows",
+  "the live-filter population never grows past 9 (a ceiling; the census holds the exact set)",
   "filterBudget.ts FILTER_BUDGET_TOTAL, T4-P1 filter-deletion cure",
   "GREEN",
   () => {
@@ -48,7 +48,12 @@ law(
     const budget = src.slice(0, src.indexOf("SECONDARY CENSUS"));
     const counts = [...budget.matchAll(/count:\s*(\d+)/g)].map((m) => +m[1]);
     const total = counts.reduce((a, b) => a + b, 0);
-    return { ok: total === 9, detail: `FILTER_BUDGET rows sum to ${total}` };
+    // The law is "never grows" — a CEILING at 9, the same form the chair gave L3. The exact
+    // population is filter-census's job (exact-match allowlist, both directions, on the built
+    // dist), so a surface that LEAVES is not a broken law; a surface that ARRIVES still reds here
+    // AND in the census. (CTRL-TABS's pass-4 PROPOSED diff, landed by the chair — registry-v4 §8
+    // act 3; the lane's plant at 10 read RED.)
+    return { ok: total <= 9, detail: `FILTER_BUDGET rows sum to ${total} (ceiling 9)` };
   },
 );
 
@@ -181,12 +186,21 @@ law(
   "T9-M04 (owner 2026-08-25); GameControlPanel `.action-bar` is a colour-matched slab",
   "RED",
   () => {
-    const p = read("src/games/shared/GameControlPanel.vue");
+    // Re-cut by the chair (registry-v4 §3.19 / §8 act 3): the old `/border|HandDrawnOutline/`
+    // passed on `border: none`. The edge must be the house hand — a HandDrawnOutline INSIDE the
+    // bar's template box — and the bar's CSS may carry no border longhand with a width > 0 (R6 L5:
+    // one box grammar). Comments are stripped first (CTRL-RULE's trap: a comment fools a text law).
+    const p = read("src/games/shared/GameControlPanel.vue").replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, "");
+    const at = p.search(/class="[^"]*\baction-bar\b/);
+    const box = at < 0 ? "" : p.slice(at, at + 1200);
+    const drawn = /<HandDrawnOutline\b/.test(box);
     const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
-    const hasEdge = /border|HandDrawnOutline/.test(bar);
+    const cssBorder = /\bborder(?:-(?:top|right|bottom|left))?(?:-width)?\s*:\s*(?!0(?:px)?\b|none\b)[^;]*?(?:[1-9][\d.]*(?:px|rem|em)|thin|medium|thick)/.test(bar);
     return {
-      ok: hasEdge,
-      detail: hasEdge ? "the bar declares an edge" : "no border, no drawn outline — background + fade only",
+      ok: drawn && !cssBorder,
+      detail: drawn
+        ? cssBorder ? "HandDrawnOutline present but the bar's CSS also paints a border longhand (L5 RED)" : "the bar wears a HandDrawnOutline and no CSS border"
+        : "no HandDrawnOutline inside the bar's box — a CSS border would not count (L5)",
     };
   },
 );

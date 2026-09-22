@@ -1,0 +1,46 @@
+Running 20 tests using 1 worker
+PLC|chromium|fine|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓   1 [chromium] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses fine 1280x800 (6.8s)
+PLC|chromium|coarse|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓   2 [chromium] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 (8.3s)
+PLC|chromium|fine|reduce|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓   3 [chromium] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses fine 1280x800 reduce (7.1s)
+PLC|chromium|coarse|reduce|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓   4 [chromium] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 reduce (8.4s)
+  ✓   5 [chromium] › e2e/filter-census.spec.ts:300:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (3.3s)
+  ✓   6 [chromium] › e2e/filter-census.spec.ts:320:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (3.1s)
+  ✓   7 [chromium] › e2e/filter-census.spec.ts:441:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (3.6s)
+  ✓   8 [chromium] › e2e/filter-census.spec.ts:448:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (2.6s)
+  ✓   9 [chromium] › e2e/filter-census.spec.ts:462:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.3s)
+  ✓  10 [chromium] › e2e/filter-census.spec.ts:507:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (49ms)
+PLC|webkit|fine|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓  11 [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses fine 1280x800 (9.9s)
+PLC|webkit|coarse|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓  12 [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 (11.0s)
+PLC|webkit|fine|reduce|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":1}
+  ✓  13 [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses fine 1280x800 reduce (9.4s)
+PLC|webkit|coarse|reduce|index-DNV3QLTCvEPL.js|{"shut":{"live":9,"filterEls":15},"openSolo":{"live":9,"filterEls":15},"openLive":{"live":9,"filterEls":15},"dots":0}
+  ✘  14 [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 reduce (9.5s)
+  ✓  15 [webkit] › e2e/filter-census.spec.ts:300:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist) (4.2s)
+  ✓  16 [webkit] › e2e/filter-census.spec.ts:320:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist) (4.5s)
+  ✓  17 [webkit] › e2e/filter-census.spec.ts:441:1 › G3.5 · no :hover state mints a live filter — board regime (built dist) (5.4s)
+  ✓  18 [webkit] › e2e/filter-census.spec.ts:448:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist) (4.0s)
+  ✓  19 [webkit] › e2e/filter-census.spec.ts:462:1 › G3.2 · no retained fill supplies a computed transform (built dist) (3.5s)
+  ✓  20 [webkit] › e2e/filter-census.spec.ts:507:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly (25ms)
+  1) [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 reduce ───────────
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: 1
+    Received: 0
+      37 |     const openLive = await count(a);
+      38 |     console.log(`PLC|${info.project.name}|${coarse ? "coarse" : "fine"}${reduce ? "|reduce" : ""}|${asset.split("/").pop()}|${JSON.stringify({ shut, openSolo, openLive, dots })}`);
+    > 39 |     expect(dots).toBe(1);
+         |                  ^
+      40 |     expect(openLive.live).toBe(shut.live);
+      41 |     await ctx.close();
+      42 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-PLACE/web/frontend/.plr-place-crit/probe-filters.spec.ts:39:18
+    Error Context: test-results/.plr-place-crit-probe-filters-poses-coarse-390x844-reduce-webkit/error-context.md
+  1 failed
+    [webkit] › .plr-place-crit/probe-filters.spec.ts:12:3 › poses coarse 390x844 reduce ────────────
+  19 passed (1.9m)
+EXIT=1

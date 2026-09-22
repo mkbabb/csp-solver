@@ -1,0 +1,59 @@
+=== node scripts/check-copy-register.mjs
+em/en dashes in product copy: 0
+jargon over RENDERED strings: 0 hit(s), 0 admitted, 0 unadmitted (lexicon: 25 entries)
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+EXIT 0 :: node scripts/check-copy-register.mjs
+=== node scripts/check-copy-register.mjs --self-test
+  jargon · twin — the same plural table in the player's words  →  0 offence(s), GREEN as required
+  admissions · a ghost admission is detected stale  →  1/1, RED as required
+
+check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+EXIT 0 :: node scripts/check-copy-register.mjs --self-test
+=== node scripts/check-ink-pressure.mjs
+  selection    .cell-ghost-path                       your own selection's body (tier 1)
+  unit         .cell-peer                             your selection's REACH — the same 6% as the body it belongs to, by design
+  laminate     .cell-because                          the hint's teacher-red square, the one ground that is asked to be seen
+  the order is GATED: it reds on a re-pitch that moves it, on the admitted tie breaking (a ground is pitched against the other grounds, never against a floor; the unit wash is tier 1's own 6% rather than a second value, so the tie is the design and not a collision), and on a ground that reads differently in the two themes.
+EXIT 0 :: node scripts/check-ink-pressure.mjs
+=== node scripts/check-ink-pressure.mjs --self-test
+  selection    .cell-ghost-path                       your own selection's body (tier 1)
+  unit         .cell-peer                             your selection's REACH — the same 6% as the body it belongs to, by design
+  laminate     .cell-because                          the hint's teacher-red square, the one ground that is asked to be seen
+  the order is GATED: it reds on a re-pitch that moves it, on the admitted tie breaking (a ground is pitched against the other grounds, never against a floor; the unit wash is tier 1's own 6% rather than a second value, so the tie is the design and not a collision), and on a ground that reads differently in the two themes.
+EXIT 0 :: node scripts/check-ink-pressure.mjs --self-test
+=== node scripts/check-theme-tokens.mjs
+unreferenced (corpus only):     0
+unreferenced (transitive rule): 0
+
+check-theme-tokens: 0 unreferenced @theme tokens
+EXIT 0 :: node scripts/check-theme-tokens.mjs
+=== node scripts/check-theme-tokens.mjs --self-test
+
+negative control (re-add --color-input): RED as required
+
+check-theme-tokens: 0 unreferenced @theme tokens
+EXIT 0 :: node scripts/check-theme-tokens.mjs --self-test
+=== node scripts/check-motion-contract.mjs --self-test
+  [3 ROUTE] a frozen file loses its emulateMedia call entirely
+      → RED (as it must)
+
+OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+EXIT 0 :: node scripts/check-motion-contract.mjs --self-test
+=== node scripts/check-font-coverage.mjs
+  bound tapes: 3 pinned · WRITEABLE == the hand cut, both directions
+  departures (declared, no longer rendered — the cut stays a superset on purpose):
+    Fraunces · .section-heading: "Board Size"
+    Patrick Hand · .washi-tag (compartment names) + the tapes: "teacher's"
+EXIT 0 :: node scripts/check-font-coverage.mjs
+=== npx knip
+EXIT 0 :: npx knip
+=== npx prettier --check --config .prettierrc.json src/ scripts/
+Checking formatting...
+All matched files use Prettier code style!
+EXIT 0 :: npx prettier --check --config .prettierrc.json src/ scripts/
+=== npx eslint src scripts e2e
+EXIT 0 :: npx eslint src scripts e2e
+=== npx vue-tsc -b --force
+EXIT 0 :: npx vue-tsc -b --force
+ALLDONE

@@ -1,0 +1,38 @@
+PROPOSED, NOT LANDED — PAL-TIN pass 4, handed to MRK-LIVE (§6.7/§6.8: `gameCell.css` is §10's
+file, and chair §6.5's no-fallback law is the wave's). Two hunks and their born-RED row.
+
+WHY. `playerIdentity.ts`'s own header names what the fallback hides: "a missing ring arm inherits
+the digit ink … and the ring quietly reads 2.28 again". `check-peer-tin.mjs` GATE 3 catches a
+token DELETED from `index.css`; it cannot see a RUNTIME path that binds only `--color-user-ink`,
+which is exactly the case the fallback swallows. BoardHost already reads the second key by name
+with no fallback; this is the CSS half.
+
+NUMBERS ON THIS TREE (e2e/peer-tin.spec.ts §1b, sampled pixels, dpr 2, both engines):
+  the ring arm painted     light 3.336 chromium / 3.306 webkit   dark 3.564 / 3.614
+  the DIGIT ink in the same ring, composited at the same alpha   2.436 light / 2.281 dark
+So the failure the fallback conceals is a 3.3 → 2.4 drop on the light arm: the ring stops being
+a ring and the floor is 3.0.
+
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -229,4 +229,10 @@
+ .game-cell.is-peer-cursor .cell-ghost-path {
+-  fill: var(--color-peer-cursor-ink, var(--color-user-ink));
++  /* NO FALLBACK (chair §6.5). An absent publisher must fail at computed-value time so the
++     born-RED row below can see it; `, var(--color-user-ink)` made the failure invisible and
++     dropped the painted ring from 3.34 to 2.44 in silence. `BoardHost.vue` binds this key by
++     name on every peer-cursor cell, and `index.css` declares the ten arms it draws from. */
++  fill: var(--color-peer-cursor-ink);
+   fill-opacity: 0.04;
+-  stroke: var(--color-peer-cursor-ink, var(--color-user-ink));
++  stroke: var(--color-peer-cursor-ink);
+   stroke-width: 4;
+
+THE BORN-RED ROW that has to land with it (the publisher deletion — LIVE's estate, LIVE's file):
+in `e2e/peer-tin.spec.ts` §1b the ring is already SAMPLED against its own ring-off control. The
+ablation is one more arm of that test: delete the ten `--color-peer-N-ring` declarations at
+runtime (`document.documentElement.style.setProperty(..., "")` cannot delete an authored rule, so
+the arm inserts a stylesheet that re-declares them as `initial`), re-shoot, and read the sampled
+ratio. With the fallback in place it reads ~2.4 and NOTHING FAILS; with the fallback struck the
+stroke computes to nothing and the row reds on `moved > 8`. PAL-TIN did not land this because the
+file is not this lane's and a half-landed fallback is worse than either whole answer.

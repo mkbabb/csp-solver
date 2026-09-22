@@ -1,0 +1,14 @@
+# U-10 ARM (row 5) — the tally laid ACROSS the rule (18 u into the board) instead of along it.
+# Framed in p4-tally-strips-*. Reads as ticks, not a dash; but 11.1 x 6.2 px desk (aspect 1.8) and it
+# reaches ~33 u in from the frame, into the top row's glyph band. Not applied (flag stays false).
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -134,7 +134,7 @@
+ // THE FORM IS THE OWNER'S (U-10), both arms a build away. ALONG (shipped): 45-unit ticks laid
+ // on the frame's own line. ACROSS: the `⊪` stroke the idiom names, `TICK_ACROSS` units into the
+ // board from the same pitch — a tally rather than a second, dashed rule. The pitch law is one.
+-const TALLY_ACROSS = false;
++const TALLY_ACROSS = true;
+ const TICK_ACROSS = 18;
+ const writable = computed(() => Math.max(1, Math.round(props.writable)));
+ const written = computed(() =>

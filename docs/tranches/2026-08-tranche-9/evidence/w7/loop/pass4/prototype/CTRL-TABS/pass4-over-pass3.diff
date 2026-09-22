@@ -1,0 +1,290 @@
+diff -ru -x .git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+--- a/web/frontend/src/assets/index.css	2026-09-22 18:05:29
++++ b/web/frontend/src/assets/index.css	2026-09-22 18:05:28
+@@ -3,6 +3,14 @@
+ 
+ @custom-variant dark (&:is(.dark *));
+ 
++/* §10's registration, the one row this lane consumes: copied verbatim from the leader's block
++   (CTRL-FACE `wf_f72f3b5a-83a-33` index.css:239-243; chair §4 on §6.8, the consumer cites). */
++@property --strip-len {
++  syntax: "<length>";
++  inherits: true;
++  initial-value: 0px;
++}
++
+ /* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+  * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+  * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+@@ -264,14 +272,12 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* T9-W7 CTRL-TABS — THE RING'S MINT IS STRUCK (pass 3, the spec's own word: "`--ring-ink`
+-     consumed `var(--ring-ink, currentColor)` — this lane's mint STRUCK"). Pass 2 authored the
+-     token here at `color-mix(in srgb, var(--color-foreground) 50%, transparent)`, which is a
+-     palette decision and belongs to the accent fold, not to the lane that happens to want a
+-     ring. The two consumers in `GameControlPanel` read `var(--ring-ink, currentColor)`: they
+-     take the fold's ink the day it lands and a full-strength foreground ring until then —
+-     never the engine default, which WebKit paints at 2.15:1 on `--color-card`, under the 3:1 a
+-     focus indicator owes (WCAG 1.4.11). */
++  /* `--ring-ink` — MRK-LIVE's ONE declaration, copied verbatim (registry-v3 §2.9, chair §4 on
++     §6.7; source `wf_f72f3b5a-83a-35` index.css:238-241). Consumed bare in GameControlPanel. */
++  --ring-ink: var(
++    --color-focus-sketch
++  ); /* the NAME the chrome consumes; the value is the focus ink's. Retire one, the other
++     follows. */
+   /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+      the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+      46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+diff -ru -x .git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+--- a/web/frontend/src/games/shared/GameControlPanel.vue	2026-09-22 18:05:29
++++ b/web/frontend/src/games/shared/GameControlPanel.vue	2026-09-22 18:05:28
+@@ -183,6 +183,12 @@
+ const uid = useId();
+ const tabId = (k: TabKey) => `${uid}tab-${k}`;
+ const panelId = (k: TabKey) => `${uid}panel-${k}`;
++// THE DECLARED FALLBACK KEEPS THE FOUR TAGS (chair §6.3(a)(b), U-10): owner mark T9-M03 is
++// the sticky section tag, and only the owner retires a mark. Each face-up tray wears its HEAD
++// tape (same seed, same literal, `anchor="tag"`; static so check-font-coverage can read it).
++// The deletion arm (the tab alone names the tray) is the ballot's other frame, banked as a
++// PROPOSED diff under `pass4/prototype/CTRL-TABS/instruments/`.
++const tagId = (k: TabKey) => `${uid}tag-${k}`;
+ const tabKeys = computed<TabKey[]>(() =>
+   props.mobile
+     ? ["new-game", "pencils", "checking", "players"]
+@@ -916,6 +922,7 @@
+         :aria-labelledby="tabId('new-game')"
+         :inert="face !== 'new-game' || undefined"
+       >
++        <SheetWashiLabel :id="tagId('new-game')" text="new game" :seed="13" anchor="tag" />
+         <div class="control-panel-filtered">
+           <div
+             v-for="section in sections"
+@@ -952,6 +959,7 @@
+         :aria-labelledby="tabId('pencils')"
+         :inert="face !== 'pencils' || undefined"
+       >
++        <SheetWashiLabel :id="tagId('pencils')" text="pencils" :seed="29" anchor="tag" />
+         <div
+           class="zone-row"
+           :class="{ 'zone-row-stacked': !mobile }"
+@@ -1011,6 +1019,7 @@
+         :aria-labelledby="tabId('checking')"
+         :inert="face !== 'checking' || undefined"
+       >
++        <SheetWashiLabel :id="tagId('checking')" text="checking" :seed="59" anchor="tag" />
+         <OptionSelector
+           :options="CHECK_OPTIONS"
+           :selected="errorCheckMode"
+@@ -1033,6 +1042,7 @@
+         :aria-describedby="playersHintId"
+         :inert="face !== 'players' || undefined"
+       >
++        <SheetWashiLabel :id="tagId('players')" text="players" :seed="67" anchor="tag" />
+         <p :id="playersHintId" class="tray-note">
+           share this board and everyone writes on the same grid
+         </p>
+@@ -1330,8 +1340,11 @@
+                on `controls`: a between-moves act at 0 taps became one at 1, undeclared, on the
+                family whose thesis is 0-tap play acts. The divider it used to be held on is
+                still deleted; the recognizer travels unchanged — same 350ms, same 10px slop,
+-               same two constants, one pair of consumers. -->
++               same two constants, one pair of consumers. Portrait only, as HEAD had it
++               (`v-if="portraitDock"`): a fourth tongue on the landscape flank reaches down over
++               the `controls` tongue and took 31–51 of its 63 hit points (pass 4, both engines). -->
+           <button
++            v-if="portraitDock"
+             class="icon-btn peek-chip"
+             type="button"
+             :disabled="loading"
+@@ -1486,7 +1499,7 @@
+ }
+ 
+ .tab:focus-visible .tab-face {
+-  outline: 2px solid var(--ring-ink, currentColor);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 4px;
+ }
+ 
+@@ -1539,6 +1552,13 @@
+   visibility: hidden;
+ }
+ 
++/* The fallback's tag, in flow at the tray's head. HEAD's straddle pull (`margin-top: −1.5em`)
++   would lift it through the lid into the raised tab's mouth, so the tape pays its own line
++   here instead; the price is the tape's line box on the face-up tray, measured in the return. */
++.tray > .washi-tag {
++  margin: 0 0 0 0.85rem;
++}
++
+ /* The row caption's heading host — the same `display: contents` trick the tab wears, so ROW 2's
+    population is the four tab words AND the two row captions (6/6) without a single box moving. */
+ .row-head {
+@@ -2250,8 +2270,9 @@
+    opacity makes that ground both legible and visible, and a ground nobody can see is not a cue.
+    So the redundancy moves to a channel the ribbon already draws — this verb keeps its box and
+    `keep` loses one (the template), which is a 19.41:1 difference rather than a 1.19:1 one — and
+-   the ink goes back on the card it is rated against. One confirm, two files: the gallery's
+-   ribbon (`GameGallery.vue`) drops the same face in the same commit. */
++   the ink goes back on the card it is rated against. The gallery's ribbon keeps HEAD's face
++   (R6 L5 is the chair's row): its half is a PROPOSED diff, pass4/prototype/CTRL-TABS/instruments/
++   L5-gallery-guard.PROPOSED.diff, so for now the two confirms disagree and the return says so. */
+ .guard-go {
+   color: var(--color-red-ink);
+ }
+@@ -2261,7 +2282,7 @@
+ }
+ 
+ .guard-btn:focus-visible .guard-face {
+-  outline: 2px solid var(--ring-ink, currentColor);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 4px;
+ }
+ 
+@@ -2302,6 +2323,31 @@
+   gap: 0.05rem;
+ }
+ 
++/* ── THE DECLARED FALLBACK'S PORTRAIT ARM (chair §6.3(b), pass 4) ────────────────────────────
++   In the shipped ribbon the row is HEAD's row: no drawn outline, no card ground, HEAD's 1rem gap
++   and 0.35rem head room, the icon-btn's own padding. Pass 3 teleported the row in here but left
++   the edge berth's absolute pose on it, which resolved against the page and hung the four tools
++   at y −8 (off-screen, measured at 390×844 coarse). The edge pose is now keyed on the edge
++   berth itself, so the ribbon gets exactly what it had. */
++.fold-tools > .play-controls {
++  gap: 1rem;
++  align-items: flex-start;
++  margin-top: 0.35rem;
++}
++
++.fold-tools .edge-tools {
++  display: contents;
++}
++
++.fold-tools .edge-tools :deep(.outline-svg) {
++  display: none;
++}
++
++.fold-tools .edge-tools .icon-btn {
++  padding: 0.3rem 0.5rem;
++  gap: 0.15rem;
++}
++
+ /* ── THE TWO BERTH POSES, the tongue's own two, read on the other end of the same edge ───────
+    Portrait: the paper's BOTTOM edge, tucked 8px under it at `z-index: -1` — `DrawerTab`'s own
+    `top: calc(100% - 0.5rem)`, at `left: 0` instead of `right: 0`, so the tools take the board's
+@@ -2313,7 +2359,7 @@
+    its events back. The container passes through, the control takes back: the estate's standing
+    shape for the idiom. */
+ @media (max-width: 1023.98px) and (orientation: portrait) {
+-  .play-controls {
++  #board-edge-tools > .play-controls {
+     position: absolute;
+     left: 0;
+     /* T9-W7 pass 3 — the tongue's cure, read on this end of the same edge: hung from the
+@@ -2369,17 +2415,11 @@
+    pays a seam, and writing 40 on both would have put the unraised tabs' feet 14px inside the
+    lid. Nothing paints above the card's own top edge, so scene.css:160-172's decided law (no
+    frame in the masthead zone) holds by construction: the berth is INSIDE the case. */
+-/* §6.5, THE NO-FALLBACK LAW, on this lane's own measured token. `var(--strip-len, 0px)` was a
+-   masked failure: with the publisher gone the berth collapses to 6px and the strip paints over
+-   the card's first row, silently. The registration carries the initial value instead, published
+-   before first paint, so an absent publisher is caught by the born-RED that deletes it
+-   (`GameControlPanel.test.ts` — "the berth's publisher is not optional") rather than by a
+-   reader. §10's leader lands ONE registration block at the fold; this row folds into it. */
+-@property --strip-len {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
++/* §6.5: `--strip-len` is consumed BARE and registered ONCE, in the first static stylesheet
++   (index.css, §10's leader's block — CTRL-FACE `wf_f72f3b5a-83a-33` index.css:239-243, copied).
++   The publisher's born-RED is a browser row, pass4/prototype/CTRL-TABS/instruments/
++   tabs-strip-publisher.mjs: it deletes the publisher and the berth reads 6px against the
++   strip's own height, with the publishing arm as its control in the same run. */
+ 
+ @media (min-width: 1024px) {
+   .desk-control-panel {
+diff -ru -x .git a/web/frontend/src/games/shared/GameScene.vue b/web/frontend/src/games/shared/GameScene.vue
+--- a/web/frontend/src/games/shared/GameScene.vue	2026-09-22 18:05:29
++++ b/web/frontend/src/games/shared/GameScene.vue	2026-09-22 18:05:28
+@@ -144,9 +144,8 @@
+              bottom rail) in portrait, `.board-peek-host` (the right flank) in landscape and on
+              the desk. That is what makes the strip one law with four tongues rather than a
+              second toolbar: the same edge, the same 2.5 stroke, the same card ground.
+-             `#fold-tools` and its composed ribbon are RETIRED — the band under the board that
+-             carried them exists only in portrait, which is exactly why undo/redo/hint had no
+-             home at all in landscape (measured 0×0 at 844×390 and 900×500). -->
++             In the declared fallback this berth serves LANDSCAPE only (where HEAD's ribbon is
++             0×0 and undo/redo/hint had no home); portrait keeps `#fold-tools` below. -->
+         <Teleport defer to="#board-edge" :disabled="!portraitDock">
+           <div id="board-edge-tools" class="edge-berth" />
+         </Teleport>
+@@ -158,8 +157,8 @@
+          instead and asks: portrait teleports `.play-controls` in here exactly as HEAD does,
+          while landscape and the flank — where this ribbon is 0×0 and the play tools had no home
+          at all — take the board's edge berth above. The ballot's YES deletes this div and its
+-         `.fold-tools` rules and lets portrait take the edge too; the default stated in the
+-         return is the strip, and it is the owner's to fire. -->
++         `.fold-tools` rules and lets portrait take the edge too. The DEFAULT is this div
++         standing (T9-B-TABS, pass4/prototype/CTRL-TABS/README.md); deletion is the owner's. -->
+     <div id="fold-tools" class="fold-tools" />
+ 
+     <!-- Row-regime sidebar (≥lg — R3: iPad portrait clips at md): controls card,
+diff -ru -x .git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue	2026-09-22 18:05:29
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue	2026-09-22 18:05:29
+@@ -1035,12 +1035,6 @@
+                 class="guard-btn guard-keep"
+                 @click.stop="dismissGuard"
+               >
+-                <!-- L5 IS THE CHAIR'S ROW (§6.7), SO IT DOES NOT MOVE HERE. Pass 2 made this
+-                     word bare to carry the confirm's cue as boxed-vs-bare; r0's law probe reads
+-                     that as L5 RED ("guard verbs wear HandDrawnOutline"), and a banked law moves
+-                     as a PROPOSED diff with its reason, never in place. The proposal and its
+-                     measured frame live at
+-                     `pass3/prototype/CTRL-TABS/instruments/L5-bare-keep.PROPOSED.diff`. -->
+                 <HandDrawnOutline
+                   :pose="0"
+                   :stroke-width="2"
+@@ -1458,17 +1452,13 @@
+   outline-offset: 4px;
+ }
+ 
+-/* ── T9-W7 §15 · THE 8% GROUND IS RETIRED — ONE CONFIRM, TWO FILES ───────────────────────────
+-   This ground claimed to be the non-colour channel and measured 1.19:1 against the card: a cue
+-   nobody can see is not a cue, and the same mix in `GameControlPanel`'s ribbon took a red word
+-   under AA (4.20 against 4.99 on the bare card). The mix cannot be tuned into both jobs at once
+-   — measured across 0–40%, the band where a red word still clears 4.5 tops out at 4% and the
+-   band where the face clears 3:1 starts above 40%, and the two never meet.
+-   THE REDUNDANCY MOVES TO THE BOX. `keep` is now a bare word here as it is in the card, and the
+-   destructive verb keeps its drawn frame at 2.5: boxed versus bare, which is a 19.41:1
+-   difference rather than a 1.19:1 one, and it survives greyscale, a `prefers-contrast` regime
+-   and a ground nobody rendered. Landed in the same commit as the card's, because a house with
+-   two confirms that disagree about their own cue has neither. */
++/* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
++   the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
++   A reader who can see neither stroke weight nor colour still sees one verb marked and one
++   bare. */
++.guard-leave .guard-face {
++  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
++}
+ 
+ @media (pointer: coarse) {
+   .guard-face {
+diff -ru -x .git a/web/frontend/src/pencil/config/filterBudget.ts b/web/frontend/src/pencil/config/filterBudget.ts
+--- a/web/frontend/src/pencil/config/filterBudget.ts	2026-09-22 18:05:29
++++ b/web/frontend/src/pencil/config/filterBudget.ts	2026-09-22 18:05:29
+@@ -207,9 +207,8 @@
+  * **5702** below 1024 in BOTH engines (971 px² under the old figure — the divider's own box,
+  * which is what left). The `row` arm does not move: the divider's four poses overlap into one
+  * box there too and its departure lands inside the 2% that arm already carries (re-measured
+- * unchanged, 12/12 green). PROTOTYPE CAVEAT, stated because this is a seal-grade constant: the
+- * figure was read on the DEV server (`PLAYWRIGHT_BASE_URL` suppresses the config's own
+- * build+preview), and the number the cure ships must be re-derived from the built dist.
++ * unchanged, 12/12 green). Re-read on the BUILT dist (pass 4, `index-D8OwVfe4bGG9.js` under
++ * `vite preview`): filter-census 12/12, chromium and webkit, both arms inside the tolerance.
+  */
+ export const FILTER_BUDGET_UNION_AREA = {
+   /** ≥1024, 1280×800 dpr1 — the row regime every config in this repo runs at. */

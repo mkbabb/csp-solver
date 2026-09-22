@@ -1,0 +1,24 @@
+=== 1 corridor (both engines, with born-RED) ===
+  ✓  8 [webkit] › e2e/progress-corridor.spec.ts:304:3 › BORN-RED: the corridor names its failure on HEAD's violet — dark (7.2s)
+
+  8 passed (55.2s)
+CORRIDOR3 EXIT=0
+=== 2 win/contrast (layered ablation) ===
+chromium/light/more-ablated more=true pre=25 post=25 | BEFORE rgb(140, 105, 29) @12px solved=false cols 24 line 2.573 paper 4.967 | AFTER rgb(201, 154, 46) @12px solved=true cols 24 line 5.046 paper 2.533
+chromium/dark/more-ablated more=true pre=25 post=25 | BEFORE rgb(229, 199, 77) @12px solved=false cols 24 line 1.037 paper 11.234 | AFTER rgb(229, 199, 77) @12px solved=true cols 24 line 1.037 paper 11.234
+webkit/light/more-ablated more=true pre=25 post=25 | BEFORE rgb(140, 105, 29) @12px solved=false cols 24 line 2.573 paper 4.967 | AFTER rgb(201, 154, 46) @12px solved=true cols 24 line 5.046 paper 2.533
+webkit/dark/more-ablated more=true pre=25 post=25 | BEFORE rgb(229, 199, 77) @12px solved=false cols 24 line 1.037 paper 11.234 | AFTER rgb(229, 199, 77) @12px solved=true cols 24 line 1.037 paper 11.234
+=== 3 join rate ===
+chromium: join poses 0 d-writes 104 re-cut frames 26 span 496.5ms RATE 52.4/s
+webkit: join poses 0 d-writes 88 re-cut frames 22 span 500ms RATE 44/s
+EXIT=0
+=== 4 G10 born-RED: FRONT_MIN_MS 16 -> 0 ===
+157:const FRONT_MIN_MS = 0;
+157:const FRONT_MIN_MS = 16;
+chromium/light  panel 130Hz  PRM=false  poses 4  d-writes 128  re-cut frames 32  span 230ms  RATE 139.1/s  opacity 1  pathLength null  dash null  segs 25
+chromium/dark  panel 127Hz  PRM=false  poses 4  d-writes 128  re-cut frames 32  span 233.4ms  RATE 137.1/s  opacity 1  pathLength null  dash null  segs 25
+webkit/light  panel 67Hz  PRM=false  poses 4  d-writes 64  re-cut frames 16  span 226ms  RATE 70.8/s  opacity 1  pathLength null  dash null  segs 25
+webkit/dark  panel 67Hz  PRM=false  poses 4  d-writes 60  re-cut frames 16  span 210ms  RATE 76.2/s  opacity 1  pathLength null  dash null  segs 25
+EXIT=0
+BATTERY DONE
+BATTERY EXIT=0

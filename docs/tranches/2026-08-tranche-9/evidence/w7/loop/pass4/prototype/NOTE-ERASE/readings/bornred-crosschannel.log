@@ -1,0 +1,32 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-47/web/frontend
+
+ ❯ src/games/shared/GameBoard.receipt.test.ts (16 tests | 1 failed) 611ms
+     × a margin write inside the voice's beat does NOT eat the voice's re-say 235ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.receipt.test.ts > GameBoard — the deal is spoken where it draws nothing > a margin write inside the voice's beat does NOT eat the voice's re-say
+AssertionError: the voice's beat survived the margin's cancel: expected '' to be 'new board. 4 by 4 kenken board' // Object.is equality
+
+- Expected
++ Received
+
+- new board. 4 by 4 kenken board
+
+ ❯ src/games/shared/GameBoard.receipt.test.ts:223:71
+    221|     await afterOneBeat();
+    222|     await nextTick();
+    223|     expect(voice(w), "the voice's beat survived the margin's cancel").…
+       |                                                                       ^
+    224|       "new board. 4 by 4 kenken board",
+    225|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 15 passed (16)
+   Start at  07:59:05
+   Duration  1.25s (transform 277ms, setup 13ms, import 319ms, tests 611ms, environment 220ms)
+

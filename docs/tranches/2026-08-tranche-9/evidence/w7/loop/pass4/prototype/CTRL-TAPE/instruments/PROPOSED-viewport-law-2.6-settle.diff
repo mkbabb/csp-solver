@@ -1,0 +1,65 @@
+PROPOSED — NOT APPLIED. T9-W7 §10 pass 4 · CTRL-TAPE.
+
+W2's §2.6 row (`e2e/viewport-law.spec.ts`, `STICKY_CENSUS`) is RED on this tree in BOTH engines
+at both its cells, and the red is LATENCY, not the pose. `STICKY_CENSUS` writes `card.scrollTop`
+and reads `getComputedStyle(tag).position` in the SAME synchronous block; `data-released` — the
+release-at-half pose this family ships — is published by an `IntersectionObserver`, which cannot
+have run in that task. The row therefore reads the pose the tape held at `scrollTop 0`.
+
+MEASURED, both engines, both cells (`instruments/p4-sticky.mjs`, `logs/p4-sticky.log`):
+
+  cell                 tag        SYNC (the row's own read)   SETTLED (+400 ms)
+  rail 1440×900        new game   sticky · visFrac 1          sticky · visFrac 1
+  rail 1440×900        pencils    static · visFrac 0          sticky · visFrac 1   wellInView 0.856
+  drawer 375×667       new game   sticky · visFrac 1          sticky · visFrac 1
+  drawer 375×667       pencils    static · visFrac 0          sticky · visFrac 1   wellInView 0.811
+
+WHY THE CONTROL IS GREEN AND THIS TREE IS NOT. At `74a2b5d9` the card's scroll range is 504 px
+(rail) / 248 px (drawer) and `pencils` needs 599.2 / 361.7, so the row reports it `unreachable`
+and never reads a second tape at all. This design's card is taller — range 717 / 433 — so the
+second compartment becomes reachable and the row reads it for the first time. The design did not
+break the row; it made the row's second subject exist.
+
+THE ROW IS W2's AND THE CHAIR'S TO MOVE (LAWS §The record: an instrument whose subject a design
+moved is a PROPOSED diff and the row is reported MOVED). It is NOT re-worded to pass: the
+assertion, the thresholds and the 40 px offset are untouched. The only change is that the census
+lets the pose it asserts be published before it reads it, which is the same settle the dock sheet
+already takes (~700 ms) everywhere else in this file.
+
+--- a/web/frontend/e2e/viewport-law.spec.ts
++++ b/web/frontend/e2e/viewport-law.spec.ts
+@@ STICKY_CENSUS
+-/** Push each well's head past the scrollport's top, then read whether its tag stayed. Returns
+- *  one row per well; wells that cannot reach the state (too short, or too near the content's
+- *  end to be scrolled that far) are reported `unreachable` rather than silently passed. */
+-const STICKY_CENSUS = (cardSel: string) => {
+-  const card = document.querySelector(cardSel) as HTMLElement | null;
+-  if (!card) return null;
+-  ...
+-    card.scrollTop = want;
+-    const c = card.getBoundingClientRect();
+-    const w = well.getBoundingClientRect();
+-    rows.push({ tag: name, position: getComputedStyle(tag).position, ... });
+-  }
+-  card.scrollTop = 0;
+-  return { max, rows };
+-};
++/** Push each well's head past the scrollport's top, then read whether its tag stayed. Returns
++ *  one row per well; wells that cannot reach the state (too short, or too near the content's
++ *  end to be scrolled that far) are reported `unreachable` rather than silently passed.
++ *
++ *  THE READ IS TAKEN AFTER THE POSE IS PUBLISHED. The release pose (`data-released`) is an
++ *  `IntersectionObserver`'s, so a census that writes `scrollTop` and reads `getComputedStyle`
++ *  in one synchronous task reads the pose from BEFORE the scroll — `static` at every well the
++ *  scroll just brought into view, whatever the design does. One well per call, with the
++ *  observer allowed to run between the scroll and the read.
++ */
++const STICKY_SCROLL = (cardSel: string, i: number) => { /* set scrollTop for well i, return it */ };
++const STICKY_READ = (cardSel: string, i: number) => { /* read well i's tag, unchanged fields */ };
++// caller: for each well — await page.evaluate(STICKY_SCROLL, [sel, i]);
++//                         await page.waitForTimeout(400);
++//                         rows.push(await page.evaluate(STICKY_READ, [sel, i]));
+
+A RUNNING implementation of the split census, with its readings, is
+`instruments/p4-sticky.mjs` (`SETTLED`). The chair decides whether the row takes the settle or
+whether the family owes a pose that does not lag a frame; this lane has no licence to choose.

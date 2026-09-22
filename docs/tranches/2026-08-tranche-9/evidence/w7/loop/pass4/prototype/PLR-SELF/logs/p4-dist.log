@@ -1,0 +1,62 @@
+
+Running 6 tests using 1 worker
+
+  ✘  1 [chromium] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist (944ms)
+[chromium] DIST-CENSUS-PRM shut=9 lobby=9
+  ✓  2 [chromium] › .plr-self/p4-dist.spec.ts:66:1 › the census under reduce, on the built dist (1.3s)
+[chromium] DIST-TAPFLOOR {"coarse":true,"box":[45.125,44],"minW":"44px","minH":"44px"}
+  ✓  3 [chromium] › .plr-self/p4-dist.spec.ts:84:1 › the tap floor on the shipped artifact, coarse and witnessed (800ms)
+  ✘  4 [webkit] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist (1.8s)
+[webkit] DIST-CENSUS-PRM shut=9 lobby=9
+  ✓  5 [webkit] › .plr-self/p4-dist.spec.ts:66:1 › the census under reduce, on the built dist (2.4s)
+[webkit] DIST-TAPFLOOR {"coarse":true,"box":[45.125,44],"minW":"44px","minH":"44px"}
+  ✓  6 [webkit] › .plr-self/p4-dist.spec.ts:84:1 › the tap floor on the shipped artifact, coarse and witnessed (1.3s)
+
+
+  1) [chromium] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist 
+
+    Error: locator.hover: Error: strict mode violation: locator('.attribution-trigger') resolved to 2 elements:
+        1) <button type="button" data-v-3ba71fa8="" aria-expanded="false" aria-label="Show attribution card" class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"> @mbabb </button> aka getByRole('button', { name: 'Show attribution card' })
+        2) <button type="button" data-v-3ba71fa8="" aria-expanded="false" aria-label="Show attribution card" class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"> @mbabb </button> aka getByLabel('Show attribution card').nth(1)
+
+    Call log:
+      - waiting for locator('.attribution-trigger')
+
+
+      42 |   // The INCUMBENT card first, as the control: whatever the head's other sheet costs, it is not
+      43 |   // this family's.
+    > 44 |   await page.locator(".attribution-trigger").hover();
+         |                                              ^
+      45 |   await page.waitForTimeout(400);
+      46 |   const card = await countFilters(page);
+      47 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/.plr-self/p4-dist.spec.ts:44:46
+
+    Error Context: test-results/p4-dist-G3-6-—-the-census--ecfd6-eets-open-on-the-built-dist-chromium/error-context.md
+
+  2) [webkit] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist 
+
+    Error: locator.hover: Error: strict mode violation: locator('.attribution-trigger') resolved to 2 elements:
+        1) <button type="button" data-v-3ba71fa8="" aria-expanded="false" aria-label="Show attribution card" class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"> @mbabb </button> aka getByRole('button', { name: 'Show attribution card' })
+        2) <button type="button" data-v-3ba71fa8="" aria-expanded="false" aria-label="Show attribution card" class="attribution-trigger text-muted-foreground hover:text-foreground font-mono text-sm transition-colors duration-200"> @mbabb </button> aka getByLabel('Show attribution card').nth(1)
+
+    Call log:
+      - waiting for locator('.attribution-trigger')
+
+
+      42 |   // The INCUMBENT card first, as the control: whatever the head's other sheet costs, it is not
+      43 |   // this family's.
+    > 44 |   await page.locator(".attribution-trigger").hover();
+         |                                              ^
+      45 |   await page.waitForTimeout(400);
+      46 |   const card = await countFilters(page);
+      47 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/.plr-self/p4-dist.spec.ts:44:46
+
+    Error Context: test-results/p4-dist-G3-6-—-the-census--ecfd6-eets-open-on-the-built-dist-webkit/error-context.md
+
+  2 failed
+    [chromium] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist 
+    [webkit] › .plr-self/p4-dist.spec.ts:34:1 › G3.6 — the census with the head's sheets open, on the built dist 
+  4 passed (9.9s)
+EXIT=1

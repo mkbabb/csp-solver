@@ -1,0 +1,65 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_308fa864-c94-1/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (43 tests | 2 failed) 135ms
+     × U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing 6ms
+     × U8 — the room of one: write, invite, write, and only the arrival inks the board 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U7 — your own hand binds on the SECOND known id, and the invite press recolours nothing
+AssertionError: expected { …(2) } to deeply equal {}
+
+- Expected
++ Received
+
+- {}
++ {
++   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
++ }
+
+ ❯ src/games/shared/useSession.test.ts:695:25
+    693|       p.session.session.players.value.find((r) => r.id === id)?.ink;
+    694|     // solo, and a room of one: there is nobody to be told apart from,…
+    695|     expect(inkOf(self)).toEqual({});
+       |                         ^
+    696|     p.peer("peer-1", true);
+    697|     expect(inkOf(self)).toEqual(inkFor(0));
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U8 — the room of one: write, invite, write, and only the arrival inks the board
+AssertionError: expected { '4': { …(2) }, '7': { …(2) } } to deeply equal {}
+
+- Expected
++ Received
+
+- {}
++ {
++   "4": {
++     "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
++     "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
++   },
++   "7": {
++     "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1214 27.17deg)",
++     "--color-user-ink": "oklch(var(--peer-ink-l) 0.1796 27.17deg)",
++   },
++ }
+
+ ❯ src/games/shared/useSession.test.ts:707:39
+    705|     await p.session.joinSession("room-u8", true);
+    706|     const self = p.selfId();
+    707|     expect(p.session.authorInk.value).toEqual({}); // invite pressed, …
+       |                                       ^
+    708|     expect(Object.keys(p.session.cellAuthors.value).sort()).toEqual(["…
+    709|     p.peer("peer-1", true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 41 passed (43)
+   Start at  14:18:59
+   Duration  731ms (transform 84ms, setup 14ms, import 108ms, tests 135ms, environment 347ms)
+

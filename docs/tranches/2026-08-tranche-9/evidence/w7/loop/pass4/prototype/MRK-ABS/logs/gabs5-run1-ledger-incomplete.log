@@ -1,0 +1,58 @@
+Running 4 tests using 1 worker
+[1/4] [chromium] › .p4-mrkabs/p4-board.spec.ts:56:1 › board search · 16x16 · frame + paper · both themes
+[chromium] › .p4-mrkabs/p4-board.spec.ts:56:1 › board search · 16x16 · frame + paper · both themes
+[2/4] [chromium] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves
+[chromium] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves
+[G-ABS-5 chromium shipped] opacity GREEN (ledger 0.95, source 0.95, computed 0.95) · paint RED
+   16×16 paper light: painted 3.972 ledger 3.97 delta 0.002 ok
+   16×16 frame light: painted 2.812 ledger 2.81 delta 0.002 ok
+   16×16 paper dark: painted 3.989 ledger 3.99 delta -0.001 ok
+   16×16 frame dark: painted 2.404 ledger 2.4 delta 0.004 ok
+   9×9 paper light: painted 3.92 ledger null delta null RED
+   9×9 paper dark: painted 3.989 ledger null delta null RED
+[G-ABS-5 chromium ablated-0.9] opacity RED (ledger 0.95, source 0.95, computed 0.9) · paint RED
+   16×16 paper light: painted 3.679 ledger 3.97 delta -0.291 RED
+   16×16 frame light: painted 2.693 ledger 2.81 delta -0.117 RED
+   16×16 paper dark: painted 3.763 ledger 3.99 delta -0.227 RED
+   16×16 frame dark: painted 2.312 ledger 2.4 delta -0.088 ok
+   9×9 paper light: painted 3.667 ledger null delta null RED
+   9×9 paper dark: painted 3.723 ledger null delta null RED
+[G-ABS-5 chromium] source-text negative control (tier 2 -> 0.9): RED as required
+  1) [chromium] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves 
+    Error: G-ABS-5 on the tree
+    expect(received).toBe(expected) // Object.is equality
+    Expected: "GREEN"
+    Received: "RED"
+    > 61 |   expect(arms["shipped"].verdict, "G-ABS-5 on the tree").toBe("GREEN");
+    Error Context: test-results/p4-gabs5-G-ABS-5-·-the-led-1036e-eds-when-that-opacity-moves-chromium/error-context.md
+[3/4] [webkit] › .p4-mrkabs/p4-board.spec.ts:56:1 › board search · 16x16 · frame + paper · both themes
+[webkit] › .p4-mrkabs/p4-board.spec.ts:56:1 › board search · 16x16 · frame + paper · both themes
+[4/4] [webkit] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves
+[webkit] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves
+[G-ABS-5 webkit shipped] opacity GREEN (ledger 0.95, source 0.95, computed 0.95) · paint RED
+   16×16 paper light: painted 3.965 ledger 3.97 delta -0.005 ok
+   16×16 frame light: painted 2.85 ledger 2.85 delta 0 ok
+   16×16 paper dark: painted 3.997 ledger 4 delta -0.003 ok
+   16×16 frame dark: painted 2.404 ledger 2.4 delta 0.004 ok
+   9×9 paper light: painted 3.965 ledger null delta null RED
+   9×9 paper dark: painted 3.989 ledger null delta null RED
+[G-ABS-5 webkit ablated-0.9] opacity RED (ledger 0.95, source 0.95, computed 0.9) · paint RED
+   16×16 paper light: painted 3.685 ledger 3.97 delta -0.285 RED
+   16×16 frame light: painted 2.693 ledger 2.85 delta -0.157 RED
+   16×16 paper dark: painted 3.755 ledger 4 delta -0.245 RED
+   16×16 frame dark: painted 2.316 ledger 2.4 delta -0.084 ok
+   9×9 paper light: painted 3.68 ledger null delta null RED
+   9×9 paper dark: painted 3.715 ledger null delta null RED
+[G-ABS-5 webkit] source-text negative control (tier 2 -> 0.9): RED as required
+  2) [webkit] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves 
+    Error: G-ABS-5 on the tree
+    expect(received).toBe(expected) // Object.is equality
+    Expected: "GREEN"
+    Received: "RED"
+    > 61 |   expect(arms["shipped"].verdict, "G-ABS-5 on the tree").toBe("GREEN");
+    Error Context: test-results/p4-gabs5-G-ABS-5-·-the-led-1036e-eds-when-that-opacity-moves-webkit/error-context.md
+  2 failed
+    [chromium] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves 
+    [webkit] › .p4-mrkabs/p4-gabs5.spec.ts:27:1 › G-ABS-5 · the ledger is true at the opacity it names, and reds when that opacity moves 
+  2 passed (2.2m)
+EXIT 1

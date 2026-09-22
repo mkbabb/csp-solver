@@ -1,0 +1,27 @@
+import { chromium, webkit } from 'playwright';
+import sharp from '/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/sharp/dist/index.mjs';
+const [engName, theme, start, outPath] = process.argv.slice(2);
+const eng = engName === 'webkit' ? webkit : chromium;
+const browser = await eng.launch();
+const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: theme, deviceScaleFactor: 1 });
+const page = await ctx.newPage();
+await page.goto('http://127.0.0.1:4259/', { waitUntil: 'load' });
+await page.waitForSelector('.controls-card .action-bar .info-btn', { timeout: 30000 });
+await page.waitForTimeout(2500);
+await page.evaluate(async (start) => {
+  const bar = document.querySelector('.action-bar'); const fold = document.getElementById('keys-fold');
+  const st = document.createElement('style');
+  st.textContent = `.action-bar{grid-template-rows:auto auto}.action-bar > #keys-fold{grid-column:1 / -1;grid-row:1}.action-bar > .action-verbs{grid-row:2}.action-bar > .info-btn{grid-row:2}`;
+  document.head.append(st); bar.prepend(fold);
+  Element.prototype.scrollIntoView = function () {};
+  const c = document.querySelector('.controls-card'); if (start === 'end') c.scrollTop = c.scrollHeight;
+  await new Promise(r => setTimeout(r, 400));
+}, start);
+const ib = await page.locator('.info-btn').boundingBox();
+await page.mouse.click(ib.x + ib.width / 2, ib.y + ib.height / 2);
+await page.mouse.move(5, 5);
+await page.waitForTimeout(900);
+const cr = await page.locator('.controls-card').boundingBox();
+const buf = await page.screenshot({ clip: { x: cr.x - 12, y: 420, width: cr.width + 24, height: 800 - 420 } });
+await sharp(buf).png({ palette: true, quality: 80 }).toFile(outPath);
+await browser.close();

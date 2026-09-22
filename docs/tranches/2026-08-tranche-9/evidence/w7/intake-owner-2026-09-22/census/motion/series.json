@@ -1,0 +1,4215 @@
+{
+ "lane": "census:motion",
+ "tree": "master 1e6cfbbf, vite dev server 127.0.0.1:4250 (private cacheDir), main src/ read-only",
+ "dpr": 2,
+ "instrument": "rAF sampler (frame-start timestamps), getBoundingClientRect + computed transform/opacity/visibility; Element.animate hook logs each FLIP mover's keyframes + the rect at call; LoAF (chromium only); drawImage hook for bake attribution. Playwright 1.x headless chromium-1223 / webkit; box shared with live pass-4 lanes (frame noise ~±20ms on warm runs).",
+ "toggle": [
+  {
+   "file": "t-chromium-gallery-1280-light.json",
+   "engine": "chromium",
+   "view": "gallery",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 101,
+     "frameMs": {
+      "min": 6.8,
+      "median": 8.3,
+      "max": 158.4
+     },
+     "over16_7": 5,
+     "over25": 5,
+     "over50": 5,
+     "bigFrames": [
+      "74.9ms ending @+89",
+      "158.4ms ending @+272",
+      "133.3ms ending @+406",
+      "123.9ms ending @+530",
+      "126.1ms ending @+656"
+     ],
+     "largestJump": {
+      "d": 0.544,
+      "body": "moon",
+      "i": 5,
+      "t": 272.4,
+      "dt": 158.4,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.544,
+       "op": 0.514,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 272,
+      "scale": 0.544,
+      "op": 0.514
+     },
+     "settleHandoff": {
+      "t": 1122,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [
+      "554x162@+123(0.5ms)",
+      "554x162@+129(0.4ms)",
+      "554x162@+135(0.4ms)",
+      "554x162@+141(0.5ms)",
+      "1272x1272@+147(1ms)",
+      "1272x1272@+275(1.1ms)",
+      "1272x1272@+405(1.4ms)",
+      "1272x1272@+530(1.2ms)"
+     ],
+     "loaf": [
+      {
+       "at": 7,
+       "dur": 84.5,
+       "scripts": [
+        "BUTTON.onclick vue.runtime.esm-bundler-J3hhHSON.js:invoker 19ms"
+       ]
+      },
+      {
+       "at": 112,
+       "dur": 161.3,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 7ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 6ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 6ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 6ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 113ms",
+        "FrameRequestCallback rafInstrumentation.ts: 10ms"
+       ]
+      },
+      {
+       "at": 275,
+       "dur": 127.2,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 113ms",
+        "FrameRequestCallback rafInstrumentation.ts: 12ms"
+       ]
+      },
+      {
+       "at": 405,
+       "dur": 122.6,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 111ms",
+        "FrameRequestCallback rafInstrumentation.ts: 11ms"
+       ]
+      },
+      {
+       "at": 530,
+       "dur": 120.8,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 109ms",
+        "FrameRequestCallback rafInstrumentation.ts: 10ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 143,
+     "frameMs": {
+      "min": 6.5,
+      "median": 8.4,
+      "max": 33.4
+     },
+     "over16_7": 11,
+     "over25": 4,
+     "over50": 0,
+     "bigFrames": [
+      "25.7ms ending @+45",
+      "33.3ms ending @+253",
+      "33.4ms ending @+370",
+      "25.2ms ending @+412"
+     ],
+     "largestJump": {
+      "d": 0.223,
+      "body": "sun",
+      "i": 11,
+      "t": 161.8,
+      "dt": 16.6,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.223,
+       "op": 0.029,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 162,
+      "scale": 0.223,
+      "op": 0.029
+     },
+     "settleHandoff": {
+      "t": 1087,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 141,
+     "frameMs": {
+      "min": 6.8,
+      "median": 8.3,
+      "max": 33.2
+     },
+     "over16_7": 12,
+     "over25": 6,
+     "over50": 0,
+     "bigFrames": [
+      "32.5ms ending @+103",
+      "26.3ms ending @+129",
+      "33.2ms ending @+221",
+      "33ms ending @+287",
+      "25.4ms ending @+371",
+      "25.1ms ending @+421"
+     ],
+     "largestJump": {
+      "d": 0.272,
+      "body": "sun",
+      "i": 19,
+      "t": 395.5,
+      "dt": 24.9,
+      "before": {
+       "s": 0.272,
+       "op": 0.07,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 162,
+      "scale": 0.263,
+      "op": 0.05
+     },
+     "settleHandoff": {
+      "t": 1079,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 139,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.4,
+      "max": 41.8
+     },
+     "over16_7": 9,
+     "over25": 7,
+     "over50": 0,
+     "bigFrames": [
+      "31.8ms ending @+42",
+      "33.3ms ending @+102",
+      "32.9ms ending @+168",
+      "25.4ms ending @+193",
+      "32.1ms ending @+309",
+      "41.8ms ending @+369",
+      "32.9ms ending @+418"
+     ],
+     "largestJump": {
+      "d": 0.3,
+      "body": "sun",
+      "i": 8,
+      "t": 168,
+      "dt": 32.9,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.3,
+       "op": 0.077,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 168,
+      "scale": 0.3,
+      "op": 0.077
+     },
+     "settleHandoff": {
+      "t": 1077,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-chromium-playing-1280-dark.json",
+   "engine": "chromium",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "dark",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 96,
+     "frameMs": {
+      "min": 6.6,
+      "median": 8.3,
+      "max": 192.7
+     },
+     "over16_7": 5,
+     "over25": 5,
+     "over50": 5,
+     "bigFrames": [
+      "75ms ending @+117",
+      "192.7ms ending @+333",
+      "115.9ms ending @+449",
+      "159ms ending @+608",
+      "133.4ms ending @+742"
+     ],
+     "largestJump": {
+      "d": 0.659,
+      "body": "sun",
+      "i": 9,
+      "t": 333.2,
+      "dt": 192.7,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.659,
+       "op": 0.73,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 333,
+      "scale": 0.659,
+      "op": 0.73
+     },
+     "settleHandoff": {
+      "t": 1142,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "765x224@+145(0.7ms)",
+      "765x224@+158(0.5ms)",
+      "765x224@+169(0.5ms)",
+      "765x224@+181(0.4ms)",
+      "1272x1272@+192(1.1ms)",
+      "1272x1272@+326(1.3ms)",
+      "1272x1272@+463(1.4ms)",
+      "1272x1272@+606(1.4ms)"
+     ],
+     "loaf": [
+      {
+       "at": 37,
+       "dur": 79.6,
+       "scripts": [
+        "BUTTON.onclick vue.runtime.esm-bundler-J3hhHSON.js:invoker 19ms"
+       ]
+      },
+      {
+       "at": 138,
+       "dur": 186.6,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 12ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 12ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 12ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 11ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 122ms",
+        "FrameRequestCallback rafInstrumentation.ts: 8ms"
+       ]
+      },
+      {
+       "at": 326,
+       "dur": 135.2,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 124ms",
+        "FrameRequestCallback rafInstrumentation.ts: 10ms"
+       ]
+      },
+      {
+       "at": 463,
+       "dur": 141.5,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 132ms",
+        "FrameRequestCallback rafInstrumentation.ts: 9ms"
+       ]
+      },
+      {
+       "at": 606,
+       "dur": 130.6,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 122ms",
+        "FrameRequestCallback rafInstrumentation.ts: 8ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "flip1",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 150,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 25.1
+     },
+     "over16_7": 6,
+     "over25": 1,
+     "over50": 0,
+     "bigFrames": [
+      "25.1ms ending @+41"
+     ],
+     "largestJump": {
+      "d": 0.298,
+      "body": "moon",
+      "i": 10,
+      "t": 148,
+      "dt": 24.1,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.298,
+       "op": 0.075,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 148,
+      "scale": 0.298,
+      "op": 0.075
+     },
+     "settleHandoff": {
+      "t": 1057,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 144,
+     "frameMs": {
+      "min": 6.6,
+      "median": 8.4,
+      "max": 33.7
+     },
+     "over16_7": 11,
+     "over25": 3,
+     "over50": 0,
+     "bigFrames": [
+      "25.3ms ending @+37",
+      "32.7ms ending @+228",
+      "33.7ms ending @+320"
+     ],
+     "largestJump": {
+      "d": 0.261,
+      "body": "sun",
+      "i": 8,
+      "t": 136.5,
+      "dt": 24.9,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.261,
+       "op": 0.049,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 137,
+      "scale": 0.261,
+      "op": 0.049
+     },
+     "settleHandoff": {
+      "t": 1052,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 145,
+     "frameMs": {
+      "min": 7.1,
+      "median": 8.3,
+      "max": 32.6
+     },
+     "over16_7": 11,
+     "over25": 3,
+     "over50": 0,
+     "bigFrames": [
+      "32.6ms ending @+226",
+      "25.3ms ending @+293",
+      "26.4ms ending @+385"
+     ],
+     "largestJump": {
+      "d": 0.325,
+      "body": "sun",
+      "i": 19,
+      "t": 358.6,
+      "dt": 23.7,
+      "before": {
+       "s": 0.325,
+       "op": 0.123,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 134,
+      "scale": 0.26,
+      "op": 0.048
+     },
+     "settleHandoff": {
+      "t": 1051,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-chromium-playing-1280-light-prm.json",
+   "engine": "chromium",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": true,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 126,
+     "frameMs": {
+      "min": 6.3,
+      "median": 8.3,
+      "max": 191.1
+     },
+     "over16_7": 3,
+     "over25": 3,
+     "over50": 2,
+     "bigFrames": [
+      "41.1ms ending @+56",
+      "174.9ms ending @+289",
+      "191.1ms ending @+480"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "moon",
+      "i": 1,
+      "t": 14.6,
+      "dt": 8.4,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [
+      "765x224@+69(0.4ms)",
+      "765x224@+78(0.3ms)",
+      "765x224@+88(0.2ms)",
+      "765x224@+97(0.1ms)",
+      "1272x1272@+107(0.8ms)",
+      "1272x1272@+201(1ms)",
+      "1272x1272@+295(0.8ms)",
+      "1272x1272@+388(0.9ms)"
+     ],
+     "loaf": [
+      {
+       "at": 6,
+       "dur": 50.6,
+       "scripts": [
+        "BUTTON.onclick vue.runtime.esm-bundler-J3hhHSON.js:invoker 12ms"
+       ]
+      },
+      {
+       "at": 107,
+       "dur": 187.2,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 93ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 94ms"
+       ]
+      },
+      {
+       "at": 295,
+       "dur": 187,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 93ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 93ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 173,
+     "frameMs": {
+      "min": 6.5,
+      "median": 8.3,
+      "max": 10.3
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 1,
+      "body": "sun",
+      "i": 1,
+      "t": 10.2,
+      "dt": 9.6,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 171,
+     "frameMs": {
+      "min": 6.5,
+      "median": 8.3,
+      "max": 17.6
+     },
+     "over16_7": 1,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 1,
+      "body": "moon",
+      "i": 1,
+      "t": 11.6,
+      "dt": 7,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 172,
+     "frameMs": {
+      "min": 6.6,
+      "median": 8.3,
+      "max": 16.3
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 1,
+      "body": "sun",
+      "i": 1,
+      "t": 10.8,
+      "dt": 8.4,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-chromium-playing-1280-light.json",
+   "engine": "chromium",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 134,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 150.4
+     },
+     "over16_7": 5,
+     "over25": 3,
+     "over50": 2,
+     "bigFrames": [
+      "25.3ms ending @+38",
+      "150.4ms ending @+263",
+      "149.8ms ending @+413"
+     ],
+     "largestJump": {
+      "d": 0.767,
+      "body": "sun",
+      "i": 11,
+      "t": 413.1,
+      "dt": 149.8,
+      "before": {
+       "s": 0.767,
+       "op": 1,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 263,
+      "scale": 0.686,
+      "op": 0.769
+     },
+     "settleHandoff": {
+      "t": 1072,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "765x224@+60(0.2ms)",
+      "765x224@+74(0.2ms)",
+      "765x224@+86(0.2ms)",
+      "765x224@+99(0.3ms)",
+      "1272x1272@+112(0.9ms)",
+      "1272x1272@+189(0.7ms)",
+      "1272x1272@+264(0.8ms)",
+      "1272x1272@+333(0.8ms)"
+     ],
+     "loaf": [
+      {
+       "at": 112,
+       "dur": 150.9,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 77ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 69ms",
+        "FrameRequestCallback rafInstrumentation.ts: 5ms"
+       ]
+      },
+      {
+       "at": 264,
+       "dur": 145.7,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 69ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 71ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 173,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 10.2
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.219,
+      "body": "moon",
+      "i": 40,
+      "t": 333.6,
+      "dt": 8.4,
+      "before": {
+       "s": 0.219,
+       "op": 0.036,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 99,
+      "scale": 0.218,
+      "op": 0.027
+     },
+     "settleHandoff": {
+      "t": 1025,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 173,
+     "frameMs": {
+      "min": 6.5,
+      "median": 8.3,
+      "max": 10.3
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.229,
+      "body": "moon",
+      "i": 13,
+      "t": 108.1,
+      "dt": 7.9,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.229,
+       "op": 0.032,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 108,
+      "scale": 0.229,
+      "op": 0.032
+     },
+     "settleHandoff": {
+      "t": 1033,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 164,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 17.1
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.218,
+      "body": "sun",
+      "i": 10,
+      "t": 106,
+      "dt": 7.2,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.218,
+       "op": 0.027,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 106,
+      "scale": 0.218,
+      "op": 0.027
+     },
+     "settleHandoff": {
+      "t": 1032,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-chromium-playing-390-light-touch.json",
+   "engine": "chromium",
+   "view": "playing",
+   "viewport": "390x844",
+   "boot": "light",
+   "prm": false,
+   "pointer": "coarse(hasTouch)",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 158,
+     "frameMs": {
+      "min": 6.4,
+      "median": 8.3,
+      "max": 108.2
+     },
+     "over16_7": 2,
+     "over25": 2,
+     "over50": 1,
+     "bigFrames": [
+      "33.3ms ending @+45",
+      "108.2ms ending @+212"
+     ],
+     "largestJump": {
+      "d": 0.544,
+      "body": "moon",
+      "i": 10,
+      "t": 211.8,
+      "dt": 108.2,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.544,
+       "op": 0.514,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 212,
+      "scale": 0.544,
+      "op": 0.514
+     },
+     "settleHandoff": {
+      "t": 1062,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "485x142@+67(0.2ms)",
+      "485x142@+71(0.2ms)",
+      "485x142@+85(0.1ms)",
+      "485x142@+93(0.1ms)",
+      "728x728@+102(0.3ms)",
+      "728x728@+127(0.5ms)",
+      "728x728@+153(0.5ms)",
+      "728x728@+178(0.4ms)"
+     ],
+     "loaf": [
+      {
+       "at": 102,
+       "dur": 106.2,
+       "scripts": [
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 25ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 25ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 25ms",
+        "IMG[src=\"blob:…\"].onload @mkbabb_pencil-boil.js: 25ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 173,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 10.4
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.217,
+      "body": "sun",
+      "i": 12,
+      "t": 99.5,
+      "dt": 7.3,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.217,
+       "op": 0.027,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 100,
+      "scale": 0.217,
+      "op": 0.027
+     },
+     "settleHandoff": {
+      "t": 1025,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 173,
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 10.2
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.222,
+      "body": "moon",
+      "i": 12,
+      "t": 101,
+      "dt": 9.6,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.222,
+       "op": 0.029,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 101,
+      "scale": 0.222,
+      "op": 0.029
+     },
+     "settleHandoff": {
+      "t": 1026,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 172,
+     "frameMs": {
+      "min": 6.8,
+      "median": 8.3,
+      "max": 10.3
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "over50": 0,
+     "bigFrames": [],
+     "largestJump": {
+      "d": 0.223,
+      "body": "sun",
+      "i": 12,
+      "t": 106.9,
+      "dt": 8.3,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.223,
+       "op": 0.029,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 107,
+      "scale": 0.223,
+      "op": 0.029
+     },
+     "settleHandoff": {
+      "t": 1032,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-webkit-gallery-1280-light.json",
+   "engine": "webkit",
+   "view": "gallery",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 42,
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 791
+     },
+     "over16_7": 5,
+     "over25": 4,
+     "over50": 3,
+     "bigFrames": [
+      "129ms ending @+149",
+      "791ms ending @+940",
+      "107ms ending @+1047",
+      "45ms ending @+1092"
+     ],
+     "largestJump": {
+      "d": 0.925,
+      "body": "sun",
+      "i": 6,
+      "t": 940,
+      "dt": 791,
+      "before": {
+       "s": 0.925,
+       "op": 1,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 149,
+      "scale": 0.394,
+      "op": 0.245
+     },
+     "settleHandoff": {
+      "t": 1121,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [
+      "551x162@+254(0ms)",
+      "551x162@+333(1ms)",
+      "551x162@+352(0ms)",
+      "551x162@+363(1ms)",
+      "1272x1272@+376(0ms)",
+      "1272x1272@+519(1ms)",
+      "1272x1272@+650(1ms)",
+      "1272x1272@+780(1ms)"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 66,
+     "frameMs": {
+      "min": 2,
+      "median": 13,
+      "max": 164
+     },
+     "over16_7": 14,
+     "over25": 8,
+     "over50": 5,
+     "bigFrames": [
+      "125ms ending @+177",
+      "164ms ending @+341",
+      "122ms ending @+483",
+      "130ms ending @+613",
+      "90ms ending @+703",
+      "28ms ending @+1073",
+      "30ms ending @+1379",
+      "37ms ending @+1437"
+     ],
+     "largestJump": {
+      "d": 0.712,
+      "body": "sun",
+      "i": 8,
+      "t": 341,
+      "dt": 164,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.712,
+       "op": 0.838,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 341,
+      "scale": 0.712,
+      "op": 0.838
+     },
+     "settleHandoff": {
+      "t": 1137,
+      "liveScaleBefore": 1.002,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 94,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 155
+     },
+     "over16_7": 5,
+     "over25": 4,
+     "over50": 4,
+     "bigFrames": [
+      "116ms ending @+124",
+      "155ms ending @+279",
+      "149ms ending @+428",
+      "93ms ending @+521"
+     ],
+     "largestJump": {
+      "d": 0.756,
+      "body": "sun",
+      "i": 5,
+      "t": 428,
+      "dt": 149,
+      "before": {
+       "s": 0.756,
+       "op": 1,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 279,
+      "scale": 0.697,
+      "op": 0.821
+     },
+     "settleHandoff": {
+      "t": 1083,
+      "liveScaleBefore": 1.001,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 67,
+     "frameMs": {
+      "min": 1,
+      "median": 13,
+      "max": 139
+     },
+     "over16_7": 10,
+     "over25": 7,
+     "over50": 6,
+     "bigFrames": [
+      "107ms ending @+118",
+      "139ms ending @+257",
+      "122ms ending @+379",
+      "136ms ending @+515",
+      "117ms ending @+644",
+      "64ms ending @+1408",
+      "26ms ending @+1443"
+     ],
+     "largestJump": {
+      "d": 0.817,
+      "body": "moon",
+      "i": 5,
+      "t": 379,
+      "dt": 122,
+      "before": {
+       "s": 0.817,
+       "op": 1,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 257,
+      "scale": 0.63,
+      "op": 0.74
+     },
+     "settleHandoff": {
+      "t": 1088,
+      "liveScaleBefore": 1.002,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": {
+      "maxRectDeltaPx": 0,
+      "posterSrcChanges": 0,
+      "transformOrOpacityChanges": 0
+     },
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-webkit-playing-1280-dark.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "dark",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 30,
+     "frameMs": {
+      "min": 3,
+      "median": 12,
+      "max": 862
+     },
+     "over16_7": 8,
+     "over25": 5,
+     "over50": 3,
+     "bigFrames": [
+      "94ms ending @+117",
+      "862ms ending @+979",
+      "137ms ending @+1116",
+      "33ms ending @+1149",
+      "31ms ending @+1319"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "sun",
+      "i": 6,
+      "t": 979,
+      "dt": 862,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 979,
+      "scale": 1,
+      "op": 1
+     },
+     "settleHandoff": {
+      "t": 1116,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "762x224@+138(0ms)",
+      "762x224@+271(1ms)",
+      "762x224@+289(0ms)",
+      "762x224@+306(0ms)",
+      "1272x1272@+322(0ms)",
+      "1272x1272@+471(0ms)",
+      "1272x1272@+627(1ms)",
+      "1272x1272@+835(1ms)"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "flip1",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 96,
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 112
+     },
+     "over16_7": 14,
+     "over25": 9,
+     "over50": 5,
+     "bigFrames": [
+      "112ms ending @+129",
+      "68ms ending @+197",
+      "62ms ending @+259",
+      "64ms ending @+323",
+      "36ms ending @+377",
+      "61ms ending @+438",
+      "26ms ending @+464",
+      "39ms ending @+503",
+      "41ms ending @+1019"
+     ],
+     "largestJump": {
+      "d": 0.469,
+      "body": "sun",
+      "i": 10,
+      "t": 377,
+      "dt": 36,
+      "before": {
+       "s": 0.469,
+       "op": 0.224,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 197,
+      "scale": 0.406,
+      "op": 0.331
+     },
+     "settleHandoff": {
+      "t": 1078,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 88,
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 101
+     },
+     "over16_7": 24,
+     "over25": 13,
+     "over50": 4,
+     "bigFrames": [
+      "101ms ending @+106",
+      "66ms ending @+172",
+      "63ms ending @+235",
+      "33ms ending @+280",
+      "36ms ending @+316",
+      "32ms ending @+348",
+      "36ms ending @+384",
+      "65ms ending @+449",
+      "35ms ending @+484",
+      "30ms ending @+514",
+      "28ms ending @+566",
+      "29ms ending @+677",
+      "28ms ending @+900"
+     ],
+     "largestJump": {
+      "d": 0.398,
+      "body": "sun",
+      "i": 3,
+      "t": 172,
+      "dt": 66,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.398,
+       "op": 0.261,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 172,
+      "scale": 0.398,
+      "op": 0.261
+     },
+     "settleHandoff": {
+      "t": 1053,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 103,
+     "frameMs": {
+      "min": 2,
+      "median": 10,
+      "max": 100
+     },
+     "over16_7": 14,
+     "over25": 11,
+     "over50": 4,
+     "bigFrames": [
+      "100ms ending @+118",
+      "78ms ending @+196",
+      "53ms ending @+249",
+      "45ms ending @+294",
+      "33ms ending @+338",
+      "42ms ending @+380",
+      "52ms ending @+432",
+      "27ms ending @+459",
+      "32ms ending @+491",
+      "29ms ending @+1098",
+      "26ms ending @+1259"
+     ],
+     "largestJump": {
+      "d": 0.497,
+      "body": "sun",
+      "i": 11,
+      "t": 380,
+      "dt": 42,
+      "before": {
+       "s": 0.497,
+       "op": 0.605,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 196,
+      "scale": 0.394,
+      "op": 0.287
+     },
+     "settleHandoff": {
+      "t": 1098,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-webkit-playing-1280-light-prm.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": true,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 60,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 783
+     },
+     "over16_7": 3,
+     "over25": 2,
+     "over50": 2,
+     "bigFrames": [
+      "106ms ending @+127",
+      "783ms ending @+910"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "moon",
+      "i": 5,
+      "t": 127,
+      "dt": 106,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [
+      "762x224@+156(0ms)",
+      "762x224@+201(0ms)",
+      "762x224@+217(0ms)",
+      "762x224@+234(0ms)",
+      "1272x1272@+249(0ms)",
+      "1272x1272@+406(0ms)",
+      "1272x1272@+569(0ms)",
+      "1272x1272@+738(0ms)"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 127,
+     "frameMs": {
+      "min": 2,
+      "median": 10,
+      "max": 118
+     },
+     "over16_7": 2,
+     "over25": 2,
+     "over50": 2,
+     "bigFrames": [
+      "118ms ending @+123",
+      "55ms ending @+178"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "sun",
+      "i": 2,
+      "t": 123,
+      "dt": 118,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 129,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 82
+     },
+     "over16_7": 2,
+     "over25": 2,
+     "over50": 2,
+     "bigFrames": [
+      "82ms ending @+90",
+      "63ms ending @+153"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "moon",
+      "i": 2,
+      "t": 90,
+      "dt": 82,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 130,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 89
+     },
+     "over16_7": 3,
+     "over25": 2,
+     "over50": 2,
+     "bigFrames": [
+      "89ms ending @+96",
+      "67ms ending @+163"
+     ],
+     "largestJump": {
+      "d": 1,
+      "body": "sun",
+      "i": 3,
+      "t": 96,
+      "dt": 89,
+      "before": {
+       "s": 1,
+       "op": 0,
+       "via": "rest"
+      },
+      "after": {
+       "s": 1,
+       "op": 1,
+       "via": "rest"
+      }
+     },
+     "incomingBornAt": null,
+     "settleHandoff": null,
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-webkit-playing-1280-light.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "boot": "light",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 42,
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 829
+     },
+     "over16_7": 5,
+     "over25": 4,
+     "over50": 4,
+     "bigFrames": [
+      "98ms ending @+129",
+      "829ms ending @+958",
+      "88ms ending @+1046",
+      "52ms ending @+1098"
+     ],
+     "largestJump": {
+      "d": 0.954,
+      "body": "sun",
+      "i": 7,
+      "t": 958,
+      "dt": 829,
+      "before": {
+       "s": 0.954,
+       "op": 1,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 129,
+      "scale": 0.253,
+      "op": 0.063
+     },
+     "settleHandoff": {
+      "t": 1098,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "762x224@+194(0ms)",
+      "762x224@+260(1ms)",
+      "762x224@+279(0ms)",
+      "762x224@+299(0ms)",
+      "1272x1272@+318(0ms)",
+      "1272x1272@+473(1ms)",
+      "1272x1272@+644(0ms)",
+      "1272x1272@+782(1ms)"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 84,
+     "frameMs": {
+      "min": 1,
+      "median": 12,
+      "max": 104
+     },
+     "over16_7": 16,
+     "over25": 9,
+     "over50": 5,
+     "bigFrames": [
+      "104ms ending @+112",
+      "93ms ending @+205",
+      "71ms ending @+276",
+      "66ms ending @+342",
+      "66ms ending @+427",
+      "39ms ending @+466",
+      "49ms ending @+515",
+      "28ms ending @+839",
+      "26ms ending @+906"
+     ],
+     "largestJump": {
+      "d": 0.496,
+      "body": "sun",
+      "i": 3,
+      "t": 205,
+      "dt": 93,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.496,
+       "op": 0.508,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 205,
+      "scale": 0.496,
+      "op": 0.508
+     },
+     "settleHandoff": {
+      "t": 1080,
+      "liveScaleBefore": 0.955,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 77,
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 108
+     },
+     "over16_7": 16,
+     "over25": 13,
+     "over50": 7,
+     "bigFrames": [
+      "108ms ending @+118",
+      "99ms ending @+217",
+      "77ms ending @+294",
+      "72ms ending @+366",
+      "59ms ending @+443",
+      "69ms ending @+512",
+      "45ms ending @+557",
+      "40ms ending @+597",
+      "36ms ending @+633",
+      "41ms ending @+674",
+      "33ms ending @+707",
+      "33ms ending @+740",
+      "64ms ending @+804"
+     ],
+     "largestJump": {
+      "d": 0.526,
+      "body": "moon",
+      "i": 5,
+      "t": 217,
+      "dt": 99,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.526,
+       "op": 0.571,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 217,
+      "scale": 0.526,
+      "op": 0.571
+     },
+     "settleHandoff": {
+      "t": 1073,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 71,
+     "frameMs": {
+      "min": 2,
+      "median": 12,
+      "max": 105
+     },
+     "over16_7": 20,
+     "over25": 15,
+     "over50": 7,
+     "bigFrames": [
+      "105ms ending @+154",
+      "98ms ending @+252",
+      "80ms ending @+332",
+      "27ms ending @+359",
+      "43ms ending @+402",
+      "63ms ending @+465",
+      "62ms ending @+527",
+      "59ms ending @+586",
+      "38ms ending @+624",
+      "40ms ending @+686",
+      "48ms ending @+756",
+      "52ms ending @+829",
+      "32ms ending @+951",
+      "33ms ending @+1078",
+      "31ms ending @+1285"
+     ],
+     "largestJump": {
+      "d": 0.476,
+      "body": "sun",
+      "i": 8,
+      "t": 252,
+      "dt": 98,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.476,
+       "op": 0.466,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 252,
+      "scale": 0.476,
+      "op": 0.466
+     },
+     "settleHandoff": {
+      "t": 1124,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "t-webkit-playing-390-light-touch.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "390x844",
+   "boot": "light",
+   "prm": false,
+   "pointer": "coarse(hasTouch)",
+   "runs": [
+    {
+     "label": "flip0",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 125,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 141
+     },
+     "over16_7": 4,
+     "over25": 2,
+     "over50": 1,
+     "bigFrames": [
+      "36ms ending @+40",
+      "141ms ending @+181"
+     ],
+     "largestJump": {
+      "d": 0.511,
+      "body": "moon",
+      "i": 3,
+      "t": 181,
+      "dt": 141,
+      "before": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      },
+      "after": {
+       "s": 0.511,
+       "op": 0.5,
+       "via": "live"
+      }
+     },
+     "incomingBornAt": {
+      "t": 181,
+      "scale": 0.511,
+      "op": 0.5
+     },
+     "settleHandoff": {
+      "t": 1034,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [
+      "483x142@+52(1ms)",
+      "483x142@+61(0ms)",
+      "483x142@+65(1ms)",
+      "483x142@+70(0ms)",
+      "728x728@+74(1ms)",
+      "728x728@+101(0ms)",
+      "728x728@+128(0ms)",
+      "728x728@+153(0ms)"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "flip1",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 131,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 40
+     },
+     "over16_7": 10,
+     "over25": 2,
+     "over50": 0,
+     "bigFrames": [
+      "40ms ending @+43",
+      "34ms ending @+946"
+     ],
+     "largestJump": {
+      "d": 0.229,
+      "body": "moon",
+      "i": 29,
+      "t": 351,
+      "dt": 11,
+      "before": {
+       "s": 0.229,
+       "op": 0.022,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 108,
+      "scale": 0.18,
+      "op": 0.022
+     },
+     "settleHandoff": {
+      "t": 1035,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip2",
+     "direction": "light->dark",
+     "reloaded": false,
+     "frames": 131,
+     "frameMs": {
+      "min": 2,
+      "median": 10,
+      "max": 49
+     },
+     "over16_7": 6,
+     "over25": 1,
+     "over50": 0,
+     "bigFrames": [
+      "49ms ending @+52"
+     ],
+     "largestJump": {
+      "d": 0.261,
+      "body": "sun",
+      "i": 25,
+      "t": 349,
+      "dt": 11,
+      "before": {
+       "s": 0.261,
+       "op": 0.031,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 114,
+      "scale": 0.195,
+      "op": 0.032
+     },
+     "settleHandoff": {
+      "t": 1041,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    },
+    {
+     "label": "flip3",
+     "direction": "dark->light",
+     "reloaded": false,
+     "frames": 121,
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 56
+     },
+     "over16_7": 12,
+     "over25": 4,
+     "over50": 1,
+     "bigFrames": [
+      "56ms ending @+61",
+      "37ms ending @+119",
+      "26ms ending @+175",
+      "29ms ending @+313"
+     ],
+     "largestJump": {
+      "d": 0.268,
+      "body": "moon",
+      "i": 18,
+      "t": 356,
+      "dt": 11,
+      "before": {
+       "s": 0.268,
+       "op": 0.034,
+       "via": "live"
+      },
+      "after": {
+       "s": 0,
+       "op": 0,
+       "via": "none"
+      }
+     },
+     "incomingBornAt": {
+      "t": 119,
+      "scale": 0.18,
+      "op": 0.026
+     },
+     "settleHandoff": {
+      "t": 1047,
+      "liveScaleBefore": 1,
+      "restAfter": 1
+     },
+     "cardsUnderFlip": null,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  }
+ ],
+ "ablation": [
+  {
+   "file": "abl-chromium-gallery-1280.json",
+   "engine": "chromium",
+   "view": "gallery",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "A_asis-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 6.7,
+      "median": 8.3,
+      "max": 41
+     },
+     "over25": 8,
+     "over50": 0,
+     "incomingBornScale": 0.215,
+     "bigFrames": [
+      "33.4ms ending @+42",
+      "26.7ms ending @+75",
+      "34.2ms ending @+225",
+      "25.3ms ending @+299",
+      "25.1ms ending @+324",
+      "33.2ms ending @+382",
+      "41ms ending @+447",
+      "25.6ms ending @+473"
+     ]
+    },
+    {
+     "arm": "A_asis-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 6.6,
+      "median": 8.3,
+      "max": 33.2
+     },
+     "over25": 9,
+     "over50": 0,
+     "incomingBornScale": 0.257,
+     "bigFrames": [
+      "25.8ms ending @+69",
+      "31.9ms ending @+118",
+      "26ms ending @+144",
+      "32.7ms ending @+193",
+      "25.6ms ending @+218",
+      "28.3ms ending @+257",
+      "33.2ms ending @+290",
+      "25.2ms ending @+348",
+      "32.9ms ending @+406"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 6.8,
+      "median": 8.3,
+      "max": 38.1
+     },
+     "over25": 3,
+     "over50": 0,
+     "incomingBornScale": 0.204,
+     "bigFrames": [
+      "33.4ms ending @+41",
+      "38.1ms ending @+128",
+      "25.3ms ending @+435"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 6.4,
+      "median": 8.3,
+      "max": 26.4
+     },
+     "over25": 4,
+     "over50": 0,
+     "incomingBornScale": 0.219,
+     "bigFrames": [
+      "26.4ms ending @+36",
+      "25.1ms ending @+119",
+      "26.3ms ending @+268",
+      "25.1ms ending @+434"
+     ]
+    },
+    {
+     "arm": "C_noGesture-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 6.5,
+      "median": 8.3,
+      "max": 24.9
+     },
+     "over25": 0,
+     "over50": 0,
+     "incomingBornScale": 1,
+     "bigFrames": []
+    },
+    {
+     "arm": "C_noGesture-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 6.6,
+      "median": 8.3,
+      "max": 25.8
+     },
+     "over25": 2,
+     "over50": 0,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "25.8ms ending @+85",
+      "25.1ms ending @+342"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "abl-webkit-gallery-1280.json",
+   "engine": "webkit",
+   "view": "gallery",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "A_asis-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 12,
+      "max": 171
+     },
+     "over25": 6,
+     "over50": 4,
+     "incomingBornScale": 0.774,
+     "bigFrames": [
+      "148ms ending @+172",
+      "171ms ending @+343",
+      "148ms ending @+491",
+      "136ms ending @+627",
+      "28ms ending @+716",
+      "29ms ending @+1006"
+     ]
+    },
+    {
+     "arm": "A_asis-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 3,
+      "median": 14,
+      "max": 158
+     },
+     "over25": 8,
+     "over50": 4,
+     "incomingBornScale": 0.691,
+     "bigFrames": [
+      "116ms ending @+123",
+      "158ms ending @+281",
+      "154ms ending @+435",
+      "136ms ending @+571",
+      "27ms ending @+598",
+      "39ms ending @+637",
+      "26ms ending @+915",
+      "26ms ending @+1066"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 126
+     },
+     "over25": 8,
+     "over50": 6,
+     "incomingBornScale": 0.381,
+     "bigFrames": [
+      "120ms ending @+127",
+      "126ms ending @+253",
+      "43ms ending @+296",
+      "97ms ending @+393",
+      "35ms ending @+428",
+      "69ms ending @+497",
+      "99ms ending @+596",
+      "94ms ending @+690"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 144
+     },
+     "over25": 6,
+     "over50": 5,
+     "incomingBornScale": 0.63,
+     "bigFrames": [
+      "113ms ending @+125",
+      "144ms ending @+269",
+      "103ms ending @+372",
+      "108ms ending @+480",
+      "77ms ending @+566",
+      "26ms ending @+1173"
+     ]
+    },
+    {
+     "arm": "C_noGesture-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 106
+     },
+     "over25": 7,
+     "over50": 6,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "106ms ending @+117",
+      "97ms ending @+214",
+      "80ms ending @+294",
+      "78ms ending @+372",
+      "26ms ending @+398",
+      "82ms ending @+480",
+      "86ms ending @+566"
+     ]
+    },
+    {
+     "arm": "C_noGesture-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 133
+     },
+     "over25": 5,
+     "over50": 5,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "104ms ending @+113",
+      "133ms ending @+246",
+      "96ms ending @+342",
+      "119ms ending @+461",
+      "85ms ending @+555"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "abl-webkit-playing-1280.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "A_asis-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 12,
+      "max": 93
+     },
+     "over25": 19,
+     "over50": 5,
+     "incomingBornScale": 0.448,
+     "bigFrames": [
+      "85ms ending @+94",
+      "93ms ending @+187",
+      "73ms ending @+260",
+      "65ms ending @+325",
+      "47ms ending @+387",
+      "50ms ending @+437",
+      "45ms ending @+482",
+      "43ms ending @+525",
+      "30ms ending @+555",
+      "41ms ending @+596",
+      "30ms ending @+626",
+      "35ms ending @+661",
+      "39ms ending @+700",
+      "32ms ending @+732",
+      "32ms ending @+764",
+      "33ms ending @+797",
+      "35ms ending @+832",
+      "31ms ending @+926",
+      "54ms ending @+1307"
+     ]
+    },
+    {
+     "arm": "A_asis-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 13,
+      "max": 156
+     },
+     "over25": 9,
+     "over50": 6,
+     "incomingBornScale": 0.309,
+     "bigFrames": [
+      "156ms ending @+238",
+      "82ms ending @+331",
+      "63ms ending @+394",
+      "55ms ending @+449",
+      "103ms ending @+552",
+      "44ms ending @+596",
+      "52ms ending @+648",
+      "34ms ending @+847",
+      "31ms ending @+1345"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 101
+     },
+     "over25": 14,
+     "over50": 5,
+     "incomingBornScale": 0.214,
+     "bigFrames": [
+      "90ms ending @+106",
+      "101ms ending @+207",
+      "72ms ending @+279",
+      "69ms ending @+348",
+      "61ms ending @+429",
+      "28ms ending @+457",
+      "35ms ending @+492",
+      "34ms ending @+526",
+      "31ms ending @+557",
+      "35ms ending @+657",
+      "26ms ending @+683",
+      "37ms ending @+769",
+      "36ms ending @+874",
+      "33ms ending @+1367"
+     ]
+    },
+    {
+     "arm": "B_liveFilterOff-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 107
+     },
+     "over25": 15,
+     "over50": 5,
+     "incomingBornScale": 0.448,
+     "bigFrames": [
+      "107ms ending @+125",
+      "82ms ending @+207",
+      "59ms ending @+266",
+      "55ms ending @+321",
+      "41ms ending @+378",
+      "40ms ending @+418",
+      "39ms ending @+457",
+      "41ms ending @+498",
+      "29ms ending @+527",
+      "37ms ending @+564",
+      "28ms ending @+635",
+      "35ms ending @+670",
+      "68ms ending @+802",
+      "35ms ending @+1019",
+      "30ms ending @+1340"
+     ]
+    },
+    {
+     "arm": "C_noGesture-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 89
+     },
+     "over25": 11,
+     "over50": 3,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "89ms ending @+99",
+      "69ms ending @+168",
+      "66ms ending @+234",
+      "44ms ending @+291",
+      "38ms ending @+329",
+      "35ms ending @+364",
+      "28ms ending @+392",
+      "29ms ending @+421",
+      "28ms ending @+449",
+      "29ms ending @+572",
+      "29ms ending @+691"
+     ]
+    },
+    {
+     "arm": "C_noGesture-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 86
+     },
+     "over25": 12,
+     "over50": 3,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "86ms ending @+91",
+      "55ms ending @+146",
+      "43ms ending @+189",
+      "43ms ending @+232",
+      "55ms ending @+301",
+      "35ms ending @+336",
+      "28ms ending @+364",
+      "29ms ending @+393",
+      "40ms ending @+433",
+      "33ms ending @+466",
+      "44ms ending @+685",
+      "29ms ending @+1140"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "abl2-webkit-gallery-1280.json",
+   "engine": "webkit",
+   "view": "gallery",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "E_gestureNoDusk-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 2,
+      "median": 10,
+      "max": 148
+     },
+     "over25": 4,
+     "over50": 4,
+     "incomingBornScale": 0.394,
+     "bigFrames": [
+      "129ms ending @+146",
+      "148ms ending @+294",
+      "147ms ending @+441",
+      "95ms ending @+536"
+     ]
+    },
+    {
+     "arm": "E_gestureNoDusk-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 13,
+      "max": 160
+     },
+     "over25": 4,
+     "over50": 4,
+     "incomingBornScale": 0.7,
+     "bigFrames": [
+      "140ms ending @+152",
+      "160ms ending @+312",
+      "137ms ending @+449",
+      "118ms ending @+567"
+     ]
+    },
+    {
+     "arm": "D_noGestureNoDusk-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 123
+     },
+     "over25": 6,
+     "over50": 5,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "107ms ending @+114",
+      "123ms ending @+237",
+      "94ms ending @+331",
+      "99ms ending @+430",
+      "29ms ending @+459",
+      "68ms ending @+527"
+     ]
+    },
+    {
+     "arm": "D_noGestureNoDusk-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 148
+     },
+     "over25": 9,
+     "over50": 6,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "108ms ending @+114",
+      "148ms ending @+262",
+      "104ms ending @+366",
+      "99ms ending @+465",
+      "85ms ending @+562",
+      "29ms ending @+703",
+      "40ms ending @+926",
+      "29ms ending @+967",
+      "55ms ending @+1229"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "abl2-webkit-playing-1280.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "E_gestureNoDusk-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 2,
+      "median": 11,
+      "max": 138
+     },
+     "over25": 9,
+     "over50": 6,
+     "incomingBornScale": 0.589,
+     "bigFrames": [
+      "117ms ending @+133",
+      "138ms ending @+271",
+      "73ms ending @+344",
+      "71ms ending @+415",
+      "32ms ending @+447",
+      "76ms ending @+523",
+      "58ms ending @+581",
+      "33ms ending @+846",
+      "29ms ending @+1101"
+     ]
+    },
+    {
+     "arm": "E_gestureNoDusk-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 103
+     },
+     "over25": 15,
+     "over50": 9,
+     "incomingBornScale": 0.48,
+     "bigFrames": [
+      "103ms ending @+109",
+      "91ms ending @+200",
+      "74ms ending @+274",
+      "52ms ending @+346",
+      "51ms ending @+397",
+      "62ms ending @+459",
+      "57ms ending @+516",
+      "55ms ending @+571",
+      "57ms ending @+628",
+      "36ms ending @+664",
+      "49ms ending @+713",
+      "39ms ending @+752",
+      "33ms ending @+785",
+      "49ms ending @+834",
+      "28ms ending @+1032"
+     ]
+    },
+    {
+     "arm": "D_noGestureNoDusk-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 155
+     },
+     "over25": 11,
+     "over50": 3,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "155ms ending @+167",
+      "85ms ending @+252",
+      "53ms ending @+305",
+      "34ms ending @+358",
+      "44ms ending @+402",
+      "45ms ending @+447",
+      "41ms ending @+488",
+      "27ms ending @+515",
+      "32ms ending @+569",
+      "31ms ending @+642",
+      "35ms ending @+690"
+     ]
+    },
+    {
+     "arm": "D_noGestureNoDusk-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 11,
+      "max": 109
+     },
+     "over25": 12,
+     "over50": 5,
+     "incomingBornScale": 1,
+     "bigFrames": [
+      "109ms ending @+120",
+      "94ms ending @+214",
+      "59ms ending @+273",
+      "52ms ending @+325",
+      "39ms ending @+382",
+      "48ms ending @+430",
+      "36ms ending @+466",
+      "46ms ending @+512",
+      "31ms ending @+740",
+      "28ms ending @+1124",
+      "27ms ending @+1176",
+      "52ms ending @+1250"
+     ]
+    }
+   ]
+  },
+  {
+   "file": "abl3-webkit-playing-1280.json",
+   "engine": "webkit",
+   "view": "playing",
+   "viewport": "1280x800",
+   "pointer": "fine",
+   "arms": [
+    {
+     "arm": "F_cssClassOnly-0",
+     "direction": "light->dark",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 52
+     },
+     "over25": 1,
+     "over50": 1,
+     "incomingBornScale": null,
+     "bigFrames": [
+      "52ms ending @+79"
+     ]
+    },
+    {
+     "arm": "F_cssClassOnly-1",
+     "direction": "dark->light",
+     "frameMs": {
+      "min": 1,
+      "median": 10,
+      "max": 57
+     },
+     "over25": 4,
+     "over50": 1,
+     "incomingBornScale": null,
+     "bigFrames": [
+      "57ms ending @+83",
+      "40ms ending @+123",
+      "27ms ending @+327",
+      "30ms ending @+586"
+     ]
+    }
+   ]
+  }
+ ],
+ "move": [
+  {
+   "file": "m-chromium-1280-prm.json",
+   "engine": "chromium",
+   "viewport": "1280x800",
+   "prm": true,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 153,
+     "frameMs": {
+      "median": 8.3,
+      "max": 41.7
+     },
+     "over16_7": 1,
+     "over25": 1,
+     "motionFrames": 1,
+     "perFrameTravelPx": {
+      "min": 640,
+      "median": 640,
+      "max": 640
+     },
+     "largest": [
+      {
+       "i": 1,
+       "t": 4.2,
+       "dt": 8.3,
+       "centerPx": 632.4,
+       "widthPx": -640,
+       "boardFrom": "129.9,124.5,640,640",
+       "boardTo": "0,0,0,0",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.2
+      }
+     ],
+     "foldAnimations": [],
+     "glideEndMs": null,
+     "galleryRemovedAt": null,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 407.9,
+      "min": 407.9,
+      "last": 407.9
+     },
+     "wordmarkMaxJumpPx": 9.2,
+     "bakes": [
+      "554x162@+64",
+      "554x162@+71",
+      "554x162@+77",
+      "554x162@+84"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 157,
+     "frameMs": {
+      "median": 8.3,
+      "max": 33.8
+     },
+     "over16_7": 1,
+     "over25": 1,
+     "motionFrames": 1,
+     "perFrameTravelPx": {
+      "min": 640,
+      "median": 640,
+      "max": 640
+     },
+     "largest": [
+      {
+       "i": 1,
+       "t": 5,
+       "dt": 8.4,
+       "centerPx": 632.4,
+       "widthPx": 640,
+       "boardFrom": "0,0,0,0",
+       "boardTo": "129.9,124.5,640,640",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.2
+      }
+     ],
+     "foldAnimations": [],
+     "glideEndMs": null,
+     "galleryRemovedAt": 56,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 104,
+      "min": 104,
+      "last": 104
+     },
+     "wordmarkMaxJumpPx": 9.2,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "m-chromium-1280.json",
+   "engine": "chromium",
+   "viewport": "1280x800",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 132,
+     "frameMs": {
+      "median": 8.3,
+      "max": 57.9
+     },
+     "over16_7": 5,
+     "over25": 1,
+     "motionFrames": 35,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 1.9,
+      "max": 110.4
+     },
+     "largest": [
+      {
+       "i": 26,
+       "t": 266.5,
+       "dt": 57.9,
+       "centerPx": 26.8,
+       "widthPx": -110.4,
+       "boardFrom": "48,99.9,628.6,628.6",
+       "boardTo": "77.9,146.4,518.2,518.2",
+       "inFace": true,
+       "visibleFraction": 0.344,
+       "slot": "136,236.6,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 25,
+       "t": 208.6,
+       "dt": 7.7,
+       "centerPx": 92.7,
+       "widthPx": -11.4,
+       "boardFrom": "129.9,124.5,640,640",
+       "boardTo": "48,99.9,628.6,628.6",
+       "inFace": true,
+       "visibleFraction": 0.234,
+       "slot": "136,236.6,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.2
+      },
+      {
+       "i": 28,
+       "t": 299.6,
+       "dt": 24.9,
+       "centerPx": 15.9,
+       "widthPx": -65.8,
+       "boardFrom": "83.5,155.1,497.5,497.5",
+       "boardTo": "101.4,182.8,431.7,431.7",
+       "inFace": true,
+       "visibleFraction": 0.496,
+       "slot": "136,236.6,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 29,
+       "t": 316.1,
+       "dt": 16.5,
+       "centerPx": 8,
+       "widthPx": -33.2,
+       "boardFrom": "101.4,182.8,431.7,431.7",
+       "boardTo": "110.4,196.8,398.5,398.5",
+       "inFace": true,
+       "visibleFraction": 0.582,
+       "slot": "136,236.6,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 245.1,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "136,236.6,304,304",
+       "slotAtCall": "136,236.6,304,304",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "136,236.6,304,304",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 449.9,
+        "cy": 444.5,
+        "w": 640
+       },
+       "trueVisualFirst": {
+        "cx": 449.9,
+        "cy": 444.5,
+        "w": 640
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": 0,
+        "dw": 0
+       }
+      }
+     ],
+     "glideEndMs": 765,
+     "galleryRemovedAt": 1,
+     "minVisibleFractionInFace": 0.234,
+     "firstClippedFrame": {
+      "t": 208.6,
+      "visibleFraction": 0.234
+     },
+     "centerCardHeight": {
+      "first": 407.9,
+      "min": 407.9,
+      "last": 407.9
+     },
+     "wordmarkMaxJumpPx": 9.2,
+     "bakes": [
+      "554x162@+286",
+      "554x162@+294",
+      "554x162@+304",
+      "554x162@+312"
+     ],
+     "loaf": [
+      {
+       "at": 202,
+       "dur": 66.2,
+       "scripts": [
+        "TimerHandler:setTimeout App.vue: 41ms"
+       ]
+      }
+     ]
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 140,
+     "frameMs": {
+      "median": 8.3,
+      "max": 33.2
+     },
+     "over16_7": 5,
+     "over25": 1,
+     "motionFrames": 34,
+     "perFrameTravelPx": {
+      "min": 0.5,
+      "median": 4,
+      "max": 52.5
+     },
+     "largest": [
+      {
+       "i": 3,
+       "t": 42.2,
+       "dt": 33.2,
+       "centerPx": 31.8,
+       "widthPx": 52.5,
+       "boardFrom": "121.9,184.3,345.8,345.8",
+       "boardTo": "123.4,173.6,398.3,398.3",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,737.2,0,0",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 2,
+       "t": 9,
+       "dt": 9.5,
+       "centerPx": 32.1,
+       "widthPx": 41.8,
+       "boardFrom": "136,236.6,304,304",
+       "boardTo": "121.9,184.3,345.8,345.8",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,737.2,0,0",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.2
+      },
+      {
+       "i": 5,
+       "t": 67.2,
+       "dt": 18.1,
+       "centerPx": 22.8,
+       "widthPx": 37.8,
+       "boardFrom": "123.7,171,411.1,411.1",
+       "boardTo": "124.7,163.3,448.9,448.9",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,737.2,0,0",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 7,
+       "t": 84.2,
+       "dt": 9,
+       "centerPx": 13.4,
+       "widthPx": 22.2,
+       "boardFrom": "125.2,159.5,467.7,467.7",
+       "boardTo": "125.8,155,489.9,489.9",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,737.2,0,0",
+       "scroll": 0,
+       "galOp": 0.778,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 26.9,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "129.9,124.5,640,640",
+       "slotAtCall": "288,737.2,0,0",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "288,737.2,0,0",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 288,
+        "cy": 353.4,
+        "w": 332.8
+       },
+       "trueVisualFirst": {
+        "cx": 288,
+        "cy": 388.6,
+        "w": 304
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": -35.2,
+        "dw": 28.8
+       }
+      }
+     ],
+     "glideEndMs": 547,
+     "galleryRemovedAt": 259,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 407.9,
+      "min": 104,
+      "last": 104
+     },
+     "wordmarkMaxJumpPx": 9.2,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "m-chromium-390-touch.json",
+   "engine": "chromium",
+   "viewport": "390x844",
+   "prm": false,
+   "pointer": "coarse(hasTouch)",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 162,
+     "frameMs": {
+      "median": 8.3,
+      "max": 10.2
+     },
+     "over16_7": 0,
+     "over25": 0,
+     "motionFrames": 37,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 2.2,
+      "max": 21.5
+     },
+     "largest": [
+      {
+       "i": 26,
+       "t": 211.2,
+       "dt": 8.4,
+       "centerPx": 21.5,
+       "widthPx": -4.7,
+       "boardFrom": "12,221.7,366,393.2",
+       "boardTo": "14.4,202.8,361.3,388.1",
+       "inFace": true,
+       "visibleFraction": 0.468,
+       "slot": "66.9,232.6,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 145.5
+      },
+      {
+       "i": 36,
+       "t": 294.3,
+       "dt": 9,
+       "centerPx": 2.7,
+       "widthPx": -9.2,
+       "boardFrom": "43.5,216.9,303.1,325.6",
+       "boardTo": "48.1,219.2,293.9,315.7",
+       "inFace": true,
+       "visibleFraction": 0.707,
+       "slot": "66.9,232.6,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 34,
+       "t": 277.9,
+       "dt": 8.9,
+       "centerPx": 2.6,
+       "widthPx": -8.6,
+       "boardFrom": "35.4,213,319.3,343",
+       "boardTo": "39.7,215.1,310.7,333.7",
+       "inFace": true,
+       "visibleFraction": 0.633,
+       "slot": "66.9,232.6,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 37,
+       "t": 302.9,
+       "dt": 8.6,
+       "centerPx": 2.5,
+       "widthPx": -8.1,
+       "boardFrom": "48.1,219.2,293.9,315.7",
+       "boardTo": "52.1,221.1,285.8,307",
+       "inFace": true,
+       "visibleFraction": 0.748,
+       "slot": "66.9,232.6,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 216.1,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "75.7,232.6,238.6,256.3",
+       "slotAtCall": "66.9,232.6,256.2,256.2",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "66.9,232.6,256.2,256.2",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 195,
+        "cy": 418.3,
+        "w": 366
+       },
+       "trueVisualFirst": {
+        "cx": 195,
+        "cy": 418.3,
+        "w": 366
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": 0,
+        "dw": 0
+       }
+      }
+     ],
+     "glideEndMs": 736,
+     "galleryRemovedAt": 2,
+     "minVisibleFractionInFace": 0.468,
+     "firstClippedFrame": {
+      "t": 211.2,
+      "visibleFraction": 0.468
+     },
+     "centerCardHeight": {
+      "first": 357.8,
+      "min": 357.8,
+      "last": 357.8
+     },
+     "wordmarkMaxJumpPx": 145.5,
+     "bakes": [
+      "349x102@+230",
+      "349x102@+232",
+      "349x102@+233",
+      "349x102@+234"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 160,
+     "frameMs": {
+      "median": 8.2,
+      "max": 17.3
+     },
+     "over16_7": 1,
+     "over25": 0,
+     "motionFrames": 30,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 2.2,
+      "max": 135.3
+     },
+     "largest": [
+      {
+       "i": 27,
+       "t": 227.4,
+       "dt": 10.1,
+       "centerPx": 135.3,
+       "widthPx": 0.5,
+       "boardFrom": "14.7,92.1,360.6,387.3",
+       "boardTo": "14.4,227,361.1,388",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": null,
+       "galOp": null,
+       "wordPx": 135.5
+      },
+      {
+       "i": 6,
+       "t": 53.8,
+       "dt": 13,
+       "centerPx": 3.8,
+       "widthPx": 6.9,
+       "boardFrom": "42.5,152,305.1,327.7",
+       "boardTo": "39,144.5,312,335.2",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,606.1,0,0",
+       "scroll": 0,
+       "galOp": 0.566,
+       "wordPx": 0
+      },
+      {
+       "i": 2,
+       "t": 16.8,
+       "dt": 17.3,
+       "centerPx": 3.6,
+       "widthPx": 6.7,
+       "boardFrom": "51.2,170.9,287.6,308.9",
+       "boardTo": "47.9,163.7,294.3,316.1",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,606.1,0,0",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 10,
+       "t": 87.1,
+       "dt": 10,
+       "centerPx": 3.5,
+       "widthPx": 6.4,
+       "boardFrom": "31.8,128.9,326.5,350.8",
+       "boardTo": "28.6,122,332.9,357.6",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,606.1,0,0",
+       "scroll": 0,
+       "galOp": 0.142,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 10.2,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "12,86.2,366,393.2",
+       "slotAtCall": "195,606.1,0,0",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "195,606.1,0,0",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 195,
+        "cy": 326.7,
+        "w": 285
+       },
+       "trueVisualFirst": {
+        "cx": 195,
+        "cy": 325.4,
+        "w": 287.6
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": 1.4,
+        "dw": -2.6
+       }
+      }
+     ],
+     "glideEndMs": 530,
+     "galleryRemovedAt": 227,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 101.6,
+      "min": 101.6,
+      "last": 101.6
+     },
+     "wordmarkMaxJumpPx": 135.5,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "m-webkit-1280-prm.json",
+   "engine": "webkit",
+   "viewport": "1280x800",
+   "prm": true,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 81,
+     "frameMs": {
+      "median": 10,
+      "max": 417
+     },
+     "over16_7": 3,
+     "over25": 1,
+     "motionFrames": 1,
+     "perFrameTravelPx": {
+      "min": 640,
+      "median": 640,
+      "max": 640
+     },
+     "largest": [
+      {
+       "i": 1,
+       "t": 106,
+       "dt": 109,
+       "centerPx": 629.3,
+       "widthPx": -640,
+       "boardFrom": "125.8,124.2,640,640",
+       "boardTo": "0,0,0,0",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.5
+      }
+     ],
+     "foldAnimations": [],
+     "glideEndMs": null,
+     "galleryRemovedAt": null,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 407.9,
+      "min": 407.9,
+      "last": 407.9
+     },
+     "wordmarkMaxJumpPx": 9.5,
+     "bakes": [
+      "551x162@+228",
+      "551x162@+420",
+      "551x162@+443",
+      "551x162@+477"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 109,
+     "frameMs": {
+      "median": 10,
+      "max": 108
+     },
+     "over16_7": 7,
+     "over25": 4,
+     "motionFrames": 2,
+     "perFrameTravelPx": {
+      "min": 3,
+      "median": 640,
+      "max": 640
+     },
+     "largest": [
+      {
+       "i": 1,
+       "t": 60,
+       "dt": 69,
+       "centerPx": 631.5,
+       "widthPx": 640,
+       "boardFrom": "0,0,0,0",
+       "boardTo": "128.8,124.2,640,640",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.5
+      },
+      {
+       "i": 2,
+       "t": 168,
+       "dt": 108,
+       "centerPx": 3,
+       "widthPx": 0,
+       "boardFrom": "128.8,124.2,640,640",
+       "boardTo": "125.8,124.2,640,640",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [],
+     "glideEndMs": null,
+     "galleryRemovedAt": 210,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 132.7,
+      "min": 132.7,
+      "last": 132.7
+     },
+     "wordmarkMaxJumpPx": 9.5,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "m-webkit-1280.json",
+   "engine": "webkit",
+   "viewport": "1280x800",
+   "prm": false,
+   "pointer": "fine",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 113,
+     "frameMs": {
+      "median": 10,
+      "max": 96
+     },
+     "over16_7": 4,
+     "over25": 4,
+     "motionFrames": 21,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 2.1,
+      "max": 167.2
+     },
+     "largest": [
+      {
+       "i": 21,
+       "t": 283,
+       "dt": 80,
+       "centerPx": 127.4,
+       "widthPx": -167.2,
+       "boardFrom": "125.8,124.2,640,640",
+       "boardTo": "89.3,165.2,472.8,472.8",
+       "inFace": true,
+       "visibleFraction": 0.413,
+       "slot": "136,236.3,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.5
+      },
+      {
+       "i": 22,
+       "t": 379,
+       "dt": 96,
+       "centerPx": 30.8,
+       "widthPx": -129.9,
+       "boardFrom": "89.3,165.2,472.8,472.8",
+       "boardTo": "125.2,219.9,342.9,342.9",
+       "inFace": true,
+       "visibleFraction": 0.786,
+       "slot": "136,236.3,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 32,
+       "t": 502,
+       "dt": 34,
+       "centerPx": 1.1,
+       "widthPx": -4.7,
+       "boardFrom": "132,230.2,318.3,318.3",
+       "boardTo": "133.3,232.2,313.6,313.6",
+       "inFace": true,
+       "visibleFraction": 0.94,
+       "slot": "136,236.3,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 23,
+       "t": 389,
+       "dt": 10,
+       "centerPx": 0.9,
+       "widthPx": -3.9,
+       "boardFrom": "125.2,219.9,342.9,342.9",
+       "boardTo": "126.3,221.5,339,339",
+       "inFace": true,
+       "visibleFraction": 0.804,
+       "slot": "136,236.3,304,304",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 263,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "136,236.3,304,304",
+       "slotAtCall": "136,236.3,304,304",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "136,236.3,304,304",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 445.9,
+        "cy": 444.2,
+        "w": 640
+       },
+       "trueVisualFirst": {
+        "cx": 445.8,
+        "cy": 444.2,
+        "w": 640
+       },
+       "anchorErrorPx": {
+        "dx": 0.1,
+        "dy": 0,
+        "dw": 0
+       }
+      }
+     ],
+     "glideEndMs": 783,
+     "galleryRemovedAt": 7,
+     "minVisibleFractionInFace": 0.413,
+     "firstClippedFrame": {
+      "t": 283,
+      "visibleFraction": 0.413
+     },
+     "centerCardHeight": {
+      "first": 407.9,
+      "min": 407.9,
+      "last": 407.9
+     },
+     "wordmarkMaxJumpPx": 9.5,
+     "bakes": [
+      "551x162@+335",
+      "551x162@+348",
+      "551x162@+357",
+      "551x162@+370"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 123,
+     "frameMs": {
+      "median": 10,
+      "max": 58
+     },
+     "over16_7": 1,
+     "over25": 1,
+     "motionFrames": 31,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 2,
+      "max": 131.4
+     },
+     "largest": [
+      {
+       "i": 2,
+       "t": 96,
+       "dt": 58,
+       "centerPx": 79.1,
+       "widthPx": 131.4,
+       "boardFrom": "120.2,173.2,398.8,398.8",
+       "boardTo": "123.3,146.5,530.2,530.2",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,736.9,0,28.8",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 1,
+       "t": 38,
+       "dt": 42,
+       "centerPx": 35.3,
+       "widthPx": 94.8,
+       "boardFrom": "136,236.3,304,304",
+       "boardTo": "120.2,173.2,398.8,398.8",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,736.9,0,28.8",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.5
+      },
+      {
+       "i": 3,
+       "t": 111,
+       "dt": 15,
+       "centerPx": 14.7,
+       "widthPx": 24.5,
+       "boardFrom": "123.3,146.5,530.2,530.2",
+       "boardTo": "123.8,141.5,554.7,554.7",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,736.9,0,28.8",
+       "scroll": 0,
+       "galOp": 0.778,
+       "wordPx": 0
+      },
+      {
+       "i": 4,
+       "t": 123,
+       "dt": 12,
+       "centerPx": 9.2,
+       "widthPx": 15.3,
+       "boardFrom": "123.8,141.5,554.7,554.7",
+       "boardTo": "124.2,138.4,570,570",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "288,736.9,0,28.8",
+       "scroll": 0,
+       "galOp": 0.584,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 35,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "128.8,124.2,640,640",
+       "slotAtCall": "288,736.9,0,28.8",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "288,736.9,0,28.8",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 288,
+        "cy": 353.1,
+        "w": 332.8
+       },
+       "trueVisualFirst": {
+        "cx": 288,
+        "cy": 388.3,
+        "w": 304
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": -35.2,
+        "dw": 28.8
+       }
+      }
+     ],
+     "glideEndMs": 555,
+     "galleryRemovedAt": 302,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 132.7,
+      "min": 132.7,
+      "last": 132.7
+     },
+     "wordmarkMaxJumpPx": 9.5,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  },
+  {
+   "file": "m-webkit-390-touch.json",
+   "engine": "webkit",
+   "viewport": "390x844",
+   "prm": false,
+   "pointer": "coarse(hasTouch)",
+   "runs": [
+    {
+     "label": "enter",
+     "reloaded": true,
+     "frames": 91,
+     "frameMs": {
+      "median": 11,
+      "max": 162
+     },
+     "over16_7": 8,
+     "over25": 5,
+     "motionFrames": 3,
+     "perFrameTravelPx": {
+      "min": 2.6,
+      "median": 13.2,
+      "max": 110.1
+     },
+     "largest": [
+      {
+       "i": 20,
+       "t": 384,
+       "dt": 162,
+       "centerPx": 52.5,
+       "widthPx": -110.1,
+       "boardFrom": "12,221.4,366,393.2",
+       "boardTo": "67,228.1,255.9,274.9",
+       "inFace": true,
+       "visibleFraction": 0.932,
+       "slot": "66.9,232.3,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 145.8
+      },
+      {
+       "i": 21,
+       "t": 507,
+       "dt": 123,
+       "centerPx": 3.8,
+       "widthPx": -13.2,
+       "boardFrom": "67,228.1,255.9,274.9",
+       "boardTo": "73.6,231.3,242.7,260.8",
+       "inFace": true,
+       "visibleFraction": 0.982,
+       "slot": "66.9,232.3,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 22,
+       "t": 585,
+       "dt": 78,
+       "centerPx": 0.8,
+       "widthPx": -2.6,
+       "boardFrom": "73.6,231.3,242.7,260.8",
+       "boardTo": "74.9,232,240.1,257.9",
+       "inFace": true,
+       "visibleFraction": 0.993,
+       "slot": "66.9,232.3,256.2,256.2",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 316,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "75.7,232.3,238.6,256.3",
+       "slotAtCall": "66.9,232.3,256.2,256.2",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "66.9,232.3,256.2,256.2",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 195,
+        "cy": 418,
+        "w": 366
+       },
+       "trueVisualFirst": {
+        "cx": 195,
+        "cy": 418,
+        "w": 366
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": 0,
+        "dw": 0
+       }
+      }
+     ],
+     "glideEndMs": 836,
+     "galleryRemovedAt": 14,
+     "minVisibleFractionInFace": 0.932,
+     "firstClippedFrame": {
+      "t": 384,
+      "visibleFraction": 0.932
+     },
+     "centerCardHeight": {
+      "first": 357.8,
+      "min": 357.8,
+      "last": 357.8
+     },
+     "wordmarkMaxJumpPx": 145.8,
+     "bakes": [
+      "347x102@+467",
+      "347x102@+477",
+      "347x102@+488",
+      "347x102@+498"
+     ],
+     "loaf": []
+    },
+    {
+     "label": "exit",
+     "reloaded": true,
+     "frames": 121,
+     "frameMs": {
+      "median": 10,
+      "max": 61
+     },
+     "over16_7": 3,
+     "over25": 1,
+     "motionFrames": 19,
+     "perFrameTravelPx": {
+      "min": 0.4,
+      "median": 0.9,
+      "max": 135.7
+     },
+     "largest": [
+      {
+       "i": 22,
+       "t": 322,
+       "dt": 12,
+       "centerPx": 135.7,
+       "widthPx": 0.2,
+       "boardFrom": "12.9,87.6,364.2,391.2",
+       "boardTo": "12.8,223.1,364.4,391.5",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": null,
+       "scroll": null,
+       "galOp": null,
+       "wordPx": 135.8
+      },
+      {
+       "i": 1,
+       "t": 50,
+       "dt": 56,
+       "centerPx": 47.7,
+       "widthPx": 71.4,
+       "boardFrom": "75.7,232.3,238.6,256.3",
+       "boardTo": "40,146.2,310,333.1",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,605.8,0,28.8",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 9.9
+      },
+      {
+       "i": 2,
+       "t": 111,
+       "dt": 61,
+       "centerPx": 18.9,
+       "widthPx": 34.6,
+       "boardFrom": "40,146.2,310,333.1",
+       "boardTo": "22.7,108.8,344.6,370.2",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,605.8,0,28.8",
+       "scroll": 0,
+       "galOp": 1,
+       "wordPx": 0
+      },
+      {
+       "i": 3,
+       "t": 133,
+       "dt": 22,
+       "centerPx": 3.3,
+       "widthPx": 6,
+       "boardFrom": "22.7,108.8,344.6,370.2",
+       "boardTo": "19.7,102.3,350.6,376.6",
+       "inFace": false,
+       "visibleFraction": 1,
+       "slot": "195,605.8,0,28.8",
+       "scroll": 0,
+       "galOp": 0.66,
+       "wordPx": 0
+      }
+     ],
+     "foldAnimations": [
+      {
+       "at": 47,
+       "dur": 520,
+       "easing": "cubic-bezier(0.32, 0.72, 0, 1)",
+       "lastRectAtCall": "12,85.6,366,393.2",
+       "slotAtCall": "195,605.8,0,28.8",
+       "scrollAtCall": 0,
+       "slotFirstFrameAfter": "195,605.8,0,28.8",
+       "scrollFirstFrameAfter": 0,
+       "impliedFirst": {
+        "cx": 195,
+        "cy": 326.4,
+        "w": 285
+       },
+       "trueVisualFirst": {
+        "cx": 195,
+        "cy": 360.5,
+        "w": 238.6
+       },
+       "anchorErrorPx": {
+        "dx": 0,
+        "dy": -34,
+        "dw": 46.4
+       }
+      }
+     ],
+     "glideEndMs": 567,
+     "galleryRemovedAt": 322,
+     "minVisibleFractionInFace": 1,
+     "firstClippedFrame": null,
+     "centerCardHeight": {
+      "first": 130.3,
+      "min": 130.3,
+      "last": 130.3
+     },
+     "wordmarkMaxJumpPx": 135.8,
+     "bakes": [],
+     "loaf": []
+    }
+   ]
+  }
+ ]
+}

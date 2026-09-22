@@ -1,0 +1,21 @@
+# U-10 ARM (row 3) — the squarer join: both passes miter at the focus tier. Straight-edge rows read
+# byte-identical to the shipped band (a50 10.52/6.00 px); only the four corners change. Not applied.
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -249,7 +249,7 @@
+   display: none;
+   fill: none;
+   stroke-linecap: round;
+-  stroke-linejoin: round;
++  stroke-linejoin: miter;
+ }
+ 
+ /* Tier 2 — keyboard focus: the pencil, pressed hard into one heavy band, sketched on over
+@@ -263,6 +263,7 @@
+    buildable as the U-10 fallback arm; it is one declaration.) */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+   fill: none;
++  stroke-linejoin: miter;
+   stroke: var(--color-pencil-graphite, var(--grid-line-color));
+   stroke-width: 12;
+   stroke-opacity: 1;

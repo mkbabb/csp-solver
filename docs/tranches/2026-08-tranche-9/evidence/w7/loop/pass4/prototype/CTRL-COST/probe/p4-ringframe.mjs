@@ -1,0 +1,21 @@
+// T9-W7 pass 4 · CTRL-COST — the FOCUSED frame (charter row 8): the ring as it paints, keyboard.
+import { chromium } from "playwright";
+const [base, out] = process.argv.slice(2);
+const b = await chromium.launch();
+const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2, colorScheme: "light" });
+const p = await ctx.newPage();
+await p.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+await p.goto(`${base}/sudoku?board=1&size=3&difficulty=EASY`);
+await p.waitForSelector('[role="grid"] [role="gridcell"]', { timeout: 30000 });
+await p.evaluate(() => document.fonts.ready);
+await p.waitForTimeout(1000);
+const verb = p.locator(".deal-face .act-verb");
+await verb.scrollIntoViewIfNeeded();
+await verb.focus();
+await p.keyboard.press("Tab");
+await p.keyboard.press("Shift+Tab");
+await p.waitForTimeout(300);
+const band = p.locator(".cost-band").filter({ has: p.locator(".deal-face") }).first();
+await band.screenshot({ path: out });
+console.log(out, "focused:", await p.evaluate(() => document.activeElement?.className));
+await b.close();

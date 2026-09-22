@@ -1,0 +1,59 @@
+
+Running 6 tests using 2 workers
+
+  ✓  2 [chromium] › e2e/player-tally.spec.ts:134:1 › a departure re-draws no survivor, and a depart-and-arrive draws exactly the newcomer (3.4s)
+  ✓  1 [webkit] › e2e/player-tally.spec.ts:134:1 › a departure re-draws no survivor, and a depart-and-arrive draws exactly the newcomer (3.8s)
+INNER LEAVER first frame ["0","0","0","0","100"]
+  ✓  3 [chromium] › e2e/player-tally.spec.ts:193:1 › at six, an inner leaver promotes the sixth and only that stroke draws (2.0s)
+INNER LEAVER first frame ["0","0","0","0","100"]
+  ✓  4 [webkit] › e2e/player-tally.spec.ts:193:1 › at six, an inner leaver promotes the sixth and only that stroke draws (2.4s)
+RACE {"frames":85,"rises":0,"afterBye":{"t":90.10000000149012,"off":0,"bye":true},"tail":[95.44247355211469,89.02771279881793,82.5293671988763,76.35519439893301,70.6327757727479,65.07483833606716,59.81638798509907,54.90658401313776,50.27307915254527,45.90787171935647,0,0]}
+  ✘  5 [chromium] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer (1.8s)
+RACE {"frames":69,"rises":0,"afterBye":{"t":101,"off":0,"bye":true},"tail":[96.61046297376092,87.6860058309038,79.32880233236152,72.9,64.88192886297375,59.27039999999999,53.42578192419825,47.97859825072888,0,0,0,0]}
+  ✘  6 [webkit] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer (2.2s)
+
+
+  1) [chromium] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer 
+
+    Error: still drawing on the frame after the leave
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      278 |   );
+      279 |   expect(rises, "the dash only ever falls").toBe(0);
+    > 280 |   expect(afterBye!.off, "still drawing on the frame after the leave").toBeGreaterThan(0);
+          |                                                                       ^
+      281 |   await expect.poll(async () => (await head(page)).offs.every((v) => v === "0")).toBe(true);
+      282 | });
+      283 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts:280:71
+
+    Error Context: .plrc-critic/test-results/player-tally-a-departure-d-42e1e-s-nor-restarts-the-newcomer-chromium/error-context.md
+
+  2) [webkit] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer 
+
+    Error: still drawing on the frame after the leave
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      278 |   );
+      279 |   expect(rises, "the dash only ever falls").toBe(0);
+    > 280 |   expect(afterBye!.off, "still drawing on the frame after the leave").toBeGreaterThan(0);
+          |                                                                       ^
+      281 |   await expect.poll(async () => (await head(page)).offs.every((v) => v === "0")).toBe(true);
+      282 | });
+      283 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts:280:71
+
+    Error Context: .plrc-critic/test-results/player-tally-a-departure-d-42e1e-s-nor-restarts-the-newcomer-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer 
+    [webkit] › e2e/player-tally.spec.ts:226:1 › a departure during a draw-in neither jumps nor restarts the newcomer 
+  4 passed (9.0s)
