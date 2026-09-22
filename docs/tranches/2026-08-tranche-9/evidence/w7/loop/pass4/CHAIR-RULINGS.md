@@ -157,3 +157,17 @@ below are pass-3 readings; none was re-measured here.
 - The pass-4 number is the CRITIC's, never the prototyper's. Converged=true only at zero
   enumerated gaps on every section's leader, pass ≥3, second consecutive clean pass; the streak
   is 0; the earliest 100 is pass 5, and a non-author audit follows before it is claimed.
+
+## Addendum 2026-09-19 (batch 4 open) — `?board=` is a codec payload, not a name
+
+MOT-VERB's pass-4 critic proved that `?board=ballot` / `?board=dusk-probe` PIN NOTHING:
+`persistence.ts` `decodeBoardParam` base64url-decodes the param and fails closed unless the
+first byte is `CODEC_VERSION`, so a bare name reads `{status: "invalid"}`, the param is dropped,
+and each arm deals its own board (webkit nodes 1216 vs 1142 on the same URL in two contexts).
+RULING for every lane from batch 4 on, and for the agglomerator's reading of batches 1–3: a row
+that says "the same pinned board" is UNPINNED unless the param is a real encoded payload — mint
+it with the app's own encoder (`persistence.ts:190–201`: `toBase64Url(String.fromCharCode(1) +
+"<size>.<cells base36>[.<clues>]")`) or reuse a link the product itself minted (the share link;
+`e2e/permalink.spec.ts` shows the codec's contract) — and the row states the payload it used.
+Rows already written against a bare name are re-run or re-worded; a ballot pair (both frames,
+one board) is contaminated until both arms load one encoded board.
