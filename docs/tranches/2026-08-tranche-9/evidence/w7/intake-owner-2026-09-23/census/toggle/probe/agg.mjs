@@ -1,0 +1,8 @@
+import { readFileSync } from "node:fs";
+const S = JSON.parse(readFileSync("series.json", "utf8")).filter((o) => o.file.startsWith(process.argv[2] || "t-"));
+const g = {};
+for (const o of S) { const k = `${o.tree.startsWith("main") ? "main" : "VERB"} · ${o.engine} · ${o.vp} ${o.pointer} · ${o.cold}${o.prm ? " PRM" : ""}`; (g[k] ||= []).push(o); }
+const rng = (a) => { a = a.filter((x) => x != null); if (!a.length) return "—"; const lo = Math.min(...a), hi = Math.max(...a); return lo === hi ? `${lo}` : `${lo}–${hi}`; };
+for (const [k, a] of Object.entries(g).sort()) {
+  console.log(`| ${k} | n${a.length} | max ${rng(a.map((o) => o.frameMs.max))} | >34 ${rng(a.map((o) => o.bloom1100.over34))} | >50 ${rng(a.map((o) => o.bloom1100.over50))} | born ${rng(a.map((o) => o.born && o.born.s))} | dS ${rng(a.map((o) => o.maxStepIn))} | outLast ${rng(a.map((o) => o.out && o.out.lastScale))} | settle s ${rng(a.map((o) => o.settle && o.settle.liveScaleBefore))} | dbl ${a.map((o) => (typeof o.doubleExposure === "string" ? o.doubleExposure.split("f")[0] : 0)).join("/")} | half-out ${rng(a.map((o) => o.pageHalf && o.pageHalf.outScale))} | pageEnd ${rng(a.map((o) => o.pageEnd && o.pageEnd.t))} in ${rng(a.map((o) => o.pageEnd && o.pageEnd.inScale))} | grid ${rng(a.map((o) => o.page.grid && o.page.grid.first))} | logo ${rng(a.map((o) => o.page.logo && o.page.logo.first))} | cMin ${rng(a.map((o) => o.gridContrast && o.gridContrast.min))} u3 ${a.map((o) => (o.gridContrast ? String(o.gridContrast.under3).split("f")[0] : "·")).join("/")} | bakes ${rng(a.map((o) => o.bakes))} | plush ${rng(a.map((o) => o.plushMaxDev))} btn ${rng(a.map((o) => o.btnMin))} |`);
+}

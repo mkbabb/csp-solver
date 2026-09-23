@@ -1,0 +1,9 @@
+<!doctype html><html><head><meta charset="utf-8"><style>
+html,body{margin:0;padding:0}
+body{background:var(--bg)}
+img{position:absolute;left:8px;top:8px;display:block}
+</style></head><body><img id="f"><script>
+const q=new URLSearchParams(location.search);
+document.body.style.setProperty('--bg',q.get('bg')||'#fff');
+const i=document.getElementById('f');i.width=+q.get('size');i.height=+q.get('size');i.src=q.get('svg')+'?v='+(q.get('n')||0);
+</script></body></html>

@@ -1,0 +1,938 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..d56ac3e1 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -3,6 +3,32 @@
+ 
+ @custom-variant dark (&:is(.dark *));
+ 
++/* ── THE ONE @property BLOCK (T9-M21) — the measured motion tokens, registered in the first
++   static stylesheet. <time>, inherited, and an initial-value that FAILS VISIBLY: at 0ms the
++   hinge is the snap it replaced, and the storybook test's G4 plant reds on it. No consumer
++   writes a var() fallback on these. The values are mirrors of pencilConfig's MOTION
++   (`hingeMs`, `beatMs`); `storybook.test.ts` reads them back. */
++@property --motion-hinge-dark {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-hinge-light {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-beat {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++:root {
++  --motion-hinge-dark: 120ms;
++  --motion-hinge-light: 87ms;
++  --motion-beat: 125ms;
++}
++
+ /* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+  * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+  * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+@@ -670,6 +696,30 @@ html {
+     }
+   }
+ 
++  /* THE HINGE (T9-M21, T9-B23 arm c). The grounds dusk over 350ms; the board's ink may not
++     (any continuous ink path must cross its paper at 1:1), and it may not snap with the class
++     either (new ink on old paper reads under 3:1 for up to 117ms). It STEPS, in one frame, at
++     the instant old and new ink read equally on the darkening paper: 0.343 of the dusk going
++     dark, 0.249 going light (MOTION.hinge, derived from these tokens). A 0s transition with a
++     delay holds the old value through the delay and cuts to the new one. Keyed on the
++     DESTINATION class; same !important standing as the grounds above, so the dusk and the
++     hinge start in one style-change event. The grid half is `inkDark` (useTheme). */
++  @media (prefers-reduced-motion: no-preference) {
++    html.theme-turning.dark :is(.glyph-svg path, .pencil-marks, .cell-ghost-path) {
++      transition:
++        stroke 0s linear var(--motion-hinge-dark),
++        fill 0s linear var(--motion-hinge-dark),
++        color 0s linear var(--motion-hinge-dark) !important;
++    }
++    html.theme-turning:not(.dark)
++      :is(.glyph-svg path, .pencil-marks, .cell-ghost-path) {
++      transition:
++        stroke 0s linear var(--motion-hinge-light),
++        fill 0s linear var(--motion-hinge-light),
++        color 0s linear var(--motion-hinge-light) !important;
++    }
++  }
++
+   /* Solve failure — the teacher's red pencil. Shadow carries the full
+      --color-teacher-red token; grid lines take a 30% red wash over the line color
+      so the full-red conflict rings still read one tier hotter (Q8 H1;
+diff --git a/web/frontend/src/composables/useTheme.ts b/web/frontend/src/composables/useTheme.ts
+index 3dab55d0..4bf6f936 100644
+--- a/web/frontend/src/composables/useTheme.ts
++++ b/web/frontend/src/composables/useTheme.ts
+@@ -1,4 +1,6 @@
++import { ref, watch } from "vue";
+ import { useDark, useToggle, createGlobalState } from "@vueuse/core";
++import { hingeMs } from "@pencil/config/pencilConfig";
+ 
+ export const useTheme = createGlobalState(() => {
+   const isDark = useDark({
+@@ -29,13 +31,45 @@ export const useTheme = createGlobalState(() => {
+     // is CSS transitions that can only START on the flip frame this kill blankets, and it died
+     // silently on every platform. Cured in DarkModeToggle.vue: the gesture transitions carry
+     // `!important`, out-ranking the zero-specificity kill within the toggle's own subtree while
+-    // the page-wide suppression (this boolean's +23.5 fps) stands. The T3-W10 dusk ease remains
+-    // inert as originally recorded (page colour snaps); if the owner wants the dusk back the
+-    // cure is to NARROW the 46 tweening selectors, not to re-blanket them.
++    // the page-wide suppression (this boolean's +23.5 fps) stands. The T3-W10 dusk ease was
++    // restored at T8-W2 M9 by exactly that narrowing (index.css: five grounds out-rank the
++    // kill); the board's ink out-ranks it the same way at the hinge (T9-M21).
+     disableTransition: true,
+   });
+ 
+   const toggleDark = useToggle(isDark);
+ 
+-  return { isDark, toggleDark };
++  // THE HINGE (T9-M21). The board's ink is new-theme ink on old-theme paper for the first
++  // ~120 ms of a dusk if it snaps with the class, under 3:1 for up to 117 ms. CSS inks step at
++  // the hinge (index.css `html.theme-turning` ink rule); the grid is a baked <image> keyed on a
++  // theme token, and this is that token: `isDark` held to the hinge while the dusk runs, and
++  // `isDark` itself otherwise (PRM, a system flip, boot), so ink and paper cut together. The
++  // swap runs on the CSS clock, not the click's: the transitions start at the commit of the
++  // frame the class lands in (two frames on), and the swap is written the frame AFTER the one
++  // that paints the CSS step (two frames off the hinge). Anchored at the click, a cold flip's
++  // first frame (~70 ms) put the swap ahead of the step, and the re-bake it starts held the
++  // step's paint ~300 ms while the compositor kept dusking the paper: dark digits on dark paper
++  // (measured, chromium 1280). The <image> still paints a decode later; the §13 form is a CSS
++  // step on the grid's own ink (MOT-VERB row 36).
++  const inkDark = ref(isDark.value);
++  let hinge = 0;
++  watch(
++    isDark,
++    (dark) => {
++      const gen = ++hinge;
++      if (!document.documentElement.classList.contains("theme-turning")) {
++        inkDark.value = dark;
++        return;
++      }
++      const frame = (fn: () => void) =>
++        requestAnimationFrame(() => gen === hinge && fn());
++      const twoFrames = (fn: () => void) => frame(() => frame(fn));
++      twoFrames(() =>
++        setTimeout(() => twoFrames(() => (inkDark.value = dark)), hingeMs(dark)),
++      );
++    },
++    { flush: "sync" },
++  );
++
++  return { isDark, inkDark, toggleDark };
+ });
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 3f0de14f..9f78097c 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -1,16 +1,22 @@
+ <template>
+   <button
++    ref="buttonRef"
+     class="sun-moon-toggle"
+-    :class="{ 'is-dark': isDark, 'is-turning': turning }"
++    :class="{
++      'is-dark': isDark,
++      'is-turning': turning,
++      'is-plush': turning && ARM === 'K',
++    }"
+     @click="handleToggle"
+-    @animationend="onGestureEnd"
+     :aria-label="isDark ? 'Switch to light mode' : 'Switch to dark mode'"
+   >
+     <!-- ── LIVE gesture instances (T3-W13 §2 THE BLOOM) ──
+          One filtered svg per body; a g.warp wraps the full content INSIDE the filter,
+          so the big scale ride changes the filter's INPUT — a fresh vector render every
+-         frame, crisp at scale 0.06 and at the ~1.09 crest alike. wobble-celestial stays
+-         bound UNCONDITIONALLY on both (T3-W10 keep); the live pair is visible ONLY
++         frame, crisp at scale 0.06 and at the ~1.09 crest alike. Each body is bound to the
++         REST STACK'S OWN pose field, `wobble-celestial-p{i}` at the pose the beat is on
++         (T9-M21: it boils through the gesture, and both hand-offs are field-identical);
++         the live pair is visible ONLY
+          during the gesture (`.is-turning`) — at rest the icons ride the frozen P3
+          stacks below, and the live filter regions cost nothing (§1-P3 interlock, the
+          HandwrittenGlyph L28-F1 discipline generalized). Every reactive binding here
+@@ -18,10 +24,10 @@
+          zero writes — a hidden filter-bound subtree still invalidates on mutation. -->
+     <svg
+       class="toggle-icon toggle-sun"
+-      :class="{ 'is-active': !isDark }"
++      :class="{ 'is-active': !face }"
+       xmlns="http://www.w3.org/2000/svg"
+       viewBox="0 0 200 200"
+-      filter="url(#wobble-celestial)"
++      :filter="liveSunFilter"
+     >
+       <g class="warp">
+         <!-- Rays: irregular per pose; the spin is QUANTIZED to the pose flips
+@@ -113,10 +119,10 @@
+     <!-- Moon icon (dark mode) — live instance, warp-wrapped -->
+     <svg
+       class="toggle-icon toggle-moon"
+-      :class="{ 'is-active': isDark }"
++      :class="{ 'is-active': face }"
+       xmlns="http://www.w3.org/2000/svg"
+       viewBox="0 0 200 200"
+-      filter="url(#wobble-celestial)"
++      :filter="liveMoonFilter"
+     >
+       <g class="warp">
+         <!-- Crescent moon path. W1: outline 6→7. M1: the lower horn tapers to a point
+@@ -351,6 +357,7 @@ import {
+   wobblePoseId,
+   wobblePoseFrequencies,
+   FILTER_PRESETS,
++  storybookScore,
+ } from "@pencil/config/pencilConfig";
+ import { useBoilBeat } from "@pencil/composables/boilBeat";
+ import {
+@@ -372,6 +379,39 @@ const MOON_DETAIL_D = "M72,52 C52,68 47,105 55,133";
+ const { isDark, toggleDark } = useTheme();
+ const reducedMotion = usePrefersReducedMotion();
+ 
++// ── THE SCORE (T9-M21, ballot T9-B24) — one const, two arms, framed as a U-10 pair ──
++// K: the owner's auditioned beats verbatim (MOTION.characters.storybook.K) with every
++// non-timing cure landed. R: the page turns once — the theme flips one whisper after the
++// press, the outgoing body folds flat for one note and is CUT at the park, the incoming is
++// born opaque at the park that frame and stands up for one throw, its stars pop one beat
++// apart from the crest. The fold of the chair picks one arm and deletes the other.
++const ARM: "K" | "R" = import.meta.env.VITE_STORYBOOK_ARM === "R" ? "R" : "K";
++const SCORE = storybookScore(ARM);
++const ms = (n: number) => `${n}ms`;
++// Published to the scoped style below through v-bind (static: written once at mount), so
++// the SFC carries no timing literal of its own.
++const sb = {
++  squash: ms(MOTION.characters.storybook.squashMs),
++  fold: ms(SCORE.fold),
++  // K keeps its accelerate-away wring; R folds on the lift (VERB's `--verb-lift-ease` is
++  // byte-identical to main's `--ease-fadeOut`, 0.32 0 0.67 0).
++  foldEase: ARM === "K" ? "var(--ease-accelIn)" : "var(--ease-fadeOut)",
++  birth: ms(SCORE.birth),
++  rise: ms(SCORE.rise),
++  pop: ms(SCORE.pop),
++  star0: ms(SCORE.stars[0]),
++  star1: ms(SCORE.stars[1]),
++  star2: ms(SCORE.stars[2]),
++  plush: ms(SCORE.plush),
++};
++
++// `face`: which body the toggle shows, flipped AT the press in both arms. The live pair's
++// `.is-active` reads it, so the fold starts at the press even when (R) the theme flips a
++// whisper later; anything else that turns the theme (PRM, the system) moves it with the
++// theme, in the same flush.
++const face = ref(isDark.value);
++watch(isDark, (d) => (face.value = d), { flush: "sync" });
++
+ // ── Celestial boils on the SHARED beat (T3-W12 §2 P1) ──
+ // All frame indexes derive from the one app-wide beat. At rest the indexes flip
+ // OPACITY on the frozen rest-stack poses (T3-W13 §1-P3) — compositor-only; the live
+@@ -398,15 +438,14 @@ const heldPoseCount = heldFrameCount(() => CELESTIAL_POSE_COUNT);
+ // spends 2 beats on one pose and 1 on the next, the 250/125ms dwell the 1.5 band means.
+ // A beat that does not advance the band assigns the ref its own value; Vue's setter
+ // no-ops, so the slower sky costs no extra write.
++// Through the gesture BOTH bodies boil (T9-M21): each live body is on stage and steps its
++// own band; at rest only the theme's body does, and the parked pair takes no write.
+ watch(beat, (b) => {
+   const total = heldPoseCount();
+   if (total <= 1) return; // held — freeze in place, no snap to pose 0
+   const step = (band: number) => Math.floor(b / band) % total;
+-  if (isDark.value) {
+-    starFrame.value = step(MOTION.bands.moon);
+-  } else {
+-    sunFrame.value = step(MOTION.bands.sun);
+-  }
++  if (isDark.value || turning.value) starFrame.value = step(MOTION.bands.moon);
++  if (!isDark.value || turning.value) sunFrame.value = step(MOTION.bands.sun);
+ });
+ 
+ // ── The ray spin, QUANTIZED TO THE POSE FLIPS (W13 gate g1 F-2) ──
+@@ -612,23 +651,25 @@ const moonBaked = computed(() => moonUrls.value.length === 4);
+  * statement about OPACITY, which is how the estate reads it.
+  */
+ 
+-// Dusk ease (T3-W10 keep, re-anchored): html.theme-turning goes on AT click, the theme
+-// flip included — body + the paper sheets ease colors ~350ms instead of snapping
+-// (index.css). One timeout, no clock machinery. Under PRM the flip stands alone and
+-// page colors snap (the index.css rule is no-preference-gated besides).
++// Dusk ease (T3-W10 keep, re-anchored): html.theme-turning goes on AT click, BEFORE the
++// flip — the five grounds ease ~350ms and the board's ink steps at the hinge (index.css).
++// Held from the press to the flip + dusk + one beat. Under PRM the flip stands alone and
++// ink and paper cut on one frame (both index.css rules are no-preference-gated).
+ //
+-// `turning`: the ~1010ms Bloom window. It gates the two plush accents
+-// (the button squash, the plush-flex tail) AND the §1-P3 interlock — while it
+-// is up the live warped instances hold the stage and the frozen rest stacks yield;
+-// at settle the stacks take back over (one filtered raster, the L28-F1 discipline).
+-// The Bloom itself is pure .is-active transitions and needs no gate. Cleared on the
+-// plush-land animationend (the crest), with a timeout backstop. A re-click mid-flight
+-// leaves `turning` up and just extends the backstop — the warp transitions retarget
+-// for free, and a FRESH plush-land instance starts when the other icon gains
+-// .is-active, so the tail always lands ~950ms after the LAST click. No phase machine.
++// `turning`: the gesture window. It gates the plush accents (the squash; K's plush-flex
++// tail) AND the §1-P3 interlock — while it is up the live warped instances hold the stage
++// and the frozen rest stacks yield; at settle the stacks take back over. It is cleared when
++// EVERY animation in the button's subtree has finished (after one rAF, so the press's own
++// transitions exist), if no press came since; a timeout at the score's end plus one beat is
++// the backstop. `plush-land`'s end was the old clock and it was the wrong one: a stalled
++// bloom could still be short of 1.0 when it fired (WebKit 0.936, census M21-g). A re-click
++// mid-flight retargets the transitions for free and restarts the wait.
+ const turning = ref(false);
++const buttonRef = ref<HTMLButtonElement | null>(null);
+ let turnTimer: ReturnType<typeof setTimeout> | undefined;
+ let gestureTimer: ReturnType<typeof setTimeout> | undefined;
++let flipTimer: ReturnType<typeof setTimeout> | undefined;
++let generation = 0;
+ 
+ // ── Live bindings, GESTURE-SCOPED (W13 gate g1 F-1) ──
+ // The parked live pair must be INERT: a per-beat write into a filter-bound svg
+@@ -659,6 +700,8 @@ const liveSparklePoints = gestureBound(() => SPARKLE_POSES[sunFrame.value]);
+ const liveSunTwinkles = gestureBound(() => TWINKLE_BY_FRAME[sunFrame.value]);
+ const liveStarPoints = gestureBound(() => STAR_POSES_D[starFrame.value]);
+ const liveStarTwinkles = gestureBound(() => TWINKLE_BY_FRAME[starFrame.value]);
++const liveSunFilter = gestureBound(() => `url(#${poseFilterId(sunFrame.value)})`);
++const liveMoonFilter = gestureBound(() => `url(#${poseFilterId(starFrame.value)})`);
+ 
+ function handleToggle() {
+   if (reducedMotion.value) {
+@@ -672,31 +715,52 @@ function handleToggle() {
+   // could have started a tween, and the page snaps however the cascade is written. Armed
+   // first, the flip frame resolves WITH the `!important` colour transition standing.
+   document.documentElement.classList.add("theme-turning");
+-  toggleDark();
++  face.value = !face.value;
++  clearTimeout(flipTimer);
++  // K flips now; R one whisper later, and a second press inside the whisper nets to zero.
++  if (SCORE.flip === 0) toggleDark();
++  else
++    flipTimer = setTimeout(() => {
++      if (isDark.value !== face.value) toggleDark();
++    }, SCORE.flip);
+   clearTimeout(turnTimer);
+   turnTimer = setTimeout(() => {
+     document.documentElement.classList.remove("theme-turning");
+-  }, 400);
++  }, SCORE.turningOff);
+   turning.value = true;
+-  clearTimeout(gestureTimer);
+-  gestureTimer = setTimeout(() => {
+-    turning.value = false;
+-  }, 1100);
++  armSettle();
+ }
+ 
+-// Bubbled from the incoming icon. Canceled animations (a mid-flight re-click swaps
+-// roles) fire animationcancel, not animationend — only a truly landed crest clears here.
+-// startsWith, not equality: scoped styles suffix keyframe names with the scope id
+-// (plush-land-<hash>).
+-function onGestureEnd(e: AnimationEvent) {
+-  if (!e.animationName.startsWith("plush-land")) return;
+-  turning.value = false;
++function armSettle() {
++  const gen = ++generation;
++  const land = () => {
++    if (gen !== generation) return;
++    turning.value = false;
++    clearTimeout(gestureTimer);
++  };
+   clearTimeout(gestureTimer);
++  gestureTimer = setTimeout(land, SCORE.settle);
++  // Ask again after every wait: one read at the first frame came back short in WebKit under a
++  // stall (the hand-off landed on the crest, 1.09, at +642), so the gesture is down only when
++  // a fresh read finds nothing unfinished. A `both`-filled keyframe that has ended reads
++  // `finished` and doesn't hold the wait.
++  const wait = () => {
++    if (gen !== generation) return;
++    const live = (buttonRef.value?.getAnimations({ subtree: true }) ?? []).filter(
++      (a) => a.playState !== "finished",
++    );
++    if (!live.length) return land();
++    void Promise.allSettled(live.map((a) => a.finished)).then(() =>
++      requestAnimationFrame(wait),
++    );
++  };
++  requestAnimationFrame(wait);
+ }
+ 
+ onUnmounted(() => {
+   clearTimeout(turnTimer);
+   clearTimeout(gestureTimer);
++  clearTimeout(flipTimer);
+   document.documentElement.classList.remove("theme-turning");
+ });
+ </script>
+@@ -724,10 +788,14 @@ onUnmounted(() => {
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+-   it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px. */
+-.sun-moon-toggle:hover {
+-  outline: none;
+-  transform: scale(1.08);
++   it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px. FENCED to a
++   pointer that can hover (R6 law 14): a tap emulates :hover and it sticks until the next
++   tap elsewhere, which left the toggle 8% large after every flip on a phone. */
++@media (hover: hover) {
++  .sun-moon-toggle:hover {
++    outline: none;
++    transform: scale(1.08);
++  }
+ }
+ 
+ .sun-moon-toggle:focus {
+@@ -769,21 +837,22 @@ onUnmounted(() => {
+   overflow: visible;
+   opacity: 0;
+   visibility: hidden;
+-  /* outgoing icon: fade only in the last wring beat (240-340ms) — the body is
+-       nearly a point before it fades; no mid-air ghost.
++  /* THE OPACITY LAW (T9-M21): pencil is on the page or it isn't — steps, never fades. The
++       outgoing body is opaque to its last frame and CUT at the park (the fold's end); a fade
++       over the new ground painted a translucent double and a brown blot (census M21-d/e).
+        !important THROUGHOUT THE GESTURE TRANSITIONS: useTheme's disableTransition
+        stamps `* { transition: none !important }` for exactly the flip frame — the
+        only frame these can start. Among importants, specificity wins, so the
+        toggle's own subtree keeps its tweens while the page-wide kill (the P1-W3
+        +23.5 fps cure) stands. Without these the storybook dies silently — found
+        by the owner's eye, 2026-08-02. */
+-  transition: opacity 100ms var(--ease-standard) 240ms !important;
++  transition: opacity 0s linear v-bind("sb.fold") !important;
+ }
+ 
+ .toggle-icon.is-active {
+   opacity: 1;
+-  /* incoming icon: 60-360ms rise with the bloom's first beats */
+-  transition: opacity 300ms var(--ease-standard) 60ms !important;
++  /* incoming icon: born opaque at the launch pose, on the frame its rise starts */
++  transition: opacity 0s linear v-bind("sb.birth") !important;
+ }
+ 
+ .sun-moon-toggle.is-turning .toggle-icon {
+@@ -798,7 +867,7 @@ onUnmounted(() => {
+   transform-box: view-box;
+   transform-origin: 100px 100px;
+   transform: scale(0.06) rotate(12deg) translateY(6px);
+-  transition: transform 340ms var(--ease-accelIn) !important;
++  transition: transform v-bind("sb.fold") v-bind("sb.foldEase") !important;
+ }
+ 
+ /* Wring-down twist: shrinks AND sinks, twisting as paper does (-15deg — owner-taste
+@@ -809,11 +878,11 @@ onUnmounted(() => {
+   transform: scale(0.06) rotate(-15deg) translateY(6px);
+ }
+ 
+-/* The bloom: 60-860ms on the signature back-out spring — crests ~1.09 around t≈560,
+-   vector-crisp by construction (the warp is the filter's input). */
++/* The bloom: the stand-up on the signature back-out spring — crests ~1.098 at 0.573 of its
++   length, vector-crisp by construction (the warp is the filter's input). */
+ .toggle-icon.is-active .warp {
+   transform: none;
+-  transition: transform 800ms var(--ease-springPop) 60ms !important;
++  transition: transform v-bind("sb.rise") var(--ease-springPop) v-bind("sb.birth") !important;
+ }
+ 
+ /* ─── The plush accent beats ─────────────────────────────────────────────
+@@ -825,7 +894,7 @@ onUnmounted(() => {
+ /* SQUASH (0-120ms) — button-level anticipation, kept verbatim from the shipped
+    gesture: the press before the pop-up rises. */
+ .sun-moon-toggle.is-turning {
+-  animation: toggle-squash 120ms both;
++  animation: toggle-squash v-bind("sb.squash") both;
+ }
+ 
+ @keyframes toggle-squash {
+@@ -842,11 +911,11 @@ onUnmounted(() => {
+   }
+ }
+ 
+-/* PLUSH FLEX (860-1010ms) — the shipped plush-land grown a second half-bounce:
++/* PLUSH FLEX (860-1010ms, arm K only) — the shipped plush-land grown a second half-bounce:
+    1.04,0.96 → 0.98,1.02 → 1,1 as the spring resolves. Identity for the first 85%
+    (= 860ms of 1010ms) so the bloom transition runs beneath it untouched. */
+-.is-turning .toggle-icon.is-active {
+-  animation: plush-land 1010ms both;
++.is-plush .toggle-icon.is-active {
++  animation: plush-land v-bind("sb.plush") both;
+ }
+ 
+ @keyframes plush-land {
+@@ -868,17 +937,21 @@ onUnmounted(() => {
+   }
+ }
+ 
+-/* STAR POP (~560/640/720ms) — stars and sparkles hold their breath through the
+-   bloom's rise, then pop staggered ONTO the overshoot crest (t≈560): a 150ms
+-   back-out fling from the body's heart out to the perch. Pure transition-delay
+-   off .is-active — no clock. On wring-out they tuck in fast, undelayed. */
++/* STAR POP — stars and sparkles hold their breath through the bloom's rise, then pop
++   staggered onto the crest: a back-out fling from the body's heart out to the perch, the
++   opacity a STEP on the fling's first frame. Pure transition-delay off .is-active — no
++   clock. On the way out they RIDE THE FOLD (T9-M21, M21-e): the outgoing body keeps its
++   accents inside its warp to the cut, and they re-arm unseen once the gesture is down. */
+ .toggle-icon .twinkle-star,
+ .toggle-icon .dot-star {
+   scale: 0.2;
+   opacity: 0;
+-  transition:
+-    scale 150ms ease-in,
+-    opacity 100ms ease-in !important;
++  transition: none !important;
++}
++
++.is-turning .toggle-icon:not(.is-active) :is(.twinkle-star, .dot-star) {
++  scale: 1;
++  opacity: 1;
+ }
+ 
+ .toggle-icon.is-active .twinkle-star,
+@@ -886,15 +959,15 @@ onUnmounted(() => {
+   scale: 1;
+   opacity: 1;
+   transition:
+-    scale 150ms var(--ease-anticipatePop) 560ms,
+-    opacity 120ms ease-out 560ms !important;
++    scale v-bind("sb.pop") var(--ease-anticipatePop) v-bind("sb.star0"),
++    opacity 0s linear v-bind("sb.star0") !important;
+ }
+ 
+ .toggle-icon.is-active .twinkle-star-2 {
+-  transition-delay: 640ms !important;
++  transition-delay: v-bind("sb.star1") !important;
+ }
+ .toggle-icon.is-active .twinkle-star-3 {
+-  transition-delay: 720ms !important;
++  transition-delay: v-bind("sb.star2") !important;
+ }
+ 
+ /* Pause all animations on inactive icon to save GPU */
+@@ -960,10 +1033,9 @@ onUnmounted(() => {
+   transform-origin: center;
+ }
+ 
+-/* Reduced motion — the T3-W10 PRM contract carried onto the P3 stacks: theme flips
+-   immediately at click, a single 200ms opacity crossfade, no transforms, stars baked
+-   in WITH the moon. Both stacks stay visibility:visible so the crossfade has two
+-   participants; the live gesture instances never take the stage (handleToggle
++/* Reduced motion — PRM IS A CUT (T9-M21): the theme flips at click and the rest stacks swap
++   on that frame, no crossfade (the 200ms one is deleted), no transforms, stars baked in
++   WITH the moon. The live gesture instances never take the stage (handleToggle
+    early-returns before `turning`) — parked and warp-nulled as a belt below. */
+ @media (prefers-reduced-motion: reduce) {
+   .toggle-icon {
+@@ -976,16 +1048,6 @@ onUnmounted(() => {
+     transform: none !important;
+   }
+ 
+-  .toggle-rest {
+-    visibility: visible;
+-    opacity: 0;
+-    transition: opacity 200ms ease;
+-  }
+-
+-  .toggle-rest.is-active {
+-    opacity: 1;
+-  }
+-
+   .sun-moon-toggle.is-turning {
+     animation: none;
+   }
+diff --git a/web/frontend/src/pencil/chrome/SvgFilters.test.ts b/web/frontend/src/pencil/chrome/SvgFilters.test.ts
+index 2afb3f41..c0ba549b 100644
+--- a/web/frontend/src/pencil/chrome/SvgFilters.test.ts
++++ b/web/frontend/src/pencil/chrome/SvgFilters.test.ts
+@@ -24,11 +24,12 @@ describe("SvgFilters — filter registry DOM contract", () => {
+   // P1-W3 moved `stroke-light` / `stroke-dark` OUT of this list: their sole consumer was
+   // `.control-panel-filtered`, retired on the G2.4 **C** ruling. The census below is the
+   // enforcement, and it lands in the same commit as the deletion that licensed it.
+-  const CONSUMED_BASE_DEFS = ["grain-static", "wobble-celestial", "wobble-heart"];
++  const CONSUMED_BASE_DEFS = ["grain-static", "wobble-heart"];
+   // Orphaned base defs — no `url(#id)` consumer, so no base def ships.
+   //   · grain-outline (T4-W4)  — baked into the outline pose geometry (gridPaths §Grain bake).
+   //   · wobble-logo   (T4-W4)  — consumed only as its `-p{i}` pose stack (HandwrittenLogo).
+   //   · stroke-light / -dark (P1-W3) — the retired control-panel filter.
++  //   · wobble-celestial (T9-M21) — the toggle's live bodies step its `-p{i}` pose fields.
+   //
+   // RECORDED, because the P-W3 inventory predicted otherwise: `wobble-celestial` and
+   // `wobble-heart` do NOT orphan. The hover clients that died at P1-W3 (`.icon-btn:hover`,
+@@ -41,6 +42,7 @@ describe("SvgFilters — filter registry DOM contract", () => {
+     "wobble-logo",
+     "stroke-light",
+     "stroke-dark",
++    "wobble-celestial",
+   ];
+ 
+   it("registers a base def for every consumed preset", () => {
+diff --git a/web/frontend/src/pencil/config/filterBudget.ts b/web/frontend/src/pencil/config/filterBudget.ts
+index 6d5d0726..bd131791 100644
+--- a/web/frontend/src/pencil/config/filterBudget.ts
++++ b/web/frontend/src/pencil/config/filterBudget.ts
+@@ -85,8 +85,10 @@ export interface FilterBudgetRow {
+   selector: string;
+   /** Expected population in the default board scene — exact, in both directions. */
+   count: number;
+-  /** The censused filter value, verbatim. */
+-  filter: string;
++  /** The censused filter value, verbatim — or, for a row whose one surface steps a pose
++   *  field on the beat, the pattern every value it takes matches (law 9: the population is
++   *  exact; the matcher widens by string, never by count). */
++  filter: string | RegExp;
+   /** Why it survives, and the named trigger that retires it. */
+   reason: string;
+ }
+@@ -149,9 +151,9 @@ const TRANSIENT: readonly FilterBudgetRow[] = [
+   {
+     selector: "button.sun-moon-toggle svg.toggle-icon",
+     count: 2,
+-    filter: "url(#wobble-celestial)",
++    filter: /^url\(#wobble-celestial-p\d\)$/,
+     reason:
+-      "the toggle's two live bodies (sun + moon) — the Bloom's warped instances, one raster each",
++      "the toggle's two live bodies (sun + moon) — the Bloom's warped instances, each on the rest stack's pose field (T9-M21), stepped on the beat only while the gesture runs",
+   },
+   {
+     selector: "button.icon-btn svg.sparkle-icon",
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..70d672fd 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -191,9 +191,87 @@ export const MOTION = {
+      *  (Band D). Scope fence: this ruling is the drawer's — no other surface
+      *  re-eases under it. */
+     drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
++    /** The toggle's stand-up (T9-M21). A TS copy of `--ease-springPop`, byte-identical and
++     *  held so by `storybook.test.ts`, because the stars' delay is DERIVED from where this
++     *  curve crests and a derivation has to read the curve, not a number typed beside it. */
++    springPop: "cubic-bezier(0.34, 1.56, 0.64, 1)",
++  },
++  /** The motion ladder's rungs the storybook spends (the same values as MOT-LADDER's bank;
++   *  on main they have no other consumer yet, so only the four used here are homed). */
++  rungs: { whisper: 150, note: 250, dusk: 350, throw: 520 },
++  /** THE DUSK — index.css's `html.theme-turning` ground ease, mirrored (the test reads it back). */
++  dusk: { curve: "cubic-bezier(0.25, 0.1, 0.25, 1)" },
++  /** THE HINGE (T9-M21, T9-B23 arm c). The board's ink steps in ONE frame at this fraction of
++   *  the dusk after the flip: the instant old ink and new ink read at equal contrast on the
++   *  darkening paper (grid 3.11:1 there, digits 4.09:1). DERIVED from index.css's
++   *  `--color-card` / `--grid-line-color` / `--color-foreground` in both themes and the dusk
++   *  curve over `rungs.dusk`; `storybook.test.ts` recomputes both within 1 ms. */
++  hinge: { toDark: 0.343, toLight: 0.249 },
++  /** One character, one home (T9-M21). The squash is the only literal (the shipped 120). */
++  characters: {
++    storybook: {
++      squashMs: 120,
++      /** Arm K — the owner's auditioned beats (T3-W13), verbatim. */
++      K: {
++        flip: 0,
++        fold: 340,
++        birth: 60,
++        rise: 800,
++        stars: [560, 640, 720],
++        pop: 150,
++        plush: 1010,
++      },
++    },
+   },
+ } as const;
+ 
++/** Where a CSS cubic-bezier with an overshoot crests, as a fraction of its duration (x at
++ *  max y). Bisection on dy/ds, then x(s). springPop's is 0.5728. */
++export function bezierCrestX(curve: string): number {
++  const [x1, y1, x2, y2] = (curve.match(/-?[\d.]+/g) ?? []).map(Number);
++  const dy = (s: number) =>
++    3 * (1 - s) ** 2 * y1 + 6 * (1 - s) * s * (y2 - y1) + 3 * s * s * (1 - y2);
++  let lo = 0;
++  let hi = 1;
++  for (let i = 0; i < 50; i++) {
++    const m = (lo + hi) / 2;
++    if (dy(m) > 0) lo = m;
++    else hi = m;
++  }
++  const s = (lo + hi) / 2;
++  return 3 * (1 - s) ** 2 * s * x1 + 3 * (1 - s) * s * s * x2 + s ** 3;
++}
++
++/** The storybook's score, per arm, in ms from the click. K is the owner's table; R is
++ *  the page turning once, spent from the rungs: the flip one whisper after the press, the
++ *  fold one note, the stand-up one throw from the note, stars one beat apart from the crest,
++ *  no plush tail. `settle` is the backstop: the score's last event plus one beat. */
++export function storybookScore(arm: "K" | "R") {
++  const { whisper, note, dusk, throw: thr } = MOTION.rungs;
++  const beat = MOTION.beatMs;
++  const s =
++    arm === "K"
++      ? MOTION.characters.storybook.K
++      : (() => {
++          const crest = Math.round(bezierCrestX(MOTION.curves.springPop) * thr);
++          return {
++            flip: whisper,
++            fold: note,
++            birth: note,
++            rise: thr,
++            stars: [0, 1, 2].map((k) => note + crest + k * beat),
++            pop: whisper,
++            plush: 0,
++          };
++        })();
++  const last = Math.max(s.birth + s.rise, s.stars[2] + s.pop, s.plush);
++  return { ...s, turningOff: s.flip + dusk + beat, settle: last + beat };
++}
++
++/** The hinge in ms after the flip, going into `dark` (true) or light. */
++export const hingeMs = (dark: boolean) =>
++  Math.round((dark ? MOTION.hinge.toDark : MOTION.hinge.toLight) * MOTION.rungs.dusk);
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+@@ -363,6 +441,9 @@ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
+   "wobble-celestial": {
+     id: "wobble-celestial",
+     margin: 10,
++    // T9-M21 (the boil): the live bodies step the rest stack's own pose fields
++    // (`wobble-celestial-p{i}`), so the base def has no consumer left.
++    baseDef: false,
+     wobble: {
+       baseFrequency: 0.02,
+       numOctaves: 2,
+diff --git a/web/frontend/src/pencil/config/storybook.test.ts b/web/frontend/src/pencil/config/storybook.test.ts
+new file mode 100644
+index 00000000..c0e9b731
+--- /dev/null
++++ b/web/frontend/src/pencil/config/storybook.test.ts
+@@ -0,0 +1,203 @@
++import { describe, expect, it } from "vitest";
++import { MOTION, bezierCrestX, hingeMs, storybookScore } from "./pencilConfig";
++
++// T9-M21 · THE STORYBOOK'S NUMBERS ARE DERIVED, and this file is the derivation run again.
++// The hinge is read off index.css's own tokens and the dusk's own curve; the stars' delay off
++// springPop's own crest. A token retuned in index.css without MOTION following reds here.
++
++// Node's fs, reached untyped: the app tsconfig carries no node types, and vitest's CSS
++// pipeline answers `index.css?raw` with an empty string. vitest runs from web/frontend.
++const { readFileSync } = (await import(/* @vite-ignore */ `node:${"fs"}`)) as {
++  readFileSync(path: string, encoding: "utf8"): string;
++};
++const ROOT = (globalThis as unknown as { process: { cwd(): string } }).process.cwd();
++const read = (rel: string) => readFileSync(`${ROOT}/${rel}`, "utf8");
++const CSS = read("src/assets/index.css");
++
++type RGB = [number, number, number];
++function hsl(h: number, s: number, l: number): RGB {
++  s /= 100;
++  l /= 100;
++  const k = (n: number) => (n + h / 30) % 12;
++  const a = s * Math.min(l, 1 - l);
++  const f = (n: number) =>
++    l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1)));
++  return [f(0), f(8), f(4)].map((x) => x * 255) as RGB;
++}
++const lum = (c: RGB) => {
++  const [r, g, b] = c.map((v) => {
++    v /= 255;
++    return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
++  });
++  return 0.2126 * r + 0.7152 * g + 0.0722 * b;
++};
++const contrast = (a: RGB, b: RGB) => {
++  const [x, y] = [lum(a), lum(b)];
++  return (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
++};
++/** y at x of a CSS cubic-bezier (bisection on x(s)). */
++function bezier(curve: string) {
++  const [x1, y1, x2, y2] = (curve.match(/-?[\d.]+/g) ?? []).map(Number);
++  const c = (s: number, p1: number, p2: number) =>
++    3 * (1 - s) ** 2 * s * p1 + 3 * (1 - s) * s * s * p2 + s ** 3;
++  return (x: number) => {
++    let lo = 0;
++    let hi = 1;
++    for (let i = 0; i < 60; i++) {
++      const m = (lo + hi) / 2;
++      if (c(m, x1, x2) < x) lo = m;
++      else hi = m;
++    }
++    return c((lo + hi) / 2, y1, y2);
++  };
++}
++
++/** A token's value in the light block (`@theme`, first declaration) or the `.dark` block. */
++function token(name: string, theme: "light" | "dark"): RGB {
++  const scope =
++    theme === "light"
++      ? CSS.slice(CSS.indexOf("@theme"))
++      : CSS.slice(CSS.indexOf("\n.dark {"));
++  const m = scope.match(
++    new RegExp(`${name}:\\s*hsl\\(([\\d.]+) ([\\d.]+)% ([\\d.]+)%\\)`),
++  );
++  if (!m) throw new Error(`index.css: ${name} (${theme}) is not an hsl() literal`);
++  return hsl(+m[1], +m[2], +m[3]);
++}
++
++/** ms after the flip at which old ink and new ink read equally on the dusking paper. */
++function crossing(ink: string, toDark: boolean): number {
++  const [from, to] = toDark
++    ? (["light", "dark"] as const)
++    : (["dark", "light"] as const);
++  const p0 = token("--color-card", from);
++  const p1 = token("--color-card", to);
++  const e = bezier(MOTION.dusk.curve);
++  const dusk = MOTION.rungs.dusk;
++  const paper = (t: number) => p0.map((v, i) => v + (p1[i] - v) * e(t / dusk)) as RGB;
++  const g = (t: number) =>
++    contrast(token(ink, from), paper(t)) - contrast(token(ink, to), paper(t));
++  let lo = 0;
++  let hi: number = dusk;
++  for (let i = 0; i < 60; i++) {
++    const m = (lo + hi) / 2;
++    if (g(m) > 0) lo = m;
++    else hi = m;
++  }
++  return lo;
++}
++
++describe("the storybook's derived numbers (T9-M21)", () => {
++  it("the dusk MOTION names is the dusk index.css runs", () => {
++    const rule = CSS.match(
++      /background-color (\d+)ms (ease)\b,\s*color \d+ms ease !important/,
++    );
++    expect(rule, "index.css dusk rule").not.toBeNull();
++    expect(Number(rule![1])).toBe(MOTION.rungs.dusk as number);
++    // CSS `ease` is cubic-bezier(0.25, 0.1, 0.25, 1) by definition.
++    expect(MOTION.dusk.curve).toBe("cubic-bezier(0.25, 0.1, 0.25, 1)");
++  });
++
++  it("MOTION.hinge is the grid's equal-contrast instant, both directions, within 1 ms", () => {
++    for (const dark of [true, false]) {
++      const grid = crossing("--grid-line-color", dark);
++      const frac = dark ? MOTION.hinge.toDark : MOTION.hinge.toLight;
++      expect(
++        Math.abs(frac * MOTION.rungs.dusk - grid),
++        `grid ${dark ? "→dark" : "→light"}`,
++      ).toBeLessThan(1);
++      // the digits (--color-foreground) cross within a millisecond of the grid
++      const digits = crossing("--color-foreground", dark);
++      expect(
++        Math.abs(digits - grid),
++        `digits ${dark ? "→dark" : "→light"}`,
++      ).toBeLessThan(1);
++    }
++  });
++
++  it("the ink at the hinge holds ≥ 3:1 against its paper (grid) and ≥ 4:1 (digits)", () => {
++    for (const dark of [true, false]) {
++      const [from] = dark ? ["light"] : ["dark"];
++      const t = crossing("--grid-line-color", dark);
++      const p0 = token("--color-card", from as "light" | "dark");
++      const p1 = token("--color-card", dark ? "dark" : "light");
++      const e = bezier(MOTION.dusk.curve)(t / MOTION.rungs.dusk);
++      const paper = p0.map((v, i) => v + (p1[i] - v) * e) as RGB;
++      expect(
++        contrast(token("--grid-line-color", from as "light" | "dark"), paper),
++      ).toBeGreaterThan(3);
++      expect(
++        contrast(token("--color-foreground", from as "light" | "dark"), paper),
++      ).toBeGreaterThan(4);
++    }
++  });
++
++  it("the three registrations sit in the ONE @property block and mirror MOTION", () => {
++    for (const [name, value] of [
++      ["--motion-hinge-dark", hingeMs(true)],
++      ["--motion-hinge-light", hingeMs(false)],
++      ["--motion-beat", MOTION.beatMs],
++    ] as const) {
++      expect(CSS).toMatch(
++        new RegExp(
++          `@property ${name} \\{\\s*syntax: "<time>";\\s*inherits: true;\\s*initial-value: 0ms;\\s*\\}`,
++        ),
++      );
++      expect(CSS).toMatch(new RegExp(`${name}: ${value}ms;`));
++      // no var() fallback on a measured token
++      expect(CSS).not.toMatch(new RegExp(`var\\(${name},`));
++    }
++    expect(hingeMs(true)).toBe(120);
++    expect(hingeMs(false)).toBe(87);
++  });
++
++  it("springPop's crest abscissa is derived, 0.573 ± 0.002, and the TS copy is index.css's", () => {
++    const css = CSS.match(/--ease-springPop:\s*(cubic-bezier\([^)]+\))/)![1];
++    expect(css).toBe(MOTION.curves.springPop);
++    expect(Math.abs(bezierCrestX(MOTION.curves.springPop) - 0.573)).toBeLessThan(0.002);
++  });
++
++  it("arm R's score is spent from the rungs; arm K is the owner's table verbatim", () => {
++    const { whisper, note, throw: thr, dusk } = MOTION.rungs;
++    const crest = Math.round(bezierCrestX(MOTION.curves.springPop) * thr);
++    const R = storybookScore("R");
++    expect(R.flip).toBe(whisper);
++    expect([R.fold, R.birth, R.rise]).toEqual([note, note, thr]);
++    expect(R.stars).toEqual([0, 1, 2].map((k) => note + crest + k * MOTION.beatMs));
++    expect(R.plush).toBe(0);
++    expect(R.turningOff).toBe(whisper + dusk + MOTION.beatMs);
++    const K = storybookScore("K");
++    expect([K.flip, K.fold, K.birth, K.rise, K.plush]).toEqual([0, 340, 60, 800, 1010]);
++    expect(K.stars).toEqual([560, 640, 720]);
++  });
++
++  it("the toggle's SFC carries no timing literal but the hover's (the score is v-bound)", () => {
++    const sfc = read("src/pencil/celestial/DarkModeToggle.vue");
++    const css = sfc
++      .slice(sfc.lastIndexOf("<style scoped>"))
++      .replace(/\/\*[\s\S]*?\*\//g, "");
++    const script = sfc
++      .slice(sfc.indexOf("<script"), sfc.indexOf("</script>"))
++      .replace(/\/\/.*$/gm, "");
++    // 0s is a step, not a timing; the one literal left is the hover's, which is no beat of the score
++    expect(css.match(/\b[1-9]\d*m?s\b/g) ?? []).toEqual(["200ms"]);
++    expect(script.match(/setTimeout\([^)]*?,\s*\d+\)/g) ?? []).toEqual([]);
++  });
++
++  it("every :hover in the toggle is fenced to a pointer that can hover (R6 law 14)", () => {
++    const css = read("src/pencil/celestial/DarkModeToggle.vue")
++      .replace(/\/\*[\s\S]*?\*\//g, "")
++      .split("<style scoped>")[1];
++    const fence = css.indexOf("@media (hover: hover)");
++    const hovers = [...css.matchAll(/:hover/g)].map((m) => m.index!);
++    expect(hovers.length).toBeGreaterThan(0);
++    for (const at of hovers) {
++      // inside the fence's block: after its opening, before the brace that closes it
++      const block = css.slice(fence, css.indexOf("\n}\n", fence));
++      expect(
++        fence >= 0 && at > fence && at < fence + block.length,
++        `:hover at ${at}`,
++      ).toBe(true);
++    }
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3fa9042d..75e6a791 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -177,8 +177,11 @@ const steadyFrames = computed(() =>
+ // renders until the bitmaps resolve, so the swap never flashes and the mount's synchronous
+ // burst is never blocked (the bake is async — the old W8 mount-chunking concern folds into
+ // this path). Re-bake fires on DPR (useRasterStack's matchMedia), theme flip (the cacheKey
+-// token, masked by the toggle's Bloom), and container resize (useElementSize).
+-const { isDark } = useTheme();
++// token), and container resize (useElementSize). The theme token is `inkDark`, the flip
++// delayed to the HINGE while the dusk runs (T9-M21): a warm flip's cached poses swap in the
++// frame old and new ink read equally on the darkening paper. A COLD flip's re-bake is not
++// masked by anything (T9-M15, carried): it starts at the hinge and lands when it lands.
++const { inkDark } = useTheme();
+ // CH-67's lens (T8-W4): `useElementSize` reads the TRANSFORM-inclusive rect for SVG targets,
+ // and a resize tick landing inside a transform window latches the wrong box permanently —
+ // measured here as board rules drifting 0.918/1.0898 across drawer toggles. The layout box
+@@ -229,8 +232,8 @@ function gridPoseSvg(pose: number): string {
+ const gridRaster = useRasterStack(() => ({
+   // The theme token separates light/dark bitmaps in the shared cache and re-bakes on a
+   // flip; the literal stroke color is read fresh in gridPoseSvg at capture time (the grid
+-  // line color snaps with the theme class — no transition to catch mid-tween).
+-  cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
++  // line token is unregistered, so it flips with the class, before the hinge fires).
++  cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${inkDark.value ? "d" : "l"}`,
+   poseCount: BOIL_CONFIG.frameCount,
+   poseSvg: gridPoseSvg,
+   // Zero until the face lands — `rasterPose.ts` §THE FONT GATE. The grid carries no text,

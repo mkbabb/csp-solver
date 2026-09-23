@@ -1,0 +1,617 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..e08d661e 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -986,6 +986,12 @@ jobs:
+             - name: theme-token census (every @theme token has a consumer, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:theme-tokens
++            # T9-M22 (TAB-PEN) — the tab's s: one pen line in the page's own ink on its own paper,
++            # both schemes byte-equal to index.css's tokens, the touch icon's sha current, and
++            # the six plants (main's file, faint ink among them) each RED their clause.
++            - name: favicon gate (the house pen, the page's tokens, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:favicon
+             # T5-W2 2.1c — the TDZ probe, WIRED at T7-W6. `lint:tdz` has been in package.json
+             # since 2.1 and no CI step ever called it, which is a package.json script, not a
+             # lane. Two arms: the GRAPH arm asserts the three severed edges of the old
+diff --git a/.gitignore b/.gitignore
+index bd478ff0..a7b67cf2 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -65,6 +65,8 @@ web/frontend/playwright-report-throttle/
+ !web/frontend/e2e/goldens/**/*.png
+ # T4-W3 social card — the one committed public PNG (og:image, <=150 KB under B1).
+ !web/frontend/public/og-card.png
++# T9-M22 touch icon — rastered from public/icon.svg by scripts/icons.mjs; lint:favicon (e) reads it in CI.
++!web/frontend/public/apple-touch-icon.png
+ # T4-W8 author avatar — BUNDLED same-origin (AttributionCard.vue imports it; Vite emits it
+ # content-hashed under /assets/) to retire the app's last third-party network hit (ROW 5 /
+ # FAM-14). A real deploy asset (6 KB), must ship despite the global *.png ignore.
+diff --git a/web/frontend/index.html b/web/frontend/index.html
+index b6f93288..16d2fde2 100644
+--- a/web/frontend/index.html
++++ b/web/frontend/index.html
+@@ -12,7 +12,8 @@
+       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+     />
+     <title>sudoku</title>
+-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
++    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
++    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+     <!-- P5 (Tranche II): fonts are self-hosted woff2 subsets, wired via @font-face
+          in src/assets/index.css — the Google Fonts CDN link is gone, so is the
+          fonts.googleapis.com / fonts.gstatic.com CSP allowance (see public/_headers). -->
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index f569bb75..100f51f4 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -34,6 +34,8 @@
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
+     "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
++    "lint:favicon": "node scripts/check-favicon.mjs --self-test",
++    "icons": "node scripts/icons.mjs",
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
+diff --git a/web/frontend/public/apple-touch-icon.png b/web/frontend/public/apple-touch-icon.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c4a97038dddd828ab7c0bfbe37477beecb19611
+GIT binary patch
+literal 2473
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/public/favicon.svg b/web/frontend/public/favicon.svg
+deleted file mode 100644
+index d0473d6a..00000000
+--- a/web/frontend/public/favicon.svg
++++ /dev/null
+@@ -1,17 +0,0 @@
+-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+-  <defs>
+-    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
+-      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
+-      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+-    </filter>
+-    <clipPath id="c">
+-      <rect width="32" height="32" rx="6" ry="6"/>
+-    </clipPath>
+-  </defs>
+-  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
+-  <g clip-path="url(#c)">
+-    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
+-      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
+-    </g>
+-  </g>
+-</svg>
+diff --git a/web/frontend/public/icon.svg b/web/frontend/public/icon.svg
+new file mode 100644
+index 00000000..f14bf261
+--- /dev/null
++++ b/web/frontend/public/icon.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#fbfaf9}path{stroke:#0a0a0a}@media(prefers-color-scheme:dark){rect{fill:#110f0e}path{stroke:#edece9}}</style><rect width="32" height="32" fill="#fbfaf9"/><path d="M22.6,9.6C21.4,7.1 18.6,6 15.8,6C12,6 9.6,7.9 9.6,10.6C9.6,13.4 12.4,14.6 16.2,15.8C21,17.3 24,18.4 24,21.2C24,24.4 20.4,26 15.8,26C11.6,26 8,24.6 8,22.6" fill="none" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+diff --git a/web/frontend/scripts/check-favicon.mjs b/web/frontend/scripts/check-favicon.mjs
+new file mode 100644
+index 00000000..5762dc81
+--- /dev/null
++++ b/web/frontend/scripts/check-favicon.mjs
+@@ -0,0 +1,392 @@
++#!/usr/bin/env node
++/**
++ * THE FAVICON GATE (T9-M22, TAB-PEN). The tab's s is written with the board's pen, on the page's
++ * paper, in the page's ink. Five clauses over the files on disk, browserless:
++ *
++ *   a  no filter      no <filter>, feTurbulence, feDisplacementMap, clip-path/clipPath, rx/ry.
++ *                     A displacement at tab size is a no-op in Chromium and a blur in WebKit.
++ *   b  one pen line   exactly one <path>: fill none, round caps and joins, stroke-width in
++ *                     [3.6, 5.2] of the 32 viewBox; no opacity/stroke-opacity/fill-opacity/filter
++ *                     anywhere; <= 600 B.
++ *   c  the page's     the light rect/path literals (presentation attributes AND <style>) and the
++ *      colours        @media (prefers-color-scheme: dark) pair are byte-equal to the resolved
++ *                     @theme / .dark --color-background / --color-foreground in src/assets/index.css
++ *                     (this file's own hsl() resolver), and ink over paper is >= 7:1 in each theme.
++ *   d  the pen's box  the exact cubic-extrema bbox inflated by half the pen is within [0.55, 0.80]
++ *                     of the tile per axis, centred within 0.5 unit of the tile's centre, and
++ *                     stroke / (bbox H + stroke) is in [0.15, 0.17] (the digits' line).
++ *   e  the estate     index.html links /icon.svg and /apple-touch-icon.png, both exist, the PNG's
++ *                     IHDR reads 180 x 180, scripts/icons.mjs's PROVENANCE carries icon.svg's
++ *                     sha256, and public/favicon.svg is gone (the rename is the favicon-store bust).
++ *
++ * The SVG audited is the one index.html's rel="icon" link names, so the gate reads a tree that
++ * still ships favicon.svg as RED on a-d rather than as "missing".
++ *
++ * `--self-test` plants six defects, each of which must RED exactly its clause(s) (the plant re-stamps
++ * the provenance sha as icons.mjs would, except P6, whose whole point is the stale sha):
++ *   P1 main's favicon.svg verbatim (a b c d) · P2 ink #1a1a1a (c) · P3 stroke-width 6 (b d) ·
++ *   P4 the @media block deleted (c) · P5 FAINT INK: stroke-opacity 0.15 (b), and separately ink
++ *   #e8e6e3 on the light paper, ~1.2:1 (c) · P6 the SVG edited after the PNG (e).
++ *
++ * Run: `node scripts/check-favicon.mjs [--self-test] [--root <web/frontend dir>]`, cwd web/frontend.
++ */
++import { createHash } from "node:crypto";
++import fs from "node:fs";
++import path from "node:path";
++import process from "node:process";
++
++const argRoot = process.argv.indexOf("--root");
++const ROOT =
++  argRoot > 0
++    ? path.resolve(process.argv[argRoot + 1])
++    : path.join(import.meta.dirname, "..");
++
++/* ── colour: the gate's own hsl() -> #rrggbb, and WCAG contrast ─────────────── */
++function hslHex(css) {
++  const m = /hsl\(\s*([\d.]+)\s+([\d.]+)%\s+([\d.]+)%\s*\)/.exec(css);
++  if (!m) return null;
++  const [h, s, l] = [+m[1], +m[2] / 100, +m[3] / 100];
++  const c = (1 - Math.abs(2 * l - 1)) * s;
++  const x = c * (1 - Math.abs(((h / 60) % 2) - 1));
++  const [r, g, b] = [
++    [c, x, 0],
++    [x, c, 0],
++    [0, c, x],
++    [0, x, c],
++    [x, 0, c],
++    [c, 0, x],
++  ][Math.floor(h / 60) % 6];
++  const to = (v) =>
++    Math.round((v + l - c / 2) * 255)
++      .toString(16)
++      .padStart(2, "0");
++  return `#${to(r)}${to(g)}${to(b)}`;
++}
++function contrast(a, b) {
++  const lum = (hex) => {
++    const [r, g, bl] = [1, 3, 5].map((i) => {
++      const v = parseInt(hex.slice(i, i + 2), 16) / 255;
++      return v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4;
++    });
++    return 0.2126 * r + 0.7152 * g + 0.0722 * bl;
++  };
++  const [hi, lo] = [lum(a), lum(b)].sort((p, q) => q - p);
++  return (hi + 0.05) / (lo + 0.05);
++}
++/** The body of the first block whose header matches `head` (brace-matched). */
++function block(text, head) {
++  const at = text.search(head);
++  if (at < 0) return "";
++  let i = text.indexOf("{", at) + 1;
++  const from = i;
++  for (let depth = 1; depth && i < text.length; i++)
++    depth += { "{": 1, "}": -1 }[text[i]] ?? 0;
++  return text.slice(from, i - 1);
++}
++function tokens(css) {
++  const read = (body, name) =>
++    hslHex(new RegExp(`${name}:\\s*([^;]+);`).exec(body)?.[1] ?? "");
++  const light = block(css, /@theme\s*\{/);
++  const dark = block(css, /^\.dark\s*\{/m);
++  return {
++    light: {
++      paper: read(light, "--color-background"),
++      ink: read(light, "--color-foreground"),
++    },
++    dark: {
++      paper: read(dark, "--color-background"),
++      ink: read(dark, "--color-foreground"),
++    },
++  };
++}
++
++/* ── geometry: absolute M/L/H/V/C/Q/Z, exact extrema ────────────────────────── */
++function bbox(d) {
++  const t = d.match(/[MLHVCQZ]|-?\d*\.?\d+(?:e-?\d+)?/gi);
++  if (!t || t.some((x) => /[a-z]/.test(x) && x !== x.toUpperCase())) return null; // relative: unread
++  let [cx, cy] = [0, 0];
++  const xs = [];
++  const ys = [];
++  const at = (p, k) => p.map((q) => q[k]);
++  const extrema = (v, cubic) => {
++    const roots = [];
++    if (cubic) {
++      const [a, b, c] = [
++        -v[0] + 3 * v[1] - 3 * v[2] + v[3],
++        2 * (v[0] - 2 * v[1] + v[2]),
++        v[1] - v[0],
++      ];
++      if (Math.abs(a) < 1e-12) {
++        if (Math.abs(b) > 1e-12) roots.push(-c / b);
++      } else {
++        const disc = b * b - 4 * a * c;
++        if (disc >= 0)
++          roots.push(
++            (-b + Math.sqrt(disc)) / (2 * a),
++            (-b - Math.sqrt(disc)) / (2 * a),
++          );
++      }
++    } else if (Math.abs(v[0] - 2 * v[1] + v[2]) > 1e-12)
++      roots.push((v[0] - v[1]) / (v[0] - 2 * v[1] + v[2]));
++    const out = [v[0], v[v.length - 1]];
++    for (const u of roots.filter((r) => r > 0 && r < 1))
++      out.push(
++        cubic
++          ? (1 - u) ** 3 * v[0] +
++              3 * (1 - u) ** 2 * u * v[1] +
++              3 * (1 - u) * u * u * v[2] +
++              u ** 3 * v[3]
++          : (1 - u) ** 2 * v[0] + 2 * (1 - u) * u * v[1] + u * u * v[2],
++      );
++    return out;
++  };
++  let cmd = "";
++  for (let i = 0; i < t.length;) {
++    if (/[A-Z]/.test(t[i])) cmd = t[i++];
++    const n = () => +t[i++];
++    if (cmd === "Z") continue;
++    if (cmd === "M" || cmd === "L") [cx, cy] = [n(), n()];
++    else if (cmd === "H") cx = n();
++    else if (cmd === "V") cy = n();
++    else if (cmd === "C" || cmd === "Q") {
++      const p = [[cx, cy]];
++      for (let k = 0; k < (cmd === "C" ? 3 : 2); k++) p.push([n(), n()]);
++      xs.push(...extrema(at(p, 0), cmd === "C"));
++      ys.push(...extrema(at(p, 1), cmd === "C"));
++      [cx, cy] = p[p.length - 1];
++      continue;
++    } else return null;
++    xs.push(cx);
++    ys.push(cy);
++  }
++  return [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)];
++}
++
++/* ── the audit: one model in, a list of [clause, reason] out ────────────────── */
++function audit(m) {
++  const fails = [];
++  const red = (clause, why) => fails.push([clause, why]);
++  const svg = m.svg ?? "";
++  // a
++  for (const [re, what] of [
++    [/<filter\b/, "<filter>"],
++    [/feTurbulence/, "feTurbulence"],
++    [/feDisplacementMap/, "feDisplacementMap"],
++    [/clip-?[pP]ath/, "a clip path"],
++    [/\sr[xy]=/, "a corner radius (rx/ry)"],
++  ])
++    if (re.test(svg)) red("a", `the icon carries ${what}`);
++  // b
++  const paths = svg.match(/<path\b[^>]*>/g) ?? [];
++  if (paths.length !== 1)
++    red("b", `${paths.length} <path> elements, one pen line wanted`);
++  const p = paths[0] ?? "";
++  const attr = (tag, name) => new RegExp(`\\s${name}="([^"]*)"`).exec(tag)?.[1];
++  if (attr(p, "fill") !== "none")
++    red("b", `fill="${attr(p, "fill")}", a filled glyph, not a pen line`);
++  if (attr(p, "stroke-linecap") !== "round") red("b", "stroke-linecap is not round");
++  if (attr(p, "stroke-linejoin") !== "round") red("b", "stroke-linejoin is not round");
++  const sw = +attr(p, "stroke-width");
++  if (!(sw >= 3.6 && sw <= 5.2))
++    red("b", `stroke-width ${attr(p, "stroke-width")} outside [3.6, 5.2]`);
++  if (
++    /(?:^|[^-\w])(?:stroke-|fill-)?opacity\b|\bfilter\b/.test(
++      svg.replace(/<filter\b/g, ""),
++    )
++  )
++    red("b", "opacity or filter on the icon (faint ink is not ink)");
++  if (Buffer.byteLength(svg) > 600) red("b", `${Buffer.byteLength(svg)} B > 600`);
++  // c
++  const tok = m.tokens;
++  const style = /<style>([\s\S]*?)<\/style>/.exec(svg)?.[1] ?? "";
++  const media = block(style, /@media\s*\(\s*prefers-color-scheme\s*:\s*dark\s*\)/);
++  const base = style.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/, "");
++  const rule = (css, sel, prop) =>
++    new RegExp(`${sel}\\s*\\{[^}]*${prop}:\\s*(#[0-9a-fA-F]{3,8})`).exec(css)?.[1];
++  const rects = svg.match(/<rect\b[^>]*>/g) ?? [];
++  const rect = rects.find((r) => attr(r, "fill")) ?? rects[0] ?? "";
++  const seen = {
++    "light rect fill (attribute)": [attr(rect, "fill"), tok.light.paper],
++    "light path stroke (attribute)": [attr(p, "stroke"), tok.light.ink],
++    "light rect fill (style)": [rule(base, "rect", "fill"), tok.light.paper],
++    "light path stroke (style)": [rule(base, "path", "stroke"), tok.light.ink],
++    "dark rect fill (@media)": [rule(media, "rect", "fill"), tok.dark.paper],
++    "dark path stroke (@media)": [rule(media, "path", "stroke"), tok.dark.ink],
++  };
++  for (const [where, [got, want]] of Object.entries(seen))
++    if (got?.toLowerCase() !== want)
++      red("c", `${where} is ${got ?? "absent"}, the page's token is ${want}`);
++  for (const theme of ["light", "dark"]) {
++    const { ink, paper } = tok[theme];
++    if (!ink || !paper || contrast(ink, paper) < 7)
++      red("c", `${theme} token ink/paper below 7:1`);
++  }
++  const litInk = attr(p, "stroke");
++  const litPaper = attr(rect, "fill");
++  if (/^#[0-9a-f]{6}$/i.test(litInk ?? "") && /^#[0-9a-f]{6}$/i.test(litPaper ?? "")) {
++    const k = contrast(litInk, litPaper);
++    if (k < 7) red("c", `the icon's own light ink/paper reads ${k.toFixed(2)}:1`);
++  }
++  // d
++  const box = bbox(attr(p, "d") ?? "");
++  const tf =
++    /transform="translate\(\s*([-\d.]+)[ ,]+([-\d.]+)\s*\)\s*scale\(\s*([\d.]+)\s*\)"/.exec(
++      svg,
++    );
++  if (/transform=/.test(svg) && !tf) red("d", "a transform this gate cannot read");
++  if (!box)
++    red("d", "the path's geometry is unreadable (relative or unknown commands)");
++  else {
++    const [ox, oy, s] = tf ? [+tf[1], +tf[2], +tf[3]] : [0, 0, 1];
++    const [x0, y0, x1, y1] = [
++      ox + s * box[0],
++      oy + s * box[1],
++      ox + s * box[2],
++      oy + s * box[3],
++    ];
++    const pen = Number.isFinite(sw) ? sw : 0;
++    const [W, H] = [x1 - x0 + pen, y1 - y0 + pen];
++    for (const [axis, v] of [
++      ["width", W / 32],
++      ["height", H / 32],
++    ])
++      if (!(v >= 0.55 && v <= 0.8))
++        red("d", `ink ${axis} ${v.toFixed(3)} of the tile, outside [0.55, 0.80]`);
++    const [cx, cy] = [(x0 + x1) / 2, (y0 + y1) / 2];
++    if (Math.hypot(cx - 16, cy - 16) > 0.5)
++      red("d", `ink centre (${cx.toFixed(2)}, ${cy.toFixed(2)}) off (16, 16)`);
++    const ratio = pen / H;
++    if (!(ratio >= 0.15 && ratio <= 0.17))
++      red("d", `stroke/H ${ratio.toFixed(3)} outside [0.15, 0.17]`);
++  }
++  // e
++  const links = m.html.match(/<link\b[^>]*>/g) ?? [];
++  const linked = (rel, href) =>
++    links.some((l) => attr(l, "rel") === rel && attr(l, "href") === href);
++  if (!linked("icon", "/icon.svg"))
++    red("e", 'index.html does not link rel="icon" /icon.svg');
++  if (!linked("apple-touch-icon", "/apple-touch-icon.png"))
++    red("e", "index.html does not link /apple-touch-icon.png");
++  if (!m.iconExists) red("e", "public/icon.svg is missing");
++  const png = m.png;
++  if (!png) red("e", "public/apple-touch-icon.png is missing");
++  else if (
++    png.subarray(12, 16).toString() !== "IHDR" ||
++    png.readUInt32BE(16) !== 180 ||
++    png.readUInt32BE(20) !== 180
++  )
++    red("e", "apple-touch-icon.png is not a 180 x 180 PNG");
++  const sha = createHash("sha256").update(svg).digest("hex");
++  const stamped = /icon\.svg sha256 ([0-9a-f]{64})/.exec(m.iconsSrc ?? "")?.[1];
++  if (stamped !== sha)
++    red("e", "the PNG's provenance sha is not icon.svg's (re-run scripts/icons.mjs)");
++  if (m.faviconExists) red("e", "public/favicon.svg still ships");
++  return fails;
++}
++
++function readTree(root) {
++  const read = (...p) => {
++    try {
++      return fs.readFileSync(path.join(root, ...p));
++    } catch {
++      return null;
++    }
++  };
++  const html = String(read("index.html") ?? "");
++  const href =
++    /<link\b[^>]*rel="icon"[^>]*href="\/([^"]+)"/.exec(html)?.[1] ?? "icon.svg";
++  return {
++    svg: String(read("public", href) ?? ""),
++    html,
++    tokens: tokens(String(read("src", "assets", "index.css") ?? "")),
++    png: read("public", "apple-touch-icon.png"),
++    iconsSrc: String(read("scripts", "icons.mjs") ?? ""),
++    iconExists: read("public", "icon.svg") !== null,
++    faviconExists: read("public", "favicon.svg") !== null,
++  };
++}
++
++const MAIN_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
++  <defs>
++    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
++      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
++      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
++    </filter>
++    <clipPath id="c">
++      <rect width="32" height="32" rx="6" ry="6"/>
++    </clipPath>
++  </defs>
++  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
++  <g clip-path="url(#c)">
++    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
++      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
++    </g>
++  </g>
++</svg>
++`;
++
++function selfTest(clean) {
++  const restamp = (svg) =>
++    `icon.svg sha256 ${createHash("sha256").update(svg).digest("hex")}`;
++  const plant = (label, edit, want, keepSha = false) => {
++    const svg = edit(clean.svg);
++    const m = { ...clean, svg, iconsSrc: keepSha ? clean.iconsSrc : restamp(svg) };
++    const got = [...new Set(audit(m).map(([c]) => c))].sort().join("");
++    const ok = got === want && svg !== clean.svg;
++    console.log(
++      `  ${ok ? "RED as required" : "FAILED"}  ${label}: red ${got || "none"}, want ${want}`,
++    );
++    return ok;
++  };
++  console.log("\nself-test plants:");
++  const results = [
++    plant("P1 main's favicon.svg verbatim", () => MAIN_FAVICON, "abcd"),
++    plant("P2 ink #1a1a1a", (s) => s.replaceAll("#0a0a0a", "#1a1a1a"), "c"),
++    plant(
++      "P3 stroke-width 6",
++      (s) => s.replace(/stroke-width="[^"]*"/, 'stroke-width="6"'),
++      "bd",
++    ),
++    plant(
++      "P4 @media deleted",
++      (s) => s.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/, ""),
++      "c",
++    ),
++    plant(
++      "P5 FAINT INK stroke-opacity 0.15",
++      (s) => s.replace("<path ", '<path stroke-opacity="0.15" '),
++      "b",
++    ),
++    plant(
++      "P5 FAINT INK #e8e6e3 on the light paper",
++      (s) => s.replaceAll("#0a0a0a", "#e8e6e3"),
++      "c",
++    ),
++    plant(
++      "P6 the SVG edited after the PNG",
++      (s) => s.replace(/d="M[\d.]+/, (x) => `${x}1`),
++      "e",
++      true,
++    ),
++  ];
++  return results.every(Boolean);
++}
++
++const model = readTree(ROOT);
++const fails = audit(model);
++console.log(`check-favicon (${ROOT}):`);
++for (const clause of "abcde") {
++  const mine = fails.filter(([c]) => c === clause);
++  console.log(
++    `  ${clause}  ${mine.length ? "RED" : "GREEN"}${mine.map(([, w]) => `\n       ${w}`).join("")}`,
++  );
++}
++if (process.argv.includes("--self-test") && !selfTest(model)) {
++  console.error("\ncheck-favicon: a plant did not red its clause");
++  process.exit(2);
++}
++if (fails.length) {
++  console.error(`\ncheck-favicon: ${fails.length} failure(s)`);
++  process.exit(1);
++}
++console.log("\ncheck-favicon: the tab's s is the house pen, on the page's paper");
+diff --git a/web/frontend/scripts/icons.mjs b/web/frontend/scripts/icons.mjs
+new file mode 100644
+index 00000000..058b534e
+--- /dev/null
++++ b/web/frontend/scripts/icons.mjs
+@@ -0,0 +1,69 @@
++#!/usr/bin/env node
++/**
++ * THE TOUCH ICON (T9-M22, TAB-PEN). Rasters `public/icon.svg`'s light arm to
++ * `public/apple-touch-icon.png`, 180 × 180, square paper (iOS rounds the corners itself), palette PNG,
++ * and stamps the SVG's sha256 into PROVENANCE below so `check-favicon.mjs` (e) can tell, without a
++ * rasteriser, whether the PNG was cut from the SVG on disk.
++ *
++ * `sharp` is NOT a dependency of this package. It is miniflare's transitive (package-lock.json,
++ * `node_modules/sharp`), resolved here through createRequire the way the favicon census's cost.mjs
++ * did. A wrangler/miniflare bump can move or drop it; declaring it is the fold's decision.
++ *
++ * NOT-A-LANE: it rides an undeclared transitive (sharp via miniflare) and writes a committed binary, so its cadence is a re-cut of public/icon.svg, run by hand beside it; CI holds the pair through lint:favicon (e), which reads the PNG's IHDR and the provenance sha with no rasteriser (scripts/check-favicon.mjs).
++ *
++ * Run: `node scripts/icons.mjs` (write) · `node scripts/icons.mjs --check` (re-raster, compare the
++ * DECODED pixels and the sha; exit 1 on drift). cwd web/frontend.
++ */
++import { createHash } from "node:crypto";
++import { createRequire } from "node:module";
++import fs from "node:fs";
++import path from "node:path";
++
++const PROVENANCE =
++  "icon.svg sha256 856c8ad5bdfe114aaf93fb4cd75e55122acc6fd055d880c9b03eaafadb14d338";
++
++const ROOT = path.join(import.meta.dirname, "..");
++const SVG = path.join(ROOT, "public", "icon.svg");
++const PNG = path.join(ROOT, "public", "apple-touch-icon.png");
++const SIZE = 180;
++
++const sharp = createRequire(path.join(ROOT, "package.json"))("sharp");
++const svg = fs.readFileSync(SVG);
++const sha = createHash("sha256").update(svg).digest("hex");
++// The light arm, explicitly: the rasteriser's own prefers-color-scheme is not a thing to rely on.
++const light = Buffer.from(
++  svg.toString().replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/, ""),
++);
++
++const raster = () =>
++  sharp(light, { density: (72 * SIZE) / 32 })
++    .resize(SIZE, SIZE)
++    .png({ palette: true, compressionLevel: 9 })
++    .toBuffer();
++const pixels = (buf) => sharp(buf).ensureAlpha().raw().toBuffer();
++
++if (process.argv.includes("--check")) {
++  const fresh = await pixels(await raster());
++  const kept = await pixels(fs.readFileSync(PNG));
++  let maxDelta = 0;
++  for (let i = 0; i < Math.max(fresh.length, kept.length); i++)
++    maxDelta = Math.max(maxDelta, Math.abs((fresh[i] ?? 0) - (kept[i] ?? 0)));
++  const shaOk = PROVENANCE.endsWith(sha);
++  console.log(
++    `icons --check: decoded max Δ ${maxDelta}, provenance ${shaOk ? "matches" : "STALE"}`,
++  );
++  process.exit(maxDelta === 0 && shaOk ? 0 : 1);
++}
++
++const png = await raster();
++fs.writeFileSync(PNG, png);
++const self = import.meta.filename;
++fs.writeFileSync(
++  self,
++  fs
++    .readFileSync(self, "utf8")
++    .replace(/icon\.svg sha256 [0-9a-f]{64}/, `icon.svg sha256 ${sha}`),
++);
++console.log(
++  `apple-touch-icon.png ${SIZE}×${SIZE}, ${png.length} B, from icon.svg ${sha}`,
++);

@@ -1,0 +1,1235 @@
+diff --git a/web/frontend/env.d.ts b/web/frontend/env.d.ts
+index df62df53..a1e044cc 100644
+--- a/web/frontend/env.d.ts
++++ b/web/frontend/env.d.ts
+@@ -5,6 +5,9 @@
+  *  rig against `wrangler dev`, and by the chair if the deploy lands on another hostname. */
+ interface ImportMetaEnv {
+   readonly VITE_RELAY_URL?: string
++  /** T9-M20 prototype arms (`MOTION.hand.order` / `.layer`); one literal at the fold. */
++  readonly VITE_HAND_ORDER?: string
++  readonly VITE_HAND_LAYER?: string
+ }
+ 
+ declare module '*.vue' {
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..fa6dcef4 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -963,11 +963,20 @@ onUnmounted(() => {
+   stopMarksReveal();
+ });
+ 
+-// On board generation change (size change, randomize, clear), erase and redraw
++// On board generation change (size change, randomize, clear), erase and redraw.
++// T9-M20 — except the boot's deal: a board that mounted blank takes its first generation bump
++// (the worker's deal, which lands 0.5–3.5 s in) onto the page the hand is ruling, at the same
++// geometry, without turning it. `initBoard` bumps before mount on a default boot, so the deal
++// is not 0 → 1; the provenance is "blank at mount, first bump". A second deal still erases.
++const bootGeometry = `${props.boardSize}-${props.subgridSize}`;
++let bootDealPending = Object.values(props.values).every((v) => v === 0);
+ watch(
+   () => props.boardGeneration,
+   (_newVal, oldVal) => {
+     if (oldVal === undefined) return; // skip initial
++    const bootDeal = bootDealPending;
++    bootDealPending = false;
++    if (bootDeal && `${props.boardSize}-${props.subgridSize}` === bootGeometry) return;
+     if (gridAnimState.value === "drawn") {
+       gridAnimState.value = "erasing";
+     } else {
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..6ef4c226 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -612,6 +612,13 @@
+     animation: controls-fade-in 250ms var(--ease-drawOn) 150ms backwards;
+   }
+ 
++  /* T9-M20 — the fade's clock starts at the frame's first stroke, not at mount: while the
++     ruling waits for its pose 0 (HandDrawnGrid sets `html.hand-pending`) the fade is paused
++     inside its delay, where `backwards` holds it at 0. Every number above stays. */
++  html.hand-pending .scene-controls {
++    animation-play-state: paused;
++  }
++
+   .app-layout.scene-leaving .scene-controls {
+     opacity: 0;
+     transition: opacity 200ms var(--ease-fadeOut);
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index fc7d2d14..2080e678 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -170,7 +170,16 @@ function bakeFace(): Promise<string | null> {
+ </script>
+ 
+ <script setup lang="ts">
+-import { ref, computed, watch, watchEffect, onMounted, nextTick, type Ref } from "vue";
++import {
++  ref,
++  computed,
++  watch,
++  watchEffect,
++  onMounted,
++  nextTick,
++  useId,
++  type Ref,
++} from "vue";
+ import {
+   heldFrameCount,
+   usePrefersReducedMotion,
+@@ -182,10 +191,17 @@ import {
+   FILTER_PRESETS,
+   MOTION,
+   beatsFor,
++  handStroke,
+   wobblePoseFrequencies,
+   wobblePoseId,
+ } from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
++import {
++  enrollStroke,
++  gridStackLanded,
++  markRubbing,
++  wordmarkResident,
++} from "@pencil/composables/bootHand";
+ import {
+   readFilterDefs,
+   resolveCssValue,
+@@ -248,18 +264,42 @@ const label = computed(() => props.game);
+ // The caret's hover wiggle rides HandwrittenGlyph's own glyph-wiggle (PRM-gated in the glyph).
+ const hovered = ref(false);
+ 
+-// ── Clip-path wipe reveal — a mount-time beat, played ONCE (see the game watch) ──
+-const isDrawn = ref(reducedMotion.value);
+-function playReveal() {
+-  if (reducedMotion.value) {
+-    isDrawn.value = true;
+-    return;
+-  }
+-  isDrawn.value = false;
+-  requestAnimationFrame(() => {
+-    requestAnimationFrame(() => {
+-      isDrawn.value = true;
+-    });
++// ── T9-M20 · THE RUBBING — a mount-time beat, played ONCE (see the game watch) ──
++// Set type is rubbed in, not written: the wordmark stays hidden (a zero-area clip, so its
++// live filter never rasters) until its pose 0 is baked, then that bitmap shows through a
++// feathered, leaning gradient mask whose front crosses the word on the hand clock. PRM cuts
++// straight to rest at residency.
++const resident = ref(false);
++const rubbing = ref(false);
++const rubId = `logo-rub-${useId()}`;
++const RUB_EM = 52; // the viewBox font-size (`.logo-text`)
++const rubFeather = MOTION.hand.rubFeatherEm * RUB_EM;
++const rubLean = (MOTION.hand.rubLeanDeg * Math.PI) / 180;
++const rubU = { x: Math.sin(rubLean), y: -Math.cos(rubLean) }; // CSS angle: 90° points right
++const rubX = ref(0);
++const rubVector = computed(() => ({
++  x1: rubX.value - rubFeather * rubU.x,
++  y1: 30 - rubFeather * rubU.y,
++  x2: rubX.value,
++  y2: 30,
++}));
++function rub() {
++  // The front starts past the box's left edge and ends past its right, feather and lean
++  // included, so the first frame hides all and the last reveals all.
++  const lean = (30 * rubU.y) / rubU.x;
++  const x0 = -lean - 1;
++  rubX.value = x0;
++  rubbing.value = true;
++  markRubbing();
++  let t0 = -1;
++  enrollStroke((clock) => {
++    if (t0 < 0) t0 = clock;
++    const k = Math.min(1, (clock - t0) / MOTION.hand.serial.rubbing);
++    const x1 = vbWidth.value + (rubFeather + 30 * rubU.y) / rubU.x + 1;
++    rubX.value = x0 + (x1 - x0) * handStroke(k);
++    if (k < 1) return false;
++    rubbing.value = false;
++    return true;
+   });
+ }
+ 
+@@ -292,15 +332,14 @@ async function measure() {
+ }
+ 
+ onMounted(() => {
+-  playReveal();
+   measure();
+   // Fonts load async (Fraunces): re-measure once the real face is in so the box fits.
+   const fonts = (document as Document & { fonts?: FontFaceSet }).fonts;
+   if (fonts?.ready) fonts.ready.then(() => measure());
+ });
+ 
+-// I2: a game swap RE-MEASURES the box for the new label — it never re-reveals. The 1.2 s
+-// clip-path wipe is a mount-time beat; replaying it on every swap reads as a page reload,
++// I2: a game swap RE-MEASURES the box for the new label — it never re-reveals. The rubbing
++// is a mount-time beat; replaying it on every swap reads as a page reload,
+ // not a label change (the menu-close motion already carries the swap).
+ watch(
+   () => props.game,
+@@ -452,9 +491,20 @@ function logoPoseSvg(f: number): string {
+  * derived from it rather than observed a second time (T6.2, above), and `dpr` is the library's
+  * (`matchMedia` re-arm, so a monitor change re-bakes).
+  */
++const logoOpen = ref(reducedMotion.value);
++watch(
++  gridStackLanded,
++  (landed) => {
++    if (landed) logoOpen.value = true;
++  },
++  { immediate: true },
++);
++
+ const logoRaster = useRasterStack(() => ({
+   cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
+-  poseCount: logoPoseIds.value.length,
++  // T9-M20 — pose 0 first (the one the rubbing shows); the rest once the grid's stack has
++  // landed, so the boot's bakes run one surface at a time on a still page.
++  poseCount: logoOpen.value ? logoPoseIds.value.length : 1,
+   poseSvg: logoPoseSvg,
+   // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
+   // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
+@@ -485,9 +535,30 @@ const logoRaster = useRasterStack(() => ({
+ // fallback (pinned pose 0, correct geometry) across the window instead. A re-tint keeps
+ // retaining: `isDark` stays out of the key.
+ const logoUrls = retainedPoseUrls(logoRaster, () => `${label.value}-${vbWidth.value}`);
+-const logoBaked = computed(
+-  () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
++const logoBaked = computed(() => logoUrls.value.length > 0);
++const logoFull = computed(() => logoUrls.value.length === logoPoseIds.value.length);
++
++// Residency: the first baked pose rubs the word in (motion) or shows it at rest (PRM). The
++// ceiling shows the word uncut if the face never bakes, and opens the stack if no grid lands.
++watch(
++  logoBaked,
++  (baked) => {
++    if (!baked || resident.value) return;
++    resident.value = true;
++    wordmarkResident.value = true;
++    if (!reducedMotion.value) rub();
++  },
++  { immediate: true },
+ );
++onMounted(() => {
++  setTimeout(() => {
++    resident.value = true;
++    wordmarkResident.value = true;
++  }, MOTION.hand.wordmarkCeilingMs.resident);
++  setTimeout(() => {
++    logoOpen.value = true;
++  }, MOTION.hand.wordmarkCeilingMs.open);
++});
+ 
+ /**
+  * ── CH-66 · THE STACK IS HIDDEN, NEVER TORN OUT (T7-WGATE) ───────────────────────────
+@@ -539,7 +610,7 @@ const logoBaked = computed(
+       <svg
+         ref="logoSvgRef"
+         class="handwritten-logo"
+-        :class="{ 'is-drawn': isDrawn }"
++        :class="{ 'is-resident': resident }"
+         :viewBox="`0 0 ${vbWidth} 60`"
+         xmlns="http://www.w3.org/2000/svg"
+         aria-hidden="true"
+@@ -557,18 +628,41 @@ const logoBaked = computed(
+         </text>
+         <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+                      opacity-swapped on the beat (no filter, no per-beat raster). -->
++        <!-- T9-M20 the rubbing: a feathered front leaning at `rubLeanDeg`, driven across
++                     the word on the hand clock; unmounted at rest. -->
++        <mask v-if="rubbing" :id="rubId">
++          <linearGradient
++            :id="`${rubId}-g`"
++            gradientUnits="userSpaceOnUse"
++            :x1="rubVector.x1"
++            :y1="rubVector.y1"
++            :x2="rubVector.x2"
++            :y2="rubVector.y2"
++          >
++            <stop offset="0" stop-color="#fff" />
++            <stop offset="1" stop-color="#000" />
++          </linearGradient>
++          <rect
++            x="-10"
++            y="-10"
++            :width="vbWidth + 20"
++            height="80"
++            :fill="`url(#${rubId}-g)`"
++          />
++        </mask>
+         <template v-if="logoBaked">
+           <image
+             v-for="(url, f) in logoUrls"
+             :key="`lg-${f}`"
+             class="logo-pose-bmp"
+-            :class="{ 'is-active': logoPose === f }"
++            :class="{ 'is-active': (logoFull ? logoPose : 0) === f }"
+             :href="url"
+             x="0"
+             y="0"
+             :width="vbWidth"
+             height="60"
+             preserveAspectRatio="none"
++            :mask="rubbing ? `url(#${rubId})` : undefined"
+           />
+         </template>
+         <!-- Fallback while baking: the live #wobble-logo-p{i} pose stack
+@@ -677,12 +771,12 @@ span.logo-trigger {
+   width: auto;
+   color: var(--color-foreground);
+   display: block;
+-  clip-path: inset(0 100% 0 0);
+-  transition: clip-path 1.2s var(--ease-noteWrite);
+ }
+ 
+-.handwritten-logo.is-drawn {
+-  clip-path: inset(0 0% 0 0);
++/* T9-M20 — hidden until its pose 0 is baked: a zero-area clip paints nothing, so the live
++   filter never rasters on the boot. The rubbing (an SVG mask) takes it from there. */
++.handwritten-logo:not(.is-resident) {
++  clip-path: inset(0 100% 0 0);
+ }
+ 
+ /* T3-W13 §1-P3 — pose-stack siblings: each is its own composited layer so the
+@@ -783,10 +877,6 @@ span.logo-trigger {
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+-  .handwritten-logo {
+-    clip-path: none;
+-    transition: none;
+-  }
+   .logo-caret {
+     transition: none;
+   }
+diff --git a/web/frontend/src/pencil/composables/bootHand.ts b/web/frontend/src/pencil/composables/bootHand.ts
+new file mode 100644
+index 00000000..0958c24d
+--- /dev/null
++++ b/web/frontend/src/pencil/composables/bootHand.ts
+@@ -0,0 +1,67 @@
++import { ref } from "vue";
++import { createSequenceSubscription, type SequenceHandle } from "@mkbabb/pencil-boil";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++/**
++ * T9-M20 · THE HAND'S CLOCK. The boot's draw-ins used to read the wall clock, so a frame the
++ * main thread lost painted every line wherever the clock said (a 100–440 ms stall moved one
++ * line 72–100 % in a single painted frame). Here one master `sequence` subscription carries
++ * the rAF timeline (`raw × SPAN_MS`) and the hand's clock advances by at most
++ * `MOTION.hand.stepMs` per tick: a healthy 60 Hz frame is never slowed, and a stall pauses
++ * the hand for one frame's travel instead of teleporting it.
++ *
++ * Every stroke on the boot (the grid's ruling, the wordmark's rubbing) enrolls here, so they
++ * share one clock; a stroke returns `true` when it is finished and leaves the set. The master
++ * leaves the scheduler the tick the set empties. The library form (`stepMs` on the sequence
++ * itself, pencil-boil 0.12.1) deletes this file.
++ */
++type Stroke = (clock: number) => boolean;
++
++const SPAN_MS = 600_000;
++let clock = 0;
++let last = -1;
++let master: SequenceHandle | null = null;
++const strokes = new Set<Stroke>();
++
++function tick(_eased: number, raw: number): void {
++  const t = raw * SPAN_MS;
++  if (last >= 0) clock += Math.min(Math.max(0, t - last), MOTION.hand.stepMs);
++  last = t;
++  for (const s of [...strokes]) if (s(clock)) strokes.delete(s);
++  if (strokes.size === 0) {
++    master?.stop();
++    master = null;
++    last = -1;
++  }
++}
++
++/** Enroll a stroke on the hand clock; returns its withdrawal. */
++export function enrollStroke(stroke: Stroke): () => void {
++  strokes.add(stroke);
++  if (!master) {
++    master = createSequenceSubscription({ durationMs: SPAN_MS, onProgress: tick });
++    master.start();
++  }
++  return () => {
++    strokes.delete(stroke);
++  };
++}
++
++/** The wordmark's rubbing onset on the hand clock: the grid's frame lands at its lift. */
++let rubbingAt: number | null = null;
++export function markRubbing(): void {
++  rubbingAt = clock;
++}
++/** How long the ruling waits so its first stroke lands at the rubbing's lift (0 if none). */
++export function rulingOffset(): number {
++  if (rubbingAt === null) return 0;
++  const lift = rubbingAt + MOTION.hand.lift * MOTION.hand.serial.rubbing;
++  return Math.max(0, lift - clock);
++}
++
++/** The grid's whole pose stack has landed: the wordmark may bake the rest of its own. */
++export const gridStackLanded = ref(false);
++
++/** The wordmark's pose 0 is resident (or its ceiling passed): the ruling may start without
++ *  the wordmark's encode landing under it (WebKit bakes it ~20–100 ms after the grid's). */
++export const wordmarkResident = ref(false);
+diff --git a/web/frontend/src/pencil/config/handStroke.test.ts b/web/frontend/src/pencil/config/handStroke.test.ts
+new file mode 100644
+index 00000000..bc17cd44
+--- /dev/null
++++ b/web/frontend/src/pencil/config/handStroke.test.ts
+@@ -0,0 +1,45 @@
++import { describe, expect, it } from "vitest";
++import { MOTION, cubicBezier, handStroke } from "./pencilConfig";
++
++// T9-M20 — the hand's curve is one ledger string read by a JS solver; the solver must agree with
++// the CSS arithmetic of the same string (the twin a `<style>` consumer would get).
++describe("handStroke", () => {
++  const [x1, y1, x2, y2] = [0.35, 0.05, 0.25, 1];
++  const bez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t * t + t ** 3;
++
++  it("reads the ledger string", () => {
++    expect(MOTION.curves.handStroke).toBe("cubic-bezier(0.35, 0.05, 0.25, 1)");
++  });
++
++  it("agrees with the parametric curve at 41 samples to 1e-4", () => {
++    for (let i = 0; i <= 40; i++) {
++      const t = i / 40;
++      expect(handStroke(bez(x1, x2, t))).toBeCloseTo(bez(y1, y2, t), 4);
++    }
++  });
++
++  it("touches down slow, peaks near a third, and stops", () => {
++    const speed = (x: number, h = 1e-4) =>
++      (handStroke(x + h) - handStroke(x - h)) / (2 * h);
++    expect(speed(1e-3)).toBeLessThan(0.3); // ≤ 0.3× the mean speed at touch-down
++    let peak = 0;
++    let at = 0;
++    for (let x = 0.01; x < 1; x += 0.001) {
++      const s = speed(x);
++      if (s > peak) [peak, at] = [s, x];
++    }
++    expect(at).toBeGreaterThan(0.2);
++    expect(at).toBeLessThan(0.4);
++    expect(peak).toBeCloseTo(2.394, 2);
++    expect(handStroke(0.2)).toBeLessThan(0.25);
++    expect(handStroke(0.9)).toBeGreaterThan(0.99);
++  });
++
++  it("parses any cubic-bezier string and clamps its ends", () => {
++    const linear = cubicBezier("cubic-bezier(0, 0, 1, 1)");
++    expect(linear(0.37)).toBeCloseTo(0.37, 5);
++    expect(linear(-1)).toBe(0);
++    expect(linear(2)).toBe(1);
++  });
++});
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..8cb0087d 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -191,9 +191,70 @@ export const MOTION = {
+      *  (Band D). Scope fence: this ruling is the drawer's — no other surface
+      *  re-eases under it. */
+     drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
++    /** T9-M20 — the hand's stroke: it touches down slow (0.14× its mean speed), peaks at
++     *  2.39× near a third of the stroke, and stops at the end. The boot's ruling and the
++     *  wordmark's rubbing ride it through `cubicBezier` below (JS consumers only; the CSS
++     *  twin is minted with its first `<style>` consumer). */
++    handStroke: "cubic-bezier(0.35, 0.05, 0.25, 1)",
++  },
++  /** T9-M20 — the boot's one hand (`@pencil/composables/bootHand`). `stepMs` caps how far
++   *  the hand's clock moves in one painted frame (one 60 Hz frame at 1 ms quantisation), so
++   *  a stalled frame pauses the hand instead of teleporting it. `lift` is the fraction of a
++   *  line's time at which the next line lands (serial order). `order`/`layer` are the
++   *  ballot's arms, baked at build (the prototype's selector; one literal at the fold). */
++  hand: {
++    stepMs: 17,
++    lift: 0.6,
++    order: (import.meta.env.VITE_HAND_ORDER === "front" ? "front" : "serial") as
++      "serial" | "front",
++    layer: (import.meta.env.VITE_HAND_LAYER === "crossfade" ? "crossfade" : "mask") as
++      "mask" | "crossfade",
++    serial: { frame: 520, subgrid: 250, cell: 150, rubbing: 520 },
++    rubFeatherEm: 0.35,
++    rubLeanDeg: 105,
++    /** Arm B's settle: the baked stack fades in over the drawn stand-ins (`dusk`). */
++    crossfadeMs: 350,
++    /** The longest the ruling waits for its pose 0 before it draws crisp stand-ins. */
++    poseZeroCeilingMs: 1200,
++    /** The wordmark's ceilings from mount: shown uncut if its pose 0 never bakes, and its
++     *  full stack opened if no grid ever lands one (after the longest ruling). */
++    wordmarkCeilingMs: { resident: 2500, open: 6000 },
+   },
+ } as const;
+ 
++/** A CSS `cubic-bezier(x1, y1, x2, y2)` string as a JS curve (Newton on x with a
++ *  bisection fallback), so one ledger string serves both layers. */
++export function cubicBezier(css: string): (t: number) => number {
++  const [x1, y1, x2, y2] = (css.match(/-?[\d.]+/g) ?? []).map(Number);
++  const bez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t * t + t ** 3;
++  const dBez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 + 6 * (b - a) * (1 - t) * t + 3 * (1 - b) * t * t;
++  return (x: number) => {
++    if (x <= 0) return 0;
++    if (x >= 1) return 1;
++    let t = x;
++    for (let i = 0; i < 8; i++) {
++      const d = dBez(x1, x2, t);
++      if (Math.abs(d) < 1e-6) break;
++      t -= (bez(x1, x2, t) - x) / d;
++    }
++    if (!(t >= 0 && t <= 1) || Math.abs(bez(x1, x2, t) - x) > 1e-6) {
++      let lo = 0;
++      let hi = 1;
++      for (let i = 0; i < 48; i++) {
++        t = (lo + hi) / 2;
++        if (bez(x1, x2, t) < x) lo = t;
++        else hi = t;
++      }
++    }
++    return bez(y1, y2, t);
++  };
++}
++
++/** The hand's curve, resolved once. */
++export const handStroke = cubicBezier(MOTION.curves.handStroke);
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+@@ -468,34 +529,42 @@ export function wobblePoseId(presetId: string, pose: number): string {
+ 
+ // ── Draw-in timing presets ────────────────────────────────────────
+ 
+-// Only gridFrame/gridSubgrid/gridCell/glyph have consumers, four files' worth:
+-// `usePathAnimation`'s `animateDrawIn` (the three grid tiers), `HandwrittenGlyph`'s reveal
+-// draw-in and `DifficultyTally`'s tally stagger (glyph), `GameGallery`'s deal reveal
+-// (gridFrame's duration). The former `solveCell` (500/120) and `logo` (1800/280)
+-// presets were dead config — zero consumers, deleted per design-refinement.md §1.2 / §7.1.
+-// The logo actually reveals via a 1.2 s clip-path wipe (HandwrittenLogo.vue), not a stroke
+-// draw-in; the celebration defines its own timing (see CELEBRATION), not a resurrected preset.
++// Consumers: `usePathAnimation`'s `animateDrawIn` (the three grid tiers and the tip),
++// `HandwrittenGlyph`'s reveal draw-in and `DifficultyTally`'s tally stagger (glyph),
++// `GameGallery`'s deal reveal (gridFrame's duration only; its curve is its own). T9-M20:
++// the ONE-HAND order times its lines off `MOTION.hand.serial`; the RULING-FRONT order reads
++// the tiers here, where `sweep` spreads a tier's onsets evenly and `jitterFrac` is the
++// seeded jitter as a fraction of that step, so the onsets stay monotone. The wordmark is
++// rubbed in on the same hand clock (HandwrittenLogo.vue), not wiped by a CSS transition.
+ export const DRAW_IN_PRESETS = {
+   gridFrame: {
+     duration: 350,
+-    stagger: 30,
+-    jitter: 20,
+     baseDelay: 0,
+-    timing: "easeOutCubic",
++    /** The frame is one closed path: the hand stops at each of its four corners. */
++    joints: 4,
++    timing: "handStroke",
+   },
+   gridSubgrid: {
+-    duration: 280,
+-    stagger: 25,
+-    jitter: 25,
+-    baseDelay: 150,
+-    timing: "easeOutCubic",
++    duration: 250,
++    baseDelay: 110,
++    sweep: 125,
++    jitterFrac: 0.2,
++    timing: "handStroke",
+   },
+   gridCell: {
+     duration: 200,
+-    stagger: 10,
+-    jitter: 15,
+-    baseDelay: 300,
+-    timing: "easeOutCubic",
++    baseDelay: 225,
++    sweep: 150,
++    jitterFrac: 0.3,
++    timing: "handStroke",
++  },
++  /** The pencil's point: a short bead at the line's front, wider and denser than the line,
++   *  that dries into it over `dryMs` when the hand lifts. Lengths are × the stroke width. */
++  tip: {
++    lengthK: 2.5,
++    widthK: 1.35,
++    opacity: { frame: 1, subgrid: 1, cell: 0.9 },
++    dryMs: 150,
+   },
+   glyph: {
+     duration: 350,
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3fa9042d..2924772f 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,8 +1,21 @@
+ <script setup lang="ts">
+-import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+-import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
++import { computed, onMounted, onUnmounted, watch, nextTick, ref, useId } from "vue";
++import {
++  heldFrameCount,
++  schedulerDebugInfo,
++  serializePoseSvg,
++  useRasterStack,
++} from "@mkbabb/pencil-boil";
+ import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+-import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
++import {
++  BOIL_CONFIG,
++  CELEBRATION,
++  DRAW_IN_PRESETS,
++  FILTER_PRESETS,
++  MOTION,
++  beatsFor,
++} from "@pencil/config/pencilConfig";
++import { gridStackLanded, wordmarkResident } from "@pencil/composables/bootHand";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   fontGatedBox,
+@@ -47,8 +60,14 @@ const emit = defineEmits<{
+ }>();
+ 
+ const svgRef = ref<SVGSVGElement | null>(null);
+-const { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup } =
+-  usePathAnimation(svgRef);
++const {
++  pathsVisible,
++  reducedMotion,
++  animateDrawIn,
++  animateErase,
++  showInstant,
++  cleanup,
++} = usePathAnimation(svgRef);
+ 
+ const VIEWBOX_SIZE = 1000;
+ 
+@@ -76,8 +95,11 @@ const boilFrame = useBeatFrame(
+   () => beatsFor(BOIL_CONFIG.intervalMs),
+ );
+ 
+-// Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
+-const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
++// Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths), and while the crisp
++// stand-ins hold the boot's settled page before its first bake lands (T9-M20).
++const activeFrame = computed(() =>
++  pathsVisible.value && everBaked.value ? boilFrame.value : 0,
++);
+ 
+ // ── T4-W9 progress trace: the violet second-pencil FILL gauge ──
+ //
+@@ -226,12 +248,18 @@ function gridPoseSvg(pose: number): string {
+   return serializePoseSvg({ width: VIEWBOX_SIZE, height: VIEWBOX_SIZE, defs, body });
+ }
+ 
++// T9-M20 — the whole stack is baked from the start under PRM (no hand to protect).
++const stackOpen = ref(reducedMotion.value);
++
+ const gridRaster = useRasterStack(() => ({
+   // The theme token separates light/dark bitmaps in the shared cache and re-bakes on a
+   // flip; the literal stroke color is read fresh in gridPoseSvg at capture time (the grid
+   // line color snaps with the theme class — no transition to catch mid-tween).
+   cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
+-  poseCount: BOIL_CONFIG.frameCount,
++  // T9-M20 · POSE 0 FIRST. The boot bakes the one pose the hand draws through, and the rest
++  // only once the hand and the wave are done (`openStack`): nothing encodes under a moving
++  // hand. The library keys on `poseCount`, so the open is one re-bake whose pose 0 repeats.
++  poseCount: stackOpen.value ? BOIL_CONFIG.frameCount : 1,
+   poseSvg: gridPoseSvg,
+   // Zero until the face lands — `rasterPose.ts` §THE FONT GATE. The grid carries no text,
+   // so the library's post-font clear could only throw its round away.
+@@ -266,20 +294,141 @@ const bitmapUrls = retainedPoseUrls(
+   gridRaster,
+   () => `${props.boardSize}-${props.subgridSize}`,
+ );
+-const showBaked = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCount);
++// T9-M20 — the steady layer shows from the first baked pose: pose 0 alone holds still until
++// the whole stack lands, then the beat takes it.
++const fullStack = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCount);
++const showBaked = computed(() => bitmapUrls.value.length >= 1);
++// Until the first bake lands the settled page holds the crisp stand-ins, never the live grain
++// filter (the boot under PRM, or a pose 0 that missed its ceiling). A later structural re-bake
++// takes the live-filter fallback as before.
++const everBaked = ref(false);
++watch(fullStack, (full) => {
++  if (full) gridStackLanded.value = true;
++});
++watch(showBaked, (baked) => {
++  if (baked) everBaked.value = true;
++});
++
++// ── T9-M20 · THE HAND'S LAYER ──
++// Arm A (`MOTION.hand.layer === "mask"`): the hand draws the RESIDENT pose 0 through a mask of
++// the grid's own lines, so the grain is on the page from the first stroke and the settle shows
++// the same bytes (no handoff frame). Arm B (`"crossfade"`): the crisp stand-ins draw, and the
++// baked stack fades in over them (`dusk`). Both wait for pose 0 before the first stroke.
++const maskId = `hand-mask-${useId()}`;
++const MASK_PAD = 4; // the grain's displacement (scale 2.5) reaches ±1.25 units past a line
++const handMasked = ref(MOTION.hand.layer === "mask" && !reducedMotion.value);
++const handHref = ref<string | null>(null);
++const crossfading = ref(false);
++const handInk = computed(() =>
++  handMasked.value ? "#fff" : "var(--grid-line-color, currentColor)",
++);
++const handPad = computed(() => (handMasked.value ? MASK_PAD : 0));
++const tipOpacity = DRAW_IN_PRESETS.tip.opacity;
++const tipK = DRAW_IN_PRESETS.tip.widthK;
++
++const showTransitionLayer = computed(
++  () => props.animState !== "drawn" || crossfading.value || !everBaked.value,
++);
++const showSteadyLayers = computed(
++  () => (props.animState === "drawn" && everBaked.value) || crossfading.value,
++);
+ 
+-const showTransitionLayer = computed(() => props.animState !== "drawn");
+-const showSteadyLayers = computed(() => props.animState === "drawn");
++// Both pose-0 encodes land before the first stroke (the grid's, and the wordmark's, which
++// WebKit bakes after the grid's): nothing encodes under the hand. The ceiling draws anyway.
++function poseZero(): Promise<boolean> {
++  const ready = () => bitmapUrls.value.length > 0 && wordmarkResident.value;
++  if (ready()) return Promise.resolve(true);
++  return new Promise((resolve) => {
++    const timer = setTimeout(() => {
++      stop();
++      resolve(bitmapUrls.value.length > 0);
++    }, MOTION.hand.poseZeroCeilingMs);
++    const stop = watch([bitmapUrls, wordmarkResident], () => {
++      if (!ready()) return;
++      clearTimeout(timer);
++      stop();
++      resolve(true);
++    });
++  });
++}
++
++// The chrome waits for the hand: `html.hand-pending` pauses the controls' fade inside its
++// delay (scene.css) until the frame's first stroke, so the grid still leads.
++function setPending(on: boolean) {
++  document.documentElement.classList.toggle("hand-pending", on);
++}
+ 
++// The stack opens once the hand has landed and the deal's wave has finished (no sequence
++// left on the chain), or at the wave's own ceiling.
++let openTimer: ReturnType<typeof setTimeout> | undefined;
++function openStack() {
++  if (stackOpen.value || openTimer !== undefined) return;
++  const t0 = performance.now();
++  const ceiling = CELEBRATION.revealWindowMs + DRAW_IN_PRESETS.glyph.duration;
++  const poll = () => {
++    if (
++      schedulerDebugInfo().kinds.sequence === 0 ||
++      performance.now() - t0 >= ceiling
++    ) {
++      openTimer = undefined;
++      stackOpen.value = true;
++      return;
++    }
++    openTimer = setTimeout(poll, 32);
++  };
++  poll();
++}
++
++function crossfade(): Promise<void> {
++  crossfading.value = true;
++  return new Promise((resolve) => {
++    const done = () => {
++      clearTimeout(gate);
++      resolve();
++    };
++    // The exit gate: the settle's own `animationend`, with a timer that can only be late.
++    const gate = setTimeout(done, MOTION.hand.crossfadeMs + 100);
++    void nextTick(() => {
++      svgRef.value
++        ?.querySelector(".boil-frame-bitmap.is-active")
++        ?.addEventListener("animationend", done, { once: true });
++    });
++  });
++}
++
++let drawToken = 0;
+ async function doDrawIn() {
++  const token = ++drawToken;
++  if (!reducedMotion.value) {
++    setPending(true);
++    const resident = await poseZero();
++    if (token !== drawToken) return;
++    const masked = MOTION.hand.layer === "mask" && resident;
++    if (handMasked.value !== masked) handMasked.value = masked;
++  }
+   await nextTick();
+   requestAnimationFrame(async () => {
+-    await animateDrawIn();
++    await animateDrawIn(
++      () => {
++        handHref.value = handMasked.value ? (bitmapUrls.value[0] ?? null) : null;
++      },
++      () => setPending(false),
++    );
++    setPending(false);
++    if (token !== drawToken) return;
++    if (MOTION.hand.layer === "crossfade" && !reducedMotion.value && showBaked.value)
++      await crossfade();
+     emit("animationComplete", "drawn");
++    crossfading.value = false;
+   });
+ }
+ 
+ async function doErase() {
++  ++drawToken;
++  setPending(false);
++  // The erase is the page's act, not the hand's: crisp stand-ins, as it always was.
++  handMasked.value = false;
++  handHref.value = null;
+   // Steady state ('drawn') unmounts the transition layer (§ steady-state boil
+   // layer above) — wait for Vue's DOM patch to remount it before
+   // usePathAnimation's querySelectorAll('path.grid-line') looks for it, or it
+@@ -294,6 +443,7 @@ watch(
+   (state) => {
+     if (state === "drawing") doDrawIn();
+     else if (state === "erasing") doErase();
++    else if (state === "drawn") openStack();
+   },
+ );
+ 
+@@ -302,11 +452,14 @@ onMounted(() => {
+     doDrawIn();
+   } else if (props.animState === "drawn") {
+     showInstant();
++    openStack();
+   }
+ });
+ 
+ onUnmounted(() => {
+   cleanup();
++  clearTimeout(openTimer);
++  setPending(false);
+ });
+ </script>
+ 
+@@ -349,43 +502,97 @@ onUnmounted(() => {
+                  vertex the endpoint mismatch (≈1.2px) extrudes a mitered barb under
+                  the SVG default linejoin (the owner's board-artifact.png, T3-W12 §5).
+                  Round join collapses it to a soft hand-drawn nub. Open subgrid/cell
+-                 lines need nothing. -->
+-      <path
+-        :d="currentPaths.frame"
+-        class="grid-line frame-line"
+-        fill="none"
+-        stroke="var(--grid-line-color, currentColor)"
+-        stroke-width="12"
+-        stroke-opacity="0.95"
+-        stroke-linecap="round"
+-        stroke-linejoin="round"
+-      />
++                 lines need nothing.
++                 T9-M20 arm A: the same lines, white and a grain's reach wider, become the
++                 MASK the resident pose 0 is drawn through (`handMasked`). -->
++      <component :is="handMasked ? 'mask' : 'g'" :id="handMasked ? maskId : undefined">
++        <path
++          :d="currentPaths.frame"
++          class="grid-line frame-line"
++          fill="none"
++          :stroke="handInk"
++          :stroke-width="12 + handPad"
++          :stroke-opacity="handMasked ? 1 : 0.95"
++          stroke-linecap="round"
++          stroke-linejoin="round"
++        />
+ 
+-      <!-- Subgrid lines -->
+-      <path
+-        v-for="(d, i) in currentPaths.subgridLines"
+-        :key="'sg-' + i"
+-        :d="d"
+-        class="grid-line subgrid-line"
+-        fill="none"
+-        stroke="var(--grid-line-color, currentColor)"
+-        stroke-width="8"
+-        stroke-opacity="0.9"
+-        stroke-linecap="round"
+-      />
++        <!-- Subgrid lines -->
++        <path
++          v-for="(d, i) in currentPaths.subgridLines"
++          :key="'sg-' + i"
++          :d="d"
++          class="grid-line subgrid-line"
++          fill="none"
++          :stroke="handInk"
++          :stroke-width="8 + handPad"
++          :stroke-opacity="handMasked ? 1 : 0.9"
++          stroke-linecap="round"
++        />
+ 
+-      <!-- Cell lines -->
+-      <path
+-        v-for="(d, i) in currentPaths.cellLines"
+-        :key="'cl-' + i"
+-        :d="d"
+-        class="grid-line cell-line"
+-        fill="none"
+-        stroke="var(--grid-line-color, currentColor)"
+-        stroke-width="5"
+-        stroke-opacity="0.7"
+-        stroke-linecap="round"
++        <!-- Cell lines -->
++        <path
++          v-for="(d, i) in currentPaths.cellLines"
++          :key="'cl-' + i"
++          :d="d"
++          class="grid-line cell-line"
++          fill="none"
++          :stroke="handInk"
++          :stroke-width="5 + handPad"
++          :stroke-opacity="handMasked ? 1 : 0.7"
++          stroke-linecap="round"
++        />
++      </component>
++      <image
++        v-if="handMasked && handHref"
++        class="hand-pose"
++        :href="handHref"
++        x="0"
++        y="0"
++        :width="VIEWBOX_SIZE"
++        :height="VIEWBOX_SIZE"
++        preserveAspectRatio="xMidYMid meet"
++        :mask="`url(#${maskId})`"
+       />
++      <!-- T9-M20 · the pencil's point: one bead per line riding its front, drying at the
++           lift (usePathAnimation). Motion only; never at rest. -->
++      <template v-if="!reducedMotion && animState === 'drawing'">
++        <path
++          :d="currentPaths.frame"
++          class="grid-tip"
++          fill="none"
++          stroke="var(--grid-line-color, currentColor)"
++          :stroke-width="12 * tipK"
++          :stroke-opacity="tipOpacity.frame"
++          stroke-linecap="round"
++          stroke-linejoin="round"
++          visibility="hidden"
++        />
++        <path
++          v-for="(d, i) in currentPaths.subgridLines"
++          :key="'sgt-' + i"
++          :d="d"
++          class="grid-tip"
++          fill="none"
++          stroke="var(--grid-line-color, currentColor)"
++          :stroke-width="8 * tipK"
++          :stroke-opacity="tipOpacity.subgrid"
++          stroke-linecap="round"
++          visibility="hidden"
++        />
++        <path
++          v-for="(d, i) in currentPaths.cellLines"
++          :key="'clt-' + i"
++          :d="d"
++          class="grid-tip"
++          fill="none"
++          stroke="var(--grid-line-color, currentColor)"
++          :stroke-width="5 * tipK"
++          :stroke-opacity="tipOpacity.cell"
++          stroke-linecap="round"
++          visibility="hidden"
++        />
++      </template>
+     </g>
+ 
+     <!-- Steady-state boil layer: `frameCount` pre-baked, grain-filtered
+@@ -402,7 +609,10 @@ onUnmounted(() => {
+           v-for="(url, f) in bitmapUrls"
+           :key="'bmp-' + f"
+           class="boil-frame-bitmap"
+-          :class="{ 'is-active': boilFrame === f }"
++          :class="{
++            'is-active': (fullStack ? boilFrame : 0) === f,
++            'hand-settle': crossfading,
++          }"
+           :href="url"
+           x="0"
+           y="0"
+@@ -577,6 +787,30 @@ onUnmounted(() => {
+   }
+ }
+ 
++/* T9-M20 — the pose the hand draws through is promoted as its steady twin is, so the settle
++   composites the same bytes the same way. */
++.hand-pose {
++  will-change: opacity;
++}
++
++/* The point dries into the line at the lift (duration and curve are written by
++   usePathAnimation from DRAW_IN_PRESETS.tip.dryMs). */
++.grid-tip.is-dry {
++  opacity: 0;
++}
++
++/* Arm B's settle: the baked stack fades in over the drawn stand-ins, `dusk` 350 ms
++   (MOTION.hand.crossfadeMs). */
++.boil-frame-bitmap.hand-settle {
++  animation: hand-settle 350ms var(--ease-standard) backwards;
++}
++
++@keyframes hand-settle {
++  from {
++    opacity: 0;
++  }
++}
++
+ /* Print takes the vector filter stack (its .grid-line strokes blacken under @media print)
+    and drops the baked bitmaps — a static one-shot render, no perf concern. */
+ @media print {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+index ead7c1db..8901ca68 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+@@ -6,16 +6,39 @@ import {
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { DRAW_IN_PRESETS } from "@pencil/config/pencilConfig";
++import { DRAW_IN_PRESETS, MOTION, handStroke } from "@pencil/config/pencilConfig";
++import { enrollStroke, rulingOffset } from "@pencil/composables/bootHand";
++
++/** One line of the ruling: its onset and duration on the hand clock, and its point. */
++interface HandLine {
++  el: SVGPathElement;
++  tip: SVGPathElement | null;
++  len: number;
++  tipLen: number;
++  delay: number;
++  dur: number;
++  joints: number;
++  p: number;
++}
++
++const TIER_WIDTH = { frame: 12, subgrid: 8, cell: 5 } as const;
++
++/** A jointed line (the frame's one closed path) stops at each joint: one bell per side. */
++function jointed(local: number, joints: number): number {
++  if (local >= 1) return 1;
++  const k = local * joints;
++  const side = Math.floor(k);
++  return (side + handStroke(k - side)) / joints;
++}
+ 
+ // Grid draw-in/erase — stroke-dashoffset tweens on the unified scheduler (W8 4th workstream).
+-// Each grid line was its own keyframes.js `KeyframesAnimation` → its own `RAFPlayback` → its
+-// own native rAF loop (up to ~boardSize² lines drawing at once). Now every line is a one-shot
+-// `sequence` subscriber on the ONE shared chain, so a full board reveal costs a single rAF.
++// The erase is one `sequence` subscriber per line on the ONE shared chain. The draw-in is the
++// boot's hand (T9-M20): every line reads one capped clock (`@pencil/composables/bootHand`).
+ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>) {
+   const pathsVisible = ref(false);
+   const reducedMotion = usePrefersReducedMotion();
+   let drawAnimations: SequenceHandle[] = [];
++  let handStops: (() => void)[] = [];
+ 
+   function getPathElements(): SVGPathElement[] {
+     if (!svgRef.value) return [];
+@@ -38,6 +61,10 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+       a.stop();
+     });
+     drawAnimations = [];
++    handStops.forEach((stop) => {
++      stop();
++    });
++    handStops = [];
+   }
+ 
+   // Run a batch of sequence tweens and resolve once every one has completed (or been stopped).
+@@ -78,7 +105,116 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+     });
+   }
+ 
+-  async function animateDrawIn() {
++  // T9-M20 · THE RULING. Two orders behind one const (the owner's ballot): ONE HAND lays each
++  // line at the last one's lift (≤2 fronts live); THE RULING FRONT spreads each tier's onsets
++  // evenly with a seeded jitter under half the step. Both read the hand clock and the hand's
++  // curve, and the frame stops at its four corners.
++  function schedule(pathEls: SVGPathElement[], lengths: Map<SVGPathElement, number>) {
++    const tips = svgRef.value
++      ? Array.from(svgRef.value.querySelectorAll<SVGPathElement>("path.grid-tip"))
++      : [];
++    const offset = rulingOffset();
++    const serial = MOTION.hand.order === "serial";
++    const jitterRng = mulberry32(77);
++    const tiers = [
++      { key: "frame", preset: DRAW_IN_PRESETS.gridFrame, cls: "frame-line" },
++      { key: "subgrid", preset: DRAW_IN_PRESETS.gridSubgrid, cls: "subgrid-line" },
++      { key: "cell", preset: DRAW_IN_PRESETS.gridCell, cls: "cell-line" },
++    ] as const;
++    const lines: HandLine[] = [];
++    // serial: the next line lands at this one's lift, but never before the line before this
++    // one has lifted — where a long line hands to short ones, the lift alone would put three
++    // fronts on the page.
++    let at = offset;
++    let lastEnd = 0;
++    for (const { key, preset, cls } of tiers) {
++      const paths = pathEls.filter((el) => el.classList.contains(cls));
++      const step =
++        "sweep" in preset && paths.length > 1 ? preset.sweep / (paths.length - 1) : 0;
++      const jitterFrac = "jitterFrac" in preset ? preset.jitterFrac : 0;
++      paths.forEach((el, i) => {
++        const dur = serial ? MOTION.hand.serial[key] : preset.duration;
++        let delay: number;
++        if (serial) {
++          delay = at;
++          at = Math.max(delay + MOTION.hand.lift * dur, lastEnd);
++          lastEnd = delay + dur;
++        } else {
++          const jitter = (jitterRng() - 0.5) * 2 * jitterFrac * step;
++          delay = offset + preset.baseDelay + i * step + jitter;
++        }
++        lines.push({
++          el,
++          tip: tips[pathEls.indexOf(el)] ?? null,
++          len: lengths.get(el)!,
++          tipLen: DRAW_IN_PRESETS.tip.lengthK * TIER_WIDTH[key],
++          delay: Math.max(0, delay),
++          dur,
++          joints: "joints" in preset ? preset.joints : 1,
++          p: -1,
++        });
++      });
++    }
++    return lines;
++  }
++
++  // The point rides the line's front: a dash of `tipLen` ending at the front, hidden before
++  // the line starts, drying (`.is-dry`, opacity → 0 over `dryMs`) the frame the line lands.
++  function writeTip(l: HandLine, p: number) {
++    const tip = l.tip;
++    if (!tip) return;
++    if (p <= 0) {
++      tip.style.visibility = "hidden";
++      return;
++    }
++    tip.style.visibility = "visible";
++    tip.style.strokeDashoffset = String(l.tipLen - l.len * p);
++    if (p >= 1) tip.classList.add("is-dry");
++  }
++
++  // Resolves once the last line has landed and its point has dried; `onStroke` fires on the
++  // frame the first line leaves the page's edge.
++  function runHand(lines: HandLine[], onStroke?: () => void): Promise<void> {
++    const first = Math.min(...lines.map((l) => l.delay));
++    const dry = DRAW_IN_PRESETS.tip.dryMs;
++    for (const l of lines) {
++      if (!l.tip) continue;
++      l.tip.classList.remove("is-dry");
++      l.tip.style.strokeDasharray = `${l.tipLen} ${l.len + l.tipLen}`;
++      l.tip.style.transition = `opacity ${dry}ms var(--ease-fadeOut)`;
++      writeTip(l, 0);
++    }
++    const end =
++      Math.max(...lines.map((l) => l.delay + l.dur)) + (lines[0]?.tip ? dry : 0);
++    return new Promise<void>((resolve) => {
++      let t0 = -1;
++      handStops.push(
++        enrollStroke((clock) => {
++          if (t0 < 0) t0 = clock;
++          const t = clock - t0;
++          if (onStroke && t > first) {
++            onStroke();
++            onStroke = undefined;
++          }
++          for (const l of lines) {
++            const local = Math.min(1, Math.max(0, (t - l.delay) / l.dur));
++            const p = l.joints > 1 ? jointed(local, l.joints) : handStroke(local);
++            if (p === l.p) continue;
++            l.p = p;
++            l.el.style.strokeDashoffset = String(l.len * (1 - p));
++            writeTip(l, p);
++          }
++          if (t < end) return false;
++          resolve();
++          return true;
++        }),
++      );
++    });
++  }
++
++  /** `onPrimed` runs once every line is hidden, before the first painted stroke; `onStroke`
++   *  on the first stroke's frame (at once under PRM). */
++  async function animateDrawIn(onPrimed?: () => void, onStroke?: () => void) {
+     cleanup();
+     const pathEls = getPathElements();
+     if (pathEls.length === 0) return;
+@@ -87,47 +223,16 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+       pathEls.forEach((el) => {
+         el.style.strokeDashoffset = "0";
+       });
++      onPrimed?.();
++      onStroke?.();
+       pathsVisible.value = true;
+       return "drawn" as const;
+     }
+ 
+     const lengths = setupPathLengths(pathEls);
+-
+-    const framePaths = pathEls.filter((el) => el.classList.contains("frame-line"));
+-    const subgridPaths = pathEls.filter((el) => el.classList.contains("subgrid-line"));
+-    const cellPaths = pathEls.filter((el) => el.classList.contains("cell-line"));
+-
+-    const jitterRng = mulberry32(77);
+-    const groups = [
+-      { paths: framePaths, preset: DRAW_IN_PRESETS.gridFrame },
+-      { paths: subgridPaths, preset: DRAW_IN_PRESETS.gridSubgrid },
+-      { paths: cellPaths, preset: DRAW_IN_PRESETS.gridCell },
+-    ];
+-
+-    const specs: {
+-      el: SVGPathElement;
+-      from: number;
+-      to: number;
+-      duration: number;
+-      delay: number;
+-      easing: string;
+-    }[] = [];
+-    for (const { paths: groupPaths, preset } of groups) {
+-      groupPaths.forEach((el, i) => {
+-        const len = lengths.get(el)!;
+-        const jitter = Math.round((jitterRng() - 0.5) * preset.jitter * 2);
+-        specs.push({
+-          el,
+-          from: len, // offset len → 0 (draw on)
+-          to: 0,
+-          duration: preset.duration,
+-          delay: Math.max(0, preset.baseDelay + i * preset.stagger + jitter),
+-          easing: preset.timing,
+-        });
+-      });
+-    }
+-
+-    await runBatch(specs);
++    const lines = schedule(pathEls, lengths);
++    onPrimed?.();
++    await runHand(lines, onStroke);
+     pathEls.forEach((el) => {
+       el.style.strokeDasharray = "none";
+       el.style.strokeDashoffset = "0";
+@@ -180,5 +285,12 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+     pathsVisible.value = true;
+   }
+ 
+-  return { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup };
++  return {
++    pathsVisible,
++    reducedMotion,
++    animateDrawIn,
++    animateErase,
++    showInstant,
++    cleanup,
++  };
+ }

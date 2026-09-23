@@ -1,0 +1,30 @@
+// chromium: CDP screencast of painted frames on a cold load, with the rAF instrument alongside.
+import { createRequire } from 'node:module';
+import { writeFileSync, readFileSync, mkdirSync } from 'node:fs';
+const require = createRequire('/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/package.json');
+const pw = require('playwright');
+const SP = process.env.SP; const init = readFileSync(SP + '/init2.js', 'utf8');
+const [base, tag, vp] = process.argv.slice(2);
+const dir = `${SP}/cast-${tag}`; mkdirSync(dir, { recursive: true });
+const browser = await pw.chromium.launch({ headless: true });
+const vps = { d: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 }, m: { viewport: { width: 390, height: 844 }, deviceScaleFactor: 3, hasTouch: true, isMobile: true } };
+const ctx = await browser.newContext({ ...vps[vp || 'd'], colorScheme: 'light' });
+await ctx.addInitScript(init);
+const page = await ctx.newPage();
+const c = await ctx.newCDPSession(page);
+await c.send('Network.enable'); await c.send('Network.setCacheDisabled', { cacheDisabled: true });
+await page.goto('about:blank');
+const frames = [];
+c.on('Page.screencastFrame', async (f) => { frames.push({ ts: f.metadata.timestamp, data: f.data }); c.send('Page.screencastFrameAck', { sessionId: f.sessionId }).catch(() => {}); });
+await c.send('Page.startScreencast', { format: 'png', everyNthFrame: 1, maxWidth: 1280, maxHeight: 1280 });
+const wall0 = Date.now() / 1000;
+await page.goto(base + '/', { waitUntil: 'load' });
+await page.waitForTimeout(3000);
+await c.send('Page.stopScreencast');
+const data = await page.evaluate(() => ({ ...window.__DI, origin: performance.timeOrigin }));
+writeFileSync(`${dir}/instr.json`, JSON.stringify(data));
+// map screencast wall timestamps (s) onto performance.now() (ms)
+const meta = frames.map((f, i) => { const t = f.ts * 1000 - data.origin; writeFileSync(`${dir}/f${String(i).padStart(3, '0')}.png`, Buffer.from(f.data, 'base64')); return { i, t: Math.round(t * 10) / 10 }; });
+writeFileSync(`${dir}/frames.json`, JSON.stringify(meta));
+console.log('screencast frames', meta.length, meta.slice(0, 40).map((m) => m.t).join(' '));
+await browser.close();
