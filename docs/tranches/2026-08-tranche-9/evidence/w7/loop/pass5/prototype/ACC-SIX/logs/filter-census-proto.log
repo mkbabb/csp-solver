@@ -1,0 +1,153 @@
+
+Running 16 tests using 9 workers
+
+[1/16] [filter-census-chromium] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist)
+[2/16] [filter-census-chromium] › e2e/filter-census.spec.ts:300:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist)
+[3/16] [filter-census-chromium] › e2e/filter-census.spec.ts:497:1 › G3.2 · no retained fill supplies a computed transform (built dist)
+[4/16] [filter-census-chromium] › e2e/filter-census.spec.ts:320:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist)
+[5/16] [filter-census-chromium] › e2e/filter-census.spec.ts:476:1 › G3.5 · no :hover state mints a live filter — board regime (built dist)
+[6/16] [filter-census-chromium] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist)
+[7/16] [filter-census-webkit] › e2e/filter-census.spec.ts:300:1 › G3.1 · live-filter census equals filterBudget.ts exactly, area and all (built dist)
+[8/16] [filter-census-chromium] › e2e/filter-census.spec.ts:542:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly
+[9/16] [filter-census-chromium] › e2e/filter-census.spec.ts:483:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist)
+[10/16] [filter-census-webkit] › e2e/filter-census.spec.ts:320:3 › G3.3 · the coarse regime › G3.3 · live-filter census holds below 1024 (built dist)
+[11/16] [filter-census-webkit] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist)
+  1) [filter-census-chromium] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist) 
+
+    Error: [coarse] live filters no filterBudget.ts row claims
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    + ]
+
+      225 |     hits.filter((h) => h.row < 0).map((h) => `${h.path}  ⟨${h.filter}⟩`),
+      226 |     `[${regime}] live filters no filterBudget.ts row claims`,
+    > 227 |   ).toEqual([]);
+          |     ^
+      228 |
+      229 |   // (b) every row's population is exact, in both directions.
+      230 |   expect(
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:227:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:357:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-3d-·-the--4cdea-024-in-the-dark-built-dist--filter-census-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-3d-·-the--4cdea-024-in-the-dark-built-dist--filter-census-chromium/error-context.md
+
+
+  2) [filter-census-chromium] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist) 
+
+    Error: [row] live filters no filterBudget.ts row claims
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    + ]
+
+      225 |     hits.filter((h) => h.row < 0).map((h) => `${h.path}  ⟨${h.filter}⟩`),
+      226 |     `[${regime}] live filters no filterBudget.ts row claims`,
+    > 227 |   ).toEqual([]);
+          |     ^
+      228 |
+      229 |   // (b) every row's population is exact, in both directions.
+      230 |   expect(
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:227:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:342:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-1d-·-the--9ce12--ts-in-the-dark-built-dist--filter-census-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-1d-·-the--9ce12--ts-in-the-dark-built-dist--filter-census-chromium/error-context.md
+
+
+[12/16] [filter-census-webkit] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist)
+[13/16] [filter-census-webkit] › e2e/filter-census.spec.ts:476:1 › G3.5 · no :hover state mints a live filter — board regime (built dist)
+[14/16] [filter-census-webkit] › e2e/filter-census.spec.ts:483:1 › G3.5 · no :hover state mints a live filter — PICKER regime (built dist)
+[15/16] [filter-census-webkit] › e2e/filter-census.spec.ts:497:1 › G3.2 · no retained fill supplies a computed transform (built dist)
+[16/16] [filter-census-webkit] › e2e/filter-census.spec.ts:542:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly
+  3) [filter-census-webkit] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist) 
+
+    Error: [row] live filters no filterBudget.ts row claims
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    + ]
+
+      225 |     hits.filter((h) => h.row < 0).map((h) => `${h.path}  ⟨${h.filter}⟩`),
+      226 |     `[${regime}] live filters no filterBudget.ts row claims`,
+    > 227 |   ).toEqual([]);
+          |     ^
+      228 |
+      229 |   // (b) every row's population is exact, in both directions.
+      230 |   expect(
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:227:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:342:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-1d-·-the--9ce12--ts-in-the-dark-built-dist--filter-census-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-1d-·-the--9ce12--ts-in-the-dark-built-dist--filter-census-webkit/error-context.md
+
+
+  4) [filter-census-webkit] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist) 
+
+    Error: [coarse] live filters no filterBudget.ts row claims
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    +   "div.hover-card > div.flex.items-center > svg.crayon-heart.idle  ⟨saturate(0.85)⟩",
+    + ]
+
+      225 |     hits.filter((h) => h.row < 0).map((h) => `${h.path}  ⟨${h.filter}⟩`),
+      226 |     `[${regime}] live filters no filterBudget.ts row claims`,
+    > 227 |   ).toEqual([]);
+          |     ^
+      228 |
+      229 |   // (b) every row's population is exact, in both directions.
+      230 |   expect(
+        at assertCensus (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:227:5)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/filter-census.spec.ts:357:5
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-3d-·-the--4cdea-024-in-the-dark-built-dist--filter-census-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6/pw-fc-proto/filter-census-G3-3d-·-the--4cdea-024-in-the-dark-built-dist--filter-census-webkit/error-context.md
+
+
+  4 failed
+    [filter-census-chromium] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist) 
+    [filter-census-chromium] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist) 
+    [filter-census-webkit] › e2e/filter-census.spec.ts:338:3 › G3.1d · the dark scheme › G3.1d · live-filter census equals filterBudget.ts in the dark (built dist) 
+    [filter-census-webkit] › e2e/filter-census.spec.ts:355:3 › G3.3d · the coarse regime, dark › G3.3d · live-filter census holds below 1024 in the dark (built dist) 
+  12 passed (8.0s)

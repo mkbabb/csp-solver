@@ -1,0 +1,13 @@
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -275,10 +275,11 @@
+   }
+-  for (const id of Object.keys(settled.value)) {
++  for (const id of new Set([...Object.keys(settled.value), ...Object.keys(timers)])) {
+     if (id in now) continue;
+     clearTimeout(timers[id]);
+     delete timers[id];
++    if (!(id in settled.value)) continue;
+     const { [id]: _gone, ...rest } = settled.value;
+     settled.value = rest;
+   }

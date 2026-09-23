@@ -1,0 +1,13 @@
+SLEEP LINT — 36 specs · 52 waitForTimeout sites in 17 files · 3 fixed in-page sampling windows · 4 cited exemptions · 5 sleep-ok tags
+
+4 failure(s):
+
+  • player-place.spec.ts:486 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :487 (`plantedOpen`), asserted non-retrying at :488. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • player-place.spec.ts:506 — a fixed 400ms sleep precedes a ONE-SHOT read off a live surface at :507, asserted non-retrying at :507. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • player-place.spec.ts:540 — a fixed 300ms sleep precedes a ONE-SHOT read off a live surface at :541, asserted non-retrying at :541. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • viewport-law.spec.ts:111 — a fixed 600ms sleep sits inside `stepDeckTo()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+EXIT 1

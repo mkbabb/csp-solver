@@ -1,0 +1,317 @@
+diff --git a/web/frontend/e2e/viewport-law.spec.ts b/web/frontend/e2e/viewport-law.spec.ts
+index 0af6ff66..345b2c2b 100644
+--- a/web/frontend/e2e/viewport-law.spec.ts
++++ b/web/frontend/e2e/viewport-law.spec.ts
+@@ -398,11 +398,33 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+     await boot(page);
+     await loadBoard(page);
+ 
+-    const CENSUS = (sel: string) => {
++    // T9-W7 pass 5 — THE PREDICATE IS CLIPPED TO THE SCROLLPORT (pass5/CHAIR-RULINGS §1.4).
++    // A tape inside a scrollport is painted only where the port shows it; its RECT keeps going.
++    // Once the action bar left the card for `#card-foot`, the rect of a tape scrolled out of the
++    // port reached down into the foot's verbs (`pencils` × `Clear the board`, 486.7px² with the
++    // tape's visible height 0.00 and `elementFromPoint` on the button). So each tape's rect is
++    // intersected with every scrolling ancestor's client box first; `clip: false` is the old
++    // predicate, kept callable for the negative control below.
++    const CENSUS = ({ sel, clip }: { sel: string; clip: boolean }) => {
+       const inter = [...document.querySelectorAll(sel)].filter((e) => {
+         const b = e.getBoundingClientRect();
+         return b.width > 0 && b.height > 0;
+       });
++      const shown = (el: Element) => {
++        const r = el.getBoundingClientRect();
++        let [l, t, rt, bt] = [r.left, r.top, r.right, r.bottom];
++        if (clip)
++          for (let a = el.parentElement; a; a = a.parentElement) {
++            const cs = getComputedStyle(a);
++            if (!/(auto|scroll|hidden|clip)/.test(cs.overflowX + cs.overflowY)) continue;
++            const ab = a.getBoundingClientRect();
++            const top = ab.top + a.clientTop;
++            const left = ab.left + a.clientLeft;
++            [l, t] = [Math.max(l, left), Math.max(t, top)];
++            [rt, bt] = [Math.min(rt, left + a.clientWidth), Math.min(bt, top + a.clientHeight)];
++          }
++        return { left: l, top: t, right: rt, bottom: bt };
++      };
+       const out: {
+         tape: string;
+         own: boolean;
+@@ -413,8 +435,8 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+       for (const tape of document.querySelectorAll('.washi-label')) {
+         const cs = getComputedStyle(tape);
+         if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.05) continue;
+-        const t = tape.getBoundingClientRect();
+-        if (t.width === 0 || t.height === 0) continue;
++        const t = shown(tape);
++        if (t.right - t.left <= 0 || t.bottom - t.top <= 0) continue;
+         // T9-W2 chair ruling on the lane law: coverage counts only where the control is
+         // DRAWN. While `data-fold-above` is set, the card's own fold chrome paints SOLID
+         // card colour over the scrollport's first `padding-top` band — a control under
+@@ -457,6 +479,8 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+     // empty, so it never clears the settle, and the bound hands the assertion the overlap it
+     // measured. The only reading forgiven is one that stops being an overlap while you watch it,
+     // which is the definition of a tape that has yielded.
++    // NEG-1's ledger: the UNCLIPPED predicate read beside the clipped one at every settled pose.
++    const ghosts = new Map<string, ReturnType<typeof CENSUS>[number]>();
+     const settled = async () => {
+       let last: ReturnType<typeof CENSUS> = [];
+       let clear = 0;
+@@ -464,7 +488,9 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+         await expect
+           .poll(
+             async () => {
+-              last = await page.evaluate(CENSUS, INTERACTIVE);
++              for (const g of await page.evaluate(CENSUS, { sel: INTERACTIVE, clip: false }))
++                ghosts.set(`${g.tape}»${g.target}`, g);
++              last = await page.evaluate(CENSUS, { sel: INTERACTIVE, clip: true });
+               clear = last.length === 0 ? clear + 1 : 0;
+               return clear;
+             },
+@@ -505,6 +531,35 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+       overlaps,
+       `a tape must flip, shift or yield rather than cover a control; measured ${JSON.stringify(overlaps)}`,
+     ).toEqual([]);
++
++    // NEGATIVE CONTROLS, same run. (1) The clip has a subject: across the same hover pass the
++    // UNCLIPPED predicate reads a scrolled-out tape's rect over a verb the clipped one does not
++    // (the artifact above; with the clip struck this row reds at 1486.9 px², `pencils` over
++    // `Clear the board`). On a tree where the two agree the clip is decoration. Reported, not
++    // asserted, because it is the tree's geometry and not the law. (2) The clipped predicate still
++    // sees paint: a tape laid IN the port across a live control must read.
++    console.log(
++      `[W2-§2.5 NEG-1] hover pass unclipped=${JSON.stringify([...ghosts.values()])} clipped=${JSON.stringify(overlaps)}`,
++    );
++    const planted = await page.evaluate(() => {
++      const card = document.querySelector('.controls-card');
++      const btn = card?.querySelector<HTMLElement>('.ctrl-btn');
++      const tape = card?.querySelector<HTMLElement>('.washi-tag.washi-label');
++      if (!card || !btn || !tape) return false;
++      card.scrollTop = 0;
++      btn.scrollIntoView({ block: 'center' });
++      const b = btn.getBoundingClientRect();
++      const t = tape.getBoundingClientRect();
++      tape.style.translate = `${b.left - t.left}px ${b.top - t.top}px`;
++      return true;
++    });
++    expect(planted, 'negative control: a tape and a control to plant it on').toBe(true);
++    await page.waitForTimeout(200);
++    const caught = await page.evaluate(CENSUS, { sel: INTERACTIVE, clip: true });
++    expect(
++      caught.length,
++      'negative control: a tape laid over a live control inside the port must read as coverage',
++    ).toBeGreaterThan(0);
+   });
+ });
+ 
+@@ -842,3 +897,210 @@ for (const cell of FOLD_CELLS) {
+     });
+   });
+ }
++// ─────────────────────────────────────────────────────────────────────────────
++// §2.5b — THE PIN BAND IS THE TAPE'S LANE, AT EVERY SCROLL OFFSET AND ON BOTH REGIMES
++//
++// PROPOSED DIFF (T9-W7 §10 pass 2, CTRL-TAPE §1.1). §2.5 above reads the card at ONE scroll
++// offset — the pose the page happens to boot in — and hovers. That is half a law: a PINNED tape
++// is a tape whose position is a function of `scrollTop`, and the census never moves the scroll.
++// Measured at HEAD with the sweep below, the same card that greens §2.5 reads
++//   · 1440×900 rail, frac 0.25 and 0.50: `new game` over `9×9` / `Easy` — 358.6px², BELOW the
++//     exempt band, `elementFromPoint` returning `.washi-tag` and not the chip;
++//   · 390×844 dock, frac 0.25: `new game` over `size` — 0.782px², the same class one regime over.
++// Three things this row adds and §2.5 does not have:
++//   1. THE SWEEP. Five offsets, 0 / .25 / .5 / .75 / 1, so a pinned tape is read where it pins.
++//   2. THE DOCK ARM. §2.5 is 1440×900 only; the pin line is `0.6rem − --pin-band` and the dock
++//      derives a different `--pin-band`, so the arithmetic differs by regime.
++//   3. THE SIGN BIT. `elementFromPoint` at the overlap's centre says whether the covered pixel
++//      still belongs to the control. A tape that covers geometry it also lets you press is a
++//      different defect from one that eats the press, and the row prints which it saw.
++// `belowExemptBand` is the number the design turns on: a pinned tape's bottom against
++// `card.top + padding-top`. ≤ 0 means the tape is wholly inside the reserved band — the band no
++// control may enter — and the coverage is 0 by arithmetic rather than by census luck.
++// ─────────────────────────────────────────────────────────────────────────────
++
++// T9-W7 pass 5 — THE BAND IS SUBTRACTED ONLY WHERE §2.5 SUBTRACTS IT, AND THE TAPE IS CLIPPED
++// TO THE PORT (pass5/CHAIR-RULINGS §1.4: §2.5b's condition = §2.5's). Pass 4 took `liveTop` at
++// every offset, so a pinned tape — which lives inside the band by construction — was zeroed
++// before its sign bit was taken and the row printed `[]` by arithmetic (the critic: 2197.1px²
++// over `9×9` at frac 0.25, `elementFromPoint` returning the tape). Now the band is exempt only
++// while `data-fold-above` is set (the card paints it solid then), and what the exemption forgave
++// is PRINTED with its sign bit, so a green is a census and not a subtraction.
++const PIN_CENSUS = (sel: string) => {
++  const card = document.querySelector('.controls-card');
++  if (!card) return { error: 'no card' } as const;
++  const cb = card.getBoundingClientRect();
++  const padTop = parseFloat(getComputedStyle(card).paddingTop) || 0;
++  const clipTop = cb.top + card.clientTop;
++  const clipBottom = clipTop + card.clientHeight;
++  const bandLine = clipTop + padTop;
++  const liveTop = card.hasAttribute('data-fold-above') ? bandLine : -Infinity;
++  const inter = [...card.querySelectorAll(sel)].filter((e) => {
++    const b = e.getBoundingClientRect();
++    return b.width > 0 && b.height > 0;
++  });
++  type Row = { tape: string; target: string; px: number; below: number; hitIsTarget: boolean };
++  const overlaps: Row[] = [];
++  const forgiven: Row[] = [];
++  let worstBelow = -Infinity;
++  for (const tape of card.querySelectorAll('.washi-tag')) {
++    const cs = getComputedStyle(tape);
++    if (cs.display === 'none' || cs.visibility === 'hidden' || +cs.opacity < 0.05) continue;
++    const r = tape.getBoundingClientRect();
++    const t = { left: r.left, right: r.right, top: Math.max(r.top, clipTop), bottom: Math.min(r.bottom, clipBottom) };
++    if (r.width === 0 || t.bottom - t.top <= 0) continue;
++    const pinned = cs.position === 'sticky' && !tape.hasAttribute('data-released');
++    const below = +(r.bottom - bandLine).toFixed(2);
++    // Only a tape that is actually PINNED is asked to stay inside the band; a tape riding its
++    // own well is governed by the well's padding (§1.2) and by §2.5's own census above.
++    if (pinned && r.top <= bandLine + 0.5 && below > worstBelow) worstBelow = below;
++    for (const el of inter) {
++      const b = el.getBoundingClientRect();
++      const w = Math.max(0, Math.min(b.right, t.right) - Math.max(b.left, t.left));
++      const whole = Math.max(0, Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top));
++      const h = Math.max(0, Math.min(b.bottom, t.bottom) - Math.max(b.top, t.top, liveTop));
++      if (w * whole <= 0.5) continue;
++      const px = (Math.max(b.left, t.left) + Math.min(b.right, t.right)) / 2;
++      const py = (Math.max(b.top, t.top) + Math.min(b.bottom, t.bottom)) / 2;
++      const hit = document.elementFromPoint(px, py);
++      const row = {
++        tape: (tape.textContent || '').trim().slice(0, 24),
++        target: el.getAttribute('aria-label') || (el.textContent || '').trim().slice(0, 24),
++        px: +(w * (w * h > 0.5 ? h : whole)).toFixed(1),
++        below,
++        hitIsTarget: hit === el || (hit ? el.contains(hit) : false),
++      };
++      (w * h > 0.5 ? overlaps : forgiven).push(row);
++    }
++  }
++  return {
++    overlaps,
++    forgiven,
++    worstBelow: worstBelow === -Infinity ? null : worstBelow,
++    padTop: +padTop.toFixed(2),
++    foldAbove: card.hasAttribute('data-fold-above'),
++  };
++};
++
++for (const cell of [
++  { name: 'rail 1440×900', w: 1440, h: 900, dock: false },
++  { name: 'dock 390×844', w: 390, h: 844, dock: true },
++]) {
++  test.describe(`§2.5b the pinned tape stays in its band @ ${cell.name}`, () => {
++    test.use({ viewport: { width: cell.w, height: cell.h }, hasTouch: cell.dock });
++
++    test(`§2.5b no pinned tape leaves the pin band at any scroll offset @ ${cell.name}`, async ({
++      page,
++    }) => {
++      test.slow();
++      await boot(page);
++      await loadBoard(page);
++      if (cell.dock) {
++        await page.locator('.drawer-tab').click();
++        await page.waitForSelector('#controls-drawer .drawer-case', { state: 'visible' });
++        // THE SHEET SLIDES (~520ms), so the POSE is polled, never slept on: a fixed wait in
++        // front of a one-shot geometry read is a race with the glide, and the whole of this row
++        // is geometry. The settled pose is the sheet's own top, unchanged across two samples.
++        await expect
++          .poll(
++            async () => {
++              const a = await page.evaluate(
++                () => document.querySelector('#controls-drawer')?.getBoundingClientRect().top ?? null,
++              );
++              await page.waitForTimeout(80);
++              const b = await page.evaluate(
++                () => document.querySelector('#controls-drawer')?.getBoundingClientRect().top ?? null,
++              );
++              return a !== null && b !== null && Math.abs(a - b) < 0.05;
++            },
++            { timeout: 5000 },
++          )
++          .toBe(true);
++      }
++      await expect(page.locator('.controls-card .washi-tag')).toHaveCount(4);
++
++      const range = await page.evaluate(() => {
++        const c = document.querySelector('.controls-card');
++        return c ? c.scrollHeight - c.clientHeight : 0;
++      });
++      expect(range, 'the card must actually scroll, or this row proves nothing').toBeGreaterThan(
++        40,
++      );
++
++      const seen: Record<string, unknown>[] = [];
++      for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
++        await page.evaluate((y) => {
++          const c = document.querySelector('.controls-card');
++          if (c) c.scrollTop = y;
++        }, Math.round(range * frac));
++        // the fold pass is rAF-coalesced and the tape carries a 150ms opacity window
++        await page.waitForTimeout(280);
++        const read = await page.evaluate(PIN_CENSUS, INTERACTIVE);
++        seen.push({ frac, ...read });
++      }
++      console.log(`[W7-§2.5b] ${cell.name} ${JSON.stringify(seen)}`);
++
++      for (const state of seen) {
++        expect(
++          state.overlaps,
++          `at scrollTop frac ${state.frac} a pinned tape covers a control: ${JSON.stringify(state.overlaps)}`,
++        ).toEqual([]);
++        if (state.worstBelow !== null)
++          expect(
++            state.worstBelow as number,
++            `at frac ${state.frac} the pinned tape hangs ${state.worstBelow}px below the exempt band`,
++          ).toBeLessThanOrEqual(0);
++      }
++
++      // NEGATIVE CONTROL, in the same run, and it is what makes this row a gate rather than
++      // arithmetic about a number nobody can move: ablate the pin band back to the utility
++      // class's own 20px — the value the card carried at HEAD — and the same sweep must find
++      // the tape on a control. HEAD's own reading at this cell is 358.6px² over `9×9` at frac
++      // 0.25 (rail) and 0.782 over `size` at frac 0.25 (dock).
++      const ablation = await page.addStyleTag({
++        content: `.controls-card { padding-top: 20px !important; --pin-band: 20px !important }`,
++      });
++      const broken: Record<string, unknown>[] = [];
++      for (const frac of [0, 0.25, 0.5, 0.75, 1]) {
++        await page.evaluate((y) => {
++          const c = document.querySelector('.controls-card');
++          if (c) c.scrollTop = y;
++        }, Math.round(range * frac));
++        await page.waitForTimeout(280);
++        broken.push({ frac, ...(await page.evaluate(PIN_CENSUS, INTERACTIVE)) });
++      }
++      console.log(`[W7-§2.5b NEG] ${cell.name} ${JSON.stringify(broken)}`);
++      expect(
++        broken.some(
++          (s) =>
++            ((s.overlaps as unknown[]) ?? []).length > 0 ||
++            (typeof s.worstBelow === 'number' && s.worstBelow > 0),
++        ),
++        'the unpaid pin band must put a pinned tape back on a control',
++      ).toBe(true);
++
++      // NEGATIVE CONTROL 2 — THE LAW, NOT THE BAND (pass 5). The ablation above moves the band
++      // line itself, so it proves the subtraction is live and nothing else. This one leaves the
++      // band whole and drops the PINNED tape 24px lower, out of it: a census reds on that; an
++      // arithmetic identity on the band does not.
++      await ablation.evaluate((n) => (n as Element).remove());
++      await page.addStyleTag({
++        content: `.controls-card .washi-tag:not([data-released]) { translate: 0 24px }`,
++      });
++      const dropped: Record<string, unknown>[] = [];
++      for (const frac of [0.25, 0.5, 0.75]) {
++        await page.evaluate((y) => {
++          const c = document.querySelector('.controls-card');
++          if (c) c.scrollTop = y;
++        }, Math.round(range * frac));
++        await page.waitForTimeout(280);
++        dropped.push({ frac, ...(await page.evaluate(PIN_CENSUS, INTERACTIVE)) });
++      }
++      console.log(`[W7-§2.5b NEG-2] ${cell.name} ${JSON.stringify(dropped)}`);
++      expect(
++        dropped.some((s) => typeof s.worstBelow === 'number' && s.worstBelow > 0),
++        'a pinned tape dropped out of an unchanged band must read below it',
++      ).toBe(true);
++    });
++  });
++}

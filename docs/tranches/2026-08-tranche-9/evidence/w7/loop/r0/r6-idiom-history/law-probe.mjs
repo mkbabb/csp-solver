@@ -191,16 +191,29 @@ law(
     // bar's template box — and the bar's CSS may carry no border longhand with a width > 0 (R6 L5:
     // one box grammar). Comments are stripped first (CTRL-RULE's trap: a comment fools a text law).
     const p = read("src/games/shared/GameControlPanel.vue").replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, "");
-    const at = p.search(/class="[^"]*\baction-bar\b/);
-    const box = at < 0 ? "" : p.slice(at, at + 1200);
-    const drawn = /<HandDrawnOutline\b/.test(box);
+    // PROPOSED (CTRL-RULE pass 5). The 1,200-char window GREENS ON THE ACT FACES: `Clear`'s
+    // `HandDrawnOutline` sits inside the bar's box on any tree whose verbs wear drawn faces, so
+    // deleting the bar's own edge leaves the row GREEN (break-tested on wf_f72f3b5a-83a-28). The
+    // EDGE is the bar's own: the first element inside the bar's opening tag, or the one
+    // immediately wrapping it — in the house hand, drawn by either of its two components (a
+    // closed `HandDrawnOutline`, T9-B13 arm a; one `RuledLine`, arm b — the same pencil-boil
+    // wobble the board's grid draws). Comments are stripped above, so a comment can't stand in.
+    const first = /<div\b[^>]*\bclass="[^"]*\baction-bar\b[^"]*"[^>]*>\s*<(?:HandDrawnOutline|RuledLine)\b/.test(p);
+    const wraps = /<HandDrawnOutline\b[^>]*>\s*<div\b[^>]*\bclass="[^"]*\baction-bar\b/.test(p);
+    const drawn = first || wraps;
     const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
-    const cssBorder = /\bborder(?:-(?:top|right|bottom|left))?(?:-width)?\s*:\s*(?!0(?:px)?\b|none\b)[^;]*?(?:[1-9][\d.]*(?:px|rem|em)|thin|medium|thick)/.test(bar);
+    // Third re-cut (the chair, pass-6 rulings §1.3, from CTRL-TAPE's critic): every edge-painting
+    // longhand counts — physical AND logical borders, `outline`, `box-shadow` (a 0 0 0 Npx spread is
+    // a border by another name) and a `background-image` gradient hairline.
+    const edgeProp = /\b(?:border(?:-(?:top|right|bottom|left|block|inline|block-start|block-end|inline-start|inline-end))?(?:-width)?|outline(?:-width)?)\s*:\s*(?!0(?:px)?\b|none\b)[^;]*?(?:[1-9][\d.]*(?:px|rem|em)|thin|medium|thick)/.test(bar);
+    const shadowEdge = /\bbox-shadow\s*:\s*(?!none\b)[^;]*[1-9][\d.]*(?:px|rem|em)/.test(bar);
+    const gradientEdge = /\bbackground(?:-image)?\s*:\s*[^;]*gradient\(/.test(bar);
+    const cssBorder = edgeProp || shadowEdge || gradientEdge;
     return {
       ok: drawn && !cssBorder,
       detail: drawn
-        ? cssBorder ? "HandDrawnOutline present but the bar's CSS also paints a border longhand (L5 RED)" : "the bar wears a HandDrawnOutline and no CSS border"
-        : "no HandDrawnOutline inside the bar's box — a CSS border would not count (L5)",
+        ? cssBorder ? "the bar's own drawn edge is present but its CSS also paints an edge (border/outline/box-shadow/gradient — L5 RED)" : "the bar wears its own drawn edge and no CSS edge"
+        : "no drawn edge of the bar's own (first child or wrapper) — an act face's outline or a CSS border does not count (L5)",
     };
   },
 );

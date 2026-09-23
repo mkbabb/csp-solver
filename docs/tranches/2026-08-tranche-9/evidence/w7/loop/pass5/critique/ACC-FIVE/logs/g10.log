@@ -1,0 +1,71 @@
+##### LANDED
+=== landed native chromium
+CRITIC gauge: 48 d records, 12 frames, 1 bursts, worst 49.8/s
+CRITIC tally: 68 d records, 17 frames, 1 bursts, worst 47.9/s
+CRITIC join: 104 d records, 26 frames, 1 bursts, worst 50.2/s
+  ✓  1 [chromium] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (7.2s)
+  1 passed (7.6s)
+exit 0
+=== landed 60Hz chromium
+CRITIC rAF clock: median tick 16.00 ms, p10 13.30 ms over 393 gaps
+CRITIC gauge: 32 d records, 8 frames, 1 bursts, worst 29.9/s
+CRITIC tally: 60 d records, 15 frames, 1 bursts, worst 42.1/s
+CRITIC join: 96 d records, 24 frames, 1 bursts, worst 44.4/s
+  ✓  1 [chromium] › front-rate-60hz.spec.ts:75:5 › G10 at 60 Hz: every poseFronts consumer re-cuts at most 62.5 times a second (6.8s)
+  1 passed (7.2s)
+exit 0
+=== landed native webkit
+CRITIC gauge: 44 d records, 11 frames, 1 bursts, worst 46.5/s
+CRITIC tally: 68 d records, 18 frames, 1 bursts, worst 51.4/s
+CRITIC join: 104 d records, 26 frames, 1 bursts, worst 50.1/s
+  ✓  1 [webkit] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (7.2s)
+  1 passed (7.6s)
+exit 0
+=== landed 60Hz webkit
+CRITIC rAF clock: median tick 19.00 ms, p10 10.00 ms over 383 gaps
+CRITIC gauge: 40 d records, 10 frames, 1 bursts, worst 41.5/s
+CRITIC tally: 56 d records, 14 frames, 1 bursts, worst 39.4/s
+CRITIC join: 80 d records, 20 frames, 1 bursts, worst 39.6/s
+  ✓  1 [webkit] › front-rate-60hz.spec.ts:75:5 › G10 at 60 Hz: every poseFronts consumer re-cuts at most 62.5 times a second (7.2s)
+  1 passed (7.5s)
+exit 0
+##### ABLATED FRONT_MIN_MS 16->0
+540:export const FRONT_MIN_MS = 0;
+=== ablated native chromium
+CRITIC gauge: 128 d records, 32 frames, 1 bursts, worst 135.3/s
+  ✘  1 [chromium] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (6.9s)
+  1) [chromium] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+    Error: gauge re-cuts 135.3/s against the budget
+    > 107 |     expect(worst, `${k} re-cuts ${worst.toFixed(1)}/s against the budget`).toBeLessThanOrEqual(
+  1 failed
+    [chromium] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+exit 1
+=== ablated 60Hz chromium
+CRITIC rAF clock: median tick 16.20 ms, p10 12.50 ms over 396 gaps
+CRITIC gauge: 56 d records, 14 frames, 1 bursts, worst 60.2/s
+CRITIC tally: 88 d records, 22 frames, 1 bursts, worst 60.4/s
+CRITIC join: 124 d records, 31 frames, 1 bursts, worst 60.0/s
+  ✓  1 [chromium] › front-rate-60hz.spec.ts:75:5 › G10 at 60 Hz: every poseFronts consumer re-cuts at most 62.5 times a second (6.9s)
+  1 passed (7.3s)
+exit 0
+=== ablated native webkit
+CRITIC gauge: 96 d records, 24 frames, 1 bursts, worst 100.4/s
+  ✘  1 [webkit] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (7.2s)
+  1) [webkit] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+    Error: gauge re-cuts 100.4/s against the budget
+    > 107 |     expect(worst, `${k} re-cuts ${worst.toFixed(1)}/s against the budget`).toBeLessThanOrEqual(
+  1 failed
+    [webkit] › front-rate.spec.ts:54:5 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+exit 1
+=== ablated 60Hz webkit
+CRITIC rAF clock: median tick 19.00 ms, p10 10.00 ms over 383 gaps
+CRITIC gauge: 56 d records, 14 frames, 1 bursts, worst 58.0/s
+CRITIC tally: 88 d records, 22 frames, 1 bursts, worst 61.4/s
+CRITIC join: 120 d records, 30 frames, 1 bursts, worst 58.4/s
+  ✓  1 [webkit] › front-rate-60hz.spec.ts:75:5 › G10 at 60 Hz: every poseFronts consumer re-cuts at most 62.5 times a second (7.2s)
+  1 passed (7.6s)
+exit 0
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/src/pencil/grid/gridPaths.ts: OK
+RESTORED
+DONE
+/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/src/pencil/grid/gridPaths.ts: OK

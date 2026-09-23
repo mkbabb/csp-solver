@@ -1,0 +1,13 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass4/prototype/ACC-SIX/instruments/p4-g0.mjs	2026-09-19 09:49:40
++++ g0.MOVED.mjs	2026-09-22 20:19:48
+@@ -28,7 +28,9 @@
+ const BASE = process.env.BASE || "http://127.0.0.1:4237";
+ const OUT = process.argv[2];
+ if (!OUT) throw new Error("usage: BASE=… node p4-g0.mjs <out.json>");
+-const VIOLET = 293.0;
++// MOVED (ACC-FIVE pass 5): the subject's ink moved off violet on the gold tree, so the anchor is a
++// parameter; 293.0 (violet) stays the default and ANCHOR_HUE=83.7 reads the gold gauge.
++const VIOLET = Number(process.env.ANCHOR_HUE || 293.0);
+ 
+ async function violetPx(buf) {
+   const { data, info } = await sharp(buf).raw().toBuffer({ resolveWithObject: true });

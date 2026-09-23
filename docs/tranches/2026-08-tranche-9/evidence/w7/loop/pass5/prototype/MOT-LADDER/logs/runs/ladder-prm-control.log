@@ -1,0 +1,81 @@
+
+Running 2 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail (514ms)
+  ✘  2 [webkit] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail (801ms)
+
+
+  1) [chromium] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 7
+
+      Array [
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+      ]
+
+      86 |     RUNGS,
+      87 |   );
+    > 88 |   expect(rungs).toEqual(RUNGS.map(() => '0s'));
+         |                 ^
+      89 |
+      90 |   // Settle is a POSE, never a sleep: the roster is read until two consecutive reads agree.
+      91 |   let prev = -1;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/ladder-prm.spec.ts:88:17
+
+    Error Context: test-results/ladder-prm-the-ladder-unde-604cc-iling-the-walk-able-to-fail-chromium/error-context.md
+
+  2) [webkit] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 7
+    + Received  + 7
+
+      Array [
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    -   "0s",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+    +   "",
+      ]
+
+      86 |     RUNGS,
+      87 |   );
+    > 88 |   expect(rungs).toEqual(RUNGS.map(() => '0s'));
+         |                 ^
+      89 |
+      90 |   // Settle is a POSE, never a sleep: the roster is read until two consecutive reads agree.
+      91 |   let prev = -1;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/ladder-prm.spec.ts:88:17
+
+    Error Context: test-results/ladder-prm-the-ladder-unde-604cc-iling-the-walk-able-to-fail-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail 
+    [webkit] › e2e/ladder-prm.spec.ts:70:1 › the ladder under reduce: every rung 0s, the residue inside its ceiling, the walk able to fail 
+EXIT=1

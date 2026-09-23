@@ -1,0 +1,22 @@
+e2e/player-place.spec.ts WHOLE FILE, dev 127.0.0.1:4246 (the work tree, base 74a2b5d9, critic's own server, cacheDir outside the tree), workers 1
+chromium: 15/15 passed (1.3m) exit 0
+webkit:   15/15 passed (82.2s) exit 0
+webkit annotations: row 9 stepAt 776 ms (13 steps of B after); row 10 escape {drop 0, fading 15, chartless 0} mark {0,15,0} planted {96,15,15}; row 7 tape-before-press true, tape-before-open true
+
+chromium rows 7/9/10 --repeat-each=2 (json): 6/6 passed exit 0
+  row 9 stepAt 769 / 778 ms (13 steps of B after)
+  row 10 escape {0,23,0} {0,24,0}; mark {0,21,0} {0,21,0}; planted {96,21,21} x2
+  row 7 tape-before-press false/true; tape-before-open TRUE/FALSE -> the 'no tape under the sheet' clause VACUOUS in 1 of 2 chromium runs (annotated, not failed)
+
+BREAK BATTERY (critic's copy of instruments/e2e-breaks.py, port 4246, E1 + E4, per engine):
+## E1 guard ablated  exit=1  restored-sha1=OK
+  chromium failed   9 · the hostage: B walks, C moves once, and C steps inside its own settle window :: Error: C's dot stepped at -1 ms after C's move
+## E4 no sheet click  exit=1  restored-sha1=OK
+  chromium failed   12 · a tap at the bottom edge of the sheet dismisses it and reaches no cell :: Error: a tap inside the sheet reached no cell
+breaks chromium EXIT 0
+## E1 guard ablated  exit=1  restored-sha1=OK
+  webkit   failed   9 · the hostage: B walks, C moves once, and C steps inside its own settle window :: Error: C's dot stepped at -1 ms after C's move
+## E4 no sheet click  exit=1  restored-sha1=OK
+  webkit   failed   12 · a tap at the bottom edge of the sheet dismisses it and reaches no cell :: Error: a tap inside the sheet reached no cell
+breaks webkit EXIT 0
+DONE

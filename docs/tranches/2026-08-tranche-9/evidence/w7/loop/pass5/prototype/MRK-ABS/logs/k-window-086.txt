@@ -1,0 +1,30 @@
+RING_GEOMETRY wanderUnits 5.4 · inset 0.86  (kW4 0.443 lives in THIS file)
+  declared sigma = wanderUnits x kW4 = 2.3922 units
+
+RING (W4, every cell, board units):
+  size      n     roughness   W4 sigma              dev vs 2.3922   +-5%   excursion
+  4         16    1.6744      2.4004 (CV 12.5%)     +0.34%          GREEN  5.379
+  9         81    3.7674      2.3777 (CV 14.4%)     -0.61%          GREEN  5.379
+  16        256   6.6977      2.4148 (CV 14.2%)     +0.95%          GREEN  5.400
+  pop4096   4096  6.6977      2.3918 (CV 14.2%)     -0.02%          GREEN  -
+  per-size spread 1.55%  (the n=4096 row is a pencil-boil VERSION CANARY, not a design gate)
+
+RULE (W4, every cell rule + every subgrid rule, pose 0, board units):
+  size  n(cell/sub)  cell-rule sigma      subgrid-rule sigma   all rules
+  4     4/2          2.2484 (CV 18.4%)    3.9335 (CV 20.2%)    2.8101
+  9     12/4         2.0209 (CV 30.0%)    4.4653 (CV 22.6%)    2.6320
+  16    24/6         2.3879 (CV 29.7%)    4.5809 (CV 16.9%)    2.8265
+
+G-ABS-1 — ring sigma / rule sigma, SAME window, same board, ONE run:
+  size  ring_u   rule_u   ratio(u)  ring_px  rule_px  ratio(px)  band [0.5,2.0]
+  4     2.4004   2.8101   0.854     0.761    1.158    0.657      GREEN
+  9     2.3777   2.6320   0.903     1.017    1.463    0.695      GREEN
+  16    2.4148   2.8265   0.854     1.033    1.572    0.657      GREEN
+
+sigma in the reader's px (the sentence the comment carries):
+  size  px/unit   sigma_px  drawn edge px  sigma/edge
+  4     0.31692   0.761     68.14          1.12%
+  9     0.42769   1.017     40.87          2.49%
+  16    0.42769   1.033     22.99          4.49%
+
+G-ABS-1 GREEN · G-ABS-2 GREEN

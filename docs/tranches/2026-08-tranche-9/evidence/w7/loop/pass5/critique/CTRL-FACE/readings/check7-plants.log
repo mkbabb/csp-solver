@@ -1,0 +1,6 @@
+# CHECK 7 (check-font-coverage.mjs) plants on a scratch copy of the tree, exit codes bare
+base (the tree) 0
+A .ctrl-word { font: 400 1rem "Comic Sans MS", cursive } -> 0 (NOT caught: shorthand)
+B class="font-[Comic_Sans_MS] ctrl-word" (Tailwind arbitrary) -> 0 (NOT caught; left to the rendered half)
+C .ctrl-word { font-family: "Comic Sans MS", cursive } -> 1 (caught)
+D .ctrl-word { font-family: var(--face-printed) } -> 0 (by design: the rendered half's job)

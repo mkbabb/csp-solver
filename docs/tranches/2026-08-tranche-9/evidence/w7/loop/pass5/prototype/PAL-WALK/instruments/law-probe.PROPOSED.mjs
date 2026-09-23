@@ -1,0 +1,258 @@
+#!/usr/bin/env node
+/**
+ * R6 LAW PROBE (T9-W7 round zero) — the house's standing design laws, asserted against the
+ * tree rather than remembered. Every row is a one-line law with its cite; the row prints
+ * GREEN when the tree still honours it and RED when it does not.
+ *
+ * Born-RED rows are the point: three of the nine are RED at HEAD and name a cure W7 owns.
+ * Read-only — it opens no browser, writes no file, and touches nothing under `src/`.
+ *
+ *   node docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+ *
+ * Exit 0 when every row that is GREEN at HEAD is still GREEN (the π half); exit 1 when a
+ * standing law has been broken. The born-RED rows never fail the run — they are the wave's
+ * work, and they flip to GREEN in the cure's own commit.
+ */
+import fs from "node:fs";
+import path from "node:path";
+
+// PAL-WALK pass 5: `LAW_FE` re-points the read (the lane runs it on its work tree, on the control
+// and on PAL-TIN's tree). The relative default is r0's, whose depth this copy does not share.
+const FE = process.env.LAW_FE || path.join(import.meta.dirname, "../../../../../../../../web/frontend");
+const read = (rel) => fs.readFileSync(path.join(FE, rel), "utf8");
+
+const rows = [];
+/** @param expect 'GREEN' when the law holds at HEAD; 'RED' when this is the wave's work. */
+const law = (id, statement, cite, atHead, fn) => {
+  let got = false;
+  let detail = "";
+  try {
+    const r = fn();
+    got = r === true || (r && r.ok === true);
+    detail = (r && r.detail) || "";
+  } catch (e) {
+    detail = `probe threw: ${e.message}`;
+  }
+  rows.push({ id, statement, cite, atHead, now: got ? "GREEN" : "RED", detail });
+};
+
+// ── π ROWS — GREEN at HEAD, and they must stay GREEN through every W7 cure ─────────────
+
+law(
+  "L1",
+  "the live-filter population never grows past 9 (a ceiling; the census holds the exact set)",
+  "filterBudget.ts FILTER_BUDGET_TOTAL, T4-P1 filter-deletion cure",
+  "GREEN",
+  () => {
+    const src = read("src/pencil/config/filterBudget.ts");
+    // The four budget groups only — FILL_ALLOWLIST below them is the SECONDARY census and
+    // carries its own `count:` rows (reading both was this probe's first bug, banked).
+    const budget = src.slice(0, src.indexOf("SECONDARY CENSUS"));
+    const counts = [...budget.matchAll(/count:\s*(\d+)/g)].map((m) => +m[1]);
+    const total = counts.reduce((a, b) => a + b, 0);
+    // The law is "never grows" — a CEILING at 9, the same form the chair gave L3. The exact
+    // population is filter-census's job (exact-match allowlist, both directions, on the built
+    // dist), so a surface that LEAVES is not a broken law; a surface that ARRIVES still reds here
+    // AND in the census. (CTRL-TABS's pass-4 PROPOSED diff, landed by the chair — registry-v4 §8
+    // act 3; the lane's plant at 10 read RED.)
+    return { ok: total <= 9, detail: `FILTER_BUDGET rows sum to ${total} (ceiling 9)` };
+  },
+);
+
+law(
+  "L2",
+  "the drawer's glass curve is one ruling in two layers, byte-identical",
+  "pencilConfig MOTION.curves.drawerGlide + index.css --ease-glassGlide, owner audit 4 2026-07-11",
+  "GREEN",
+  () => {
+    const ts = /drawerGlide:\s*"([^"]+)"/.exec(read("src/pencil/config/pencilConfig.ts"))?.[1];
+    // Comments stripped FIRST — the easing ledger names this token in its own prose, and a
+    // match that reads the comment reports the paragraph as the curve (banked probe bug).
+    const cssSrc = read("src/assets/index.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    const css = /--ease-glassGlide:\s*([^;]+);/.exec(cssSrc)?.[1];
+    const norm = (s) => (s ?? "").replace(/\s+/g, "");
+    return {
+      ok: !!ts && norm(ts) === norm(css),
+      detail: `TS ${ts} · CSS ${css?.trim()}`,
+    };
+  },
+);
+
+law(
+  "L3",
+  "no em dash and no unadmitted jargon reaches a reader",
+  "check-copy-register.mjs, M16 (owner 2026-08-03)",
+  "GREEN",
+  () => {
+    const g = read("scripts/check-copy-register.mjs");
+    // The law is UNADMITTED = 0; an ADMITTED row is a debt with a cure's seam, and the count
+    // may only ever FALL. Pinning it at 2 made the probe red on the commit that paid it
+    // (T9-W7 · B1/B1b at the fold `74a2b5d9`). The ceiling stays, the floor goes. The count
+    // also reads the ADMITTED ARRAY, not every `since:` in the file — the self-test's
+    // synthetic stale-admission fixture is not a standing debt. (CTRL-COST's pass-3 PROPOSED
+    // diff, landed by the chair — registry-v3 §2.12; pass4/CHAIR-RULINGS.md §1.)
+    const table = /const ADMITTED = \[([\s\S]*?)\n\];/.exec(g)?.[1] ?? "";
+    const admitted = (table.match(/since:\s*"/g) ?? []).length;
+    return { ok: admitted <= 2, detail: `${admitted} ADMITTED entries standing (of B1's two)` };
+  },
+);
+
+law(
+  "L4",
+  "washi is NEUTRAL tinted paper, one token, redefined per theme, never a hue",
+  "index.css --sheet-washi-neutral, SheetWashiLabel.vue, T5 design-union §7.3",
+  "GREEN",
+  () => {
+    const css = read("src/assets/index.css");
+    const hits = [...css.matchAll(/--sheet-washi-neutral:\s*color-mix\(([\s\S]*?)\);/g)];
+    const chromatic = hits.some((h) => /crayon|ink|#[0-9a-f]{6}/i.test(h[1]));
+    return {
+      ok: hits.length === 2 && !chromatic,
+      detail: `${hits.length} declarations (light + dark), chromatic: ${chromatic}`,
+    };
+  },
+);
+
+law(
+  "L5",
+  "one box grammar: a drawn frame is HandDrawnOutline, never a CSS border on chrome",
+  "HandDrawnOutline.vue; T8-W1 M4 (the guard ribbon's verbs took the drawn box)",
+  "GREEN",
+  () => {
+    const g = read("src/pencil/chrome/GameGallery/GameGallery.vue");
+    const drawn = /class="guard-btn guard-keep"[\s\S]{0,400}?HandDrawnOutline/.test(g);
+    return { ok: drawn, detail: `guard verbs wear HandDrawnOutline: ${drawn}` };
+  },
+);
+
+law(
+  "L6",
+  "the per-player ink is a FORMULA, not a palette: a golden step over the arcs index.css has " +
+    "not spent, at the largest chroma sRGB holds at both bands, and the ring's band is the " +
+    "section's pair (registry-v4 §2.4: light 0.295 / dark 0.79)",
+  "playerIdentity.ts inkFor/chromaAt/RESERVED_ARCS/DIGIT_BANDS/RING_BANDS, index.css --peer-ink-l + --peer-ring-l, T6 mark 13, pass5/CHAIR-RULINGS §1.4",
+  "GREEN",
+  () => {
+    // MOVED (T9-W7 pass 2). The r0 row asserted the LITERALS `137.5` and `0.11`, which is a
+    // palette test wearing a formula's name: it passes a hand-written table of hues and fails
+    // any better formula. What the law actually says is that the ink is COMPUTED and that no
+    // hex is minted for a player — so that is what is read: a step, a gamut-derived chroma, a
+    // two-arm band, and NO hex literal anywhere in the module.
+    const p = read("src/games/shared/playerIdentity.ts");
+    const css = read("src/assets/index.css").replace(/\/\*[\s\S]*?\*\//g, "");
+    const step = /const STEP\s*=/.test(p) && /Math\.sqrt\(5\)/.test(p);
+    const gamut = /function chromaAt/.test(p) && /inGamut/.test(p);
+    const arcs = /RESERVED_ARCS/.test(p);
+    const hexes = (p.match(/#[0-9a-fA-F]{6}\b/g) ?? []).length;
+    // The ring is the same hand pressed harder — its own band, two arms — and each band the
+    // module bisects its chroma at is the band the sheet publishes (one publisher; the copy held).
+    const arms = (t) =>
+      [...css.matchAll(new RegExp(`${t}:\\s*([\\d.]+);`, "g"))].map((m) => Number(m[1]));
+    const ink = arms("--peer-ink-l");
+    const ring = arms("--peer-ring-l");
+    const table = (n) =>
+      (p.match(new RegExp(`${n}\\s*=\\s*\\[\\s*([\\d.]+)\\s*,\\s*([\\d.]+)`)) ?? []).slice(1).map(Number);
+    const agree = (a, b) => a.length === 2 && b.length === 2 && a[0] === b[0] && a[1] === b[1];
+    const held = agree(ink, table("DIGIT_BANDS")) && agree(ring, table("RING_BANDS"));
+    // PASS 5: THE PAIR IS A VALUE, not a cite (LAWS P4 — an escape row carries its value). The
+    // chair adopted light 0.295 / dark 0.79 under the core-median statistic; a ring band that is
+    // not that pair is a law moved without the chair's row.
+    const PAIR = [0.295, 0.79];
+    const pair = agree(ring, PAIR);
+    return {
+      ok: step && gamut && arcs && hexes === 0 && ink.length === 2 && held && pair,
+      detail: `step: ${step}; gamut chroma: ${gamut}; arcs: ${arcs}; hex literals: ${hexes}; --peer-ink-l arms: ${ink.join("/")}; --peer-ring-l arms: ${ring.join("/") || "none"} (the pair ${PAIR.join("/")}: ${pair}); module tables held to the sheet: ${held}`,
+    };
+  },
+);
+
+// ── BORN-RED ROWS — the wave's own work, red at HEAD by construction ────────────────────
+
+law(
+  "R1",
+  "every chromatic token that paints in BOTH themes carries a dark arm",
+  "index.css --color-focus-sketch:219 — its own comment claims 'Dark mode keeps crayon-blue'",
+  "RED",
+  () => {
+    const css = read("src/assets/index.css");
+    const darkAt = css.indexOf("\n.dark");
+    const inDark = css.slice(darkAt).includes("--color-focus-sketch:");
+    return {
+      ok: inDark,
+      detail: inDark
+        ? "declared in .dark"
+        : "declared ONLY in :root — the focus ring paints #3a7bc4 at night, and the comment says otherwise",
+    };
+  },
+);
+
+law(
+  "R2",
+  "the copy register's jargon arm reads EVERY rendered string, including a computed accessible name",
+  "B1's second string lives at useGameCell.ts:153 (`solver's answer ${…}`), outside the arm's corpus",
+  "RED",
+  () => {
+    const cell = read("src/games/shared/useGameCell.ts");
+    const shipsIt = /solver's answer/.test(cell);
+    const gate = read("scripts/check-copy-register.mjs");
+    // The arm reads template text, static RENDERED_ATTRS, COPY_KEYS object literals and
+    // NARRATION_CALLS. A `computed(() => …)` that becomes an `:aria-label` is none of those.
+    const armWouldSee = /useGameCell|computed|ariaLabel/.test(
+      /const COPY_KEYS[\s\S]*?\];/.exec(gate)?.[0] ?? "",
+    );
+    return {
+      ok: !shipsIt || armWouldSee,
+      detail: shipsIt
+        ? "useGameCell.ts ships `solver's answer` into an aria-label and the gate's corpus cannot reach it"
+        : "string is gone",
+    };
+  },
+);
+
+law(
+  "R3",
+  "the mobile floating controls bar wears a drawn edge in the house hand",
+  "T9-M04 (owner 2026-08-25); GameControlPanel `.action-bar` is a colour-matched slab",
+  "RED",
+  () => {
+    // Re-cut by the chair (registry-v4 §3.19 / §8 act 3): the old `/border|HandDrawnOutline/`
+    // passed on `border: none`. The edge must be the house hand — a HandDrawnOutline INSIDE the
+    // bar's template box — and the bar's CSS may carry no border longhand with a width > 0 (R6 L5:
+    // one box grammar). Comments are stripped first (CTRL-RULE's trap: a comment fools a text law).
+    const p = read("src/games/shared/GameControlPanel.vue").replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, "");
+    const at = p.search(/class="[^"]*\baction-bar\b/);
+    const box = at < 0 ? "" : p.slice(at, at + 1200);
+    const drawn = /<HandDrawnOutline\b/.test(box);
+    const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
+    const cssBorder = /\bborder(?:-(?:top|right|bottom|left))?(?:-width)?\s*:\s*(?!0(?:px)?\b|none\b)[^;]*?(?:[1-9][\d.]*(?:px|rem|em)|thin|medium|thick)/.test(bar);
+    return {
+      ok: drawn && !cssBorder,
+      detail: drawn
+        ? cssBorder ? "HandDrawnOutline present but the bar's CSS also paints a border longhand (L5 RED)" : "the bar wears a HandDrawnOutline and no CSS border"
+        : "no HandDrawnOutline inside the bar's box — a CSS border would not count (L5)",
+    };
+  },
+);
+
+// ── report ─────────────────────────────────────────────────────────────────────────────
+
+const pad = (s, n) => String(s).padEnd(n);
+console.log("R6 LAW PROBE — the house's standing design laws, on THIS tree\n");
+console.log(`${pad("id", 4)} ${pad("head", 6)} ${pad("now", 6)} law`);
+for (const r of rows) {
+  const flag = r.now === r.atHead ? " " : "!";
+  console.log(`${pad(r.id, 4)} ${pad(r.atHead, 6)} ${pad(r.now, 6)}${flag}${r.statement}`);
+  console.log(`${" ".repeat(19)}cite: ${r.cite}`);
+  if (r.detail) console.log(`${" ".repeat(19)}read: ${r.detail}`);
+}
+
+const brokenPi = rows.filter((r) => r.atHead === "GREEN" && r.now === "RED");
+const bornRed = rows.filter((r) => r.atHead === "RED");
+console.log(
+  `\n${rows.length} rows · ${rows.length - bornRed.length} standing laws · ${bornRed.length} born-RED` +
+    ` (${bornRed.filter((r) => r.now === "RED").length} still red)`,
+);
+if (brokenPi.length) {
+  console.error(`\nBROKEN: ${brokenPi.map((r) => r.id).join(", ")}`);
+  process.exit(1);
+}

@@ -1,0 +1,31 @@
+--- a/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
++++ b/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs
+@@ -125,15 +125,23 @@
+ 
+ law(
+   "L6",
+-  "the per-player ink is a formula, not a palette: hue = i × 137.5° at a banded lightness",
+-  "playerIdentity.ts inkFor, index.css --peer-ink-l, T6 mark 13",
++  "the per-player ink is a TABLE with a gate on it: five sticks and five ring arms per arm, the ring arms at the section's pair",
++  "playerIdentity.ts inkFor, index.css --color-peer-N/-ring, scripts/check-peer-tin.mjs (lint:tin) gate 4b RING_PAIR, registry-v4 §2.4, T9-W7 PAL-TIN",
+   "GREEN",
+   () => {
+     const p = read("src/games/shared/playerIdentity.ts");
+     const css = read("src/assets/index.css");
+-    const walk = /137\.5/.test(p) && /0\.11/.test(p);
+-    const band = (css.match(/--peer-ink-l:/g) ?? []).length;
+-    return { ok: walk && band === 2, detail: `golden-angle walk: ${walk}; --peer-ink-l arms: ${band}` };
++    const tin = /var\(--color-peer-1\)/.test(p) && /var\(--color-peer-1-ring\)/.test(p);
++    const sticks = (css.match(/--color-peer-\d+:/g) ?? []).length;
++    const rings = (css.match(/--color-peer-\d+-ring:/g) ?? []).length;
++    const gated = /check-peer-tin/.test(read("package.json"));
++    // THE PAIR AS A VALUE: the gate holds every ring arm at it, so the probe reads the gate's pair.
++    const gate = gated ? read("scripts/check-peer-tin.mjs") : "";
++    const pair = /RING_PAIR\s*=\s*\{\s*light:\s*0\.295,\s*dark:\s*0\.79\s*\}/.test(gate);
++    return {
++      ok: tin && sticks === 10 && rings === 10 && gated && pair,
++      detail: `two keys off one tin: ${tin}; sticks ${sticks}; ring arms ${rings}; lint:tin present: ${gated}; the pair 0.295/0.79 held by gate 4b: ${pair}`,
++    };
+   },
+ );
+ 

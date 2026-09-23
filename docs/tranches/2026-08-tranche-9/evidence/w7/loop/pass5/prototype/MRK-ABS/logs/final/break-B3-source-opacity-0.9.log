@@ -1,0 +1,70 @@
+
+Running 2 tests using 1 worker
+
+[1/2] [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[G-ABS-5 chromium] opacity ledger 0.95 source 0.9 computed 0.95 · ablated 0.9
+16×16 paper light: painted 3.972 ledger 3.97
+16×16 frame light: painted 2.812 ledger 2.81
+16×16 paper dark: painted 3.989 ledger 3.99
+16×16 frame dark: painted 2.404 ledger 2.4
+9×9 paper light: painted 3.92 ledger 3.92
+9×9 paper dark: painted 3.989 ledger 3.99
+ablated: 3.679 2.693 3.763 2.312 3.667 3.723
+
+  1) [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+
+    Error: opacity: ledger 0.95, source 0.9, computed 0.95,0.95,0.95,0.95,0.95,0.95
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      264 |     // THE GATE, on the tree.
+      265 |     expect(L.unguarded, "every figure in the ledger comment is a ledger row").toEqual([]);
+    > 266 |     expect(opClause(L.opacity, srcOp, arms.shipped.ops), `opacity: ledger ${L.opacity}, source ${srcOp}, computed ${arms.shipped.ops}`).toBe(true);
+          |                                                                                                                                         ^
+      267 |     expect(paintClause(L.rows, arms.shipped.reads), lines.join("\n")).toBe(true);
+      268 |     // ITS CONTROLS, same run.
+      269 |     expect(opClause(L.opacity, srcOp, arms["ablated-0.9"].ops), "control: tier 2 ablated to 0.9 reds the opacity clause").toBe(false);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:266:137
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-e8e46-mes-and-reds-when-it-is-not-chromium/error-context.md
+
+
+[2/2] [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[G-ABS-5 webkit] opacity ledger 0.95 source 0.9 computed 0.95 · ablated 0.9
+16×16 paper light: painted 3.965 ledger 3.97
+16×16 frame light: painted 2.85 ledger 2.85
+16×16 paper dark: painted 3.997 ledger 4
+16×16 frame dark: painted 2.404 ledger 2.4
+9×9 paper light: painted 3.965 ledger 3.97
+9×9 paper dark: painted 3.989 ledger 3.99
+ablated: 3.685 2.693 3.755 2.316 3.68 3.715
+
+  2) [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+
+    Error: opacity: ledger 0.95, source 0.9, computed 0.95,0.95,0.95,0.95,0.95,0.95
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      264 |     // THE GATE, on the tree.
+      265 |     expect(L.unguarded, "every figure in the ledger comment is a ledger row").toEqual([]);
+    > 266 |     expect(opClause(L.opacity, srcOp, arms.shipped.ops), `opacity: ledger ${L.opacity}, source ${srcOp}, computed ${arms.shipped.ops}`).toBe(true);
+          |                                                                                                                                         ^
+      267 |     expect(paintClause(L.rows, arms.shipped.reads), lines.join("\n")).toBe(true);
+      268 |     // ITS CONTROLS, same run.
+      269 |     expect(opClause(L.opacity, srcOp, arms["ablated-0.9"].ops), "control: tier 2 ablated to 0.9 reds the opacity clause").toBe(false);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:266:137
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-e8e46-mes-and-reds-when-it-is-not-webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+    [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 

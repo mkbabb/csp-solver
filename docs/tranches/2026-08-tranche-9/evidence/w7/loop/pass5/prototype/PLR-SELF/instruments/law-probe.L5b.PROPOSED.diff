@@ -1,0 +1,43 @@
+--- r0/r6-idiom-history/law-probe.mjs	2026-09-22 18:53:25
++++ r0/r6-idiom-history/law-probe.mjs (PROPOSED)	2026-09-22 19:39:15
+@@ -123,7 +123,40 @@
+   },
+ );
+ 
++// PROPOSED (T9-W7 pass 5, PLR-SELF; the chair's row): L5 read only the guard verbs, so a head
++// disclosure could mint a CSS border and L5 stayed GREEN (§11's lobby did, pass 4). The rule's
++// SHAPE is the key, never one site's text: any scoped rule under src/pencil/chrome that hangs a
++// sheet off the head (`top: 100%`) paints no border longhand wider than 0, and the file that owns
++// that rule renders a <HandDrawnOutline. Comments are stripped first. Born RED at 74a2b5d9
++// (AttributionCard's .hover-card: `border: 2px solid`).
+ law(
++  "L5b",
++  "a head disclosure's sheet wears a drawn edge and paints no CSS border",
++  "CH-71 (a pose decision for both head disclosures at once); R6 L5; T9-W7 §11",
++  "RED",
++  () => {
++    const dir = path.join(FE, "src/pencil/chrome");
++    const files = [];
++    const walk = (d) => { for (const e of fs.readdirSync(d, { withFileTypes: true })) { const f = path.join(d, e.name); if (e.isDirectory()) walk(f); else if (f.endsWith(".vue")) files.push(f); } };
++    walk(dir);
++    const bad = [];
++    let sheets = 0;
++    for (const f of files) {
++      const src = fs.readFileSync(f, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/<!--[\s\S]*?-->/g, "");
++      const style = (src.match(/<style[^>]*>([\s\S]*?)<\/style>/) || [])[1] || "";
++      for (const m of style.matchAll(/([^{}]+)\{([^{}]*)\}/g)) {
++        if (!/(^|;|\s)top:\s*100%/.test(m[2])) continue;
++        sheets++;
++        const border = [...m[2].matchAll(/border(?:-(?:top|right|bottom|left))?(?:-width)?:\s*([^;]+)/g)].some((b) => /(^|\s)(?!0(px)?\b)\d*\.?\d+(px|rem|em)\b|thin|medium|thick/.test(b[1]) && !/^none\b/.test(b[1].trim()));
++        const drawn = /<HandDrawnOutline\b/.test(src);
++        if (border || !drawn) bad.push(`${path.basename(f)} ${m[1].trim()}${border ? " paints a border" : ""}${drawn ? "" : " draws no HandDrawnOutline"}`);
++      }
++    }
++    return { ok: sheets > 0 && bad.length === 0, detail: bad.length ? bad.join("; ") : `${sheets} head sheet rule(s), each drawn, none bordered` };
++  },
++);
++
++law(
+   "L6",
+   "the per-player ink is a formula, not a palette: hue = i × 137.5° at a banded lightness",
+   "playerIdentity.ts inkFor, index.css --peer-ink-l, T6 mark 13",

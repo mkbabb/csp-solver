@@ -1,0 +1,15 @@
+--- law-probe.copy.mjs	2026-09-23 05:50:23
++++ law-probe.R1.proposed.mjs	2026-09-23 05:50:55
+@@ -146,7 +146,11 @@
+   "index.css --color-focus-sketch:219 — its own comment claims 'Dark mode keeps crayon-blue'",
+   "RED",
+   () => {
+-    const css = read("src/assets/index.css");
++    // PROPOSED (ACC-GRAPHITE pass 5): comments stripped first, and a RETIRED token is its own
++    // reading rather than a false sentence about a ring that no longer paints it.
++    const css = read("src/assets/index.css").replace(/\/\*[\s\S]*?\*\//g, "");
++    if (!css.includes("--color-focus-sketch:"))
++      return { ok: true, detail: "RETIRED: --color-focus-sketch is declared nowhere (the ring's ink is another token's; read that token's arms)" };
+     const darkAt = css.indexOf("\n.dark");
+     const inDark = css.slice(darkAt).includes("--color-focus-sketch:");
+     return {

@@ -1,0 +1,50 @@
+
+Running 2 tests using 2 workers
+
+  ✘  2 [chromium] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (6.9s)
+  ✘  1 [webkit] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (7.4s)
+
+
+  1) [chromium] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Error: join re-cuts 134.7/s against the budget
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 62.5
+    Received:    134.65346534653466
+
+      104 |     // the row must SEE the consumer re-cut, or it measures nothing
+      105 |     expect(rates.length, `${k} (${CONSUMERS[k as keyof typeof CONSUMERS]}) never re-cut`).toBeGreaterThan(0);
+    > 106 |     expect(worst, `${k} re-cuts ${worst.toFixed(1)}/s against the budget`).toBeLessThanOrEqual(
+          |                                                                            ^
+      107 |       BUDGET_PER_S,
+      108 |     );
+      109 |   }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/e2e/front-rate.spec.ts:106:76
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc5/test-results/front-rate-G10-every-poseF-0feec-at-most-62-5-times-a-second-chromium/error-context.md
+
+  2) [webkit] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Error: join re-cuts 98.2/s against the budget
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 62.5
+    Received:    98.23182711198427
+
+      104 |     // the row must SEE the consumer re-cut, or it measures nothing
+      105 |     expect(rates.length, `${k} (${CONSUMERS[k as keyof typeof CONSUMERS]}) never re-cut`).toBeGreaterThan(0);
+    > 106 |     expect(worst, `${k} re-cuts ${worst.toFixed(1)}/s against the budget`).toBeLessThanOrEqual(
+          |                                                                            ^
+      107 |       BUDGET_PER_S,
+      108 |     );
+      109 |   }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/e2e/front-rate.spec.ts:106:76
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc5/test-results/front-rate-G10-every-poseF-0feec-at-most-62-5-times-a-second-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+    [webkit] › e2e/front-rate.spec.ts:54:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 

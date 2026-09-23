@@ -1,0 +1,7 @@
+SLEEP LINT — 34 specs · 36 waitForTimeout sites in 15 files · 3 fixed in-page sampling windows · 4 cited exemptions · 2 sleep-ok tags
+
+1 failure(s):
+
+  • viewport-law.spec.ts:111 — a fixed 600ms sleep sits inside `stepDeckTo()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+EXIT 1

@@ -1,0 +1,452 @@
+
+ RUN  v4.1.11 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/fold13/web/frontend
+
+ ❯ src/pencil/chrome/marginNote.motion.test.ts (11 tests | 1 failed) 10ms
+     × G7 (row E): the publisher emits VALUES, never the registration it is guarded by 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/marginNote.motion.test.ts > the margin note's motion (T9-W7 §7) > G7 (row E): the publisher emits VALUES, never the registration it is guarded by
+AssertionError: expected 'export function publishMotionRungs(do…' to contain '--motion-'
+
+- Expected
++ Received
+
+- --motion-
++ export function publishMotionRungs(doc: Document = document): void {
++   const el = doc.createElement("style");
++   el.dataset.motionRungs = "";
++   el.textContent = motionRungsCss();
++   doc.head.append(el);
++ }
++
++ /** The verbs a WAAPI mover may spend: DERIVED from each verb's own `mechanism`, never listed
++  *  twice. `spend("writeIn", …)` is a type error rather than a masked fallback — a keyframe
++  *  verb has no options half to hand a mover. */
++ type WaapiVerb = {
++   [
++     K in keyof typeof MOTION.verbs
++   ]: "waapi" extends (typeof MOTION.verbs)[K]["mechanism"][number] ? K : never;
++ }[keyof typeof MOTION.verbs];
++
++ /** A WAAPI mover SPENDS a verb at a rung (T9-W7 §13): it never types a number and it
++  *  never picks a curve. Returns the options half of `element.animate(keyframes, …)`;
++  *  the keyframes stay the caller's, because the SHAPE is theirs and the TIMING is ours.
++  *  The fill comes from the VERB (pass 2) — it is the verb's arm, not the mover's taste, and
++  *  no verb fills `forwards`, so `FILL_ALLOWLIST` never hears about a spend. */
++ export const spend = <V extends WaapiVerb>(
++   verb: V,
++   rung: (typeof MOTION.verbs)[V]["rungs"][number],
++ ) =>
++   ({
++     duration: MOTION.rungs[rung],
++     easing: MOTION.verbs[verb].ease,
++     fill: MOTION.verbs[verb].fill,
++     composite: "replace",
++   }) as const;
++
++ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
++  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
++  *  applied at the consumer. */
++ export function beatsFor(intervalMs: number): number {
++   if (!Number.isFinite(intervalMs)) return 1;
++   return Math.max(1, Math.round(intervalMs / MOTION.beatMs));
++ }
++
++ // ── THE HOVER GRAMMAR — what boils under a pointer, and what never does ──────────
++ //
++ // THE RULE, in two clauses, DERIVED from the estate's dominant pattern (T8-W2 M5, censused
++ // row by row across every text surface the chrome paints — masthead, drawer, picker, gallery,
++ // ribbon, cards, notes; the table is the wave report's):
++ //
++ //   R1  NO TEXT BOILS. Ever — not at rest, not on hover. Boil is for DRAWN GEOMETRY (the grid,
++ //       the outlines, the wordmark's pose stack, the celestial pair, the divider) and for the
++ //       DRAWN MARKS text wears (the option chips' scribble/ghost underlines, which are seeded
++ //       data-URI backgrounds, not filters). A text RUN never carries `filter: url(#…)` and a
++ //       hover never mints one. This clause is not new and it is not advice: P1-W3 deleted the
++ //       estate's three hover wobbles at source (`.ctrl-btn:hover`, `.section-heading:hover`,
++ //       `.icon-btn:hover`) and `e2e/filter-census.spec.ts` G3.5 walks the pointer over every
++ //       candidate surface in BOTH regimes and reds if one comes back. Census 9, unmoved by
++ //       anything on this page — a hover cure that needs a filter is the wrong cure.
++ //
++ //   R2  EVERY INTERACTIVE TEXT SURFACE TAKES EXACTLY ONE HOVER AFFORDANCE; INERT TEXT TAKES
++ //       NONE. The affordance is the CONTROL's, not each text run's — a sublabel that stays
++ //       muted inside a button whose ground lights conforms, because the rank it carries is
++ //       the point. Three forms, and there is no fourth:
++ //         · INK LIFT — muted → `--color-foreground`, tweened 150–250ms. The default for a
++ //           bare word (chips, `leave`, `@mbabb`, the debug toggle).
++ //         · A DRAWN MARK — the chips' ghost scribble appears (unselected) or redraws one boil
++ //           step (selected, T8-W2). The pencil answer, for words that already sit at
++ //           foreground and have no lift left.
++ //         · A GROUND — `--color-accent` behind a BOXED control (`.icon-btn`, `.staging-btn`,
++ //           `.error-note-retry`). Boxes only; a ground under a bare word is a fourth form.
++ //       Fence every hover rule in `@media (hover: hover)` so nothing sticks after a tap.
++ //
++ // THE COUNTS, and only the ones that can be re-derived on demand. R1 is gated and its number
++ // is 9 — `FILTER_BUDGET_TOTAL`, exact-match in both directions, both engines, both regimes,
++ // hovered and at rest. R2 is not gated yet; what the census found is SIX violations against
++ // it, every one an interactive surface answering nothing, and inert text conforming with no
++ // exceptions at all. Two are cured in this wave (`OptionSelector`'s selected chip — the only
++ // inert word in an otherwise live row, the mark's own shot; `AttributionCard`'s debug toggle,
++ // an ink lift that snapped where every sibling tweens). Four sit behind other agents' fences
++ // and ride wiring requests: the guard ribbon's two buttons, the gallery card's title and
++ // subline, the drawer's `i` glyph, and its mobile heading tab.
++ //
++ // PROMOTE R2 TO A GATE ON ITS NEXT BITE. This is the family's second appearance (P1-W3 cut
++ // three hover wobbles; T8-W2 counts six silent controls), and a rule stated only in a comment
++ // is exactly what lessons §3 warns about. The cheap instrument already exists in shape:
++ // `filter-census.spec.ts` G3.5 already walks the pointer over every candidate surface in both
++ // regimes — a second assertion in that walk ("every interactive text surface's computed style
++ // DIFFERS hovered vs at rest") turns this paragraph into a count.
++ //
++ // The wordmark is the instructive conforming case: the WORD never changes, and the control
++ // still answers — its caret glyph wiggles (`HandwrittenGlyph`'s `isHovered`, the one hover
++ // wiggle that reaches chrome at all). In the gallery the heading renders as a `<span>` and
++ // the caret is not mounted, so the inert form correctly answers nothing. Same component,
++ // both clauses, no exception.
++
++ // ── Path-based boil config ───────────────────────────────────────
++
++ export interface BoilConfig {
++   frameCount: number;
++   intervalMs: number;
++   frameBoil: number;
++   subgridBoil: number;
++   cellBoil: number;
++   outlineBoilPx: number;
++ }
++
++ const DEFAULT_BOIL_CONFIG: BoilConfig = {
++   frameCount: 4,
++   intervalMs: 150, // ~6.7fps — "shooting on fours"
++   frameBoil: 1.2, // frame lines perturbation (viewBox units)
++   subgridBoil: 0.6, // subgrid lines
++   cellBoil: 0.3, // cell lines — subtle so glyphs feel stable
++   // HandDrawnOutline perturbation, in CSS PX (the outline is px-native, T3-W10 F1).
++   // Its own constant because frameBoil is 1000-unit viewBox units — passing it verbatim
++   // was a unit bug once the outline went px-native (1.2px flat ≈ 4× the BEFORE screen
++   // energy of 0.31–0.44px across hosts; T3-W12 §3, a2-boil-outline.md).
++   outlineBoilPx: 0.45,
++ };
++
++ /** Reactive boil config — mutations here update the grid boil live */
++ export const BOIL_CONFIG: BoilConfig = reactive({ ...DEFAULT_BOIL_CONFIG });
++
++ export function resetBoilConfig() {
++   Object.assign(BOIL_CONFIG, { ...DEFAULT_BOIL_CONFIG });
++ }
++
++ /** Frozen defaults for reset.
++  *  Wobble filters use single-layer feTurbulence+feDisplacementMap (small elements only).
++  *  Grid boil is path-based (see BOIL_CONFIG). */
++ const DEFAULT_PRESETS: Record<string, FilterPreset> = {
++   // GRAIN-STATIC DISPOSITION — rewritten to the SHIPPED TRUTH at P1-W3.
++   //
++   // `grain-static` is the pencil's tooth: feTurbulence + feDisplacementMap chattering stroke
++   // edges. Its VALUES are byte-untouched and have been since W9 (the crit-forensics HOLD): the
++   // grid's 1000-unit space depends on them. What has changed, repeatedly, is WHO IS ALLOWED TO
++   // BE A LIVE CLIENT — and the answer is now counted, in one file:
++   // **`pencil/config/filterBudget.ts`**, enforced against the built dist by
++   // `e2e/filter-census.spec.ts` as an exact-match allowlist. Read that budget, not this comment,
++   // for the population. As of P1-W3 the whole estate's live-filter total is 14, against 96–118
++   // measured on the base build.
++   //
++   // How each surface got there, shortest form:
++   //   • grid — BAKED (T4-W1). `<image>` pose stack; the live `<g filter>` fallback goes
++   //     `display: none` once the bitmaps land. Soul gate: SSIM 0.983–0.985 at settled/DPR2 (a
++   //     thin but genuine pass at the 0.98 floor). 6 of 36 matrix conditions fell below 0.98, ALL
++   //     of them DPR1 + live-animating mid-phase — the envelope was EXTENDED to cover them with
++   //     the numbers on the record rather than gate-blocking on transient frames. The measured
++   //     values are structural SSIM; mean-channel deltas (0.12–1.06%) are a different metric and
++   //     are never to be reported as SSIM.
++   //   • outline, tally — GRAIN IN GEOMETRY (T3-W13 §1-P2). `gridPaths.ts §Grain bake` folds the
++   //     grain into the pose geometry, params derived from these GrainConfigs (wavelength =
++   //     1/baseFrequency, resample @ wavelength/3, peak amplitude scale/2, per-frame seeds); the
++   //     surface drops `filter=` for frameCount static siblings + an opacity swap. Soul gate:
++   //     SSIM 0.996/0.993 tab, 0.993 stroke band panel, @DPR2 settled.
++   //   • divider — FROZEN, filter kept (`fb15253d`). The bake FAILED its gate at 0.809: it is
++   //     100% stroke, and two noise realizations of a thin line cannot correlate window-wise. It
++   //     takes the banked fallback — pose 0 pinned on Apple engines, one raster per pose — and it
++   //     is the budget's SOLE beat-driven exception, with its retirement trigger written there.
++   //   • glyph, icon, control panel, loader — DELETED (P1-W3, G2.4 ruled **C / C / C** on the
++   //     owner's word). Not relocated, not baked: the bake could not reproduce the filter's
++   //     per-pixel tooth at glyph scale, and SSIM ranked unfiltered CLOSER to the incumbent than
++   //     baked in all four engine×theme cells (webkit board 0.978/0.980). Icons were a uniform
++   //     ±1.25-unit nudge at viewBox 24 against this preset's 25-unit wavelength — never a tooth.
++   //   • `stroke-light` / `stroke-dark` — ORPHANED with the control panel; `baseDef: false` below.
++   //
++   // The booked escape hatch is spent: design-refinement §2.2's geometric bake IS the outline
++   // path above, and the glyph's version was auditioned at G2.4 and declined by ruling.
++   "grain-static": {
++     id: "grain-static",
++     margin: 5,
++     grain: { baseFrequency: 0.04, numOctaves: 3, scale: 2.5, seed: 2 },
++   },
++   // `grain-outline` (T3-W12 §3): HandDrawnOutline's own tooth. The outline is px-native
++   // (T3-W10 F1), so grain-static's userSpaceOnUse units render LITERAL there — 2.5px
++   // displacement at 25px wavelength, 3.8× the BEFORE screen energy; the stroke body
++   // wavers and its core erodes to the hairline in the 2026-07-11 owner audit
++   // (boil-hairline.png). Derivation (a2-boil-outline.md): old screen displacement was
++   // 2.5·k at k* ≈ 0.3 for the outlined-host band → scale 0.75; baseFrequency 0.04/0.3 →
++   // 0.13. grain-static stays byte-untouched — the grid's 1000-unit space, glyphs, and
++   // 20–32px icons depend on its values (crit-forensics HOLD).
++   "grain-outline": {
++     id: "grain-outline",
++     margin: 5,
++     // Baked into the outline pose geometry (gridPaths §Grain bake) — no live base def.
++     baseDef: false,
++     grain: { baseFrequency: 0.13, numOctaves: 3, scale: 0.75, seed: 2 },
++   },
++   "wobble-logo": {
++     id: "wobble-logo",
++     margin: 10,
++     // Consumed only as the #wobble-logo-p{i} pose stack (HandwrittenLogo) — no base def.
++     baseDef: false,
++     wobble: {
++       baseFrequency: 0.02,
++       numOctaves: 2,
++       scale: 3,
++       offsets: [0.01, -0.02, 0.02, -0.01],
++       animScale: 0.1,
++       intervalMs: 550,
++     },
++   },
++   "wobble-celestial": {
++     id: "wobble-celestial",
++     margin: 10,
++     wobble: {
++       baseFrequency: 0.02,
++       numOctaves: 2,
++       scale: 5,
++       offsets: [-0.01, 0.02, -0.02, 0.01],
++       animScale: 0.15,
++       intervalMs: 160,
++     },
++   },
++   "wobble-heart": {
++     id: "wobble-heart",
++     margin: 10,
++     wobble: {
++       baseFrequency: 0.02,
++       numOctaves: 2,
++       scale: 5,
++       offsets: [0.01, -0.02, 0.02, -0.01],
++       animScale: 0.2,
++       intervalMs: 170,
++     },
++   },
++   // `stroke-light` / `stroke-dark` (P1-W3): ORPHANED. Their sole consumer was
++   // `.control-panel-filtered`, retired on the G2.4 ballot's **C** ruling — a 3-pass 4-octave
++   // turbulence chain with three displacement maps and two blends, over a ~320×700 CSS panel,
++   // on an HTML box (WebKit's software filter path). No `url(#id)` consumer remains, so the P4
++   // rule suppresses both base defs; the params stay here, unaltered, because reversal is meant
++   // to be one CSS block plus a flag — not a re-derivation.
++   "stroke-light": {
++     id: "stroke-light",
++     margin: 10,
++     baseDef: false,
++     multiPass: {
++       baseFrequency: 0.04,
++       numOctaves: 4,
++       blendMode: "multiply",
++       passes: [
++         { seed: 1, scale: 4.5 },
++         { seed: 7, scale: 5.0 },
++         { seed: 13, scale: 4.0 },
++       ],
++     },
++   },
++   "stroke-dark": {
++     id: "stroke-dark",
++     margin: 10,
++     baseDef: false,
++     multiPass: {
++       baseFrequency: 0.04,
++       numOctaves: 4,
++       blendMode: "screen",
++       passes: [
++         { seed: 1, scale: 4.5 },
++         { seed: 7, scale: 5.0 },
++         { seed: 13, scale: 4.0 },
++       ],
++     },
++   },
++ } as const;
++
++ /** Reactive copy for live tuning — mutations here update the live SVG filters */
++ export const FILTER_PRESETS: Record<string, FilterPreset> = reactive(
++   structuredClone(DEFAULT_PRESETS) as Record<string, FilterPreset>,
++ );
++
++ export function resetPreset(id: string) {
++   const defaults = DEFAULT_PRESETS[id];
++   if (defaults) Object.assign(FILTER_PRESETS[id], structuredClone(defaults));
++ }
++
++ export function resetAllPresets() {
++   for (const id of Object.keys(DEFAULT_PRESETS)) {
++     resetPreset(id);
++   }
++ }
++
++ export { DEFAULT_PRESETS };
++
++ // ── Frozen wobble pose variants (T3-W13 §1-P3) ───────────────────
++ //
++ // The per-beat feTurbulence write is retired: a wobble boil is N poses, and pose
++ // i's params are exactly what the retired SvgFilters watcher wrote on its beat —
++ // baseFrequency + offsets[i]·animScale, same seed. SvgFilters renders one STATIC
++ // filter per pose (id `${presetId}-p${i}`); consumers stack N filtered siblings
++ // (`will-change: opacity`) and flip visibility on the shared beat, so each pose
++ // rasters ONCE and the steady state re-rasters nothing (the grain-hoist mechanics,
++ // generalized). Derived reactively from FILTER_PRESETS — FilterTuner stays live.
++
++ /** The frozen pose frequencies of a wobble preset (rounding matches the retired
++  *  watcher's write, so each pose renders byte-identically to its live-beat frame). */
++ export function wobblePoseFrequencies(preset: FilterPreset): number[] {
++   const w = preset.wobble;
++   if (!w) return [];
++   return w.offsets.map(
++     (o) => Math.round((w.baseFrequency + o * w.animScale) * 10000) / 10000,
++   );
++ }
++
++ /** Filter id of pose `i` of a wobble preset — the shared def shape every pose
++  *  stack consumes (HandwrittenLogo, DarkModeToggle). */
++ export function wobblePoseId(presetId: string, pose: number): string {
++   return `${presetId}-p${pose}`;
++ }
++
++ // ── Draw-in timing presets ────────────────────────────────────────
++
++ // Only gridFrame/gridSubgrid/gridCell/glyph have consumers, four files' worth:
++ // `usePathAnimation`'s `animateDrawIn` (the three grid tiers), `HandwrittenGlyph`'s reveal
++ // draw-in and `DifficultyTally`'s tally stagger (glyph), `GameGallery`'s deal reveal
++ // (gridFrame's duration). The former `solveCell` (500/120) and `logo` (1800/280)
++ // presets were dead config — zero consumers, deleted per design-refinement.md §1.2 / §7.1.
++ // The logo actually reveals via a 1.2 s clip-path wipe (HandwrittenLogo.vue), not a stroke
++ // draw-in; the celebration defines its own timing (see CELEBRATION), not a resurrected preset.
++ export const DRAW_IN_PRESETS = {
++   gridFrame: {
++     duration: 350,
++     stagger: 30,
++     jitter: 20,
++     baseDelay: 0,
++     timing: "easeOutCubic",
++   },
++   gridSubgrid: {
++     duration: 280,
++     stagger: 25,
++     jitter: 25,
++     baseDelay: 150,
++     timing: "easeOutCubic",
++   },
++   gridCell: {
++     duration: 200,
++     stagger: 10,
++     jitter: 15,
++     baseDelay: 300,
++     timing: "easeOutCubic",
++   },
++   glyph: {
++     duration: 350,
++     stagger: 0,
++     jitter: 0,
++     baseDelay: 0,
++     timing: "easeOutCubic",
++   },
++ } as const;
++
++ // ── Glyph animation timing ───────────────────────────────────────
++
++ export const GLYPH_ANIM = {
++   autoWiggleDuration: 2500,
++   hoverWiggleDuration: 600,
++ } as const;
++
++ // ── Solve celebration — "the gold-star moment" (design-refinement.md §1.3) ──
++ //
++ // A celebration is a moment, not a state: three beats, one timeline, finite, ≤3.2s crest.
++ // The board's own beats ride the scheduler's `sequence` subscriber kind; the star and the
++ // heart (T6 marks 14/15) ride the CSS animation vocabulary instead (assets/index.css §THE
++ // MOTION VOCABULARY), binding these numbers as `--*-dur`/`--*-delay` — zero subscribers,
++ // zero timers. Never a per-cell keyframes.js RAFPlayback either way.
++ //
++ // Budget (worst case): beat-1 reveal window ≈1.2s → 150ms breath → beat-2 onset ≈1.35s;
++ // the diagonal front crosses in ≈0.5s (last onset ≈1.85s); each flourish is 2×600ms → the
++ // last cell crests ≈3.05s. The star's own tail is the longest limb: crest 2650 + fade 540
++ // = 3.19s. Both inside the 3.2s cap.
++ export const CELEBRATION = {
++   /** Beat 1: total board-normalized reveal window; per-cell stagger = window / blankCount. */
++   revealWindowMs: 1200,
++   revealStaggerMin: 4,
++   revealStaggerMax: 24,
++   /** Beat 2: onset after beat 1 + the 150ms breath. */
++   beat2StartMs: 1350,
++   /** Beat 2: diagonal wavefront crosses any board in ~this long; per-cell onset += (row+col)·(cross/(2N−2)). */
++   wavefrontCrossMs: 500,
++   /** Beat 2: each solved cell plays exactly this many wiggle cycles as it passes. */
++   flourishCycles: 2,
++   /** Wiggle cycle length (= hoverWiggleDuration) — the variant-swap cadence. */
++   wiggleCycleMs: 600,
++   /** Beat 3: classroom murmur — one solved cell wakes for a single wiggle per this window. */
++   murmurWindowMs: 2500,
++   /** The gold star, T6 mark 14 — it BLOOMS over the whole board and hands the
++    *  moment to the corners. Onset 2050ms, 600ms of storybook growth (one 1.06
++    *  overshoot) landing exactly on the crest; at the crest the star's OUTLINE
++    *  alone flashes (320ms) while the body plateaus and dissolves (540ms, quiet
++    *  by 3.19s — the ≤3.2s cap held), and the corner sticker presses on (260ms).
++    *  `starCrestMs` keeps its meaning: the crest is one instant, shared. */
++   starBloomStartMs: 2050,
++   starBloomMs: 600,
++   starCrestMs: 2650,
++   starFlashMs: 320,
++   starFadeMs: 540,
++   starLandMs: 260,
++   /** The felt heart (T3-W9, F7 §3.2) — the Heart Fruit crests board bottom-right.
++    *  Bounce onset = the star's crest (one shared moment), 550ms of reciprocal-axis
++    *  squash on the HOST WRAPPER (never the filtered <g>), settling ≈3.2s — at the cap.
++    *  The blink is post-crest ambient: one shut-and-open on the eyes group, once,
++    *  1.8s after settle (T6 mark 15 — a bound delay on `plush-blink`, no timer). */
++   heartCrestMs: 2650,
++   heartBounceMs: 550,
++   heartBlinkDelayMs: 1800,
++   heartBlinkMs: 240,
++ } as const;
++
++ /** Beat-1 stagger, board-normalized so the reveal window is ~constant across sizes. */
++ export function revealStaggerMs(blankCount: number): number {
++   if (blankCount <= 1) return CELEBRATION.revealStaggerMin;
++   return Math.min(
++     CELEBRATION.revealStaggerMax,
++     Math.max(
++       CELEBRATION.revealStaggerMin,
++       Math.round(CELEBRATION.revealWindowMs / blankCount),
++     ),
++   );
++ }
++
++ /** Beat-2 wavefront step per (row+col) diagonal, so the front crosses in ~wavefrontCrossMs. */
++ export function wavefrontStepMs(boardSize: number): number {
++   const diag = Math.max(1, 2 * boardSize - 2);
++   return Math.round(CELEBRATION.wavefrontCrossMs / diag);
++ }
++
+
+ ❯ src/pencil/chrome/marginNote.motion.test.ts:131:23
+    129|     );
+    130|     expect(publisher).not.toContain("@property");
+    131|     expect(publisher).toContain("--motion-");
+       |                       ^
+    132|   });
+    133|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 10 passed (11)
+   Start at  19:05:42
+   Duration  595ms (transform 43ms, setup 16ms, import 66ms, tests 10ms, environment 375ms)
+
+EXIT 1

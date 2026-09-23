@@ -1,0 +1,39 @@
+T9-W7 pass 5 · CTRL-TAPE — readings, summarised (raw JSON stays in the lane's scratch, never banked)
+payload: ?board= PINNED_GIVENS {0:5,2:8,11:3,18:6,20:9} codec v1; givens read back EQUAL on every arm of every row
+arms: proto dist index-CtiSx-dqCRkE.js → final index-T6edeNHCmbrz.js (slab deleted) · control 74a2b5d9 index-CubiZsMVSwTc.js · main-HEAD 042698e2 index-ChSrVSqM0j8q.js (git-archive scratch tree, own cacheDir)
+
+M18 FOOT (p5-foot, DPR 2, final dist; light all cells, dark rail1280/dock390/land844) — chromium | webkit
+  lip paths / stroke        1 / 1.5 every cell                          | same
+  border in the strip       0                                           | 0          (control 1 | 1.5 at the rail — the "i" ring; main-HEAD same)
+  coverage shown vs hidden  1.00 top/bottom/left/right, every cell      | same       (NEG: foot unpositioned → top 0.00)
+  lip core median           17.359 light · 14.309 dark                  | 17.197 · 14.309
+  |dx| lip sides vs wells   ≤ 0.24                                      | ≤ 0.24
+  box gap last well → lip   rail 15.92–16.17 · dock 15.77–16.17 · land 16.00–16.22 | rail 16.05–16.33 · dock 15.3–16.06 · land 15.59–15.81
+  inter-well box gap        rail 16 · dock/land 8
+  painted daylight          lip 17.5–21 vs inter-well 25.5–37 (the wells' jagged hand sits ~11 css inside their boxes)
+  foot pad computed         rail 56px (3.5rem berth) · dock 12px · land 18px
+  lowest lip ink above vp   dock 4.5–5.5 · land 7.5–8 · rail 101–136
+  lip → case stroke         dock 4.0–5.0 · land 4.5–5.0 · rail 49–50
+  control / main-HEAD       paths 0 at every cell (R3 RED on both controls)
+PAD SWEEP (dock, lowest ink above vp / lip→case daylight): 0.5rem 0.5–1 / 0–0.5 · 0.625rem 2.5–3 / 2–2.5 · 0.75rem 4.5–5 / 4–4.5 (landed) · landscape 0.75rem crossed the case stroke −1.0/−1.5 → 1.125rem
+SHEET SNAP (webkit): risen sheet top snaps to a whole css px, bottom 844.156 (390) / 931.828 (430): bar box stands 11.84/12.17 off the viewport, 12.00 off the sheet
+
+CONTENT VIEW per cell (card clientHeight − pin band − an in-port sticky bar) proto | control → Δ (both engines equal ±0.01 unless noted)
+  rail1440 475.13 | 554.84 → −79.71   rail1280 443.13 | 523.19 → −80.06   rail1024 412.13 | 491.72 → −79.59
+  coarse1280 487.13 | 523.19 → −36.06 (webkit 470.13 | 506.19)   dock390 468.13 | 555.23 → −87.10 (webkit −88.10)
+  dock430 531.13 | 602.23 → −71.10   land844 173.13 | 296 → −122.87 (control's bar is in flow there; range 441 → 594)
+  of which the pin band (43.87 vs 20 rail / 6 dock) is −23.87 rail, −37.87 dock/land; the rest is the foot (121 rail with the 56 berth · 78.77 dock · 84.77 land)
+
+π PROD-VS-PROD (p5-pi, 6 cells × 2 engines, 417/421/409-node signatures outside the case)
+  vs 74a2b5d9 AND vs main-HEAD: board, cell, wordmark identical to the hundredth every cell; rect deltas 0; paint deltas only IMG.rest-pose opacity (control-vs-control shows the same 2 in 2 of 12 cells — noise)
+  tag deltas 6 at the rail = the quick set's 3 nodes (DrawerTab tongue-strip) shifting the index
+  case: rail y 0.00, h −0.02 (after the unrounded --card-foot-h; −0.19…−0.86 before) · land y +0.02, h −0.02 · dock390 top +37.23/+38.00 · dock430 top +20.99/+21.00
+
+RING (p5-ring, keyboard route both engines, core median | fracUnder | worst column at 90%)
+  proto  well/foot/tape: 4.289 light · 4.286 dark | 0.004–0.176 | 3.23–4.29 · tape ground only at dock390 · CARD ground ABSENT (no focusable ring abuts bare card)
+  control chromium 3.675 light / 17.47 dark · webkit 2.147 / 1.783, fracUnder 1.0
+
+RIBBON (p5-ribbon = CTRL-RULE's ribbon-critic, re-pointed): 390×844 + 844×390 both engines covRaw 0.68/0.76 (unclipped rect) vs covPainted 0, elementFromPoint = the ribbon; answers 48.36×44 clear 51.36×44 at stroke 1.5/2.5, min-height 44px; 1440×900 fine: one click clears, no ask (isCoarse && isDirty)
+ARMER (p5-armkeys): after the tap focus = body; Tab 1 → ribbon `keep`, Tab 2 → `clear`, both engines
+STICKY §2.6 (p5-sticky): proto SYNC pencils static / visFrac 0, SETTLED sticky / 1 (wellInView 0.811–0.856) · control pencils UNREACHABLE (want 599.2 > range 504 rail; drawer range 437) — the control is green vacuously
+SEAL (p5-seal, iPad coarse 1280×800): 1303.44 / 1303.31 · first tape above/below [−4.42, 38.83] / [−4.41, 38.81] · LIFT a −8 translate → [3.58, 30.83] Δseal 0 · b −16 → [11.58, 22.83] Δ0 · c layout +8 → [11.60, 22.81] Δ−8

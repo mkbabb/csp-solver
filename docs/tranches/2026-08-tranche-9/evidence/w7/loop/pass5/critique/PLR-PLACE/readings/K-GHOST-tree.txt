@@ -1,0 +1,58 @@
+
+ RUN  v4.1.11 <work>
+
+ ❯ .plr-place-crit/ghost.test.ts (3 tests | 2 failed) 35ms
+   × K-GHOST: an epoch clear inside a first move's settle window leaves no dot 26ms
+   × K-LEAVE: a peer dropped from the map inside its first settle window draws no dot 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  .plr-place-crit/ghost.test.ts > K-GHOST: an epoch clear inside a first move's settle window leaves no dot
+AssertionError: 1000 ms after the clear, nobody has sent a cur on the new board: expected [ 'p2' ] to deeply equal []
+
+- Expected
++ Received
+
+- []
++ [
++   "p2",
++ ]
+
+ ❯ .plr-place-crit/ghost.test.ts:29:85
+     27|   vi.advanceTimersByTime(1000);
+     28|   await w.vm.$nextTick();
+     29|   expect(dots(), "1000 ms after the clear, nobody has sent a cur on th…
+       |                                                                                     ^
+     30|   w.unmount();
+     31| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  .plr-place-crit/ghost.test.ts > K-LEAVE: a peer dropped from the map inside its first settle window draws no dot
+AssertionError: expected [ 'p1', 'p2' ] to deeply equal [ 'p1' ]
+
+- Expected
++ Received
+
+  [
+    "p1",
++   "p2",
+  ]
+
+ ❯ .plr-place-crit/ghost.test.ts:43:18
+     41|   vi.advanceTimersByTime(1000);
+     42|   await w.vm.$nextTick();
+     43|   expect(dots()).toEqual(["p1"]);
+       |                  ^
+     44|   w.unmount();
+     45| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 1 passed (3)
+   Start at  02:16:18
+   Duration  530ms (transform 159ms, setup 13ms, import 187ms, tests 35ms, environment 211ms)
+
+EXIT 1

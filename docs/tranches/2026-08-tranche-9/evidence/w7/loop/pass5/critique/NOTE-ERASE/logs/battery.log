@@ -1,0 +1,20 @@
+npm run lint:lanes | tree 0 | control 2
+    C: > csp-solver-frontend@0.1.0 lint:lanes
+    C: > node scripts/check-lane-membership.mjs --self-test
+    C: 
+    C: check-lane-membership: no ci.yml at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl/.github/workflows/ci.yml. This gate reads the workflow, the manifest and BOTH script trees, and refuses to run without them rather than degrading to a green.
+npm run lint:theme-tokens | tree 0 | control 0
+npm run lint:sleep | tree 0 | control 0
+npm run test:e2e:projects | tree 0 | control 0
+node scripts/check-pw-projects.mjs | tree 0 | control 0
+npx eslint . | tree 0 | control 0
+npm run lint | tree 0 | control 0
+npm run lint:copy | tree 0 | control 0
+node scripts/check-copy-register.mjs | tree 0 | control 0
+npm run lint:motion | tree 0 | control 0
+npm run lint:ink | tree 0 | control 0
+node scripts/check-ink-pressure.mjs | tree 0 | control 0
+npx vue-tsc --noEmit | tree 0 | control 0
+DONE
+EXIT 0
+npm run lint:lanes | control (re-run with .github in the archive) 0

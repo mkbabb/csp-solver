@@ -1,0 +1,92 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-PLACE/web/frontend
+
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > Lamport-LWW — two replicas, every delivery order, one board > converges whatever order the ops arrive in 2ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > Lamport-LWW — two replicas, every delivery order, one board > is idempotent — a re-delivered op changes nothing 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > Lamport-LWW — two replicas, every delivery order, one board > the tie-break is the AUTHOR, not the arrival — the higher id takes the cell 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > Lamport-LWW — two replicas, every delivery order, one board > an older write never takes a cell back 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > identity — derived on every page, negotiated on none > the same peer id reads the same name everywhere, forever 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > identity — derived on every page, negotiated on none > a taken name re-rolls rather than growing a number 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > identity — derived on every page, negotiated on none > every name is writeable in the hand the roster is drawn in 2ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > identity — derived on every page, negotiated on none > ink is the golden-angle walk, and it never repeats a hue inside a room 0ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the epoch names its worksheet — `st` gains g, z and k > publishes the mounted game, its size, and the room's ink assignment 3ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the epoch names its worksheet — `st` gains g, z and k > a same-game `st` is adopted in place, AT THE PUBLISHED SIZE (defect D-1) 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the epoch names its worksheet — `st` gains g, z and k > a different-game `st` stages the board and asks the app to turn the page 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the epoch names its worksheet — `st` gains g, z and k > the staged board is a ONE-SHOT: a mis-routed arm dies at the first mount 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the epoch names its worksheet — `st` gains g, z and k > an older epoch never turns the page 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > ink is the room's, not the page's — `k` adoption > rebinds from the assignment, continues the cursor past it, and is idempotent 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > ink is the room's, not the page's — `k` adoption > names a peer who left before this page arrived 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the ghost — `cur`, and what it refuses to be > throttles to the leading edge and one trailing frame 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the ghost — `cur`, and what it refuses to be > drops a cursor aimed at another board, holds one aimed at this one, and expires it 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the ghost — `cur`, and what it refuses to be > clears wholesale at the epoch, and per id at a departure 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > `live` follows the socket — the latch dies > a table you opened is one you are at; a dropped link says so 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > `live` follows the socket — the latch dies > a table you followed a link into waits for the room to answer 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the session outlives the scene > clearing the board source does NOT end the room (the trapdoor, deleted) 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > arrivals, departures, and returns > a join whose id the roster already holds is a REJOIN, with no duplicate row 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > presence is said on a clock — the roster stops lying > a peer silent past the expiry leaves the roster — and their digits keep their ink 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > presence is said on a clock — the roster stops lying > this page says it is here on a clock, and the beat carries nothing 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > presence is said on a clock — the roster stops lying > a peer that keeps beating never leaves, however still the table is 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > presence is said on a clock — the roster stops lying > a peer that says nothing but `cur` is still at the table 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the binding — you rejoin as slug x (§2.9) > a new tab in the same room reclaims the id, the slug and the ink 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the binding — you rejoin as slug x (§2.9) > keeps the name even when the room has expired and nobody answers 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the binding — you rejoin as slug x (§2.9) > a SECOND live tab is a second player — it never takes the first one's name 2ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > the binding — you rejoin as slug x (§2.9) > the binding is per ROOM — a different table is a different name 1ms
+ × src/games/shared/useSession.plrplace-scratch.test.ts > PAL-WALK CRITIC — the relay race at the SAME epoch > S1 — a non-author's st of the SAME epoch arrives first: does the author's word land? 4ms
+   → expected { Object (--color-user-ink) } to deeply equal { Object (--color-user-ink) }
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > PAL-WALK CRITIC — the relay race at the SAME epoch > S2 — the control: the author first, the relayer second (same epoch) 1ms
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > PLR-PLACE — the cur half of the same wire > C1 — a second same-epoch st (the relayer's answer) does not wipe a cursor heard between 1ms
+ × src/games/shared/useSession.plrplace-scratch.test.ts > PLR-PLACE — the cur half of the same wire > C2 — a cursor that races AHEAD of its st (a joiner's first second): is the still peer drawn after the adopt? 1ms
+   → a still peer, after the joiner adopts: expected {} to deeply equal { 'peer-3': 40 }
+ ✓ src/games/shared/useSession.plrplace-scratch.test.ts > PLR-PLACE — the cur half of the same wire > C3 — your own ring follows the wire: a new epoch clears what you sent, as it clears the room's 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.plrplace-scratch.test.ts > PAL-WALK CRITIC — the relay race at the SAME epoch > S1 — a non-author's st of the SAME epoch arrives first: does the author's word land?
+AssertionError: expected { Object (--color-user-ink) } to deeply equal { Object (--color-user-ink) }
+
+- Expected
++ Received
+
+  {
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.11 105.0deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.11 157.5deg)",
+  }
+
+ ❯ src/games/shared/useSession.plrplace-scratch.test.ts:676:29
+    674|     p.hear("st", stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3, k: {…
+    675|     p.peer("peer-3", true);
+    676|     expect(inkOf("peer-3")).toEqual(inkFor(6));
+       |                             ^
+    677|   });
+    678|   it("S2 — the control: the author first, the relayer second (same epo…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.plrplace-scratch.test.ts > PLR-PLACE — the cur half of the same wire > C2 — a cursor that races AHEAD of its st (a joiner's first second): is the still peer drawn after the adopt?
+AssertionError: a still peer, after the joiner adopts: expected {} to deeply equal { 'peer-3': 40 }
+
+- Expected
++ Received
+
+- {
+-   "peer-3": 40,
+- }
++ {}
+
+ ❯ src/games/shared/useSession.plrplace-scratch.test.ts:702:82
+    700|     p.hear("cur", { p: 40, e: 3, ea: "peer-1" }, "peer-3"); // peer-3 …
+    701|     p.hear("st", stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3 }), "…
+    702|     expect(p.session.peerCursors.value, "a still peer, after the joine…
+       |                                                                                  ^
+    703|   });
+    704|   it("C3 — your own ring follows the wire: a new epoch clears what you…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 33 passed (35)
+   Start at  01:10:53
+   Duration  418ms (transform 55ms, setup 12ms, import 72ms, tests 39ms, environment 213ms)
+
+exit=1

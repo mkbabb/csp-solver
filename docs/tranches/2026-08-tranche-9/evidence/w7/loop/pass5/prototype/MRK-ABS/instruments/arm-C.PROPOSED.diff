@@ -1,0 +1,34 @@
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -218,7 +218,10 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* THE ONE FOCUS INK (T9-W7 §6), ONE VALUE IN BOTH THEMES.
++  --color-focus-sketch: #4589d2; /* BALLOT ARM (U-10), TWO VALUES: #4589d2 here, #2f68aa in
++     `.dark`. Two new hexes against law 23; R1 (one declaration) reads RED. The comment below
++     describes the one-value arm this replaces.
++     THE ONE FOCUS INK (T9-W7 §6), ONE VALUE IN BOTH THEMES.
+      Crayon-blue darkened one step. On the board it is the drawn ghost's stroke (gameCell.css
+      tier 2, at the opacity MRK-LIVE's rank rules); off the board it is the chrome's outline at
+      full alpha, through `--ring-ink`.
+@@ -387,6 +390,8 @@
+   --color-accent: hsl(24 5% 15%);
+   --color-border: hsl(24 4% 16%);
+ 
++  --color-focus-sketch: #2f68aa; /* BALLOT ARM: the dark value */
++
+   /* NO DARK ARM for `--color-focus-sketch` (declared once, in @theme). The alias onto the
+      crayon itself (`var(--color-crayon-blue)`, zero new hex) moves the ring's ink the wrong way
+      at night on the 16×16 frame; a darker arm is the direction that helps, and it is the
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -250,7 +250,7 @@
+   fill-opacity: 0.08;
+   stroke: var(--color-focus-sketch);
+   stroke-width: 7;
+-  stroke-opacity: 0.95;
++  stroke-opacity: 1; /* BALLOT ARM (U-10): tier 2 at full ink; it ties the invalid rung */
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+      value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an

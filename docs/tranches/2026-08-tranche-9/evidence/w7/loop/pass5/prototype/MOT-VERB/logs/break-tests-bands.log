@@ -1,0 +1,22 @@
+== break-tests, lint:bands BARE (CI's invocation, no env var) Tue Sep 22 22:39:08 EDT 2026
+row 0 the landed tree
+  → lint:bands exit 0
+row 1 B8: the star tuck back on the UA's ease-in
+  • [B8 CURVE] src/pencil/celestial/DarkModeToggle.vue:892  a bare UA keyword on a transition.  scale 150ms ease-in
+  → lint:bands exit 1
+row 2 B8: the laminate PRM back on linear
+  • [B8 CURVE] src/pencil/sheet/AnswerKeyLaminate.vue:285  a bare UA keyword on a transition.  opacity 150ms linear
+  → lint:bands exit 1
+row 3 B8: a curve DROPPED (none) on the toggle's PRM fade
+  • [B8 CURVE] src/pencil/celestial/DarkModeToggle.vue:997  NO curve on a transition — the UA's own `ease` by omission.  opacity 200ms
+  → lint:bands exit 1
+row 4 B3: --motion-rise re-nested inside :root{}
+  • [B3 ONE HOME, NO FALLBACK] MOTION.rungs.rise is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as `all` for that one rung alone.
+  • [B3 ONE HOME, NO FALLBACK] @property --motion-rise is registered INSIDE a brace (depth 1) — illegal CSS the bundler hoists silently; the ladder's registrations are ONE block at file scope.
+  • [SELF-TEST] the negative-negative REGRESSED: MOTION.rungs.rise is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as `all` for that one rung alone.; @property --motion-rise is registered INSIDE a brace (depth 1) — illegal CSS the bundler hoists silently; the ladder's registrations are ONE block at file scope.
+  → lint:bands exit 1
+row 5 B3: --motion-note's registration deleted (published but unregistered)
+  • [B3 ONE HOME, NO FALLBACK] MOTION.rungs.note is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as `all` for that one rung alone.
+  • [SELF-TEST] the negative-negative REGRESSED: MOTION.rungs.note is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as `all` for that one rung alone.
+  → lint:bands exit 1
+restore sha1 OK

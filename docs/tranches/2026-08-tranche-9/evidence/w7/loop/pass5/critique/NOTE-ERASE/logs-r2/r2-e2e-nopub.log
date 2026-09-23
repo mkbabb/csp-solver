@@ -1,0 +1,39 @@
+== N1 drop-clock row on the NO-PUBLISHER dist (4248 rDNFsnQN1BD6), both engines
+Running 2 tests using 2 workers
+  ✘  1 [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (1.5s)
+  ✘  2 [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (1.5s)
+  1) [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+    Error: expect(received).toBeGreaterThan(expected)
+    Expected: > 0
+    Received:   0
+      314 |   expect(leave.animationName).toContain('ink-rub-out');
+      315 |   // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
+    > 316 |   for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
+          |                                                                              ^
+      317 |   // The whisper rung plus a frame or two; the planted second would read ~1000.
+      318 |   expect(leave.ms).toBeLessThan(500);
+      319 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-47/web/frontend/e2e/affordances.spec.ts:316:78
+  2) [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+    Error: expect(received).toBeGreaterThan(expected)
+    Expected: > 0
+    Received:   0
+      314 |   expect(leave.animationName).toContain('ink-rub-out');
+      315 |   // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
+    > 316 |   for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
+          |                                                                              ^
+      317 |   // The whisper rung plus a frame or two; the planted second would read ~1000.
+      318 |   expect(leave.ms).toBeLessThan(500);
+      319 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-47/web/frontend/e2e/affordances.spec.ts:316:78
+  2 failed
+    [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+    [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+N1 exit=1
+== N2 drop-clock row on the TREE dist (4246 B5bclKNTuHnj), both engines
+Running 2 tests using 2 workers
+  ✓  1 [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (1.7s)
+  ✓  2 [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (1.8s)
+  2 passed (2.8s)
+N2 exit=0
+DONE

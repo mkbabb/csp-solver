@@ -1,0 +1,1346 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 5b583920..34635948 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1067,27 +1067,13 @@ jobs:
+             # `reduce` rather than as a page of `transition: all`. The CODE roster is fenced
+             # by KIND (TRAVEL / WINDOW / CADENCE / POLICY), the ratchet is keyed on the RUNG
+             # as well as on `file :: selector :: term`, and `--self-test` fires every
+-            # negative control before falling through to the census. B8's bare-keyword count
+-            # is MOT-VERB's cure and is carried here as a reported red.
++            # negative control before falling through to the census. It runs BARE: B8 (no
++            # transition ships on the UA's taste) was carried here behind an env-var demotion
++            # until its five bare keywords were cured at their sites (T9-W7 §13 pass 5, the
++            # curves written out as named tokens with the same control points), and the
++            # demotion is deleted with the cure, so both gates read one law from one tree.
+             - name: motion bands (the duration ladder, self-tested)
+               working-directory: web/frontend
+-              # B8 (no transition ships on the UA's taste) is the ONLY check this lane does
+-              # not own: curves are MOT-VERB's axis by T9-W7 registry §2.1, and this lane
+-              # reverted the ten it had quietly cured by ASSIGNING a house curve at sites the
+-              # base left bare — an out-of-scope axis moved unmeasured (pass-3 critique §2.5).
+-              # MOT-VERB's curve ledger HAS landed on the merged §13 tree (pass 4) and the
+-              # count fell 21 -> 5: B8 learned to read `--verb-*-ease` as a house curve, which
+-              # killed 50 false reds in one line, and the five that remain are the five bare UA
+-              # keywords `lint:verbs` ADMITS with rulings (the toggle's three signature pops,
+-              # its 200ms rest fade, the laminate's PRM linear). RETIREMENT, now a condition
+-              # with a number: delete this line when those five are cured at their sites, at
+-              # which point both gates read the same law from the same tree. Pass 5 priced the
+-              # cure: no house curve is an exact twin of four of the five (max |dP| 0.18-0.30 at
+-              # fixed t), and the fifth's twin (`--verb-dusk-ease` IS `ease`) is refused by
+-              # lint:verbs' property law (dusk does not move opacity) -- so every cure moves a
+-              # curve on M15's surface, and it is MOT-VERB's to land or the owner's to rule.
+-              env:
+-                  MOTION_LADDER_B8_OWNED: "1"
+               run: npm run lint:bands
+             # T9-W7 §13 gate — the pencil verbs. Every shipped transition and animation
+             # names a house curve (a verb) and a named duration (a rung), spends only a
+diff --git a/web/frontend/e2e/theme-bake-freshness.spec.ts b/web/frontend/e2e/theme-bake-freshness.spec.ts
+index 885c5d8d..98dfaa7a 100644
+--- a/web/frontend/e2e/theme-bake-freshness.spec.ts
++++ b/web/frontend/e2e/theme-bake-freshness.spec.ts
+@@ -28,6 +28,16 @@ import { attachBakeEvidence } from "./bake-evidence";
+  *   · the logo bake's mean ink must clear WCAG 4:1 against the live paper it sits on;
+  *   · the grid bake's mean ink must sit within ΔE 24 (sRGB) of the live `--grid-line-color`.
+  *
++ * T9-M15 (arm A, the GRID half) — THE GRID'S INK IS PAINT NOW, NOT A BAKE. The grid poses bake
++ * theme-free COVERAGE (black) and `.grid-ink`'s boxes paint `--grid-line-color` through each
++ * pose's mask, so the flip must NOT re-mint the grid (a verb never bakes: 4 × 1272² encodes
++ * landed inside the toggle's Bloom and starved it). The grid half is re-cut to the new
++ * invariant: the PAINTED ink (the active box's computed background) within ΔE 24 of the live
++ * `--grid-line-color` resolved through the same cascade, the coverage blob still decoding to
++ * something (the vacuity guard), and the grid's mask URL UNCHANGED across the toggle — born RED
++ * on the theme-keyed stack, which re-mints it. The wordmark half is untouched (its ink path is
++ * blocked under M09, INTAKE row 37) and still re-mints and re-inks as below.
++ *
+  * Both are asserted BEFORE the toggle too, on the fresh load, so a sampler that has quietly
+  * stopped measuring anything reds instead of passing vacuously. Both directions run, each as
+  * its own ONE-toggle test off an emulated system scheme — that is the reported gesture, and a
+@@ -107,6 +117,7 @@ type Sample = {
+   liveGrid: string;
+   logoHref: string | null;
+   gridHref: string | null;
++  gridStack: string;
+   logoInk: string | null;
+   gridInk: string | null;
+ };
+@@ -117,6 +128,7 @@ type Sample = {
+  */
+ async function sample(page: Page): Promise<Sample> {
+   return page.evaluate(async () => {
++    const unreadable = (v: string | null) => !v || v === "no-ink" || v === "load-failed";
+     const meanInk = (href: string | null) =>
+       new Promise<string | null>((ok) => {
+         if (!href) return ok(null);
+@@ -152,24 +164,41 @@ async function sample(page: Page): Promise<Sample> {
+       });
+ 
+     const logoSvg = document.querySelector("svg.handwritten-logo");
+-    const gridSvg = document.querySelector("svg.hand-drawn-grid");
+     const logoHref =
+       logoSvg?.querySelector("image.logo-pose-bmp")?.getAttribute("href") ?? null;
+-    const gridHref = gridSvg?.querySelector("image")?.getAttribute("href") ?? null;
+-    const [logoInk, gridInk] = await Promise.all([
++    const box = document.querySelector<HTMLElement>(".grid-ink .boil-frame-bitmap.is-active");
++    const gridHref =
++      /url\("?([^")]+)"?\)/.exec(box?.style.getPropertyValue("mask-image") || box?.style.getPropertyValue("-webkit-mask-image") || "")?.[1] ?? null;
++    // The whole pose stack, in DOM order: `is-active` follows the boil beat, so one box's URL
++    // names a FRAME, not the bake — the no-re-mint claim is over the set.
++    const gridStack = Array.from(
++      document.querySelectorAll<HTMLElement>(".grid-ink .boil-frame-bitmap"),
++      (b) => /url\("?([^")]+)"?\)/.exec(b.style.getPropertyValue("mask-image"))?.[1] ?? "",
++    ).join(" ");
++    const [logoInk, gridCoverage] = await Promise.all([
+       meanInk(logoHref),
+       meanInk(gridHref),
+     ]);
++    // The live colour through the SAME cascade the box reads (a probe beside it), serialised
++    // by the engine, so both sides of the ΔE are computed rgb().
++    let liveGrid = "";
++    if (box?.parentElement) {
++      const probe = document.createElement("i");
++      probe.style.color = "var(--grid-line-color)";
++      box.parentElement.appendChild(probe);
++      liveGrid = getComputedStyle(probe).color;
++      probe.remove();
++    }
+     return {
+       theme: document.documentElement.className || "(light)",
+       paper: getComputedStyle(document.body).backgroundColor,
+-      liveGrid: gridSvg
+-        ? getComputedStyle(gridSvg).getPropertyValue("--grid-line-color").trim()
+-        : "",
++      liveGrid,
+       logoHref,
+       gridHref,
++      gridStack,
+       logoInk,
+-      gridInk,
++      // the PAINTED ink; the coverage blob only has to decode (its ink is black by design)
++      gridInk: unreadable(gridCoverage) ? gridCoverage : box ? getComputedStyle(box).backgroundColor : null,
+     };
+   });
+ }
+@@ -212,7 +241,7 @@ async function loadBaked(page: Page, game: string) {
+   await page.waitForSelector("svg.handwritten-logo image.logo-pose-bmp", {
+     timeout: 30000,
+   });
+-  await page.waitForSelector("svg.hand-drawn-grid image", { timeout: 30000 });
++  await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 30000 });
+   // The logo re-bakes once `document.fonts.ready` re-fits the box — sample the settled stack.
+   await page.evaluate(() => document.fonts.ready);
+   await page.waitForTimeout(1200);
+@@ -334,18 +363,6 @@ for (const start of ["light", "dark"] as const) {
+             { timeout: 20000, message: "the logo pose blob was never re-minted" },
+           )
+           .not.toBe(before.logoHref);
+-        await expect
+-          .poll(
+-            async () =>
+-              await page.evaluate(
+-                () =>
+-                  document
+-                    .querySelector("svg.hand-drawn-grid image")
+-                    ?.getAttribute("href") ?? null,
+-              ),
+-            { timeout: 20000, message: "the grid pose blob was never re-minted" },
+-          )
+-          .not.toBe(before.gridHref);
+ 
+         // A fixed 400ms "let the atomic url swap settle" used to stand here. It is gone with
+         // the poll re-cut (T7-W3): both surfaces are already proven re-minted by the polls
+@@ -356,6 +373,12 @@ for (const start of ["light", "dark"] as const) {
+           before.theme,
+         );
+         await assertAgrees(after, `${game} after ONE toggle`, page, testInfo);
++        // T9-M15: the grid did NOT re-bake — the same coverage mask, re-inked by the cascade.
++        expect(before.gridStack, `${game}: no grid pose stack to compare`).not.toBe("");
++        expect(
++          after.gridStack,
++          `${game}: the grid re-minted its mask on a theme flip — a verb baked`,
++        ).toBe(before.gridStack);
+       });
+     }
+   });
+diff --git a/web/frontend/e2e/visual-golden.spec.ts b/web/frontend/e2e/visual-golden.spec.ts
+index 4886c805..ac995fe0 100644
+--- a/web/frontend/e2e/visual-golden.spec.ts
++++ b/web/frontend/e2e/visual-golden.spec.ts
+@@ -208,9 +208,9 @@ async function loadSettled(page: Page, { pinBoard = false, dark = false } = {})
+   // (baked-hidden) once the bake lands, so the pixel-truth settle is the ACTIVE BITMAP.
+   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
+   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
+-  await page.waitForSelector("image.boil-frame-bitmap.is-active", { timeout: 15000 });
++  await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 15000 });
+   await expect
+-    .poll(() => page.locator("image.boil-frame-bitmap.is-active").count(), {
++    .poll(() => page.locator(".grid-ink .boil-frame-bitmap.is-active").count(), {
+       timeout: 15000,
+     })
+     .toBe(1);
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index dfd467f8..f9f66538 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -50,7 +50,8 @@ async function setDarkMode(page: Page, dark: boolean) {
+  * Once draw-in completes ('drawn'), HandDrawnGrid mounts BOIL_CONFIG.frameCount sibling
+  * boil layers and ticks by toggling which one is `.is-active` (opacity 0→1,
+  * compositor-only). W1 replaced the resident grain-static filtered groups
+- * (`g.boil-frame-layer`) with baked `image.boil-frame-bitmap` siblings — each pose is
++ * (`g.boil-frame-layer`) with baked `.boil-frame-bitmap` siblings (T9-M15: HTML boxes of the
++ * live ink under each pose's coverage MASK, in `.grid-ink` beside the svg) — each pose is
+  * captured to a bitmap ONCE and no filter re-executes at steady state (the WebKit cure).
+  * The live-filter groups remain as the during-bake fallback, so steady state is the
+  * bitmap stack once the async bake resolves, or the filter fallback while it is in flight.
+@@ -64,7 +65,7 @@ async function steadyGridCounts(page: Page) {
+   // Either steady form has exactly one `.is-active` layer — waiting for it also proves the
+   // transition layer has handed off (draw-in completed).
+   await page.waitForSelector(
+-    "image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
++    ".grid-ink .boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
+     { timeout: 10000 },
+   );
+   // SETTLE IS POLLED, NEVER READ ONCE (CH-63 trigger-1 order for :235 — the row redded
+@@ -78,7 +79,7 @@ async function steadyGridCounts(page: Page) {
+   await page
+     .waitForFunction(
+       () => {
+-        const baked = document.querySelectorAll("image.boil-frame-bitmap");
++        const baked = document.querySelectorAll(".grid-ink .boil-frame-bitmap");
+         const filtered = document.querySelectorAll("g.boil-frame-layer");
+         const layers = baked.length ? baked : filtered;
+         if (layers.length < 2) return false;
+@@ -92,7 +93,7 @@ async function steadyGridCounts(page: Page) {
+     )
+     .catch(() => {}); // the returned census still tells the truth; the assertions red on it
+   return page.evaluate(() => {
+-    const baked = Array.from(document.querySelectorAll("image.boil-frame-bitmap"));
++    const baked = Array.from(document.querySelectorAll(".grid-ink .boil-frame-bitmap"));
+     const filtered = Array.from(document.querySelectorAll("g.boil-frame-layer"));
+     const layers = baked.length ? baked : filtered;
+     const visible = layers.filter((l) => parseFloat(getComputedStyle(l).opacity) > 0);
+@@ -266,7 +267,7 @@ test("grid draw-in completes and path-based boil activates", async ({ page }) =>
+   // Draw-in complete = the grid handed off to its boil steady-state layers (`.is-active`
+   // exists only then — baked bitmap or the live-filter fallback). The settle, not a sleep.
+   await page.waitForSelector(
+-    "image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
++    ".grid-ink .boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
+     { timeout: 15000 },
+   );
+ 
+@@ -323,7 +324,7 @@ test("randomize populates board and blank cells accept input", async ({ page })
+   await loadApp(page);
+   // Initial auto-deal settled: the grid drew in and handed off to steady state.
+   await page.waitForSelector(
+-    "image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
++    ".grid-ink .boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
+     { timeout: 15000 },
+   );
+ 
+@@ -406,7 +407,7 @@ test("size switching: 4x4, 9x9, 16x16 all render grid lines", async ({ page }) =
+   // Initial auto-deal settled: the grid drew in and handed off to steady state, so the
+   // first size switch starts from a settled surface. The settle, never a fixed sleep.
+   await page.waitForSelector(
+-    "image.boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
++    ".grid-ink .boil-frame-bitmap.is-active, g.boil-frame-layer.is-active",
+     { timeout: 15000 },
+   );
+ 
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 76d4ccdd..3277ccb9 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -1126,9 +1126,11 @@ function b7Tailwind() {
+  * per-step easing. Pass 2's 16-site `--ease-standard` row was Material's curve under
+  * Material's name on this estate's grounds, and it LEFT this family with the row.
+  *
+- * This check is INHERITED-RED by design: its cure is MOT-VERB's, not the ladder's, and the
+- * count is reported rather than hidden. `MOTION_LADDER_B8_OWNED=1` demotes it to a census
+- * line for the section's fold, when the verbs land and the number is owned.
++ * CURED AT ITS SITES (pass 5, MOT-VERB): the five bare keywords it carried (the toggle's star
++ * tuck and crest fade, its PRM crossfade, the laminate's PRM fade) are written out as named
++ * shape tokens with the SAME control points — no frame moved — and the
++ * `MOTION_LADDER_B8_OWNED` demotion that let CI run this gate blind to them is deleted, so
++ * `lint:bands` runs bare everywhere.
+  */
+ function b8Curve(decls) {
+   const bad = [];
+@@ -1662,10 +1664,6 @@ console.log(
+     `${kinds.rows.filter((r) => !r.kind).length} unkinded`,
+ );
+ 
+-// B8's cure is MOT-VERB's (registry §2.1 gives curves to the verbs); the ladder carries the
+-// prohibition and REPORTS the count rather than hiding it. Set when the verbs land.
+-const B8_OWNED = process.env.MOTION_LADDER_B8_OWNED === "1";
+-
+ const CHECKS = [
+   ["B1 NAMED", () => b1Named(decls, rungKeys)],
+   ["B2 CLOSED", () => b2Closed(lad)],
+@@ -1674,7 +1672,7 @@ const CHECKS = [
+   ["B5 PRM", () => b5Prm(decls, pub)],
+   ["B6 RATCHET", () => b6NoShorten(rows, bank, lad)],
+   ["B7 TAILWIND", () => b7Tailwind()],
+-  ["B8 CURVE (MOT-VERB's cure)", () => (B8_OWNED ? [] : b8Curve(decls))],
++  ["B8 CURVE", () => b8Curve(decls)],
+   ["B9 DELAY FENCE", () => b9DelayFence(decls)],
+   ["B10 PINNED-CITE", () => b10PinnedCite(lad)],
+   ["B11 KIND FENCE", () => kinds.bad],
+@@ -2150,7 +2148,7 @@ if (SELF_TEST) {
+       },
+     ],
+     [
+-      "B8 CURVE (MOT-VERB's cure)",
++      "B8 CURVE",
+       "a transition ships on the UA's taste",
+       () => b8Curve([d1("q.vue:1", "opacity var(--motion-leave) ease")]),
+     ],
+diff --git a/web/frontend/scripts/check-pencil-verbs.mjs b/web/frontend/scripts/check-pencil-verbs.mjs
+index 550f8283..c0ede432 100644
+--- a/web/frontend/scripts/check-pencil-verbs.mjs
++++ b/web/frontend/scripts/check-pencil-verbs.mjs
+@@ -42,6 +42,13 @@
+  *                    <style> outside the reduce block must be named by a beat. The record
+  *                    verifies the record on the surface the owner audited most.
+  *
++ * WHAT THIS GATE CANNOT SEE, AND ITS PAIR. It reads what a declaration NAMES, never whether the
++ * name RESOLVES: a `var(--x)` naming a token nobody declares in scope reads 0 on every rule
++ * above (the declaration is invalid at computed-value time and computes `all | 0s | ease`, the
++ * pass-3 dusk). That class is `lint:theme-tokens`' undefined-token census — keyed by SCOPE
++ * (`:root`/`@theme`/`html`/`*` global, everything else file-local) — and the two are ONE gate
++ * run as two scripts: neither is green alone, and CI runs both.
++ *
+  * Plus the publisher's own check (the two layers, byte for byte) and the DUPLICATE-PAIR row:
+  * two published curve tokens may resolve to the same points only where it is declared.
+  *
+@@ -169,11 +176,11 @@ const ADMITTED = new Map([
+     ["signature", "the wring-down", ["curve", "rung"]],
+   ],
+   [
+-    "pencil/celestial/DarkModeToggle.vue :: scale 150ms ease-in, opacity 100ms ease-in !important #1",
++    "pencil/celestial/DarkModeToggle.vue :: scale 150ms var(--ease-starTuck), opacity 100ms var(--ease-starTuck) !important #1",
+     ["signature", "the stars tuck in, undelayed", ["curve", "rung"]],
+   ],
+   [
+-    "pencil/celestial/DarkModeToggle.vue :: scale 150ms var(--ease-anticipatePop) 560ms, opacity 120ms ease-out 560ms !important #1",
++    "pencil/celestial/DarkModeToggle.vue :: scale 150ms var(--ease-anticipatePop) 560ms, opacity 120ms var(--ease-starFade) 560ms !important #1",
+     ["signature", "the first star pops onto the crest", ["curve", "rung"]],
+   ],
+   [
+@@ -255,11 +262,11 @@ const ADMITTED = new Map([
+     ["prm", "the global kill is not a gesture", ["curve", "rung"]],
+   ],
+   [
+-    "pencil/celestial/DarkModeToggle.vue :: opacity 200ms ease #1",
++    "pencil/celestial/DarkModeToggle.vue :: opacity 200ms var(--ease-prmFade) #1",
+     ["prm", "the toggle's own fallback fade", ["curve", "rung"]],
+   ],
+   [
+-    "pencil/sheet/AnswerKeyLaminate.vue :: opacity 150ms linear #1",
++    "pencil/sheet/AnswerKeyLaminate.vue :: opacity 150ms var(--ease-prmLinear) #1",
+     ["prm", "the laminate's own fallback fade", ["curve", "rung"]],
+   ],
+   // ── ELSEWHERE — §6 owns `gameCell.css` this pass (the chair's §6.11). The marks' fade and
+@@ -293,6 +300,8 @@ const DECLARED_DUPLICATES = new Set([
+   "--verb-layDown-ease=--verb-slide-ease",
+   "--verb-lift-ease=--verb-rubOut-ease",
+   "--ease-noteWrite=--verb-writeIn-ease",
++  // T9-W7 §13 pass 5: the toggle's PRM fallback keeps CSS `ease`, written out; dusk IS `ease`.
++  "--ease-prmFade=--verb-dusk-ease",
+ ]);
+ 
+ // ── THE PROPERTY ALIAS TABLE (rule 5) ────────────────────────────────────────────────
+@@ -895,23 +904,41 @@ function selfTest() {
+         : t,
+     (r) => r.counts.props > 0 || r.counts.direction > 0,
+   );
++  // RULE 9's controls are keyed on the RULE's SHAPE, never on one site's bytes (pass 5: the
++  // first one was keyed on SolverErrorNote's literal declaration, the third control in this
++  // gate to carry a scheduled death). Each plants on the FIRST declaration anywhere in the tree
++  // that has the shape the rule governs, so a site that is re-spelled, re-timed or deleted moves
++  // the plant to the next one instead of killing the control. `firstOnly` keeps it one plant.
++  const firstOnly = (re, to, fallback) => {
++    let spent = false;
++    const anyReal = [...walk(SRC)].some((f) => re.test(readFileSync(f, "utf8")));
++    return (f, t) => {
++      if (!spent && re.test(t)) {
++        spent = true;
++        return t.replace(re, to);
++      }
++      // No real site has the shape (the last one was deleted): plant ONE probe rule of that
++      // shape at the end of the first static stylesheet instead — the rule is still tested.
++      if (fallback && !anyReal && f === "assets/index.css")
++        return `${t}\n${fallback}\n`;
++      return t;
++    };
++  };
+   ok &= control(
+-    "rule 9 THE FILL ARM: a `none` verb handed a fill keyword",
+-    (f, t) =>
+-      f === "games/shared/SolverErrorNote.vue"
+-        ? t.replace(
+-            "note-in var(--motion-note) var(--verb-layDown-ease)",
+-            "note-in var(--motion-note) var(--verb-layDown-ease) forwards",
+-          )
+-        : t,
++    "rule 9 THE FILL ARM: a `none` verb handed a fill keyword (the first layDown animation, any file)",
++    firstOnly(
++      /(animation:\s*[\w-]+\s+var\(--motion-[a-z]+\)\s+var\(--verb-layDown-ease\))(\s*;)/,
++      "$1 forwards$2",
++      ".probe-fill { animation: note-in var(--motion-note) var(--verb-layDown-ease) forwards; }",
++    ),
+     (r) => r.counts.fill > 0,
+   );
+   ok &= control(
+-    "rule 9 the OTHER way: a `backwards` verb stripped of its arm",
+-    (f, t) =>
+-      f === "pencil/chrome/MarginNote.vue"
+-        ? t.replace("var(--verb-writeIn-ease) backwards", "var(--verb-writeIn-ease)")
+-        : t,
++    "rule 9 the OTHER way: a `backwards` verb stripped of its arm (the first writeIn term, any file)",
++    firstOnly(
++      /var\(--verb-writeIn-ease\)(\s+[\d.]+m?s)?\s+backwards/,
++      "var(--verb-writeIn-ease)$1",
++    ),
+     (r) => r.counts.fill > 0,
+   );
+   ok &= control(
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index b2a9f84a..f24f5fd7 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -235,25 +235,113 @@ function tokenFiles(dir) {
+   return out;
+ }
+ 
++/** THE SCOPE OF A DECLARATION (pass 5, MOT-VERB's critic's PLANT B). A custom property
++ *  resolves only on the element that declares it and that element's descendants, so a
++ *  flat union of every `--x:` in `src/**` counted a token declared in component A's scoped
++ *  style as declared for a consumer in component B — the pass-3 dusk defect, under a green
++ *  gate. The census is keyed by SCOPE instead:
++ *    GLOBAL — a `--x:` in `@theme`, or in a rule whose EVERY selector is the root (`:root`,
++ *             `html`, `*`, each with an optional compound tail like `:root.dark` or
++ *             `html.theme-turning`); `@property --x` (a registered property always resolves:
++ *             its initial value); `document.documentElement.style.setProperty("--x")`.
++ *    LOCAL  — everything else (a scoped rule, a template's inline style, a style object, an
++ *             element's own `setProperty`) declares the token for ITS OWN FILE only.
++ *  A consumer resolves against GLOBAL ∪ its file's LOCAL set. A token that genuinely inherits
++ *  across a component boundary (declared on an ancestor in one file, read by a descendant in
++ *  another) is an INHERITED row below, keyed on the token AND both files — closed both ways:
++ *  a row whose token no longer crosses (now global, or no longer read there, or no longer
++ *  declared in its `from`) reds STALE, so an admission cannot outlive its reason. */
++const ROOT_SELECTOR = /^(?::root|html|\*)(?:[.:#[][^\s>+~,]*)?$/;
++
++/** `token :: from-file -> to-file` — the cross-file inheritances the product relies on. Each
++ *  row names its ancestor (the declaring element) so a reader can check the DOM claim. */
++export const INHERITED = new Map([
++  [
++    "--refuse-dur :: games/shared/GameBoard.vue -> assets/index.css",
++    "the board host binds MOTION.characters.refuse inline; `.solve-failure` is its descendant",
++  ],
++  [
++    "--board-col :: games/shared/scene.css -> games/shared/DrawerTab.vue",
++    "declared on `.app-layout` below 1024px; the drawer tab lives inside that subtree",
++  ],
++  [
++    "--washi-tilt :: pencil/sheet/SheetWashiLabel.vue -> games/shared/GameControlPanel.vue",
++    "the label's root span carries it inline; `.zone-hint` is a fallthrough class on that root",
++  ],
++]);
++
++/** For a declaration at `at` inside CSS `text`, the selector of its innermost enclosing rule
++ *  (`@theme` counts as a selector), or null when the offset is not inside any rule. */
++function enclosingSelector(text, at) {
++  let depth = 0;
++  for (let i = at - 1; i >= 0; i--) {
++    const c = text[i];
++    if (c === "}") depth++;
++    else if (c === "{") {
++      if (depth === 0) {
++        let j = i - 1;
++        while (j >= 0 && !"{};".includes(text[j])) j--;
++        return text.slice(j + 1, i).trim();
++      }
++      depth--;
++    }
++  }
++  return null;
++}
++
++/** The `<style>` blocks of a `.vue` file as [start, end) offsets; a `.css` file is one block. */
++function styleRanges(file, text) {
++  if (file.endsWith(".css")) return [[0, text.length]];
++  const out = [];
++  for (const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g)) {
++    const start = m.index + m[0].indexOf(">") + 1;
++    out.push([start, start + m[1].length]);
++  }
++  return out;
++}
++
++function isGlobalRule(selector) {
++  if (selector == null) return false;
++  if (/^@theme\b/.test(selector)) return true;
++  if (selector.startsWith("@")) return false;
++  return selector.split(",").every((s) => ROOT_SELECTOR.test(s.trim()));
++}
++
+ /** The census. `extra` is a map {file: text} that REPLACES the file's own bytes — the
+- *  self-test's plants, so a control runs against the real corpus and not a fixture. */
+-export function undefinedTokens(extra = {}) {
++ *  self-test's plants, so a control runs against the real corpus and not a fixture.
++ *  `inherited` defaults to the ledger above; a control passes its own. */
++export function undefinedTokens(extra = {}, inherited = INHERITED) {
+   const files = tokenFiles(path.join(ROOT, "src"));
+-  const declared = new Set();
++  const global = new Set();
++  const local = new Map(); // file -> Set
+   const texts = new Map();
+   for (const f of files) {
+     const raw = extra[f] ?? fs.readFileSync(f, "utf8");
+     const masked = maskComments(raw);
+     texts.set(f, masked);
+-    for (const m of masked.matchAll(/(--[a-zA-Z0-9_-]+)\s*:/g)) declared.add(m[1]);
++    const mine = new Set();
++    local.set(f, mine);
++    const ranges = styleRanges(f, masked);
++    const inStyle = (at) => ranges.find(([a, b]) => at >= a && at < b);
++    for (const m of masked.matchAll(/(--[a-zA-Z0-9_-]+)\s*:/g)) {
++      const r = inStyle(m.index);
++      const sel = r
++        ? enclosingSelector(masked.slice(r[0], r[1]), m.index - r[0])
++        : null;
++      (r && isGlobalRule(sel) ? global : mine).add(m[1]);
++    }
+     for (const m of masked.matchAll(/@property\s+(--[a-zA-Z0-9_-]+)/g))
+-      declared.add(m[1]);
+-    for (const m of masked.matchAll(/setProperty\(\s*["'`](--[a-zA-Z0-9_-]+)/g))
+-      declared.add(m[1]);
+-    for (const m of masked.matchAll(/["'`](--[a-zA-Z0-9_-]+)["'`]\s*[:,)]/g))
+-      declared.add(m[1]);
++      global.add(m[1]);
++    for (const m of masked.matchAll(
++      /(documentElement\s*\.\s*)?style\s*\.\s*setProperty\(\s*["'`](--[a-zA-Z0-9_-]+)/g,
++    ))
++      (m[1] ? global : mine).add(m[2]);
++    for (const m of masked.matchAll(/["'`](--[a-zA-Z0-9_-]+)["'`]\s*(?:[:,)]|\]\s*=)/g))
++      mine.add(m[1]);
+   }
+ 
++  const rel = (f) => path.relative(path.join(ROOT, "src"), f);
++  const used = new Set();
+   const timing = [];
+   const any = [];
+   for (const [f, masked] of texts) {
+@@ -267,18 +355,44 @@ export function undefinedTokens(extra = {}) {
+         const [, name, comma] = m;
+         if (comma) continue; // a HOOK names its own failure value
+         if (name.endsWith("-")) continue; // `var(--ease-${x})` — a template stem, not a name
+-        if (declared.has(name)) continue;
++        if (global.has(name) || local.get(f).has(name)) continue;
++        const crossing = [...inherited.keys()].find(
++          (k) => k.startsWith(`${name} :: `) && k.endsWith(`-> ${rel(f)}`),
++        );
++        if (crossing) {
++          used.add(crossing);
++          continue;
++        }
+         const row = {
+           file: path.relative(ROOT, f),
+           line: lineAt(at + m.index),
+           token: name,
+           prop,
++          elsewhere: [...local]
++            .filter(([g, s]) => g !== f && s.has(name))
++            .map(([g]) => rel(g)),
+         };
+         (TIMING_PROP.test(prop) ? timing : any).push(row);
+       }
+     }
+   }
+-  return { declared: declared.size, timing, any };
++  // CLOSED BOTH WAYS: a ledger row nothing consumes, or whose token is global now, or whose
++  // `from` file no longer declares it, is STALE.
++  const stale = [];
++  for (const k of inherited.keys()) {
++    const [, token, from] = /^(--[\w-]+) :: (.+?) -> /.exec(k) ?? [];
++    const fromFile = files.find((f) => rel(f) === from);
++    if (
++      !used.has(k) ||
++      global.has(token) ||
++      !fromFile ||
++      !local.get(fromFile).has(token)
++    )
++      stale.push(k);
++  }
++  const declared = new Set(global);
++  for (const s of local.values()) for (const t of s) declared.add(t);
++  return { declared: declared.size, global: global.size, timing, any, stale };
+ }
+ 
+ function main() {
+@@ -315,7 +429,13 @@ function main() {
+ 
+   // ── the reverse direction, on the same corpus ─────────────────────────────────────────
+   const rev = undefinedTokens();
+-  console.log(`\ncustom properties declared in src: ${rev.declared}`);
++  console.log(
++    `\ncustom properties declared in src: ${rev.declared} (${rev.global} global; the rest file-local)`,
++  );
++  console.log(
++    `cross-file inheritances ledgered: ${INHERITED.size} · stale: ${rev.stale.length}`,
++  );
++  for (const k of rev.stale) console.log(`  STALE  ${k}`);
+   console.log(`bare var() naming no declaration — TIMING slots: ${rev.timing.length}`);
+   console.log(`bare var() naming no declaration — any other slot: ${rev.any.length}`);
+   for (const r of [...rev.timing, ...rev.any])
+@@ -357,16 +477,69 @@ function main() {
+         `2 undeclared token elsewhere ${red2 ? "RED as required" : "FAILED"} · ` +
+         `3 the hook form ${green3 ? "green as required" : "FAILED"}`,
+     );
+-    if (!red1 || !red2 || !green3) process.exit(2);
++    // CONTROL 4 — PLANT B, the pass-4 critic's: the consumer's token is 'declared' only in
++    // ANOTHER component's scoped style. SolverErrorNote is not a descendant of MarginNote, so
++    // at runtime this is the pass-3 dusk verbatim; the flat declared-set read it green.
++    const note = path.join(ROOT, "src", "games", "shared", "SolverErrorNote.vue");
++    const margin = path.join(ROOT, "src", "pencil", "chrome", "MarginNote.vue");
++    const noteText = fs.readFileSync(note, "utf8");
++    const marginText = fs.readFileSync(margin, "utf8");
++    // Keyed on the RULE's shape, not a site's bytes: the first rung read in the note's first
++    // `animation:` declaration, whatever it spells today.
++    const plantAt = /animation:\s*[\w-]+\s+var\((--motion-[a-z]+)\)/.exec(noteText);
++    const plantB = (declSel) =>
++      undefinedTokens({
++        [note]: noteText.replace(
++          plantAt[0],
++          plantAt[0].replace(plantAt[1], "--critic-ghost-ms"),
++        ),
++        [declSel === ":root" ? dusk : margin]: (declSel === ":root"
++          ? duskText
++          : marginText
++        ).replace(
++          declSel === ":root" ? /^:root\s*\{/m : /<style[^>]*>/,
++          (m) =>
++            `${m}\n${declSel === ":root" ? "" : ".margin-note { "}--critic-ghost-ms: 250ms;${declSel === ":root" ? "" : " }"}\n`,
++        ),
++      });
++    const red4 =
++      !!plantAt &&
++      plantB(".margin-note").timing.some((r) => r.token === "--critic-ghost-ms");
++    // CONTROL 5 — its NEGATIVE-NEGATIVE: the same token declared at `:root` resolves, and must
++    // stay green (the scope rule is a rule, not a blanket).
++    const green5 =
++      !!plantAt && !plantB(":root").timing.some((r) => r.token === "--critic-ghost-ms");
++    // CONTROL 6 — the ledger is closed both ways: a row with no consumer is STALE, and a real
++    // crossing with its row removed reds.
++    const ghostRow = new Map([
++      ...INHERITED,
++      ["--no-such :: App.vue -> App.vue", "a ghost"],
++    ]);
++    const red6a = undefinedTokens({}, ghostRow).stale.includes(
++      "--no-such :: App.vue -> App.vue",
++    );
++    const lessOne = new Map([...INHERITED].slice(1));
++    const red6b =
++      undefinedTokens({}, lessOne).any.length +
++        undefinedTokens({}, lessOne).timing.length >
++      0;
++    console.log(
++      `scope controls: 4 PLANT B (declared in another component's scoped style) ${red4 ? "RED as required" : "FAILED"} · ` +
++        `5 the same token at :root ${green5 ? "green as required" : "FAILED"} · ` +
++        `6a a ghost ledger row ${red6a ? "STALE as required" : "FAILED"} · ` +
++        `6b a real crossing un-ledgered ${red6b ? "RED as required" : "FAILED"}`,
++    );
++    if (!red1 || !red2 || !green3 || !red4 || !green5 || !red6a || !red6b)
++      process.exit(2);
+   }
+ 
+   if (dead.length) {
+     console.error(`\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens`);
+     process.exit(1);
+   }
+-  if (rev.timing.length || rev.any.length) {
++  if (rev.timing.length || rev.any.length || rev.stale.length) {
+     console.error(
+-      `\ncheck-theme-tokens: ${rev.timing.length + rev.any.length} bare var() naming no declaration`,
++      `\ncheck-theme-tokens: ${rev.timing.length + rev.any.length} bare var() naming no declaration in scope, ${rev.stale.length} stale inheritance rows`,
+     );
+     process.exit(1);
+   }
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 1025ec35..30464e6a 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -381,7 +381,54 @@ const coarse = useCoarsePointer();
+ // PINNED (T9-W7 §2.3): the LENGTH is T4-W12 Wave C's ruling, so retuning `throw` re-auditions
+ // that ruling by name before the number moves.
+ const FOLD = spend("turn", "throw");
+-const foldCtl = useFlipGlide({ spend: FOLD });
++const foldCtl = useFlipGlide({ spend: FOLD, onSettle: () => markFold([]) });
++
++// T9-M19 · THE VERB'S MARKS LIVE AS LONG AS ITS GLIDE. The fold unclips and lifts the centre
++// card (`.is-folding`), the unfold raises the board over the leaving deck (`.is-unfolding`), and
++// `folding` holds the wordmark's bake key so nothing re-bakes under the move. Each run replaces
++// the last run's marks (a re-press supersedes without a settle) and the settle clears them.
++const folding = ref(false);
++let foldUndo: (() => void)[] = [];
++function markFold(marks: [Element | null | undefined, string][]) {
++  for (const undo of foldUndo) undo();
++  foldUndo = [];
++  for (const [el, cls] of marks) {
++    if (!el) continue;
++    // the scroll offset is read BEFORE the class ends the scroller; the undo restores it after
++    const lift = el.matches(".gallery-viewport")
++      ? liftScrollport(el as HTMLElement)
++      : null;
++    el.classList.add(cls);
++    foldUndo.push(() => el.classList.remove(cls));
++    if (lift) foldUndo.push(lift);
++  }
++  folding.value = marks.length > 0;
++}
++/** THE SCROLLPORT IS A CLIP TOO. The deck's viewport scrolls on x, which makes it clip on y,
++ *  and the full board is taller than the case (640 against 456 at 1280), so unclipping the
++ *  slot alone leaves 29 % of the board cut off at the fold's head. For the fold the viewport
++ *  stops scrolling (GameGallery `.is-folding`: `overflow-x: clip`, y visible — a clip is not a
++ *  scroller, so neither the viewport nor the DOCUMENT gains scrollable overflow) and the track
++ *  holds its scrolled pose by a translate; the settle restores the scroll in the same task. */
++function liftScrollport(vp: HTMLElement): () => void {
++  const track = vp.firstElementChild as HTMLElement | null;
++  const left = vp.scrollLeft;
++  if (track) track.style.translate = `${-left}px 0`;
++  return () => {
++    if (track) track.style.translate = "";
++    vp.scrollLeft = left;
++  };
++}
++/** One board verb: mark, then run. `holdFirstFrame` is the FOLD's alone (useFlipGlide
++ *  §holdFirstFrame — its run starts at the tail of the deck's mount task). */
++function runBoardVerb(
++  movers: FlipMover[],
++  marks: [Element | null | undefined, string][],
++  holdFirstFrame = false,
++) {
++  markFold(marks);
++  foldCtl.run(movers, undefined, { holdFirstFrame });
++}
+ 
+ // Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+ // Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+@@ -489,11 +536,6 @@ function moveLiveBoard(el: HTMLElement | null) {
+   setLiveFaceTarget(el);
+   void nextTick(() => restoreBoardAnims(phase));
+ }
+-/** The centered card's box — the exit unfold's card-pose anchor. */
+-function centerCardEl(): HTMLElement | null {
+-  return document.querySelector<HTMLElement>(".game-card.is-center");
+-}
+-
+ function onGallerySnap(index: number) {
+   snapTo(index);
+ }
+@@ -554,11 +596,16 @@ function onLiveFace(el: HTMLElement | null) {
+     // position, then it glides to identity, settling into the face — only the transform channel
+     // tweens. Deep-link / navigation land the face with no fold (pendingFoldFrom null).
+     const board = document.querySelector<HTMLElement>(".board-peek-host");
+-    if (board && pendingFoldFrom && !reducedMotion.value) {
+-      const from = pendingFoldFrom;
+-      const headFrom = pendingHeadFrom;
+-      pendingFoldFrom = null;
+-      pendingHeadFrom = null;
++    const from = pendingFoldFrom;
++    const headFrom = pendingHeadFrom;
++    pendingFoldFrom = null;
++    pendingHeadFrom = null;
++    // The fit is an ANCESTOR scale on the mover's path, so the translate is divided by it
++    // (flipTransform §ONE SPACE). An unset fit is not a 1: it takes the CUT (the face is empty
++    // at the registered initial 0 until the fit lands), never a divide-by-1 glide that would
++    // put the census's 92.7 px back silently.
++    const fit = Number(el.style.getPropertyValue("--live-fit"));
++    if (board && from && !reducedMotion.value && fit > 0) {
+       const last = board.getBoundingClientRect(); // face-slot pose (post-fit)
+       // The wordmark rides the SAME fold as its second element — one `run`, one clock, one
+       // curve. `--logo-scale` is a LAYOUT size and has already landed at onset (classic FLIP);
+@@ -566,16 +613,25 @@ function onLiveFace(el: HTMLElement | null) {
+       // re-bake at settle — the drawer's own masthead precedent, verbatim. The referent is the
+       // wordmark's own box and not the `<h1>`'s (§wordmarkEl) — the heading's width is mostly
+       // whitespace, and FLIP-ing whitespace magnified the baked ink 2.6× more than the fold does.
+-      foldCtl.run([
+-        {
+-          el: board,
+-          from: flipTransform(from, last),
+-          to: "translate(0px, 0px) scale(1)",
+-          transformOrigin: "50% 50%",
+-        },
+-        ...mastheadMover(headFrom),
+-      ]);
+-    }
++      // The card is unclipped and lifted while the board shrinks into it whole (GameCard
++      // `.is-folding`), and the deck's scrollport with it (GameGallery `.is-folding`).
++      runBoardVerb(
++        [
++          {
++            el: board,
++            from: flipTransform(from, last, fit),
++            to: "translate(0px, 0px) scale(1)",
++            transformOrigin: "50% 50%",
++          },
++          ...mastheadMover(headFrom),
++        ],
++        [
++          [el.closest(".game-card"), "is-folding"],
++          [el.closest(".gallery-viewport"), "is-folding"],
++        ],
++        true,
++      );
++    } else markFold([]); // the cut: nothing glides, so nothing is held
+   });
+ }
+ 
+@@ -598,6 +654,7 @@ function mastheadMover(first: DOMRect | null): FlipMover[] {
+  *  is on-screen from frame ONE (no rest-pose flash). A null mover drops out; all of them
+  *  dropping out leaves the cut standing. */
+ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[]) {
++  const group = document.querySelector(".board-group");
+   void nextTick(() => {
+     const movers: FlipMover[] = [];
+     for (const pair of pairs) {
+@@ -610,7 +667,10 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
+         transformOrigin: "50% 50%",
+       });
+     }
+-    if (movers.length) foldCtl.run(movers);
++    // The board rises OVER the pinned, dissolving deck (§pinLeavingDeck) — a stacking order
++    // for the glide's life, cleared at settle.
++    if (movers.length) runBoardVerb(movers, [[group, "is-unfolding"]]);
++    else markFold([]);
+   });
+ }
+ 
+@@ -639,6 +699,15 @@ function enterGallery() {
+   }
+   pendingFoldFrom = first;
+   pendingHeadFrom = head;
++  // The wordmark's bake is held from the GESTURE's first act, not the mover's: `--logo-scale`
++  // lands with the view flip, one flush before the fold's run, and a hold set there is late.
++  folding.value = true;
++  // …and released by the settle, the cut, or — if the face never mounts live — this backstop
++  // on the fold's own clock (the chrome-leave, the glide, the one settle guard).
++  window.setTimeout(
++    () => foldCtl.active || markFold([]),
++    MOTION.rungs.leave + FOLD.duration + MOTION.settleGuardMs,
++  );
+   document.documentElement.classList.add("gallery-leaving"); // BEAT 0 — chrome leaves (200ms)
+   window.setTimeout(() => {
+     document.documentElement.classList.remove("gallery-leaving");
+@@ -653,11 +722,21 @@ function enterGallery() {
+ // under the still-small card — or cancel), then FLIP the board UP from that pose to full.
+ // `sameGame` = a pure unfold, no seam.
+ function unfoldToBoard(applyState: () => void) {
+-  const card = centerCardEl();
+-  const first = card?.getBoundingClientRect() ?? null;
++  // T9-M19 · FIRST IS THE PAINTED FACE: the live board where it is painted (mid-fold
++  // included), else the centred poster's face — never the card's whole box, whose caption and
++  // paper put the first frame 35 px off.
++  const face =
++    document.querySelector<HTMLElement>(".game-card.is-center .board-peek-host") ??
++    document.querySelector<HTMLElement>(".game-card.is-center .game-card-face");
++  const first = face?.getBoundingClientRect() ?? null;
++  // The deck's painted box, read before the state flip reflows it (§pinLeavingDeck).
++  leavingDeckRect = reducedMotion.value
++    ? null
++    : (document.querySelector(".game-gallery")?.getBoundingClientRect() ?? null);
+   // BOTH firsts before `applyState()` — the state flip is what moves the wordmark back to its
+   // playing pose, so its gallery rect has to be in hand before that happens.
+   const headFirst = wordmarkEl()?.getBoundingClientRect() ?? null;
++  folding.value = !reducedMotion.value && !!first; // held from the gesture (§enterGallery)
+   moveLiveBoard(null); // un-teleport the board home before the deck unmounts
+   applyState(); // synchronous view→playing + game swap (the seam) or cancel (Wave B path)
+   if (reducedMotion.value || !first) return; // PRM / no card → same-frame cut
+@@ -667,6 +746,30 @@ function unfoldToBoard(applyState: () => void) {
+   ]);
+ }
+ 
++// T9-M19 · THE LEAVING DECK STEPS OUT OF FLOW. It dissolves over the leave rung while the
++// board unfolds, and in flow it was squeezed into what the playing layout left (the centre
++// card 407.9 → 104 px on frame 1) and then, at unmount, moved the home layout under a running
++// glide (a 135 px drop at 390). Pinned `fixed` at the box it was painted in — read before the
++// state flip — the home layout is final before the unfold reads LAST, and the unmount moves
++// nothing. Inline px for a one-shot measurement; the element dies with the leave. PRM: the
++// leave is a cut (`transition: none`), and nothing is pinned.
++let leavingDeckRect: DOMRect | null = null;
++function pinLeavingDeck(el: Element) {
++  const r = leavingDeckRect;
++  leavingDeckRect = null;
++  if (!r || reducedMotion.value) return;
++  Object.assign((el as HTMLElement).style, {
++    position: "fixed",
++    left: `${r.left}px`,
++    top: `${r.top}px`,
++    width: `${r.width}px`,
++    height: `${r.height}px`,
++    margin: "0",
++    zIndex: "0",
++    pointerEvents: "none",
++  });
++}
++
+ function onGallerySelect(id: string) {
+   unfoldToBoard(() => {
+     select(); // view → playing, `?view` cleared
+@@ -864,6 +967,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+             ref="logoMenu"
+             :game="headerName"
+             :inert-heading="view === 'gallery'"
++            :hold-bake="folding"
+             @open="enterGallery"
+           />
+         </h1>
+@@ -891,7 +995,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+            hole for two rules and no added latency (`unfoldToBoard` parks the live board home
+            BEFORE the view flips, so the fading deck never contains the board). Entry needs
+            nothing — BEAT 2, the deal, already animates it. -->
+-      <Transition name="gallery-fade">
++      <Transition name="gallery-fade" @before-leave="pinLeavingDeck">
+         <GameGallery
+           v-if="view === 'gallery'"
+           :cards="GAMES"
+@@ -1165,6 +1269,12 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+   opacity: 0;
+ }
+ 
++/* T9-M19 — the unfolding board rises over the pinned deck (z 0) for the glide's life. */
++.board-group.is-unfolding {
++  position: relative;
++  z-index: 1;
++}
++
+ @media (prefers-reduced-motion: reduce) {
+   .gallery-fade-leave-active {
+     transition: none;
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 31602da5..2e8c8a61 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -372,6 +372,17 @@
+   --ease-loaderScrub: cubic-bezier(0.645, 0.045, 0.355, 1);
+   --ease-anticipatePop: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+   --ease-glassGlide: cubic-bezier(0.32, 0.72, 0, 1);
++  /* THE FOUR THE UA HAD BEEN DECIDING (T9-W7 §13 pass 5, B8's cure at its sites). Each is
++     the shipped curve WRITTEN OUT — the same control points the keyword computes to, so no
++     frame moves — and named for the one gesture that spends it: the toggle's stars tuck in
++     on `ease-in` and fade onto the crest on `ease-out` (the Bloom's own numbers, T3-W13, kept
++     verbatim under T9-M15), and the two reduced-motion fallbacks keep their `ease` and
++     `linear`. A keyword is the browser's taste; a token here is a decision someone can re-cut
++     in one place. `--ease-prmFade` is `--verb-dusk-ease`'s twin, declared in lint:verbs. */
++  --ease-starTuck: cubic-bezier(0.42, 0, 1, 1);
++  --ease-starFade: cubic-bezier(0, 0, 0.58, 1);
++  --ease-prmFade: cubic-bezier(0.25, 0.1, 0.25, 1);
++  --ease-prmLinear: cubic-bezier(0, 0, 1, 1);
+ 
+   /* ── THE PENCIL VERBS, PUBLISHED (T9-W7 §13) ── generated, do not hand-edit ──
+      Written by scripts/publish-verbs.mjs from the marker pair in pencilConfig.ts;
+@@ -853,7 +864,7 @@ html {
+      included, Tailwind's default tier included — already collapses to a same-frame swap.
+      This reset catches what the ladder does not govern: a third-party keyframe, a stray
+      loop. Two shipped fallbacks are deliberately NOT rung consumers and keep breathing:
+-     DarkModeToggle's 200ms rest-stack crossfade and the answer-key laminate's 150ms linear
++     DarkModeToggle's 200ms rest-stack crossfade and the answer-key laminate's 150ms `prmLinear`
+      fade, both admitted PRM-FALLBACK in `scripts/check-motion-bands.mjs`. */
+   @media (prefers-reduced-motion: reduce) {
+     * {
+diff --git a/web/frontend/src/games/shared/useFlipGlide.ts b/web/frontend/src/games/shared/useFlipGlide.ts
+index c0c14b10..c1bb7e9e 100644
+--- a/web/frontend/src/games/shared/useFlipGlide.ts
++++ b/web/frontend/src/games/shared/useFlipGlide.ts
+@@ -78,9 +78,19 @@ const cy = (r: FlipRect) => r.top + r.height / 2;
+  * tweens. `scale = first.width / last.width`; pair with `transformOrigin: "50% 50%"` so
+  * the translate maps centers. (Byte-identical to the drawer host mover's own string.)
+  */
+-export function flipTransform(first: FlipRect, last: FlipRect): string {
++export function flipTransform(
++  first: FlipRect,
++  last: FlipRect,
++  parentScale = 1,
++): string {
+   const s = last.width === 0 ? 1 : first.width / last.width;
+-  return `translate(${cx(first) - cx(last)}px, ${cy(first) - cy(last)}px) scale(${s})`;
++  // T9-M19 · ONE SPACE. The translate lands in the mover's LOCAL space, so under an ancestor
++  // scale (the gallery face's `--live-fit`) a viewport-px delta arrives shrunk by it: the
++  // census's 92.7 px centre jump at 1280. Dividing by that scale puts it back in viewport px;
++  // at 1 (the drawer, every unscaled mover) the division is exact and the string unchanged.
++  const tx = (cx(first) - cx(last)) / parentScale;
++  const ty = (cy(first) - cy(last)) / parentScale;
++  return `translate(${tx}px, ${ty}px) scale(${s})`;
+ }
+ 
+ /** One mover: an element, its FROM transform (the inverted old-pose delta), its TO
+@@ -107,11 +117,21 @@ export interface FlipGlideOptions {
+   onSettle?: () => void;
+ }
+ 
++interface FlipRunOptions {
++  /** T9-M19 · THE FIRST PAINTED FRAME IS THE FIRST POSE — the gallery FOLD's alone. Leave the
++   *  movers' `startTime` pending rather than pinned to the current frame, so a run started at
++   *  the tail of a long task (the deck's mount inside the chrome-leave timeout) paints progress
++   *  0 and the UA starts the clock on the next frame. Pinned (the default: the drawer's, the
++   *  unfold's), that task's frame paints the curve already part-way in. One clock survives:
++   *  every mover of the run is started pending in the same task. */
++  holdFirstFrame?: boolean;
++}
++
+ export interface FlipGlideController {
+   /** Start a glide: one WAAPI animation per mover (`composite: replace`, `fill: none`)
+    *  on the glass curve, ALL pinned to one clock. Supersedes any in-flight glide
+    *  silently (no `onSettle` — the new gesture owns the settle). */
+-  run(movers: FlipMover[], durationMs?: number): void;
++  run(movers: FlipMover[], durationMs?: number, opts?: FlipRunOptions): void;
+   /** Mid-glide retarget: each mover plays its own curve backwards from its current
+    *  pose. Resets the settle guard; a no-op when nothing is in flight. */
+   reverse(): void;
+@@ -163,7 +183,11 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     options.onSettle?.();
+   }
+ 
+-  function run(specs: FlipMover[], durationMs = options.spend.duration) {
++  function run(
++    specs: FlipMover[],
++    durationMs = options.spend.duration,
++    opts?: FlipRunOptions,
++  ) {
+     lastDuration = durationMs;
+     // A fresh gesture supersedes any prior one WITHOUT firing its settle side-effects
+     // (the new gesture owns the settle): clear the guard + old animations, then build.
+@@ -187,7 +211,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     // One clock, literally (§3-S3): every mover pinned to the same startTime — zero
+     // stagger, and the FIRST painted frame already carries motion (no pending-start
+     // dead frame — a pending animation renders progress 0 until the UA assigns a start).
+-    const clock = document.timeline.currentTime;
++    const clock = opts?.holdFirstFrame ? null : document.timeline.currentTime;
+     if (typeof clock === "number") for (const m of movers) m.anim.startTime = clock;
+     active = true;
+     // Settle keys off the movers themselves; the guard stays the never-never backstop.
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index acbb3f24..aac99e4f 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -890,8 +890,8 @@ onUnmounted(() => {
+   scale: 0.2;
+   opacity: 0;
+   transition:
+-    scale 150ms ease-in,
+-    opacity 100ms ease-in !important;
++    scale 150ms var(--ease-starTuck),
++    opacity 100ms var(--ease-starTuck) !important;
+ }
+ 
+ .toggle-icon.is-active .twinkle-star,
+@@ -900,7 +900,7 @@ onUnmounted(() => {
+   opacity: 1;
+   transition:
+     scale 150ms var(--ease-anticipatePop) 560ms,
+-    opacity 120ms ease-out 560ms !important;
++    opacity 120ms var(--ease-starFade) 560ms !important;
+ }
+ 
+ .toggle-icon.is-active .twinkle-star-2 {
+@@ -994,7 +994,7 @@ onUnmounted(() => {
+     opacity: 0;
+     /* PRM-FALLBACK (T9-W7 §2.2): NOT a rung. Every rung reads 0ms under reduce, so a
+        fallback that read one would be the same-frame cut it exists to replace. */
+-    transition: opacity 200ms ease;
++    transition: opacity 200ms var(--ease-prmFade);
+   }
+ 
+   .toggle-rest.is-active {
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index ec1b7967..c4c31b9d 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -453,6 +453,24 @@ const dealStyle = computed(() => {
+    projected board to the face, and centers it. `.live-face-fit` shrink-wraps the full board
+    and App scales it (`--live-fit`) to fit — a COMPOSITOR scale, so the board keeps its
+    playing-view raster (the crit kill: layout size never tweened, the board only travels). */
++/* T9-M19 · THE FOLD IS SEEN WHOLE. For the fold's glide (App marks `.is-folding` and clears
++   it at the settle) the slot stops clipping and the centre card rises over its flanks, so the
++   full board visibly shrinks into its page instead of cutting to a crop. The fit's transform
++   walls the board's own z in, so the card's outline would draw across the board in flight:
++   for the fold the fit itself rises over it. At rest: unchanged. */
++.game-card.is-folding {
++  position: relative;
++  z-index: 1;
++}
++
++.game-card.is-folding .live-face-slot {
++  overflow: visible;
++}
++
++.game-card.is-folding .live-face-fit {
++  z-index: 2;
++}
++
+ .live-face-slot {
+   position: absolute;
+   inset: 0;
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 40565080..3d32c34b 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1303,6 +1303,26 @@ onMounted(async () => {
+   }
+ }
+ 
++/* T9-M19 · THE FOLD IS SEEN WHOLE, and the scrollport is a clip too: scrolling on x makes this
++   box clip on y, and the full board is taller than the case. For the fold's glide (App marks
++   `.is-folding`, holds the scrolled pose on the track by a translate, and restores the scroll
++   at the settle) the viewport stops scrolling and CLIPS on x only. `clip` is not a scroller:
++   unlike `overflow: visible` (the intake arm), the track's width never reaches the document's
++   scrollable overflow, so the page cannot pan mid-fold (INTAKE row 31, G-M3). It rises over
++   its own siblings so the shrinking board passes over the pips and the band. */
++.gallery-viewport.is-folding {
++  overflow-x: clip;
++  overflow-y: visible;
++  position: relative;
++  z-index: 1;
++}
++
++/* The band's own lifts (its outline, its washi tag) would still paint over the board, so for
++   the fold alone the band keeps them to itself and sits under the viewport. */
++.gallery-viewport.is-folding ~ .staging-band {
++  isolation: isolate;
++}
++
+ .gallery-pips {
+   display: flex;
+   align-items: center;
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 6af171c4..03326710 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -63,6 +63,7 @@ import {
+   usePrefersReducedMotion,
+   serializePoseSvg,
+   useRasterStack,
++  type RasterStackOptions,
+ } from "@mkbabb/pencil-boil";
+ import { useTheme } from "@/composables/useTheme";
+ import {
+@@ -93,6 +94,10 @@ const props = defineProps<{
+    *  activation. The `<h1>` keeps an accessible name off the visually-hidden label, since the
+    *  svg that carries all the ink is `aria-hidden`. */
+   inertHeading?: boolean;
++  /** T9-M19 · A VERB NEVER BAKES. True while the board's fold or unfold is in flight: the bake
++   *  options are held at their last value, so the gallery's `--logo-scale` lands as ONE bake
++   *  after the move instead of a round of encodes inside it. */
++  holdBake?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+@@ -339,18 +344,25 @@ function logoPoseSvg(f: number): string {
+  * derived from it rather than observed a second time (T6.2, above), and `dpr` is the library's
+  * (`matchMedia` re-arm, so a monitor change re-bakes).
+  */
+-const logoRaster = useRasterStack(() => ({
+-  cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
+-  poseCount: logoPoseIds.value.length,
+-  poseSvg: logoPoseSvg,
+-  // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
+-  // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
+-  // an <svg> needs because it has no offsetWidth, so any element-size seed reads 0 — is the
+-  // library's problem now, and it solves it by NOT baking rather than by baking wrong.
+-  // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
+-  // `latchWholePx` above for the measurement that rejected quantization in its favour.
+-  cssSize: { width: captureW.value, height: captureH.value },
+-}));
++let heldBake: RasterStackOptions | null = null;
++const logoRaster = useRasterStack(() => {
++  if (props.holdBake && heldBake) return heldBake; // §holdBake — no key moves under a verb
++  return (heldBake = logoBakeOpts());
++});
++function logoBakeOpts(): RasterStackOptions {
++  return {
++    cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
++    poseCount: logoPoseIds.value.length,
++    poseSvg: logoPoseSvg,
++    // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
++    // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
++    // an <svg> needs because it has no offsetWidth, so any element-size seed reads 0 — is the
++    // library's problem now, and it solves it by NOT baking rather than by baking wrong.
++    // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
++    // `latchWholePx` above for the measurement that rejected quantization in its favour.
++    cssSize: { width: captureW.value, height: captureH.value },
++  };
++}
+ 
+ // The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own
+ // capture canvas and mints the handles, so there is no bitmap to re-draw, re-encode or close
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 557f9a95..ae038848 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -6,11 +6,9 @@ import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConf
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   readFilterDefs,
+-  resolveCssValue,
+   retainedPoseUrls,
+   useLayoutBoxSize,
+ } from "@pencil/composables/rasterPose";
+-import { useTheme } from "@/composables/useTheme";
+ import { usePathAnimation } from "./usePathAnimation";
+ import type { AnimationState } from "@pencil/types";
+ 
+@@ -175,9 +173,11 @@ const steadyFrames = computed(() =>
+ // residual ~8/s tile churn zeroes with it. The live-filter <g> stack (template §fallback)
+ // renders until the bitmaps resolve, so the swap never flashes and the mount's synchronous
+ // burst is never blocked (the bake is async — the old W8 mount-chunking concern folds into
+-// this path). Re-bake fires on DPR (useRasterStack's matchMedia), theme flip (the cacheKey
+-// token, masked by the toggle's Bloom), and container resize (useElementSize).
+-const { isDark } = useTheme();
++// this path). Re-bake fires on DPR (useRasterStack's matchMedia) and container resize
++// (useElementSize) — NEVER on a theme flip (T9-M15, arm A: a verb never bakes). The poses bake
++// COVERAGE and the page paints the ink through a mask (template §grid-ink), so the flip swaps
++// no bitmap and encodes nothing. The census measured the re-bake this replaces: 4 × 1272²
++// encodes landing inside the toggle's Bloom and starving it — it was never masked by it.
+ // CH-67's lens (T8-W4): `useElementSize` reads the TRANSFORM-inclusive rect for SVG targets,
+ // and a resize tick landing inside a transform window latches the wrong box permanently —
+ // measured here as board rules drifting 0.918/1.0898 across drawer toggles. The layout box
+@@ -193,7 +193,7 @@ const captureSide = computed(() => {
+ });
+ 
+ function gridPoseSvg(pose: number): string {
+-  const color = resolveCssValue(svgRef.value, "--grid-line-color", "#262626");
++  const color = "#000"; // coverage, not ink — the mask's box paints `--grid-line-color`
+   const defs = readFilterDefs("grain-static");
+   const paths = steadyFrames.value[pose];
+   const stroke = (d: string, w: number, op: number, join = false): string =>
+@@ -210,10 +210,9 @@ function gridPoseSvg(pose: number): string {
+ }
+ 
+ const gridRaster = useRasterStack(() => ({
+-  // The theme token separates light/dark bitmaps in the shared cache and re-bakes on a
+-  // flip; the literal stroke color is read fresh in gridPoseSvg at capture time (the grid
+-  // line color snaps with the theme class — no transition to catch mid-tween).
+-  cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
++  // No theme token (T9-M15): one coverage stack serves both themes, and the grid line colour
++  // snaps with the theme class through the mask's fill — no transition to catch mid-tween.
++  cacheKey: `grid-${props.boardSize}-${props.subgridSize}`,
+   poseCount: BOIL_CONFIG.frameCount,
+   poseSvg: gridPoseSvg,
+   cssSize: { width: captureSide.value, height: captureSide.value },
+@@ -232,12 +231,12 @@ const gridRaster = useRasterStack(() => ({
+   ),
+ }));
+ 
+-// The baked poses ARE object URLs (pencil-boil 0.11) backing static <image> siblings —
++// The baked poses ARE object URLs (pencil-boil 0.11) backing static masked siblings —
+ // opacity flips only, no per-beat drawImage, and no bitmap re-draw/encode/close between the
+ // capture and the render. `urls` goes null while a (re-)bake is in flight and the set is
+-// RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the old theme's
+-// <image> stack keeps rendering until the new poses land, then one assignment swaps — no
+-// mid-gesture drop to the live-filter fallback (the toggle Bloom masks the moment).
++// RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the old stack keeps
++// rendering until the new poses land (a resize, a DPR move), then one assignment swaps — no
++// drop to the live-filter fallback.
+ //
+ // The reset key is the STRUCTURAL escape: a board/subgrid change is not a re-tint, so the
+ // retained poses carry the wrong geometry. Dropping them takes the FROZEN-pose path —
+@@ -305,6 +304,21 @@ onUnmounted(() => {
+     :aria-valuenow="progressPercent"
+     :aria-valuetext="`board ${progressPercent}% filled`"
+   ></div>
++  <!-- T9-M15 · THE INK IS PAINT. The baked poses are COVERAGE (black at the bake's opacities)
++       and each one masks a box filled with the live `--grid-line-color`, so a theme flip
++       re-inks at frame 2 and swaps no bitmap. HTML, not an in-svg `<mask>`: WebKit re-renders an
++       SVG mask on every repaint of the board (the intake's A1 read: idle worst frame 15 → 36 ms),
++       where a CSS mask on its own layer is a compositor opacity flip. Painted under the svg, so
++       the fill trace and the join ring still sit over the rules. -->
++  <div v-if="showSteadyLayers && showBaked" class="grid-ink" aria-hidden="true">
++    <div
++      v-for="(url, f) in bitmapUrls"
++      :key="'bmp-' + f"
++      class="boil-frame-bitmap"
++      :class="{ 'is-active': boilFrame === f }"
++      :style="`mask-image: url(${url}); -webkit-mask-image: url(${url})`"
++    />
++  </div>
+   <!-- Decorative: the board's drawn rules. Its shape is already published by the grid's own
+        role/rowcount/colcount and by every cell's name (a11y r1 M6). -->
+   <svg
+@@ -375,23 +389,8 @@ onUnmounted(() => {
+              tick, a compositor-stage change that never invalidates a sibling's own
+              SourceGraphic. Rendered only while 'drawn' (see showSteadyLayers). -->
+     <template v-if="showSteadyLayers">
+-      <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+-                 opacity-swapped on the beat. No filter, no per-beat raster — the WebKit
+-                 re-raster and Chromium's tile churn both go to zero. -->
+-      <template v-if="showBaked">
+-        <image
+-          v-for="(url, f) in bitmapUrls"
+-          :key="'bmp-' + f"
+-          class="boil-frame-bitmap"
+-          :class="{ 'is-active': boilFrame === f }"
+-          :href="url"
+-          x="0"
+-          y="0"
+-          :width="VIEWBOX_SIZE"
+-          :height="VIEWBOX_SIZE"
+-          preserveAspectRatio="xMidYMid meet"
+-        />
+-      </template>
++      <!-- T4-W1 baked poses: painted OUTSIDE this svg since T9-M15 — the `.grid-ink` layer
++                 beside it (coverage masks over the live `--grid-line-color`). -->
+       <!-- The live grain-static stack stays mounted: it is the during-bake fallback
+                  AND the print surface (@media print blackens its .grid-line strokes, which
+                  a baked bitmap can't take). Once baked it is display:none on screen
+@@ -538,10 +537,26 @@ onUnmounted(() => {
+   opacity: 1;
+ }
+ 
+-/* T4-W1 baked poses: the same opacity-swap discipline, but each sibling is a static
+-   <image> of the captured bitmap (filter removed) — the flip is a compositor-only blend
+-   and no raster ever recurs. */
++/* T4-W1 baked poses: the same opacity-swap discipline — the flip is a compositor-only blend
++   and no raster ever recurs. T9-M15: each pose is a box of the live ink under its coverage
++   mask, fitted exactly as the svg's `meet` square (contain, centred). */
++.grid-ink {
++  position: absolute;
++  inset: 0;
++  z-index: 1;
++  pointer-events: none;
++}
++
+ .boil-frame-bitmap {
++  position: absolute;
++  inset: 0;
++  background-color: var(--grid-line-color);
++  mask-size: contain;
++  mask-position: center;
++  mask-repeat: no-repeat;
++  -webkit-mask-size: contain;
++  -webkit-mask-position: center;
++  -webkit-mask-repeat: no-repeat;
+   opacity: 0;
+   will-change: opacity;
+ }
+@@ -561,7 +576,7 @@ onUnmounted(() => {
+ /* Print takes the vector filter stack (its .grid-line strokes blacken under @media print)
+    and drops the baked bitmaps — a static one-shot render, no perf concern. */
+ @media print {
+-  .boil-frame-bitmap {
++  .grid-ink {
+     display: none;
+   }
+ }
+diff --git a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+index 04cb2c12..3943586b 100644
+--- a/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
++++ b/web/frontend/src/pencil/sheet/AnswerKeyLaminate.vue
+@@ -282,7 +282,7 @@ const keyBucketMs = computed(() =>
+   .answer-key-laminate.is-shown {
+     transform: none;
+     /* PRM-FALLBACK (T9-W7 §2.2): NOT a rung, for the reason above the toggle's twin. */
+-    transition: opacity 150ms linear;
++    transition: opacity 150ms var(--ease-prmLinear);
+   }
+   /* Key glyphs: PRM-instant at 0.9 is inherited from the primitive itself
+      (.pencil-draw-on's reduce arm lands opacity at --draw-opacity) — no scoped rule. */

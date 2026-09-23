@@ -1,0 +1,9 @@
+catch clauses scanned across 204 src files
+swallows (no statement, no explanation): 0
+
+negative controls:
+  statement form  `catch { /* ignore */ }`  →  1 swallow(s), RED as required
+  arrow form      `.catch(() => {})`  →  1 swallow(s), RED as required; the pre-W6 head saw 0 — the structural miss this cures
+  quoted in prose `/** … .catch(() => {}) … */`  →  0 swallow(s), GREEN as required
+
+check-empty-catch: 0 swallowed catch bodies

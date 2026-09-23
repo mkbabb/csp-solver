@@ -1,0 +1,5 @@
+cd /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend
+echo "== X2 witness"; TM='c5-witness' npx playwright test --config /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself-c5/pw.config.ts 2>&1 | grep -E "WITNESS|passed|failed"
+echo "== X2 landed row (drawn edge), both engines"; TD=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/e2e TM='player-mark' npx playwright test --config /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself-c5/pw.config.ts -g "drawn edge" 2>&1 | grep -E "✓|✘|passed|failed|Error" ; echo "row exit ${PIPESTATUS[0]}"
+echo "== X2 witness after"; TM='c5-witness' npx playwright test --config /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself-c5/pw.config.ts 2>&1 | grep -E "WITNESS|passed|failed"
+echo DONE

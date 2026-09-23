@@ -1,0 +1,7 @@
+K-GHOST e2e (critic, pass 5) · dev 127.0.0.1:4246 = the PLR-PLACE work tree (base 74a2b5d9) · 1280x800 fine · ?size=3&difficulty=EASY&wire=local (the room's own deal; row is not a π row, no payload needed: the subject is the board CHANGING)
+three at the table; A opens the sheet (mouse); C taps cell 20 (its FIRST cur since A's open); B deals ("Deal a new board"); read A's chart 1.5 s after the deal lands on A.
+chromium FAILED  seeded=false tDeal=65 ms tAdopt=172 ms open=true dots=["p-0c9f@277.8,277.8"]   <- C drawn on cell 20 of the board that is gone
+webkit   FAILED  seeded=false tDeal=68 ms tAdopt=174 ms open=true dots=["p-de0f@277.8,277.8"]
+chromium passed  seeded=true  (control: C moved to cell 5 BEFORE A's open, so C is in `settled`) tAdopt=148 dots=[]
+webkit   passed  seeded=true  tAdopt=162 dots=[]
+exit 1 (3 unexpected: 2 K-GHOST + WebKit K-BELOW's first recorder, re-cut and re-run in batch4)

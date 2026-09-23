@@ -1,0 +1,23 @@
+SLEEP LINT — 34 specs · 36 waitForTimeout sites in 15 files · 3 fixed in-page sampling windows · 4 cited exemptions · 2 sleep-ok tags
+
+SELF-TEST — red fixtures must flag, green fixtures must not:
+  ✓ RED — sleep → boundingBox → one-shot expect (the plain disease)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep → helper-wrapped .count() → one-shot expect (a11y:305's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — fixed rAF deadline → distant one-shot geometry (drawer:154's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep-ok tag present but the reason is a shrug
+      → 1 flag(s), expected flag
+  ✓ GREEN — the cure: expect.poll over the same surface, no sleep at all
+      → 0 flag(s), expected clean
+  ✓ GREEN — sleep with a cited sleep-ok: the elapsed time is the subject
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a retrying assertion (auto-waiting locator matcher)
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+      → 0 flag(s), expected clean
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+      → 4 stale
+
+OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 34 specs.

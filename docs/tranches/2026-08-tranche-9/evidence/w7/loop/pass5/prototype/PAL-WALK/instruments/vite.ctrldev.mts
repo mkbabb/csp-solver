@@ -1,0 +1,3 @@
+import base from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-control/web/frontend/vite.config.ts";
+// PAL-WALK pass 5 · the 74a2b5d9 control served in DEV for the session π (a dist never forms a room): read-only, own cacheDir, no watcher.
+export default { ...base, root: "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-control/web/frontend", cacheDir: "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/palwalk5/vite-cache-ctrldev", server: { ...(base.server ?? {}), hmr: false, watch: null } };

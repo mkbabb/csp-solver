@@ -1,0 +1,47 @@
+### B-S settle() without its stop lines :: useTallyStrokes.ts planted (sha1 c4e2eb5701a2 -> f55243f739cf) :: -g 'mid-draw'
+    PRM MID {"before":45.1469833819242,"frames":110,"firstInked":1,"head":[40.94630390437315,0,0,0,0,0,0,0]}
+      ✓  2 [chromium] › e2e/player-tally.spec.ts:637:1 › reduced motion engaged mid-draw lands the stroke inked, and it stays inked (1.8s)
+    PRM MID {"before":45.39967113702623,"frames":89,"firstInked":0,"head":[0,0,0,0,0,0,0,0]}
+      ✓  1 [webkit] › e2e/player-tally.spec.ts:637:1 › reduced motion engaged mid-draw lands the stroke inked, and it stays inked (2.4s)
+      2 passed (2.9s)
+EXIT[B-S settle() without its stop lines]=0 restored=OK
+### B-W the reduced-motion watch struck :: PlayerMark.vue planted (sha1 f928465af21e -> e242b742f8a8) :: -g 'mid-draw'
+    PRM MID {"before":48.189030399214936,"frames":111,"firstInked":-1,"head":[39.49852928677595,39.49852928677595,39.49852928677595,39.49852928677595,39.49852928677595,39.49852928677595,39.49852928677595,39.49852928677595]}
+      ✘  1 [chromium] › e2e/player-tally.spec.ts:637:1 › reduced motion engaged mid-draw lands the stroke inked, and it stays inked (1.9s)
+    PRM MID {"before":46.93562215743441,"frames":90,"firstInked":-1,"head":[46.93562215743441,46.93562215743441,46.93562215743441,46.93562215743441,46.93562215743441,46.93562215743441,46.93562215743441,46.93562215743441]}
+      ✘  2 [webkit] › e2e/player-tally.spec.ts:637:1 › reduced motion engaged mid-draw lands the stroke inked, and it stays inked (2.4s)
+        Error: it lands inked
+          679 |   console.log("PRM MID", JSON.stringify({ before, frames: trace.length, firstInked, head: trace.slice(0, 8) }));
+        Error: it lands inked
+          679 |   console.log("PRM MID", JSON.stringify({ before, frames: trace.length, firstInked, head: trace.slice(0, 8) }));
+      2 failed
+EXIT[B-W the reduced-motion watch struck]=1 restored=OK
+### B-G drawIn a global cancel (pass 2) :: useTallyStrokes.ts planted (sha1 c4e2eb5701a2 -> d15f727f5014) :: -g 'two arrivals'
+    TWO MOVERS {"frames":170,"aAtB":21.110037794038817,"riseA":0,"riseB":0,"lastA":21.110037794038817,"lastB":0,"aHead":[98.5,90.9,82.9,76.2,70.2,64.6],"bHead":[95.4,88.6,81.6,75.8,72.8,65.7]}
+      ✘  1 [chromium] › e2e/player-tally.spec.ts:689:1 › two arrivals a beat apart each draw in once, and neither holds the other (1.9s)
+    TWO MOVERS {"frames":138,"aAtB":19.511200000000006,"riseA":0,"riseB":0,"lastA":19.511200000000006,"lastB":0,"aHead":[96.6,87.7,80.1,73.6,65.5,59.3],"bHead":[96.6,86.9,80.1,70.8,65.5,58.7]}
+      ✘  2 [webkit] › e2e/player-tally.spec.ts:689:1 › two arrivals a beat apart each draw in once, and neither holds the other (2.5s)
+        Error: the first lands
+        Error: the first lands
+      2 failed
+EXIT[B-G drawIn a global cancel (pass 2)]=1 restored=OK
+### B-14 the shipped ground translucent :: PlayerLobby.vue planted (sha1 2660643c4586 -> fd7057e4827c) :: -g 'ground is opaque'
+    G14 {"shipped":"color(srgb 0.9865 0.9859 0.9835 / 0.8)","planted":"color(srgb 0.9865 0.9859 0.9835 / 0.8)","alpha":[0.8,0.8],"rows":4,"foot":"and 12 more","reads":{".pl-state":{"core":433,"coreContrast":5.159,"worst":{"50":3.528,"70":3.528,"90":5.159,"100":5.1
+      ✘  1 [chromium] › e2e/player-tally.spec.ts:581:3 › the sheet's ground › the register's ground is opaque and its quiet lines paint 4.5:1 on it (1.6s)
+    G14 {"shipped":"color(srgb 0.9865 0.9859 0.9835 / 0.8)","planted":"color(srgb 0.9865 0.9859 0.9835 / 0.8)","alpha":[0.8,0.8],"rows":4,"foot":"and 12 more","reads":{".pl-state":{"core":432,"coreContrast":5.15,"worst":{"50":2.072,"70":2.072,"90":2.072,"100":2.07
+      ✘  2 [webkit] › e2e/player-tally.spec.ts:581:3 › the sheet's ground › the register's ground is opaque and its quiet lines paint 4.5:1 on it (2.4s)
+        Error: the shipped ground is opaque
+        Error: the shipped ground is opaque
+      2 failed
+EXIT[B-14 the shipped ground translucent]=1 restored=OK
+### B-16 the written count at the heading rung :: PlayerMark.vue planted (sha1 f928465af21e -> ce04c69abf85) :: -g 'rung below would not'
+    G16 {"D":603,"ink":{"one":59.8,"six":56.35,"sixAtHeading":56.35}}
+      ✘  1 [chromium] › e2e/player-tally.spec.ts:754:3 › the written count's weight › six people paint more ink than one, and the rung below would not (1.7s)
+    G16 {"D":603,"ink":{"one":60.72,"six":55.57,"sixAtHeading":55.57}}
+      ✘  2 [webkit] › e2e/player-tally.spec.ts:754:3 › the written count's weight › six people paint more ink than one, and the rung below would not (2.4s)
+        Error: six out-weighs one
+          777 |     console.log("G16", JSON.stringify({ D, ink }));
+        Error: six out-weighs one
+          777 |     console.log("G16", JSON.stringify({ D, ink }));
+      2 failed
+EXIT[B-16 the written count at the heading rung]=1 restored=OK

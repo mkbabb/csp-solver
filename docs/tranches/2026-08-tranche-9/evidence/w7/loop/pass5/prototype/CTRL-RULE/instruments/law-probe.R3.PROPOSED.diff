@@ -1,0 +1,22 @@
+--- law-probe.copy.mjs	2026-09-23 01:25:34
++++ law-probe.R3.PROPOSED.mjs	2026-09-23 01:26:00
+@@ -192,9 +192,16 @@
+     // bar's template box — and the bar's CSS may carry no border longhand with a width > 0 (R6 L5:
+     // one box grammar). Comments are stripped first (CTRL-RULE's trap: a comment fools a text law).
+     const p = read("src/games/shared/GameControlPanel.vue").replace(/<!--[\s\S]*?-->|\/\*[\s\S]*?\*\//g, "");
+-    const at = p.search(/class="[^"]*\baction-bar\b/);
+-    const box = at < 0 ? "" : p.slice(at, at + 1200);
+-    const drawn = /<HandDrawnOutline\b/.test(box);
++    // PROPOSED (CTRL-RULE pass 5). The 1,200-char window GREENS ON THE ACT FACES: `Clear`'s
++    // `HandDrawnOutline` sits inside the bar's box on any tree whose verbs wear drawn faces, so
++    // deleting the bar's own edge leaves the row GREEN (break-tested on wf_f72f3b5a-83a-28). The
++    // EDGE is the bar's own: the first element inside the bar's opening tag, or the one
++    // immediately wrapping it — in the house hand, drawn by either of its two components (a
++    // closed `HandDrawnOutline`, T9-B13 arm a; one `RuledLine`, arm b — the same pencil-boil
++    // wobble the board's grid draws). Comments are stripped above, so a comment can't stand in.
++    const first = /<div\b[^>]*\bclass="[^"]*\baction-bar\b[^"]*"[^>]*>\s*<(?:HandDrawnOutline|RuledLine)\b/.test(p);
++    const wraps = /<HandDrawnOutline\b[^>]*>\s*<div\b[^>]*\bclass="[^"]*\baction-bar\b/.test(p);
++    const drawn = first || wraps;
+     const bar = /\.action-bar\s*\{([\s\S]*?)\n\}/.exec(p)?.[1] ?? "";
+     const cssBorder = /\bborder(?:-(?:top|right|bottom|left))?(?:-width)?\s*:\s*(?!0(?:px)?\b|none\b)[^;]*?(?:[1-9][\d.]*(?:px|rem|em)|thin|medium|thick)/.test(bar);
+     return {

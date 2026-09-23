@@ -227,3 +227,40 @@ rest identity blocks the logo arm), G-INFO 74, G-PANEL 72, G-BAR 72 — all ADVA
   fold at 21:34). CTRL-FACE, CTRL-TAPE and MOT-LADDER started on the adjudications + both designs as
   §3 allows; INTAKE.md was on disk within their first minutes and their returns say what they read.
   MOT-VERB (after LADDER) starts with the fold on disk.
+
+## Addendum B · The COUNT hang, the mistaken resume, and the continuation (2026-09-23 03:0x–03:2x)
+
+- **proto:PLR-COUNT hung** for two hours inside a shell call that never returned (transcript stopped
+  01:04 at the call; no live process; no stall retry — a hung TOOL is invisible to the 180 s watchdog).
+  Its tree `-52` held only pass-4 edits and no pass-5 evidence existed. The chair stopped the run
+  (30 results journaled, 0 null, COUNT without a result).
+- **The resume was a mistake the chair had already banked a law against**: resuming the same script
+  replays a prototype from cache, but a critic's prompt EMBEDS that prototype and the replayed object
+  re-serializes differently, so every critic re-keys and RE-RUNS. Three batch-1 critics started again
+  before the chair stopped it: NOTE-ERASE and PLR-SELF returned second sittings (90 and 86 — their
+  files and returns are the consistent pair, and they replace sitting 1 in the record: 90 → 90,
+  87 → 86); MRK-LIVE's second sitting was killed before returning but had already overwritten the
+  file — banked as `critique/MRK-LIVE.sitting2-unreturned.md` (85), and `critique/MRK-LIVE.md` is
+  reconstructed from sitting 1's journal return (87, the family's number). No prototype re-ran; no
+  tree moved.
+- **The continuation** `.claude/t9-scratch/w7-pass5-cont.mjs` (PRIOR baked: 15 lanes proto + crit,
+  protos slimmed to the agglomerator's fields; 308,933 B) runs PLR-COUNT whole, then batch 6
+  (ACC-GRAPHITE + the fold-order rehearsal), then `agglomerate:v5`. Run `wf_938fa7aa-58d`.
+- LAW (LAWS P5, to be written by the agglomerator): a run with a hung lane is stopped and continued
+  from a PRIOR-baked script, never resumed; a lane's transcript silent > 30 min with no process
+  behind its last tool call is hung.
+- **COUNT hung a SECOND time** (`wf_938fa7aa-58d`, 03:17, 79 lines) at the same step: a shell that
+  `rm -rf`s a scratch dir the shell sits in, `git archive`s `docs/` + src into it and `diff -rq`s
+  two such trees to compare PLR-SELF's pass-4 vs pass-5 `substrate.diff`. The call never returns.
+  The chair stopped the run, baked a note into COUNT's brief (compare the patch files directly;
+  never archive `docs/`; never `rm -rf` your own cwd) and relaunched the continuation as
+  `wf_749adeed-d9d`. The monitor now carries a 20-minute silence alarm on the newest transcript.
+- **COUNT hung a THIRD time** (`wf_749adeed-d9d`, 03:48, 67 lines) on a per-file rebuild of the same
+  comparison — so the scratch-tree route was not the cause. The one thing all three hung calls share
+  is an `rm -rf` / `rm -f` inside the command; nothing behind the call ever ran (no process, no
+  scratch dir created). READING: the harness's permission layer HOLDS a delete-bearing call for a
+  decision a headless lane cannot give, and the lane waits forever — the stall watchdog counts a
+  held tool as activity. LAW (into LAWS P5): no `rm` of any form inside a workflow lane; scratch
+  stays under unique names and is the chair's to clean; a scratch config that must go before
+  return is `mv`ed to a trash dir. Relaunched as the fourth sitting with the law in COUNT's note and
+  in every lane's LAWS block.

@@ -1,0 +1,46 @@
+
+Running 2 tests using 2 workers
+
+  ✘  1 [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (3.2s)
+  ✘  2 [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries (3.2s)
+
+
+  1) [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "0s"
+    Received: "1s"
+
+      311 |   const leave = (await read())!;
+      312 |
+    > 313 |   expect(leave.transitionDuration).toBe('0s');
+          |                                    ^
+      314 |   expect(leave.animationName).toContain('ink-rub-out');
+      315 |   // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
+      316 |   for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-47/web/frontend/e2e/affordances.spec.ts:313:36
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-e2e-out/affordances-drop-clock-a-n-8630d--transition-the-ink-carries-chromium/error-context.md
+
+  2) [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "0s"
+    Received: "1s"
+
+      311 |   const leave = (await read())!;
+      312 |
+    > 313 |   expect(leave.transitionDuration).toBe('0s');
+          |                                    ^
+      314 |   expect(leave.animationName).toContain('ink-rub-out');
+      315 |   // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
+      316 |   for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-47/web/frontend/e2e/affordances.spec.ts:313:36
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-e2e-out/affordances-drop-clock-a-n-8630d--transition-the-ink-carries-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 
+    [webkit] › e2e/affordances.spec.ts:255:1 › drop clock: a note leaves on the rub-out, whatever transition the ink carries 

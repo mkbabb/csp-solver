@@ -1,0 +1,40 @@
+--- owners-eye.copy.mjs	2026-09-23 01:50:36
++++ owners-eye.I2-I4.PROPOSED.mjs	2026-09-23 02:11:51
+@@ -94,15 +94,23 @@
+       !!bar.querySelector(":scope > .outline-container, :scope > svg.outline-svg");
+     let worst = 0;
+     let who = null;
+-    for (const w of document.querySelectorAll(".tray-well")) {
+-      const wb = w.getBoundingClientRect();
++    // PROPOSED (CTRL-RULE pass 5): the ruled page's groups are `.ruled-group` (named by `.rp-name`);
++    // `.tray-well` alone reads 0 groups on that tree and greens the coverage clause by vacuity.
++    for (const w of document.querySelectorAll(".tray-well, .ruled-group")) {
++      // PROPOSED (CTRL-RULE pass 5, TAPE's critic's graft): clip the group to the card's scrollport
++      // first; a group scrolled past the scrollport's edge is not on screen, and a bar outside the
++      // scrollport cannot bury what the scrollport already hides.
++      const g = w.getBoundingClientRect();
++      const sp = (w.closest(".controls-card") || document.documentElement).getBoundingClientRect();
++      const wb = { top: Math.max(g.top, sp.top), bottom: Math.min(g.bottom, sp.bottom), left: Math.max(g.left, sp.left), right: Math.min(g.right, sp.right), width: g.width, height: g.height };
++      if (wb.bottom <= wb.top) continue;
+       const ov =
+         Math.max(0, Math.min(wb.bottom, bb.bottom) - Math.max(wb.top, bb.top)) *
+         Math.max(0, Math.min(wb.right, bb.right) - Math.max(wb.left, bb.left));
+       const frac = ov / Math.max(1, wb.width * wb.height);
+       if (frac > worst) {
+         worst = frac;
+-        who = (w.querySelector(".washi-tag")?.textContent || "?").trim();
++        who = (w.querySelector(".washi-tag, .rp-name")?.textContent || "?").trim();
+       }
+     }
+     return { own, worst: +worst.toFixed(3), who, border: cs.borderTopWidth, shadow: cs.boxShadow };
+@@ -182,7 +190,9 @@
+           const after = [...document.querySelectorAll(".sudoku-cell input")].map((i) => i.value).join("");
+           return {
+             verb: name,
+-            armed: !!b.querySelector(".icon-sublabel.is-armed"),
++            // PROPOSED (CTRL-RULE pass 5): the ask is TAPE's `ConfirmRibbon` (the question in the verb's
++            // cell), not pass 3's armed sublabel; the old selector reads armed=false on a verb that asked.
++            armed: !!b.querySelector(".icon-sublabel.is-armed") || !!document.querySelector(".confirm-ribbon"),
+             dialog: !!document.querySelector("[role=alertdialog],[role=dialog]"),
+             cellsWritten: [...before].filter((c, i) => c !== after[i]).length,
+           };

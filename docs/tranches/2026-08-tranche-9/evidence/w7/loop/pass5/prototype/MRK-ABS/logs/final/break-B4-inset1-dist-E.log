@@ -1,0 +1,60 @@
+
+Running 2 tests using 1 worker
+
+[1/2] [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+[chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+[G-ABS-7] stroke 7: product 0.232 px · witness f=1.00 0.232 px · identical 256/256 · scale 0.489 px/u
+
+[G-ABS-7] stroke 10: product -0.501 px · witness f=1.00 -0.501 px · identical 256/256 · scale 0.489 px/u
+
+  1) [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+
+    Error: G-ABS-7 stroke 10: the ring's outer ink stays inside its own cell (px)
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -0.501348877473788
+
+      325 |       const witness = Math.min(...cells.map((c, pos) => clearance(ring(pos, 1), c.m, c.box, stroke)));
+      326 |       console.log(`[G-ABS-7] stroke ${stroke}: product ${r3(product)} px · witness f=1.00 ${r3(witness)} px · identical ${identical}/${N * N} · scale ${r3(cells[0].m[0])} px/u`);
+    > 327 |       expect(product, `G-ABS-7 stroke ${stroke}: the ring's outer ink stays inside its own cell (px)`).toBeGreaterThanOrEqual(0);
+          |                                                                                                        ^
+      328 |       if (stroke === 10) expect(witness, "the witness: the same wander at inset 1.00 enters the neighbour (px)").toBeLessThan(0);
+      329 |     }
+      330 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:327:104
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-5b594-dentity-the-f-1-00-witness--chromium/error-context.md
+
+
+[2/2] [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+[webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+[G-ABS-7] stroke 7: product 0.232 px · witness f=1.00 0.232 px · identical 256/256 · scale 0.489 px/u
+
+[G-ABS-7] stroke 10: product -0.501 px · witness f=1.00 -0.501 px · identical 256/256 · scale 0.489 px/u
+
+  2) [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+
+    Error: G-ABS-7 stroke 10: the ring's outer ink stays inside its own cell (px)
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -0.501348877473788
+
+      325 |       const witness = Math.min(...cells.map((c, pos) => clearance(ring(pos, 1), c.m, c.box, stroke)));
+      326 |       console.log(`[G-ABS-7] stroke ${stroke}: product ${r3(product)} px · witness f=1.00 ${r3(witness)} px · identical ${identical}/${N * N} · scale ${r3(cells[0].m[0])} px/u`);
+    > 327 |       expect(product, `G-ABS-7 stroke ${stroke}: the ring's outer ink stays inside its own cell (px)`).toBeGreaterThanOrEqual(0);
+          |                                                                                                        ^
+      328 |       if (stroke === 10) expect(witness, "the witness: the same wander at inset 1.00 enters the neighbour (px)").toBeLessThan(0);
+      329 |     }
+      330 |   });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:327:104
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-5b594-dentity-the-f-1-00-witness--webkit/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+    [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 

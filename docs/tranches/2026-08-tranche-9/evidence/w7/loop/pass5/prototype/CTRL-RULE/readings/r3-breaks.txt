@@ -1,0 +1,14 @@
+R3 (r0 law-probe, the chair's pass-5 re-cut) vs the PROPOSED re-cut — break test on wf_f72f3b5a-83a-28
+(a scratch copy of the tree's src/ per break; the tree itself untouched; FE= env points the copy)
+
+case                                             chair's R3 (1,200-char window)   PROPOSED (the bar's own edge)
+as-is (arm b: RuledLine first in the bar)        GREEN                            GREEN
+BREAK 1: the bar's RuledLine deleted             GREEN   <- cannot fail            RED
+BREAK 2: + `<!-- <RuledLine … /> -->` in its place GREEN                          RED (comments stripped)
+arm a: HandDrawnOutline 1.5/4/3/0 as the edge    GREEN                            GREEN
+control 74a2b5d9                                 RED                              RED
+
+Why the chair's row greens on break 1: `Clear`'s act face (`<HandDrawnOutline class="act-face is-destructive"`)
+sits 700-odd chars after `class="action-bar"`, inside the 1,200-char window. On any tree whose verbs wear
+drawn faces the window reads a face as the bar's edge. The re-cut reads the bar's FIRST child (or the
+element immediately wrapping the bar) and accepts either house-hand component.

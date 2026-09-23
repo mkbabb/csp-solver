@@ -1,0 +1,23 @@
+Critic pass 5 · ACC-GRAPHITE · gate attacks, run on a SCRATCH COPY of the work tree (src/scripts/e2e copied,
+node_modules symlinked; the tree itself never edited). Each mutation restored from a saved copy before the next.
+
+check-theme-tokens (RETIRED list)
+  M-A  --color-crayon-blue re-minted as `:root { --color-crayon-blue: #4a90d9; }` appended to gameCell.css  -> exit 0   (HOLE: RETIRED reads index.css only)
+  M-B  the same re-mint inside index.css @theme (negative control)                                           -> exit 1   (RED as required)
+  bare after restore -> 0 ; --self-test -> 0 ("re-mint --color-crayon-blue: RED as required (dead-token rule alone: live)")
+
+check-ink-pressure (wash-step gate)
+  M-D  `.dark { --ground-wash-unit: … 2% }` (a per-theme base override)          -> exit 1 (caught by the GROUND-RANK gate's per-theme rule, not the wash gate)
+  M-D2 base arm 6% -> 4% (negative control)                                        -> exit 1
+  M-D4 `@media (prefers-contrast: more) { html.dark { --ground-wash-unit: … 3% } }` placed BEFORE the :root more block
+       -> exit 0; the gate prints "more 12% 1.281 dark" while dark+more paints the 3% arm   (HOLE: the more arm is read scope-blind)
+  restored bare -> 0
+
+gridPaths.tally.test.ts (LAW A on the export)
+  bare                         -> 5/5 pass, exit 0
+  ceil form                    -> 2 failed, exit 1 (reproduces the prototype's born-RED)
+  round -> floor               -> 5/5 pass, exit 0   (every sampled ratio is an exact integer; written=1 on writable 57 draws 0 ticks under floor, 1 under round — unsampled)
+
+HandwrittenGlyph caret rule (`<`/`>` keep 5)
+  reverted to `return 6`       -> vitest src/pencil + src/games/futoshiki + DigitCell/PosterBoard/posters: 18 files / 209 tests pass, exit 0
+                                  (NO landed row holds the caret closure; only the probe does)

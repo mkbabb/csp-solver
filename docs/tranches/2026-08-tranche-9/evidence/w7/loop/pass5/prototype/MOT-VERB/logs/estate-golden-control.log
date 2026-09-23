@@ -1,0 +1,107 @@
+
+Running 4 tests using 4 workers
+
+  ✘  3 e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) (15.6s)
+  ✘  2 e2e/visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer (15.8s)
+  ✘  1 e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack (15.8s)
+  ✘  4 e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose (15.8s)
+
+
+  1) e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.grid-ink .boil-frame-bitmap.is-active') to be visible
+
+
+      209 |   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
+      210 |   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
+    > 211 |   await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 15000 });
+          |              ^
+      212 |   await expect
+      213 |     .poll(() => page.locator(".grid-ink .boil-frame-bitmap.is-active").count(), {
+      214 |       timeout: 15000,
+        at loadSettled (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:211:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:325:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-log-944fc--soul-baked-logo-pose-stack/error-context.md
+
+  2) e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.grid-ink .boil-frame-bitmap.is-active') to be visible
+
+
+      209 |   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
+      210 |   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
+    > 211 |   await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 15000 });
+          |              ^
+      212 |   await expect
+      213 |     .poll(() => page.locator(".grid-ink .boil-frame-bitmap.is-active").count(), {
+      214 |       timeout: 15000,
+        at loadSettled (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:211:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:356:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-tog-a421d-13-soul-celestial-rest-pose/error-context.md
+
+  3) e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) ───────────────
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.grid-ink .boil-frame-bitmap.is-active') to be visible
+
+
+      209 |   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
+      210 |   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
+    > 211 |   await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 15000 });
+          |              ^
+      212 |   await expect
+      213 |     .poll(() => page.locator(".grid-ink .boil-frame-bitmap.is-active").count(), {
+      214 |       timeout: 15000,
+        at loadSettled (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:211:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:378:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-single-cell-with-given-glyph-light-/error-context.md
+
+  4) e2e/visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer 
+
+    TimeoutError: page.waitForSelector: Timeout 15000ms exceeded.
+    Call log:
+      - waiting for locator('.grid-ink .boil-frame-bitmap.is-active') to be visible
+
+
+      209 |   // A golden captured mid-bake (fallback filter) would diverge from the shipped steady
+      210 |   // state; if the bake ever breaks, this times out — the gate biting, not a flake.
+    > 211 |   await page.waitForSelector(".grid-ink .boil-frame-bitmap.is-active", { timeout: 15000 });
+          |              ^
+      212 |   await expect
+      213 |     .poll(() => page.locator(".grid-ink .boil-frame-bitmap.is-active").count(), {
+      214 |       timeout: 15000,
+        at loadSettled (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:211:14)
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/e2e/visual-golden.spec.ts:391:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/visual-golden-golden-·-gri-345e1-l-grain-static-steady-layer/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/visual-golden-golden-·-gri-345e1-l-grain-static-steady-layer/error-context.md
+
+  4 failed
+    e2e/visual-golden.spec.ts:322:1 › golden · logo wordmark (light) — W13 soul: baked logo pose stack 
+    e2e/visual-golden.spec.ts:353:1 › golden · toggle crest (dark, moon) — W13 soul: celestial rest pose 
+    e2e/visual-golden.spec.ts:377:1 › golden · single cell with given glyph (light) ────────────────
+    e2e/visual-golden.spec.ts:388:1 › golden · grid top-left corner (light) — W13 soul: grain-static steady layer 
+EXIT 1

@@ -1,0 +1,92 @@
+
+Running 14 tests using 2 workers
+
+  ✓   1 [chromium] › e2e/progress-corridor.spec.ts:317:3 › the fill gauge clears 3:1 against both its painted grounds — light (6.6s)
+  ✓   2 [chromium] › e2e/progress-corridor.spec.ts:317:3 › the fill gauge clears 3:1 against both its painted grounds — dark (6.6s)
+  ✓   3 [chromium] › e2e/progress-corridor.spec.ts:339:3 › BORN-RED: the corridor names its failure on HEAD's violet — light (7.2s)
+  ✓   4 [chromium] › e2e/progress-corridor.spec.ts:353:3 › BORN-RED: an in-window ink 25° off the anchor reds on the HUE row — light (7.2s)
+  ✓   5 [chromium] › e2e/progress-corridor.spec.ts:339:3 › BORN-RED: the corridor names its failure on HEAD's violet — dark (7.1s)
+  ✓   6 [chromium] › e2e/progress-corridor.spec.ts:353:3 › BORN-RED: an in-window ink 25° off the anchor reds on the HUE row — dark (7.1s)
+  ✓   8 [webkit] › e2e/progress-corridor.spec.ts:317:3 › the fill gauge clears 3:1 against both its painted grounds — light (7.3s)
+  ✓   9 [webkit] › e2e/progress-corridor.spec.ts:317:3 › the fill gauge clears 3:1 against both its painted grounds — dark (6.6s)
+  ✓  10 [webkit] › e2e/progress-corridor.spec.ts:339:3 › BORN-RED: the corridor names its failure on HEAD's violet — light (7.5s)
+  ✓  11 [webkit] › e2e/progress-corridor.spec.ts:353:3 › BORN-RED: an in-window ink 25° off the anchor reds on the HUE row — light (7.2s)
+  ✓  12 [webkit] › e2e/progress-corridor.spec.ts:339:3 › BORN-RED: the corridor names its failure on HEAD's violet — dark (7.3s)
+  ✓  13 [webkit] › e2e/progress-corridor.spec.ts:353:3 › BORN-RED: an in-window ink 25° off the anchor reds on the HUE row — dark (7.2s)
+  ✘   7 [chromium] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (1.5m)
+  ✘  14 [webkit] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (1.5m)
+
+
+  1) [chromium] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Test timeout of 90000ms exceeded.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for locator('[aria-label*="Hint" i]').first()
+        - locator resolved to <button class="icon-btn" data-v-fa75191a="" aria-label="Reveal a hint in the selected cell">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+          - waiting 100ms
+        174 × waiting for element to be visible, enabled and stable
+            - element is not visible
+          - retrying click action
+            - waiting 500ms
+
+
+      426 |   await expect(hint).toBeEnabled({ timeout: 30000 });
+      427 |   for (let i = 0; i < 3; i++) {
+    > 428 |     await hint.click();
+          |                ^
+      429 |     await a.waitForTimeout(700);
+      430 |   }
+      431 |   const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/e2e/progress-corridor.spec.ts:428:16
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc5/test-results/progress-corridor-G10-ever-d975b-at-most-62-5-times-a-second-chromium/error-context.md
+
+  2) [webkit] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Test timeout of 90000ms exceeded.
+
+    Error: locator.click: Test ended.
+    Call log:
+      - waiting for locator('[aria-label*="Hint" i]').first()
+        - locator resolved to <button class="icon-btn" data-v-fa75191a="" aria-label="Reveal a hint in the selected cell">…</button>
+      - attempting click action
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+        - waiting 20ms
+        2 × waiting for element to be visible, enabled and stable
+          - element is not visible
+        - retrying click action
+          - waiting 100ms
+        171 × waiting for element to be visible, enabled and stable
+            - element is not visible
+          - retrying click action
+            - waiting 500ms
+
+
+      426 |   await expect(hint).toBeEnabled({ timeout: 30000 });
+      427 |   for (let i = 0; i < 3; i++) {
+    > 428 |     await hint.click();
+          |                ^
+      429 |     await a.waitForTimeout(700);
+      430 |   }
+      431 |   const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-41/web/frontend/e2e/progress-corridor.spec.ts:428:16
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc5/test-results/progress-corridor-G10-ever-d975b-at-most-62-5-times-a-second-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+    [webkit] › e2e/progress-corridor.spec.ts:414:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+  12 passed (2.6m)
+EXIT 1

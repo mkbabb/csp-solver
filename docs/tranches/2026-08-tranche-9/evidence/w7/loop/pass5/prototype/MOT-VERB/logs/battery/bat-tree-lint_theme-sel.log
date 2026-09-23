@@ -1,0 +1,36 @@
+THEME-SELECTOR CENSUS — 56 style files, 3 data-attribute selector sites over 3 attribute(s), 0 prefers-color-scheme site(s), 0 allowlisted
+  writers for `data-fold-above`: src/games/shared/GameControlPanel.vue:668 (toggleAttribute)
+  writers for `data-fold-below`: src/games/shared/GameControlPanel.vue:669 (toggleAttribute)
+  writers for `data-under-bar`: src/games/shared/GameControlPanel.vue:679 (toggleAttribute)
+  ✓ 1 UNWRITTEN ATTRIBUTES
+  ✓ 2 UNHONORED MEDIA
+  ✓ 3 ALLOWLIST CLOSED
+  ✓ 0 POPULATION CANARY — a planted `[data-canary-theme]` rule over the live 141-file corpus reds check 1
+
+SELF-TEST — each check against fixture trees:
+  [1 UNWRITTEN ATTRIBUTES] the wave's exact shape — a [data-theme] rule with a class-only writer
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] the only mention of the writer is inside a comment
+      → RED (want RED)
+  [1 UNWRITTEN ATTRIBUTES] positive control — a real setAttribute writer lands
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] a doc comment that SPELLS a style open tag must not blank the writer under it (T9-W2)
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — vueuse writes through `attribute:`, no setAttribute in sight
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — Vue's own scope id is not an app attribute
+      → GREEN (want GREEN)
+  [1 UNWRITTEN ATTRIBUTES] positive control — the cured, class-keyed block
+      → GREEN (want GREEN)
+  [2 UNHONORED MEDIA] a prefers-color-scheme block with nothing said about it
+      → RED (want RED)
+  [2 UNHONORED MEDIA] positive control — allowlisted with a reason
+      → GREEN (want GREEN)
+  [3 ALLOWLIST CLOSED] a stale entry — the selector it excuses is gone
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] the excused attribute gained a writer — the excuse outlived its reason
+      → RED (want RED)
+  [3 ALLOWLIST CLOSED] an entry whose reason is a shrug
+      → RED (want RED)
+
+OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.

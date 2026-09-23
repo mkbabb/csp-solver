@@ -1,0 +1,20 @@
+## U0-none  exit=0  restored-sha1=OK  8 passed (8)
+  ✓ the chart opens on the room as it is > draws every settled peer at the press, before any timer runs
+  ✓ the chart opens on the room as it is > holds a MOVE until the peer has sat still for settleMs, then steps
+  ✓ the chart opens on the room as it is > a peer with no cell has a row, no dot, and says so
+  ✓ the query asks only rows that have an answer > a peer's row dims every other dot; your own row dims none
+  ✓ each peer's clock is its own > p2 moves once while p1 walks every 250 ms: p2 steps 700 ms after ITS move
+  ✓ each peer's clock is its own > your own cell moving (a new place, the same cursors) restarts no peer's clock
+  ✓ the chart leaves with the sheet > is still mounted, dots and ring where they were, in the first shut frame
+  ✓ the chart leaves with the sheet > draws nothing new while shut: your walk and a peer's move wait for the next open
+## U-A guard ablated  exit=1  restored-sha1=OK  1 failed | 7 passed (8)
+  × each peer's clock is its own > p2 moves once while p1 walks every 250 ms: p2 steps 700 ms after ITS move
+## U-B deep restored  exit=0  restored-sha1=OK  8 passed (8)
+## U-AB both  exit=1  restored-sha1=OK  2 failed | 6 passed (8)
+  × each peer's clock is its own > p2 moves once while p1 walks every 250 ms: p2 steps 700 ms after ITS move
+  × each peer's clock is its own > your own cell moving (a new place, the same cursors) restarts no peer's clock
+## U-C open && chart  exit=1  restored-sha1=OK  2 failed | 6 passed (8)
+  × the chart leaves with the sheet > is still mounted, dots and ring where they were, in the first shut frame
+  × the chart leaves with the sheet > draws nothing new while shut: your walk and a peer's move wait for the next open
+## U-D ring unfrozen  exit=1  restored-sha1=OK  1 failed | 7 passed (8)
+  × the chart leaves with the sheet > draws nothing new while shut: your walk and a peer's move wait for the next open

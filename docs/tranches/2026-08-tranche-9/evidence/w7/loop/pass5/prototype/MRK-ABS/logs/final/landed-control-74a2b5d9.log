@@ -1,0 +1,234 @@
+
+Running 8 tests using 1 worker
+
+[1/8] [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[G-ABS-5 chromium] opacity ledger 0.95 source 0.95 computed 0.9 · ablated 0.9
+16×16 paper light: painted 3.679 ledger 3.97
+16×16 frame light: painted 2.69 ledger 2.81
+16×16 paper dark: painted 3.763 ledger 3.99
+16×16 frame dark: painted 2.32 ledger 2.4
+9×9 paper light: painted 2.693 ledger 3.92
+9×9 paper dark: painted 2.309 ledger 3.99
+ablated: 3.679 2.69 3.763 2.32 2.693 2.309
+
+  1) [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+
+    Error: opacity: ledger 0.95, source 0.95, computed 0.9,0.9,0.9,0.9,0.9,0.9
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      264 |     // THE GATE, on the tree.
+      265 |     expect(L.unguarded, "every figure in the ledger comment is a ledger row").toEqual([]);
+    > 266 |     expect(opClause(L.opacity, srcOp, arms.shipped.ops), `opacity: ledger ${L.opacity}, source ${srcOp}, computed ${arms.shipped.ops}`).toBe(true);
+          |                                                                                                                                         ^
+      267 |     expect(paintClause(L.rows, arms.shipped.reads), lines.join("\n")).toBe(true);
+      268 |     // ITS CONTROLS, same run.
+      269 |     expect(opClause(L.opacity, srcOp, arms["ablated-0.9"].ops), "control: tier 2 ablated to 0.9 reds the opacity clause").toBe(false);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:266:137
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-e8e46-mes-and-reds-when-it-is-not-chromium/error-context.md
+
+
+[2/8] [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+  2) [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+
+    Error: G-ABS-8: every resident `d` is the recipe at RING_GEOMETRY
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 256
+    Received: 0
+
+      320 |     };
+      321 |     const identical = cells.filter((c, pos) => c.d === ring(pos, RING_GEOMETRY.inset)).length;
+    > 322 |     expect(identical, "G-ABS-8: every resident `d` is the recipe at RING_GEOMETRY").toBe(N * N);
+          |                                                                                     ^
+      323 |     for (const stroke of [7, 10]) {
+      324 |       const product = Math.min(...cells.map((c) => clearance(c.d, c.m, c.box, stroke)));
+      325 |       const witness = Math.min(...cells.map((c, pos) => clearance(ring(pos, 1), c.m, c.box, stroke)));
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:322:85
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-5b594-dentity-the-f-1-00-witness--chromium/error-context.md
+
+
+[3/8] [chromium] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame
+  3) [chromium] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame 
+
+    Error: sudoku light: inks rgb(10, 10, 10) | color(srgb 0.0392157 0.0392157 0.0392157 / 0.4) · auto 4 · button.attribution-trigger auto oklab(0.144787 0.00000661612 0.00000289828 / 0.5), button.sun-moon-toggle solid rgb(10, 10, 10), button.logo-trigger solid color(srgb 0.0392157 0.0392157 0.0392157 / 0.4), button.drawer-tab dashed rgb(10, 10, 10), button.ctrl-btn auto oklab(0.144787 0.00000661612 0.00000289828 / 0.5), button.icon-btn auto oklab(0.144787 0.00000661612 0.00000289828 / 0.5), button.info-btn auto oklab(0.144787 0.00000661612 0.00000289828 / 0.5)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      429 |         await setTheme(page, theme);
+      430 |         const c = await census();
+    > 431 |         expect(c.clause, `${game} ${theme}: inks ${c.inks.join(" | ")} · auto ${c.autos} · ${c.rows.map((r) => `${r.stop} ${r.style} ${r.colour}${r.sameFrame ? "" : " LATE"}`).join(", ")}`).toBe(true);
+          |                                                                                                                                                                                               ^
+      432 |         if (theme === "light") token ??= c.inks[0];
+      433 |         expect(c.inks[0], "the one ink is one value in both themes (R1)").toBe(token);
+      434 |       }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:431:191
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-c-d86a4-l-colour-on-the-first-frame-chromium/error-context.md
+
+
+[4/8] [chromium] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked
+[chromium] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked
+[G-ABS-3 chromium light]
+button.attribution-trigger worst 3.69 under3 0 (44)
+button.sun-moon-toggle worst 18.991 under3 0 (15)
+button.logo-trigger worst 2.702 under3 1 (44)
+button.drawer-tab worst 1.043 under3 0.154 (26)
+button.ctrl-btn worst 3.725 under3 0 (44)
+button.icon-btn worst 3.097 under3 0 (27)
+button.info-btn worst 3.725 under3 0 (44)
+
+  4) [chromium] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked 
+
+    Error: chromium light button.logo-trigger: no sample line under 3:1
+    button.attribution-trigger worst 3.69 under3 0 (44)
+    button.sun-moon-toggle worst 18.991 under3 0 (15)
+    button.logo-trigger worst 2.702 under3 1 (44)
+    button.drawer-tab worst 1.043 under3 0.154 (26)
+    button.ctrl-btn worst 3.725 under3 0 (44)
+    button.icon-btn worst 3.097 under3 0 (27)
+    button.info-btn worst 3.725 under3 0 (44)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 1
+
+      502 |       for (const [key, v] of banded) {
+      503 |         const adm = ADMITTED[key]?.max[engine][theme] != null ? ADMITTED[key] : undefined;
+    > 504 |         if (!adm) expect(v.under, `${engine} ${theme} ${key}: no sample line under 3:1\n${say}`).toBe(0);
+          |                                                                                                  ^
+      505 |         else {
+      506 |           expect(v.under, `${engine} ${theme} ${key}: ADMITTED at ${adm.max[engine][theme]} (${adm.why})\n${say}`).toBeLessThanOrEqual(adm.max[engine][theme]!);
+      507 |           expect(v.under, `${engine} ${theme} ${key}: STALE — the admitted stop obeys the rule; strike its row`).toBeGreaterThan(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:504:98
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-c-37897-s-painted-floor-boil-parked-chromium/error-context.md
+
+
+[5/8] [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not
+[G-ABS-5 webkit] opacity ledger 0.95 source 0.95 computed 0.9 · ablated 0.9
+16×16 paper light: painted 3.685 ledger 3.97
+16×16 frame light: painted 3.124 ledger 2.85
+16×16 paper dark: painted 3.755 ledger 4
+16×16 frame dark: painted 2.927 ledger 2.4
+9×9 paper light: painted 2.693 ledger 3.97
+9×9 paper dark: painted 2.316 ledger 3.99
+ablated: 3.685 2.911 3.755 2.851 2.693 2.316
+
+  5) [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+
+    Error: opacity: ledger 0.95, source 0.95, computed 0.9,0.9,0.9,0.9,0.9,0.9
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      264 |     // THE GATE, on the tree.
+      265 |     expect(L.unguarded, "every figure in the ledger comment is a ledger row").toEqual([]);
+    > 266 |     expect(opClause(L.opacity, srcOp, arms.shipped.ops), `opacity: ledger ${L.opacity}, source ${srcOp}, computed ${arms.shipped.ops}`).toBe(true);
+          |                                                                                                                                         ^
+      267 |     expect(paintClause(L.rows, arms.shipped.reads), lines.join("\n")).toBe(true);
+      268 |     // ITS CONTROLS, same run.
+      269 |     expect(opClause(L.opacity, srcOp, arms["ablated-0.9"].ops), "control: tier 2 ablated to 0.9 reds the opacity clause").toBe(false);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:266:137
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-e8e46-mes-and-reds-when-it-is-not-webkit/error-context.md
+
+
+[6/8] [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness)
+  6) [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+
+    Error: G-ABS-8: every resident `d` is the recipe at RING_GEOMETRY
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 256
+    Received: 0
+
+      320 |     };
+      321 |     const identical = cells.filter((c, pos) => c.d === ring(pos, RING_GEOMETRY.inset)).length;
+    > 322 |     expect(identical, "G-ABS-8: every resident `d` is the recipe at RING_GEOMETRY").toBe(N * N);
+          |                                                                                     ^
+      323 |     for (const stroke of [7, 10]) {
+      324 |       const product = Math.min(...cells.map((c) => clearance(c.d, c.m, c.box, stroke)));
+      325 |       const witness = Math.min(...cells.map((c, pos) => clearance(ring(pos, 1), c.m, c.box, stroke)));
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:322:85
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-b-5b594-dentity-the-f-1-00-witness--webkit/error-context.md
+
+
+[7/8] [webkit] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame
+  7) [webkit] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame 
+
+    Error: sudoku light: inks rgb(10, 10, 10) | color(srgb 0.039216 0.039216 0.039216 / 0.4) · auto 4 · button.attribution-trigger auto oklab(0.144788 0 0 / 0.5), button.sun-moon-toggle solid rgb(10, 10, 10), button.logo-trigger solid color(srgb 0.039216 0.039216 0.039216 / 0.4), button.drawer-tab dashed rgb(10, 10, 10), button.ctrl-btn auto oklab(0.144788 0 0 / 0.5), button.icon-btn auto oklab(0.144788 0 0 / 0.5), button.info-btn auto oklab(0.144788 0 0 / 0.5)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      429 |         await setTheme(page, theme);
+      430 |         const c = await census();
+    > 431 |         expect(c.clause, `${game} ${theme}: inks ${c.inks.join(" | ")} · auto ${c.autos} · ${c.rows.map((r) => `${r.stop} ${r.style} ${r.colour}${r.sameFrame ? "" : " LATE"}`).join(", ")}`).toBe(true);
+          |                                                                                                                                                                                               ^
+      432 |         if (theme === "light") token ??= c.inks[0];
+      433 |         expect(c.inks[0], "the one ink is one value in both themes (R1)").toBe(token);
+      434 |       }
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:431:191
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-c-d86a4-l-colour-on-the-first-frame-webkit/error-context.md
+
+
+[8/8] [webkit] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked
+[webkit] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked
+[G-ABS-3 webkit light]
+button.sun-moon-toggle worst 18.991 under3 0 (15)
+button.logo-trigger worst 2.695 under3 1 (33)
+button.drawer-tab worst 3.606 under3 0 (23)
+
+  8) [webkit] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked 
+
+    Error: light: the walk bands the home stops
+    button.sun-moon-toggle worst 18.991 under3 0 (15)
+    button.logo-trigger worst 2.695 under3 1 (33)
+    button.drawer-tab worst 3.606 under3 0 (23)
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 6
+    Received:    3
+
+      499 |       const say = banded.map(([k, v]) => `${k} worst ${v.worst} under3 ${v.under} (${v.lines})`).join("\n");
+      500 |       console.log(`[G-ABS-3 ${engine} ${theme}]\n${say}`);
+    > 501 |       expect(banded.length, `${theme}: the walk bands the home stops\n${say}`).toBeGreaterThanOrEqual(6);
+          |                                                                                ^
+      502 |       for (const [key, v] of banded) {
+      503 |         const adm = ADMITTED[key]?.max[engine][theme] != null ? ADMITTED[key] : undefined;
+      504 |         if (!adm) expect(v.under, `${engine} ${theme} ${key}: no sample line under 3:1\n${say}`).toBe(0);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/e2e/focus-ring.spec.ts:501:80
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/pw-landed/focus-ring-MRK-ABS-·-the-c-37897-s-painted-floor-boil-parked-webkit/error-context.md
+
+
+  8 failed
+    [chromium] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+    [chromium] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+    [chromium] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame 
+    [chromium] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked 
+    [webkit] › e2e/focus-ring.spec.ts:224:3 › MRK-ABS · the board ring › G-ABS-5 · the ledger is true at the opacity it names, and reds when it is not 
+    [webkit] › e2e/focus-ring.spec.ts:282:3 › MRK-ABS · the board ring › G-ABS-7 · MA-N from the DOM: no ring enters its neighbour (G-ABS-8 identity; the f = 1.00 witness) 
+    [webkit] › e2e/focus-ring.spec.ts:399:3 › MRK-ABS · the chrome ring › G-ABS-4 · one ink on every game route, no `auto`, the final colour on the first frame 
+    [webkit] › e2e/focus-ring.spec.ts:442:3 › MRK-ABS · the chrome ring › G-ABS-3 · the chrome ring's painted floor, boil parked 

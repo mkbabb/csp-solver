@@ -1,0 +1,42 @@
+--- a/GameControlPanel.vue	2026-09-23 01:41:15
++++ b/GameControlPanel.vue	2026-09-23 01:41:15
+@@ -1285,7 +1285,14 @@
+          them wherever it lands and the second binding is deleted with the first. -->
+     <Teleport defer to="#card-foot" :disabled="!footBerth">
+       <div ref="actionBarEl" class="action-bar">
+-        <RuledLine class="outline-svg bar-rule" :seed="SEED.bar" />
++        <HandDrawnOutline
++          class="bar-frame"
++          :stroke-width="1.5"
++          :outset="4"
++          :radius="3"
++          :pose="0"
++          aria-hidden="true"
++        />
+         <!-- WHILE A QUESTION STANDS THE ROW IS THE QUESTION'S (pass 4). `v-show`, not a cover:
+              pass 3 hung the note `bottom: 100%` of the bar, OVER the card's last visible row,
+              and the critic read `Off` `Ask` `Live` and the invite at 1.000 (both engines,
+@@ -2174,9 +2181,10 @@
+    half-pixel row by construction. `inset: 0 0 auto 0` keeps the path's centre 2.5px inside the
+    bar. Its stroke is the page's one rule stroke (3, `RuledLine.vue`'s sweep): the foot used to
+    set a `--rp-rule-stroke: 3` of its own, and that knob is deleted now that every rule is 3. */
+-.bar-rule {
++.action-bar > .bar-frame {
+   position: absolute;
+-  inset: 0 0 auto 0;
++  inset: 0;
++  pointer-events: none;
+ }
+ 
+ /* ── T9-W2 §2.3 · THE FADE IS DEEPER, AND IT IS HONEST ────────────────────────────────────
+--- a/scene.css	2026-09-23 01:41:15
++++ b/scene.css	2026-09-23 01:41:15
+@@ -361,7 +361,7 @@
+    `env()` with a UA value is not a `var()` fallback (pass-4 §3) and stays. */
+ .card-foot {
+   padding-inline: var(--card-pad-x);
+-  padding-bottom: max(0.15rem, env(safe-area-inset-bottom));
++  padding-bottom: max(0.75rem, env(safe-area-inset-bottom));
+ }
+ 
+ /* THE FOOT TAKES THE CASE'S WIDTH AT THE DESK AND NEVER GIVES IT ONE (chair §6.4). Uncontained
