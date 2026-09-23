@@ -1,0 +1,36 @@
+--- r0/r6-idiom-history/law-probe.mjs
++++ r0/r6-idiom-history/law-probe.mjs (PROPOSED, pass 6)
+@@ -15,6 +15,8 @@
+  */
+ import fs from "node:fs";
+ import path from "node:path";
++// L5b's body lives ONCE, in the chair's instruments (pass6/instruments/l5b.mjs), with its plants.
++import { l5b } from "../../pass6/instruments/l5b.mjs";
+ 
+ const FE = path.join(import.meta.dirname, "../../../../../../../../web/frontend");
+ const read = (rel) => fs.readFileSync(path.join(FE, rel), "utf8");
+@@ -123,7 +125,24 @@
+   },
+ );
+ 
++// L5b (T9-W7 pass 6, the chair's instruments lane, from PLR-SELF's pass-4 PROPOSED and its pass-5
++// critic): L5 reads only the guard verbs, so a head disclosure could mint a CSS border and L5 stayed
++// GREEN (§11's lobby did, pass 4). Keyed on the sheet's SHAPE at EVERY consumer site — any rule
++// under src/pencil/chrome hanging a sheet (`top: 100%`), HeadSheet's own rules, and in every file
++// that renders `<HeadSheet …>` each rule whose subject names a hook passed on that tag, plus the
++// tag's own utility classes — against R3's third-re-cut edge set. Born RED at 74a2b5d9
++// (AttributionCard's .hover-card: `border: 2px solid`). Negative controls A–H:
++// `node pass6/instruments/l5b.plants.mjs <web/frontend>` (A/B are the critic's: the pass-4 border
++// on the consumer and at its pass-4 site, each GREEN under the pass-5 body).
+ law(
++  "L5b",
++  "a head disclosure's sheet wears a drawn edge and paints no CSS edge, at every consumer site",
++  "CH-71 (a pose decision for both head disclosures at once); R6 L5; T9-W7 §11",
++  "RED",
++  () => l5b(FE),
++);
++
++law(
+   "L6",
+   "the per-player ink is a formula, not a palette: hue = i × 137.5° at a banded lightness",
+   "playerIdentity.ts inkFor, index.css --peer-ink-l, T6 mark 13",

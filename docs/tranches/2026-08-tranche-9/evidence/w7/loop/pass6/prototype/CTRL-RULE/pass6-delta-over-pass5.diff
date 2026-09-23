@@ -1,0 +1,704 @@
+diff --git a/web/frontend/e2e/mobile-affordances.spec.ts b/web/frontend/e2e/mobile-affordances.spec.ts
+index 490ceaf..f4ba910 100644
+--- a/web/frontend/e2e/mobile-affordances.spec.ts
++++ b/web/frontend/e2e/mobile-affordances.spec.ts
+@@ -457,3 +457,58 @@ test("Deal is dirty-gated (T4-WU/U3): a pristine board carries no arm; a dirty b
+   await expect(dealBtn.locator(".icon-sublabel")).toHaveText("Deal");
+   await expect(input).toHaveValue("5"); // the first tap armed — it did NOT deal a new board
+ });
++
++// T9-W7 CTRL-RULE pass 6 — THE CROSS TAP RE-TARGETS THE QUESTION, both directions (registry-v5
++// §2.2; the cure is CTRL-TAPE's, at `useTwoTap`, taken in its shape and cited there). With deal's
++// question standing in deal's row, `clear` stays visible and hit-testable in the foot, and pass 5's
++// `if (askingAct.value) return` made that tap do NOTHING, both directions, both engines, while the
++// control armed the second verb. The predicate: ONE ribbon stands and it is the second verb's.
++// The row is born RED on the pass-5 dist (the dead tap itself); its in-run negative control emulates
++// that dead tap with a capture-phase swallower, as CTRL-TAPE's row does, so the two trees' rows fail
++// the same way.
++test("the CROSS TAP re-targets the question, both directions (T9-W7 §10 pass 6)", async ({ page }) => {
++  await loadSudoku(page);
++  const blank = await firstBlank(page, ".sudoku-cell");
++  const input = cellInput(page, blank);
++  await input.tap();
++  await page.keyboard.type("5");
++  await expect(input).toHaveValue("5");
++  await openDrawer(page);
++
++  const deal = page.locator(".mobile-control-panel").getByRole("button", { name: "Deal a new board" });
++  const clear = page.locator("#controls-drawer").getByRole("button", { name: "Clear the board" });
++  const standing = () =>
++    page
++      .locator(".confirm-ribbon")
++      .evaluateAll((rs) => rs.map((r) => r.getAttribute("aria-label")));
++
++  await clear.tap();
++  await expect.poll(standing).toEqual(["clear the board?"]);
++  await deal.tap();
++  await expect.poll(standing, { message: "clear asking → tap deal" }).toEqual(["start a new board?"]);
++  await clear.tap();
++  await expect.poll(standing, { message: "deal asking → tap clear" }).toEqual(["clear the board?"]);
++  await expect(input).toHaveValue("5"); // three taps, three questions, nothing destroyed
++
++  // NEGATIVE CONTROL, same run: the dead tap emulated (a guarded verb's click swallowed while a
++  // question stands). The same tap must now leave the FIRST question standing.
++  await page.evaluate(() =>
++    document.addEventListener(
++      "click",
++      (e) => {
++        const t = e.target as Element | null;
++        if (
++          document.querySelector(".confirm-ribbon") &&
++          t?.closest('[aria-label="Deal a new board"], [aria-label="Clear the board"]')
++        )
++          e.stopImmediatePropagation();
++      },
++      true,
++    ),
++  );
++  await deal.tap();
++  await page.waitForTimeout(300);
++  expect(await standing(), "negative control: a dead tap leaves the first question").toEqual([
++    "clear the board?",
++  ]);
++});
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index cc06aca..6ca8afd 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -728,33 +728,87 @@ test.describe("the card never scrolls sideways @ 1280×800 (the coarse rail)", (
+ 
+ test.describe("the page's first line clears the toggle's foot @ 1024×768", () => {
+   test.use({ viewport: { width: 1024, height: 768 } });
+-  test("the derived --toggle-foot names the hit box, and the first chip starts below it", async ({
++  /** The toggle HOVERED (the pointer on it, the transform polled to rest), read live: its box
++   *  against every live control in the case, and the derived `--toggle-foot` against that box.
++   *  Pass 6 (the critic's 1.6): pass 5 read the box at REST and added `height × 0.04` — the 1.08
++   *  written a third time — so a hover raised to 1.25 moved neither side and the row stayed green
++   *  while the hovered toggle lay 5.7 × 126.8px over the first chip. Nothing here names 1.08. */
++  const HOVERED = async (page: Page) => {
++    const t = page.locator("button.sun-moon-toggle");
++    await t.hover();
++    let last = "";
++    await expect
++      .poll(async () => {
++        const now = await t.evaluate((el) => getComputedStyle(el).transform);
++        const settled = now !== "none" && now === last;
++        last = now;
++        return settled;
++      })
++      .toBe(true);
++    return page.evaluate(() => {
++      const t = document.querySelector("button.sun-moon-toggle")!.getBoundingClientRect();
++      const card = document.querySelector(".controls-card") as HTMLElement;
++      const cb = card.getBoundingClientRect();
++      let worst = 0;
++      let first = Infinity;
++      for (const c of document.querySelectorAll(
++        '.drawer-case :is(button, [role="button"], input, a[href], [tabindex="0"])',
++      )) {
++        if (c.closest("[inert]")) continue;
++        if (!(c as HTMLElement).checkVisibility?.({ visibilityProperty: true } as never)) continue;
++        const r = c.getBoundingClientRect();
++        const top = card.contains(c) ? Math.max(r.top, cb.top) : r.top;
++        const bot = card.contains(c) ? Math.min(r.bottom, cb.bottom) : r.bottom;
++        if (bot - top < 0.01 || r.width < 0.01) continue;
++        const ix = Math.max(0, Math.min(t.right, r.right) - Math.max(t.left, r.left));
++        if (ix > 0) first = Math.min(first, top); // the first control in the toggle's own column
++        const iy = Math.max(0, Math.min(t.bottom, bot) - Math.max(t.top, top));
++        worst = Math.max(worst, ix * iy);
++      }
++      return {
++        foot: parseFloat(getComputedStyle(card).getPropertyValue("--toggle-foot")),
++        hovered: t.bottom,
++        first,
++        overlap: +worst.toFixed(2),
++      };
++    });
++  };
++
++  test("the hovered toggle covers no control, and --toggle-foot names its hovered reach", async ({
+     page,
+   }) => {
+     await loadSudoku(page);
+-    const read = () =>
+-      page.evaluate(() => {
+-        const t = document.querySelector("button.sun-moon-toggle")!.getBoundingClientRect();
+-        const card = document.querySelector(".controls-card")!;
+-        const chip = card.querySelector(".ctrl-btn")!.getBoundingClientRect();
+-        return {
+-          foot: parseFloat(getComputedStyle(card).getPropertyValue("--toggle-foot")),
+-          // the hit box's reach: its resting bottom plus the ±8% hover bound's half-growth
+-          box: t.bottom + t.height * 0.04,
+-          chipTop: chip.top,
+-        };
+-      });
+-    // The token is DERIVED from the tokens that draw the box, so it must name the box's reach
+-    // exactly (read at rest: the pointer is not on the toggle here).
+-    await expect.poll(async () => (await read()).foot).toBeGreaterThan(0);
+-    const at = await read();
+-    expect(Math.abs(at.foot - at.box), `--toggle-foot ${at.foot} vs box ${at.box}`).toBeLessThan(0.5);
+-    expect(at.chipTop, "the first chip starts at or below the toggle's foot").toBeGreaterThanOrEqual(
+-      at.foot - 0.5,
++    await expect
++      .poll(() =>
++        page.evaluate(() =>
++          parseFloat(getComputedStyle(document.querySelector(".controls-card")!).getPropertyValue("--toggle-foot")),
++        ),
++      )
++      .toBeGreaterThan(0);
++    const at = await HOVERED(page);
++    console.log(`[RULE row 6] ${JSON.stringify(at)}`);
++    expect(at.overlap, `hovered toggle ∩ live controls ${JSON.stringify(at)}`).toBe(0);
++    expect(at.first, "the first live control in its column starts below the hovered toggle").toBeGreaterThanOrEqual(
++      at.hovered - 0.5,
+     );
+-    // NEGATIVE CONTROL — the clearance struck: the first line rides back under the hit box.
++    expect(Math.abs(at.foot - at.hovered), `--toggle-foot ${at.foot} vs hovered ${at.hovered}`).toBeLessThan(0.5);
++
++    // NEGATIVE CONTROL 1 — the hover grows (the critic's plant, 1.25): the LIVE read must see it.
++    const grow = await page.addStyleTag({
++      content: ".sun-moon-toggle:hover { transform: scale(1.25) !important; }",
++    });
++    await page.mouse.move(0, 700);
++    const big = await HOVERED(page);
++    console.log(`[RULE row 6] scale(1.25) ${JSON.stringify(big)}`);
++    expect(big.overlap, `negative control: scale(1.25) must cover a control ${JSON.stringify(big)}`).toBeGreaterThan(0);
++    expect(Math.abs(big.foot - big.hovered), "negative control: the token no longer names the reach").toBeGreaterThan(0.5);
++    await grow.evaluate((n) => (n as Element).remove());
++
++    // NEGATIVE CONTROL 2 — the clearance struck: the first line rides back under the hit box.
+     await page.addStyleTag({ content: ".control-panel-wrap { padding-top: 0 !important; }" });
+-    await expect.poll(async () => (await read()).chipTop).toBeLessThan(at.foot - 0.5);
++    await page.mouse.move(0, 700);
++    const flat = await HOVERED(page);
++    expect(flat.overlap, `negative control: no clearance ${JSON.stringify(flat)}`).toBeGreaterThan(0);
+   });
+ });
+ 
+@@ -786,7 +840,10 @@ const DRAWN_LINES = () => {
+   for (let i = 1; i < card_.length; i++) inCard.push(+(card_[i].t - card_[i - 1].b).toFixed(2));
+   // THE FOLD PAIR at the scroll END, the one pose where both lines are fixed and the fade is off
+   card.scrollTop = card.scrollHeight;
+-  const footLine = foot ? box(foot.querySelector("svg.ruled-line") ?? foot) : null;
++  // NO `?? foot` (pass 6, the critic's 1.5): with the foot's rule deleted that fallback measured
++  // the foot's BOX (fold 101.08 → 130.23) and the row stayed green. A missing rule is a red.
++  const footRule = foot?.querySelector("svg.ruled-line") ?? null;
++  const footLine = footRule ? box(footRule) : null;
+   const last = card_.length ? card_[card_.length - 1] : null;
+   const endTop0 = card.getBoundingClientRect().top - card.scrollTop;
+   const fold = footLine && last ? +(footLine.t - (last.b + endTop0)).toFixed(2) : null;
+@@ -943,3 +1000,292 @@ test.describe("the standing question (coarse, 390×844)", () => {
+     });
+   }
+ });
++
++// ─────────────────────────────────────────────────────────────────────────────
++// T9-W7 CTRL-RULE pass 6 — the rows the pass-5 critic proved missing or unable to fail. Each
++// carries, in the same test, the negative control that reds it.
++// ─────────────────────────────────────────────────────────────────────────────
++
++/** Two photographs of one clip, the subject shown and then hidden by `hideCss`, decoded in the
++ *  page: per column, whether any pixel moved (> 24 on a channel), and every moved pixel's contrast
++ *  against its own ground pixel. The CORE is the moved pixels whose luminance moved ≥ half the
++ *  p98 move (CTRL-TAPE's `EDGE_COVERAGE` recipe, pass 6, cut to one band). A RECT IS NOT PAINT. */
++const PAINT_DIFF = async (
++  page: Page,
++  clip: { x: number; y: number; width: number; height: number },
++  hideCss: string,
++) => {
++  const on = (await page.screenshot({ clip })).toString("base64");
++  const hide = await page.addStyleTag({ content: hideCss });
++  const off = (await page.screenshot({ clip })).toString("base64");
++  await hide.evaluate((n) => (n as Element).remove());
++  return page.evaluate(
++    async ({ on, off }) => {
++      const px = async (b64: string) => {
++        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++        const c = new OffscreenCanvas(bmp.width, bmp.height);
++        const g = c.getContext("2d")!;
++        g.drawImage(bmp, 0, 0);
++        return g.getImageData(0, 0, bmp.width, bmp.height);
++      };
++      const [a, b] = [await px(on), await px(off)];
++      const { width: w, height: h } = a;
++      const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
++      const L = (d: Uint8ClampedArray, o: number) =>
++        0.2126 * lin(d[o]) + 0.7152 * lin(d[o + 1]) + 0.0722 * lin(d[o + 2]);
++      const moved: { move: number; r: number }[] = [];
++      let cols = 0;
++      const x0 = Math.floor(w * 0.05);
++      const x1 = Math.ceil(w * 0.95);
++      for (let x = x0; x < x1; x++) {
++        let hit = false;
++        for (let y = 0; y < h; y++) {
++          const o = (y * w + x) * 4;
++          const d = Math.max(
++            Math.abs(a.data[o] - b.data[o]),
++            Math.abs(a.data[o + 1] - b.data[o + 1]),
++            Math.abs(a.data[o + 2] - b.data[o + 2]),
++          );
++          if (d <= 24) continue;
++          hit = true;
++          const [la, lb] = [L(a.data, o), L(b.data, o)];
++          moved.push({ move: Math.abs(la - lb), r: (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05) });
++        }
++        if (hit) cols++;
++      }
++      const moves = moved.map((p) => p.move).sort((m, n) => m - n);
++      const ref = moves.length ? moves[Math.floor(0.98 * (moves.length - 1))] : 0;
++      const core = moved.filter((p) => p.move >= 0.5 * ref).map((p) => p.r).sort((m, n) => m - n);
++      const all = moved.map((p) => p.r).sort((m, n) => m - n);
++      return {
++        coverage: +(cols / Math.max(1, x1 - x0)).toFixed(3),
++        coreMedian: core.length ? +core[core.length >> 1].toFixed(3) : 1,
++        p98: all.length ? +all[Math.floor(0.98 * (all.length - 1))].toFixed(3) : 1,
++      };
++    },
++    { on, off },
++  );
++};
++
++/** The sheet SLIDES (~700 ms): poll the case's top until two reads agree, never a fixed sleep. */
++const SHEET_SETTLED = async (page: Page) => {
++  let last = NaN;
++  await expect
++    .poll(
++      async () => {
++        const t = await page.evaluate(() => document.querySelector(".drawer-case")!.getBoundingClientRect().top);
++        const same = Math.abs(t - last) < 0.01;
++        last = t;
++        return same;
++      },
++      { intervals: [100] },
++    )
++    .toBe(true);
++};
++
++/** T9-M18 on the ruled page (T9-B13 arm (b)): the foot's ONE drawn top rule is present, IS
++ *  PAINTED across the foot, and is SEEN (core median ≥ 3.0 — pass-6 rulings A.5.3: existence is
++ *  not visibility). Its ancestor opacity chain is read too, because an `opacity: 0` ancestor
++ *  paints nothing a computed stroke can report. */
++const FOOT_RULE = async (page: Page) => {
++  const rule = page.locator("#card-foot svg.ruled-line");
++  if ((await rule.count()) !== 1) return null;
++  const box = await rule.boundingBox();
++  if (!box) return null;
++  const chain = await rule.evaluate((el) => {
++    let o = 1;
++    for (let e: Element | null = el; e; e = e.parentElement) o *= parseFloat(getComputedStyle(e).opacity);
++    return o;
++  });
++  const clip = { x: box.x, y: box.y - 3, width: box.width, height: box.height + 6 };
++  const paint = await PAINT_DIFF(page, clip, "#card-foot svg.ruled-line { visibility: hidden !important; }");
++  return { chain: +chain.toFixed(3), ...paint };
++};
++const FOOT_RULE_HOLDS = (d: Awaited<ReturnType<typeof FOOT_RULE>>) =>
++  !!d && d.chain > 0.9 && d.coverage >= 0.9 && d.coreMedian >= 3.0;
++
++for (const cell of [
++  { name: "1280×800 fine", use: { viewport: { width: 1280, height: 800 } } },
++  { name: "390×844 coarse", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
++]) {
++  test.describe(`T9-M18 · the foot's drawn rule is painted and seen @ ${cell.name}`, () => {
++    test.use(cell.use);
++    for (const theme of ["light", "dark"] as const) {
++      test(`${theme}: present, painted across the foot, core median ≥ 3.0 — and five plants red it`, async ({
++        page,
++      }) => {
++        await page.emulateMedia({ colorScheme: theme });
++        await page.addInitScript((t) => {
++          try {
++            localStorage.setItem("sudoku-color-scheme", t);
++          } catch {
++            /* private mode: the media query carries it */
++          }
++        }, theme);
++        await loadSudoku(page);
++        if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++          await page.locator(".drawer-tab").tap();
++        await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
++        await SHEET_SETTLED(page);
++        const d = await FOOT_RULE(page);
++        console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
++        expect(FOOT_RULE_HOLDS(d), `the foot's rule ${JSON.stringify(d)}`).toBe(true);
++
++        // NEGATIVE CONTROLS, same run — each must red on its own.
++        for (const [plant, css] of [
++          ["X1 opacity 0", "#card-foot svg.ruled-line { opacity: 0 !important; }"],
++          ["X2 stroke transparent", "#card-foot svg.ruled-line path { stroke: transparent !important; }"],
++          ["FAINT opacity 0.15", "#card-foot svg.ruled-line { opacity: 0.15 !important; }"],
++          [
++            "FAINT ink 25% (painted, chain intact)",
++            "#card-foot svg.ruled-line path { stroke: color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 25%, transparent) !important; }",
++          ],
++          ["ancestor opacity 0", "#card-foot .action-bar { opacity: 0 !important; }"],
++        ] as const) {
++          const tag = await page.addStyleTag({ content: css });
++          const red = await FOOT_RULE(page);
++          console.log(`[RULE M18] ${cell.name} ${theme} plant ${plant} ${JSON.stringify(red)}`);
++          expect(FOOT_RULE_HOLDS(red), `negative control ${plant}: ${JSON.stringify(red)}`).toBe(false);
++          await tag.evaluate((n) => (n as Element).remove());
++        }
++        await page.evaluate(() => document.querySelector("#card-foot svg.ruled-line")!.remove());
++        expect(await FOOT_RULE(page), "negative control: the rule deleted").toBeNull();
++      });
++    }
++  });
++}
++
++test.describe("the coarse rail keeps the control's width (1280×800 hasTouch, chair §6.4)", () => {
++  test.use({ viewport: { width: 1280, height: 800 }, isMobile: true, hasTouch: true });
++  /** The case against the ruler `74a2b5d9` used at this cell: four verbs at the tap gutter
++   *  (each its glyph plus the button's own inline padding, nothing of the face's), plus the
++   *  foot's inline padding. The verbs are read as drawn; nothing here is a literal. */
++  const RAIL = () => {
++    const cas = document.querySelector(".drawer-case")!.getBoundingClientRect();
++    const foot = getComputedStyle(document.getElementById("card-foot")!);
++    const verbs = [...document.querySelectorAll<HTMLElement>(".action-verbs > .icon-btn")].map((b) => {
++      const cs = getComputedStyle(b);
++      return {
++        w: b.getBoundingClientRect().width,
++        gutter: b.querySelector("svg")!.getBoundingClientRect().width + parseFloat(cs.paddingLeft) + parseFloat(cs.paddingRight),
++      };
++    });
++    const card = document.querySelector(".controls-card") as HTMLElement;
++    return {
++      caseW: +cas.width.toFixed(2),
++      ruler: +(verbs.reduce((s, v) => s + v.gutter, 0) + parseFloat(foot.paddingLeft) + parseFloat(foot.paddingRight)).toFixed(2),
++      faceAdds: +Math.max(...verbs.map((v) => v.w - v.gutter)).toFixed(2),
++      n: verbs.length,
++      overflow: card.scrollWidth - card.clientWidth,
++    };
++  };
++  test("the case is the control's ruler to the pixel, the faces add none, and the card never scrolls sideways", async ({
++    page,
++  }) => {
++    await loadSudoku(page);
++    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches), "coarse regime").toBe(true);
++    const at = await page.evaluate(RAIL);
++    console.log(`[RULE row 1] ${JSON.stringify(at)}`);
++    expect(at.n, "four verbs").toBe(4);
++    expect(at.faceAdds, `a face adds width inside the gutter ${JSON.stringify(at)}`).toBeLessThanOrEqual(0.5);
++    expect(Math.abs(at.caseW - at.ruler), `case vs the control's ruler ${JSON.stringify(at)}`).toBeLessThan(0.5);
++    expect(at.overflow).toBe(0);
++    // NEGATIVE CONTROL — the pass-5 face (its own 0.55rem inside the gutter): the case +70.38.
++    await page.addStyleTag({ content: ".action-verbs .act-face { padding-inline: 0.55rem !important; }" });
++    const red = await page.evaluate(RAIL);
++    console.log(`[RULE row 1] plant ${JSON.stringify(red)}`);
++    expect(Math.abs(red.caseW - red.ruler), `negative control ${JSON.stringify(red)}`).toBeGreaterThan(0.5);
++  });
++});
++
++for (const cell of [
++  { width: 390, height: 844 },
++  { width: 360, height: 800 },
++]) {
++  test.describe(`the raised sheet stops under the wordmark @ ${cell.width}×${cell.height} (fine)`, () => {
++    test.use({ viewport: cell });
++    /** The case's top against the wordmark ink's bottom, drawer open and SETTLED (the sheet
++     *  slides ~700 ms, so two reads 100 ms apart must agree). */
++    const SEAM = async (page: Page) => {
++      await SHEET_SETTLED(page);
++      return page.evaluate(() => {
++        const ink = document.querySelector("svg.handwritten-logo")!.getBoundingClientRect().bottom;
++        const top = document.querySelector(".drawer-case")!.getBoundingClientRect().top;
++        return { air: +(top - ink).toFixed(2) };
++      });
++    };
++    test("the case's top sits ≥ 8px under the wordmark's ink, and the band alone reds it", async ({ page }) => {
++      await loadSudoku(page);
++      if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++        await page.locator(".drawer-tab").click();
++      const at = await SEAM(page);
++      console.log(`[RULE row 2] ${JSON.stringify(at)}`);
++      expect(at.air, `air under the wordmark ${JSON.stringify(at)}`).toBeGreaterThanOrEqual(7.5);
++      // NEGATIVE CONTROL — the publisher silenced (the registered 0px): the band alone, 12.6rem.
++      await page.addStyleTag({ content: ":root { --masthead-foot: 0px !important; }" });
++      const red = await SEAM(page);
++      console.log(`[RULE row 2] band alone ${JSON.stringify(red)}`);
++      expect(red.air, `negative control: the band alone ${JSON.stringify(red)}`).toBeLessThan(7.5);
++    });
++  });
++}
++
++test.describe("mid-scroll, the fold's fade covers an in-card rule at the foot's rule (390×844 coarse)", () => {
++  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
++  /** An in-card rule scrolled to within `k` css of the card's clip line — the band where the
++   *  critic read it crossing the foot's rule (−0.08…−2.46) — photographed shown vs hidden. What
++   *  shows through is the residue the fade leaves. */
++  const RESIDUE = async (page: Page, k: number, fade: "1" | "0") => {
++    const pose = await page.evaluate((k) => {
++      const card = document.querySelector(".controls-card") as HTMLElement;
++      const clipB = card.getBoundingClientRect().top + card.clientTop + card.clientHeight;
++      const max = card.scrollHeight - card.clientHeight;
++      // the first rule the scroll can actually put at the pose (the last ones cannot: the card
++      // runs out of scroll before they reach its bottom edge)
++      const svg = [...card.querySelectorAll<SVGSVGElement>("svg.ruled-line")].find((s) => {
++        const want = card.scrollTop + s.querySelector("path")!.getBoundingClientRect().bottom - (clipB - k);
++        return want >= 1 && want <= max - 8;
++      });
++      if (!svg) return null;
++      document.querySelectorAll("[data-residue]").forEach((e) => e.removeAttribute("data-residue"));
++      svg.setAttribute("data-residue", "");
++      card.scrollTop += svg.querySelector("path")!.getBoundingClientRect().bottom - (clipB - k);
++      const r2 = svg.querySelector("path")!.getBoundingClientRect();
++      return { k: +(clipB - r2.bottom).toFixed(2), x: r2.left, w: r2.width, clipB, below: card.hasAttribute("data-fold-below") };
++    }, k);
++    expect(pose, `a rule the scroll can bring to k=${k}`).not.toBeNull();
++    // ≤ 1 css: WebKit's scrollTop snaps to whole pixels (k 0.5 lands at −0.47), Chromium's does not
++    expect(Math.abs(pose!.k - k), `the pose reached ${JSON.stringify(pose)}`).toBeLessThanOrEqual(1.0);
++    // the fold's rAF publish, then the fade's own 150ms: poll the painted state it names
++    await expect
++      .poll(() =>
++        page.evaluate(() => getComputedStyle(document.querySelector("#card-foot .action-bar")!, "::before").opacity),
++      )
++      .toBe(fade);
++    const paint = await PAINT_DIFF(
++      page,
++      { x: pose!.x, y: pose!.clipB - 8, width: pose!.w, height: 8 },
++      "svg[data-residue] { visibility: hidden !important; }",
++    );
++    return { ...pose!, ...paint };
++  };
++  test("the residue in the crossing band stays under 1.5:1, and the fade struck shows the line", async ({
++    page,
++  }) => {
++    await loadSudoku(page);
++    if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++      await page.locator(".drawer-tab").tap();
++    await SHEET_SETTLED(page);
++    for (const k of [0.5, 1.5, 2.5]) {
++      const at = await RESIDUE(page, k, "1");
++      console.log(`[RULE row 8] fade on ${JSON.stringify({ k: at.k, p98: at.p98, coverage: at.coverage })}`);
++      expect(at.below, "mid-scroll: the fade is live").toBe(true);
++      expect(at.p98, `residue at k=${k} ${JSON.stringify(at)}`).toBeLessThan(1.5);
++    }
++    // NEGATIVE CONTROL — the fade struck: the in-card rule shows at the clip line.
++    await page.addStyleTag({ content: ".action-bar::before { opacity: 0 !important; transition: none !important; }" });
++    const red = await RESIDUE(page, 2.5, "0");
++    console.log(`[RULE row 8] fade struck ${JSON.stringify({ k: red.k, p98: red.p98, coverage: red.coverage })}`);
++    expect(red.p98, `negative control: no fade ${JSON.stringify(red)}`).toBeGreaterThanOrEqual(2.0);
++  });
++});
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 6b4f26b..9251fe2 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -11,6 +11,7 @@ import {
+   type Component,
+   type FunctionalComponent,
+ } from "vue";
++import { useResizeObserver } from "@vueuse/core";
+ import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+ import { MOTION } from "@pencil/config/pencilConfig";
+ import {
+@@ -331,6 +332,28 @@ function wordmarkEl(): HTMLElement | null {
+   return (logoMenu.value?.$el as HTMLElement | undefined) ?? mastheadEl.value;
+ }
+ 
++// ── T9-W7 CTRL-RULE pass 6 · THE WORDMARK PUBLISHES ITS OWN FOOT (W2 §2.5's publisher) ──────
++// Taken from CTRL-TAPE's tree (`wf_f72f3b5a-83a-27` App.vue, `wordmarkInk` + `publishMastheadFoot`,
++// the same two functions), not re-authored: the raised sheet's cap reads the seam instead of a
++// band. It is this family's row because this family made it worse — the foot left the card's
++// scroll content, so at 390×844 FINE the capped case (content 587 + foot 74.14) rode the
++// constant band 26.91px over the masthead (control 3.69). The ink's own `<svg>` box is read,
++// falling back outward, and BOTH boxes are observed because what is published is a POSITION.
++function wordmarkInk(): Element | null {
++  const host = wordmarkEl();
++  return host?.querySelector("svg.handwritten-logo") ?? host;
++}
++
++function publishMastheadFoot() {
++  const ink = wordmarkInk();
++  if (!ink) return;
++  document.documentElement.style.setProperty(
++    "--masthead-foot",
++    `${ink.getBoundingClientRect().bottom.toFixed(2)}px`,
++  );
++}
++useResizeObserver([mastheadEl, () => wordmarkEl()], publishMastheadFoot);
++
+ function closeAll() {
+   desktopAttribution.value?.close();
+   mobileAttribution.value?.close();
+@@ -969,8 +992,10 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+      finger or a cursor can actually meet is `hit × 1.08 / 2` below the centre: 172.16 at the
+      desk. W2 §2.4's own census reads the box hovered (its positive control clicks the toggle
+      first) and found the first chip at 171.7 under it. The 1.08 is that contract's number,
+-     written twice (here and at the hover); re-cut one, re-cut both. The controls card keys its
+-     first line to this (W2 §2.4, `GameControlPanel.vue`). */
++     written twice (here and at the hover), and pass 6 makes the pair a row rather than a note:
++     `zone-grammar.spec.ts` HOVERS the toggle, reads its settled box live and reds when this
++     token stops naming it (the critic's scale(1.25) plant is its negative control). The
++     controls card keys its first line to this (W2 §2.4, `GameControlPanel.vue`). */
+   --toggle-foot: calc(
+     var(--head-rule) + var(--toggle-size) / 2 + var(--toggle-hit) * 0.54
+   );
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index cdce649..6a895f7 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -151,6 +151,16 @@
+    from the same three and cannot drift from the box it names. `--card-head-clear` is the
+    panel's (`GameControlPanel.vue`, `publishHeadClear`): the page's first line against that
+    foot. `0px` fails visibly: the first line rides back under the toggle and §2.4 reds. */
++/* Pass 6 (the charter's row 2) — W2 §2.5's publisher, taken from CTRL-TAPE's tree with its
++   registration in the same form (`App.vue` `publishMastheadFoot`; the leader registers the same
++   name). Consumed bare by `scene.css`'s `--sheet-chrome`. `0px` collapses the derivation to its
++   floor, and the 390×844 fine crossing row (`zone-grammar.spec.ts`) reds on exactly that. */
++@property --masthead-foot {
++  syntax: "<length>";
++  inherits: true;
++  initial-value: 0px;
++}
++
+ @property --toggle-foot {
+   syntax: "<length>";
+   inherits: true;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index b17a686..3427656 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -619,11 +619,16 @@ function keepAsk() {
+ function useTwoTap(name: AskableAct, act: () => void) {
+   askActs[name] = act;
+   function press(e?: MouseEvent) {
+-    if (askingAct.value) return;
+-    if (isCoarse.value && props.isDirty) {
++    // THE CROSS TAP RE-TARGETS (pass 6, registry-v5 §2.2; the cure is CTRL-TAPE's, at its
++    // `useTwoTap`, taken in its shape). With deal's question standing, `clear` stays visible and
++    // hit-testable in the bar, and pass 5's `if (askingAct.value) return` made that tap do
++    // nothing, both directions, both engines, while the control armed the second verb. A press on
++    // another guarded verb is a new question about THAT verb: the standing one yields.
++    if (isCoarse.value && props.isDirty && askingAct.value !== name) {
+       arm(name, e);
+       return;
+     }
++    clearAsk();
+     act();
+   }
+   return { press };
+@@ -770,9 +775,12 @@ function publishHeadClear() {
+   const cs = getComputedStyle(card);
+   const foot = parseFloat(cs.getPropertyValue("--toggle-foot")) || 0;
+   const line = card.getBoundingClientRect().top + (parseFloat(cs.paddingTop) || 0);
++  // UNROUNDED (pass 6, the critic's 1.9): `Math.ceil` split the engines 12px / 13px at
++  // 1280×720 and 1366×768 on one geometry — the rounding CTRL-TAPE's graft struck from the
++  // publisher above, re-introduced here. The clearance is the geometry, to the hundredth.
+   card.style.setProperty(
+     "--card-head-clear",
+-    `${Math.max(0, Math.ceil(foot - line))}px`,
++    `${Math.max(0, foot - line).toFixed(2)}px`,
+   );
+ }
+ useEventListener(window, "resize", publishHeadClear, { passive: true });
+@@ -2253,6 +2261,21 @@ onMounted(() => {
+   }
+ }
+ 
++/* THE COARSE RAIL KEEPS THE CONTROL'S WIDTH (pass 6, the critic's 1.1; chair §6.4). An iPad in
++   the row regime has no legend, and at `74a2b5d9` the case there was ruled by its four verbs at
++   the tap gutter — `icon-verb + 2 × 0.5rem` each, 46px, four of them plus the card's padding:
++   224.00. Pass 5's faces added their own 0.55rem inside that gutter, the row came to 254.38 and
++   the case to 294.38, and the masthead, the wordmark, the tab, the board and its host all moved
++   −35.19px on surfaces this family does not claim. So at the rail the face takes the gutter the
++   button already gives it and adds none: the verb is the control's box to the pixel, the drawn
++   face sits on the button's own content edge (outset 2, stroke 2–2.5), and the case is 224.00
++   by the control's own terms. The desk keeps its padded faces (the legend rules there). */
++@media (min-width: 1024px) and (pointer: coarse) {
++  .action-verbs .act-face {
++    padding-inline: 0;
++  }
++}
++
+ .action-bar > .confirm-ribbon {
+   grid-area: 1 / 1;
+   align-self: center;
+diff --git a/web/frontend/src/games/shared/RuledLine.vue b/web/frontend/src/games/shared/RuledLine.vue
+index bd7dcbf..8c04d6e 100644
+--- a/web/frontend/src/games/shared/RuledLine.vue
++++ b/web/frontend/src/games/shared/RuledLine.vue
+@@ -26,6 +26,10 @@
+  * and the ink arm (`--color-muted-foreground` at 2px, 4.40 at rest) reads 2.834 forced — RED.
+  * So the thinnest stroke that clears every phase in both engines is 3, the case's own rung.
+  * `--ink-press-rule` is not moved to buy it: it is `check-ink-pressure`'s ramp.
++ * PASS 6 — THOSE WORST-COLUMN FIGURES ARE BEST-PIXEL READINGS (each column's most-contrasting
++ * pixel), so the sweep chose the WIDTH on a statistic that cannot see antialiasing. Re-read under
++ * the core statistic the width holds (3 over 2) and the INK moves one rung, to `--ink-press-quiet`
++ * (the path rule below).
+  */
+ import { computed } from "vue";
+ import { wobbleLine } from "@mkbabb/pencil-boil";
+@@ -90,7 +94,16 @@ const drawDelay = computed(() => `${(props.seed % 7) * 22}ms`);
+ 
+ .ruled-line path {
+   fill: none;
+-  stroke: var(--ink-press-rule);
++  /* THE QUIET RUNG, NOT THE RULE RUNG (pass 6, the critic's 1.3). `--ink-press-rule` (55%)
++     paints 3.53:1 on the light paper at its FULLY INKED pixel, and that pixel is a ceiling no
++     antialiased one reaches: under the core statistic (a column's pixels ≥ 50% of its max ink)
++     the foot's rule read median 2.712 with 96.4% of columns under 3:1 at 390 coarse DPR 1 and
++     3.063 / 42.2% at 1280 fine — the "0% under" was a best-pixel reading. The next rung on the
++     ladder, `--ink-press-quiet` (68%, 5.23:1 at full ink), reads core@50 median 3.628 / 4.306
++     at DPR 1 and clears 3:1 at core@70 in every column (`pass6/prototype/CTRL-RULE/readings/
++     p6-rule-core-*`). No byte is minted and the ramp is not moved: the rule takes a rung the
++     estate already spends. The 55% arm is the owner's to see beside it (T9-B13's weight row). */
++  stroke: var(--ink-press-quiet);
+   /* 3, per the sweep in the docblock (pass 4): worst painted column over rest + three forced
+      phases, both engines, both themes (`pass4/prototype/CTRL-RULE/readings/rule-arms-*.json`).
+      Pass 3's "2.0 is the sweep's answer" is STRUCK: its sweep read only light (its ink-mass term
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 063cc91..0c952f7 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -564,7 +564,15 @@
+        puts the risen case 120.87px (chromium) / 121.30 (webkit) ABOVE the wordmark's bottom.
+        That is HEAD's number on HEAD's arm — this family did not move it — and curing it means
+        spending ~129px of a 390px-tall sheet, which is a W2 layout ruling and not a voice's. */
+-    --sheet-chrome: 12.6rem;
++    /* ── PASS 6 · THE DERIVATION MY PASS-2 NOTE PROMISED, NOW THAT THE PUBLISHER IS HERE ─────
++       The band stays as the FLOOR and the wordmark's own foot is the other arm: the card's cap
++       below spends `--sheet-chrome + 1.5rem` above the case, so `masthead-foot + 8px − 1.5rem`
++       puts the case's top 8px under the wordmark's ink wherever the capped case would reach
++       it. One-sided (`max`): at 390×844 COARSE the band already clears (−3.88) and keeps that
++       air; at 390×844 FINE the foot moved the case 26.91px over the masthead (control 3.69) and
++       this is the whole cure. No fallback: the token is registered (index.css), and its `0px`
++       initial collapses this to the floor, which the fine-cell row reds. */
++    --sheet-chrome: max(12.6rem, calc(var(--masthead-foot) + 8px - 1.5rem));
+     position: fixed;
+     left: 0;
+     right: 0;
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 9ca2782..ea74ad5 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -160,17 +160,24 @@ const geom = computed(() => {
+    with the font instead of stranding it.
+    The pin (`top`) sits inside the card's top fade band, so a pinned tape is read on paper
+    rather than over live content — re-cut the sentinel's height in `scene.css` and re-cut this
+-   offset with it. */
++   offset with it.
++
++   ── T9-W7 CTRL-RULE pass 6 · THE WELL'S FOUR TERMS DIED WITH THE WELLS ──────────────────────
++   `--washi-tag-top/-lift/-gap/-inset` were declared by the controls card's wells, and the ruled
++   page has none, so every `var()` here read its fallback with no declarer left in the estate
++   (the undefined-token census, tree minus `74a2b5d9`: +4). The one tag still laid is the deck's
++   `new game` (`StagingBand`), which never sat in a well and read these same fallbacks at
++   `74a2b5d9` too — so the fallbacks ARE the values and are written as literals: the deck's
++   tape computes identically, and nothing reads a token nobody declares. A consumer that needs
++   a clearance again declares it and writes it back here. */
+ .washi-tag {
+   position: sticky;
+-  top: var(--washi-tag-top, 0.3rem);
++  top: 0.3rem;
+   bottom: auto;
+   left: auto;
+   align-self: flex-start;
+   line-height: 1.5;
+-  margin: calc(-1.5em - 0.04rem - var(--washi-tag-lift, 0px)) 0
+-    calc(var(--washi-tag-lift, 0px) - var(--washi-tag-gap, 0px))
+-    var(--washi-tag-inset, 0.85rem);
++  margin: calc(-1.5em - 0.04rem) 0 0 0.85rem;
+   padding: 0.02rem 0.4rem;
+   font-size: var(--type-tag);
+   font-weight: 500;

@@ -1,0 +1,12 @@
+427a428
+> 
+428a430,438
+> const PLANT_CSS: Record<string, string> = {
+>   K: ".grid-ink .boil-frame-bitmap { mask-image: none !important; -webkit-mask-image: none !important; }",
+>   SHIFT: ".grid-ink .boil-frame-bitmap { mask-position: 5.5% 5.5% !important; -webkit-mask-position: 5.5% 5.5% !important; }",
+>   HALF: ".grid-ink { opacity: 0.45 !important; }",
+> };
+> test.beforeEach(async ({ page }) => {
+>   const css = PLANT_CSS[process.env.PLANT ?? ""];
+>   if (css) await page.addInitScript((c) => { document.addEventListener("DOMContentLoaded", () => { const s = document.createElement("style"); s.textContent = c; document.head.appendChild(s); }); }, css);
+> });

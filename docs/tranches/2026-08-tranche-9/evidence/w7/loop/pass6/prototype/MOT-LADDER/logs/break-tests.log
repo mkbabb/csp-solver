@@ -1,0 +1,74 @@
+ROW 0 · the landed tree
+    exit 0   (expect 0)
+ROW A1 · the critic's A1 verbatim: .cell-reveal-animated 0.3s -> .cell-reveal-anim 0.15s, CHARACTER row [150], MOVED newKey MOTION.characters.refuse (ms 300)
+    exit 1   (expect 1)
+      ✗ B6 RATCHET — 2
+        MOVED row for src/assets/index.css :: .cell-reveal-animated :: cell-reveal names MOTION.characters.refuse, and that site does not read `var(--refuse-dur)` bound from the character — a destination with no subject.
+        src/assets/index.css :: .cell-reveal-anim :: cell-reveal ships cell-reveal at 150ms — a NEW, unclaimed site carrying the moved term below src/assets/index.css :: .cell-reveal-animated :: cell-reveal's banked 300ms 
+ROW A1b · the same commit, newKey aimed at another BANKED live site (.solve-success :: box-shadow, 500 >= 300)
+    exit 1   (expect 1)
+      ✗ B6 RATCHET — 3
+        MOVED row for src/assets/index.css :: .cell-reveal-animated :: cell-reveal names src/assets/index.css :: .solve-success :: box-shadow, a key the BANK holds — a banked key is its own floor, never another site's dest
+        MOVED row for src/assets/index.css :: .cell-reveal-animated :: cell-reveal names src/assets/index.css :: .solve-success :: box-shadow, which shares neither its selector nor its term — that is another site, not this
+        src/assets/index.css :: .cell-reveal-anim :: cell-reveal ships cell-reveal at 150ms — a NEW, unclaimed site carrying the moved term below src/assets/index.css :: .cell-reveal-animated :: cell-reveal's banked 300ms 
+    restored (sha1 ok)
+ROW A2 · the critic's A2 verbatim: bank 300 -> 150 + css 0.15s + CHARACTER [150] (four lines)
+    exit 1   (expect 1)
+      ✗ B6 RATCHET — 2
+        motion-bank.json digests to ee5f8b1b2f45…, and the gate holds 78fd5fa5ccd1… — the floor was re-written outside the gate. Re-bank with --bank and re-stamp BANK_SHA256 in this script (a reviewed change), or restore t
+        src/assets/index.css :: .cell-reveal-animated :: cell-reveal: the bank holds 150ms, BELOW 74a2b5d9's 300ms — the floor was lowered.
+ROW A2b · the same, and the author RE-STAMPS BANK_SHA256 to the lowered bank (BASE_REF reachable here: the re-derived floor reds)
+    exit 1   (expect 1)
+      ✗ B6 RATCHET — 1
+        src/assets/index.css :: .cell-reveal-animated :: cell-reveal: the bank holds 150ms, BELOW 74a2b5d9's 300ms — the floor was lowered.
+    restored (sha1 ok)
+ROW A3 · the critic's A3 verbatim: CaretOverlay's one length leaves its file for index.css at whisper, zero ledger rows
+    exit 1   (expect 1)
+      ✗ B6 RATCHET — 1
+        src/games/futoshiki/CaretOverlay.vue :: .board-leaving .caret-layer :: opacity  banked at 200ms and GONE — the KEY moved or the file left, which is how a shortening hides from a content-anchored ratchet. Needs a MO
+    restored (sha1 ok)
+ROW C4 · clause 4: @property --motion-throw { inherits: false }
+    exit 1   (expect 1)
+      ✗ B3 ONE HOME, NO FALLBACK — 1
+        @property --motion-throw reads `inherits: false` — a non-inherited token set on :root reads its initial in every descendant, so every consumer below :root runs at 0 (clause 4).
+    restored (sha1 ok)
+ROW C5 · GC1: --live-fit initial-value 0 -> 0.99
+    exit 1   (expect 1)
+      ✗ B3 ONE HOME, NO FALLBACK — 1
+        `--live-fit`'s initial is not 0 — any other initial paints a board where no fit was measured.
+    restored (sha1 ok)
+ROW C6 · the value law: MOTION.dealStaggerMs 90 -> 10
+    exit 1   (expect 1)
+      ✗ B2 CLOSED — 1
+        MOTION.dealStaggerMs ships 10ms; its EXEMPT row says ms: 90 — an exemption licenses ONE value.
+    restored (sha1 ok)
+ROW C13 · plant P5: --ease-starTuck: ease-in (the keyword written back as the token's value)
+    exit 1   (expect 1)
+      ✗ B8 CURVE — 3
+        src/pencil/celestial/DarkModeToggle.vue:892  var(--ease-starTuck) resolves to `ease-in` — a UA keyword by another name (the spelling cure, un-cured).  scale 150ms var(--ease-starTuck)
+        src/pencil/celestial/DarkModeToggle.vue:892  var(--ease-starTuck) resolves to `ease-in` — a UA keyword by another name (the spelling cure, un-cured).  opacity 100ms var(--ease-starTuck) !important
+        KEYWORD_TWINS --ease-starTuck @ (0.42,0,1,1) admits nothing — no shipped transition reads it at those points; STALE.
+    restored (sha1 ok)
+ROW P5-3 · rise 520 -> 100 behind the valued RETUNE row (to: 520)
+    exit 1   (expect 1)
+      ✗ B2 CLOSED — 1
+      ✗ B6 RATCHET — 1
+      ✗ G-DOCK-BAND — 1
+        MOTION.rungs.rise = 100 carries no ruling — a rung is a named DECISION.
+        MOTION.rungs.rise  ships 100ms; its RETUNE row says to: 520ms — a retune licenses ONE value, and a second shortening behind it is a new retune.
+        the dock ships 100ms against a pick of 700ms, with no BALLOT row holding it at ruling 1's 520.
+    restored (sha1 ok)
+ROW P5-5 · rise's registration nested inside :root {}
+    exit 1   (expect 1)
+      ✗ B3 ONE HOME, NO FALLBACK — 2
+        MOTION.rungs.rise is published but never registered — an unregistered rung loses its 0ms initial, so absence reads as `all` for that one rung alone.
+        @property --motion-rise is registered INSIDE a brace (depth 1) — illegal CSS the bundler hoists silently; the ladder's registrations are ONE block at file scope.
+    restored (sha1 ok)
+ROW P5-7 · GC1: var(--live-fit, 1) returns at GameCard
+    exit 1   (expect 1)
+      ✗ B3 ONE HOME, NO FALLBACK — 1
+        src/pencil/chrome/GameGallery/GameCard.vue  var(--live-fit, 1) — a fallback on a measured, registered token (the @property law).
+    restored (sha1 ok)
+FINAL · the landed tree again
+    exit 0   (expect 0)
+every file byte-equal to the snapshot

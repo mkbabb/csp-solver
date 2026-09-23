@@ -1,0 +1,10 @@
+#!/usr/bin/env bash
+CSS="/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-39/web/frontend/src/assets/index.css"; PR="/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-probe"; cp "$CSS" "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-bak/index.css.final"; S0=$(shasum "$CSS" | cut -d' ' -f1); echo "sha1 before $S0"
+python3 -c "import sys;p=sys.argv[1];s=open(p).read();s=s.replace('Until the owner rules,','The deck card reads 1.8 dark. Until the owner rules,',1);open(p,'w').write(s)" "$CSS"
+cd "$PR" && TAG=b1 BASE=http://127.0.0.1:4239 npx playwright test --config landed.config.ts --project chromium -g "G-ABS-5" > "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-logs/break-B1-onedecimal-1.8.log" 2>&1; echo "B1 (planted 1.8 in the ledger comment) exit $?"
+cp "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-bak/index.css.final" "$CSS"
+python3 -c "import sys;p=sys.argv[1];s=open(p).read();s=s.replace('under 3:1 of 240  light 78 / 78  dark 78 / 78','under 3:1 of 240  light 40 / 40  dark 40 / 40',1);open(p,'w').write(s)" "$CSS"
+grep -c "light 40 / 40" "$CSS"
+cd "$PR" && TAG=b5 BASE=http://127.0.0.1:4239 npx playwright test --config landed.config.ts --project chromium -g "G-ABS-5" > "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-logs/break-B5-count-40.log" 2>&1; echo "B5 (whole-ring count falsified to 40) exit $?"
+cp "/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/mrkabs6-bak/index.css.final" "$CSS"; S1=$(shasum "$CSS" | cut -d' ' -f1); echo "sha1 after $S1"; [ "$S0" = "$S1" ] && echo RESTORED || echo NOT-RESTORED
+echo BREAKS-DONE

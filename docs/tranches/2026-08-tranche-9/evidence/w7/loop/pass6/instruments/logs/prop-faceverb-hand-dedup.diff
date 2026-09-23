@@ -1,0 +1,119 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index cf6fc78..cb4901e 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -266,8 +266,23 @@
+   inherits: true;
+   initial-value: 0px;
+ }
+-/* §13's six rungs: registered HERE, once, and published by MOT-LADDER's publisher. A rung that
+-   reads 0ms is the PRM pose, which is why 0ms is the honest initial AND why it fails visibly. */
++/* ── THE LADDER'S REGISTRATIONS (T9-W7 §13, chair §6.5) ───────────────────────
++   The VALUES are published at boot by `publishMotionRungs()` from `MOTION.rungs`; the
++   REGISTRATIONS live here, in the first stylesheet, because a registration emitted beside
++   its values dies with them — and then deleting the publisher reads as `transition-property:
++   all`, exactly as it does with no ladder at all, and the born-RED row that proves the
++   publisher matters can never fire (measured both engines, MOT-LADDER pass 3).
++
++   `initial-value: 0ms`, never the rung's own value: with the real value as the initial, an
++   absent publisher still paints and the row re-silences itself. At 0ms an ABSENT publisher
++   reads EXACTLY as `reduce` does, which is the honest failure for a ladder. Consumers write
++   `var(--motion-x)` with NO fallback (chair §6.5), so a missing publisher fails at
++   computed-value time where a gate can see it.
++
++   ONE BLOCK, AT FILE SCOPE (registry-v4 §2.7). Pass 4 shipped these twice — six here and seven
++   nested inside `:root {}`, where `@property` is illegal and the bundler hoisted it silently, so
++   `rise` was registered only by the rescue. B3 reads a brace-nested registration as RED, and
++   every published rung must be registered HERE. §10's lengths register beside this block. */
+ @property --motion-whisper {
+   syntax: "<time>";
+   inherits: true;
+@@ -298,6 +313,20 @@
+   inherits: true;
+   initial-value: 0ms;
+ }
++@property --motion-rise {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++/* THE BOARD'S FIT IN ITS CARD FACE (T9-M19, P5-M19-3). App writes it inline on the face's mount
++   (`App.vue` onLiveFace) and `GameCard.vue` consumes it BARE. `initial-value: 0`, never 1: an
++   unmeasured fit paints NO board, which a gate can see, where 1 painted a 640px board spilling out
++   of a 300px face and read as a layout, not as a missing measurement. */
++@property --live-fit {
++  syntax: "<number>";
++  inherits: true;
++  initial-value: 0;
++}
+ 
+ @theme {
+   /* Type register bindings — the pencil faces bound into the vendored √φ ladder
+@@ -599,67 +628,6 @@
+ }
+ /* ── end of the published verbs ── */
+ 
+-/* ── THE LADDER'S REGISTRATIONS (T9-W7 §13, chair §6.5) ───────────────────────
+-   The VALUES are published at boot by `publishMotionRungs()` from `MOTION.rungs`; the
+-   REGISTRATIONS live here, in the first stylesheet, because a registration emitted beside
+-   its values dies with them — and then deleting the publisher reads as `transition-property:
+-   all`, exactly as it does with no ladder at all, and the born-RED row that proves the
+-   publisher matters can never fire (measured both engines, MOT-LADDER pass 3).
+-
+-   `initial-value: 0ms`, never the rung's own value: with the real value as the initial, an
+-   absent publisher still paints and the row re-silences itself. At 0ms an ABSENT publisher
+-   reads EXACTLY as `reduce` does, which is the honest failure for a ladder. Consumers write
+-   `var(--motion-x)` with NO fallback (chair §6.5), so a missing publisher fails at
+-   computed-value time where a gate can see it.
+-
+-   ONE BLOCK, AT FILE SCOPE (registry-v4 §2.7). Pass 4 shipped these twice — six here and seven
+-   nested inside `:root {}`, where `@property` is illegal and the bundler hoisted it silently, so
+-   `rise` was registered only by the rescue. B3 reads a brace-nested registration as RED, and
+-   every published rung must be registered HERE. §10's lengths register beside this block. */
+-@property --motion-whisper {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-leave {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-note {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-dusk {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-step {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-throw {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-@property --motion-rise {
+-  syntax: "<time>";
+-  inherits: true;
+-  initial-value: 0ms;
+-}
+-/* THE BOARD'S FIT IN ITS CARD FACE (T9-M19, P5-M19-3). App writes it inline on the face's mount
+-   (`App.vue` onLiveFace) and `GameCard.vue` consumes it BARE. `initial-value: 0`, never 1: an
+-   unmeasured fit paints NO board, which a gate can see, where 1 painted a 640px board spilling out
+-   of a 300px face and read as a layout, not as a missing measurement. */
+-@property --live-fit {
+-  syntax: "<number>";
+-  inherits: true;
+-  initial-value: 0;
+-}
+ 
+ /* Dark theme */
+ .dark {

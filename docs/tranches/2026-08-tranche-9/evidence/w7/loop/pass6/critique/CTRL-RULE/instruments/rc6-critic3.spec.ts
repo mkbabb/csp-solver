@@ -1,0 +1,23 @@
+import { test, expect, type Page } from "@playwright/test";
+const ARM = () => (test.info().project.use.baseURL?.includes("4241") ? "control" : "lane");
+test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+test("F straight clear semantics", async ({ page }) => {
+  await page.goto("./?size=3&difficulty=EASY");
+  await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
+  await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+  await expect.poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 20000 }).toBeGreaterThan(0);
+  const FP = () => page.evaluate(() => [...document.querySelectorAll(".sudoku-cell")].map((c) => (c.querySelector(".glyph-svg") ? "g" : ".")).join(""));
+  const g0 = await FP();
+  const input = page.locator(".board-cells input").nth(g0.indexOf("."));
+  await input.tap(); await page.keyboard.type("5");
+  if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").tap();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 900)));
+  const clear = page.locator("#controls-drawer").getByRole("button", { name: /Clear/ }).first();
+  await clear.tap();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 300)));
+  const go = page.locator(".confirm-ribbon .confirm-go");
+  if (await go.count()) await go.tap(); else await clear.tap();
+  await page.evaluate(() => new Promise((r) => setTimeout(r, 6000)));
+  const g1 = await FP();
+  console.log(`[RC6] F ${test.info().project.name} ${ARM()} ${JSON.stringify({ g0: (g0.match(/g/g) || []).length, g1: (g1.match(/g/g) || []).length, typed: await input.inputValue(), sample: await page.evaluate(() => document.querySelector(".sudoku-cell")!.outerHTML.slice(0, 300)) })}`);
+});

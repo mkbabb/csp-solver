@@ -1,0 +1,23 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index da2fd1c9..869fee56 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -1091,12 +1091,12 @@ html {
+       stroke: CanvasText;
+     }
+ 
+-    /* The gauge does NOT yield here (T9-W7 §4, ROW C, pass 6). Forced colours leave SVG
+-       `stroke` alone, so the trace keeps its crayon, and it keeps it on purpose: the frame line
+-       it retraces is not forced either (it stays graphite), so CanvasText would draw black ink
+-       over a graphite line — painted, the system-ink arm read trace:frame 1.39 light where the
+-       crayon clears 3:1 against the line AND the paper. The painted pair is in the pass-6
+-       record; the CanvasText arm stays buildable as a one-rule diff beside it. */
++    /* The gauge yields the same way (T9-W7 §4): a reader who asked for system ink gets the
++       fill trace in system ink, at the win as well as before it. Same layer, same reason —
++       forced colours force `color` and `background-color` and leave SVG `stroke` alone. */
++    .progress-trace {
++      stroke: CanvasText !important;
++    }
+ 
+     /* And the tape names the peer in system ink (T9-W7 §12). It writes in the peer's own walk
+        colour, which is exactly the kind of hue a forced-colours reader has asked not to be

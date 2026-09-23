@@ -1,0 +1,12 @@
+#!/bin/bash
+cd /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/atk
+GP=src/pencil/grid/gridPaths.ts; HG=src/pencil/glyph/HandwrittenGlyph.vue
+cp $GP /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/gp.orig; cp $HG /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/hg.orig
+F="src/pencil/grid/gridPaths.tally.test.ts src/pencil/grid/gridPaths.poseFronts.test.ts src/pencil/glyph/HandwrittenGlyph.test.ts"
+t(){ npx vitest run $F > /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/unit-$1.log 2>&1; echo "$1 exit=$? $(grep -E 'Tests +' /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/unit-$1.log | tr -s ' ')"; }
+t clean
+sed -i '' 's/const k = Math.min(slots, Math.round((written \* slots) \/ writable));/const k = Math.min(slots, Math.floor((written * slots) \/ writable));/' $GP; grep -c "Math.floor((written" $GP; t floor; cp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/gp.orig $GP
+sed -i '' 's/export const FRONT_MIN_MS = 16;/export const FRONT_MIN_MS = 8;/' $GP; grep -c "FRONT_MIN_MS = 8" $GP; t frontms8; cp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/gp.orig $GP
+sed -i '' 's/if (!force \&\& now - last < FRONT_MIN_MS) return;/if (!force \&\& now - last < FRONT_MIN_MS - 1) return;/' $GP; grep -c "FRONT_MIN_MS - 1) return" $GP; t frontminus1; cp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/gp.orig $GP
+sed -i '' 's/return props.value === "<" || props.value === ">" ? 5 : 6;/return props.value === ">" ? 5 : 6;/' $HG; grep -c 'props.value === ">" ? 5 : 6' $HG; t caretlt; cp /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/accg6crit/hg.orig $HG
+t restored

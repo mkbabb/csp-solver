@@ -1,0 +1,68 @@
+# PLR-PLACE pass-6 critic readings (summarised; raw logs stay in the chair's scratchpad plr-place-crit6/)
+## kill probe (the lane's probe-kill.spec.ts copied, payload pass5 kill-payload.json, coarse witnessed)
+chromium|chart|390x664 n2|payload=ATMuMTk3NjA0NT…
+chromium|chart|360x800 n2|payload=ATMuMTk3NjA0NT…
+chromium|chart|844x390 n2|payload=ATMuMTk3NjA0NT…
+webkit|chart|390x664 n2|payload=ATMuMTk3NjA0NT…
+webkit|chart|360x800 n2|payload=ATMuMTk3NjA0NT…
+webkit|chart|844x390 n2|payload=ATMuMTk3NjA0NT…
+chromium|list|390x664 n2|payload=ATMuMTk3NjA0NT…
+chromium|list|360x800 n2|payload=ATMuMTk3NjA0NT…
+chromium|list|844x390 n2|payload=ATMuMTk3NjA0NT…
+webkit|list|390x664 n2|payload=ATMuMTk3NjA0NT…
+webkit|list|360x800 n2|payload=ATMuMTk3NjA0NT…
+webkit|list|844x390 n2|payload=ATMuMTk3NjA0NT…
+chromium|yield|390x664 n2|payload=ATMuMTk3NjA0NT…
+chromium|yield|360x800 n2|payload=ATMuMTk3NjA0NT…
+chromium|yield|844x390 n2|payload=ATMuMTk3NjA0NT…
+webkit|yield|390x664 n2|payload=ATMuMTk3NjA0NT…
+webkit|yield|360x800 n2|payload=ATMuMTk3NjA0NT…
+webkit|yield|844x390 n2|payload=ATMuMTk3NjA0NT…
+## crit6 probes (EV = tap event sequence, ROT = landscape->portrait while open, RSZ = 390x860 -> 390x664 while open)
+EV|chromium|open=true|pointerdown:PointerEvent:touch pointerup:PointerEvent:touch touchend:TouchEvent:- click:PointerEvent:touch
+ROT|chromium|rotate|open=false|before={"H":249.55,"lap":289.55,"lapped":8,"chart":true,"rows":5,"more":""}|after={"H":0,"lap":0,"lapped":0,"chart":true,"rows":5,"more":""}
+ROT|chromium|fresh|open=true|before={"H":180.47,"lap":2.73,"lapped":7,"chart":true,"rows":1,"more":"and 4 more"}|after={"H":180.47,"lap":2.73,"lapped":7,"chart":true,"rows":1,"more":"and 4 more"}
+EV|webkit|open=true|pointerdown:PointerEvent:touch pointerup:PointerEvent:touch touchend:TouchEvent:-
+ROT|webkit|rotate|open=false|before={"H":249.55,"lap":289.55,"lapped":8,"chart":true,"rows":5,"more":""}|after={"H":0,"lap":0,"lapped":0,"chart":true,"rows":5,"more":""}
+ROT|webkit|fresh|open=true|before={"H":180.47,"lap":3.05,"lapped":7,"chart":true,"rows":1,"more":"and 4 more"}|after={"H":180.47,"lap":3.05,"lapped":7,"chart":true,"rows":1,"more":"and 4 more"}
+ROT|chromium|rotate|open=false|before={"H":249.55,"lap":289.55,"lapped":8,"chart":true,"rows":5,"more":""}|after={"H":0,"lap":0,"lapped":0,"chart":true,"rows":5,"more":""}
+ROT|chromium|fresh|open=true|before={"H":172.44,"lap":0,"lapped":0,"chart":false,"rows":5,"more":""}|after={"H":172.44,"lap":0,"lapped":0,"chart":false,"rows":5,"more":""}
+ROT|webkit|rotate|open=false|before={"H":249.55,"lap":289.55,"lapped":8,"chart":true,"rows":5,"more":""}|after={"H":0,"lap":0,"lapped":0,"chart":true,"rows":5,"more":""}
+ROT|webkit|fresh|open=true|before={"H":172.44,"lap":0,"lapped":0,"chart":false,"rows":5,"more":""}|after={"H":172.44,"lap":0,"lapped":0,"chart":false,"rows":5,"more":""}
+RSZ|chart|chromium|resize|open=true|before={"H":182.38,"lap":0,"lapped":0,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.64,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|chart|chromium|fresh|open=true|before={"H":182.38,"lap":94.64,"lapped":21,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.64,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|chart|webkit|resize|open=true|before={"H":182.38,"lap":0,"lapped":0,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.95,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|chart|webkit|fresh|open=true|before={"H":182.38,"lap":94.95,"lapped":21,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.95,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|yield|chromium|resize|open=true|before={"H":182.38,"lap":0,"lapped":0,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.64,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|yield|chromium|fresh|open=true|before={"H":105.27,"lap":17.53,"lapped":7,"chart":false,"rows":2,"more":""}|after={"H":105.27,"lap":17.53,"lapped":7,"chart":false,"rows":2,"more":""}
+RSZ|yield|webkit|resize|open=true|before={"H":182.38,"lap":0,"lapped":0,"chart":true,"rows":2,"more":""}|after={"H":182.38,"lap":94.95,"lapped":21,"chart":true,"rows":2,"more":""}
+RSZ|yield|webkit|fresh|open=true|before={"H":105.27,"lap":17.84,"lapped":7,"chart":false,"rows":2,"more":""}|after={"H":105.27,"lap":17.84,"lapped":7,"chart":false,"rows":2,"more":""}
+## plants (sha1-restored; PlayerMark.vue final 6fa921b071, PlayerLobby.vue bf1be5b39d, App.vue 8d11da55e2)
+15:40:40 crit6 exit 0
+15:41:03 kill chart exit 0
+planted NO_ARM 8d11da55e2 -> 76142b788b
+15:41:29 kill list exit 0
+restored NO_ARM 8d11da55e2 OK
+planted YIELD 6fa921b071 -> 069c340bcf
+15:41:57 kill yield exit 0
+15:42:12 crit6 ROT yield exit 0
+restored YIELD 6fa921b071 OK
+planted GHOST 6fa921b071 -> aa6d598768
+15:43:30 GHOST row13 x3 exit 1
+restored GHOST 6fa921b071 OK
+planted E4 6fa921b071 -> d90bb75a4c
+15:43:52 E4 row14 exit 1
+restored E4 6fa921b071 OK
+15:44:03 leader507 exit 1
+planted SEAM_A 6fa921b071 -> 3612b9e1f3
+SEAM_A rows7/11 exit 1
+restored SEAM_A 6fa921b071 OK
+planted E4 6fa921b071 -> d90bb75a4c
+E4 row7 exit 0
+restored E4 6fa921b071 OK
+PASS rows7/12 exit 0
+planted PASS bf1be5b39d -> 2f247073b2
+PASS rows7/12 exit 1
+restored PASS bf1be5b39d OK
+planted YIELD 6fa921b071 -> 069c340bcf
+restored YIELD 6fa921b071 OK

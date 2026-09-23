@@ -1,0 +1,19 @@
+# lint:sleep + getAttribute (PROPOSED) on a pristine 74a2b5d9 archive of web/frontend/{scripts,e2e}
+## with the verb:
+  ✓ RED — sleep → boundingBox → one-shot expect (the plain disease)
+  ✓ RED — sleep → helper-wrapped .count() → one-shot expect (a11y:305's shape)
+  ✓ RED — fixed rAF deadline → distant one-shot geometry (drawer:154's shape)
+  ✓ RED — sleep-ok tag present but the reason is a shrug
+  ✓ RED — sleep → getAttribute → one-shot expect (a published attribute is a live read)
+  ✓ GREEN — the cure for the attribute: expect.poll over getAttribute, no sleep
+  ✓ GREEN — the cure: expect.poll over the same surface, no sleep at all
+  ✓ GREEN — sleep with a cited sleep-ok: the elapsed time is the subject
+  ✓ GREEN — a sleep before a retrying assertion (auto-waiting locator matcher)
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+  • viewport-law.spec.ts:111 — a fixed 600ms sleep sits inside `stepDeckTo()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+exit 1 (one inherited finding: viewport-law.spec.ts:111)
+## the fixtures WITHOUT the verb (negative control):
+  ✗ RED — sleep → getAttribute → one-shot expect (a published attribute is a live read)
+  ✓ GREEN — the cure for the attribute: expect.poll over getAttribute, no sleep
+  • --self-test — fixture "RED — sleep → getAttribute → one-shot expect (a published attribute is a live read)" stayed GREEN. The gate cannot fail for the defect it names.

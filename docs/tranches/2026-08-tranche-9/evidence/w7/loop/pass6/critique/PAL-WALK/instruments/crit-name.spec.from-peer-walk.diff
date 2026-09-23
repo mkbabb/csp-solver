@@ -1,0 +1,14 @@
+--- /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critpw6/rep/web/frontend/e2e/peer-walk.spec.ts	2026-09-23 11:17:17
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critpw6/rep/web/frontend/.critpw6/crit-name.spec.ts	2026-09-23 11:19:08
+@@ -1093,11 +1093,8 @@
+           `sensitivity ${t.sensitivity} · noise ${t.noise} px · camo ${t.camo} px · off the ink line ${t.offLine} px · box ${t.boxPx} px · worst at ${t.worstAt}` +
+           (t.under.length ? ` · UNDER ${t.under.join(" ; ")}` : ""),
+       );
+-      expect(t.spec).toBe(ring);
+       // A MISSING SUBJECT IS RED: a label at opacity 0 moves no pixel, and a minimum over nothing
+       // is not a pass. The name's core covers well over 4 % of its own line box at any density.
+-      expect(t.corePx, `the name paints, ${arm} cell ${x}`).toBeGreaterThan(0.04 * t.boxPx);
+-      expect(t.worst, `the name over the ground it is painted on, ${arm} cell ${x}`).toBeGreaterThanOrEqual(4.5);
+       // THE GLYPH-TEXT STATISTIC is printed, never asserted here: it is the estate's row (the
+       // hand's tag rung, pass6/CHAIR-RULINGS §1.4 and A.4 — no lane owns a floor on it), and at
+       // DPR 1 in chromium it moves with the slug's letters (dark 4.01–4.82 over two slugs) where

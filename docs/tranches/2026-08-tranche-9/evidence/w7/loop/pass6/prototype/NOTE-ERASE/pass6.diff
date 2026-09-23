@@ -1,0 +1,1933 @@
+diff --git a/web/frontend/e2e/affordances.spec.ts b/web/frontend/e2e/affordances.spec.ts
+index 598efb0f..b3a05a18 100644
+--- a/web/frontend/e2e/affordances.spec.ts
++++ b/web/frontend/e2e/affordances.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, type Page } from '@playwright/test';
+ import { encodeSudoku } from './wire';
++import { MOTION } from '../src/pencil/config/pencilConfig';
+ 
+ // PRM: live, because the print row asserts the print stylesheet strips animation to `none`—a
+ //   freeze would hand it that answer for free—and the wrapper's 500ms box-shadow transition is
+@@ -232,6 +233,94 @@ test('stale-note: teacher-red and gold-star notes clear on the next edit', async
+   await expect(note).not.toContainText('solved it!', { timeout: 5000 });
+ });
+ 
++// ── 2a. The drop clock — a note leaves on its own verb's length ─────
++//
++// T9-W7 §7. A note leaves as a verb (`ink-rub-out` on the whisper rung), and Vue drops the
++// leaving node on max(transition, animation) read off that node's computed style. So any
++// transition on the ink (the settle's dusk step, or one a later lane hangs on it) would hold a
++// finished rub-out on the page for its own length. MarginNote writes `transition: none` inline
++// with `!important` at before-leave, which outranks every author rule. This row PLANTS that
++// adversary at (1,1,0) with `!important` and a whole second, proves the plant is live on the
++// resting ink, then reads the clock off the leaving node. Born red on both engines with the hook
++// deleted: the node is held for the plant's full second.
++
++type LeaveRecord = {
++  el?: Element;
++  t0?: number;
++  t1?: number;
++  transitionDuration?: string;
++  animationName?: string;
++  animationDuration?: string;
++};
++
++test('drop clock: a note leaves on the rub-out, whatever transition the ink carries', async ({
++  page,
++}) => {
++  await loadSudoku(page, '?board=' + CONFLICT_BOARD);
++  await expect
++    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
++    .toBe(72);
++  await page.addStyleTag({
++    content: '#app .margin-note-ink { transition: color 1000ms linear !important; }',
++  });
++
++  // A red verdict: row 0 is blank on the pinned board, so two nines in it are a conflict.
++  await setCellValue(page, 0, '9');
++  await setCellValue(page, 1, '9');
++  await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
++  await expect(page.locator('.margin-note')).toHaveClass(/teacher-red/, { timeout: 15000 });
++  const ink = page.locator('.margin-note-ink');
++  await expect(ink).toHaveCount(1);
++  // The adversary is in force on the resting line, so a green below is the hook's, not a dud.
++  expect(await ink.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('1s');
++
++  await page.evaluate(() => {
++    const host = document.querySelector('.margin-note')!;
++    const rec: LeaveRecord = {};
++    (window as unknown as { __leave: LeaveRecord }).__leave = rec;
++    new MutationObserver(() => {
++      const el = rec.el ?? host.querySelector('.margin-note-ink.note-leave-active');
++      if (el && !rec.el) {
++        const cs = getComputedStyle(el);
++        Object.assign(rec, {
++          el,
++          t0: performance.now(),
++          transitionDuration: cs.transitionDuration,
++          animationName: cs.animationName,
++          animationDuration: cs.animationDuration,
++        });
++      }
++      if (rec.el && rec.t1 === undefined && !rec.el.isConnected) rec.t1 = performance.now();
++    }).observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
++  });
++
++  // The next edit reverts the grade, and the red line is rubbed out.
++  await setCellValue(page, 1, '');
++  const read = () =>
++    page.evaluate(() => {
++      const r = (window as unknown as { __leave: LeaveRecord }).__leave;
++      return r.t1 === undefined || r.t0 === undefined
++        ? null
++        : {
++            ms: r.t1 - r.t0,
++            transitionDuration: r.transitionDuration,
++            animationName: r.animationName,
++            animationDuration: r.animationDuration,
++          };
++    });
++  await expect.poll(read, { timeout: 5000 }).not.toBeNull();
++  const leave = (await read())!;
++
++  expect(leave.transitionDuration).toBe('0s');
++  expect(leave.animationName).toContain('ink-rub-out');
++  // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
++  for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
++  // The whisper rung plus a frame or two; the planted second would read ~1000. The bound is the
++  // ARRIVAL's rung, because the erase is shorter than the write-in by design: a whisper/dusk
++  // swap (the rub-out on 350 ms, node gone at ~360) reds here, where the pass-5 '< 500' let it by.
++  expect(leave.ms).toBeLessThan(MOTION.rungs.note);
++});
++
+ // ── 2b. The verdict names the unit that is actually broken ──────────
+ //
+ // T9-W1 §1.2 (family F7). `findConflicts` BUILT per-unit buckets, read them for `positions`,
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b6e2d9a0..832557c3 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -533,6 +533,75 @@ function gateTape(css, tape) {
+   return fails;
+ }
+ 
++/**
++ * THE NOTE'S RUNG ON THE PAPER (T9-W7 §7).
++ *
++ * `gateFloors` reads every rung against the CARD, and the quiet rung clears there. The margin
++ * note is not on a card: the strip sits on `--color-background`, the paper, which is a lighter
++ * ground in light and a darker one in dark — so a rung that clears 4.5 on the card is not
++ * thereby cleared where a SETTLED note actually paints. The settle is the first thing to send
++ * running text to that rung on that surface, and this is the row that says it reads.
++ *
++ * ONE row for both note families: NOTE-ERASE ages the live line, NOTE-LEDGER keeps the previous
++ * one; whichever ships, the assertion is the same ink on the same paper. It is deliberately not
++ * a seventh `SHIP4` surface — that census pins six and self-tests on the count.
++ */
++const NOTE_QUIET = {
++  ink: "--ink-press-quiet",
++  surface: "--color-background",
++  floor: 4.5,
++  consumers:
++    ".margin-note-ink[data-note-age='settled'] (NOTE-ERASE) / .margin-note-previous (NOTE-LEDGER)",
++};
++
++function gateNote(css, note) {
++  const fails = [];
++  const p = stopOf(css, note.ink);
++  for (const [name, scope] of Object.entries(SCOPES)) {
++    const paper = colorOf(scope, note.surface);
++    const cr = contrast(press(THEMES[name].graphite, p, paper), paper);
++    if (cr < note.floor) {
++      fails.push(
++        `${note.ink} (${p}%) on ${note.surface} = ${cr.toFixed(3)}:1 in ${name} — under the ` +
++          `text floor ${note.floor}; a settled note is running text on the paper (${note.consumers})`,
++      );
++    }
++  }
++  return fails;
++}
++
++/**
++ * THE DISCOVERY HALF. `consumers` above is prose, and prose goes stale — the block's own law is
++ * that a count the tree can derive is never written down. So the census derives it: every
++ * `var(--ink-press-*)` read in `src/`, asserted to still exist and to still contain the files
++ * the two pinned selectors live in. It fails when the ramp loses its consumers wholesale (the
++ * `--ink-press-firm` shape: a rung nobody reads) and when a pinned row is deleted.
++ */
++const QUIET_FLOOR = 16;
++function gateNoteDiscovery(files, min = QUIET_FLOOR) {
++  const fails = [];
++  const hits = [];
++  for (const f of files) {
++    const body = readFileSync(f, "utf8");
++    const n = (body.match(/var\(--ink-press-(quiet|rule)\)/g) ?? []).length;
++    if (n) hits.push([relative(SRC, f), n]);
++  }
++  const total = hits.reduce((a, [, n]) => a + n, 0);
++  if (total < min)
++    fails.push(
++      `the two rungs have ${total} consumers in src/ (was ${min}) — a rung nobody reads is ` +
++        `unearned abstraction, and the note row above may be asserting over a deleted surface`,
++    );
++  const pinned = ["pencil/chrome/MarginNote.vue"];
++  for (const p of pinned) {
++    if (!hits.some(([f]) => f === p))
++      fails.push(
++        `${p} no longer reads a press rung — the pinned consumer of the note row is gone`,
++      );
++  }
++  return fails;
++}
++
+ /* ── closure 5: the cross-theme rank (T9-W5 §5.4) ────────────────────────── */
+ 
+ /**
+@@ -695,6 +764,12 @@ function selfTest() {
+           TAPE,
+         ),
+     ],
++    // THE NOTE'S ROW, both halves. `note-floor`: the quiet rung at 55% — it still clears on the
++    // card (4.71) and fails on the paper, which is the whole reason the row exists. `note-
++    // discovery`: the census is told to expect more consumers than the tree has, the shape of a
++    // pinned surface being deleted out from under the assertion above it.
++    ["note-floor", () => gateNote(bad, NOTE_QUIET)],
++    ["note-discovery", () => gateNoteDiscovery(sources(SRC), 999)],
+     // CLOSURE 5, three modes. `rank-moved`: the quiet rung drops to 40%, which slides it under
+     // the register in light and re-orders the string the ruling pins. `rank-stale`: the ruling
+     // is told the two themes agree, which is what a CURED crossing looks like — the admission
+@@ -746,6 +821,8 @@ const fails = [
+   ...gateArmed(ARMED),
+   ...gateShip4(SHIP4),
+   ...gateTape(INDEX_CSS, TAPE),
++  ...gateNote(INDEX_CSS, NOTE_QUIET),
++  ...gateNoteDiscovery(sources(SRC)),
+   ...gateRank(ranksOf(INDEX_CSS), RANK_RULING),
+ ];
+ const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
+@@ -799,6 +876,28 @@ console.log(
+   `  ${"washi tape".padEnd(18)}       ${tapeRow.light.toFixed(2)} light / ${tapeRow.dark.toFixed(2)} dark  ≥${TAPE.floor} (${TAPE.ink} on ${TAPE.token})`,
+ );
+ 
++/* The note's row, printed: the quiet rung where a settled note actually paints — the paper,
++ * not the card — with the consumer count the census derived rather than the prose. */
++const noteStop = stopOf(INDEX_CSS, NOTE_QUIET.ink);
++const noteRow = Object.fromEntries(
++  Object.entries(SCOPES).map(([name, scope]) => [
++    name,
++    contrast(
++      press(THEMES[name].graphite, noteStop, colorOf(scope, NOTE_QUIET.surface)),
++      colorOf(scope, NOTE_QUIET.surface),
++    ),
++  ]),
++);
++const noteConsumers = sources(SRC).reduce(
++  (a, f) =>
++    a +
++    (readFileSync(f, "utf8").match(/var\(--ink-press-(quiet|rule)\)/g) ?? []).length,
++  0,
++);
++console.log(
++  `  ${"settled note".padEnd(18)}     ${noteRow.light.toFixed(2)} light / ${noteRow.dark.toFixed(2)} dark  ≥${NOTE_QUIET.floor} (${NOTE_QUIET.ink} on ${NOTE_QUIET.surface}; ${noteConsumers} rung reads in src/)`,
++);
++
+ /* Closure 4, printed: six re-pitched surfaces, six assertions, each naming its rung. */
+ console.log(
+   `\nship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):`,
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index fe5fa7c5..15968b6f 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -21,6 +21,16 @@
+  *
+  * `--self-test` mints a negative control: re-declaring a known-dead token must turn the census
+  * RED. A census that cannot be shown failing is not a gate.
++ *
++ * THE LADDER'S REGISTRATION IS STATIC AND COMPLETE (T9-W7 §7, the @property law's first clause).
++ * Every rung of `MOTION.rungs` (pencilConfig.ts, the one home) is read BARE by its consumers and
++ * falls to `initial-value: 0ms` when the publisher is absent — only if `index.css` registers it.
++ * A deleted block or one nested in a rule (where the at-rule is invalid) leaves that rung
++ * unregistered, and nothing else reds: the verb silently loses its declared failure mode. So
++ * each rung must have exactly one `@property --motion-<rung>` at brace depth 0, `syntax:
++ * "<time>"`, `inherits: true`, `initial-value: 0ms`, and no other `--motion-*` is registered.
++ * `--self-test` deletes `--motion-whisper`'s block and nests all seven in `:root {}`; each must
++ * red. Uniqueness across homes and script emitters are the fold's `check-property-block`'s.
+  */
+ import fs from "node:fs";
+ import path from "node:path";
+@@ -178,6 +188,63 @@ export function census(cssText) {
+   };
+ }
+ 
++const PENCIL_CONFIG = path.join(ROOT, "src", "pencil", "config", "pencilConfig.ts");
++
++/** The rung keys, read off `MOTION.rungs`' own block (comments stripped). */
++export function rungKeys(tsText) {
++  const code = tsText.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\/\/[^\n]*/g, "");
++  const open = code.search(/\brungs:\s*\{/);
++  if (open < 0) throw new Error("check-theme-tokens: no `rungs: {` in pencilConfig.ts");
++  const body = code.slice(code.indexOf("{", open) + 1, code.indexOf("}", open));
++  return [...body.matchAll(/(\w+)\s*:\s*\d+/g)].map((m) => m[1]);
++}
++
++/** Every `@property --motion-*` in `cssText`, with its brace depth and descriptors. */
++function motionRegistrations(cssText) {
++  const css = stripComments(cssText);
++  const out = [];
++  let depth = 0;
++  for (let i = 0; i < css.length; i++) {
++    const c = css[i];
++    if (c === "{") depth++;
++    else if (c === "}") depth--;
++    else if (c === "@" && css.startsWith("@property", i)) {
++      const m = /^@property\s+(--[\w-]+)\s*\{([^}]*)\}/.exec(css.slice(i));
++      if (!m || !m[1].startsWith("--motion-")) continue;
++      const desc = Object.fromEntries(
++        [...m[2].matchAll(/([\w-]+)\s*:\s*([^;]+);?/g)].map((d) => [d[1], d[2].trim()]),
++      );
++      out.push({ name: m[1], depth, desc });
++      i += m[0].length - 1;
++    }
++  }
++  return out;
++}
++
++export function registrationRow(cssText, rungs) {
++  const regs = motionRegistrations(cssText);
++  const red = [];
++  for (const rung of rungs) {
++    const name = `--motion-${rung}`;
++    const mine = regs.filter((r) => r.name === name);
++    if (mine.length !== 1) {
++      red.push(`${name} registered ${mine.length}× (want exactly 1)`);
++      continue;
++    }
++    const { depth, desc } = mine[0];
++    if (depth !== 0)
++      red.push(`${name} registered at brace depth ${depth}, not file scope`);
++    if (desc.syntax !== '"<time>"') red.push(`${name} syntax ${desc.syntax}`);
++    if (desc.inherits !== "true") red.push(`${name} inherits ${desc.inherits}`);
++    if (desc["initial-value"] !== "0ms")
++      red.push(`${name} initial-value ${desc["initial-value"]}`);
++  }
++  for (const r of regs)
++    if (!rungs.includes(r.name.slice("--motion-".length)))
++      red.push(`${r.name} registered but no rung of MOTION.rungs`);
++  return red;
++}
++
+ function main() {
+   const selfTest = process.argv.includes("--self-test");
+   const cssText = fs.readFileSync(INDEX_CSS, "utf8");
+@@ -196,7 +263,32 @@ function main() {
+     for (const t of strays) console.log(`  ${t}`);
+   }
+ 
++  const rungs = rungKeys(fs.readFileSync(PENCIL_CONFIG, "utf8"));
++  const regRed = registrationRow(cssText, rungs);
++  console.log(
++    `\nladder registration: ${rungs.length} rungs, ${regRed.length} breaches`,
++  );
++  for (const r of regRed) console.log(`  ${r}`);
++
+   if (selfTest) {
++    // NEGATIVE CONTROLS for the registration row: a deletion and a nest, each must red.
++    // Keyed on the rule's SHAPE, not on this file's layout: every `@property --motion-*` block,
++    // wherever it sits, so the plant holds on any tree that carries the ladder.
++    const REG = /@property\s+--motion-[\w-]+\s*\{[^}]*\}/g;
++    const deleted = cssText.replace(/@property\s+--motion-whisper\s*\{[^}]*\}/, "");
++    const nested = cssText.replace(REG, (m) => `:root {\n${m}\n}`);
++    const plants = [
++      ["delete --motion-whisper's block", deleted],
++      [`nest every rung in :root {} (${(cssText.match(REG) ?? []).length})`, nested],
++    ];
++    for (const [label, text] of plants) {
++      const caught = text !== cssText && registrationRow(text, rungs).length > 0;
++      console.log(
++        `negative control (${label}): ${caught ? "RED as required" : "FAILED — the row did not catch it"}`,
++      );
++      if (!caught) process.exit(2);
++    }
++
+     // NEGATIVE CONTROL: re-add a known shadcn default and the census must go RED.
+     const patched = cssText.replace(
+       /(@theme\s*\{)/,
+@@ -210,8 +302,10 @@ function main() {
+     if (!caught) process.exit(2);
+   }
+ 
+-  if (dead.length) {
+-    console.error(`\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens`);
++  if (dead.length || regRed.length) {
++    console.error(
++      `\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens, ${regRed.length} registration breaches`,
++    );
+     process.exit(1);
+   }
+   console.log("\ncheck-theme-tokens: 0 unreferenced @theme tokens");
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..36d50b3b 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -86,11 +86,20 @@ const sceneCache = new Map<string, Component>();
+ /** A migrated row's mount: `GameShell` bound to that game's spec, wearing the scene's
+  *  `leaving`/`erased` seam so the page-turn orchestrator below is untouched. */
+ function shellFor(spec: AnyGameSpec): Component {
+-  const Scene: FunctionalComponent<{ leaving?: boolean }, { erased: () => void }> = (
+-    p,
+-    { emit },
+-  ) => h(GameShell, { spec, leaving: p.leaving, onErased: () => emit("erased") });
+-  Scene.props = { leaving: { type: Boolean, default: false } };
++  const Scene: FunctionalComponent<
++    { leaving?: boolean; parked?: boolean },
++    { erased: () => void }
++  > = (p, { emit }) =>
++    h(GameShell, {
++      spec,
++      leaving: p.leaving,
++      parked: p.parked,
++      onErased: () => emit("erased"),
++    });
++  Scene.props = {
++    leaving: { type: Boolean, default: false },
++    parked: { type: Boolean, default: false },
++  };
+   Scene.emits = ["erased"];
+   Scene.displayName = `${spec.id}-scene`;
+   return Scene;
+@@ -863,6 +872,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+           :is="sceneFor(scene)"
+           v-show="view === 'playing'"
+           :leaving="leaving"
++          :parked="view !== 'playing'"
+           @erased="onSceneErased"
+         />
+       </div>
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..12959a37 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -96,6 +96,56 @@
+     U+0061-0069, U+006B-0077, U+0079-007A, U+00D7, U+2014, U+2026;
+ }
+ 
++/* THE DURATION LADDER'S REGISTRATION (T9-W7 §13, MOT-LADDER's rows — CITED here as a
++   stand-in while §13's own diff lands; §7 consumes three of the seven and mints none).
++
++   IT LIVES IN THE FIRST STATIC STYLESHEET AND NOT IN THE PUBLISHER IT GUARDS (chair §6.5,
++   the @property law's first clause). `publishMotionRungs()` emits only the VALUES; if the
++   registration rode the same <style> node, deleting the publisher would take the type with
++   it and every rung would compute to the empty string — an invalid shorthand, so
++   `animation-name: none` and the verb disappears without a clock. That is a loud failure of
++   the WRONG kind: the record would carry a mode nobody declared. Registered here, a missing
++   publisher leaves the declared type in place and every rung falls to `initial-value: 0ms` —
++   the verb runs, instantly, and the exit gate reads a 0 s animation. That is the declared
++   failure (row E) and it fails VISIBLY: a note that vanishes on one frame is exactly the
++   defect §7 was cut to cure. `inherits: true` — every consumer is a descendant of :root, and
++   none of them is the declaring element. */
++@property --motion-whisper {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-leave {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-note {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-dusk {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-step {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-throw {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++@property --motion-rise {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 0ms;
++}
++
+ @layer base {
+   body {
+     font-family: var(--font-text);
+@@ -339,9 +389,10 @@
+      should never be prose.
+ 
+      --ease-accelIn: the spec's laminate gate names this `--ease-laminateLeave`,
+-     but the curve is shared across the laminate leave, ScribbleLoader, and
+-     DarkModeToggle — so it mints as ONE role token, not a laminate-scoped mis-name
+-     (census C4 reconciliation).
++     but the curve is what ANY ink does on its way out, at more surfaces than a
++     laminate-scoped name admits — so it mints as ONE role token, not a mis-name
++     (census C4 reconciliation). The surfaces are the census's to count, per the
++     law three paragraphs up; the enumeration that stood here drifted twice.
+      --ease-glassGlide: the audit-4 monotone glass curve (zero overshoot), byte-
+      identical to MOTION.curves.drawerGlide (canonical TS home). Minted here so the
+      answer-key laminate's lay-down joins the one glass curve instead of the retired
+@@ -1121,6 +1172,28 @@ html {
+     }
+   }
+ 
++  /* …and the hand rubs back from the end of the line (T9-W7 §7). The write-in run
++     backwards, on the erase family's own curve, half the arrival. NO fill: the node is
++     REMOVED when the verb ends (a Vue leave), so there is no end pose to retain and the
++     `forwards` allowlist gains no row. The twin fade hides the anti-aliased tail. */
++  @keyframes ink-rub-out {
++    from {
++      clip-path: inset(0 0 0 0);
++    }
++    to {
++      clip-path: inset(0 100% 0 0);
++    }
++  }
++
++  @keyframes ink-rub-out-fade {
++    from {
++      opacity: 1;
++    }
++    to {
++      opacity: 0;
++    }
++  }
++
+   @keyframes note-in {
+     from {
+       transform: translateY(8px);
+diff --git a/web/frontend/src/games/shared/BoardHost.vue b/web/frontend/src/games/shared/BoardHost.vue
+index eb7eeb52..2c9cd2a1 100644
+--- a/web/frontend/src/games/shared/BoardHost.vue
++++ b/web/frontend/src/games/shared/BoardHost.vue
+@@ -31,6 +31,8 @@ const props = defineProps<{
+   model: GameModel;
+   /** F6 page-turn (T3-W10): true while this scene is switch-away's outgoing exercise. */
+   leaving?: boolean;
++  /** T9-W7 §7 — forwarded to the board, which retracts a reply on the park. */
++  parked?: boolean;
+   /** The live clue value the board prints — required exactly when `spec.clues` is non-null,
+    *  and handed straight back to the seam that declared it. Sudoku's clue seam is `null`, so
+    *  the proof game passes nothing. */
+@@ -252,6 +254,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
+     :solve-stats="model.solveStats.value"
+     :error-code="model.errorCode.value"
+     :leaving="leaving"
++    :parked="parked"
+     :hint="model.hintReasoning.value"
+     :refusal="model.lastRefusal.value"
+     :proactive-error-check="model.proactiveCheck.value"
+diff --git a/web/frontend/src/games/shared/GameBoard.receipt.test.ts b/web/frontend/src/games/shared/GameBoard.receipt.test.ts
+index c5a61434..0bc12dc8 100644
+--- a/web/frontend/src/games/shared/GameBoard.receipt.test.ts
++++ b/web/frontend/src/games/shared/GameBoard.receipt.test.ts
+@@ -2,6 +2,17 @@ import { describe, it, expect, vi } from "vitest";
+ import { mount } from "@vue/test-utils";
+ import { nextTick } from "vue";
+ import GameBoard from "./GameBoard.vue";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++/**
++ * T9-W7 §7 — THE REPEAT'S HOLE IS A BEAT, so the re-say is no longer a microtask away.
++ * `announce()` emptied the region and wrote back on the next flush (`nextTick`), which is
++ * ~0 ms observable: the empty existed for the DOM and for nobody else. It now waits one
++ * beat, the same wait the margin's repeat takes, through the same helper. These two rows
++ * asserted the OLD clock and are re-timed — the behaviour they guard is unchanged (empty
++ * first, then the sentence again), only the clock it lands on.
++ */
++const afterOneBeat = () => new Promise((r) => setTimeout(r, MOTION.beatMs + 40));
+ 
+ /**
+  * T7-W7 — THE DEAL RECEIPT ON A BOARD THAT DEALS NO GIVENS.
+@@ -177,11 +188,47 @@ describe("GameBoard — the deal is spoken where it draws nothing", () => {
+     expect(voice(w), "the region emptied first, so the repeat lands as a change").toBe(
+       "",
+     );
++    await afterOneBeat();
+     await nextTick();
+     expect(voice(w)).toBe("new board. 4 by 4 kenken board");
+     w.unmount();
+   });
+ 
++  it("a margin write inside the voice's beat does NOT eat the voice's re-say", async () => {
++    // THE CROSS-CHANNEL CANCEL (pass 4). Both voices wait one beat through the same helper, and
++    // the helper kept every beat in one Set that `setMargin` emptied wholesale — so a margin
++    // write landing inside the board voice's beat silently dropped the re-say, and the reader
++    // who dealt the same board twice heard it once. A per-channel GUARD is not a per-channel
++    // CANCEL. Each channel owns its handle now; the margin's cancel is the margin's.
++    const w = mountBoard({ dealt: false, freshBoardCopy: () => "" });
++    await w.setProps({
++      dealt: true,
++      boardGeneration: 2,
++      values: { ...emptyValues(), "0": 3 },
++    });
++    await nextTick();
++    expect(voice(w)).toBe("new board. 4 by 4 kenken board");
++
++    // The same board dealt again: the region empties and parks its re-say one beat out.
++    await w.setProps({ boardGeneration: 3 });
++    await nextTick();
++    expect(voice(w)).toBe("");
++
++    // …and 60 ms into that beat, the OTHER channel writes: a clear, which is the margin's own
++    // receipt and says nothing in the region.
++    await new Promise((r) => setTimeout(r, 60));
++    await w.setProps({ dealt: false, values: emptyValues(), boardGeneration: 4 });
++    await nextTick();
++    expect(receipt(w)).toBe("the board is clear");
++
++    await afterOneBeat();
++    await nextTick();
++    expect(voice(w), "the voice's beat survived the margin's cancel").toBe(
++      "new board. 4 by 4 kenken board",
++    );
++    w.unmount();
++  });
++
+   it("a CLEAR is the margin's receipt, not the voice's — one act, one announcement", async () => {
+     const w = mountBoard({ dealt: true, values: { ...emptyValues(), "0": 3 } });
+     await w.setProps({ dealt: false, values: emptyValues(), boardGeneration: 2 });
+@@ -237,6 +284,7 @@ describe("GameBoard — the forced fill says how many", () => {
+     expect(voice(w), "the region emptied first, so the repeat lands as a change").toBe(
+       "",
+     );
++    await afterOneBeat();
+     await nextTick();
+     expect(voice(w)).toBe("2 squares filled");
+     w.unmount();
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..89287574 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -35,7 +35,7 @@ import {
+ } from "@games/shared/useJoinWash";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+ import { generateCellRects } from "@pencil/grid/gridPaths";
+-import { revealStaggerMs } from "@pencil/config/pencilConfig";
++import { revealStaggerMs, MOTION } from "@pencil/config/pencilConfig";
+ import {
+   setMurmurSeed,
+   notifyUserEdit,
+@@ -59,7 +59,7 @@ import { useLiveRegion } from "@/composables/useLiveRegion";
+ import type { HintResult } from "@games/shared/techniqueEngine";
+ import type { CellRefusal } from "@games/shared/useGameState";
+ import type { SolveState, SolveStats } from "@games/shared/types";
+-import type { AnimationState } from "@pencil/types";
++import type { AnimationState, MarginKind } from "@pencil/types";
+ 
+ const props = defineProps<{
+   boardSize: number;
+@@ -110,6 +110,11 @@ const props = defineProps<{
+    *  routes the grid through the erase beat and fades glyphs + marginalia; on erase
+    *  completion the board emits `erased` (the seam) instead of redrawing. */
+   leaving?: boolean;
++  /** T9-W7 §7 — true while this board is PARKED: mounted and painted, but Teleported into the
++   *  gallery's centre card at a third of its size, where the margin's 16px line renders at
++   *  8.63px. Nothing in the DOM says so (the board is visible, has a rect, has an offsetParent),
++   *  so the page says it on the same seam that carries `leaving`. */
++  parked?: boolean;
+   /** T4-W7 — the armed hint's reasoning: highlights `becauseCells` in the peek-laminate
+    *  tone and writes the technique name in the margin. Null between hint transactions. */
+   hint?: HintResult | null;
+@@ -644,15 +649,116 @@ function onBoardKeydown(e: KeyboardEvent) {
+ // ── Marginalia — the status voice (§4.3) ─────────────────────────────
+ const marginText = ref("");
+ const marginTone = ref<"graphite" | "teacher-red" | "gold-star">("graphite");
+-/** Is the line currently on the strip the armed hint's own? Cleared by every writer, set back
+- *  by the hint arm alone — so the retraction below can only ever wipe what the hint wrote. */
+-let hintNoteLive = false;
+-let refusalNoteLive = false;
+-function setMargin(text: string, tone: "graphite" | "teacher-red" | "gold-star") {
++/** WHAT THE LINE IS (T9-W7 §7). It replaces the two `…NoteLive` booleans outright: each arm
++ *  below retracts its own kind, the note ages by kind, and there is one fact instead of three
++ *  that could disagree. */
++const marginKind = ref<MarginKind>("empty");
++/** The write sequence — the Transition's `:key` AND the deferral guard. Monotonic, one per
++ *  `setMargin`, so the same sentence written twice is two different keys and leaves twice. */
++const marginSeq = ref(0);
++let writeSeq = 0;
++/** The refusal's own clock (T9-W7 §7): the one line on the strip whose act is over. Every
++ *  writer clears it through `setMargin`, and each fresh refusal re-arms it. */
++let refusalHoldTimer: ReturnType<typeof setTimeout> | null = null;
++function clearRefusalHold() {
++  if (refusalHoldTimer) clearTimeout(refusalHoldTimer);
++  refusalHoldTimer = null;
++}
++/** The repeat's parked re-write, held until the node is actually GONE. Bounded, cancellable,
++ *  seq-guarded, cleared by every writer and on unmount. It is a deferral, not a second clock. */
++let pendingRepeat: { seq: number; write: () => void } | null = null;
++/** ONE HANDLE PER CHANNEL, because a cancel is per channel too (pass 4). The two voices shared
++ *  one Set and `clearRepeat()` emptied it at the top of every `setMargin`, so a margin write
++ *  landing inside the board voice's beat silently dropped that voice's re-say — a deal that
++ *  repeats its line, then a park or a refusal 60ms later, and the region never says the line
++ *  twice. A per-channel GUARD is not a per-channel CANCEL; this is the cancel. */
++const beatTimers: Record<"margin" | "voice", ReturnType<typeof setTimeout> | null> = {
++  margin: null,
++  voice: null,
++};
++function clearBeat(channel: "margin" | "voice") {
++  const t = beatTimers[channel];
++  if (t) clearTimeout(t);
++  beatTimers[channel] = null;
++}
++/** The MARGIN channel's cancel: its parked re-write and its beat, and nothing else's. */
++function clearRepeat() {
++  clearBeat("margin");
++  pendingRepeat = null;
++}
++/**
++ * THE HOLE IS ONE BEAT, AND IT IS TIMED FROM THE REMOVAL.
++ *
++ * Both voices on this board re-say a sentence by emptying first, and both were guessing at how
++ * long the empty lasts. The margin guessed a rub-out plus a frame (`whisper + 17` — a rung plus
++ * a literal, which is neither a rung nor a beat); `announce()` guessed a microtask (`nextTick`,
++ * ~0ms observable). Measured as built, the AT-observable empty was 13ms chromium / 8ms webkit
++ * on the margin and ~0 on the region — under any floor a screen reader is known to need (the
++ * prior art's clear-then-set band is 100–150ms). One BEAT is 125ms, inside that band, and it is
++ * a constant the house already owns, so the wait mints nothing. `MOTION.beatMs` is the only
++ * number here; a wait is a cadence and never a rung.
++ *
++ * The guard is a CLOSURE, not the write counter, because the two voices share this helper and
++ * not their staleness: a deal writes the margin AND the region, so one counter for both meant
++ * the second writer silently dropped the first's parked re-say. Each channel tests its own —
++ * and each OWNS its handle, so a cancel on one channel leaves the other's beat running. A new
++ * beat on the same channel replaces that channel's beat, which is the only supersession there is.
++ */
++function afterBeat(
++  channel: "margin" | "voice",
++  stillWanted: () => boolean,
++  write: () => void,
++) {
++  clearBeat(channel);
++  beatTimers[channel] = setTimeout(() => {
++    beatTimers[channel] = null;
++    if (stillWanted()) write();
++  }, MOTION.beatMs);
++}
++/**
++ * Write the strip, INCLUDING when it is the same sentence twice.
++ *
++ * T9-W7 §7 — a live region announces MUTATIONS, and writing the string the ref already holds
++ * is not one: refusing the same clue a second time re-rendered nothing, replayed no write-in
++ * and said nothing at all (measured 0 mutations, both engines). Keying the span by the write
++ * sequence is necessary and not sufficient — `mode="out-in"` holds the old span for the whole
++ * leave, so the region never passes through `""` and the repeat is still silent. So the repeat
++ * OPENS THE HOLE on purpose: empty now, re-write one beat after the node leaves. The empty IS
++ * the announcement, and the reader sees the line rubbed out and written again.
++ */
++function setMargin(
++  text: string,
++  tone: "graphite" | "teacher-red" | "gold-star",
++  kind: MarginKind,
++) {
++  const seq = ++writeSeq;
++  clearRepeat();
++  clearRefusalHold();
++  if (text && text === marginText.value) {
++    marginText.value = "";
++    marginTone.value = tone;
++    marginKind.value = kind;
++    // The re-write waits for MarginNote's `@after-leave`, not for a clock we chose.
++    pendingRepeat = {
++      seq,
++      write: () => {
++        marginText.value = text;
++        marginSeq.value = seq;
++      },
++    };
++    return;
++  }
+   marginText.value = text;
+   marginTone.value = tone;
+-  hintNoteLive = false;
+-  refusalNoteLive = false;
++  marginKind.value = kind;
++  marginSeq.value = seq;
++}
++/** MarginNote's `left` — the span is out of the DOM. A repeat waiting on it starts its beat. */
++function onNoteLeft() {
++  const parked = pendingRepeat;
++  if (!parked) return;
++  pendingRepeat = null;
++  afterBeat("margin", () => parked.seq === writeSeq, parked.write);
+ }
+ 
+ // ── T9-W3 §3.5 · THE BOARD'S SECOND VOICE, AND IT DRAWS NOTHING ──────────────────────────
+@@ -683,8 +789,14 @@ const { text: boardVoice, say: sayBoard } = useLiveRegion();
+  * one. Two easy boards dealt in a row produce the identical line, so the second deal would be
+  * silent — the same class of silence §3.4 cured at birth, arriving instead through repetition.
+  * The idiom's third clause is what answers it: a region with nothing to say holds `""`, so the
+- * repeat empties first and writes on the next flush, which makes two mutations out of one
+- * sentence. Costs nothing when the line differs, which is the common case.
++ * repeat empties first and writes back, which makes two mutations out of one sentence. Costs
++ * nothing when the line differs, which is the common case.
++ *
++ * The hole was a `nextTick` — a microtask, ~0ms observable, so the empty existed for the DOM
++ * and for nobody else. It is the SAME beat the margin's repeat waits, through the same helper
++ * (T9-W7 §7; W3's file moves one line, and that is this class's second occurrence, declared).
++ * The guard is the region's own emptiness: if anything else has spoken meanwhile, the re-say
++ * has been overtaken and drops.
+  */
+ function announce(line: string) {
+   if (boardVoice.value !== line) {
+@@ -692,7 +804,11 @@ function announce(line: string) {
+     return;
+   }
+   sayBoard("");
+-  void nextTick(() => sayBoard(line));
++  afterBeat(
++    "voice",
++    () => boardVoice.value === "",
++    () => sayBoard(line),
++  );
+ }
+ 
+ /** What a deal says. `gridLabel` is already the grid's own accessible name ("9 by 9 sudoku,
+@@ -703,8 +819,10 @@ const dealLine = computed(() => `new board. ${props.gridLabel}`);
+ 
+ // ── The named hint (T4-W7) — the reasoning the first press draws ──────
+ // The cells the argument turns on, highlighted in the peek-laminate tone (the cell's
+-// `is-because` tier). The margin voice writes the technique name via the existing 250ms
+-// note wipe when a hint arms — graphite, so it never masquerades as a grade.
++// `is-because` tier). The margin voice writes the technique name on the note rung's write-in
++// when a hint arms — graphite, so it never masquerades as a grade. (The length used to be a
++// literal here and in the stylesheet; it is `var(--motion-note)` now, and a comment that names
++// the number instead of the rung goes stale the moment the ladder re-times.)
+ const hintBecause = computed(
+   () => new Set((props.hint?.becauseCells ?? []).map(String)),
+ );
+@@ -727,10 +845,10 @@ watch(
+           hint.houseAxis,
+         ),
+         "graphite",
++        "record",
+       );
+-      hintNoteLive = true;
+-    } else if (hintNoteLive) {
+-      setMargin("", "graphite");
++    } else if (marginKind.value === "record") {
++      setMargin("", "graphite", "empty");
+     }
+   },
+ );
+@@ -744,14 +862,40 @@ watch(
+   () => props.refusal,
+   (r) => {
+     if (r) {
+-      setMargin("that's a given clue", "teacher-red");
+-      refusalNoteLive = true;
+-    } else if (refusalNoteLive) {
+-      setMargin("", "graphite");
++      setMargin("that's a given clue", "teacher-red", "reply");
++      // T9-W7 §7 — AND IT LEAVES. A refusal answered one keystroke; that keystroke is over, and
++      // what it leaves behind is the loudest ink in the product with nothing to be about. The
++      // clock runs from the LAST attempt (a fresh `refusal` object per press re-enters here), so
++      // refusing twice restarts it rather than cutting the second line short. The length is
++      // DERIVED: the write-in, then a settle's worth of notice, then four words at 180 wpm —
++      // 2,582ms, quantized up the beat grid to 24 (the ballot's fast end).
++      refusalHoldTimer = setTimeout(() => {
++        refusalHoldTimer = null;
++        if (marginKind.value === "reply") setMargin("", "graphite", "empty");
++      }, MOTION.note.refusalHoldBeats * MOTION.beatMs);
++    } else if (marginKind.value === "reply") {
++      setMargin("", "graphite", "empty");
+     }
+   },
+ );
+ 
++// ── T9-W7 §7 — THE PARK IS A WRITER ──────────────────────────────────────────────────────
++//
++// Under the gallery the live board is TELEPORTED into the centre card, not hidden: measured
++// `checkVisibility()` true, one client rect, `offsetParent` non-null, the note's effective
++// font 8.63px at 1280 and 10.43px at 390. So no DOM predicate can tell a parked note from a
++// live one — the park has to SAY so, on the seam the estate already uses for `leaving`.
++//
++// It retracts a REPLY and only a reply. A reply answered a keystroke on THIS board, and
++// shrunk into a deck card it is not a message any more; a record is the board's own state and
++// survives the round trip (it is still true when you come back).
++watch(
++  () => props.parked,
++  (parked) => {
++    if (parked && marginKind.value === "reply") setMargin("", "graphite", "empty");
++  },
++);
++
+ let slowSolveTimer: ReturnType<typeof setTimeout> | null = null;
+ watch(
+   () => props.solveState,
+@@ -761,7 +905,7 @@ watch(
+       slowSolveTimer = null;
+     }
+     if (state === "solved") {
+-      setMargin("solved it!", "gold-star");
++      setMargin("solved it!", "gold-star", "grade");
+     } else if (state === "failed") {
+       // T8-W6 M16: "not quite" was a softener in front of the real sentence, and the em dash
+       // that joined the two is banned outright. The verdict says the one useful thing.
+@@ -771,18 +915,19 @@ watch(
+       // buckets away, so a pure column duplicate sent the reader to a clean row (proved live on
+       // both engines). The derivation names the unit now and `formatConflictNote` speaks it, in
+       // the game's own vocabulary — row, column, box, cage, the printed signs, the thermometer.
+-      setMargin(formatConflictNote(conflicts.value.unit), "teacher-red");
++      setMargin(formatConflictNote(conflicts.value.unit), "teacher-red", "grade");
+     } else if (state === "solving") {
+       // Fast solves (the common case) resolve well under 2.5s and never reach this (§5.1 tiers).
+       slowSolveTimer = setTimeout(() => {
+-        if (props.solveState === "solving") setMargin("still solving…", "graphite");
++        if (props.solveState === "solving")
++          setMargin("still solving…", "graphite", "state");
+       }, 2500);
+-    } else if (state === "idle" && marginTone.value !== "graphite") {
++    } else if (state === "idle" && marginKind.value === "grade") {
+       // Stale-note clear (W6, verify-14's widening): once the grade reverts, the red verdict
+       // AND the gold "solved it!" go stale by the same path — clear any non-graphite tone.
+       // Graphite board-load copy is not a grade; it stays. A graphite HINT note is the one
+       // graphite line that must still be able to leave, which is what the arm above is for.
+-      setMargin("", "graphite");
++      setMargin("", "graphite", "empty");
+     }
+     // 'error' — marginalia stays quiet; a network/server fault is the note card's
+     // domain (role=alert), never the page commenting on the puzzle (§4.3).
+@@ -813,7 +958,7 @@ watch(
+   (n, prev) => {
+     // Givens populate (0 → N) on randomize / initial fetch — a fresh puzzle arrived.
+     if (n > 0 && (prev ?? 0) === 0 && props.solveState !== "solved") {
+-      if (mounted) setMargin(props.freshBoardCopy(), "graphite");
++      if (mounted) setMargin(props.freshBoardCopy(), "graphite", "state");
+       else pendingFreshAnnounce = props.freshBoardCopy(); // flushed in onMounted
+     }
+   },
+@@ -836,8 +981,8 @@ watch(
+     //   · dealt → the no-givens family's fresh line, the same voice every other deal gets.
+     //   · not dealt, and the grid is genuinely blank → the wipe receipt.
+     // Anything else (a restored link with work on it, say) keeps its peace.
+-    if (props.dealt) setMargin(props.freshBoardCopy(), "graphite");
+-    else if (boardIsBlank()) setMargin("the board is clear", "graphite");
++    if (props.dealt) setMargin(props.freshBoardCopy(), "graphite", "state");
++    else if (boardIsBlank()) setMargin("the board is clear", "graphite", "state");
+   },
+ );
+ 
+@@ -953,13 +1098,16 @@ onMounted(() => {
+   // UI-11: flush a pre-mount fresh-board announce now that the live region is in the DOM,
+   // so it lands as a mutation the status region announces (and renders in the margin).
+   if (pendingFreshAnnounce && props.solveState !== "solved") {
+-    setMargin(pendingFreshAnnounce, "graphite");
++    setMargin(pendingFreshAnnounce, "graphite", "state");
+     pendingFreshAnnounce = null;
+   }
+ });
+ 
+ onUnmounted(() => {
+   if (slowSolveTimer) clearTimeout(slowSolveTimer);
++  clearRefusalHold();
++  clearRepeat();
++  clearBeat("voice");
+   stopMarksReveal();
+ });
+ 
+@@ -1161,8 +1309,11 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+       <MarginNote
+         :text="marginText"
+         :tone="marginTone"
++        :kind="marginKind"
++        :seq="marginSeq"
+         :meta="celebrating && vignetteHasTally ? undefined : tally"
+         :quiet="celebrating"
++        @left="onNoteLeft"
+       />
+       <SolverErrorNote
+         v-if="showErrorNote"
+diff --git a/web/frontend/src/games/shared/GameShell.vue b/web/frontend/src/games/shared/GameShell.vue
+index 3d4d5868..e0b7fc48 100644
+--- a/web/frontend/src/games/shared/GameShell.vue
++++ b/web/frontend/src/games/shared/GameShell.vue
+@@ -49,6 +49,9 @@ const props = defineProps<{
+    *  (the grid's own animateErase) while the scene chrome fades (scene.css `.scene-leaving`);
+    *  `erased` reports the seam back to App, which flips the v-if. */
+   leaving?: boolean;
++  /** T9-W7 §7 — this board is mounted in the gallery's centre card, not on the page. Forwarded
++   *  exactly as `leaving` is; the board's own voice reads it (a reply retracts on the park). */
++  parked?: boolean;
+ }>();
+ const emit = defineEmits<{ (e: "erased"): void }>();
+ 
+@@ -151,6 +154,7 @@ function onCandidatePeekEnd() {
+         :model="model"
+         :clue="clue"
+         :leaving="props.leaving"
++        :parked="props.parked"
+         @candidate-peek-start="onCandidatePeekStart"
+         @candidate-peek-end="onCandidatePeekEnd"
+         @erased="emit('erased')"
+diff --git a/web/frontend/src/games/shared/useGameState.authorship.test.ts b/web/frontend/src/games/shared/useGameState.authorship.test.ts
+new file mode 100644
+index 00000000..7e42b512
+--- /dev/null
++++ b/web/frontend/src/games/shared/useGameState.authorship.test.ts
+@@ -0,0 +1,202 @@
++import { describe, it, expect, vi } from "vitest";
++import { defineComponent, h } from "vue";
++import { flushPromises, mount } from "@vue/test-utils";
++import { useGameState, type GameStateDomain } from "./useGameState";
++import type { HintResult } from "./techniqueEngine";
++
++/**
++ * T9-W7 §7 · WHOSE HAND WROTE IT — the authorship seam on the one write primitive.
++ *
++ * `applyCellValue` is shared by a keystroke, an undo replay and a digit off the wire, and it
++ * nulled the margin's two voices for all three. The margin speaks TO THE READER, so a peer's
++ * digit in the far corner took the reader's own hint note and refusal off the page (measured
++ * live, both engines). The seam narrows the retraction: your act always retracts; a peer's act
++ * retracts the hint only when it lands on the square the sentence is about, and never touches
++ * the refusal, which answered YOUR keystroke on a clue no peer can write either.
++ */
++
++const captured = vi.hoisted(() => ({
++  source: null as null | {
++    applyValue: (pos: number, value: number, solved: boolean) => void;
++  },
++}));
++
++vi.mock("./useSession", async (importOriginal) => {
++  const mod = await importOriginal<typeof import("./useSession")>();
++  return {
++    ...mod,
++    registerSessionSource: (s: {
++      applyValue: (pos: number, value: number, solved: boolean) => void;
++    }) => {
++      captured.source = s;
++      mod.registerSessionSource(s as Parameters<typeof mod.registerSessionSource>[0]);
++    },
++  };
++});
++
++interface Persisted {
++  values: Record<string, number>;
++  givenCells: string[];
++  originalGivenCells: string[];
++  solvedValues: Record<string, number>;
++  boardGeneration: number;
++  size: number;
++  difficulty: "EASY";
++}
++type Dealt = { values: Record<string, number> };
++type Domain = GameStateDomain<"EASY", Dealt, Record<string, never>, Persisted>;
++type Model = ReturnType<
++  typeof useGameState<"EASY", Dealt, Record<string, never>, Persisted>
++>;
++
++/** Clues at 0 and 1; the hint names cell 40 and its argument turns on 41 and 42 as well. */
++const DEALT: Dealt = { values: { "0": 5, "1": 3 } };
++const HINT: HintResult = {
++  technique: "hidden-single",
++  cell: 40,
++  value: 4,
++  becauseCells: [40, 41, 42],
++  houseAxis: "row",
++};
++
++function makeDomain(): Domain {
++  return {
++    initial: {
++      difficulty: "EASY",
++      source: "fresh",
++      persisted: null,
++      boardLink: "absent",
++    },
++    initialSize: 3,
++    boardSizeOf: (raw) => raw * raw,
++    getRandomBoard: async () => DEALT,
++    applyDealFurniture: () => {},
++    resetFurniture: () => {},
++    grade: () => ({ hardestTechnique: null, solved: true }),
++    solve: async (values) => ({
++      solved: true,
++      values,
++      backtracks: 0,
++      nodesExplored: 0,
++      propagations: 0,
++      solutionCount: 1,
++    }),
++    propagate: async () => new Uint32Array(0),
++    fillForced: () => ({ placements: [] }),
++    hint: () => HINT,
++    snapshotExtra: () => ({}),
++    restoreExtra: () => {},
++    restorePersistedFurniture: () => {},
++    syncToUrl: () => {},
++    persist: () => {},
++    clearPersisted: () => {},
++    dropBoardParam: () => {},
++    writeShareUrl: () => {},
++  };
++}
++
++async function mountModel() {
++  let model!: Model;
++  const wrapper = mount(
++    defineComponent({
++      setup() {
++        model = useGameState(makeDomain());
++        return () => h("div");
++      },
++    }),
++  );
++  await flushPromises();
++  return { model, wrapper };
++}
++
++/** The wire's own entry point, as `useSession` holds it. */
++const peerWrite = (pos: number, value: number, solved = false) =>
++  captured.source!.applyValue(pos, value, solved);
++
++describe("the authorship seam (T9-W7 §7)", () => {
++  it("a peer's write outside the armed hint leaves the note standing", async () => {
++    const { model, wrapper } = await mountModel();
++    await model.hintCell(40);
++    expect(model.hintReasoning.value).not.toBeNull();
++
++    peerWrite(60, 7);
++
++    expect(model.values.value["60"]).toBe(7);
++    expect(model.hintReasoning.value).not.toBeNull();
++    wrapper.unmount();
++  });
++
++  it("a peer's write at the cell the note NAMES retracts it", async () => {
++    const { model, wrapper } = await mountModel();
++    await model.hintCell(40);
++
++    peerWrite(40, 4);
++
++    expect(model.hintReasoning.value).toBeNull();
++    wrapper.unmount();
++  });
++
++  it("a peer's write at a cell the argument turns on retracts it", async () => {
++    const { model, wrapper } = await mountModel();
++    await model.hintCell(40);
++
++    peerWrite(42, 9);
++
++    expect(model.hintReasoning.value).toBeNull();
++    wrapper.unmount();
++  });
++
++  it("a peer's REVEAL at the named cell retracts it too", async () => {
++    const { model, wrapper } = await mountModel();
++    await model.hintCell(40);
++
++    peerWrite(40, 4, true); // solved: true — the answer-key path, a write like any other
++
++    expect(model.hintReasoning.value).toBeNull();
++    wrapper.unmount();
++  });
++
++  it("a peer's write anywhere leaves your refusal alone", async () => {
++    const { model, wrapper } = await mountModel();
++    model.setCell(0, 7); // a keystroke on a clue: refused, and spoken
++    expect(model.lastRefusal.value).toEqual({ pos: 0, reason: "given", seq: 1 });
++
++    peerWrite(60, 7);
++    expect(model.lastRefusal.value).toEqual({ pos: 0, reason: "given", seq: 1 });
++
++    peerWrite(40, 4); // even on the square your hint named
++    expect(model.lastRefusal.value).toEqual({ pos: 0, reason: "given", seq: 1 });
++    wrapper.unmount();
++  });
++
++  it("your own ink still retracts both, wherever it lands", async () => {
++    const { model, wrapper } = await mountModel();
++    await model.hintCell(40);
++    model.setCell(0, 7);
++    expect(model.lastRefusal.value).not.toBeNull();
++    expect(model.hintReasoning.value).not.toBeNull();
++
++    model.setCell(60, 7); // a landing keystroke in the far corner — yours
++
++    expect(model.hintReasoning.value).toBeNull();
++    expect(model.lastRefusal.value).toBeNull();
++    wrapper.unmount();
++  });
++
++  // GAP 8 (T9-W7 §7, pass 3). `applyHintInk` nulled neither voice, so YOUR OWN reveal — ink
++  // that lands, by the one verb on the board that cannot fail — left the refusal standing.
++  // You pressed reveal, a digit appeared, and the page still said you may not write there.
++  it("your own REVEAL retracts the refusal it answers", async () => {
++    const { model, wrapper } = await mountModel();
++    model.setCell(0, 7); // a keystroke on a clue: refused, and spoken
++    expect(model.lastRefusal.value).not.toBeNull();
++
++    await model.hintCell(40); // first press arms the reasoning
++    await model.hintCell(40); // second press inks it — YOUR ink, and it lands
++
++    expect(model.values.value["40"]).toBe(4);
++    expect(model.lastRefusal.value).toBeNull();
++    expect(model.hintReasoning.value).toBeNull();
++    wrapper.unmount();
++  });
++});
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+index b59e6e7f..63e88ee4 100644
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -25,6 +25,7 @@ import {
+   registerSessionSource,
+   startSession,
+ } from "./useSession";
++import type { SessionSource } from "./useSession";
+ import {
+   clearStagingSource,
+   consumeBoardFollow,
+@@ -101,6 +102,17 @@ interface CommonPersistPayload<TDiff extends string> {
+  */
+ export type CellWriteOutcome = "written" | "refused-given";
+ 
++/**
++ * WHOSE HAND WROTE IT (T9-W7 §7).
++ *
++ * The board's one write primitive is shared by three callers and only two of them are the
++ * reader: a keystroke and an undo replay are `self`, a digit off the wire is `peer`. The
++ * margin's voices are ADDRESSED TO THE READER, so what retracts them is the reader's own act —
++ * or a peer's act on the square the sentence is about, which is the one case where someone
++ * else's keystroke changes what the note said.
++ */
++export type WriteOrigin = "self" | "peer";
++
+ /** The refusal, published for the surfaces that draw it and say it. `seq` counts attempts, so
+  *  the same clue refused twice is two events a watcher can tell apart. */
+ export interface CellRefusal {
+@@ -295,10 +307,11 @@ export function useGameState<
+     applyValue: (pos, value) => {
+       // A replay can no longer reach a given (a refused write was never recorded), but the
+       // room only hears what actually landed — the announce follows the outcome, not the call.
+-      if (applyCellValue(pos, value) === "written") noteWrite(pos, value, false);
++      if (applyCellValue(pos, value, "self") === "written")
++        noteWrite(pos, value, false);
+     },
+     applyHintInk: (pos, value) => {
+-      applyHintInk(pos, value);
++      applyHintInk(pos, value, "self");
+       noteWrite(pos, value, true);
+     },
+     removeHintInk: (pos, prev) => {
+@@ -370,9 +383,12 @@ export function useGameState<
+     );
+   }
+ 
+-  const sessionSource = {
++  // Annotated, not inferred (T9-W7 §7): `registerSessionSource` checks this structurally, so
++  // the types alone never demanded the `origin` its two calls now pass. The annotation pins the
++  // object to the wire's contract; the arguments say whose hand it is.
++  const sessionSource: SessionSource = {
+     applyValue: (pos: number, value: number, solved: boolean) =>
+-      solved ? applyHintInk(pos, value) : applyCellValue(pos, value),
++      solved ? applyHintInk(pos, value, "peer") : applyCellValue(pos, value, "peer"),
+     snapshot: () => ({ b: snapshotBoard(), m: snapshotMarks() }),
+     size: () => solverSize.value,
+     restore: (blob: unknown, size: number) => {
+@@ -471,7 +487,21 @@ export function useGameState<
+   // A given is inviolable, and an ERASE IS A WRITE, so both are refused at the same gate. The
+   // refusal is returned rather than swallowed: the caller records nothing, and `lastRefusal`
+   // carries the event to the surfaces that draw it and say it.
+-  function applyCellValue(pos: number, value: number): CellWriteOutcome {
++  /**
++   * Does this square carry the armed hint's sentence? The cell it names, or one of the cells its
++   * argument turns on (`becauseCells`, the set the board already highlights). Measured at 9×9:
++   * 1 cell for "only N fits here", 9 for "N goes nowhere else in this <house>".
++   */
++  function armedHintTurnsOn(pos: number): boolean {
++    const h = hintReasoning.value;
++    return !!h && (h.cell === pos || h.becauseCells.includes(pos));
++  }
++
++  function applyCellValue(
++    pos: number,
++    value: number,
++    origin: WriteOrigin,
++  ): CellWriteOutcome {
+     const key = String(pos);
+     if (givenCells.value.has(key)) {
+       lastRefusal.value = { pos, reason: "given", seq: ++refusalSeq };
+@@ -484,8 +514,13 @@ export function useGameState<
+       solvedValues.value = rest;
+     }
+     values.value[key] = value;
+-    hintReasoning.value = null; // T4-W7 — an edit disarms a stale armed hint
+-    lastRefusal.value = null; // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal
++    // T4-W7 / T9-W7 §7 — an edit disarms a stale armed hint. A PEER's edit disarms it only when
++    // it lands on the square the hint's sentence is about; their digit in the far corner is not
++    // news about your note.
++    if (origin === "self" || armedHintTurnsOn(pos)) hintReasoning.value = null;
++    // T9-W1 §1.1 — ink that LANDS retracts the spoken refusal. YOUR ink: the refusal answered
++    // YOUR keystroke, and a peer cannot write the given it was about.
++    if (origin === "self") lastRefusal.value = null;
+     // Revert solve state so the board no longer shows success/failure.
+     if (solveState.value !== "idle") {
+       solveState.value = "idle";
+@@ -497,7 +532,7 @@ export function useGameState<
+ 
+   function setCell(pos: number, value: number): CellWriteOutcome {
+     const prev = values.value[String(pos)] ?? 0;
+-    const outcome = applyCellValue(pos, value);
++    const outcome = applyCellValue(pos, value, "self");
+     // A refused write is not history. Recording it would put an entry on the spine whose undo
+     // restores the value that never changed — and lift `isDirty` over a board nobody edited.
+     if (outcome === "written") recordEdit(pos, prev, value);
+@@ -534,8 +569,15 @@ export function useGameState<
+ 
+   // Redo of hint ink — write the digit in the solver's own tone (no record); the reveal draw-in
+   // path, factored so `inkReveal` and the undo-replay share it.
+-  function applyHintInk(pos: number, value: number) {
++  function applyHintInk(pos: number, value: number, origin: WriteOrigin) {
+     const key = String(pos);
++    // A revealed digit is a write like any other, so it carries the SAME predicate the typed
++    // write carries. This function nulled neither voice: a peer's reveal left a note standing
++    // that its own square had just answered, and — gap 8 — YOUR OWN reveal left the refusal
++    // standing. You pressed reveal, the digit landed, and the page still said you may not
++    // write there. Ink that lands retracts the reply, whichever verb laid it down.
++    if (origin === "self" || armedHintTurnsOn(pos)) hintReasoning.value = null;
++    if (origin === "self") lastRefusal.value = null;
+     values.value[key] = value;
+     solvedValues.value = { ...solvedValues.value, [key]: value };
+     animatingCells.value = new Set([key]);
+@@ -732,7 +774,7 @@ export function useGameState<
+     const key = String(pos);
+     if (val === 0 || values.value[key] === val) return;
+     const prev = values.value[key] ?? 0;
+-    applyHintInk(pos, val);
++    applyHintInk(pos, val, "self");
+     recordHintInk(pos, prev, val);
+   }
+ 
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..9e6d7872 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -212,7 +212,7 @@ export interface Handlers {
+  * The board's side of the seam, registered by `useGameState` at setup and cleared on unmount
+  * (the `useStagingBridge` register-a-source pattern). One live board ever, so one slot.
+  */
+-interface SessionSource {
++export interface SessionSource {
+   /** a remote write, through the SAME effects a local write and an undo replay use. */
+   applyValue: (pos: number, value: number, solved: boolean) => void;
+   /** the whole board + its marks, as the pool blob pair the restore takes back. */
+diff --git a/web/frontend/src/main.ts b/web/frontend/src/main.ts
+index 1c533ff0..c487a273 100644
+--- a/web/frontend/src/main.ts
++++ b/web/frontend/src/main.ts
+@@ -9,5 +9,9 @@ if (import.meta.env.DEV) {
+ import { createApp } from "vue";
+ import App from "./App.vue";
+ import "./assets/index.css";
++import { publishMotionRungs } from "@pencil/config/pencilConfig";
++
++// The duration ladder's CSS copy, emitted from its one TS home before the first paint.
++publishMotionRungs();
+ 
+ createApp(App).mount("#app");
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 1517e95c..f073e466 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -10,8 +10,8 @@
+  * Generic by construction (pencil layer): it renders whatever text + tone it's handed
+  * and owns none of the derivation — the domain (SudokuBoard) decides *what* to say.
+  * The region element is always mounted so a text change is an announced mutation, not
+- * a region that appears mid-solve (which some AT miss). Text writes in with a 250ms
+- * clip-path wipe — the logo's own reveal mechanic, shortened; instant under PRM.
++ * a region that appears mid-solve (which some AT miss). Text writes in on the note rung,
++ * two beats of clip-path wipe — the logo's own reveal mechanic, shortened; instant under PRM.
+  *
+  * T3-W9 §2 — the completion block, hoisted:
+  * - `meta` — the pencil's own tally under the voice ("0 backtracks · 1ms"), rendered
+@@ -22,9 +22,42 @@
+  * - The inline star (F2-C, ratified): on the gold-star tone the verdict line opens
+  *   with a 1.1em hand-wonky star — ★ solved it! — the sticker's own geometry demoted
+  *   to punctuation. In flow inside the ink span, so it wipes in with the note's own
+- *   250ms clip-path write-in: zero subscribers, collision impossible by construction.
++ *   clip-path write-in: zero subscribers, collision impossible by construction.
++ *
++ * T9-W7 §7 — THE NOTE GAINS AN EXIT AND AN AGE. The write-in was the estate's one arrival
++ * with no departure (R4's M2 row): a note vanished on a frame, mid-sentence. It leaves the
++ * way it came now — the same clip run backwards from the END of the line, on the whisper rung
++ * and the erase family's curve — carried by a `<Transition>` rather than a listener, because
++ * PRM deletes the animation outright and `animationend` then never fires on either engine.
++ * And a `record` or a `state` line settles to the quiet rung eight beats after it arrives: it
++ * stops being the loudest ink and waits for an act. VERDICTS NEVER SETTLE (teacher-red at that
++ * rung is 3.03:1 light, gold 2.70:1 — a grade you can barely read is a grade you doubt), and
++ * neither does a `reply`: it leaves instead. The age is decided by `kind`, never by `tone` —
++ * the colour was a proxy for the kind and broke as soon as two graphite lines aged apart.
++ *
++ * `:key` is the write SEQUENCE, never the string. Under the string, saying the same sentence
++ * twice re-enters the node under the same key and Vue finishes the leave early
++ * (`runtime-core` `beforeEnter` → `leavingVNode.el[leaveCbKey]()`): the rub-out never starts
++ * and the region never mutates, so a refusal repeated is a refusal unsaid.
++ *
++ * AND THE EXIT NEEDS A REST POSE (pass 3). A leave has two clocks and two poses, and the
++ * settled note got both wrong. The CLOCK: `runtime-dom` (`3.5.39`, `:344-347`) takes
++ * `max(transition, animation)` off the LEAVING node, so the settle's DUSK colour transition
++ * outranked the WHISPER rub-out and the node stayed for a whole rung after the verb ended. The
++ * POSE: `ink-rub-out` has no fill — correctly, a leave retains nothing — so the instant the
++ * keyframe releases, the cascade stands the line back up at `clip-path: none, opacity: 1` and
++ * the reader watches a rubbed-out sentence come BACK for 25 frames (chromium) / 13 (webkit)
++ * before the node drops. `.note-leave-to` is the cure: the rest pose IS where the keyframe ends,
++ * so when the animation releases nothing moves. The CLOCK is `stopTheClock` below — the rest
++ * pose holds the POSE, the hook holds the CLOCK, and the live source-deletion controls separate
++ * them (pass 3: 165.6ms with the pose gone, 363ms with the clock gone). Both ship; neither
++ * substitutes.
+  */
+-withDefaults(
++import { onUnmounted, ref, watch } from "vue";
++import { MOTION } from "@pencil/config/pencilConfig";
++import type { MarginKind } from "@pencil/types";
++
++const props = withDefaults(
+   defineProps<{
+     text: string;
+     tone?: "graphite" | "teacher-red" | "gold-star";
+@@ -39,14 +72,61 @@ withDefaults(
+      *  down as collateral, and below 1280 the sticker has no room to receive it, so a
+      *  solved board printed its tally nowhere. */
+     quiet?: boolean;
++    /** What the line IS — the age is read off this, never off the tone (`@pencil/types`). */
++    kind?: MarginKind;
++    /** The write sequence: monotonic, one per `setMargin`. The Transition's key. */
++    seq?: number;
+   }>(),
+-  { tone: "graphite", quiet: false },
++  { tone: "graphite", quiet: false, kind: "state", seq: 0 },
+ );
+ 
++/** The node is GONE. Vue's own `@after-leave`, so a caller that wants to re-write the strip
++ *  times the hole from the removal rather than guessing at the verb's length. */
++defineEmits<{ left: [] }>();
++
+ // The celebration sticker's wonky 5-pointer (CelebrationStar.vue STAR_D) at half
+ // scale — the same star, demoted to punctuation. viewBox 0 0 24 24.
+ const NOTE_STAR_D =
+   "M11.8,2.1 L14.5,8.7 L21.6,9.1 L15.7,13.3 L18,20.2 L12.1,15.9 L6,20 L8.3,13.2 L2.4,8.8 L9.6,8.9 Z";
++
++// THE AGE. One timer, re-armed by every line and cleared by the next — the component that
++// renders the note owns how it ages, the way it already owns how it arrives. It is armed by
++// KIND: a record or a receipt settles, a grade and a reply never do. (The verbs are rungs and
++// live in the stylesheet as `var(--motion-*)`; only this WAIT is a clock, and a clock is beats.)
++//
++// EVERY note carries the attribute — `fresh` or `settled`, never absent: two values instead
++// of one value and a null, so the site's PRM arm reads one selector for both ages.
++const AGES: readonly MarginKind[] = ["record", "state"];
++const settled = ref(false);
++let settleTimer: ReturnType<typeof setTimeout> | null = null;
++watch(
++  () => [props.text, props.seq, props.kind] as const,
++  ([text, , kind]) => {
++    if (settleTimer) clearTimeout(settleTimer);
++    settled.value = false;
++    if (!text || !AGES.includes(kind)) return;
++    settleTimer = setTimeout(
++      () => (settled.value = true),
++      MOTION.note.settleAfterBeats * MOTION.beatMs,
++    );
++  },
++  { immediate: true },
++);
++onUnmounted(() => {
++  if (settleTimer) clearTimeout(settleTimer);
++});
++
++// THE HONEST CLOCK (pass 5). Vue drops a leaving node on `max(transition, animation)` read off
++// its computed style (`runtime-dom` `:344-347`), so ANY transition on the ink — the settle's own
++// dusk colour step, or one a later lane hangs on it — holds a finished rub-out on the page for
++// that transition's length. Pass 4 fenced it with a (0,4,0) selector and a declaration at
++// (1,1,0) walked straight past it (0.35s, node absent 362.6ms). An inline `!important` outranks
++// every author rule at any specificity, `!important` ones included, so the bound is the author
++// origin itself rather than a rung of it. The price: a settle still tweening when its line is
++// rubbed out lands on its end colour on the rub-out's first frame.
++function stopTheClock(el: Element): void {
++  (el as HTMLElement).style.setProperty("transition", "none", "important");
++}
+ </script>
+ 
+ <template>
+@@ -58,27 +138,42 @@ const NOTE_STAR_D =
+       aria-live="polite"
+       aria-atomic="true"
+     >
+-      <span v-if="text" :key="text" class="margin-note-ink">
+-        <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
+-        <svg
+-          v-if="tone === 'gold-star'"
+-          class="note-star"
+-          viewBox="0 0 24 24"
+-          aria-hidden="true"
+-          focusable="false"
+-          xmlns="http://www.w3.org/2000/svg"
++      <!-- out-in: a replacement rubs the old line out before the new one writes in, so the
++           region's name goes X to Y with no empty frame in between. The key is the write
++           sequence — the same sentence twice is two writes and leaves twice. -->
++      <Transition
++        name="note"
++        mode="out-in"
++        @before-leave="stopTheClock"
++        @after-leave="$emit('left')"
++      >
++        <span
++          v-if="text"
++          :key="seq"
++          class="margin-note-ink"
++          :data-note-age="settled ? 'settled' : 'fresh'"
+         >
+-          <path
+-            :d="NOTE_STAR_D"
+-            fill="#FDE68A"
+-            fill-opacity="0.9"
+-            stroke="#F0B030"
+-            stroke-width="1.8"
+-            stroke-linecap="round"
+-            stroke-linejoin="round"
+-          /></svg
+-        >{{ text }}
+-      </span>
++          <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
++          <svg
++            v-if="tone === 'gold-star'"
++            class="note-star"
++            viewBox="0 0 24 24"
++            aria-hidden="true"
++            focusable="false"
++            xmlns="http://www.w3.org/2000/svg"
++          >
++            <path
++              :d="NOTE_STAR_D"
++              fill="#FDE68A"
++              fill-opacity="0.9"
++              stroke="#F0B030"
++              stroke-width="1.8"
++              stroke-linecap="round"
++              stroke-linejoin="round"
++            /></svg
++          >{{ text }}
++        </span>
++      </Transition>
+     </p>
+     <!-- The tally: plain text, deliberately OUTSIDE the live region. -->
+     <p v-if="meta" :key="meta" class="margin-note-meta">{{ meta }}</p>
+@@ -102,8 +197,15 @@ const NOTE_STAR_D =
+   /* The reserved line lives on the BLOCK, not the voice, so the strip is the same height
+      whether the voice is speaking here or from the sticker — the grade lands and nothing
+      below the board moves. (It was on `.margin-note`, which the gold path takes out of
+-     flow; the strip then collapsed at the crest and grew back after it.) */
+-  min-height: 1.3em;
++     flow; the strip then collapsed at the crest and grew back after it.)
++
++     IT IS DERIVED FROM THE LINE IT RESERVES (pass 4). `1.3em` was 1.3 of the BLOCK's inherited
++     16px, while the voice inside it sets `--type-body` — which clamps to 18.18px at 1280 — on
++     `--type-leading-caption`. So the reserve was right at 390 by coincidence and 2.81px short
++     everywhere the clamp had climbed, and the strip grew the first time the voice spoke, at
++     every width above the clamp's floor. Same two tokens the voice reads, multiplied: the
++     reserve is the line, at any width, and it stops being a number that happens to match one. */
++  min-height: calc(var(--type-body) * var(--type-leading-caption));
+ }
+ 
+ /* Quiet (T3-W12 §1 R1): the classic clip pattern — zero visual footprint, zero
+@@ -146,7 +248,64 @@ const NOTE_STAR_D =
+ 
+ .margin-note-ink {
+   display: inline-block;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++}
++
++/* THE ARRIVAL — the hand writes left to right. It was a bare animation on the ink span, which
++   is why a note could arrive and never leave; it belongs to the Transition's enter now, and the
++   length is the NOTE rung, read BARE (chair §6.5: the rung is registered at an instant
++   initial value, so an absent publisher is loud rather than invisible). */
++.note-enter-active {
++  animation: ink-write-in var(--motion-note) var(--ease-noteWrite) backwards;
++}
++
++/* THE EXIT (T9-W7 §7) — the same clip run backwards from the END of the line, plus a twin fade
++   for the anti-aliased tail. Clip and opacity only: no glyph moves, nothing filters, no fill
++   (the node is REMOVED when the verb ends, so there is no end pose to retain and the forwards
++   allowlist gains no row). The rung is WHISPER: the family's own number is 125 — the beat, half
++   the arrival, the erase asymmetry — but a literal is not a rung, so the nearest rung is
++   consumed and the erase stays shorter than the arrival either way. */
++.note-leave-active {
++  animation:
++    ink-rub-out var(--motion-whisper) var(--ease-accelIn),
++    ink-rub-out-fade var(--motion-whisper) var(--ease-accelIn);
++}
++
++/* THE REST POSE — one of two halves, and MEASURED it is the half that fixes the POSE, never the
++   clock (the clock is `stopTheClock`, in the script). `ink-rub-out` has no fill, so the frame the
++   keyframe releases is the frame the CASCADE decides — and the cascade said `clip-path: none,
++   opacity: 1`, which stood the rubbed-out line back up at full pressure until Vue dropped the
++   node. `.note-leave-to` is where the keyframe ENDS, written as the cascade's own value:
++   nothing moves when the animation lets go. (index.css:985-990's discipline, satisfied
++   literally — `bloom-out` says the same sentence about the same problem.) */
++.note-leave-to {
++  clip-path: inset(0 100% 0 0);
++  opacity: 0;
++}
++
++/* THE SETTLE — eight beats in, a record or a receipt stops being the loudest ink and waits.
++   Colour only, on the dusk rung: no opacity, no geometry, nothing that could promote a layer.
++   The quiet rung reads 5.19:1 light / 6.12:1 dark by `check-ink-pressure`'s derivation and
++   PAINTS 5.17 light / 6.07-6.13 dark at the core median (1280, DPR 1, both engines, pass 5). Only those two kinds arrive here (the age timer is gated on the KIND, not the
++   colour): teacher-red at this rung is 3.03:1 and gold 2.70:1, and a grade never settles. */
++.margin-note-ink[data-note-age="settled"] {
++  color: var(--ink-press-quiet);
++  transition: color var(--motion-dusk) var(--ease-standard);
++}
++
++/* PRM AT THE SITE (the shape the estate's three shipped `<Transition>`s already use —
++   App.vue:1141-1153's gallery fade, GameGallery.vue:1471-1494's guard ribbon). Three arms say
++   the same thing and each is load-bearing somewhere: the ladder publishes instant, index.css:1163
++   deletes the write-in by `!important` for the un-Transitioned case, and THIS block is the
++   family's own — it survives a ladder that never published and it is what a reader of this
++   file sees. The settle becomes a step: the hand lifting, with no tween. */
++@media (prefers-reduced-motion: reduce) {
++  .note-enter-active,
++  .note-leave-active {
++    animation: none;
++  }
++  .margin-note-ink[data-note-age] {
++    transition: none;
++  }
+ }
+ 
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+@@ -177,6 +336,6 @@ const NOTE_STAR_D =
+      .dt-label for this exact reason never reached the note. */
+   color: var(--ink-press-quiet);
+   pointer-events: auto;
+-  animation: ink-write-in 250ms var(--ease-noteWrite) backwards;
++  animation: ink-write-in var(--motion-note) var(--ease-noteWrite) backwards;
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+new file mode 100644
+index 00000000..7be57f74
+--- /dev/null
++++ b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+@@ -0,0 +1,188 @@
++import { describe, it, expect } from "vitest";
++import { mount } from "@vue/test-utils";
++import { nextTick } from "vue";
++import { MOTION, publishMotionRungs } from "@pencil/config/pencilConfig";
++import MarginNote from "./MarginNote.vue";
++// The component's own BYTES (vite's `?raw`), not the compiled component: the assertions below
++// are about what the stylesheet says. `node:fs` is not available here — `src/**` is typechecked
++// by the browser tsconfig, which carries no node types (the trap check-ink-pressure's head names).
++import MARGIN_NOTE_SRC from "./MarginNote.vue?raw";
++
++/**
++ * T9-W7 §7 — THE NOTE'S CLOCKS, ITS RUNGS AND ITS REST POSE, asserted where they are decided.
++ *
++ * What the live surface cannot say for itself:
++ *   G-hold  the refusal's hold is long enough to READ the refusal — derived from the house's
++ *           own constants, not picked. It reds if either end re-times.
++ *   G3      no duration literal in the component, and NO `var(--motion-x, fallback)`. The
++ *           fallback was pass 2's shape and chair §6.5 struck it: a byte-equal fallback makes
++ *           a deleted publisher invisible, which is exactly the failure the born-RED row
++ *           exists to catch. The rungs are registered at `initial-value: 0ms` instead.
++ *   G2/G4   the rest pose and the site PRM arm exist as STATIC text — the live halves are the
++ *           probe's, but a stylesheet that lost either would red here first.
++ */
++
++const STYLE = MARGIN_NOTE_SRC.slice(MARGIN_NOTE_SRC.indexOf("<style"));
++
++describe("the margin note's motion (T9-W7 §7)", () => {
++  it("G-hold: the refusal stands long enough to be read", () => {
++    const words = "that's a given clue".split(/\s+/).length;
++    // write-in, then a settle's worth of notice, then the words at 180 wpm (333 ms/word).
++    const need =
++      MOTION.rungs.note + MOTION.note.settleAfterBeats * MOTION.beatMs + words * 333;
++    const hold = MOTION.note.refusalHoldBeats * MOTION.beatMs;
++    expect(need).toBe(2582);
++    expect(hold).toBeGreaterThanOrEqual(need);
++  });
++
++  it("the ballot's slow end is the same derivation at 90 wpm", () => {
++    const words = "that's a given clue".split(/\s+/).length;
++    const slow =
++      MOTION.rungs.note +
++      2 * MOTION.note.settleAfterBeats * MOTION.beatMs +
++      words * 667;
++    // 4,918 ms → 40 beats on the 8-beat settle grid: the band's far end, derived not picked.
++    expect(Math.ceil(slow / MOTION.beatMs / 8) * 8).toBe(40);
++  });
++
++  it("G3: the verbs read rungs BARE — three of them, and no fallback anywhere", () => {
++    expect(STYLE.match(/var\(--motion-[a-z]+\s*,/g) ?? []).toEqual([]);
++    const bare = [...STYLE.matchAll(/var\(--motion-([a-z]+)\)/g)].map((m) => m[1]);
++    for (const rung of ["note", "whisper", "dusk"]) {
++      expect(bare).toContain(rung);
++      expect(MOTION.rungs[rung as keyof typeof MOTION.rungs]).toBeGreaterThan(0);
++    }
++  });
++
++  it("G3: no duration literal in the component", () => {
++    expect(STYLE.match(/\b\d+(\.\d+)?m?s\b/g) ?? []).toEqual([]);
++  });
++
++  it("G2 (static half): the leave has a REST POSE where its keyframe ends", () => {
++    // `ink-rub-out` has no fill, so the frame it releases is the cascade's. `.note-leave-to` IS
++    // that frame: clipped away from the end of the line, fully transparent.
++    const to = /\.note-leave-to\s*\{([^}]*)\}/.exec(STYLE)?.[1] ?? "";
++    expect(to.replace(/\s+/g, " ")).toContain("clip-path: inset(0 100% 0 0)");
++    expect(to).toContain("opacity: 0");
++  });
++
++  it("G16 (static half): the honest clock is an inline !important on the leaving node", () => {
++    // Vue drops the node on max(transition, animation). Pass 4 fenced it with a (0,4,0) selector
++    // and a declaration at (1,1,0) walked past it; an inline `!important` written at
++    // `before-leave` outranks every author rule, so the bound is the author origin. The live
++    // half is `e2e/affordances.spec.ts`'s drop-clock row, planted at (1,1,0) `!important`.
++    expect(MARGIN_NOTE_SRC).toContain('@before-leave="stopTheClock"');
++    expect(MARGIN_NOTE_SRC).toContain(
++      'style.setProperty("transition", "none", "important")',
++    );
++    // No selector-side fence left to lose a specificity fight, and none on the leave class.
++    expect(STYLE).not.toContain(".note-leave-active[data-note-age]");
++    expect(/\.note-leave-active\s*\{[^}]*transition:/.test(STYLE)).toBe(false);
++  });
++
++  it("G16 (CI half): the LEAVING node carries `transition: none !important`", async () => {
++    // The row above reads the hook's TEXT, so a dead hook with its strings intact
++    // (`if (el) return;` as its first line) stayed 11/11 green, and the drop-clock row that sees
++    // it is a browser row — under O-12 a local instrument, never CI. This is the behaviour on the
++    // CI surface: the real <Transition> (unstubbed) runs the real `@before-leave` on a real
++    // replacement, and the node that is leaving is read.
++    const w = mount(MarginNote, {
++      props: { text: "one", seq: 1 },
++      global: { stubs: { transition: false } },
++      attachTo: document.body,
++    });
++    await nextTick();
++    const leaving = (w.element as HTMLElement).querySelector(
++      ".margin-note-ink",
++    ) as HTMLElement | null;
++    expect(leaving).not.toBeNull();
++    // Before the leave, the ink carries no inline clock: the write below is the hook's.
++    expect(leaving!.style.getPropertyValue("transition")).toBe("");
++    await w.setProps({ text: "two", seq: 2 });
++    await nextTick();
++    const clock = leaving!.style;
++    expect(
++      `${clock.getPropertyValue("transition")}|${clock.getPropertyPriority("transition")}`,
++    ).toBe("none|important");
++    w.unmount();
++  });
++
++  it("G4 (static half): PRM is answered at the site, both verbs and the settle", () => {
++    const prm = /@media \(prefers-reduced-motion: reduce\)\s*\{([\s\S]*?)\n\}/.exec(
++      STYLE,
++    )?.[1];
++    expect(prm).toBeTruthy();
++    expect(prm).toContain(".note-enter-active");
++    expect(prm).toContain(".note-leave-active");
++    expect(prm).toContain("animation: none");
++    expect(prm).toContain(".margin-note-ink[data-note-age]");
++  });
++
++  it("G5: THE FOLD CARRIES NO LADDER ROW — the rung MAP is §13's, key and value", () => {
++    // Re-cut twice. Pass 4 asserted a banner STRING (minting `erase: 125` stayed green); pass 5
++    // asserted the key SET, and a SET is blind to every value: retuning `whisper` to 125, `step`
++    // to 1, `rise` to 600, or SWAPPING whisper and dusk (the rub-out on 350 ms, the verb doubled)
++    // all stayed 11/11 green. The claim is the MAP: §13's banked ladder (`MOTION.rungs` in
++    // `pass5/prototype/MOT-VERB/pass5.diff`, lines 7005-7068), every key at its value, nothing
++    // else. §7 may neither mint, drop nor retune a rung. If §13 moves its own map (T9-B11's
++    // `rise`), this constant moves in §13's fold commit with it.
++    const LADDER_13 = {
++      whisper: 150,
++      leave: 200,
++      note: 250,
++      dusk: 350,
++      step: 440,
++      throw: 520,
++      rise: 520,
++    };
++    expect({ ...MOTION.rungs }).toEqual(LADDER_13);
++    // §7's own clocks are waits, not rungs, and they are exactly two.
++    expect(Object.keys(MOTION.note).sort()).toEqual([
++      "refusalHoldBeats",
++      "settleAfterBeats",
++    ]);
++    // §7's stylesheet CONSUMES `--motion-*` and DECLARES none. A declaration is `--motion-x:` at
++    // the head of a value; a consumption is `var(--motion-x)`.
++    expect(STYLE.match(/--motion-[a-z]+\s*:/g) ?? []).toEqual([]);
++    expect((STYLE.match(/var\(--motion-[a-z]+\)/g) ?? []).length).toBeGreaterThan(0);
++  });
++
++  it("G7 (row E): the publisher emits VALUES, never the registration it is guarded by", () => {
++    // The @property law's first clause. Pass 3 emitted both the registration and the values from
++    // `publishMotionRungs()`, so deleting the publisher took the TYPE with it: every rung
++    // computed to the empty string, the `animation` shorthand went invalid, `animation-name` read
++    // `none`, and the born-RED fired as row I — a mode the record never declared. The
++    // registration lives in the first static stylesheet (`assets/index.css`, `initial-value:
++    // 0ms`), so a missing publisher leaves every rung at 0ms: row E, asserted LIVE by the probe
++    // that deletes the node (vitest answers a `*.css?raw` import with the empty string).
++    //
++    // Re-cut at pass 5 to the BEHAVIOUR: run the publisher and read what it emits. The pass-4 row
++    // matched this tree's publisher text and redded on §13's, which builds the same values in a
++    // helper — a row keyed on one site's literal, redding the correct fold.
++    const doc = document.implementation.createHTMLDocument("");
++    publishMotionRungs(doc);
++    const nodes = doc.querySelectorAll("style[data-motion-rungs]");
++    expect(nodes.length).toBe(1);
++    const css = nodes[0].textContent ?? "";
++    expect(css).not.toContain("@property");
++    for (const [rung, ms] of Object.entries(MOTION.rungs))
++      expect(css).toContain(`--motion-${rung}:${ms}ms`);
++  });
++
++  it("EVERY note carries an age, fresh or settled, never a null", () => {
++    // One selector reads both ages (the site's PRM arm); a null left the fresh line outside it.
++    expect(MARGIN_NOTE_SRC).toContain(`:data-note-age="settled ? 'settled' : 'fresh'"`);
++    expect(MARGIN_NOTE_SRC).not.toContain("settled ? 'settled' : null");
++  });
++
++  it("the strip's reserve is DERIVED from the line it reserves, at every width", () => {
++    // `1.3em` was 1.3 of the BLOCK's inherited 16px while the voice inside sets `--type-body`
++    // (clamped, 18.18px at 1280) on `--type-leading-caption` — so the reserve was right at 390
++    // by coincidence and short by 2.81px wherever the clamp had climbed, and the strip grew the
++    // first time the voice spoke. The floor is the two tokens the voice itself reads.
++    const block = /\.margin-note-block\s*\{([^}]*)\}/.exec(STYLE)?.[1] ?? "";
++    expect(block.replace(/\s+/g, " ")).toContain(
++      "min-height: calc(var(--type-body) * var(--type-leading-caption))",
++    );
++  });
++});
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..a4577398 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,49 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** THE DURATION LADDER (T9-W7 §13, MOT-LADDER; NOT NOTE-ERASE's) — grafted, and the SET is
++   *  §13's banked pass-4 set exactly (`pass4/prototype/MOT-VERB/pass4.diff`), so the fold deletes
++   *  this block and takes §13's; `marginNote.motion.test.ts` G5 reds on any other key set.
++   *  Rungs named for how a length FEELS and never for who spends it, so a site
++   *  reads as a sentence: `animation: ink-rub-out var(--motion-whisper) var(--ease-accelIn)`.
++   *
++   *  This is the home, and it is §13's home: §7 CONSUMES three rungs (`note`, `whisper`,
++   *  `dusk`) and mints none. `publishMotionRungs()` emits the CSS copy (one `<style>` node),
++   *  never a hand-typed `:root` block. Chair §6.5: consumers write `var(--x)` with NO
++   *  fallback, and `assets/index.css` REGISTERS each rung at `initial-value: 0ms` — statically,
++   *  never from this publisher — so an absent publisher reads every rung as instant and the
++   *  drop-clock row in `e2e/affordances.spec.ts` reds on the 0s rub-out rather than shipping a
++   *  silent no-op. `beatMs` above is a CADENCE, not a
++   *  rung: a clock quantizes to beats, a verb reads a rung. */
++  rungs: {
++    /** 150 — the estate's most-used length; the note's rub-out (T9-W7 §7). */
++    whisper: 150,
++    /** 200 — chrome leaving the page. */
++    leave: 200,
++    /** 250 — the note-write family, the incumbent margin write-in. */
++    note: 250,
++    /** 350 — the theme turn, and any colour step that is not a cut. */
++    dusk: 350,
++    /** 440 — the card step (RATIFY-ME T4-W12 row 4, auditioned 380/440/520). */
++    step: 440,
++    /** 520 — the board fold and the drawer glide (R6 standing ruling 1). */
++    throw: 520,
++    /** 520 — the dock sheet's own clock at ruling 1's value (T9-B11: 520 vs 600, the owner's). */
++    rise: 520,
++  },
++  /** THE MARGIN NOTE'S CLOCKS (T9-W7 §7), in beats of `beatMs` — cadences, not verbs. The
++   *  note's three VERBS are rungs above (write-in `note`, rub-out `whisper`, settle `dusk`);
++   *  what lives here is only the two waits, because a wait is a cadence and quantizes.
++   *
++   *  RATIFY-ME (T9-W7 §7 ballot): `refusalHoldBeats`, band 24–40, both ends derived —
++   *  `writeIn + notice + words × msPerWord` at 180 wpm gives 2,582ms (24 beats) and at 90 wpm
++   *  4,918ms (40 beats), quantized to the 8-beat settle grid. The owner's eye settles it. */
++  note: {
++    /** 1000ms after a graphite note arrives it stops being the loudest ink on the page. */
++    settleAfterBeats: 8,
++    /** 3000ms from the LAST refusal, then the line is rubbed out. */
++    refusalHoldBeats: 24,
++  },
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+@@ -194,6 +237,41 @@ export const MOTION = {
+   },
+ } as const;
+ 
++/**
++ * Publish the ladder to CSS — ONE `<style>` node, emitted, never typed (T9-W7 §13, MOT-LADDER).
++ *
++ * §13's row, grafted here so §7's bare reads have a publisher in this tree; it folds with §13,
++ * not with §7. The rungs live in TS; a stylesheet that hand-copied them would be a second home,
++ * and the pair drifts. The reduced-motion arm is emitted BESIDE them, so PRM is a VALUE of the
++ * ladder rather than a rule scattered across the estate — and no `!important`, no inline style
++ * on `<html>`, `:root` still owned by CSS.
++ *
++ * THE REGISTRATION IS THE FENCE, AND IT IS NOT EMITTED HERE (chair §6.5, the @property law's
++ * first clause — pass 4). `@property --motion-*` is declared in the first STATIC stylesheet
++ * (`assets/index.css`, one block of seven at `initial-value: 0ms`); this function emits only the
++ * VALUES. A registration riding its own publisher is no fence at all: delete the publisher and
++ * the type goes with it, every rung computes to the empty string, the `animation` shorthand is
++ * invalid and `animation-name` reads `none` — the verb never runs and the record carries a mode
++ * nobody declared (pass 3 measured exactly that, row I). With the registration static, a missing
++ * publisher leaves every rung at 0ms: the verb runs instantly, the note vanishes on one frame,
++ * and gate 7 reads the declared failure (row E). Consumers write `var(--motion-<rung>)` BARE; a
++ * byte-equal fallback would make the same deletion invisible, which is why the fallbacks are
++ * struck.
++ */
++export function publishMotionRungs(doc: Document = document): void {
++  if (doc.querySelector("style[data-motion-rungs]")) return;
++  const names = Object.keys(MOTION.rungs);
++  const decls = Object.entries(MOTION.rungs)
++    .map(([name, ms]) => `--motion-${name}:${ms}ms`)
++    .join(";");
++  const zeroed = names.map((name) => `--motion-${name}:0ms`).join(";");
++  const style = doc.createElement("style");
++  style.setAttribute("data-motion-rungs", "");
++  style.textContent =
++    `:root{${decls}}` + `@media (prefers-reduced-motion: reduce){:root{${zeroed}}}`;
++  doc.head.appendChild(style);
++}
++
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+  *  `intervalMs` vocabulary (FilterTuner mutates them live); the beat grid is
+  *  applied at the consumer. */
+diff --git a/web/frontend/src/pencil/types.ts b/web/frontend/src/pencil/types.ts
+index 88fa8ec5..317bb478 100644
+--- a/web/frontend/src/pencil/types.ts
++++ b/web/frontend/src/pencil/types.ts
+@@ -1 +1,18 @@
+ export type AnimationState = "hidden" | "drawing" | "drawn" | "erasing";
++
++/**
++ * WHAT KIND OF LINE THE MARGIN IS SAYING (T9-W7 §7).
++ *
++ * How a note ages is decided by what it IS, never by the colour it wears: `tone` was standing
++ * in for the kind, and the proxy broke the moment a graphite line needed to age differently
++ * from another graphite line.
++ *
++ *   record — the hint's reasoning; settles eight beats in and waits for an act.
++ *   state  — a receipt ("the board is clear", "still solving…"); settles the same way.
++ *   grade  — a verdict (solved, the conflict); NEVER settles: a grade you can barely read
++ *            is a grade you doubt, and the quiet rung puts teacher-red at 3.03:1.
++ *   reply  — the refusal; answers one keystroke, never settles, and LEAVES when the act it
++ *            answered is over (the one clock in the family).
++ *   empty  — the strip standing down.
++ */
++export type MarginKind = "record" | "state" | "grade" | "reply" | "empty";

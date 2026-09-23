@@ -1,0 +1,104 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/law-probe.mjs	2026-09-23 06:48:37
++++ law-probe.PROPOSED.mjs	2026-09-23 09:31:09
+@@ -16,7 +16,9 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ 
+-const FE = path.join(import.meta.dirname, "../../../../../../../../web/frontend");
++// `LAW_FE` re-points the read (a lane runs the probe on its tree, the control and a sibling's
++// tree); the relative default is r0's own depth.
++const FE = process.env.LAW_FE || path.join(import.meta.dirname, "../../../../../../../../web/frontend");
+ const read = (rel) => fs.readFileSync(path.join(FE, rel), "utf8");
+ 
+ const rows = [];
+@@ -125,15 +127,84 @@
+ 
+ law(
+   "L6",
+-  "the per-player ink is a formula, not a palette: hue = i × 137.5° at a banded lightness",
+-  "playerIdentity.ts inkFor, index.css --peer-ink-l, T6 mark 13",
++  "the per-player ink is a FORMULA, not a palette: a golden step over the arcs index.css has " +
++    "not spent, at the largest chroma sRGB holds at both bands; and every ring ARM index.css " +
++    "publishes paints at the section's pair (registry-v4 §2.4, registry-v5 §2.4: OKLab L 0.295 " +
++    "light / 0.79 dark)",
++  "playerIdentity.ts inkFor/chromaAt/RESERVED_ARCS/DIGIT_BANDS/RING_BANDS, index.css ring arms, T6 mark 13, registry-v5 §2.4, pass6/CHAIR-RULINGS §1.4",
+   "GREEN",
+   () => {
++    // MOVED (T9-W7 pass 2). The r0 row asserted the LITERALS `137.5` and `0.11`: a palette test
++    // wearing a formula's name. The law is that the ink is COMPUTED and no hex is minted for a
++    // player — a step, a gamut-derived chroma, a two-arm band, no hex in the module.
+     const p = read("src/games/shared/playerIdentity.ts");
+-    const css = read("src/assets/index.css");
+-    const walk = /137\.5/.test(p) && /0\.11/.test(p);
+-    const band = (css.match(/--peer-ink-l:/g) ?? []).length;
+-    return { ok: walk && band === 2, detail: `golden-angle walk: ${walk}; --peer-ink-l arms: ${band}` };
++    const css = read("src/assets/index.css").replace(/\/\*[\s\S]*?\*\//g, "");
++    const step = /const STEP\s*=/.test(p) && /Math\.sqrt\(5\)/.test(p);
++    const gamut = /function chromaAt/.test(p) && /inGamut/.test(p);
++    const arcs = /RESERVED_ARCS/.test(p);
++    const hexes = (p.match(/#[0-9a-fA-F]{6}\b/g) ?? []).length;
++    const formula = step && gamut && arcs && hexes === 0;
++    // THE PAIR, READ OFF THE ARMS (pass 6 — PAL-TIN's critic: a probe that greps a gate's
++    // constant certifies the gate's sentence, not the paint). Every ring arm the sheet publishes
++    // is found PER THEME BLOCK and its OKLab L COMPUTED: a `--peer-ring-l` number is an L; a
++    // `--color-peer-*ring*` / `--color-peer-cursor-ink` colour (hex, `rgb()`, `oklch()`) is
++    // converted. Palette-agnostic on purpose — the walk publishes a band, five sticks publish
++    // colours, and both are held to the one pair. No arm at all in a theme is RED.
++    const blocks = (sel) => {
++      const out = [];
++      const re = new RegExp(`(^|[}\\s])${sel}\\s*\\{`, "g");
++      for (const m of css.matchAll(re)) {
++        let d = 0;
++        const at = m.index + m[0].length - 1;
++        for (let k = at; k < css.length; k++) {
++          if (css[k] === "{") d++;
++          else if (css[k] === "}" && --d === 0) {
++            out.push(css.slice(at + 1, k));
++            break;
++          }
++        }
++      }
++      return out.join("\n");
++    };
++    const lin = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
++    const okL = ([r, g, b]) => {
++      const [R, G, B] = [r, g, b].map((v) => lin(v / 255));
++      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
++      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
++      const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++      return 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
++    };
++    const lOf = (v) => {
++      let m;
++      if ((m = /^([\d.]+)$/.exec(v))) return Number(m[1]);
++      if ((m = /^oklch\(\s*([\d.]+)(%?)/.exec(v))) return Number(m[1]) / (m[2] ? 100 : 1);
++      if ((m = /^#([0-9a-f]{3,8})$/i.exec(v))) {
++        const x = m[1].length <= 4 ? [...m[1]].map((c) => c + c).join("") : m[1];
++        return okL([0, 2, 4].map((k) => parseInt(x.slice(k, k + 2), 16)));
++      }
++      if ((m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v))) return okL([m[1], m[2], m[3]].map(Number));
++      return NaN; // an alias or a mix is not a lightness anyone can hold — RED below
++    };
++    const PAIR = { light: 0.295, dark: 0.79 };
++    const TOL = 0.005; // a hex rounds OKLab L by ≤ 0.002
++    const RING_ARM = /(--peer-ring-l|--color-peer-[\w-]*ring[\w-]*|--color-peer-cursor-ink)\s*:\s*([^;]+);/g;
++    const read6 = [];
++    let pair = true;
++    // The light arm is Tailwind's `@theme` (compiled onto `:root`) and any bare `:root`; the dark
++    // arm is `.dark`. `@media print` never matches either selector.
++    const light = `${blocks("@theme")}\n${blocks(":root")}`;
++    for (const [theme, text] of [["light", light], ["dark", blocks("\\.dark")]]) {
++      const arms = [...text.matchAll(RING_ARM)].map((m) => [m[1], m[2].trim(), lOf(m[2].trim())]);
++      if (!arms.length) pair = false;
++      for (const [t, v, L] of arms) if (!(Math.abs(L - PAIR[theme]) <= TOL)) pair = false;
++      read6.push(
++        `${theme} ${arms.length ? arms.map(([t, , L]) => `${t} L ${Number.isFinite(L) ? L.toFixed(3) : "unreadable"}`).join(", ") : "NO ring arm"}`,
++      );
++    }
++    return {
++      ok: formula && pair,
++      detail: `formula: ${formula} (step ${step}; gamut chroma ${gamut}; arcs ${arcs}; hex literals ${hexes}); ring arms at the pair ${PAIR.light}/${PAIR.dark}: ${pair} — ${read6.join(" · ")}`,
++    };
+   },
+ );
+ 

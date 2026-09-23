@@ -1,0 +1,32 @@
+
+Running 1 test using 1 worker
+
+G10 webkit clock 60 Hz shim (negative control): measured 58.8 Hz over 486 gaps (precondition ≥ 93.75 Hz) · deal HARD ×1, tally inked 5 · .progress-trace nodes 4
+G10 webkit gauge: 52 d records, 13 frames (4.00 d/frame; by burst 4.00), 1 bursts, worst 55.0/s
+G10 webkit tally: 348 d records, 32 frames (10.88 d/frame; by burst 10.88), 1 bursts, worst 45.4/s
+G10 webkit join: 100 d records, 25 frames (4.00 d/frame; by burst 4.00), 1 bursts, worst 47.9/s
+  ✘  1 [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (9.4s)
+
+
+  1) [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Error: the animation clock ran at 58.8 Hz; a rate row needs ≥ 93.75 Hz to see its budget
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 93.75
+    Received:    58.8235294117647
+
+      175 |   // the clock first: a row whose clock cannot exceed its budget cannot see the budget broken
+      176 |   if (PRECOND)
+    > 177 |     expect(hz.hz, `the animation clock ran at ${hz.hz.toFixed(1)} Hz; a rate row needs ≥ ${MIN_CLOCK_HZ} Hz to see its budget`).toBeGreaterThanOrEqual(MIN_CLOCK_HZ);
+          |                                                                                                                                 ^
+      178 |   // the interleave second: one tally draw-in must have drawn several strokes in the same frames
+      179 |   expect(tallyBestDPerFrame, `the tally never drew two strokes at once (best draw-in ${tallyBestDPerFrame.toFixed(2)} d/frame ≤ 4; inked ${inked} after ${deals} deals)`).toBeGreaterThan(4);
+      180 |   for (const k of Object.keys(CONSUMERS))
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/front-rate.spec.ts:177:129
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6p6-pw-out/front-rate-G10-every-poseF-0feec-at-most-62-5-times-a-second-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 

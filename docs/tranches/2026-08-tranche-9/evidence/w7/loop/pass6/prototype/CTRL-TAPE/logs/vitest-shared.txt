@@ -1,0 +1,40 @@
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend
+ ❯ src/games/shared/GameControlPanel.test.ts (34 tests | 2 failed) 1633ms
+     × fine: the row keeps its verb in every state — the tape is the one voice 43ms
+     × fine: the name never contradicts the label the reader can see 36ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > fine: the row keeps its verb in every state — the tape is the one voice
+AssertionError: expected 'copied!' to be 'Share' // Object.is equality
+Expected: "Share"
+Received: "copied!"
+ ❯ src/games/shared/GameControlPanel.test.ts:574:61
+    572|
+    573|   it("fine: the row keeps its verb in every state — the tape is the on…
+    574|     expect(await pressShare(mountPanel({ mobile: false }))).toBe("Shar…
+       |                                                             ^
+    575|     expect(await pressShare(mountPanel({ mobile: false, share: DENIED …
+    576|       "Share",
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+ FAIL  src/games/shared/GameControlPanel.test.ts > the copy acts — the sublabel flips on the coarse surfaces alone > fine: the name never contradicts the label the reader can see
+AssertionError: expected { name: 'Link copied', …(1) } to deeply equal { name: 'Share board link', …(1) }
+- Expected
++ Received
+  {
+-   "label": "Share",
+-   "name": "Share board link",
++   "label": "copied!",
++   "name": "Link copied",
+  }
+ ❯ src/games/shared/GameControlPanel.test.ts:604:30
+    602|     const ok = mountPanel({ mobile: false });
+    603|     await pressShare(ok);
+    604|     expect(nameAndLabel(ok)).toEqual({ name: "Share board link", label…
+       |                              ^
+    605|
+    606|     const denied = mountPanel({ mobile: false, share: DENIED });
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+ Test Files  1 failed | 33 passed (34)
+      Tests  2 failed | 427 passed (429)
+   Start at  12:02:51
+   Duration  6.92s (transform 22.02s, setup 1.12s, import 27.59s, tests 7.78s, environment 53.37s)
+EXIT 1

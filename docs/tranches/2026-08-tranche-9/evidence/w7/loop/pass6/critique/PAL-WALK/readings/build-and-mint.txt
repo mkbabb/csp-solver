@@ -1,0 +1,10 @@
+# build identity (critic's replica = git archive 74a2b5d9 + the tree's git diff --binary (sha1 83bed113…, 84,569 B) + its 2 untracked; diff -rq src/e2e/scripts vs the tree: IDENTICAL)
+clean build, outside the tree, private cacheDir: index-iqdYCvIZwvfI.js · 43 files  (pass 5's index-iqdYCvIZwvfI.js, 43 files: reproduces)
+pass-6 delta vs pass5.diff applied to an archive: 4 files differ (BoardHost.authors.test.ts, useSession.test.ts, e2e/peer-walk.spec.ts, scripts/check-peer-arcs.mjs); every product file cmp-equal.
+
+# the Tailwind mint clause skips public/ — a candidate there SHIPS and the gate stays green
+plant: append <i class="[--color-peer-cursor-ink:red]"></i> to public/404.html (attack copy rep4, restored sha1-equal 6cfd1445…)
+node scripts/check-peer-arcs.mjs (bare): exit 0
+
+vite build: EXIT=0 · index-CEdHn5zBavob.js (identity moved from index-iqdYCvIZwvfI.js) · the shipped CSS carries:
+index-D7qQiJYmxakR.css: …r-cursor-ink\:red\]{--color-peer-cursor-ink:red}

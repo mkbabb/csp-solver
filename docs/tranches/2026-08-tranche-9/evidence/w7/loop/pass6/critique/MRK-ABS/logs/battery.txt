@@ -1,0 +1,33 @@
+bl | node scripts/check-copy-register.mjs | exit 0
+bl | npm run -s lint:copy | exit 0
+bl | npm run -s lint:lanes | exit 2
+bl | npm run -s lint:theme-tokens | exit 0
+bl | npm run -s lint:theme-selectors | exit 0
+bl | npm run -s lint:sleep | exit 0
+bl | npm run -s lint:motion | exit 0
+bl | npm run -s lint:ink | exit 0
+bl | npm run -s test:e2e:projects | exit 0
+bl | node scripts/check-pw-projects.mjs | exit 0
+bl | npx eslint . | exit 0
+bl | npx prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/ | exit 0
+bl | node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass6/instruments/check-property-block.mjs --fe . | exit 0
+bl | env FE=. node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass6/instruments/undefined-token-census.mjs | exit 1
+bc | node scripts/check-copy-register.mjs | exit 0
+bc | npm run -s lint:copy | exit 0
+bc | npm run -s lint:lanes | exit 2
+bc | npm run -s lint:theme-tokens | exit 0
+bc | npm run -s lint:theme-selectors | exit 0
+bc | npm run -s lint:sleep | exit 0
+bc | npm run -s lint:motion | exit 0
+bc | npm run -s lint:ink | exit 0
+bc | npm run -s test:e2e:projects | exit 0
+bc | node scripts/check-pw-projects.mjs | exit 0
+bc | npx eslint . | exit 0
+bc | npx prettier --check --config .prettierrc.json src/ scripts/ ../../scripts/ ../relay/ | exit 0
+bc | node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass6/instruments/check-property-block.mjs --fe . | exit 0
+bc | env FE=. node /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass6/instruments/undefined-token-census.mjs | exit 1
+BATDONE
+bl lint:lanes (with .github) exit 0 | bc 0
+bl vue-tsc -b exit 0
+bl typecheck:e2e exit 0
+# census exit 1 = the declared STALE --refuse-dur row on both, 0 findings

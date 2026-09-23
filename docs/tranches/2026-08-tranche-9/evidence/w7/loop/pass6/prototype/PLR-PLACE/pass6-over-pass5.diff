@@ -1,0 +1,1146 @@
+diff --git a/web/frontend/e2e/player-mark.spec.ts b/web/frontend/e2e/player-mark.spec.ts
+index bf48223..4c67ac4 100644
+--- a/web/frontend/e2e/player-mark.spec.ts
++++ b/web/frontend/e2e/player-mark.spec.ts
+@@ -17,9 +17,9 @@
+  *   4  the sheet never scrolls, and the sentence, the rows and `and N more` count one population
+  *   5  the head rule is registered and its absence is visible
+  *   6  Escape has one owner while the sheet is open
+- *   7  the row budget is keyed on the band the sheet has (desk, short portrait, landscape)
+- *   8  a tap opens the mark on a coarse phone in both engines
+- *   9  both head disclosures wear a drawn edge and no CSS border
++ *   7  the row budget is keyed on the MEASURED space: the tall sheet laps a board under its rows
++ *   8  a tap opens the mark on a coarse phone in both engines, and is a look, not a look-away
++ *   9  both head disclosures PAINT a drawn edge and no CSS border
+  *  10  the deck's swatch for you is the colour the room paints you (F1's fourth surface)
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+@@ -442,31 +442,39 @@ test('Escape reaches only the open sheet, and reaches the peek when the sheet is
+ });
+ 
+ /**
+- * THE ROW BUDGET IS KEYED ON THE BAND THE SHEET HAS (pass-4 gap 4; pass-5 row 8).
++ * THE ROW BUDGET IS KEYED ON THE SPACE, MEASURED (pass-5 critic gap 1; pass-6 row 1).
+  *
+- * At `(min-height: 800px)` one pixel of desk viewport turned four names into one (pass 3). Pass 4
+- * re-keyed it on `(pointer: coarse) and (max-height: 799px)`, which fixed the desk and misfired
+- * on a coarse LANDSCAPE phone, whose board sits beside the sheet. The regime is now the short
+- * PORTRAIT band — the board under the sheet's whole width and under 800px to put both in — and
+- * each row below carries the query it replaced, evaluated live on the same page, as its control.
++ * Pass 3 keyed it on `(min-height: 800px)` (a one-pixel desk cliff), pass 4 on the pointer (a
++ * landscape misfire), pass 5 on `(orientation: portrait) and (max-height: 799px)` — which moved
++ * the cliff to 390×799/800: four rows at 390×800 lapped seven cells where one row lapped none.
++ * The sheet now compresses when, drawn tall, it would lap a board that runs under its rows. Each
++ * row reads the cells the sheet actually covers, and carries the retired query, evaluated live on
++ * the same page, as the witness of why the old key drew the wrong budget there.
+  */
+-const REGIME = '(orientation: portrait) and (max-height: 799px)';
+ const PASS3 = '(min-height: 800px)';
+-const PASS4 = '(pointer: coarse) and (max-height: 799px)';
++const PASS5 = '(orientation: portrait) and (max-height: 799px)';
+ 
+ async function drawSheet(page: Page) {
+   if ((await mark(page).getAttribute('aria-expanded')) !== 'true') await mark(page).click();
+   await openSheet(page);
+   return lobby(page).evaluate(
+-    (el, q) => ({
+-      rows: el.querySelectorAll('.pl-row').length,
+-      more: el.querySelector('.pl-more')?.textContent?.trim() ?? '',
+-      bottom: +el.getBoundingClientRect().bottom.toFixed(1),
+-      regime: matchMedia(q.REGIME).matches,
+-      pass3: matchMedia(q.PASS3).matches,
+-      pass4: matchMedia(q.PASS4).matches,
+-    }),
+-    { REGIME, PASS3, PASS4 },
++    (el, q) => {
++      const s = el.getBoundingClientRect();
++      const lapped = [...document.querySelectorAll('.sudoku-cell')]
++        .map((c) => c.getBoundingClientRect())
++        .filter(
++          (c) =>
++            c.width > 0 && c.left < s.right && c.right > s.left && c.top < s.bottom && c.bottom > s.top,
++        ).length;
++      return {
++        rows: el.querySelectorAll('.pl-row').length,
++        more: el.querySelector('.pl-more')?.textContent?.trim() ?? '',
++        lapped,
++        pass3: matchMedia(q.PASS3).matches,
++        pass5: matchMedia(q.PASS5).matches,
++      };
++    },
++    { PASS3, PASS5 },
+   );
+ }
+ 
+@@ -482,140 +490,226 @@ test('the desk draws the same rows at 800 and at 799, and the pass-3 query is wh
+   const tall = await drawSheet(page);
+   await page.setViewportSize({ width: 1280, height: 799 });
+   await expect.poll(() => page.evaluate(() => innerHeight)).toBe(799);
++  await mark(page).click();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   const short = await drawSheet(page);
++  // The desk's corner lap is CH-71's ratified pose: the board is BESIDE the rows' start.
+   expect(tall.rows).toBe(4);
+   expect(tall.more).toBe('and 3 more');
+   // THE ROW: one pixel of desk viewport moves nothing.
+   expect(short.rows).toBe(tall.rows);
+   expect(short.more).toBe(tall.more);
+-  expect(short.regime).toBe(false);
+   // THE NEGATIVE CONTROL: the query pass 3 keyed on DID flip across that pixel.
+   expect(tall.pass3).toBe(true);
+   expect(short.pass3).toBe(false);
+ });
+ 
+-test('a short portrait phone compresses and a coarse landscape phone does not', async ({
++test('a portrait phone compresses exactly where four rows would lap the board', async ({
+   browser,
+ }) => {
+-  // THE SHORT BAND: 390×664, coarse, seven at the table — the board runs under the sheet.
+-  const p = await coarsePage(browser, 390, 664);
+-  await invite(p.page);
+-  await crowd(p.page, 6, 'band-spec');
+-  const portrait = await drawSheet(p.page);
+-  expect(portrait.regime).toBe(true);
+-  expect(portrait.rows).toBe(1);
+-  expect(portrait.more).toBe('and 6 more');
+-  await p.ctx.close();
+-
+-  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board sits BESIDE the sheet, so the tall budget.
+-  const l = await coarsePage(browser, 844, 390);
+-  await invite(l.page);
+-  await crowd(l.page, 6, 'band-spec');
+-  const landscape = await drawSheet(l.page);
+-  expect(landscape.regime).toBe(false);
+-  expect(landscape.rows).toBe(4);
+-  expect(landscape.more).toBe('and 3 more');
+-  // THE NEGATIVE CONTROL: the pass-4 key reads TRUE here, and it drew one row.
+-  expect(landscape.pass4).toBe(true);
+-  await l.ctx.close();
++  const cell = async (w: number, h: number, long = false) => {
++    const p = await coarsePage(browser, w, h);
++    await invite(p.page);
++    if (long) {
++      // `long-66737` slugs to `straightforward-tyrannosaurus`, 29 characters, the longest pair
++      // the dictionaries make. 21s on, every peer is QUIET, so its row carries a qualifier too.
++      await p.page.evaluate((room) => {
++        const ch = new BroadcastChannel(`board:${room}`);
++        for (const id of ['long-66737', 'q-1', 'q-2', 'q-3', 'q-4', 'q-5'])
++          ch.postMessage({ kind: 'hi', data: {}, from: id });
++        setTimeout(() => ch.close(), 0);
++      }, new URL(p.page.url()).searchParams.get('s')!);
++      await expect(p.page.locator('.players-roster .player-row')).toHaveCount(7);
++      await expect(p.page.locator('.players-roster')).toContainText('straightforward-tyrannosaurus');
++      await p.page.clock.setSystemTime(new Date(Date.now() + 21000));
++    } else await crowd(p.page, 6, `band-${w}x${h}`);
++    const r = await drawSheet(p.page);
++    await p.ctx.close();
++    return r;
++  };
++  // THE CLIFF, BOTH SIDES OF IT. At 390×800 and 360×800 the board's top sits above the tall
++  // sheet's bottom: one row, nothing lapped. The pass-5 key read FALSE there and drew four rows
++  // over seven cells — the witness is the query itself, evaluated on the same page.
++  for (const [w, h] of [
++    [390, 800],
++    [360, 800],
++    [390, 799],
++  ] as const) {
++    const r = await cell(w, h);
++    expect(r, `${w}x${h}`).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
++    if (h === 800) expect(r.pass5, `${w}x${h} pass-5 key`).toBe(false);
++  }
++  // A tall phone keeps four rows and laps nothing...
++  expect(await cell(390, 844)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 0 });
++  // ...until its rows WRAP: the longest slug, quiet, takes two lines (a row-count law would
++  // miss it; the tall sheet measures 212.13 tall at 390×1000). The same phone compresses.
++  expect(await cell(390, 844, true)).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
++  // A short phone laps whatever it does with one row: the least the sheet can hold.
++  expect(await cell(390, 664)).toMatchObject({ rows: 1, more: 'and 6 more' });
++  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board is BESIDE the rows' start, so four rows,
++  // and the price is stated, not denied: six cells lapped where one row would lap four.
++  expect(await cell(844, 390)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 6 });
+ });
+ 
+ /**
+- * A TAP OPENS THE MARK (PLR-PLACE pass 4, grafted back; pass-5 row 2). `@pointerdown.prevent`
+- * for every pointer cancelled a WebKit tap's click, so the mark never opened on a tapped phone.
+- * The pass-4 seam is planted in-run as the negative control: under it WebKit stays shut and
+- * Chromium opens regardless — which is why the row reads the engine it runs in.
++ * A TAP OPENS THE MARK, AND A TAP IS A LOOK (PLR-PLACE's seam; `TAP_IS_A_LOOK`, arm (b)).
++ * `@pointerdown.prevent` for every pointer cancelled a WebKit tap's click (pass 4), so the sheet
++ * toggles on the touch's own `pointerup`; and because the touch is prevented, the cell you were
++ * writing in keeps focus and the room hears nothing — as for a mouse press (row 2). The negative
++ * control swallows that `pointerup` in-run: the mark then stays shut in BOTH engines, which is
++ * what proves the open is the release's and not a click's.
+  */
+-test('a tap opens the mark on a coarse phone, and the pass-4 seam is why it did not', async ({
++test('a tap opens the mark on a coarse phone, keeps the cell, and tells the room nothing', async ({
+   browser,
+-}, info) => {
++}) => {
+   const { ctx, page } = await coarsePage(browser, 390, 844);
+   await invite(page);
+-  const plant = () =>
+-    page.evaluate(() => {
+-      const m = [...document.querySelectorAll('[data-player-mark]')].find(
+-        (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
+-      )!;
+-      const cancel = (e: Event) => e.preventDefault();
+-      m.addEventListener('pointerdown', cancel, { capture: true });
+-      (window as any).__unplant = () =>
+-        m.removeEventListener('pointerdown', cancel, { capture: true });
+-    });
++  await page.evaluate(() => {
++    const room = new URL(location.href).searchParams.get('s')!;
++    const seen: unknown[] = [];
++    (window as any).__frames = seen;
++    const ch = new BroadcastChannel(`board:${room}`);
++    ch.onmessage = (e: MessageEvent) => seen.push(e.data);
++  });
++  const curs = () =>
++    page.evaluate(
++      () =>
++        ((window as any).__frames as { kind?: string }[]).filter((f) => f?.kind === 'cur').length,
++    );
++  await page.locator('.sudoku-cell input').first().tap();
++  await expect.poll(curs).toBeGreaterThan(0);
++  await expect.poll(() => inCell(page)).toBe(true);
+ 
+-  // THE NEGATIVE CONTROL.
+-  await plant();
++  // THE NEGATIVE CONTROL: the release swallowed, the mark stays shut in both engines.
++  await page.evaluate(() => {
++    const m = [...document.querySelectorAll('[data-player-mark]')].find(
++      (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
++    )!;
++    const swallow = (e: Event) => e.stopImmediatePropagation();
++    m.addEventListener('pointerup', swallow, { capture: true });
++    (window as any).__unplant = () =>
++      m.removeEventListener('pointerup', swallow, { capture: true });
++  });
+   await mark(page).tap();
+-  const planted = info.project.name === 'webkit' ? 'false' : 'true';
+-  await expect(mark(page)).toHaveAttribute('aria-expanded', planted);
+-  if (planted === 'true') {
+-    await mark(page).tap();
+-    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+-  }
++  await stable(() => mark(page).getAttribute('aria-expanded'));
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   await page.evaluate(() => (window as any).__unplant());
+ 
+-  // THE ROW: the built mark opens on a tap, both engines.
++  // THE ROW.
++  await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
+   await mark(page).tap();
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'true');
++  // sleep-ok: an ABSENCE has no event to poll — a look-away reaches the wire CUR_MS (120ms) after
++  // the cell lets go, so a 500ms window with nothing in it is the measurement, not a settle.
++  await page.waitForTimeout(500);
++  expect(await curs()).toBe(0);
++  expect(await inCell(page)).toBe(true);
++  // A second tap shuts it, once (Chromium's click for the touch is not a second toggle).
++  await mark(page).tap();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   await ctx.close();
+ });
+ 
+ /**
+- * BOTH HEAD DISCLOSURES WEAR A DRAWN EDGE AND NO CSS BORDER (R6 L5; CH-71: a pose decision for
+- * both at once). `HeadSheet` is the one pose. The reading is the computed border on all four
+- * sides plus the frame's painted path inside the sheet; the negative control plants the pass-4
+- * `border: 2px solid` on each sheet in the same run and the same reading goes red on it.
++ * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE AND NO CSS BORDER (R6 L5; CH-71; pass-5 critic
++ * gap 3). A rect and a computed stroke are not paint: an `opacity: 0` edge (X1) and an inkless
++ * one (X2) both passed the pass-5 row. The row now photographs the sheet's top band twice —
++ * edge ON, then edge OFF (`visibility: hidden` on the edge layer) — and counts the columns
++ * whose best contrast against the sheet's own ground rises by half again when the edge is on.
++ * That is an EXISTENCE reading, so it holds for either edge ink the owner is shown (full:
++ * ~16:1, quiet: ~4.7:1, off: 1.00); the edge's contrast is a number in the record, not this
++ * row's. X1 and X2 are planted in the same run and must drive the count to zero; the pass-4
++ * border, planted, must read on the computed box.
+  */
+-test('both head disclosures are framed by a drawn edge and paint no CSS border', async ({
+-  page,
+-}) => {
++async function edgePaint(page: Page, sel: string) {
++  const sheet = page.locator(`${sel}:visible`).first();
++  const box = (await sheet.boundingBox())!;
++  const clip = { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width), height: 14 };
++  const shoot = async () => (await page.screenshot({ clip })).toString('base64');
++  const on = await shoot();
++  const off = await page.addStyleTag({ content: '.head-sheet-edge { visibility: hidden !important; }' });
++  const bare = await shoot();
++  await off.evaluate((e) => (e as Element).remove());
++  return page.evaluate(
++    async ({ on, bare }) => {
++      const read = async (b64: string) => {
++        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++        const c = document.createElement('canvas');
++        c.width = bmp.width;
++        c.height = bmp.height;
++        const x = c.getContext('2d')!;
++        x.drawImage(bmp, 0, 0);
++        return x.getImageData(0, 0, c.width, c.height);
++      };
++      const lum = (d: Uint8ClampedArray, i: number) => {
++        const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
++        return 0.2126 * f(d[i]) + 0.7152 * f(d[i + 1]) + 0.0722 * f(d[i + 2]);
++      };
++      const [a, b] = [await read(on), await read(bare)];
++      const best = (img: ImageData, x: number) => {
++        const g = lum(img.data, (10 * img.width + x) * 4);
++        let r = 1;
++        for (let y = 0; y < 5; y++) {
++          const l = lum(img.data, (y * img.width + x) * 4);
++          r = Math.max(r, (Math.max(l, g) + 0.05) / (Math.min(l, g) + 0.05));
++        }
++        return r;
++      };
++      const x0 = Math.floor(a.width * 0.2);
++      const x1 = Math.floor(a.width * 0.8);
++      let drawn = 0;
++      for (let x = x0; x < x1; x++) if (best(a, x) >= 1.5 * best(b, x)) drawn++;
++      return drawn / (x1 - x0);
++    },
++    { on, bare },
++  );
++}
++const border = (page: Page, sel: string) =>
++  page.locator(`${sel}:visible`).first().evaluate((el) => {
++    const cs = getComputedStyle(el);
++    return ['top', 'right', 'bottom', 'left'].reduce(
++      (n, s) =>
++        n + (cs.getPropertyValue(`border-${s}-style`) === 'none' ? 0 : parseFloat(cs.getPropertyValue(`border-${s}-width`))),
++      0,
++    );
++  });
++
++test('both head disclosures paint a drawn edge and no CSS border', async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 800 });
+   await page.goto(SOLO);
+   await settled(page);
+-  const edge = (sel: string) =>
+-    page.evaluate((sel) => {
+-      const el = [...document.querySelectorAll<HTMLElement>(sel)].find(
+-        (e) => e.getBoundingClientRect().width > 0,
+-      )!;
+-      const cs = getComputedStyle(el);
+-      const border = ['Top', 'Right', 'Bottom', 'Left'].reduce(
+-        (n, s) => n + parseFloat(cs.getPropertyValue(`border-${s.toLowerCase()}-width`)) *
+-          (cs.getPropertyValue(`border-${s.toLowerCase()}-style`) === 'none' ? 0 : 1),
+-        0,
+-      );
+-      const path = [...el.querySelectorAll<SVGPathElement>('.head-sheet-edge .outline-svg path')].find(
+-        (p) => p.getBoundingClientRect().width > 0,
+-      );
+-      const box = el.getBoundingClientRect();
+-      const pb = path?.getBoundingClientRect();
+-      return {
+-        border,
+-        drawn: !!path && getComputedStyle(path).stroke !== 'none',
+-        // the frame hugs its sheet: within 3px on every side
+-        hugs: !!pb && Math.max(
+-          Math.abs(pb.left - box.left), Math.abs(pb.top - box.top),
+-          Math.abs(pb.right - box.right), Math.abs(pb.bottom - box.bottom),
+-        ) <= 3,
+-      };
+-    }, sel);
+ 
+   // The lobby, open. (Solo: one person, one row, the sheet still draws.)
+   await mark(page).click();
+   await openSheet(page);
+-  expect(await edge('[data-lobby]')).toEqual({ border: 0, drawn: true, hugs: true });
++  expect(await border(page, '[data-lobby]')).toBe(0);
++  expect(await edgePaint(page, '[data-lobby]')).toBeGreaterThan(0.9);
+   await page.keyboard.press('Escape');
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+ 
+-  // The @mbabb card, open by its own hover (a fine pointer's disclosure; a click would toggle
+-  // the hover's open back shut).
++  // The @mbabb card, open by its own hover (a click would toggle the hover's open back shut).
+   await page.locator('.corner-left .attribution-trigger').hover();
+-  await expect(page.locator('.corner-left .hover-card')).toHaveClass(/is-open/);
+-  expect(await edge('.hover-card')).toEqual({ border: 0, drawn: true, hugs: true });
+-
+-  // THE NEGATIVE CONTROL: the pass-4 border, planted, reads red on the same reading.
++  const card = page.locator('.corner-left .hover-card');
++  await expect(card).toHaveClass(/is-open/);
++  await stable(() => card.evaluate((e) => getComputedStyle(e).opacity + JSON.stringify(e.getBoundingClientRect())));
++  expect(await border(page, '.corner-left .hover-card')).toBe(0);
++  expect(await edgePaint(page, '.corner-left .hover-card')).toBeGreaterThan(0.9);
++
++  // THE NEGATIVE CONTROLS, same run, same reading. X1: the edge at opacity 0. X2: the edge
++  // inkless. Each paints nothing, and the count must say so.
++  for (const plant of [
++    '.head-sheet-edge { opacity: 0 !important; }',
++    '.head-sheet-edge { color: transparent !important; } .head-sheet-edge path { stroke: rgba(0, 0, 0, 0) !important; }',
++  ]) {
++    const tag = await page.addStyleTag({ content: plant });
++    expect(await edgePaint(page, '.corner-left .hover-card'), plant).toBe(0);
++    await tag.evaluate((e) => (e as Element).remove());
++  }
++  // And the pass-4 border, planted, reads on the computed box.
+   await page.addStyleTag({
+     content: `.hover-card, [data-lobby] { border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent) !important; }`,
+   });
+-  expect((await edge('.hover-card')).border).toBe(8);
++  expect(await border(page, '.corner-left .hover-card')).toBe(8);
+ });
+ 
+ /**
+diff --git a/web/frontend/e2e/player-place.spec.ts b/web/frontend/e2e/player-place.spec.ts
+index e8c9abb..f91f763 100644
+--- a/web/frontend/e2e/player-place.spec.ts
++++ b/web/frontend/e2e/player-place.spec.ts
+@@ -19,21 +19,26 @@
+  *   5  the pitch is 32/3 px a cell at 4×4, 9×9 and 16×16, every dot 8px across, unconditionally
+  *   6  each qualifier on its own peer: `you`, the silent peer's seconds, `no cell shown`, and
+  *      nothing on a peer with a dot
+- *   7  a TAP opens the mark on a coarse phone in both engines (the pass-3 seam, planted, is the
+- *      negative control: WebKit drops the tap's click), the tap lets the cell go so no tape is
+- *      left under the sheet, the sheet owns the lapped board's hit test, and one tap there
+- *      dismisses it and hits no cell
++ *   7  a TAP opens the mark on a coarse phone in both engines (the release swallowed, planted, is
++ *      the negative control: shut in both), the sheet owns the lapped board's hit test, and one
++ *      tap there dismisses it and reaches no cell under it (the tape clause is retired to 3C-4)
+  *   8  under reduce the open sheet has no transition left
+  *   9  THE HOSTAGE (pass-4 critic): three at the table, B walking at 4 steps a second, C moves
+  *      once; C's dot on A's open chart steps inside the settle window while B is still walking
+  *  10  A CLOSE IS A POSE (pass-4 critic): every visible frame of the fade still holds the chart
+  *      and the sheet's height, by Escape and by the mark; a planted unmount at the close is the
+  *      negative control in the same run
+- *  11  your ring and the room agree: after a mouse open both draw you on your cell; after a tapped
+- *      and a keyed open, both draw you on none
++ *  11  your ring and the room agree: after a mouse open and a tapped open (the seam's arm (b))
++ *      both draw you on your cell; after a keyed open, both draw you on none
+  *  12  THE THIN LAP (pass-4 critic): at 390×844 two at the table the sheet laps the board by ~4.6px,
+  *      and a tap 1–3px inside its bottom edge dismisses it and reaches no cell (it focused the cell
+  *      below, both engines, while the sheet answered no click of its own)
++ *  13  THE GHOST (pass-5 critic): three at the table, A's chart open, C's FIRST move pending when
++ *      B deals; 1.5 s on, A's chart draws nobody (the seeded arm is the in-run control)
++ *  14  BOTH SIDES OF THE EDGE (pass-5 critic, the cure's price): taps 1–3px inside the sheet's
++ *      bottom edge reach no cell in either engine; taps 4–10px below reach the cell under them in
++ *      both; taps 1–3px below reach the cell in WebKit and, in Chromium, shut the sheet and reach
++ *      nothing (touch adjustment snaps them onto the sheet that now answers taps) — pinned both ways
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+ 
+@@ -456,11 +461,11 @@ test('7 · a tapped mark opens on a coarse phone, the lap belongs to the sheet,
+   await b.keyboard.type('5');
+   await a.bringToFront();
+   await expect.poll(() => cell(a, target).inputValue(), { timeout: 10000 }).toBe('5');
+-  // THE PRECONDITION IS READ, NOT ASSUMED. The coarse tape (T9-W7 3C-4) rises on a tapped peer
+-  // digit in WebKit; in Chromium `hasTouch` it did not rise at all in pass 4, on the HEAD control
+-  // (74a2b5d9) exactly as on this tree (0 of 25 samples over 1.2 s, seven cells). That is the
+-  // fold's row, not this one; where the tape never rose, the "no tape under the sheet" clause
+-  // below is vacuous, and the annotation says so rather than the row passing silently.
++  // THE TAPE IS READ AND ANNOTATED, NOT GATED HERE. The coarse tape (T9-W7 3C-4) rises on a tapped
++  // peer digit (pass 6, this rig: tree 8/8 Chromium, 4/4 WebKit; the dev HEAD control 7/8 and 8/8).
++  // The pass-5 clause "a tap lets the cell go, so no tape is left under the sheet" is RETIRED to
++  // the fold's 3C-4 row by name: under the seam's arm (b) a tap keeps the cell, so its premise is
++  // gone, and no in-run plant could red it.
+   await cell(a, target).tap();
+   const tapeUp = await expect
+     .poll(() => a.locator('.attribution-tape').count(), { timeout: 2000 })
+@@ -469,27 +474,23 @@ test('7 · a tapped mark opens on a coarse phone, the lap belongs to the sheet,
+   info.annotations.push({ type: 'tape-before-press', description: String(tapeUp) });
+   if (info.project.name === 'webkit') expect(tapeUp, 'WebKit raises the coarse tape').toBe(true);
+ 
+-  // THE NEGATIVE CONTROL FIRST, in this run: the pass-3 seam (`pointerdown` cancelled for every
+-  // pointer) re-created by a capture listener. Under a WebKit touch it cancels the tap's click
+-  // and the mark never opens; Chromium opens regardless. The built mark must open on both.
+-  const planted = await a.evaluate(() => {
++  // THE NEGATIVE CONTROL FIRST, in this run. Under the leader's seam arm (b) the touch is
++  // prevented and the sheet toggles on the touch's own `pointerup` (the click is dropped by WebKit
++  // and ignored in Chromium), so the pass-3 seam (a prevented press, a toggle on click) is the
++  // product minus that release: swallowed here by a capture listener, the mark stays shut in BOTH
++  // engines. The built mark must open on both.
++  await a.evaluate(() => {
+     const m = [...document.querySelectorAll('[data-player-mark]')].find(
+       (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
+     )!;
+-    const plant = (e: Event) => e.preventDefault();
+-    m.addEventListener('pointerdown', plant, { capture: true });
+-    (window as any).__unplant = () => m.removeEventListener('pointerdown', plant, { capture: true });
+-    return true;
++    const swallow = (e: Event) => e.stopImmediatePropagation();
++    m.addEventListener('pointerup', swallow, { capture: true });
++    (window as any).__unplant = () => m.removeEventListener('pointerup', swallow, { capture: true });
+   });
+-  expect(planted).toBe(true);
+   await mark(a).tap();
++  // sleep-ok: an ABSENCE is the subject (the planted mark never opens); no event marks "stayed shut".
+   await a.waitForTimeout(400);
+-  const plantedOpen = await mark(a).getAttribute('aria-expanded');
+-  expect(plantedOpen, 'the pass-3 seam under a tap').toBe(info.project.name === 'webkit' ? 'false' : 'true');
+-  if (plantedOpen === 'true') {
+-    await a.touchscreen.tap(380, 650); // shut it again, off the sheet
+-    await a.waitForTimeout(300);
+-  }
++  expect(await mark(a).getAttribute('aria-expanded'), 'the release swallowed').toBe('false');
+   await a.evaluate(() => (window as any).__unplant());
+   await cell(a, target).tap();
+   // READ AGAIN, NOT ASSUMED: in pass 5 Chromium raised the tape on the first tap and not on this
+@@ -503,11 +504,11 @@ test('7 · a tapped mark opens on a coarse phone, the lap belongs to the sheet,
+ 
+   // THE BUILT MARK.
+   await mark(a).tap();
+-  await a.waitForTimeout(400);
+-  expect(await mark(a).getAttribute('aria-expanded'), 'a tap opens the sheet').toBe('true');
+-  // A tap is an honest look away: the cell lets go, and the tape it held goes with it, so there
+-  // is no tape left to paint over the sheet. VACUOUS where `tapeAgain` is false (the annotation).
+-  await expect(a.locator('.attribution-tape')).toHaveCount(0);
++  await expect(mark(a), 'a tap opens the sheet').toHaveAttribute('aria-expanded', 'true');
++  info.annotations.push({
++    type: 'tape-after-open',
++    description: String(await a.locator('.attribution-tape').count()),
++  });
+   const geo = await a.evaluate(() => {
+     const sh = document.querySelector('[data-lobby].is-open')!.getBoundingClientRect();
+     const cells = [...document.querySelectorAll('.sudoku-cell')].map((c) => c.getBoundingClientRect());
+@@ -536,13 +537,28 @@ test('7 · a tapped mark opens on a coarse phone, the lap belongs to the sheet,
+       [...document.querySelectorAll('.sudoku-cell input')].map((i) => (i as HTMLInputElement).value).join('|'),
+     );
+   const before = await values();
+-  await a.touchscreen.tap(geo.lapX, geo.lapY);
+-  await a.waitForTimeout(300);
+-  expect(await mark(a).getAttribute('aria-expanded')).toBe('false');
++  // The cell under the tap point, named before the tap (the sheet hides it from elementFromPoint).
++  // Under the seam's arm (b) the tapped cell keeps focus through the open, so the tap point steps
++  // one column right when it would land on that same cell.
++  const own = await cell(a, target).getAttribute('aria-label');
++  const cellAt = (x: number, y: number) => a.evaluate(({ x, y }) => {
++    const hit = [...document.querySelectorAll('.sudoku-cell')].find((c) => {
++      const r = c.getBoundingClientRect();
++      return x >= r.left && x < r.right && y >= r.top && y < r.bottom;
++    });
++    return hit?.querySelector('input')?.getAttribute('aria-label') ?? '';
++  }, { x, y });
++  let tapX = geo.lapX;
++  let under = await cellAt(tapX, geo.lapY);
++  if (under === own) under = await cellAt((tapX += 40), geo.lapY);
++  expect(under, 'a cell lies under the lap, and not the one you were on').toMatch(/^Row \d/);
++  expect(under).not.toBe(own);
++  await a.touchscreen.tap(tapX, geo.lapY);
++  await expect(mark(a)).toHaveAttribute('aria-expanded', 'false');
+   const after = await a.evaluate(
+     () => document.activeElement?.getAttribute('aria-label') ?? document.activeElement?.tagName,
+   );
+-  expect(after, 'the tap reached no cell').not.toMatch(/^Row \d/);
++  expect(after, 'the tap reached no cell under it').not.toBe(under);
+   expect(await values()).toBe(before);
+   await ctx.close();
+ });
+@@ -718,7 +734,7 @@ test('11 · your ring and the room agree: a mouse open on your cell, a keyed ope
+   await ctx.close();
+ });
+ 
+-test('11 · your ring and the room agree: a tapped open on a phone draws you on none', async ({
++test('11 · your ring and the room agree: a tapped open on a phone keeps you on your cell', async ({
+   browser,
+ }) => {
+   test.slow();
+@@ -731,16 +747,22 @@ test('11 · your ring and the room agree: a tapped open on a phone draws you on
+   await expect.poll(() => where(b), { timeout: 5000 }).toEqual([at9(30)]); // the room has A first
+   await mark(b).tap();
+ 
+-  // A TAP moves focus to the mark like any tap (the WebKit dead-tap cure), so the wire says `null`.
++  // THE SEAM'S ARM (b), the leader's default (`TAP_IS_A_LOOK`): a tap on the mark is a look, the
++  // touch is prevented, the cell keeps focus, and the wire keeps cell 30 — so your chart draws you
++  // there and so does the room's. Arm (a) (the pass-5 form) moved focus and drew you on none; the
++  // break battery's SEAM_A plant reds this row in both engines.
+   await a.bringToFront();
+   await mark(a).tap();
+   await expect(sheet(a)).toBeVisible();
+-  // The ring follows the wire, and the wire's `null` may sit in the CUR_MS (120 ms) trailing window
+-  // behind the refocus `bringToFront` just caused — so it is polled, never read once.
+-  await expect.poll(() => ring(a), { message: 'tapped: your ring' }).toBeNull();
++  // Polled, then HELD: the open reads the wire, and under arm (a) the wire's `null` lands a CUR_MS
++  // (120 ms) window after the open, so a ring read once at the open passes under either arm.
++  await expect.poll(() => ring(a), { message: 'tapped: your ring' }).toBe(at9(30));
++  // sleep-ok: "still there" is the subject — past the 120 ms window in which arm (a) drops the ring.
++  await a.waitForTimeout(500);
++  expect(await ring(a), 'tapped: your ring, held').toBe(at9(30));
+   await b.bringToFront();
+   await mark(b).tap();
+-  await expect.poll(() => where(b), { timeout: 5000 }).toEqual([]);
++  await expect.poll(() => where(b), { timeout: 5000 }).toEqual([at9(30)]);
+   await ctx.close();
+ });
+ 
+@@ -769,3 +791,80 @@ test('12 · a tap at the bottom edge of the sheet dismisses it and reaches no ce
+   expect(reached, 'a tap inside the sheet reached no cell').toEqual([]);
+   await ctx.close();
+ });
++
++// ── 13 · THE GHOST (pass-5 critic) ────────────────────────────────────────────────────────────
++const sig = (p: Page) =>
++  p.evaluate(() =>
++    [...document.querySelectorAll<HTMLInputElement>('.sudoku-cell input')].map((i) => i.value || '.').join(''),
++  );
++
++for (const seeded of [false, true]) {
++  test(`13 · the ghost: a deal inside C's first settle leaves A's chart empty${seeded ? ' (control: C placed at the open)' : ''}`, async ({
++    browser,
++  }) => {
++    test.slow();
++    const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
++    const [a, b, c] = await table(ctx, 3);
++    const deal = b.locator('.controls-card button[aria-label="Deal a new board"]');
++    if (seeded) {
++      await c.bringToFront();
++      await cell(c, 5).click();
++    }
++    await a.bringToFront();
++    await openSheet(a);
++    if (seeded) await expect.poll(() => dots(a).then((d) => d.length), { timeout: 5000 }).toBe(1);
++    else expect(await dots(a), 'nobody placed at the open').toEqual([]);
++    const before = await sig(a);
++    await b.bringToFront();
++    await expect(deal).toBeVisible();
++    await c.bringToFront();
++    const t0 = Date.now();
++    await cell(c, 20).click(); // C's first move since A opened: a clock on A with no settled cell
++    await b.bringToFront();
++    await deal.click();
++    await expect.poll(() => sig(a), { timeout: 10000 }).not.toBe(before);
++    // The deal must land on A INSIDE C's settle window, or the row proves nothing.
++    expect(Date.now() - t0, 'the deal landed inside the 700 ms window').toBeLessThan(700);
++    // sleep-ok: an absence past C's whole settle window IS the subject; no event marks "no dot".
++    await a.waitForTimeout(1500);
++    expect(await mark(a).getAttribute('aria-expanded'), 'A read an open chart throughout').toBe('true');
++    expect(await dots(a), 'no dot on the new board 1.5 s after the deal').toEqual([]);
++    await ctx.close();
++  });
++}
++
++// ── 14 · BOTH SIDES OF THE EDGE (pass-5 critic, the thin-lap cure's price) ─────────────────────
++test('14 · both sides of the sheet edge: inside reaches no cell, below reaches the cell, and the 1–3px band is pinned', async ({
++  browser,
++}, info) => {
++  test.slow();
++  const { ctx, pages } = await coarseTable(browser, 844);
++  const [a] = pages;
++  await a.bringToFront();
++  const read: Record<string, 'cell' | 'none'> = {};
++  for (const d of [-3, -2, -1, 1, 2, 3, 4, 6, 10]) {
++    await a.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
++    await mark(a).tap();
++    const sh = sheet(a);
++    await expect(sh).toBeVisible();
++    await expect.poll(() => sh.evaluate((e) => getComputedStyle(e).opacity)).toBe('1');
++    await stable(() => sh.evaluate((e) => Math.round(e.getBoundingClientRect().bottom * 10)));
++    const g = await sh.evaluate((e) => {
++      const top = Math.min(...[...document.querySelectorAll('.sudoku-cell')].map((c) => c.getBoundingClientRect().top));
++      return { bottom: e.getBoundingClientRect().bottom, gridTop: top };
++    });
++    expect(g.bottom, 'this arm laps the board').toBeGreaterThan(g.gridTop);
++    await a.touchscreen.tap(60, g.bottom + d);
++    await expect(mark(a)).toHaveAttribute('aria-expanded', 'false');
++    const active = await a.evaluate(() => document.activeElement?.getAttribute('aria-label') ?? '');
++    read[d < 0 ? `in ${-d}px` : `below ${d}px`] = /^Row 1,/.test(active) ? 'cell' : 'none';
++  }
++  info.annotations.push({ type: 'edge', description: JSON.stringify(read) });
++  const band = info.project.name === 'chromium' ? 'none' : 'cell';
++  expect(read).toEqual({
++    'in 3px': 'none', 'in 2px': 'none', 'in 1px': 'none',
++    'below 1px': band, 'below 2px': band, 'below 3px': band,
++    'below 4px': 'cell', 'below 6px': 'cell', 'below 10px': 'cell',
++  });
++  await ctx.close();
++});
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 102f0e0..43f5d9a 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -755,9 +755,18 @@ const markPlace = computed<PlaceInput>(() => ({
+   settleMs: PLACE_SETTLE_MS,
+ }));
+ /** THE NO ARM (U-10, the kill condition). `false` hands the mark no `place`, and the sheet is the
+- *  list alone: flipping this is the whole arm. Not exported, as `SELF_TAKES_ROOM_INK` is not. */
++ *  list alone: flipping this is the whole arm. Not exported. The chart costs the sheet +77.11px
++ *  at every cell (390×664, two at the table: 182.38 tall, laps the board 94.64 against the list's
++ *  17.53), and the mark's measured row budget cannot take it back. Every figure is a one-line
++ *  FLOOR: a row whose slug and qualifier do not fit the 256px sheet wraps, +20.79px a row (a
++ *  29-character slug with `no cell shown`, the chart's own qualifier, laps 25.44 at 390×844). */
+ const PLACE_CHART = true;
+ 
++/** The board's box, read by the mark when its sheet opens (the row budget is keyed on it). */
++const boardBox = () =>
++  document.querySelector<HTMLElement>(".board-peek-host")?.getBoundingClientRect() ??
++  null;
++
+ /** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
+  *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
+  *  game → an id-keyed one-shot the incoming `useGameState` consumes BEFORE its init, so the
+@@ -846,6 +855,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+           :quiet-after-ms="PRESENCE_QUIET_MS"
+           :quiet-ms-of="quietMsOf"
+           :place="PLACE_CHART ? markPlace : undefined"
++          :board-box="boardBox"
+         />
+       </template>
+     </AttributionCard>
+@@ -867,6 +877,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+           :quiet-after-ms="PRESENCE_QUIET_MS"
+           :quiet-ms-of="quietMsOf"
+           :place="PLACE_CHART ? markPlace : undefined"
++          :board-box="boardBox"
+         />
+       </template>
+     </AttributionCard>
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 52c0a3c..502bfc2 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -1,5 +1,11 @@
+ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+-import { wins, type Handlers, type Msg, type Wire } from "./useSession";
++import {
++  SELF_TAKES_A_HAND,
++  wins,
++  type Handlers,
++  type Msg,
++  type Wire,
++} from "./useSession";
+ import { inkFor, slugFor } from "./playerIdentity";
+ 
+ /**
+@@ -349,6 +355,23 @@ describe("ink is the room's, not the page's — `k` adoption", () => {
+     expect(inkOf("peer-3")).toEqual(inkFor(6));
+   });
+ 
++  it("F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND", async () => {
++    const p = await bootPage();
++    await p.session.joinSession("room-f1");
++    const mine = () => p.session.session.players.value.find((r) => r.self)?.ink ?? {};
++    // minted at the join (`mint`): an index of your own, or nothing
++    expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
++    // adopted from the room's `k` (`adoptInk`): the room's index for you, or nothing
++    const me = p.selfId();
++    p.hear(
++      "st",
++      stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3, k: { [me]: 4, "peer-1": 5 } }),
++      "peer-1",
++    );
++    p.peer("peer-1", true);
++    expect(mine()).toEqual(SELF_TAKES_A_HAND ? inkFor(4) : {});
++  });
++
+   it("names a peer who left before this page arrived", async () => {
+     const p = await bootPage();
+     await p.session.joinSession("room-departed");
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 232ab18..13cad6a 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -523,25 +523,21 @@ function writeSessionParam(id: string | null): void {
+ // ── Joining, leaving, and the wire itself ─────────────────────────────────────────
+ 
+ /**
+- * F1, BEHIND ONE CONST (T9-W7 §11 · PLR-SELF; chair §6.10 — both arms buildable, the owner
+- * disposes at the re-look).
++ * F1 — DOES YOUR OWN HAND TAKE THE ROOM'S COLOUR? ONE switch, one name, one home (T9-W7
++ * registry-v5 §2.8; chair §6.10 — both arms buildable, the owner disposes at the re-look).
+  *
+- * TRUE: your own id takes its index from `k` like everyone else's, so the three surfaces that
+- * draw a person — the head's mark, the lobby row, the deck's caption swatch — say the colour
+- * the ROOM says about you. FALSE: your own row binds nothing and those three surfaces keep the
+- * incumbent's graphite/blue, i.e. your page paints you one colour while every other page paints
+- * you another (the defect r0's I2 was written to name).
++ * TRUE: your own id takes its index from `k` like everyone else's, so the surfaces that draw a
++ * person — the head's mark, the lobby row, the deck's caption swatch — say the colour the ROOM
++ * says about you. FALSE: your own row binds nothing and those surfaces keep the incumbent's
++ * graphite/blue, i.e. your page paints you one colour while every other page paints you another
++ * (the defect r0's I2 was written to name).
+  *
+- * `mint` runs ONLY inside a room (`joinSession` for self, `onPeer` for everyone else), so a
+- * SOLO board binds nothing anywhere under either arm and stays byte-identical; `authorInk`
+- * skips self-authored cells by id, so the board's own digits are untouched either way. Flipping
+- * this const is the whole false arm: no other line changes.
+- *
+- * NOT EXPORTED. Nothing outside this module decides F1 — the three surfaces read `p.ink`, which
+- * is this file's answer — and an exported flag with no importer is a consumer-less substrate
+- * (`lint:knip` says so, and it did).
++ * `mint` runs ONLY inside a room (`joinSession` for self, `onPeer` for everyone else), so a SOLO
++ * board binds nothing anywhere under either arm; `authorInk` skips self-authored cells by id, so
++ * the board's own digits are untouched either way. Flipping this const is the whole false arm.
++ * Exported because the unit that holds each arm reads it (`useSession.test.ts`).
+  */
+-const SELF_TAKES_ROOM_INK = true;
++export const SELF_TAKES_A_HAND: boolean = true;
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+@@ -555,8 +551,8 @@ function mint(id: string): Omit<Player, "self"> {
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+-    // T9-W7 PLR-SELF F1, the one const above. Both arms run; the owner disposes.
+-    ink: SELF_TAKES_ROOM_INK || id !== selfId.value ? ident!.inkFor(index) : {},
++    // F1, the one const above. Both arms run; the owner disposes.
++    ink: SELF_TAKES_A_HAND || id !== selfId.value ? ident!.inkFor(index) : {},
+   };
+ }
+ 
+@@ -576,7 +572,7 @@ function adoptInk(k: Record<string, number>): void {
+     inkIndex[id] = index;
+     if (index > top) top = index;
+     // F1, as in `mint`: under the true arm your index is the room's, not a page's.
+-    const ink = SELF_TAKES_ROOM_INK || id !== selfId.value ? ident!.inkFor(index) : {};
++    const ink = SELF_TAKES_A_HAND || id !== selfId.value ? ident!.inkFor(index) : {};
+     const held = next[id];
+     if (held) {
+       next[id] = { ...held, ink };
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue b/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+index 7378002..1a137bc 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+@@ -10,25 +10,36 @@ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+  *
+  * THE EDGE IS DRAWN, NEVER A CSS BORDER (R6 L5: one box grammar). Both sheets wore
+  * `border: 2px solid` at 30% of `--color-border`; the edge is now the wells' own frame
+- * (`HandDrawnOutline`, 1.5px, radius 3, frozen at `:pose="0"` so it enrols no beat and mints
+- * one node), drawn in the sheet's inherited ink over a rounded ground, as `SolverErrorNote`
+- * already does. The box does not move: the 2px band the border held is kept as padding, and
+- * the frame's centre line runs 1px inside the edge, in that band.
++ * (`HandDrawnOutline`, 1.5px, frozen at `:pose="0"` so it enrols no beat and mints one node).
++ * The box does not move: the 2px band the border held is kept as padding, and the frame's
++ * centre line runs 1px inside the edge, in that band.
++ *
++ * THE FRAME'S CORNER IS THE GROUND'S. The ground is rounded at 1rem; the edge sits 1px inside
++ * it, so the frame's radius is 15. At the wells' radius 3 it drew square corners past the
++ * ground and moved 67–70 of the 106 px outside the card's rounded corners (pass-5 critic).
++ *
++ * THE EDGE'S INK IS THE OWNER'S (U-10), ONE CONST. `false`: the sheet's own inherited ink, the
++ * wells' weight. `true`: the house's quiet press ink, the rung the sheet's captions use.
+  *
+  * Every attribute a consumer passes (`id`, `data-lobby`, `class`, `@click.stop`) lands on the
+  * root, so each consumer keeps its own ground and its own hooks.
+  */
+ defineProps<{ open: boolean }>();
++const EDGE_QUIET = false;
+ </script>
+ 
+ <template>
+   <div class="head-sheet" :class="{ 'is-open': open }">
+-    <span class="head-sheet-edge" aria-hidden="true">
++    <span
++      class="head-sheet-edge"
++      :class="{ 'is-quiet': EDGE_QUIET }"
++      aria-hidden="true"
++    >
+       <HandDrawnOutline
+         class="head-sheet-frame"
+         :stroke-width="1.5"
+         :outset="0"
+-        :radius="3"
++        :radius="15"
+         :pose="0"
+       />
+     </span>
+@@ -75,6 +86,10 @@ defineProps<{ open: boolean }>();
+   pointer-events: none;
+ }
+ 
++.head-sheet-edge.is-quiet {
++  color: var(--ink-press-quiet);
++}
++
+ .head-sheet-frame {
+   height: 100%;
+ }
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.place.test.ts b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.place.test.ts
+index 1ddea4b..252392b 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.place.test.ts
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.place.test.ts
+@@ -183,3 +183,43 @@ describe("the chart leaves with the sheet", () => {
+     w.unmount();
+   });
+ });
++
++// PASS-5 CRITIC, THE GHOST: a per-key timer map owes a LEAVE-WHILE-PENDING row beside its
++// two-movers row (LAWS P5). p2's FIRST cur arrives after the open, so p2 has a clock and no
++// settled cell; the map then loses p2 inside that clock. The seeded row is the control: a peer
++// the open already placed was always seen by the leave.
++describe("a leave cancels a pending first move", () => {
++  const ids = () => dots().map((d) => d.id);
++
++  async function firstMoveThen(
++    next: Record<string, number | null>,
++    seed: Record<string, number | null> = { p1: 10 },
++  ) {
++    const w = mountMark(seed);
++    await w.find("button").trigger("click");
++    await w.setProps({ place: place({ ...seed, p2: 55 }) });
++    vi.advanceTimersByTime(300);
++    await w.setProps({ place: place(next) });
++    vi.advanceTimersByTime(1000);
++    await w.vm.$nextTick();
++    return w;
++  }
++
++  it("K-GHOST: a deal (the map emptied) inside p2's first settle draws nobody", async () => {
++    const w = await firstMoveThen({});
++    expect(ids()).toEqual([]);
++    w.unmount();
++  });
++
++  it("K-LEAVE: p2 dropped from the map inside its first settle draws no p2", async () => {
++    const w = await firstMoveThen({ p1: 10 });
++    expect(ids()).toEqual(["p1"]);
++    w.unmount();
++  });
++
++  it("K-SEEDED (control): the same clear for a peer the open placed draws nobody", async () => {
++    const w = await firstMoveThen({}, { p1: 10, p2: 20 });
++    expect(ids()).toEqual([]);
++    w.unmount();
++  });
++});
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index dbc7880..6d63036 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -1,46 +1,5 @@
+-<script lang="ts">
+-import { ref, type Ref } from "vue";
+-
+-/**
+- * ONE MediaQueryList PER QUERY, AT MODULE SCOPE — `useHoverCard`'s own idiom one file over,
+- * and the reason this component carries a second `<script>` block: `<script setup>` is the
+- * setup function, so a probe written there is one listener per instance and the head mounts
+- * two. The `matchMedia` guard is for the no-DOM case (jsdom), not for any browser.
+- */
+-function probe(query: string): Ref<boolean> {
+-  const m = ref(false);
+-  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+-    const l = window.matchMedia(query);
+-    m.value = l.matches;
+-    l.addEventListener("change", (e) => {
+-      m.value = e.matches;
+-    });
+-  }
+-  return m;
+-}
+-
+-/**
+- * THE COMPRESSION REGIME IS KEYED ON THE SPACE THE SHEET HAS (pass-5 row 8; LAWS: a regime is
+- * keyed on the space the surface has, never on a proxy for it).
+- *
+- * Pass 4 read `(pointer: coarse) and (max-height: 799px)`. The pointer was the proxy, and it
+- * misfired: a coarse LANDSCAPE phone (844×390, 812×375) compressed to one row while its board
+- * sits BESIDE the sheet (15px of overlap, 3–4 cells under a 256px sheet whatever it holds).
+- * The space the sheet has is two facts, measured at six cells, seven at the table, both engines:
+- *   · WHERE THE BOARD IS. In portrait it runs under the sheet's whole width (left edge 14); in
+- *     landscape it is beside it (241 / 232.5); on the desk it takes a corner (CH-71's pose).
+- *   · HOW TALL THE BAND ABOVE IT IS. The height below the sheet's top alone cannot decide it:
+- *     334 (landscape, where compression buys one cell) < 620 (the 664 phone, where one row
+- *     already laps seven cells) < 668 (the 720 desk, the ratified lap).
+- * So the regime is the portrait band that is short: the board under the sheet and 799px or less
+- * of viewport to put both in. A 390×844 portrait holds four rows 4.1px clear of the board.
+- */
+-const shortBand = probe("(orientation: portrait) and (max-height: 799px)");
+-</script>
+-
+ <script setup lang="ts">
+-// `ref` comes from the module block above — the two script blocks share one scope.
+-import { computed, onBeforeUnmount, useId, watch } from "vue";
++import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
+ import PlayerStub from "../icons/PlayerStub.vue";
+ import PlayerLobby from "./PlayerLobby.vue";
+ import { LOBBY_COPY } from "./copy";
+@@ -90,8 +49,10 @@ const props = withDefaults(
+      *  stands, the cell you are on (`null` when unknown or hidden), and how long a peer must
+      *  hold still before their dot moves. Absent, the sheet is the list alone. */
+     place?: PlaceInput;
++    /** Where the board is, read at OPEN — the one fact the row budget needs from outside pencil. */
++    boardBox?: () => DOMRect | null;
+   }>(),
+-  { quietAfterMs: 20000, quietMsOf: undefined, place: undefined },
++  { quietAfterMs: 20000, quietMsOf: undefined, place: undefined, boardBox: undefined },
+ );
+ 
+ const { isOpen, toggle, close } = useHoverCard();
+@@ -143,13 +104,28 @@ function onBlur(): void {
+ }
+ 
+ /**
+- * THE SEAM, FOR A MOUSE AND A PEN ONLY (PLR-PLACE pass 4, grafted back). A mouse press must not
+- * move focus: the cell you were writing in keeps it and the room is not told you looked away.
+- * Under a WebKit touch a cancelled `pointerdown` cancels the tap's CLICK with it, so the mark
+- * never opened on a tapped phone. A tap therefore moves focus like any other tap.
++ * THE SEAM (PLR-PLACE pass 4; the leader's ballot, both arms built behind ONE const).
++ *
++ * A mouse press never moves focus: the cell you were writing in keeps it, so `onGridFocusout`
++ * never fires and the room is not told you looked away. The question is a TAP.
++ *   (a) `false`: a tap moves focus like any other tap. Honest, and the room hears `null` — your
++ *       ring leaves every other board while you read who is here.
++ *   (b) `true`: the tap is a look too. The touch is prevented like the mouse press, and because a
++ *       cancelled WebKit `pointerdown` cancels the tap's CLICK with it, the sheet toggles on the
++ *       touch's own `pointerup`; the click Chromium still sends for that touch is ignored.
++ * A keyed open is neither: Tab leaves the cell before the mark is reached, in both arms.
+  */
++const TAP_IS_A_LOOK = true;
++
+ function onPress(e: PointerEvent): void {
+-  if (e.pointerType !== "touch") e.preventDefault();
++  if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
++}
++function onRelease(e: PointerEvent): void {
++  if (TAP_IS_A_LOOK && e.pointerType === "touch") toggle();
++}
++function onClick(e: MouseEvent): void {
++  if (TAP_IS_A_LOOK && (e as PointerEvent).pointerType === "touch") return;
++  toggle();
+ }
+ 
+ // ── Escape, window-bound, one owner — AND THE PHASE IS THE WHOLE OF IT ──────────────────────
+@@ -213,16 +189,67 @@ watch(isOpen, (open) => {
+ const quietAt = ref<Record<string, number | null>>({});
+ 
+ /**
+- * THE SHEET NEVER SCROLLS, SO THE VIEWPORT DECIDES HOW MANY ROWS IT HOLDS.
++ * THE SHEET NEVER SCROLLS, SO THE SPACE DECIDES HOW MANY ROWS IT HOLDS — AND THE SPACE IS READ.
+  *
+- * `H(r, m) = 36 + S + 5.6 + 22.4·r + (1.6 + S)·m` with S read from the sheet (measured exact to
+- * 0.05px at three points, both engines). A tall phone (844) has 5.3px between five rows and the
+- * board's top; a short one (664) has none, so it takes two. One media query — the regime above
+- * — and no scrollport anywhere: a list you scroll inside a disclosure is a second surface, and
+- * the compression line is the honest answer instead.
++ * Two budgets: `tall` draws four rows and `and N more`, `short` draws your row and `and N more`.
++ * The sheet takes `short` when, drawn tall, it would lap a board that runs under its rows from
++ * where they start. Both facts are MEASURED at the open (and again when the room changes while it
++ * is open), never keyed on a media query: the pass-5 key `(orientation: portrait) and
++ * (max-height: 799px)` drew four rows at 390×800 and lapped seven cells where one row lapped none,
++ * because what decides the lap is where the board's top sits, and that moves with the width.
++ *   · the tall sheet's bottom is read off the sheet ITSELF, laid out and untransformed (the
++ *     offset box, so the 150ms scale-in is not in it) — a wrapped 29-character slug is in it too;
++ *   · the board's box comes from `App.vue`, because pencil may not import a board.
++ * The board BESIDE the sheet is not under its rows: the desk's corner lap is CH-71's ratified
++ * pose (1280×800: four rows over two or three cells, one row over one or two), and a coarse
++ * landscape phone keeps four rows AT A PRICE — at 844×390 six cells where one row laps four, at
++ * 812×375 five against three, and on the widest board (16×16) nine against six and eighteen
++ * against twelve. Stated, not denied; the landscape cell is ONE π row the fold reads.
++ * The re-read and the budget flip happen in one microtask pair, so no tall frame is painted.
+  */
+ const ROWS = { tall: 5, short: 2 } as const;
+-const budget = computed(() => (shortBand.value ? ROWS.short : ROWS.tall));
++const cramped = ref(false);
++const budget = computed(() => (cramped.value ? ROWS.short : ROWS.tall));
++
++/**
++ * THE CHART YIELDS (PLR-PLACE pass 6; U-10, the kill condition's third arm, behind ONE const).
++ * `true`: where the tall sheet WITH the chart would lap the board under its rows, the chart goes
++ * first and the rows are measured again; only if the list still laps does the budget compress.
++ * The chart then draws only where it costs the board nothing. `false` (what ships today): the
++ * chart always draws and only the rows compress, so the chart's 77px lap on a short phone stays.
++ */
++const CHART_YIELDS = false;
++const yielded = ref(false);
++
++/** Does the sheet, laid out and untransformed, lap a board that runs under its rows? */
++function laps(): boolean | null {
++  const sheet = document.getElementById(lobbyId);
++  const host = sheet?.offsetParent;
++  const board = props.boardBox?.();
++  if (!sheet || !(host instanceof HTMLElement) || !board) return null;
++  const at = host.getBoundingClientRect();
++  const rowsStart =
++    at.left + sheet.offsetLeft + parseFloat(getComputedStyle(sheet).paddingLeft);
++  const bottom = at.top + sheet.offsetTop + sheet.offsetHeight;
++  return board.left <= rowsStart && board.top < bottom;
++}
++
++async function fit(): Promise<void> {
++  cramped.value = false;
++  yielded.value = false;
++  await nextTick();
++  if (!laps()) return;
++  if (CHART_YIELDS && props.place && live.value) {
++    yielded.value = true;
++    await nextTick();
++    if (!laps()) return;
++  }
++  cramped.value = true;
++}
++watch([isOpen, () => people.value.length], ([open]) => {
++  if (open) void fit();
++});
++
+ const shown = computed(() =>
+   people.value.length <= budget.value
+     ? people.value
+@@ -275,10 +302,15 @@ watch([isOpen, () => props.place?.cursors], ([open, now], [wasOpen]) => {
+       settled.value = { ...settled.value, [id]: pos };
+     }, props.place!.settleMs);
+   }
+-  for (const id of Object.keys(settled.value)) {
++  // THE LEAVE WALKS EVERY CLOCK, not the settled set alone (pass-5 critic, THE GHOST): a peer
++  // whose FIRST move since the open is still pending has a timer and no settled cell, and a leave
++  // or a deal (the session empties the map) that skipped them let the timer fire later and draw
++  // them on a cell of a board that is gone.
++  for (const id of new Set([...Object.keys(settled.value), ...Object.keys(timers)])) {
+     if (id in now) continue;
+     clearTimeout(timers[id]);
+     delete timers[id];
++    if (!(id in settled.value)) continue;
+     const { [id]: _gone, ...rest } = settled.value;
+     settled.value = rest;
+   }
+@@ -299,7 +331,7 @@ const placed = (id: string) => typeof settled.value[id] === "number";
+  *  law, an unknown author gets no colour, and a fallback here would draw a stranger in yours. */
+ const chart = computed<PlaceChartInput | null>(() => {
+   const p = props.place;
+-  if (!p || !live.value) return null;
++  if (!p || !live.value || yielded.value) return null;
+   return {
+     size: p.size,
+     subgrid: p.subgrid,
+@@ -338,11 +370,9 @@ const lines = computed<LobbyLine[]>(() =>
+ </script>
+ 
+ <template>
+-  <!-- `onPress` is the seam (PLR-PLACE arm I). A mouse press on this mark must not move focus,
+-       so `onGridFocusout` never fires and the room is not told you looked away. The click still
+-       lands, so Enter and Space are untouched: a native button's activation is the whole
+-       contract, and the `@keydown.enter` that used to sit beside it ran the handler AND the
+-       synthesised click, netting zero (CH-70). A touch is not prevented: see `onPress`. -->
++  <!-- `onPress` / `onRelease` are the seam (`TAP_IS_A_LOOK`). Enter and Space are a native
++       button's click and nothing else: the `@keydown.enter` that used to sit beside it ran the
++       handler AND the synthesised click, netting zero (CH-70). -->
+   <button
+     ref="el"
+     type="button"
+@@ -353,8 +383,9 @@ const lines = computed<LobbyLine[]>(() =>
+     :aria-label="stateLine"
+     :aria-expanded="isOpen"
+     :aria-controls="lobbyId"
+-    @click.stop="toggle"
++    @click.stop="onClick"
+     @pointerdown="onPress"
++    @pointerup="onRelease"
+     @pointerenter="onEnter"
+     @pointerleave="onLeave"
+     @focus="onFocus"
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts b/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+index cf5c60d..986cc4a 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
++++ b/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+@@ -3,11 +3,11 @@
+  *
+  * Three surfaces read this: the sheet draws it, the mark's accessible name IS the state line,
+  * and `App.vue` computes that line one boundary over. A copy string that lived in three files
+- * would be three strings; here it is one, and the two gates that read copy read it once —
+- * `scripts/check-font-coverage.mjs`'s `lobbyStrings` derive (does the 46-codepoint cut hold
+- * these glyphs) and `scripts/check-copy-register.mjs`'s `COPY_SOURCES` arm (M16: no dash, no
+- * first person, no jargon). Both name `LOBBY_COPY` by identifier, so a line that moves out of
+- * this object stops being read and the gate says so.
++ * would be three strings; here it is one. Two gates read it, and they read different things:
++ * `scripts/check-font-coverage.mjs`'s `lobbyStrings` derive names `LOBBY_COPY` by identifier (does
++ * the 46-codepoint cut hold these glyphs), and `scripts/check-copy-register.mjs` reads these
++ * literals in its scan of `src/` for dashes only. No gate reads person or jargon here: a planted
++ * first-person line exits 0 (pass-5 critic), so that half of the rule below is held by review.
+  *
+  * COUNTING, DECLARED ONCE — ONE POPULATION (registry-v4 §2.5, PLR-COUNT's base). The state
+  * line, the mark's accessible name, the rows and `and N more` all count the same people: everyone

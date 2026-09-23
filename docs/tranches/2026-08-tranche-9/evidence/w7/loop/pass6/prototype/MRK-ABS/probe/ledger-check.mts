@@ -1,0 +1,10 @@
+import { readFileSync, writeFileSync } from "node:fs";
+const spec = readFileSync(process.argv[2], "utf8");
+const css = readFileSync(process.argv[3], "utf8");
+const body = spec.slice(spec.indexOf("const NUMERAL"), spec.indexOf("const tier2"));
+const tmp = process.argv[4];
+writeFileSync(tmp, 'type Engine = "chromium" | "webkit";\n' + body + "\nexport { ledger };\n");
+const { ledger } = await import(tmp);
+const L = ledger(css);
+console.log(JSON.stringify({ opacity: L.opacity, rows: L.rows.length, whole: L.whole, unguarded: L.unguarded }));
+process.exit(L.unguarded.length === 0 && L.rows.length === 3 && L.whole ? 0 : 1);

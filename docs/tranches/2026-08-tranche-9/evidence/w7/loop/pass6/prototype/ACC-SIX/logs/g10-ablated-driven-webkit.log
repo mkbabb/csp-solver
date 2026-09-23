@@ -1,0 +1,32 @@
+
+Running 1 test using 1 worker
+
+G10 webkit clock driven 125 Hz: measured 125.0 Hz over 998 gaps (precondition ≥ 93.75 Hz) · deal HARD ×1, tally inked 5 · .progress-trace nodes 4
+G10 webkit gauge: 120 d records, 30 frames (4.00 d/frame; by burst 4.00), 1 bursts, worst 125.5/s
+G10 webkit tally: 880 d records, 87 frames (10.11 d/frame; by burst 10.11), 1 bursts, worst 120.8/s
+G10 webkit join: 248 d records, 64 frames (3.88 d/frame; by burst 3.88), 1 bursts, worst 122.6/s
+  ✘  1 [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second (9.5s)
+
+
+  1) [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 
+
+    Error: gauge re-cuts 125.5/s against the budget
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 62.5
+    Received:    125.54112554112554
+
+      179 |   expect(tallyBestDPerFrame, `the tally never drew two strokes at once (best draw-in ${tallyBestDPerFrame.toFixed(2)} d/frame ≤ 4; inked ${inked} after ${deals} deals)`).toBeGreaterThan(4);
+      180 |   for (const k of Object.keys(CONSUMERS))
+    > 181 |     expect(worsts[k], `${k} re-cuts ${worsts[k].toFixed(1)}/s against the budget`).toBeLessThanOrEqual(BUDGET_PER_S);
+          |                                                                                    ^
+      182 |   await ctx.close();
+      183 | });
+      184 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/front-rate.spec.ts:181:84
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/acc6p6-pw-out/front-rate-G10-every-poseF-0feec-at-most-62-5-times-a-second-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/front-rate.spec.ts:83:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second 

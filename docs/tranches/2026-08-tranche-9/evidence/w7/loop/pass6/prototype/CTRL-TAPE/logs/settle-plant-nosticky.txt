@@ -1,0 +1,40 @@
+    Error: a group's tag must stay visible while the group is in view; measured [{"tag":"new game","position":"absolute","wellInView":0.853,"tagVisFrac":0,"lagFrames":0,"ladder":"absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0"},{"tag":"pencils","position":"absolute","wellInView":0.816,"tagVisFrac":0,"lagFrames":0,"ladder":"absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0"}]
+    expect(received).toEqual(expected) // deep equality
+    - Expected  -  1
+    + Received  + 18
+    - Array []
+    + Array [
+    +   Object {
+    +     "ladder": "absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0",
+    +     "lagFrames": 0,
+    +     "position": "absolute",
+    +     "tag": "new game",
+    +     "tagVisFrac": 0,
+    +     "wellInView": 0.853,
+    +   },
+    +   Object {
+    +     "ladder": "absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0 → absolute/0",
+    +     "lagFrames": 0,
+    +     "position": "absolute",
+    +     "tag": "pencils",
+    +     "tagVisFrac": 0,
+    +     "wellInView": 0.816,
+    +   },
+    + ]
+      770 |       lost,
+      771 |       `a group's tag must stay visible while the group is in view; measured ${JSON.stringify(tested)}`,
+    > 772 |     ).toEqual([]);
+          |       ^
+      773 |     const late = tested.filter((r) => (r.lagFrames ?? 0) > STICKY_MAX_LAG);
+      774 |     expect(
+      775 |       late,
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend/.ctrl-tape/settle/plant-nosticky.spec.ts:772:7
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out-settle/plant-nosticky-§2-6-the-se-84c0f-p-is-in-view-mobile-drawer--webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out-settle/plant-nosticky-§2-6-the-se-84c0f-p-is-in-view-mobile-drawer--webkit/error-context.md
+  4 failed
+    [chromium] › .ctrl-tape/settle/plant-nosticky.spec.ts:707:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+    [chromium] › .ctrl-tape/settle/plant-nosticky.spec.ts:747:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 
+    [webkit] › .ctrl-tape/settle/plant-nosticky.spec.ts:707:3 › §2.6 the section tag pins @ 1440×900 (the rail) › §2.6 a section tag stays pinned while its group is in view (desktop rail) 
+    [webkit] › .ctrl-tape/settle/plant-nosticky.spec.ts:747:3 › §2.6 the section tag pins @ 375×667 (the drawer) › §2.6 a section tag stays pinned while its group is in view (mobile drawer) 

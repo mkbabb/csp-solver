@@ -1,0 +1,22 @@
+# attacks through CI's invocations (npm run lint:bands · lint:verbs · check-motion-contract), tree 53a73123 archived at depth 1 (no git)
+X0 bands=0 verbs=0 motion=0 :: 
+X1 bands=1 verbs=1 motion=0 :: 
+X1c bands=1 verbs=1 motion=0 ::   ✗ B6 RATCHET — 1 
+X2ctl bands=1 verbs=0 motion=0 ::   ✗ B8 CURVE — 2 
+X2a bands=0 verbs=0 motion=0 :: 
+X2b bands=0 verbs=0 motion=0 :: 
+X2c bands=0 verbs=0 motion=0 :: 
+X2d bands=0 verbs=0 motion=0 :: 
+X2e bands=0 verbs=0 motion=0 :: 
+X3 bands=0 verbs=0 motion=0 :: 
+X3ctl bands=1 verbs=0 motion=0 ::   ✗ B3 ONE HOME, NO FALLBACK — 1 
+X4 bands=0 verbs=0 motion=0 :: 
+X5 bands=0 verbs=0 motion=0 :: 
+X6 bands=1 verbs=0 motion=0 ::   ✗ B3 ONE HOME, NO FALLBACK — 2 
+X7 bands=0 verbs=0 motion=0 :: 
+X8 bands=1 verbs=0 motion=0 :: 
+
+# X1/X8 crash: TypeError: row.ms.join is not a function
+# A2c depth-1 re-bank + re-stamp on CaretOverlay 200->150: lint:bands 0, lint:verbs 0 ('nothing shortened')
+# A2b (lane's row) at depth 1: bare gate exit 0; npm run lint:bands exit 1 ONLY via the self-test's A2 control going VACUOUS (it models the same cell-reveal 300->150)
+# theme-tokens + chair census on X2a-X2d: all 0

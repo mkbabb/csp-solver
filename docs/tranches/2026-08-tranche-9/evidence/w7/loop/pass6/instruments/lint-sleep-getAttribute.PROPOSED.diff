@@ -1,0 +1,50 @@
+diff --git a/web/frontend/scripts/check-sleep-lint.mjs b/web/frontend/scripts/check-sleep-lint.mjs
+index 9270b3b..3cf8407 100644
+--- a/web/frontend/scripts/check-sleep-lint.mjs
++++ b/web/frontend/scripts/check-sleep-lint.mjs
+@@ -114,9 +114,12 @@ const EXEMPT = [
+ 
+ /* ── liveness vocabulary ───────────────────────────────────────────────────── */
+ 
+-/** Reads that touch a moving surface directly. */
++/** Reads that touch a moving surface directly. `getAttribute` joins (T9-W7 pass 6, the chair's
++ *  act; PLR-PLACE's pass-5 critic): an attribute a component PUBLISHES (`data-released`,
++ *  `aria-valuenow`, `data-fold-*`) is a live read, and a sleep before a one-shot read of it is the
++ *  same disease as a sleep before a box. */
+ const LIVE_CALL =
+-  /\.(boundingBox|screenshot|count|textContent|innerText|allTextContents|inputValue|elementHandles)\s*\(/;
++  /\.(boundingBox|screenshot|count|textContent|innerText|allTextContents|inputValue|elementHandles|getAttribute)\s*\(/;
+ 
+ /** Inside an `evaluate` body, the tokens that mean "this reads the live document". */
+ const LIVE_IN_EVALUATE =
+@@ -499,6 +502,30 @@ test('grows', async ({ page }) => {
+   const box = await page.locator('.board').boundingBox();
+   expect(box.width).toBeGreaterThan(400);
+ });
++`,
++  },
++  {
++    name: "RED — sleep → getAttribute → one-shot expect (a published attribute is a live read)",
++    file: "fixture.spec.ts",
++    expect: "flag",
++    src: `// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
++test('released', async ({ page }) => {
++  await page.locator('.controls-card').evaluate((c) => (c.scrollTop = 400));
++  await page.waitForTimeout(400);
++  const rel = await page.locator('.washi-tag').first().getAttribute('data-released');
++  expect(rel).toBeNull();
++});
++`,
++  },
++  {
++    name: "GREEN — the cure for the attribute: expect.poll over getAttribute, no sleep",
++    file: "fixture.spec.ts",
++    expect: "clean",
++    src: `// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
++test('released', async ({ page }) => {
++  await page.locator('.controls-card').evaluate((c) => (c.scrollTop = 400));
++  await expect.poll(() => page.locator('.washi-tag').first().getAttribute('data-released')).toBeNull();
++});
+ `,
+   },
+   {

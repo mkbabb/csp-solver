@@ -1,0 +1,275 @@
+--- /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/erase6-fold13-theirs.vue	2026-09-23 07:34:09
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/erase6-fold13-resolved.vue	2026-09-23 07:35:11
+@@ -10,8 +10,8 @@
+  * Generic by construction (pencil layer): it renders whatever text + tone it's handed
+  * and owns none of the derivation — the domain (SudokuBoard) decides *what* to say.
+  * The region element is always mounted so a text change is an announced mutation, not
+- * a region that appears mid-solve (which some AT miss). Text writes in with a 250ms
+- * clip-path wipe — the logo's own reveal mechanic, shortened; instant under PRM.
++ * a region that appears mid-solve (which some AT miss). Text writes in on the note rung,
++ * two beats of clip-path wipe — the logo's own reveal mechanic, shortened; instant under PRM.
+  *
+  * T3-W9 §2 — the completion block, hoisted:
+  * - `meta` — the pencil's own tally under the voice ("0 backtracks · 1ms"), rendered
+@@ -22,9 +22,42 @@
+  * - The inline star (F2-C, ratified): on the gold-star tone the verdict line opens
+  *   with a 1.1em hand-wonky star — ★ solved it! — the sticker's own geometry demoted
+  *   to punctuation. In flow inside the ink span, so it wipes in with the note's own
+- *   250ms clip-path write-in: zero subscribers, collision impossible by construction.
++ *   clip-path write-in: zero subscribers, collision impossible by construction.
++ *
++ * T9-W7 §7 — THE NOTE GAINS AN EXIT AND AN AGE. The write-in was the estate's one arrival
++ * with no departure (R4's M2 row): a note vanished on a frame, mid-sentence. It leaves the
++ * way it came now — the same clip run backwards from the END of the line, on the whisper rung
++ * and the erase family's curve — carried by a `<Transition>` rather than a listener, because
++ * PRM deletes the animation outright and `animationend` then never fires on either engine.
++ * And a `record` or a `state` line settles to the quiet rung eight beats after it arrives: it
++ * stops being the loudest ink and waits for an act. VERDICTS NEVER SETTLE (teacher-red at that
++ * rung is 3.03:1 light, gold 2.70:1 — a grade you can barely read is a grade you doubt), and
++ * neither does a `reply`: it leaves instead. The age is decided by `kind`, never by `tone` —
++ * the colour was a proxy for the kind and broke as soon as two graphite lines aged apart.
++ *
++ * `:key` is the write SEQUENCE, never the string. Under the string, saying the same sentence
++ * twice re-enters the node under the same key and Vue finishes the leave early
++ * (`runtime-core` `beforeEnter` → `leavingVNode.el[leaveCbKey]()`): the rub-out never starts
++ * and the region never mutates, so a refusal repeated is a refusal unsaid.
++ *
++ * AND THE EXIT NEEDS A REST POSE (pass 3). A leave has two clocks and two poses, and the
++ * settled note got both wrong. The CLOCK: `runtime-dom` (`3.5.39`, `:344-347`) takes
++ * `max(transition, animation)` off the LEAVING node, so the settle's DUSK colour transition
++ * outranked the WHISPER rub-out and the node stayed for a whole rung after the verb ended. The
++ * POSE: `ink-rub-out` has no fill — correctly, a leave retains nothing — so the instant the
++ * keyframe releases, the cascade stands the line back up at `clip-path: none, opacity: 1` and
++ * the reader watches a rubbed-out sentence come BACK for 25 frames (chromium) / 13 (webkit)
++ * before the node drops. `.note-leave-to` is the cure: the rest pose IS where the keyframe ends,
++ * so when the animation releases nothing moves. The CLOCK is `stopTheClock` below — the rest
++ * pose holds the POSE, the hook holds the CLOCK, and the live source-deletion controls separate
++ * them (pass 3: 165.6ms with the pose gone, 363ms with the clock gone). Both ship; neither
++ * substitutes.
+  */
+-withDefaults(
++import { onUnmounted, ref, watch } from "vue";
++import { MOTION } from "@pencil/config/pencilConfig";
++import type { MarginKind } from "@pencil/types";
++
++const props = withDefaults(
+   defineProps<{
+     text: string;
+     tone?: "graphite" | "teacher-red" | "gold-star";
+@@ -39,14 +72,61 @@
+      *  down as collateral, and below 1280 the sticker has no room to receive it, so a
+      *  solved board printed its tally nowhere. */
+     quiet?: boolean;
++    /** What the line IS — the age is read off this, never off the tone (`@pencil/types`). */
++    kind?: MarginKind;
++    /** The write sequence: monotonic, one per `setMargin`. The Transition's key. */
++    seq?: number;
+   }>(),
+-  { tone: "graphite", quiet: false },
++  { tone: "graphite", quiet: false, kind: "state", seq: 0 },
+ );
+ 
++/** The node is GONE. Vue's own `@after-leave`, so a caller that wants to re-write the strip
++ *  times the hole from the removal rather than guessing at the verb's length. */
++defineEmits<{ left: [] }>();
++
+ // The celebration sticker's wonky 5-pointer (CelebrationStar.vue STAR_D) at half
+ // scale — the same star, demoted to punctuation. viewBox 0 0 24 24.
+ const NOTE_STAR_D =
+   "M11.8,2.1 L14.5,8.7 L21.6,9.1 L15.7,13.3 L18,20.2 L12.1,15.9 L6,20 L8.3,13.2 L2.4,8.8 L9.6,8.9 Z";
++
++// THE AGE. One timer, re-armed by every line and cleared by the next — the component that
++// renders the note owns how it ages, the way it already owns how it arrives. It is armed by
++// KIND: a record or a receipt settles, a grade and a reply never do. (The verbs are rungs and
++// live in the stylesheet as `var(--motion-*)`; only this WAIT is a clock, and a clock is beats.)
++//
++// EVERY note carries the attribute — `fresh` or `settled`, never absent: two values instead
++// of one value and a null, so the site's PRM arm reads one selector for both ages.
++const AGES: readonly MarginKind[] = ["record", "state"];
++const settled = ref(false);
++let settleTimer: ReturnType<typeof setTimeout> | null = null;
++watch(
++  () => [props.text, props.seq, props.kind] as const,
++  ([text, , kind]) => {
++    if (settleTimer) clearTimeout(settleTimer);
++    settled.value = false;
++    if (!text || !AGES.includes(kind)) return;
++    settleTimer = setTimeout(
++      () => (settled.value = true),
++      MOTION.note.settleAfterBeats * MOTION.beatMs,
++    );
++  },
++  { immediate: true },
++);
++onUnmounted(() => {
++  if (settleTimer) clearTimeout(settleTimer);
++});
++
++// THE HONEST CLOCK (pass 5). Vue drops a leaving node on `max(transition, animation)` read off
++// its computed style (`runtime-dom` `:344-347`), so ANY transition on the ink — the settle's own
++// dusk colour step, or one a later lane hangs on it — holds a finished rub-out on the page for
++// that transition's length. Pass 4 fenced it with a (0,4,0) selector and a declaration at
++// (1,1,0) walked straight past it (0.35s, node absent 362.6ms). An inline `!important` outranks
++// every author rule at any specificity, `!important` ones included, so the bound is the author
++// origin itself rather than a rung of it. The price: a settle still tweening when its line is
++// rubbed out lands on its end colour on the rub-out's first frame.
++function stopTheClock(el: Element): void {
++  (el as HTMLElement).style.setProperty("transition", "none", "important");
++}
+ </script>
+ 
+ <template>
+@@ -58,27 +138,42 @@
+       aria-live="polite"
+       aria-atomic="true"
+     >
+-      <span v-if="text" :key="text" class="margin-note-ink">
+-        <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
+-        <svg
+-          v-if="tone === 'gold-star'"
+-          class="note-star"
+-          viewBox="0 0 24 24"
+-          aria-hidden="true"
+-          focusable="false"
+-          xmlns="http://www.w3.org/2000/svg"
++      <!-- out-in: a replacement rubs the old line out before the new one writes in, so the
++           region's name goes X to Y with no empty frame in between. The key is the write
++           sequence — the same sentence twice is two writes and leaves twice. -->
++      <Transition
++        name="note"
++        mode="out-in"
++        @before-leave="stopTheClock"
++        @after-leave="$emit('left')"
++      >
++        <span
++          v-if="text"
++          :key="seq"
++          class="margin-note-ink"
++          :data-note-age="settled ? 'settled' : 'fresh'"
+         >
+-          <path
+-            :d="NOTE_STAR_D"
+-            fill="#FDE68A"
+-            fill-opacity="0.9"
+-            stroke="#F0B030"
+-            stroke-width="1.8"
+-            stroke-linecap="round"
+-            stroke-linejoin="round"
+-          /></svg
+-        >{{ text }}
+-      </span>
++          <!-- The inline star: gold verdicts only, decorative (the text carries the grade). -->
++          <svg
++            v-if="tone === 'gold-star'"
++            class="note-star"
++            viewBox="0 0 24 24"
++            aria-hidden="true"
++            focusable="false"
++            xmlns="http://www.w3.org/2000/svg"
++          >
++            <path
++              :d="NOTE_STAR_D"
++              fill="#FDE68A"
++              fill-opacity="0.9"
++              stroke="#F0B030"
++              stroke-width="1.8"
++              stroke-linecap="round"
++              stroke-linejoin="round"
++            /></svg
++          >{{ text }}
++        </span>
++      </Transition>
+     </p>
+     <!-- The tally: plain text, deliberately OUTSIDE the live region. -->
+     <p v-if="meta" :key="meta" class="margin-note-meta">{{ meta }}</p>
+@@ -102,8 +197,15 @@
+   /* The reserved line lives on the BLOCK, not the voice, so the strip is the same height
+      whether the voice is speaking here or from the sticker — the grade lands and nothing
+      below the board moves. (It was on `.margin-note`, which the gold path takes out of
+-     flow; the strip then collapsed at the crest and grew back after it.) */
+-  min-height: 1.3em;
++     flow; the strip then collapsed at the crest and grew back after it.)
++
++     IT IS DERIVED FROM THE LINE IT RESERVES (pass 4). `1.3em` was 1.3 of the BLOCK's inherited
++     16px, while the voice inside it sets `--type-body` — which clamps to 18.18px at 1280 — on
++     `--type-leading-caption`. So the reserve was right at 390 by coincidence and 2.81px short
++     everywhere the clamp had climbed, and the strip grew the first time the voice spoke, at
++     every width above the clamp's floor. Same two tokens the voice reads, multiplied: the
++     reserve is the line, at any width, and it stops being a number that happens to match one. */
++  min-height: calc(var(--type-body) * var(--type-leading-caption));
+ }
+ 
+ /* Quiet (T3-W12 §1 R1): the classic clip pattern — zero visual footprint, zero
+@@ -146,18 +248,64 @@
+ 
+ .margin-note-ink {
+   display: inline-block;
++}
++
++/* THE ARRIVAL — the hand writes left to right. It was a bare animation on the ink span, which
++   is why a note could arrive and never leave; it belongs to the Transition's enter now, and the
++   length is the NOTE rung, read BARE (chair §6.5: the rung is registered at an instant
++   initial value, so an absent publisher is loud rather than invisible). */
++.note-enter-active {
+   animation: ink-write-in var(--motion-note) var(--verb-writeIn-ease) backwards;
+ }
+ 
+-/* RUB OUT is a VERB, and this file is where its tuple is defined — but nothing in any
+-   template, script or test ever writes `.is-rubbing-out`, so the rule it used to carry was ink
+-   no player could reach. It is DELETED. WHICH act erases a note is §7's design (NOTE-ERASE),
+-   and the rule lands there WITH its writer, reading
+-   `var(--motion-whisper) var(--verb-rubOut-ease) backwards`; it also takes NOTE-ERASE's
+-   specificity audit with it, since a Vue `<Transition>` leave class is (0,1,0) and loses to
+-   `[data-note-age="settled"]` (0,2,0) on the same node. The `ink-rub-out` keyframe stays in
+-   index.css beside `ink-write-in`, which is where the verb's shape belongs. */
++/* THE EXIT (T9-W7 §7) — the same clip run backwards from the END of the line, the fade in the
++   same keyframe (§13's `ink-rub-out`, one shape). Clip and opacity only: no glyph moves, nothing
++   filters; `backwards` like every other verb (zero delay, so it retains nothing: the node is
++   REMOVED when the verb ends and `.note-leave-to` is the rest pose). The rung is WHISPER: the family's own number is 125 — the beat, half
++   the arrival, the erase asymmetry — but a literal is not a rung, so the nearest rung is
++   consumed and the erase stays shorter than the arrival either way. */
++.note-leave-active {
++  animation: ink-rub-out var(--motion-whisper) var(--verb-rubOut-ease) backwards;
++}
+ 
++/* THE REST POSE — one of two halves, and MEASURED it is the half that fixes the POSE, never the
++   clock (the clock is `stopTheClock`, in the script). `ink-rub-out` has no fill, so the frame the
++   keyframe releases is the frame the CASCADE decides — and the cascade said `clip-path: none,
++   opacity: 1`, which stood the rubbed-out line back up at full pressure until Vue dropped the
++   node. `.note-leave-to` is where the keyframe ENDS, written as the cascade's own value:
++   nothing moves when the animation lets go. (index.css:985-990's discipline, satisfied
++   literally — `bloom-out` says the same sentence about the same problem.) */
++.note-leave-to {
++  clip-path: inset(0 100% 0 0);
++  opacity: 0;
++}
++
++/* THE SETTLE — eight beats in, a record or a receipt stops being the loudest ink and waits.
++   Colour only, on the dusk rung: no opacity, no geometry, nothing that could promote a layer.
++   The quiet rung reads 5.19:1 light / 6.12:1 dark by `check-ink-pressure`'s derivation and
++   PAINTS 5.17 light / 6.07-6.13 dark at the core median (1280, DPR 1, both engines, pass 5). Only those two kinds arrive here (the age timer is gated on the KIND, not the
++   colour): teacher-red at this rung is 3.03:1 and gold 2.70:1, and a grade never settles. */
++.margin-note-ink[data-note-age="settled"] {
++  color: var(--ink-press-quiet);
++  transition: color var(--motion-dusk) var(--ease-standard);
++}
++
++/* PRM AT THE SITE (the shape the estate's three shipped `<Transition>`s already use —
++   App.vue:1141-1153's gallery fade, GameGallery.vue:1471-1494's guard ribbon). Three arms say
++   the same thing and each is load-bearing somewhere: the ladder publishes instant, index.css:1163
++   deletes the write-in by `!important` for the un-Transitioned case, and THIS block is the
++   family's own — it survives a ladder that never published and it is what a reader of this
++   file sees. The settle becomes a step: the hand lifting, with no tween. */
++@media (prefers-reduced-motion: reduce) {
++  .note-enter-active,
++  .note-leave-active {
++    animation: none;
++  }
++  .margin-note-ink[data-note-age] {
++    transition: none;
++  }
++}
++
+ /* The inline star: sized to the hand's own em, seated on the baseline like a glyph.
+    Foil pair kept from the sticker (#FDE68A wax / #F0B030 stroke) — non-text, wax-tier. */
+ .note-star {

@@ -1,0 +1,39 @@
+undefined-token census (pass6/instruments copy), bare exit codes, tree = w7-p4-PLR-PLACE post-merge, control = w7-control 74a2b5d9
+== tree-plain
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+  src/pencil/chrome/PlayerMark/PlayerMark.vue:437  --tap-floor
+  src/pencil/chrome/PlayerMark/PlayerMark.vue:438  --tap-floor
+bare var() naming no declaration — TIMING slots: 0
+bare var() naming no declaration — any other slot: 2
+check-theme-tokens: 2 bare var() naming no declaration in scope, 1 stale inheritance rows
+cross-file inheritances ledgered: 3 · stale: 1
+== ctl-plain
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+bare var() naming no declaration — TIMING slots: 0
+bare var() naming no declaration — any other slot: 0
+check-theme-tokens: 0 bare var() naming no declaration in scope, 1 stale inheritance rows
+cross-file inheritances ledgered: 3 · stale: 1
+== tree-led
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+bare var() naming no declaration — TIMING slots: 0
+bare var() naming no declaration — any other slot: 0
+check-theme-tokens: 0 bare var() naming no declaration in scope, 1 stale inheritance rows
+cross-file inheritances ledgered: 4 · stale: 1
+== ctl-led
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+  STALE  --tap-floor :: App.vue -> pencil/chrome/PlayerMark/PlayerMark.vue
+bare var() naming no declaration — TIMING slots: 0
+bare var() naming no declaration — any other slot: 0
+check-theme-tokens: 0 bare var() naming no declaration in scope, 2 stale inheritance rows
+cross-file inheritances ledgered: 4 · stale: 2
+== tree-selftest
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+bare var() naming no declaration — TIMING slots: 0
+bare var() naming no declaration — any other slot: 0
+check-theme-tokens: 0 bare var() naming no declaration in scope, 1 stale inheritance rows
+cross-file inheritances ledgered: 4 · stale: 1
+negative control (re-add --color-input): RED as required
+reverse controls: 1 undeclared token in a duration slot RED as required · 2 undeclared token elsewhere RED as required · 3 the hook form green as required
+scope controls: 4 PLANT B (declared in another component's scoped style) RED as required · 5 the same token at :root green as required · 6a a ghost ledger row STALE as required · 6b a live crossing un-ledgered RED as required
+scope-hole controls (pass 6): 7 S1 scoped :root RED as required · 7b S4 scoped html RED as required · 7c S3 scoped *.margin-note RED as required · 7d :global(:root) green as required · 8 S2 html.theme-turning only RED as required · 8b same-class consumer green as required · 8c tail + bare root green as required · 9 @media-only root RED as required
+exits: tree plain 1 (2 bare --tap-floor + STALE --refuse-dur) · ctl plain 1 (STALE only) · tree ledgered 1 (STALE --refuse-dur only; 0 bare) · ctl ledgered 1 (2 STALE: --refuse-dur, --tap-floor — the new row has no crossing there) · tree self-test 1 (every control as required; exit from STALE)

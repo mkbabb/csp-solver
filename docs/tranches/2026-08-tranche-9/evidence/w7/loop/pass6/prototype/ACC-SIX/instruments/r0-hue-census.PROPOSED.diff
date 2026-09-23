@@ -1,0 +1,33 @@
+PROPOSED — NOT APPLIED. r0/ is frozen (LAWS §The record); ACC-SIX pass 6, the MOVED row: the census read a literal hex and
+now meets `--color-progress-ink: var(--color-answer-mid)`, so it DROPPED the token on the lane tree. One alias level resolved.
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/r0/r6-idiom-history/hue-census.mjs	2026-09-17 13:24:03
++++ r0-hue-census.MOVED.mjs	2026-09-23 14:22:19
+@@ -11,7 +11,8 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ 
+-const CSS = path.join(
++// PASS-6 COPY (ACC-SIX, the MOVED row): CSS from env so it reads the lane's tree and the control.
++const CSS = process.env.CSS ?? path.join(
+   import.meta.dirname,
+   "../../../../../../../../web/frontend/src/assets/index.css",
+ );
+@@ -69,9 +70,16 @@
+   "--color-solver-ink-5",
+ ];
+ 
+-function read(block, token) {
++function read(block, token, depth = 0) {
+   const m = new RegExp(`${token}:\\s*(#[0-9a-fA-F]{3,8})`).exec(block);
+-  return m ? m[1] : null;
++  if (m) return m[1];
++  // THE MOVED ROW (T9-W7 ACC-SIX): a token that names its ramp's RUNG (`var(--color-answer-mid)`)
++  // holds no hex, and the literal read above returned null — the census silently dropped
++  // `--color-progress-ink` on the lane's tree. One alias level at a time, the dark block
++  // falling back to the light :root for a rung declared once.
++  const v = new RegExp(`${token}:\\s*var\\(\\s*(--[\\w-]+)\\s*\\)`).exec(block);
++  if (!v || depth > 3) return null;
++  return read(block, v[1], depth + 1) ?? (block === light ? null : read(light, v[1], depth + 1));
+ }
+ 
+ const rows = [];

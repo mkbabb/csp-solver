@@ -1,0 +1,118 @@
+c6-crit.spec.ts on dev :4244 (tree w7-p4-PLR-SELF, 24 files +1901/-402), seven at the table, ?wire=local; both engines
+C1 chromium 390x800 rows 1 'and 6 more' bottom 147.4 boardTop 199.7 boardLeft 14 lapped 0 coarse True
+C1 chromium 360x800 rows 1 'and 6 more' bottom 147.4 boardTop 210.3 boardLeft 14 lapped 0 coarse True
+C1 chromium 390x664 rows 1 'and 6 more' bottom 147.4 boardTop 131.7 boardLeft 14 lapped 7 coarse True
+C1 chromium 844x390 rows 4 'and 3 more' bottom 226.5 boardTop 16 boardLeft 241 lapped 6 coarse True
+C2 rotate-while-open chromium 844x390 -> 390x800
+   before  open=True rows=4 bottom=226.5 boardTop=16 boardLeft=241 lapped=6 vp=844x390
+   after   open=False rows=4 bottom=213.2 boardTop=199.7 boardLeft=14 lapped=6 vp=390x800
+   reopen  open=True rows=1 bottom=147.4 boardTop=199.7 boardLeft=14 lapped=0 vp=390x800
+C2 rotate-while-open chromium 390x800 -> 844x390
+   before  open=True rows=1 bottom=147.4 boardTop=199.7 boardLeft=14 lapped=0 vp=390x800
+   after   open=False rows=4 bottom=225.2 boardTop=16 boardLeft=241 lapped=5 vp=844x390
+   reopen  open=True rows=4 bottom=226.5 boardTop=16 boardLeft=241 lapped=6 vp=844x390
+C2 rotate-while-open chromium 390x844 -> 390x800
+   before  open=True rows=4 bottom=214.5 boardTop=221.7 boardLeft=14 lapped=0 vp=390x844
+   after   open=True rows=4 bottom=214.5 boardTop=199.7 boardLeft=14 lapped=7 vp=390x800
+   reopen  open=True rows=1 bottom=147.4 boardTop=199.7 boardLeft=14 lapped=0 vp=390x800
+C3 seam chromium
+   cellTap focus INPUT[cell].cell-native-input expanded - events pointerdown:touch@INPUT.cell-native-input pointerup:touch@INPUT.cell-native-input click:touch@INPUT.cell-native-input
+   markTap focus INPUT[cell].cell-native-input expanded - events pointerdown:touch(prevented)@path. pointerup:touch@path.
+   rowTap focus BODY. expanded false events pointerdown:touch@SPAN.pl-name pointerup:touch@SPAN.pl-name click:touch@SPAN.pl-name
+C4 slide-off chromium CDP [{"dx": 0, "dy": 0, "expanded": "true", "ev": ["pointerup:touch", "click:touch"]}, {"dx": 120, "dy": 0, "expanded": "false", "ev": ["pointercancel:touch", "pointercancel:touch"]}, {"dx": 0, "dy": 300, "expanded": "false", "ev": ["pointercancel:touch", "pointercancel:touch", "pointercancel:touch"]}]
+C5 edge statistic (the landed row's own, per band: frac of middle-60% columns ON>=1.5xOFF / ON median) chromium
+   lobby:none top 1 / 17.52 bottom 1 / 11.18
+   lobby:X1 top 0 / 1 bottom 0 / 1
+   lobby:X2 top 0 / 1 bottom 0 / 1
+   lobby:X3-top-only top 0.895 / 11.88 bottom 0 / 1
+   lobby:X4-half-alpha top 0.895 / 1.74 bottom 0.784 / 1.6
+   card:none top 1 / 16.14 bottom 1 / 7.93
+   card:X1 top 0 / 1 bottom 0 / 1
+   card:X2 top 0 / 1 bottom 0 / 1
+   card:X3-top-only top 0.856 / 11.14 bottom 0 / 1
+   card:X4-half-alpha top 0.699 / 1.74 bottom 0.405 / 1.51
+C1 webkit 390x800 rows 1 'and 6 more' bottom 147.4 boardTop 199.4 boardLeft 14 lapped 0 coarse True
+C1 webkit 360x800 rows 1 'and 6 more' bottom 147.4 boardTop 210 boardLeft 14 lapped 0 coarse True
+C1 webkit 390x664 rows 1 'and 6 more' bottom 147.4 boardTop 131.4 boardLeft 14 lapped 7 coarse True
+C1 webkit 844x390 rows 4 'and 3 more' bottom 226.5 boardTop 16 boardLeft 241 lapped 6 coarse True
+C2 rotate-while-open webkit 844x390 -> 390x800
+   before  open=True rows=4 bottom=226.5 boardTop=16 boardLeft=241 lapped=6 vp=844x390
+   after   open=False rows=4 bottom=213.2 boardTop=199.4 boardLeft=14 lapped=6 vp=390x800
+   reopen  open=True rows=1 bottom=147.4 boardTop=199.4 boardLeft=14 lapped=0 vp=390x800
+C2 rotate-while-open webkit 390x800 -> 844x390
+   before  open=True rows=1 bottom=147.4 boardTop=199.4 boardLeft=14 lapped=0 vp=390x800
+   after   open=False rows=4 bottom=225.2 boardTop=16 boardLeft=241 lapped=5 vp=844x390
+   reopen  open=True rows=4 bottom=226.5 boardTop=16 boardLeft=241 lapped=6 vp=844x390
+C2 rotate-while-open webkit 390x844 -> 390x800
+   before  open=True rows=4 bottom=214.5 boardTop=221.4 boardLeft=14 lapped=0 vp=390x844
+   after   open=True rows=4 bottom=214.5 boardTop=199.4 boardLeft=14 lapped=7 vp=390x800
+   reopen  open=True rows=1 bottom=147.4 boardTop=199.4 boardLeft=14 lapped=0 vp=390x800
+C3 seam webkit
+   cellTap focus INPUT[cell].cell-native-input expanded - events pointerdown:touch@INPUT.cell-native-input pointerup:touch@INPUT.cell-native-input click:mouse@INPUT.cell-native-input
+   markTap focus INPUT[cell].cell-native-input expanded - events pointerdown:touch(prevented)@path. pointerup:touch@path.
+   rowTap focus BODY. expanded false events pointerdown:touch@SPAN.pl-name pointerup:touch@SPAN.pl-name click:mouse@SPAN.pl-name
+C5 edge statistic (the landed row's own, per band: frac of middle-60% columns ON>=1.5xOFF / ON median) webkit
+   lobby:none top 1 / 15.77 bottom 1 / 11.52
+   lobby:X1 top 0 / 1 bottom 0 / 1
+   lobby:X2 top 0 / 1 bottom 0 / 1
+   lobby:X3-top-only top 0.791 / 11.88 bottom 0 / 1
+   lobby:X4-half-alpha top 0.837 / 1.67 bottom 0.621 / 1.58
+   card:none top 1 / 14.81 bottom 1 / 8.98
+   card:X1 top 0 / 1 bottom 0 / 1
+   card:X2 top 0 / 1 bottom 0 / 1
+   card:X3-top-only top 0.778 / 11.16 bottom 0 / 1
+   card:X4-half-alpha top 0.686 / 1.7 bottom 0.392 / 1.49
+
+c7-edge.spec.ts (same statistic, more plants)
+   chromium lobby:none top 1/17.52 bottom 1/11.18
+   chromium lobby:X3@40 top 0.895/11.88 bottom 0/1
+   chromium lobby:X3@70 top 0.895/11.88 bottom 0/1
+   chromium lobby:X6-bottom-gone top 0.895/11.88 bottom 0/1
+   chromium lobby:X5@0.3 top 0.908/1.99 bottom 0.817/1.76
+   chromium lobby:X5@0.4 top 0.961/2.56 bottom 0.948/2.17
+   chromium lobby:X5@0.5 top 0.967/3.47 bottom 0.961/2.75
+   chromium card:none top 1/16.14 bottom 1/7.93
+   chromium card:X3@40 top 0.856/11.14 bottom 0/1
+   chromium card:X3@70 top 0.856/11.14 bottom 0/1
+   chromium card:X6-bottom-gone top 0.856/11.14 bottom 0/1
+   chromium card:X5@0.3 top 0.797/1.98 bottom 0.588/1.65
+   chromium card:X5@0.4 top 0.856/2.58 bottom 0.889/1.99
+   chromium card:X5@0.5 top 0.908/3.46 bottom 0.902/2.44
+   webkit lobby:none top 1/15.77 bottom 1/11.52
+   webkit lobby:X3@40 top 0.791/11.88 bottom 0/1
+   webkit lobby:X3@70 top 0.791/11.88 bottom 0/1
+   webkit lobby:X6-bottom-gone top 0.791/11.88 bottom 0/1
+   webkit lobby:X5@0.3 top 0.902/1.9 bottom 0.817/1.76
+   webkit lobby:X5@0.4 top 0.948/2.44 bottom 0.895/2.17
+   webkit lobby:X5@0.5 top 0.967/3.21 bottom 0.967/2.72
+   webkit card:none top 1/14.81 bottom 1/8.98
+   webkit card:X3@40 top 0.778/11.16 bottom 0/1
+   webkit card:X3@70 top 0.778/11.16 bottom 0/1
+   webkit card:X6-bottom-gone top 0.778/11.16 bottom 0/1
+   webkit card:X5@0.3 top 0.765/1.94 bottom 0.647/1.63
+   webkit card:X5@0.4 top 0.843/2.47 bottom 0.863/1.96
+   webkit card:X5@0.5 top 0.908/3.25 bottom 0.908/2.42
+
+c9-sweep.spec.ts (widths; rowsStart = sheet left + padding-left)
+   chromium 440x800 coarse rows 1 bottom 147.4 boardTop 174.7 boardLeft 14 rowsStart 18 lapped 0
+   chromium 460x800 coarse rows 1 bottom 147.4 boardTop 164.7 boardLeft 14 rowsStart 18 lapped 0
+   chromium 480x800 coarse rows 1 bottom 147.4 boardTop 154.7 boardLeft 14 rowsStart 18 lapped 0
+   chromium 520x800 coarse rows 1 bottom 159.4 boardTop 134.7 boardLeft 14 rowsStart 18 lapped 5
+   chromium 560x800 coarse rows 1 bottom 159.4 boardTop 114.7 boardLeft 14 rowsStart 18 lapped 5
+   chromium 620x800 coarse rows 1 bottom 159.4 boardTop 86.2 boardLeft 14 rowsStart 18 lapped 8
+   chromium 700x800 coarse rows 1 bottom 159.4 boardTop 87.6 boardLeft 16 rowsStart 18 lapped 4
+   chromium 768x1024 coarse rows 4 bottom 226.5 boardTop 168.9 boardLeft 50 rowsStart 18 lapped 3
+   chromium 600x700 fine rows 1 bottom 151.4 boardTop 84.2 boardLeft 14 rowsStart 18 lapped 8
+   chromium 800x700 fine rows 4 bottom 219.7 boardTop 114.6 boardLeft 132 rowsStart 18 lapped 6
+   chromium 900x640 fine rows 4 bottom 220.3 boardTop 114.6 boardLeft 212 rowsStart 18 lapped 2
+   webkit 440x800 coarse rows 1 bottom 147.4 boardTop 174.4 boardLeft 14 rowsStart 18 lapped 0
+   webkit 460x800 coarse rows 1 bottom 147.4 boardTop 164.4 boardLeft 14 rowsStart 18 lapped 0
+   webkit 480x800 coarse rows 1 bottom 147.4 boardTop 154.4 boardLeft 14 rowsStart 18 lapped 0
+   webkit 520x800 coarse rows 1 bottom 159.4 boardTop 134.4 boardLeft 14 rowsStart 18 lapped 5
+   webkit 560x800 coarse rows 1 bottom 159.4 boardTop 114.4 boardLeft 14 rowsStart 18 lapped 5
+   webkit 620x800 coarse rows 1 bottom 159.4 boardTop 85.6 boardLeft 14 rowsStart 18 lapped 8
+   webkit 700x800 coarse rows 1 bottom 159.4 boardTop 88 boardLeft 16 rowsStart 18 lapped 4
+   webkit 768x1024 coarse rows 4 bottom 226.5 boardTop 168.6 boardLeft 50 rowsStart 18 lapped 3
+   webkit 600x700 fine rows 1 bottom 151.4 boardTop 83.6 boardLeft 14 rowsStart 18 lapped 8
+   webkit 800x700 fine rows 4 bottom 219.7 boardTop 114 boardLeft 132 rowsStart 18 lapped 6
+   webkit 900x640 fine rows 4 bottom 220.3 boardTop 114 boardLeft 212 rowsStart 18 lapped 3

@@ -1,0 +1,40 @@
+  1) [chromium] › e2e/mobile-affordances.spec.ts:526:1 › COST's focus contract: a keyboard arm lands on keep, and Escape hands focus back to the verb 
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: "Deal a new board"
+    Received: null
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+      541 |   await expect
+      542 |     .poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-label")))
+    > 543 |     .toBe("Deal a new board");
+          |      ^
+      544 |   // The sheet is still up: the first Escape answered the question, and only that.
+      545 |   await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+      546 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend/e2e/mobile-affordances.spec.ts:543:6
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out/mobile-affordances-COST-s--92a3b-ands-focus-back-to-the-verb-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out/mobile-affordances-COST-s--92a3b-ands-focus-back-to-the-verb-chromium/error-context.md
+  2) [webkit] › e2e/mobile-affordances.spec.ts:526:1 › COST's focus contract: a keyboard arm lands on keep, and Escape hands focus back to the verb 
+    Error: expect(received).toBe(expected) // Object.is equality
+    Expected: "Deal a new board"
+    Received: null
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+      541 |   await expect
+      542 |     .poll(() => page.evaluate(() => document.activeElement?.getAttribute("aria-label")))
+    > 543 |     .toBe("Deal a new board");
+          |      ^
+      544 |   // The sheet is still up: the first Escape answered the question, and only that.
+      545 |   await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+      546 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-27/web/frontend/e2e/mobile-affordances.spec.ts:543:6
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out/mobile-affordances-COST-s--92a3b-ands-focus-back-to-the-verb-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/ctrl-tape-p6/pw-out/mobile-affordances-COST-s--92a3b-ands-focus-back-to-the-verb-webkit/error-context.md
+  2 failed
+    [chromium] › e2e/mobile-affordances.spec.ts:526:1 › COST's focus contract: a keyboard arm lands on keep, and Escape hands focus back to the verb 
+    [webkit] › e2e/mobile-affordances.spec.ts:526:1 › COST's focus contract: a keyboard arm lands on keep, and Escape hands focus back to the verb 
+  2 passed (18.4s)

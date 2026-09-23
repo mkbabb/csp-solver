@@ -1,0 +1,2464 @@
+diff --git a/web/frontend/e2e/front-rate.spec.ts b/web/frontend/e2e/front-rate.spec.ts
+new file mode 100644
+index 00000000..3c372857
+--- /dev/null
++++ b/web/frontend/e2e/front-rate.spec.ts
+@@ -0,0 +1,183 @@
++// PRM: live, because the subject IS the tween: the front's re-cut only runs while a draw-in eases, and
++// under reduced motion every consumer lands its fraction in one frame with nothing to count.
++import { test, expect } from "@playwright/test";
++import { clockFor, clockHz } from "./rate-clock";
++
++/**
++ * G10 — THE FRONT'S RATE BUDGET, COUNTED ON THE SURFACE (pass-4 critique §3.2, LAWS P4: count a
++ * primitive's consumers and gate every call site in the SAME page).
++ *
++ * All three `poseFronts` consumers, one page A at no-preference (witnessed): the tally draws in
++ * when the dealt board's grade lands, three hints move the fill gauge, and B joining A's room
++ * rings A's board (`?wire=local`, the dev server's transport, one context). A MutationObserver on
++ * `d` clusters records into re-cut FRAMES; each consumer's worst burst must hold
++ * ≤ 1000 / FRONT_MIN_MS = 62.5 re-cuts per second.
++ *
++ * THE STATISTIC IS THE INTERVAL RATE, (frames − 1) / span: N commits are N − 1 gaps, and the
++ * budget bounds the gaps. frames / span reads 64/s on a 60 Hz panel whose every frame clears the
++ * gate, where no two cuts are closer than 16.7 ms.
++ *
++ * THE CLOCK IS THE ROW'S, NOT THE HOST'S (T9-W7 pass 6; pass-5 critique §3.1). A budget of
++ * 62.5/s cannot be seen broken on a clock at or under 62.5 Hz: with FRONT_MIN_MS deleted this row
++ * PASSED at 58–61/s under a 60 Hz rAF shim in both engines. So the page runs the chair's DRIVEN
++ * 125 Hz animation clock (`rate-clock.ts`, one copy with pass6/instruments/), and the measured
++ * in-page clock must reach 1.5 × the budget (93.75 Hz) BEFORE any rate is read — a slow clock reds
++ * loudly instead of passing a broken tree. CLOCK=60 is the negative control (reds on the
++ * precondition), CLOCK=native reads the host panel.
++ *
++ * THE INTERLEAVE IS WITNESSED (pass-5 critique §3.5). The tally's one-clock cure exists for
++ * several strokes drawing at once; a board graded at one stroke draws 4 `d` a frame and never shows
++ * it. The tally inks the DEALT board's measured grade, not the tier asked for (a HARD deal can grade
++ * at one stroke, and did: 68 d over 17 frames, pass 6), and a shared `?board=` payload is never
++ * graded at all (twelve bank templates read "level not graded yet" after 30 s), so no pinned board
++ * can carry this row. The row deals HARD and re-deals, at most six times, until the tally inks
++ * ≥ 3 strokes, then asserts ONE tally draw-in averaged MORE than 4 `d` records per re-cut frame:
++ * it saw the stagger or it says so.
++ *
++ * BORN-REDs: `FRONT_MIN_MS` 16 → 0 in `gridPaths.ts` reds the rate on the driven clock in both
++ * engines; CLOCK=60 reds the precondition; DEAL=EASY reds the interleave witness.
++ */
++const BUDGET_PER_S = 62.5;
++const MIN_CLOCK_HZ = 1.5 * BUDGET_PER_S;
++const CONSUMERS = { gauge: ".progress-trace", tally: ".dt-stroke", join: ".join-pose path" };
++const DEAL = process.env.DEAL ?? "HARD";
++const PRECOND = process.env.PRECOND !== "0";
++
++type Cuts = Record<string, { d: number; times: number[]; n: number[] }>;
++
++const OBSERVE_CUTS = (selectors: Record<string, string>) => {
++  const w = window as unknown as { __cuts: Cuts };
++  w.__cuts = {};
++  for (const k of Object.keys(selectors)) w.__cuts[k] = { d: 0, times: [], n: [] };
++  const seen = new WeakSet<Element>();
++  const attach = () => {
++    for (const [k, sel] of Object.entries(selectors))
++      document.querySelectorAll(sel).forEach((el) => {
++        if (seen.has(el)) return;
++        seen.add(el);
++        new MutationObserver((recs) => {
++          const t = performance.now();
++          const r = w.__cuts[k];
++          for (const m of recs) {
++            if (m.attributeName !== "d") continue;
++            r.d++;
++            const last = r.times[r.times.length - 1];
++            if (last === undefined || t - last > 0.5) {
++              r.times.push(t);
++              r.n.push(0);
++            }
++            r.n[r.n.length - 1]++;
++          }
++        }).observe(el, { attributes: true, attributeFilter: ["d"] });
++      });
++  };
++  // an init script runs before <body> exists; observing a null body throws and loses the hook
++  const go = () => {
++    attach();
++    new MutationObserver(attach).observe(document.body, { childList: true, subtree: true });
++  };
++  if (document.body) go();
++  else document.addEventListener("DOMContentLoaded", go, { once: true });
++};
++
++test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async ({
++  browser,
++}, testInfo) => {
++  test.setTimeout(120000);
++  const clock = clockFor();
++  const ctx = await browser.newContext({ reducedMotion: "no-preference" });
++  await ctx.addInitScript(clock.script as (a?: number) => void, clock.arg);
++  await ctx.addInitScript(OBSERVE_CUTS, CONSUMERS);
++  const a = await ctx.newPage();
++  await a.goto(`/?wire=local&size=3&difficulty=${DEAL}`);
++  await a.waitForSelector(".sudoku-cell", { timeout: 60000 });
++  expect(await a.evaluate(() => matchMedia("(prefers-reduced-motion: reduce)").matches)).toBe(
++    false,
++  );
++  const t0 = await a.evaluate(() => performance.now());
++  // the tally's grade lands off the solver worker; re-deal until it inks ≥ 3 strokes (one pose's)
++  const INKED = () => {
++    const t = document.querySelector(".difficulty-tally");
++    if (!t || t.classList.contains("is-ungraded")) return -1;
++    return document.querySelector(".dt-pose")?.querySelectorAll(".dt-stroke.inked").length ?? 0;
++  };
++  let inked: number;
++  let deals = 1;
++  for (;;) {
++    await expect.poll(() => a.evaluate(INKED), { timeout: 30000 }).toBeGreaterThanOrEqual(0);
++    inked = await a.evaluate(INKED);
++    if (inked >= 3 || deals >= 6) break;
++    await a.locator('.controls-card button[aria-label="Deal a new board"]').click();
++    await a.waitForSelector(".difficulty-tally.is-ungraded", { timeout: 5000 }).catch(() => {});
++    deals++;
++  }
++  await a.waitForTimeout(1500); // the last draw-in ends before the hints move the gauge
++  // the product's own HINT, pressed the way `fillByHint` presses it (the first match in the DOM
++  // is the live control; a locator's `.first()` can resolve a hidden twin)
++  await expect
++    .poll(() => a.evaluate(() => !!document.querySelector<HTMLButtonElement>('[aria-label*="Hint" i]:not([disabled])')), { timeout: 30000 })
++    .toBe(true);
++  for (let i = 0; i < 3; i++) {
++    await a.evaluate(() => document.querySelector<HTMLButtonElement>('[aria-label*="Hint" i]:not([disabled])')?.click());
++    await a.waitForTimeout(700);
++  }
++  const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
++  await expect(verb).toBeEnabled();
++  await verb.click();
++  await expect.poll(() => new URL(a.url()).searchParams.get("s")).not.toBeNull();
++  await a.waitForTimeout(1500); // the join policy's boot suppression (join-language.spec.ts)
++  const b = await ctx.newPage();
++  await b.goto(a.url());
++  await b.waitForSelector(".sudoku-cell", { timeout: 60000 });
++  await expect.poll(() => a.evaluate(() => (window as any).__cuts.join.d), { timeout: 15000 })
++    .toBeGreaterThan(0);
++  await a.waitForTimeout(2000);
++
++  const hz = await clockHz(a, t0);
++  const cuts = await a.evaluate(() => (window as unknown as { __cuts: Cuts }).__cuts);
++  const rings = await a.evaluate(() => document.querySelectorAll(".progress-trace").length);
++  const lines: string[] = [
++    `clock ${clock.name}: measured ${hz.hz.toFixed(1)} Hz over ${hz.gaps} gaps (precondition ≥ ${MIN_CLOCK_HZ} Hz${PRECOND ? "" : ", OFF"}) · deal ${DEAL} ×${deals}, tally inked ${inked} · .progress-trace nodes ${rings}`,
++  ];
++  const worsts: Record<string, number> = {};
++  const bursts_: Record<string, number> = {};
++  let tallyBestDPerFrame = 0;
++  for (const k of Object.keys(CONSUMERS)) {
++    const t = cuts[k].times;
++    // bursts: one event's frames (a gap > 300 ms starts the next event)
++    const bursts: number[][] = [];
++    const burstD: number[] = [];
++    t.forEach((x, i) => {
++      const cur = bursts[bursts.length - 1];
++      if (cur && x - cur[cur.length - 1] <= 300) {
++        cur.push(x);
++        burstD[burstD.length - 1] += cuts[k].n[i];
++      } else {
++        bursts.push([x]);
++        burstD.push(cuts[k].n[i]);
++      }
++    });
++    const dPerFrame = bursts.map((q, i) => burstD[i] / q.length);
++    if (k === "tally") tallyBestDPerFrame = Math.max(0, ...dPerFrame);
++    const rates = bursts
++      .filter((q) => q.length > 2)
++      .map((q) => ((q.length - 1) / (q[q.length - 1] - q[0])) * 1000);
++    worsts[k] = Math.max(0, ...rates);
++    bursts_[k] = rates.length;
++    lines.push(`${k}: ${cuts[k].d} d records, ${t.length} frames (${(cuts[k].d / Math.max(1, t.length)).toFixed(2)} d/frame; by burst ${dPerFrame.map((v) => v.toFixed(2)).join("/")}), ${rates.length} bursts, worst ${worsts[k].toFixed(1)}/s`);
++  }
++  // every consumer's reading is printed BEFORE any assertion, so a red names all three
++  for (const l of lines) console.log(`G10 ${testInfo.project.name} ${l}`);
++  testInfo.annotations.push({ type: "G10", description: lines.join(" · ") });
++  // the row must SEE every consumer re-cut, or it measures nothing
++  for (const k of Object.keys(CONSUMERS))
++    expect(bursts_[k], `${k} (${CONSUMERS[k as keyof typeof CONSUMERS]}) never re-cut`).toBeGreaterThan(0);
++  // the clock first: a row whose clock cannot exceed its budget cannot see the budget broken
++  if (PRECOND)
++    expect(hz.hz, `the animation clock ran at ${hz.hz.toFixed(1)} Hz; a rate row needs ≥ ${MIN_CLOCK_HZ} Hz to see its budget`).toBeGreaterThanOrEqual(MIN_CLOCK_HZ);
++  // the interleave second: one tally draw-in must have drawn several strokes in the same frames
++  expect(tallyBestDPerFrame, `the tally never drew two strokes at once (best draw-in ${tallyBestDPerFrame.toFixed(2)} d/frame ≤ 4; inked ${inked} after ${deals} deals)`).toBeGreaterThan(4);
++  for (const k of Object.keys(CONSUMERS))
++    expect(worsts[k], `${k} re-cuts ${worsts[k].toFixed(1)}/s against the budget`).toBeLessThanOrEqual(BUDGET_PER_S);
++  await ctx.close();
++});
+diff --git a/web/frontend/e2e/join-language.spec.ts b/web/frontend/e2e/join-language.spec.ts
+index e2bc0058..cf1f9041 100644
+--- a/web/frontend/e2e/join-language.spec.ts
++++ b/web/frontend/e2e/join-language.spec.ts
+@@ -59,11 +59,19 @@ async function pastBootWindow(page: Page) {
+     .toBeGreaterThan(1400);
+ }
+ 
+-/** The join ring's dash front, 0 at rest and 1000 when it stands complete. */
++/**
++ * The join ring's front: -1 with no ring, 1000 when a pose stands WHOLE, 0 while it draws.
++ *
++ * T9-W7 §4 moved the front from a dash to geometry (`poseFronts`): the path ENDS where the wash
++ * has got to, so `stroke-dashoffset` computes 0 from the first frame and the dash reading this
++ * replaces returned 1000 for a ring 1 % drawn (a gate that could not fail). Only an UNCUT pose
++ * closes with `Z`; a cut front is an open polyline. So "whole" is read off the geometry itself.
++ */
+ const ringFront = (page: Page) =>
+   page.evaluate(() => {
+     const p = document.querySelector('.join-trace');
+-    return p ? 1000 - parseFloat(getComputedStyle(p).strokeDashoffset) : -1;
++    if (!p) return -1;
++    return /Z\s*$/i.test(p.getAttribute('d') ?? '') ? 1000 : 0;
+   });
+ 
+ test('a join rings the board, in the joiner’s own ink, once', async ({ browser }) => {
+diff --git a/web/frontend/e2e/progress-corridor.spec.ts b/web/frontend/e2e/progress-corridor.spec.ts
+new file mode 100644
+index 00000000..5ea77868
+--- /dev/null
++++ b/web/frontend/e2e/progress-corridor.spec.ts
+@@ -0,0 +1,433 @@
++// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto
++import { test, expect, type Page, type TestInfo } from "@playwright/test";
++
++/**
++ * THE FILL GAUGE'S CORRIDOR, PAINTED (T9-W7 §2/§4, gate G2).
++ *
++ * The gauge is the one accent on the board with THREE grounds at once: the graphite frame line it
++ * retraces (an 8-unit stroke inside a 12-unit one leaves a ~1.27 CSS px flank per side at desk,
++ * 0.73 at phone), the paper behind that, and the board wrapper's own 2 px border, which the
++ * stroke's outer overhang covers (T9-W7 pass 6: a quarter of the trace's footprint at desk; the
++ * pass-2..5 gold read 2.970 on it, under the floor, while this file checked two grounds). They swap value between themes. So "clears 3:1" is
++ * an INTERVAL the ink has to sit inside, not a number it has to beat — and this file asserts the
++ * interval against PAINTED BYTES, because token arithmetic over-reports a hand-drawn line by
++ * ~0.5 (a 12-unit wobbled stroke never paints its own token at full strength). The node arm in
++ * `scripts/check-ink-pressure.mjs` carries the same corridor in token space, labelled as such;
++ * where the two disagree, THIS one governs.
++ *
++ * WHY THE GROUND IS READ AT PROGRESS 0. At `progress === 0` the trace's `v-for` yields nothing —
++ * there is no `.progress-trace` node in the DOM at all (HandDrawnGrid) — so the frame line and
++ * the paper are read off a board that provably has no gauge on it. The pass-2 instrument sampled
++ * an untraced EDGE of a traced board and had to argue it was clean; this samples an untraced
++ * BOARD and does not have to argue anything.
++ *
++ * THE CORE IS THE MODE OF 24 COLUMNS, not the single most chromatic pixel. A wobbled stroke's
++ * peak pixel is its own best case and moves with the seed; the modal column core is the colour
++ * the stroke actually paints across its run. The max-chroma pixel is asserted too, at the same
++ * floor, so the margin is what survives EITHER instrument.
++ */
++
++const FLOOR = 3;
++const HUE_WINDOW = 45; // degrees either side of the gold anchor: what counts as "the gauge"
++/** THE CHROMA FLOOR, and it is load-bearing. The gauge paints C 0.122 light / 0.100 dark; the
++ *  frame line paints C 0.011. Without this floor a column the front has not reached contributes
++ *  the LINE as its "core", and on a lightly filled board the mode of 24 columns is then the line
++ *  itself — which reads 1.0 against the line and passes nothing. Measured, not guessed. */
++const CHROMA_FLOOR = 0.05;
++const GOLD_HUE: Record<string, number> = { light: 83.7, dark: 95.2 };
++/** THE BORDER ROW'S FLOOR. Light: the 3:1 floor, which one ink clears on all three grounds
++ *  (painted luminance 0.1922–0.2300). Dark: NO ink clears 3:1 against the light line, the dark
++ *  paper and the dark border at once (the best is 2.914, arithmetic from the painted grounds), so
++ *  the row is held to what HEAD's violet painted there — 2.441 at 74a2b5d9, both engines — and a
++ *  gauge may not lose to it. That number is a floor, not a pass: the estate row is the border's. */
++const BORDER_FLOOR: Record<string, number> = { light: FLOOR, dark: 2.441 };
++
++type Rgb = [number, number, number];
++
++const srgbToLinear = (c: number) => {
++  const x = c / 255;
++  return x <= 0.04045 ? x / 12.92 : Math.pow((x + 0.055) / 1.055, 2.4);
++};
++const lum = ([r, g, b]: Rgb) =>
++  0.2126 * srgbToLinear(r) + 0.7152 * srgbToLinear(g) + 0.0722 * srgbToLinear(b);
++const ratio = (a: Rgb, b: Rgb) => {
++  const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
++  return (hi + 0.05) / (lo + 0.05);
++};
++
++/** sRGB -> OKLCH (Ottosson), the space the estate's tiers were cut in. */
++function oklch([r, g, b]: Rgb) {
++  const [R, G, B] = [srgbToLinear(r), srgbToLinear(g), srgbToLinear(b)];
++  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
++  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
++  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++  const A = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
++  const Bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
++  return {
++    L: 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
++    C: Math.hypot(A, Bb),
++    h: ((Math.atan2(Bb, A) * 180) / Math.PI + 360) % 360,
++  };
++}
++const hueGap = (a: number, b: number) => {
++  const d = Math.abs(a - b) % 360;
++  return d > 180 ? 360 - d : d;
++};
++
++/**
++ * A painted band, decoded BY THE ENGINE THAT PAINTED IT.
++ *
++ * This file used to `import { PNG } from "pngjs"` — and `pngjs` is not a dependency of this
++ * package, so the spec could not resolve its own import and had never been run (T9-W7 pass 4;
++ * the pass-3 critique said "written and never executed" and the reason was one level lower than
++ * that). The estate installs nothing for a gate, so the screenshot goes back INTO the page and
++ * is decoded on a canvas: the same sRGB bytes, no Node image library, and the decode happens in
++ * the browser whose raster is the subject.
++ */
++type Band = { w: number; h: number; data: number[] };
++
++async function band(page: Page, clip: { x: number; y: number; width: number; height: number }) {
++  const b64 = (await page.screenshot({ clip })).toString("base64");
++  return page.evaluate(async (d): Promise<Band> => {
++    const img = new Image();
++    img.src = "data:image/png;base64," + d;
++    await img.decode();
++    const c = document.createElement("canvas");
++    c.width = img.naturalWidth;
++    c.height = img.naturalHeight;
++    const ctx = c.getContext("2d", { willReadFrequently: true })!;
++    ctx.drawImage(img, 0, 0);
++    return {
++      w: c.width,
++      h: c.height,
++      data: Array.from(ctx.getImageData(0, 0, c.width, c.height).data),
++    };
++  }, b64);
++}
++
++const px = (b: Band, x: number, y: number): Rgb => {
++  const o = (b.w * y + x) << 2;
++  return [b.data[o], b.data[o + 1], b.data[o + 2]];
++};
++
++/** the most frequent colour over whole rows of a band that passes `keep` (null if none does) */
++function modalRows(b: Band, rows: number[], keep: (c: Rgb) => boolean): Rgb | null {
++  const freq = new Map<string, number>();
++  for (const y of rows) {
++    if (y < 0 || y >= b.h) continue;
++    for (let x = 0; x < b.w; x++) {
++      const k = px(b, x, y).join(",");
++      freq.set(k, (freq.get(k) ?? 0) + 1);
++    }
++  }
++  for (const [k] of [...freq.entries()].sort((a, c) => c[1] - a[1])) {
++    const rgb = k.split(",").map(Number) as Rgb;
++    if (keep(rgb)) return rgb;
++  }
++  return null;
++}
++
++/** paper = the modal colour; line = the modal ACHROMATIC colour that is neither paper nor its edge */
++function groundOf(b: Band) {
++  const freq = new Map<string, number>();
++  for (let y = 0; y < b.h; y++)
++    for (let x = 0; x < b.w; x++) {
++      const k = px(b, x, y).join(",");
++      freq.set(k, (freq.get(k) ?? 0) + 1);
++    }
++  const ranked = [...freq.entries()].sort((a, b) => b[1] - a[1]);
++  const paper = ranked[0][0].split(",").map(Number) as Rgb;
++  let line: Rgb | null = null;
++  for (const [k] of ranked) {
++    const rgb = k.split(",").map(Number) as Rgb;
++    if (k === ranked[0][0]) continue;
++    if (oklch(rgb).C > 0.03) continue;
++    if (Math.abs(lum(rgb) - lum(paper)) < 0.05) continue;
++    line = rgb;
++    break;
++  }
++  return { paper, line };
++}
++
++/**
++ * The MODE of 24 per-column cores, and the single max-chroma pixel beside it.
++ *
++ * THE NO-GAUGE-PIXEL CASE IS A NAMED FAILURE, NOT A CRASH (T9-W7 pass-4, critique §3.6). The
++ * hue window pre-selects pixels within 45° of the gold anchor. On the base this family exists
++ * to cure — HEAD's violet, 150.7° off — NO column yields a candidate, and the earlier cut of
++ * this file then dereferenced an empty ranking and reported a TypeError. The born-RED outcome
++ * of a corridor gate must be a corridor READING: what the band actually held, at what hue, and
++ * how far off the anchor it was. So the sweep keeps a second, hue-blind maximum (`offAnchor`)
++ * whose only filter is the chroma floor, and the caller prints it when `columns` is 0.
++ */
++function modalCore(b: Band, scheme: string, cols = 24) {
++  const per: { rgb: Rgb; C: number; h: number }[] = [];
++  let max: { rgb: Rgb; C: number; h: number } | null = null;
++  /** the most chromatic pixel in the band REGARDLESS of hue — the failure's own evidence */
++  let offAnchor: { rgb: Rgb; C: number; h: number } | null = null;
++  const step = Math.max(1, Math.floor(b.w / cols));
++  for (let c = 0; c < cols; c++) {
++    const x = Math.min(b.w - 1, c * step);
++    let best: { rgb: Rgb; C: number; h: number } | null = null;
++    for (let y = 0; y < b.h; y++) {
++      const rgb = px(b, x, y);
++      const o = oklch(rgb);
++      if (o.C < CHROMA_FLOOR) continue;
++      const cand = { rgb, C: o.C, h: o.h };
++      if (!offAnchor || o.C > offAnchor.C) offAnchor = cand;
++      // only pixels inside the gauge's own hue window AND above the chroma floor are the gauge
++      if (hueGap(o.h, GOLD_HUE[scheme]) > HUE_WINDOW) continue;
++      if (!best || o.C > best.C) best = cand;
++      if (!max || o.C > max.C) max = cand;
++    }
++    if (best) per.push(best);
++  }
++  const freq = new Map<string, number>();
++  for (const p of per) freq.set(p.rgb.join(","), (freq.get(p.rgb.join(",")) ?? 0) + 1);
++  const ranked = [...freq.entries()].sort((a, b) => b[1] - a[1]);
++  const modal = ranked.length ? (ranked[0][0].split(",").map(Number) as Rgb) : null;
++  return { modal, columns: per.length, max: max?.rgb ?? null, offAnchor };
++}
++
++/**
++ * Fill through the product's own HINT button. Every digit it writes is CORRECT, so the board
++ * stays solvable and the front walks the top edge for real. A probe that TYPES digits writes
++ * wrong ones, and a board with a duplicate returns the failure verdict — which paints the
++ * teacher's red and was mistaken for a gauge reading in an earlier cut of this instrument.
++ */
++async function fillByHint(page: Page, max = 26) {
++  let n = 0;
++  for (; n < max; n++) {
++    const ok = await page.evaluate(() => {
++      const b = document.querySelector<HTMLButtonElement>('[aria-label*="Hint" i]');
++      if (!b || b.disabled) return false;
++      b.click();
++      return true;
++    });
++    if (!ok) break;
++    await page.waitForTimeout(130);
++  }
++  await page.evaluate(() => (document.activeElement as HTMLElement)?.blur?.());
++  await page.waitForTimeout(1000);
++  return n;
++}
++
++
++/**
++ * The NAMED failure's own text. Shared by the gate and by its born-RED control below, so the
++ * message a reviewer meets on a red is the message the control proved is produced.
++ */
++function noGaugePixel(
++  scheme: string,
++  offAnchor: { rgb: Rgb; C: number; h: number } | null,
++  line: Rgb,
++  paper: Rgb,
++) {
++  const found = offAnchor
++    ? `the band's most chromatic pixel is ${offAnchor.rgb.join(",")} at h ${offAnchor.h.toFixed(1)}°, ` +
++      `${hueGap(offAnchor.h, GOLD_HUE[scheme]).toFixed(1)}° off the gold anchor ${GOLD_HUE[scheme]}° ` +
++      `(C ${offAnchor.C.toFixed(3)}); it reads ${ratio(offAnchor.rgb, line).toFixed(3)} vs the line and ` +
++      `${ratio(offAnchor.rgb, paper).toFixed(3)} vs the paper`
++    : `no pixel in the band clears the chroma floor ${CHROMA_FLOOR} at all`;
++  return (
++    `NO GAUGE PIXEL IN THE BAND (${scheme}). 0 of 24 columns hold a pixel within ` +
++    `${HUE_WINDOW}° of the gold anchor above the chroma floor. ${found}. ` +
++    `grounds: line ${line.join(",")}, paper ${paper.join(",")}.`
++  );
++}
++
++/**
++ * THE CORRIDOR ROW, one body for the gate and for its born-RED controls. `ablate` (the controls
++ * only) repaints the gauge after the fill, and the control's own precondition is read first:
++ * the gauge must be painting before it is ablated, so a control cannot pass on an empty band.
++ * The corridor THROWS its reading; a control asserts the text of that throw, never a local call
++ * to the message builder (pass-4 critique §3.6).
++ */
++async function corridor(
++  page: Page,
++  scheme: "light" | "dark",
++  testInfo: TestInfo,
++  ablate?: string,
++) {
++  await page.emulateMedia({ colorScheme: scheme, reducedMotion: "reduce" });
++  await page.goto("/?size=3&difficulty=EASY");
++  await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
++  // the dealt board is on the page when its givens have rendered (the ground is read off it)
++  await expect
++    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 15000 })
++    .toBeGreaterThan(0);
++
++  const box = (await page.locator("svg.hand-drawn-grid").first().boundingBox())!;
++  const clip = {
++    x: Math.round(box.x + box.width * 0.1),
++    y: Math.round(box.y - 10),
++    width: Math.round(box.width * 0.8),
++    height: 26,
++  };
++
++  // THE GROUND, off a board with no gauge on it: at progress 0 there is no trace node.
++  expect(await page.evaluate(() => document.querySelectorAll(".progress-trace").length)).toBe(0);
++  const bare = await band(page, clip);
++  const { paper, line } = groundOf(bare);
++  expect(line, "the frame line must be found in the band").not.toBeNull();
++  // THE THIRD GROUND, painted: the most frequent colour in the rows around the wrapper's top edge
++  // that is neither the paper nor the line (its box is read for the ROWS only — the colour is the
++  // bytes; the edge sits at a fractional device row, so four rows are ranked, not two assumed).
++  // No such colour means the row has lost its subject, and that is a failure, not a pass.
++  const wrap = (await page.locator(".board-wrapper").first().boundingBox())!;
++  const top = Math.floor(wrap.y) - clip.y;
++  const border = modalRows(bare, [top - 1, top, top + 1, top + 2], (c) => ratio(c, paper) > 1.1 && ratio(c, line!) > 1.1);
++  expect(border, `no border colour in rows ${top - 1}–${top + 2}: the wrapper edge is not where the row reads it`).not.toBeNull();
++
++  const hints = await fillByHint(page);
++  expect(hints, "the hint control must be able to fill the board").toBeGreaterThan(8);
++
++  // THE ALPHA: the gauge is the one OPAQUE stroke on a board whose frame is 0.95 (§2).
++  const computed = await page.evaluate(() => {
++    const t = document.querySelector(".progress-trace");
++    return t
++      ? {
++          strokeOpacity: getComputedStyle(t).strokeOpacity,
++          hasPathLength: !!t.getAttribute("pathLength"),
++          hasDash: !!t.getAttribute("stroke-dasharray"),
++        }
++      : null;
++  });
++  expect(computed, "a gauge must exist once a digit is written").not.toBeNull();
++  expect(computed!.strokeOpacity).toBe("1");
++  // the dash is gone: the front is geometry (§1)
++  expect(computed!.hasPathLength).toBe(false);
++  expect(computed!.hasDash).toBe(false);
++
++  if (ablate) {
++    const before = modalCore(await band(page, clip), scheme);
++    expect(before.columns, "the gauge must be painting before it is ablated").toBeGreaterThan(0);
++    const was = await page.evaluate(
++      () => getComputedStyle(document.querySelector(".progress-trace")!).stroke,
++    );
++    await page.evaluate((css) => {
++      const st = document.createElement("style");
++      st.textContent = css;
++      document.head.appendChild(st);
++    }, ablate);
++    // the ablation has LANDED when the trace's computed stroke has left the gold it read
++    await expect
++      .poll(() => page.evaluate(() => getComputedStyle(document.querySelector(".progress-trace")!).stroke))
++      .not.toBe(was);
++  }
++
++  const { modal, columns, max, offAnchor } = modalCore(await band(page, clip), scheme);
++
++  // THE NAMED FAILURE (critique §3.6). A band with no gauge pixel in it is the exact outcome
++  // this gate exists to produce on HEAD's violet, so it reports the corridor it DID find
++  // rather than dereferencing an empty ranking.
++  const grounds = `grounds: line ${line!.join(",")}, paper ${paper.join(",")}, border ${border!.join(",")}`;
++  if (columns === 0) throw new Error(noGaugePixel(scheme, offAnchor, line!, paper));
++  expect(columns, `24 columns must each carry a gauge pixel (${grounds})`).toBe(24);
++
++  // IT IS THE GOLD CRAYON FIRST: a hue this far from the anchor is a different colour passing
++  // the same ratio, which is exactly what the violet did. Read BEFORE the ratios, so an ink
++  // inside the 45° window at the gauge's own luminance reds HERE and nowhere else.
++  const gap = hueGap(oklch(modal!).h, GOLD_HUE[scheme]);
++  expect(gap, `HUE: the modal core ${modal!.join(",")} is ${gap.toFixed(1)}° off the gold anchor`)
++    .toBeLessThanOrEqual(5);
++
++  const vsLine = ratio(modal!, line!);
++  const vsPaper = ratio(modal!, paper);
++  const vsBorder = ratio(modal!, border!);
++  const maxVsLine = ratio(max!, line!);
++  const maxVsPaper = ratio(max!, paper);
++  const maxVsBorder = ratio(max!, border!);
++  testInfo.annotations.push({
++    type: "corridor",
++    description:
++      `${scheme}: modal ${modal!.join(",")} vs line ${line!.join(",")} = ${vsLine.toFixed(3)}, ` +
++      `vs paper ${paper.join(",")} = ${vsPaper.toFixed(3)}, vs border ${border!.join(",")} = ${vsBorder.toFixed(3)}; ` +
++      `max-chroma ${maxVsLine.toFixed(3)} / ${maxVsPaper.toFixed(3)} / ${maxVsBorder.toFixed(3)}`,
++  });
++
++  // ALL THREE grounds. The corridor is the intersection. Line and paper hold on BOTH instruments;
++  // the border on the MODAL core only, because the max-chroma pixel is a partial-coverage blend
++  // at the stroke's outer edge, lighter than the ink (OKLCH L 0.619 against 0.598, pass 6), and it
++  // sits on the PAGE outside the wrapper (251,250,249), where it reads 3.54 / 3.59 against the
++  // ground it touches. Held to the border it does not touch it reads 2.917 chromium / 2.927 webkit
++  // light; that number is printed in the annotation above and is not a reading of the border.
++  expect(vsLine).toBeGreaterThanOrEqual(FLOOR);
++  expect(vsPaper).toBeGreaterThanOrEqual(FLOOR);
++  expect(maxVsLine).toBeGreaterThanOrEqual(FLOOR);
++  expect(maxVsPaper).toBeGreaterThanOrEqual(FLOOR);
++  expect(vsBorder, `BORDER: the modal core ${modal!.join(",")} reads ${vsBorder.toFixed(3)} on the wrapper border ${border!.join(",")} (floor ${BORDER_FLOOR[scheme]})`)
++    .toBeGreaterThanOrEqual(BORDER_FLOOR[scheme]);
++}
++
++/** Drive the corridor row under an ablation and hand back the error it threw (null if none). */
++const thrownBy = (run: Promise<void>) =>
++  run.then(
++    () => null,
++    (e: Error) => e,
++  );
++
++for (const scheme of ["light", "dark"] as const) {
++  test(`the fill gauge clears ${FLOOR}:1 against both its painted grounds — ${scheme}`, async ({
++    page,
++  }, testInfo) => {
++    await corridor(page, scheme, testInfo);
++  });
++}
++
++/**
++ * THE GATE'S BORN-RED CONTROLS, ON THIS TREE, IN THE SAME RUN (T9-W7 pass 4-5; LAWS §Gates).
++ *
++ * FAR: the gauge repainted HEAD's own violet (`#8b5cf6`, 150.7° off the gold anchor) in a
++ * stylesheet appended last (the only thing that beats an equal-specificity `!important` in
++ * `@layer utilities`). The row must THROW the named failure with the off-anchor evidence in it.
++ *
++ * NEAR: an ink INSIDE the 45° window at the gauge's own luminance, 25° off the anchor (OKLCH L
++ * and C held: light #b46b29 at h 58.7, dark #8b5b19 at h 69.7; Y within 4 % of the gauge's). The
++ * window admits it, so only the hue row can catch it — the pass-4 critic's 25.3° pick red on the
++ * RATIO row first and left the ≤5° line un-demonstrated.
++ *
++ * BORDER: an ink on the anchor that clears the line and the paper and fails ONLY the wrapper
++ * border. Light: the pass-2..5 gold #a87e13 (3.505 / 3.646 / 2.970 painted). Dark: #756106 at
++ * h 94.5 (3.505 / 3.091 / 2.424, under HEAD's 2.441). Only the BORDER row can catch either.
++ */
++const NEAR: Record<string, string> = { light: "#b46b29", dark: "#8b5b19" };
++const BORDER_ONLY: Record<string, string> = { light: "#a87e13", dark: "#756106" };
++
++for (const scheme of ["light", "dark"] as const) {
++  test(`BORN-RED: the corridor names its failure on HEAD's violet — ${scheme}`, async ({
++    page,
++  }, testInfo) => {
++    const err = await thrownBy(
++      corridor(page, scheme, testInfo, "html body .progress-trace { stroke: #8b5cf6 !important }"),
++    );
++    expect(err, "the corridor must FAIL on HEAD's violet; it passed, so it is VACUOUS").not.toBeNull();
++    expect(err!.message).toContain(`NO GAUGE PIXEL IN THE BAND (${scheme})`);
++    expect(err!.message).toMatch(/grounds: line \d+,\d+,\d+, paper \d+,\d+,\d+\./);
++    // the far arm lands outside the window: named with its own hue, or as under the chroma floor
++    expect(err!.message).toMatch(/° off the gold anchor|clears the chroma floor/);
++    testInfo.annotations.push({ type: "born-red", description: err!.message });
++  });
++
++  test(`BORN-RED: an in-window ink 25° off the anchor reds on the HUE row — ${scheme}`, async ({
++    page,
++  }, testInfo) => {
++    const err = await thrownBy(
++      corridor(page, scheme, testInfo, `html body .progress-trace { stroke: ${NEAR[scheme]} !important }`),
++    );
++    expect(err, "a 25°-off ink inside the window passed the corridor").not.toBeNull();
++    expect(err!.message).toContain("HUE: the modal core");
++    testInfo.annotations.push({ type: "born-red", description: err!.message.split("\n")[0] });
++  });
++
++  test(`BORN-RED: an ink that clears the line and the paper reds on the wrapper BORDER — ${scheme}`, async ({
++    page,
++  }, testInfo) => {
++    const err = await thrownBy(
++      corridor(page, scheme, testInfo, `html body .progress-trace { stroke: ${BORDER_ONLY[scheme]} !important }`),
++    );
++    expect(err, `${BORDER_ONLY[scheme]} passed the corridor; the border row cannot see its ground`).not.toBeNull();
++    expect(err!.message).toContain("BORDER: the modal core");
++    testInfo.annotations.push({ type: "born-red", description: err!.message.split("\n")[0] });
++  });
++}
+diff --git a/web/frontend/e2e/rate-clock.ts b/web/frontend/e2e/rate-clock.ts
+new file mode 100644
+index 00000000..c3745760
+--- /dev/null
++++ b/web/frontend/e2e/rate-clock.ts
+@@ -0,0 +1,130 @@
++/**
++ * RATE CLOCKS — the ONE copy every rate or budget row ships beside (T9-W7 pass 6, the chair's
++ * instruments lane; registry-v5 §2.3; LAWS P5 "A rate or budget gate proves its ablation reds
++ * under a 60 Hz rAF shim or drives its own clock ≥120 Hz"). From ACC-FIVE's pass-5 critic
++ * (`critique/ACC-FIVE/instruments/front-rate-60hz.CRITIC.spec.ts`): with the budget deleted
++ * (FRONT_MIN_MS 16 → 0) G10 PASSED at 60.2/60.4/60.0 (chromium) and 58.0/61.4/58.4 (webkit) per
++ * second under a 60 Hz clock — a gate whose verdict was the host's display.
++ *
++ * Three init scripts (pass to `context.addInitScript`), each self-contained:
++ *   SIXTY_HZ      the critic's shim verbatim: rAF callbacks fire on the first native frame at or
++ *                 after each 16.667 ms due time — the NEGATIVE CONTROL clock.
++ *   DRIVEN_CLOCK  a JS animation clock at `hz` (default 125): rAF callbacks are dispatched from a
++ *                 setTimeout pump with `performance.now()` timestamps, so a budget ablation reds
++ *                 on ANY host, including a 60 Hz panel and the runner's raster.
++ *   TICK_RECORDER records native rAF timestamps (no change to the clock), for the precondition.
++ * All three leave `window.__ticks` (ms timestamps of animation-clock ticks).
++ *
++ * `clockPrecondition(page)` reads `__ticks` over the window the row measured and returns the
++ * median rate; every rate row asserts it ≥ 1.5 × its budget (93.75 Hz for 62.5/s) BEFORE it
++ * reads its own numbers, so a slow clock REDS LOUDLY instead of passing a broken tree.
++ *
++ * PRODUCT COPY (e2e/, ACC-FIVE pass 6): the chair's pass6/instruments/rate-clock.ts but for three
++ * `export` keywords. The three clocks are reached only through `clockFor`, and knip reds an export
++ * nothing imports.
++ */
++import type { Page } from "@playwright/test";
++
++const SIXTY_HZ = () => {
++  const nat = window.requestAnimationFrame.bind(window);
++  let pending = new Map<number, FrameRequestCallback>();
++  let id = 1,
++    due = -1,
++    scheduled = false;
++  (window as unknown as { __ticks: number[] }).__ticks = [];
++  const pump = (ts: number) => {
++    scheduled = false;
++    if (due < 0) due = ts;
++    if (ts + 0.5 < due) {
++      scheduled = true;
++      nat(pump);
++      return;
++    }
++    due = Math.max(due + 1000 / 60, ts);
++    (window as unknown as { __ticks: number[] }).__ticks.push(ts);
++    const cbs = pending;
++    pending = new Map();
++    for (const cb of cbs.values()) cb(ts);
++  };
++  window.requestAnimationFrame = (cb) => {
++    const i = id++;
++    pending.set(i, cb);
++    if (!scheduled) {
++      scheduled = true;
++      nat(pump);
++    }
++    return i;
++  };
++  window.cancelAnimationFrame = (i) => {
++    pending.delete(i);
++  };
++};
++
++const DRIVEN_CLOCK = (hz: number = 125) => {
++  const period = 1000 / hz;
++  let pending = new Map<number, FrameRequestCallback>();
++  let id = 1,
++    timer: ReturnType<typeof setTimeout> | null = null,
++    next = 0;
++  (window as unknown as { __ticks: number[] }).__ticks = [];
++  const pump = () => {
++    timer = null;
++    const ts = performance.now();
++    (window as unknown as { __ticks: number[] }).__ticks.push(ts);
++    const cbs = pending;
++    pending = new Map();
++    for (const cb of cbs.values()) cb(ts);
++    if (pending.size) arm();
++  };
++  const arm = () => {
++    if (timer != null) return;
++    const now = performance.now();
++    next = Math.max(next + period, now);
++    timer = setTimeout(pump, Math.max(0, next - now));
++  };
++  window.requestAnimationFrame = (cb) => {
++    const i = id++;
++    pending.set(i, cb);
++    arm();
++    return i;
++  };
++  window.cancelAnimationFrame = (i) => {
++    pending.delete(i);
++  };
++};
++
++const TICK_RECORDER = () => {
++  const nat = window.requestAnimationFrame.bind(window);
++  const w = window as unknown as { __ticks: number[] };
++  w.__ticks = [];
++  const tick = (ts: number) => {
++    w.__ticks.push(ts);
++    nat(tick);
++  };
++  nat(tick);
++};
++
++/** The median animation-clock rate (Hz) over ticks at or after `since` (performance.now()). */
++export async function clockHz(page: Page, since = 0): Promise<{ hz: number; gaps: number }> {
++  return page.evaluate((since) => {
++    const t = ((window as unknown as { __ticks?: number[] }).__ticks ?? []).filter((x) => x >= since);
++    const g = t
++      .slice(1)
++      .map((x, i) => x - t[i])
++      .filter((d) => d < 100)
++      .sort((a, b) => a - b);
++    const med = g.length ? g[g.length >> 1] : Infinity;
++    return { hz: 1000 / med, gaps: g.length };
++  }, since);
++}
++
++/** The init script a row runs under, keyed by CLOCK=60|driven|native (default driven). */
++export function clockFor(env = process.env.CLOCK ?? "driven"): {
++  name: string;
++  script: (() => void) | ((hz: number) => void);
++  arg?: number;
++} {
++  if (env === "60") return { name: "60 Hz shim (negative control)", script: SIXTY_HZ };
++  if (env === "native") return { name: "native (recorded)", script: TICK_RECORDER };
++  return { name: "driven 125 Hz", script: DRIVEN_CLOCK, arg: 125 };
++}
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b6e2d9a0..6e288afe 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -663,6 +663,21 @@ function selfTest() {
+   const fixture = ownershipFixture();
+   const armedBad = { ...ARMED, token: ARMED.banned, banned: ARMED.token };
+   const cases = [
++    // T9-W7 §3: one ink walks 6° off its crayon in OKLCH — inside every ratio floor, outside
++    // the family. A gate that reads hexes cannot see this; that is the whole point of KIN.
++    ["kin-6deg", () => gateKin(rotated(INDEX_CSS, "--color-progress-ink", 6))],
++    // And the corridor, squeezed from the GROUND rather than the ink: the paper walks toward
++    // the trace and both floors can no longer hold at once.
++    [
++      "corridor-ground",
++      () =>
++        gateCorridor(
++          INDEX_CSS.replace(
++            /--color-card:\s*hsl\([^)]*\);/,
++            "--color-card: hsl(48 30% 62%);",
++          ),
++        ),
++    ],
+     ["floors", () => gateFloors(bad)],
+     ["monotone", () => gateMonotone(bad)],
+     ["ownership", () => gateOwnership(sources(fixture))],
+@@ -737,9 +752,142 @@ function selfTest() {
+   return mute;
+ }
+ 
++/* ── T9-W7 §3 · KINSHIP, and THE CORRIDOR ───────────────────────────────────
++ *
++ * The ladder above grades PRESSURE. These two grade HUE and its price.
++ *
++ * KIN: every interactive accent is one of the five crayons at a different pressure, so an ink
++ * tier must hold its crayon's hue. The violet this replaced sat 41.3° off every house colour and
++ * no gate could say so, because a hex is not a hue. OKLCH is the space the tiers were cut in.
++ *
++ * CORRIDOR: the fill trace has TWO grounds at once — the frame line it retraces and the paper
++ * behind it — and they swap places between themes, so "clears 3:1" is an INTERVAL, not a number.
++ * The gate asserts the interval, never the hex: any move of --grid-line-color or --color-card
++ * re-opens it and reds here rather than in the wild. This arm is TOKEN ARITHMETIC and is labelled
++ * so: it over-reports a 12-unit hand-drawn line by ~0.5 against the painted bytes, so it carries
++ * a MARGIN over the floor and the painted pair is asserted in the browser
++ * (e2e/progress-corridor.spec.ts), which is the row that governs.
++ *
++ * DECLARED A DRIFT GUARD, NOT A GATE ON THE INK (T9-W7 pass 6). It cannot fail on the ink it
++ * replaced: HEAD's violet computes 3.57 by token against the light frame and PAINTS 2.876, so
++ * this row passes a trace the painted row reds. Its job is narrower and it does that job: it reds
++ * when a ground token moves under a fixed ink. KIN is what reds the violet here.
++ */
++const OKLCH_KIN_DEG = 5;
++const CORRIDOR_MARGIN = 0.25;
++
++const lin = (c) => {
++  const s = c / 255;
++  return s <= 0.04045 ? s / 12.92 : ((s + 0.055) / 1.055) ** 2.4;
++};
++const unlin = (v) =>
++  255 * (v <= 0.0031308 ? v * 12.92 : 1.055 * v ** (1 / 2.4) - 0.055);
++
++/** sRGB (0-255) → OKLCH {L, C, h°}. Björn Ottosson's matrices, verbatim. */
++function oklch([r, g, b]) {
++  const [R, G, B] = [lin(r), lin(g), lin(b)];
++  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
++  const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
++  const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++  const L = 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
++  const a = 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s;
++  const bb = 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s;
++  return {
++    L,
++    C: Math.hypot(a, bb),
++    h: ((Math.atan2(bb, a) * 180) / Math.PI + 360) % 360,
++  };
++}
++
++/** OKLCH → sRGB (0-255, clamped). The self-test's rotation needs the way back. */
++function fromOklch({ L, C, h }) {
++  const a = C * Math.cos((h * Math.PI) / 180);
++  const b = C * Math.sin((h * Math.PI) / 180);
++  const l = (L + 0.3963377774 * a + 0.2158037573 * b) ** 3;
++  const m = (L - 0.1055613458 * a - 0.0638541728 * b) ** 3;
++  const s = (L - 0.0894841775 * a - 1.291485548 * b) ** 3;
++  return [
++    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
++    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
++    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
++  ].map((v) => Math.min(255, Math.max(0, Math.round(unlin(v)))));
++}
++
++const hueGap = (a, b) => {
++  const d = Math.abs(a - b) % 360;
++  return d > 180 ? 360 - d : d;
++};
++
++/** the two ink tiers that must stay their crayon's own hue */
++const KIN = [
++  {
++    ink: "--color-progress-ink",
++    crayon: "--color-crayon-gold",
++    why: "the gauge is the sticker's crayon, pressed lighter",
++  },
++  {
++    ink: "--color-user-ink",
++    crayon: "--color-crayon-blue",
++    why: "your pen is crayon-blue's ink tier",
++  },
++];
++
++/** the fill trace, its two grounds, and the floor both must clear at once */
++const CORRIDOR = {
++  ink: "--color-progress-ink",
++  grounds: ["--grid-line-color", "--color-card"],
++  floor: 3,
++};
++
++function gateKin(css, deg = OKLCH_KIN_DEG) {
++  const out = [];
++  for (const [theme, scope] of Object.entries(themesScopes(css))) {
++    for (const { ink, crayon, why } of KIN) {
++      const d = hueGap(oklch(colorOf(scope, ink)).h, oklch(colorOf(scope, crayon)).h);
++      if (d > deg)
++        out.push(
++          `kin ${theme}: ${ink} is ${d.toFixed(1)}° from ${crayon} (KIN_DEG ${deg}) — ${why}`,
++        );
++    }
++  }
++  return out;
++}
++
++function gateCorridor(css) {
++  const out = [];
++  for (const [theme, scope] of Object.entries(themesScopes(css))) {
++    const ink = colorOf(scope, CORRIDOR.ink);
++    for (const g of CORRIDOR.grounds) {
++      const cr = contrast(ink, colorOf(scope, g));
++      if (cr < CORRIDOR.floor + CORRIDOR_MARGIN)
++        out.push(
++          `corridor ${theme}: ${CORRIDOR.ink} vs ${g} is ${cr.toFixed(3)} — under ${CORRIDOR.floor} + ${CORRIDOR_MARGIN} of margin (token arithmetic; the painted row is e2e/progress-corridor.spec.ts)`,
++        );
++    }
++  }
++  return out;
++}
++
++/** the two scopes, re-derived per call so a self-test's mutated css is what gets graded */
++const themesScopes = (css) => ({
++  light: scopeOf(css, "@theme {"),
++  dark: scopeOf(css, "\n.dark {"),
++});
++
++/** THE NEGATIVE CONTROL: rotate one ink 6° in OKLCH and the kin gate must red. */
++function rotated(css, token, deg) {
++  const scope = scopeOf(css, "@theme {");
++  const c = oklch(colorOf(scope, token));
++  const [r, g, b] = fromOklch({ ...c, h: (c.h + deg + 360) % 360 });
++  const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
++  return css.replace(new RegExp(`(${token}:\\s*)#[0-9a-fA-F]{3,8}`), `$1${hex}`);
++}
++
+ /* ── run ────────────────────────────────────────────────────────────────── */
+ 
+ const fails = [
++  ...gateKin(INDEX_CSS),
++  ...gateCorridor(INDEX_CSS),
+   ...gateFloors(INDEX_CSS),
+   ...gateMonotone(INDEX_CSS),
+   ...gateOwnership(sources(SRC)),
+@@ -759,6 +907,33 @@ if (fails.length || vacuous.length) {
+   process.exit(1);
+ }
+ 
++/* T9-W7 §3, printed: the family, and the interval the gauge lives in. */
++console.log(
++  `kinship — every interactive accent is one of the five crayons at a different pressure (KIN_DEG ${OKLCH_KIN_DEG}°, OKLCH):`,
++);
++for (const [theme, scope] of Object.entries(themesScopes(INDEX_CSS))) {
++  for (const { ink, crayon } of KIN) {
++    const a = oklch(colorOf(scope, ink));
++    const b = oklch(colorOf(scope, crayon));
++    console.log(
++      `  ${theme.padEnd(5)} ${ink.padEnd(22)} h ${a.h.toFixed(1)}°  L ${a.L.toFixed(3)} C ${a.C.toFixed(3)}   Δ${hueGap(a.h, b.h).toFixed(2)}° off ${crayon} (h ${b.h.toFixed(1)}°)`,
++    );
++  }
++}
++console.log(
++  `\ncorridor — the fill trace clears ${CORRIDOR.floor}:1 against BOTH its grounds at once, with ${CORRIDOR_MARGIN} of margin (TOKEN ARITHMETIC: it over-reports a 12-unit hand-drawn line by ~0.5 against the painted bytes — the governing row is the painted one in e2e/progress-corridor.spec.ts):`,
++);
++for (const [theme, scope] of Object.entries(themesScopes(INDEX_CSS))) {
++  const cells = CORRIDOR.grounds
++    .map(
++      (g) =>
++        `${contrast(colorOf(scope, CORRIDOR.ink), colorOf(scope, g)).toFixed(3)} vs ${g}`,
++    )
++    .join("  /  ");
++  console.log(`  ${theme.padEnd(5)} ${cells}`);
++}
++console.log("");
++
+ const ratio = (theme, p) =>
+   contrast(press(THEMES[theme].graphite, p, THEMES[theme].card), THEMES[theme].card);
+ const SCOPE_NAMES = Object.keys(THEMES);
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index 18a8d380..22b6d119 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -236,6 +236,7 @@ const SPEC_MANIFEST = [
+   "filter-census.spec.ts",
+   "follow-still-authorship.spec.ts",
+   "font-census.spec.ts",
++  "front-rate.spec.ts",
+   "futoshiki.spec.ts",
+   "gallery-deal.spec.ts",
+   "gallery-guard.spec.ts",
+@@ -249,6 +250,7 @@ const SPEC_MANIFEST = [
+   "permalink.spec.ts",
+   "presence.spec.ts",
+   "prm-void-audition.spec.ts",
++  "progress-corridor.spec.ts",
+   "session-substrate.spec.ts",
+   "share-truth.spec.ts",
+   "spoken-controls.spec.ts",
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index fe5fa7c5..3439bb44 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -29,6 +29,14 @@ import process from "node:process";
+ const ROOT = path.join(import.meta.dirname, "..");
+ const INDEX_CSS = path.join(ROOT, "src", "assets", "index.css");
+ 
++/** The alias-only tokens the estate ADMITS: each is a semantic a surface reads through, and
++ *  each earned its second name at a named ruling. A fourth is a decoy (T9-W7 §3). */
++const ALIAS_ALLOWLIST = [
++  "--color-teacher-red", // the verdict's red, read through the crayon (T3-W9)
++  "--color-gold-star", // the sticker, read through the crayon (T3-W9 / design-refinement §3.3.1)
++  "--color-pencil-graphite", // the pencil, read through --grid-line-color (T4-W10)
++];
++
+ /** Tailwind v4 utility namespaces that mint class names off a token prefix. */
+ const UTILITY_NAMESPACES = {
+   "--color-": [
+@@ -196,6 +204,23 @@ function main() {
+     for (const t of strays) console.log(`  ${t}`);
+   }
+ 
++  // THE ALIAS LAW, WITH AN EXIT CODE (T9-W7 §3, T5-W2 2.3's rule finally enforced). An
++  // alias-only token — declared, read by nothing in the corpus, alive only because another
++  // token's value mentions it — is the "third name for a colour that already has two" T5-W2
++  // killed. Three are ADMITTED, by name and for a reason: they are semantic indirections a
++  // surface reads THROUGH, not spare spellings. Anything else is a new one, and the census
++  // printed it and moved on. It does not any more.
++  const unadmitted = strays.filter((t) => !ALIAS_ALLOWLIST.includes(t));
++  if (unadmitted.length) {
++    console.error(
++      `\ncheck-theme-tokens: ${unadmitted.length} alias-only token(s) outside the allowlist — ${unadmitted.join(", ")}`,
++    );
++    console.error(
++      `  admitted: ${ALIAS_ALLOWLIST.join(", ")}. A fourth is a third name for a colour that already has two (T5-W2 2.3).`,
++    );
++    process.exit(1);
++  }
++
+   if (selfTest) {
+     // NEGATIVE CONTROL: re-add a known shadcn default and the census must go RED.
+     const patched = cssText.replace(
+@@ -208,6 +233,22 @@ function main() {
+       `\nnegative control (re-add --color-input): ${caught ? "RED as required" : "FAILED — the census did not catch it"}`,
+     );
+     if (!caught) process.exit(2);
++
++    // THE ALIAS LAW'S OWN PLANT (T9-W7 §3): a fourth alias-only token — declared in @theme,
++    // read by nothing in the corpus, kept alive solely by a live token's value. The census
++    // above stays green on it (it is not DEAD), so only the allowlist can catch it.
++    const planted = cssText
++      .replace(/(@theme\s*\{)/, "$1\n  --color-crayon-amber: #c99a2e;")
++      .replace(/(--color-gold-star:\s*var\()/, "$1--color-crayon-amber, ");
++    const p = census(planted);
++    const stray = p.directDead.filter((t) => !p.dead.includes(t));
++    const plantCaught =
++      stray.includes("--color-crayon-amber") &&
++      !ALIAS_ALLOWLIST.includes("--color-crayon-amber");
++    console.log(
++      `negative control (plant a 4th alias --color-crayon-amber): ${plantCaught ? "RED as required" : "FAILED — an unadmitted alias walked past the allowlist"}`,
++    );
++    if (!plantCaught) process.exit(2);
+   }
+ 
+   if (dead.length) {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..da2fd1c9 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -147,8 +147,23 @@
+      hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+      third name for a colour that already has two. */
+ 
+-  /* Handwritten glyph colors */
+-  --color-user-ink: #2563eb;
++  /* Handwritten glyph colors — your pen is CRAYON-BLUE'S INK TIER (T9-W7 §3). The old
++     pen was Tailwind blue-600 spelled verbatim, 11.5° off crayon-blue in OKLCH, so the
++     one mark a player makes most belonged to no house colour. #026FC4 holds crayon-blue's
++     hue (251.4° → 251.2°, Δ0.17°) and buys its contrast with lightness alone — the exact
++     move red-ink/green-ink/orange-ink/gold-ink already model. Measured on the painted bytes:
++     5.065:1 on --color-card, 4.945:1 on --color-background (the old blue-600 read 5.078 /
++     4.958 — the digit's weight moves by 0.013 of a ratio). Chroma 0.156 against the focus
++     ring's 0.117: the pen and the ring are one hue at two pressures, and what separates them
++     is FORM — an opaque glyph inside the cell versus a wobbled ghost drawn around it.
++
++     NO ALIAS TIER ABOVE IT. The hex lands on this name, not on a `--color-blue-ink` the name
++     then points at: that is the same third name T5-W2 2.3 killed four lines up, and all 24
++     var() consumers want the BINDING — the peer seam (playerIdentity.ts:69) rebinds
++     --color-user-ink per cell, so a consumer reading a constant tier would read the wrong
++     player's pen. If a surface ever needs the CONSTANT (a mark that must stay yours inside a
++     rebound cell), it mints the tier then, with its consumer. */
++  --color-user-ink: #026fc4;
+ 
+   /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+      scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+@@ -179,7 +194,14 @@
+      2.16:1, gold wax 2.47:1, rose 4.01:1 on the live papers), so the verdict line writes with
+      a darkened ink of the same hue; washes/strokes/fills keep the wax. Measured on
+      --color-background hsl(48 15% 98%): gold-ink #8C691D 4.85:1, red-ink #D02A52 4.87:1
+-     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below. */
++     (4.97:1 / 4.99:1 on --color-card) — both AA. Dark mode collapses ink into wax below.
++
++     GOLD NOW HAS THREE TIERS, and they are three jobs with three measured floors, not three
++     names for one colour (T9-W7 §3). --color-crayon-gold is the WAX: strokes, washes, the
++     solved frame, the sticker. --color-gold-ink is the VERDICT TEXT tier, darkened to the
++     4.5:1 body floor. --color-progress-ink (below) is the TRACE tier, which sits between
++     them because it has to clear 3:1 against TWO grounds at once — the frame line it
++     retraces and the card behind it — and those two grounds swap places between themes. */
+   --color-gold-ink: #8c691d;
+   --color-red-ink: #d02a52; /* teacher-red #E8315B hue-locked (346°), darkened to AA */
+ 
+@@ -219,11 +241,20 @@
+   --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+      the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+      lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++     blends to 3.63:1 on the painted bytes. Dark mode keeps crayon-blue. (The dark arm this
++     sentence has promised since T3-W9 does not exist — the ring paints THIS ink on near-black
++     paper. The token has one owner, T9-W7 §6; the fix is that row's, not a palette's.) */
+   --color-pencil-graphite: var(
+     --grid-line-color
+   ); /* the pencil: grid, ghost ring, hover sketch */
+ 
++  /* The solver button's glow, at rest and under a pointer (T9-W7 §3). Two names rather than
++     two inline rgba() literals, and gold rather than violet: the button that fills the board
++     in glows in the colour the finished board wears. Both resolve through --color-crayon-gold,
++     so the dark arm comes free with the crayon. */
++  --sparkle-glow-soft: color-mix(in srgb, var(--color-crayon-gold) 30%, transparent);
++  --sparkle-glow-strong: color-mix(in srgb, var(--color-crayon-gold) 60%, transparent);
++
+   /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+      N, and the T4-W10 gate-1 sweep (which raised .heading-value 60→68 and .dt-label 62→68
+@@ -264,18 +295,40 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+-     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+-     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+-     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+-     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+-     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+-     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+-     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+-     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+-     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+-     4.16/3.85. */
+-  --color-progress-ink: #8b5cf6;
++  /* Progress-ink — GOLD'S INK TIER (T9-W7 §3, retiring the T4-W9 violet). The trace is a
++     coloured pencil that retraces the board frame arc-length-proportional to fill, and it is
++     now the same hue as the sticker the board wears when it is done: crayon-gold 83.7°, held
++     to 83.6° (Δ0.12°). The violet it replaces sat at 292.7°, inside the 122.8° hole between
++     crayon-blue and crayon-rose — 41.3° from the nearest house colour, the one accent on the
++     page that belonged to no family. Progress is not a sixth crayon; progress is gold at
++     pencil pressure, and the win lifts it one pressure into the wax.
++
++     The two-tier direction still INVERTS the crayon "glow brighter at night" doctrine, and
++     for the reason the violet named: the trace sits over the FRAME LINE, which flips value
++     between themes (dark graphite in light, light warm-grey in dark), so the ink goes
++     LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark). That
++     inversion is why gold needs its own ink here and cannot alias either gold it already
++     has: crayon-gold reads 2.41:1 on the light card, gold-ink reads 2.83:1 over the light
++     frame, and in dark both collapse into the wax at 1.07:1 over the frame line.
++
++     LAW 25 STANDS, AND THIS PALETTE MEETS IT (T9-W7 chair §6.7). "Gold is earned light" is not
++     amended by a colour lane: the LIGHT arrives only at the win. What arrives with the work is a
++     PENCIL. The gauge writes gold at pencil pressure — painted relative luminance 0.211 light /
++     0.134 dark against the wax's 0.357 / 0.580 — and the win is the lift from ink to wax on the
++     same rect, the same seed, the same hue. One hue, two pressures; the earned light is the
++     second one. (The standing ask that law 25 say so out loud travels to the chair, not here.)
++
++     Contrast ledger — PAINTED, at stroke-opacity 1 (the trace paints its own token to the byte,
++     chromium == webkit). The trace has THREE painted grounds, not two: the frame line it
++     retraces (49,49,49), the paper inside (253,253,252), and — because an 8-unit stroke centred
++     on a line 2 px inside the board overhangs it — the board wrapper's own 2 px border
++     (230,230,228, `--color-border`), under about a quarter of the trace's footprint (T9-W7 pass
++     6). All three at 3:1 admit painted luminance 0.1922–0.2300 and nothing else. The pass-2..5
++     gold #A87E13 painted 0.2329 — 2.970 on the border, 0.003 over the ceiling. #A27803 holds its
++     hue (83.93° to 83.81° OKLCH, chroma 0.122 kept) and sits at 0.2112, the balanced point: 3.237
++     vs the line, 3.949 vs paper, 3.217 vs the border. The GATE asserts the corridor on all three
++     grounds (e2e/progress-corridor.spec.ts), never the hex. */
++  --color-progress-ink: #a27803;
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -369,7 +422,14 @@
+   --color-border: hsl(24 4% 16%);
+   --color-ring: hsl(48 8% 83%);
+ 
+-  --color-user-ink: #60a5fa;
++  /* The pen is the ONE ink that may not collapse into its wax: the wax belongs to the focus
++     ring and the unit wash, and a player's own digit cannot be the same colour as the cell
++     it happens to be sitting in. #47A7FF holds crayon-blue's dark hue (249.3°, Δ0.07°) and
++     keeps the weight the old Tailwind blue-400 had — 7.341:1 on --color-card against 7.360:1.
++     The dark ring's own arm is §6's row (T9-W7 chair §6.1: one owner for that token); this
++     palette survives every candidate on §6's table because each sits inside the blue arc
++     244.4–258.3° this family reserves. */
++  --color-user-ink: #47a7ff;
+ 
+   /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+   --peer-ink-l: 0.8;
+@@ -400,11 +460,31 @@
+ 
+   --grid-line-color: hsl(48 10% 80%);
+ 
+-  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+-     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+-     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+-     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+-  --color-progress-ink: #7c3aed;
++  /* Progress-ink (dark) — gold's ink tier DEEPENS at night, the inversion the light-tier
++     comment names: the dark frame line is a LIGHT warm-grey, so a deeper gold is what reads
++     over it. #79650F holds dark crayon-gold's hue (94.5°, Δ0.72° painted) at OKLCH L 0.512,
++     C 0.100 — one tier DOWN from the wax rather than up, the only direction that clears both
++     grounds. The dark grid line is itself a warm near-gold grey (95.2° at chroma 0.011), so in
++     dark the trace and the frame it retraces are ONE hue and only pressure tells them apart.
++
++     THE CORRIDOR, and it is narrow. The dark trace has TWO painted grounds pulling opposite
++     ways — the line (199,197,190) above it and the paper (19,18,17) below — so clearing 3:1
++     against both at once admits painted core luminance 0.1184–0.1526 and nothing else. That is
++     0.034 wide. This paints 0.1341, mid-corridor, for 3.303 vs the line and 3.280 vs paper.
++     (Pass 2's first candidate painted 0.1584 — 0.006 OVER the ceiling, i.e. too light for the paper.)
++
++     THE THIRD GROUND HAS NO DARK ANSWER. The board wrapper's 2 px border (42,40,39) sits under the
++     trace's outer overhang too, and against the line, the paper AND that border no colour clears
++     3:1: the best any ink can do is 2.914 (luminance 0.1586), and it pays for it on the line. This
++     paints 2.572 there; HEAD's violet painted 2.441. The gate holds the dark border row to "no
++     worse than HEAD" and says why (T9-W7 pass 6); the estate row is the border's, the same class
++     as the dark card edge ACC-SIX found infeasible.
++
++     THE COST, named rather than hidden: the night gauge can be gold at OKLCH C ≤ 0.10 AND NO
++     MORE. Nothing at C ≥ 0.12 clears both floors — the best such candidate scores 2.317. Any
++     move of --grid-line-color or --color-card re-opens this row, which is why the gate asserts
++     the CORRIDOR and not the hex. */
++  --color-progress-ink: #79650f;
+ 
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+@@ -580,6 +660,18 @@ html {
+       background: var(--color-card);
+       border-color: color-mix(in srgb, var(--color-foreground) 30%, transparent);
+     }
++
++    /* The gauge, specified FROM THE PHONE (T9-W7 §2). At 393 dpr3 the trace is 2.92 CSS px
++       inside a 4.38 px frame, so the graphite flank is 0.73 px per side — an antialiased
++       sliver, which means the ground a reader actually perceives is a BLEND of line and paper
++       rather than either. At 12 units the trace covers the line outright and paper is its only
++       ground, so the ink can take the TEXT tier: --color-gold-ink reads 4.85 on light paper,
++       and in dark that tier already IS the wax by the estate's own collapse (the .dark block
++       above), 11.2 on dark paper. One rule, no new token. */
++    .progress-trace {
++      stroke-width: 12;
++      stroke: var(--color-gold-ink);
++    }
+   }
+ 
+   /* Solve success — the gold-star moment. Grid lines + shadow both reference the single
+@@ -590,13 +682,46 @@ html {
+     transition: stroke 500ms;
+   }
+ 
+-  /* Completion hand-off (T4-W9 ROW 1): at the win the frame floods gold and progress is
+-     already 100% — redundant with it. The violet trace bows out so the gold reward owns
+-     the frame alone; the trace led the eye to the gold, it never competes with it. The
+-     500ms bow-out lives in HandDrawnGrid's (unlayered) scoped style so this layered
+-     rule's `transition` isn't the one that wins — here we only assert the end state. */
++  /* Completion hand-off (T9-W7 §4, recut from T4-W9 ROW 1). The trace no longer bows out.
++     It LIFTS: the same rect, the same seed, the same hue, one pressure up — gold ink
++     becomes gold wax, which is the sentence the whole gauge exists to say. At 100% the
++     player has drawn the frame themselves; the win is the board pressing that line down in
++     crayon.
++
++     This is also the only version of the hand-off that PAINTS. The .grid-line recolour
++     above lands on the live vector stack, which is display:none under the grid bake
++     (HandDrawnGrid's .baked-hidden), so the solved frame's gold reaches zero pixels on
++     screen while pre-baked graphite bitmaps hold the surface — measured 0 chromatic px
++     through 5s, both themes. The trace is a grain-baked pose stack that is never hidden, so
++     the stroke swap is the gold the player actually sees. The .grid-line rule stays for
++     print, where the bitmaps drop and the vector stack is what renders.
++
++     Zero filters and zero re-raster: a stroke colour swap on a live pose stack. The
++     duration is v-bound in HandDrawnGrid's scoped style from the ladder's 500ms rung, which
++     these `.solve-success` transitions are already the consumers of (unlayered there, so a
++     layered `transition` can't win over it); here we only assert the end state. */
+   .solve-success .progress-trace {
+-    opacity: 0;
++    stroke: var(--color-gold-star) !important;
++  }
++
++  /* THE WIN'S HEDGE, AND IT MUST SIT HERE (T9-W7 §4, gate G4 row 3). The rule above is
++     (0,2,0) `!important`; the `prefers-contrast: more` arm ~45 lines up is (0,1,0) and
++     unimportant, so the win OVERRODE it and a reader who asked for MORE contrast got LESS:
++     measured in both engines at 12 units, light, the stroke went gold-ink 4.967 on paper to
++     gold-wax 2.533 — under the 3:1 non-text floor, DOWN from a moment earlier. The default
++     arm can argue its 2.533 because it keeps a 5.046 line ground; this arm covers the line
++     on purpose and so has only paper, and cannot.
++
++     So the hedge is restated at the win's own specificity, AFTER it in source order — the
++     only thing that beats an equal-specificity `!important` in the same layer. Moving it up
++     into the block above would read tidier and would not work; that is the whole defect. The
++     wax still lands everywhere else the win touches (the box-shadow, the grid lines), so the
++     state change is not lost — the pressure change is carried by width, which this arm has
++     already raised to 12. */
++  @media (prefers-contrast: more) {
++    .solve-success .progress-trace {
++      stroke: var(--color-gold-ink) !important;
++    }
+   }
+ 
+   .solve-success {
+@@ -923,6 +1048,23 @@ html {
+       stroke: #000 !important;
+     }
+ 
++    /* The fill trace's print arm (T9-W7 §4). It had none: the trace printed in whatever the
++       progress ink resolved to, and at the win the `.solve-success` recolour in @layer
++       utilities would print gold over a black frame. `@layer base` + !important wins both
++       (for important declarations layer precedence inverts — the EARLIER layer wins), so a
++       printed worksheet's gauge is the same graphite as the frame it retraces. */
++    .progress-trace {
++      stroke: #000 !important;
++    }
++
++    /* The peer's name-tape prints nothing (T9-W7 §12). The fold gave the board a scrap of washi
++       naming who wrote a digit; it is a hover/focus affordance for a live room, and a printed
++       worksheet has neither. It sat in the print rule's blind spot because it is mounted by
++       `hoveredPos` rather than by a layout class the list above already names. */
++    .attribution-tape {
++      display: none !important;
++    }
++
+     .glyph-svg path {
+       stroke: #000 !important;
+       filter: none !important;
+@@ -948,6 +1090,21 @@ html {
+     .glyph-svg path {
+       stroke: CanvasText;
+     }
++
++    /* The gauge does NOT yield here (T9-W7 §4, ROW C, pass 6). Forced colours leave SVG
++       `stroke` alone, so the trace keeps its crayon, and it keeps it on purpose: the frame line
++       it retraces is not forced either (it stays graphite), so CanvasText would draw black ink
++       over a graphite line — painted, the system-ink arm read trace:frame 1.39 light where the
++       crayon clears 3:1 against the line AND the paper. The painted pair is in the pass-6
++       record; the CanvasText arm stays buildable as a one-rule diff beside it. */
++
++    /* And the tape names the peer in system ink (T9-W7 §12). It writes in the peer's own walk
++       colour, which is exactly the kind of hue a forced-colours reader has asked not to be
++       handed; `color` is what the tape paints with, and forced colours will not override an
++       author's own `color` unless an author yields it. */
++    .attribution-tape {
++      color: CanvasText;
++    }
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+index 0fd9a20c..21d532db 100644
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -24,9 +24,10 @@
+  *    invalidate, the beat toggles opacity only (compositor-only), the geometry never mutates.
+  *  - DRAW-IN with the glyph grammar: the inked strokes tick in on the shared sequence chain
+  *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via
+- *    stroke-dashoffset — the identical primitive/easing glyphAnimations rides, retargeted to a
+- *    reactive reveal so all four pose copies of a stroke draw as one. Transient, one-shot; at
+- *    rest the reveal is constant, so the only per-beat change is the opacity swap.
++ *    a geometric front (`poseFronts`, T9-W7 §1) — the identical primitive and easing
++ *    glyphAnimations rides, retargeted to a reactive reveal so all four pose copies of a stroke
++ *    draw as one. Transient, one-shot; at rest the reveal is constant, so the only per-beat
++ *    change is the opacity swap.
+  *  - PRM: the sequence chain's central gate no-ops `start()` under reduced motion; the reveal
+  *    snaps to inked and the beat freezes (the grid's own PRM discipline, inherited).
+  */
+@@ -34,10 +35,11 @@ import { computed, onMounted, onUnmounted, reactive, watch } from "vue";
+ import {
+   createSequenceSubscription,
+   easeOutCubic,
++  linear,
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { generateLineBoilFrames } from "@pencil/grid/gridPaths";
++import { generateLineBoilFrames, poseFronts, frontGate } from "@pencil/grid/gridPaths";
+ import {
+   BOIL_CONFIG,
+   FILTER_PRESETS,
+@@ -118,49 +120,81 @@ const boilFrame = useBeatFrame(
+   () => beatsFor(BOIL_CONFIG.intervalMs),
+ );
+ 
+-// ── The draw-in reveal (stroke-dashoffset, one-shot on the shared sequence chain) ──────────
+-// reveal[i] ∈ [0,1] — the inked arc-length fraction of stroke i, shared across its four poses.
+-// pathLength=100 normalises the dash, so strokeDashoffset = 100·(1−reveal).
++// ── The draw-in reveal (a geometric front, one-shot on the shared sequence chain) ──────────
++// reveal[i] ∈ [0,1] — the inked arc-length fraction of stroke i, shared across its four poses,
++// and cut straight into the pose's own geometry (`fronts` below).
++//
++// ONE CLOCK AND ONE GATE FOR ALL FIVE STROKES (T9-W7 §5). The draw-in used to run a sequence
++// per stroke, each writing its own `reveal[i]` every frame: ungated, the tally re-cut at
++// 134.2/s on a 128 Hz panel, 2.15x the front's declared budget (pass-4 critique §3.1). Five
++// gates would not cure it (their commits interleave), so the stagger is now arithmetic over one
++// linear clock, and the whole reveal commits through the section's one `frontGate`.
+ const reveal = reactive<number[]>(Array(TALLY_TOTAL).fill(1));
+ const reducedMotion = usePrefersReducedMotion();
+-let draws: SequenceHandle[] = [];
++let draw: SequenceHandle | null = null;
+ 
+-function stopDraws() {
+-  for (const d of draws) {
+-    d.stop();
+-  }
+-  draws = [];
++function stopDraw() {
++  draw?.stop();
++  draw = null;
+ }
+ 
+ function runDrawIn(filled: number) {
+-  stopDraws();
+-  for (let i = 0; i < TALLY_TOTAL; i++) {
+-    if (i >= filled) {
+-      reveal[i] = 1; // an un-inked (ghost) stroke sits statically present — no draw-in
+-      continue;
+-    }
+-    if (reducedMotion.value) {
+-      reveal[i] = 1; // PRM: snap inked, no tween
+-      continue;
+-    }
+-    reveal[i] = 0;
+-    const seq = createSequenceSubscription({
+-      durationMs: DRAW_IN_PRESETS.glyph.duration,
+-      delayMs: i * DRAW_STAGGER_MS,
+-      easing: easeOutCubic,
+-      onProgress: (eased) => {
+-        reveal[i] = eased;
+-      },
+-      onComplete: () => {
+-        reveal[i] = 1;
+-      },
+-    });
+-    seq.start();
+-    draws.push(seq);
+-  }
++  stopDraw();
++  const inked = Math.max(0, Math.min(filled, TALLY_TOTAL));
++  const dur = DRAW_IN_PRESETS.glyph.duration;
++  // stroke i starts at i·stagger and eases over the glyph's own duration
++  const at = (ms: number) => {
++    for (let i = 0; i < TALLY_TOTAL; i++)
++      reveal[i] =
++        i >= inked
++          ? 1
++          : easeOutCubic(Math.max(0, Math.min(1, (ms - i * DRAW_STAGGER_MS) / dur)));
++  };
++  // PRM (or nothing inked): snap. An un-inked (ghost) stroke is always statically present.
++  if (reducedMotion.value || inked === 0) return at(Infinity);
++  const span = dur + (inked - 1) * DRAW_STAGGER_MS;
++  const gate = frontGate(at);
++  gate.write(0, true);
++  draw = createSequenceSubscription({
++    durationMs: span,
++    easing: linear,
++    onProgress: (t) => gate.write(t * span),
++    onComplete: () => {
++      gate.write(Infinity, true);
++      draw = null;
++    },
++  });
++  draw.start();
+ }
+ 
+-const dashOffset = (i: number) => 100 * (1 - reveal[i]);
++// THE GRAMMAR THE BOARD AND THE TALLY SHARE, and the estate still has the other one (T9-W7 §1,
++// hygiene — declared as such, not a cure; the scope claim is the pass-3 critique's §3.8 row).
++//
++// The tally's twelve strokes are short enough that the dash was never wrong here. WebKit
++// restarts a polyline's dash phase every ~128 segments; measured on the rendered surface, these
++// strokes are 4 segments each (the diagonal 8) and the board gauge's ring is ~490, which is why
++// exactly one of the two was broken. The cure's edge is therefore a measured line, and these are
++// the four surfaces still on the dash, counted rather than waved at:
++//
++//   DigitCell         glyph stroke   2–9 segments  (glyphPaths, 50 variants: min 2, median 4, max 9)
++//   DigitCell         ghost rect    16 / 8        (wobbleRect segments 4 at 9x9, 2 at 16x16)
++//   HandwrittenGlyph  glyph stroke   2–9          (the same glyph bank)
++//   AnswerKeyLaminate key glyph      2–9          (the same glyph bank)
++//   ScribbleLoader    coil          44            (scribblePath: 44 steps, one L each)
++//
++// The worst of them is 44 against ~128 — a third of the boundary, and none of them is generated
++// at a size the board's ring is. They are safe where they stand; what they are NOT is a second
++// grammar that can be ignored, so the count lives here and moves when they do.
++//
++// The tally takes `poseFronts` because it was the SECOND spelling of "a stroke drawn part-way"
++// on geometry this family already owns: the pose is cut at its own arc-length fraction and the
++// path ends where the reveal has got to. No `pathLength` normalisation, no dash pattern, nothing
++// for an engine to restart — and the day this tally is re-cut at a segment count that matters,
++// it cannot acquire the bug the board just shed. Each stroke's four poses are cut in ONE call on
++// the computed's own array, so the memo hits (`poseFronts([d], f)` would miss it every call).
++const fronts = computed(() =>
++  strokeFrames.value.map((fr, i) => poseFronts(fr, reveal[i])),
++);
+ const strokeState = (i: number) => (i < props.descriptor.filled ? "inked" : "ghost");
+ 
+ // Re-ink whenever the measured grade changes (graded flips, or the tier moves). A same-tier
+@@ -169,7 +203,7 @@ watch(
+   () => [props.descriptor.graded, props.descriptor.filled] as const,
+   ([graded, filled]) => {
+     if (graded) runDrawIn(filled);
+-    else stopDraws();
++    else stopDraw();
+   },
+ );
+ 
+@@ -177,7 +211,7 @@ watch(
+ // finishes the value); land every inked stroke on its settled offset.
+ watch(reducedMotion, (reduced) => {
+   if (reduced && props.descriptor.graded) {
+-    stopDraws();
++    stopDraw();
+     for (let i = 0; i < TALLY_TOTAL; i++) reveal[i] = 1;
+   }
+ });
+@@ -185,7 +219,7 @@ watch(reducedMotion, (reduced) => {
+ onMounted(() => {
+   if (props.descriptor.graded) runDrawIn(props.descriptor.filled);
+ });
+-onUnmounted(stopDraws);
++onUnmounted(stopDraw);
+ </script>
+ 
+ <template>
+@@ -219,17 +253,14 @@ onUnmounted(stopDraws);
+           :class="{ 'is-active': boilFrame === f }"
+         >
+           <path
+-            v-for="(d, i) in pose"
++            v-for="(_, i) in pose"
+             :key="i"
+-            :d="d"
++            :d="fronts[i][f % fronts[i].length]"
+             class="dt-stroke"
+             :class="strokeState(i)"
+             fill="none"
+             stroke-linecap="round"
+             stroke-linejoin="round"
+-            pathLength="100"
+-            stroke-dasharray="100 100"
+-            :style="{ strokeDashoffset: dashOffset(i) }"
+           />
+         </g>
+       </template>
+@@ -332,8 +363,9 @@ onUnmounted(stopDraws);
+ 
+ .dt-stroke {
+   stroke: var(--color-pencil-graphite, var(--grid-line-color));
+-  /* Draw-in advances the fill-front only while a new grade lands; absent under PRM so the
+-     offset snaps (the beat is already frozen). */
++  /* Draw-in advances the fill-front only while a new grade lands, and it advances as GEOMETRY
++     now — there is nothing here for a CSS transition to carry, and declaring `none` keeps it
++     that way should a future rule try. Under PRM the reveal snaps (the beat is already frozen). */
+   transition: none;
+ }
+ .dt-stroke.inked {
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..8416f8dd 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -347,17 +347,18 @@ const conflicts = computed<Conflicts>(() =>
+     : { positions: new Set<string>(), unit: null },
+ );
+ 
+-// ── T4-W9 board FILL fraction (the progress trace's number) ──────────────
++// ── T4-W9 board FILL, as the two COUNTS (the progress trace's numbers) ──────
+ // A pure derivation over `values`/`givenCells` (re-evaluated on a fill/clear, NEVER on
+-// the boil beat): filled non-given cells / fillable cells. FILL, not correctness — wrong
+-// digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render.
+-const fillProgress = computed(() => {
++// the boil beat): filled non-given cells and fillable cells. FILL, not correctness — wrong
++// digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render and
++// the fraction; the counts travel because the progressbar says the count out loud (T9-W7
++// §2.3: one contract, ACC-SIX's prop shape) and a fraction cannot be un-rounded into one.
++const fillCounts = computed(() => {
+   let filled = 0;
+   for (const [pos, v] of Object.entries(props.values)) {
+     if (v !== 0 && !props.givenCells.has(pos)) filled++;
+   }
+-  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+-  return Math.max(0, Math.min(1, filled / fillable));
++  return { filled, fillable: Math.max(1, props.totalCells - props.givenCells.size) };
+ });
+ 
+ // Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
+@@ -1027,7 +1028,8 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+         :board-size="boardSize"
+         :subgrid-size="subgridSize"
+         :anim-state="gridAnimState"
+-        :progress="fillProgress"
++        :filled="fillCounts.filled"
++        :fillable="fillCounts.fillable"
+         :solve-success="solveState === 'solved'"
+         :join-progress="traceProgress"
+         :join-opacity="traceOpacity"
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..20aba772 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -2084,14 +2084,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   fill: url(#sparkle-rainbow) !important;
+ }
+ 
++/* The glow is GOLD (T9-W7 §3). It was two inline rgba() literals — Tailwind
++   violet-300 spelled by hand, the third place the retired violet painted and the only one
++   nothing named. The solver's button now glows in the colour the solved board wears. One
++   filter; the budget stays 9. `transition: all` narrows to `filter`, because `all` was also
++   tweening the colour a gate reads and handing back a frame of the tween. */
+ .sparkle-icon {
+-  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
++  filter: drop-shadow(0 0 2px var(--sparkle-glow-soft));
++  transition: filter 200ms var(--ease-standard);
+ }
+ 
+ @media (hover: hover) {
+   .icon-btn:hover .sparkle-icon {
+-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
++    filter: drop-shadow(0 0 5px var(--sparkle-glow-strong));
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..e87527e8 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1431,7 +1431,6 @@ onMounted(async () => {
+ @media (hover: hover) {
+   .guard-btn:hover .guard-face {
+     background: var(--color-accent);
+-    color: var(--color-foreground);
+   }
+ }
+ 
+@@ -1453,11 +1452,32 @@ onMounted(async () => {
+ }
+ 
+ /* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+-   the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
+-   A reader who can see neither stroke weight nor colour still sees one verb marked and one
+-   bare. */
++   the hand's way of saying weight — and now it takes the DANGER INK too (T9-W7 §3/§15). The
++   two most consequential buttons the deck has had zero chromatic content between them: the
++   armed verb painted rgb(10,10,10), which is the same ink as `keep`. Red is already the house's
++   word for undoing work (the teacher's pencil, the conflict ring, the refusal note), so the
++   verb writes in it — and `HandDrawnOutline` strokes `currentColor`, so the drawn box reddens
++   with the word and the mark is a shape as well as a hue.
++
++   NO GROUND. The 8% graphite wash that used to sit here went with it, and no red one replaced
++   it: red-ink over its own 5% ground reads 4.549:1, four hundredths over the AA floor, which is
++   a number that is true today and false the next time a paper moves. The word and its box carry
++   the mark on bare card.
++
++   THE INK IS RED-INK PULLED 15% TOWARD THE PAGE'S OWN INK (T9-W7 pass 6, G5). Red-ink itself
++   painted UNDER the 4.5 body floor on the hover ground (core median 4.41 / 4.38 light, both
++   engines, pass 5) and marginal at rest (4.62 / 4.59). Mixing in OKLab toward a near-neutral ink
++   scales a and b together, so the hue holds (13.55 to 13.64 degrees light, 12.15 to 12.20 dark,
++   arithmetic) and only value moves:
++   darker on light paper, paler on dark, and in both themes further from the ground. One
++   declaration, no new token, both themes. The painted figures live in the pass-6 record.
++
++   The hover ground belongs to both verbs; the ink does not, and it no longer has to be restated
++   under the pointer: the shared hover rule sets the ground only, and `keep` already inherits
++   `--color-foreground` from `.guard-btn`. One verb marked, one bare, and the mark is legible to a
++   reader who sees neither stroke weight nor colour, because the word itself changed value. */
+ .guard-leave .guard-face {
+-  background: color-mix(in srgb, var(--color-foreground) 8%, transparent);
++  color: color-mix(in oklab, var(--color-red-ink) 85%, var(--color-foreground));
+ }
+ 
+ @media (pointer: coarse) {
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.ink.test.ts b/web/frontend/src/pencil/glyph/HandwrittenGlyph.ink.test.ts
+new file mode 100644
+index 00000000..1979c9a2
+--- /dev/null
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.ink.test.ts
+@@ -0,0 +1,57 @@
++import { describe, it, expect } from "vitest";
++import { mount } from "@vue/test-utils";
++import HandwrittenGlyph from "./HandwrittenGlyph.vue";
++
++/**
++ * THE PEN'S GUARD (T9-W7 §3, gate G6's unit half).
++ *
++ * The four board goldens render no user digit, so a bitmap cannot guard the one mark a player
++ * makes most — and the chair forbids re-minting a golden inside the loop (§6.4). The guard is
++ * therefore a UNIT row on the RESOLVED stroke of the three kinds of digit the glyph draws, and
++ * it exists because of a specific defect: `HandwrittenGlyph` carried `var(--color-user-ink,
++ * #2563eb)`, a second spelling of the pen that stopped being true the moment the token moved.
++ * A fallback nothing can reach is not a safety net; it is a stale copy waiting to be believed.
++ *
++ * The painted-colour half of G6 is in the browser (the digit reads #026FC4 light / #47A7FF dark
++ * on the byte, 0.17° / 0.11° off crayon-blue); this half asserts that the right TOKEN is asked
++ * for, in every state, with no second spelling anywhere in the component.
++ */
++const BASE = {
++  value: "5",
++  position: 0,
++  boardSize: 9,
++  noiseDelay: 0,
++  isGiven: false,
++  isOverridden: false,
++  isSolved: false,
++  isRevealed: false,
++  isHovered: false,
++};
++
++const strokeOf = (props: Partial<typeof BASE>) =>
++  mount(HandwrittenGlyph, { props: { ...BASE, ...props } })
++    .find("path")
++    .attributes("stroke");
++
++describe("HandwrittenGlyph — whose hand wrote this digit", () => {
++  it("writes a player's digit in --color-user-ink, with NO fallback spelling", () => {
++    const stroke = strokeOf({ isGiven: false });
++    expect(stroke).toBe("var(--color-user-ink)");
++    // the tell the defect left behind: a comma means a second colour is named here
++    expect(stroke).not.toContain(",");
++  });
++
++  it("writes an OVERRIDDEN given in the player's ink too — they wrote it, so it is theirs", () => {
++    expect(strokeOf({ isGiven: true, isOverridden: true })).toBe(
++      "var(--color-user-ink)",
++    );
++  });
++
++  it("leaves an original given in the page's own foreground, never the pen", () => {
++    expect(strokeOf({ isGiven: true })).toBe("var(--color-foreground)");
++  });
++
++  it("gives a solved digit the solver's rainbow, which outranks both", () => {
++    expect(strokeOf({ isGiven: false, isSolved: true })).toBe("url(#solver-ink)");
++  });
++});
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..8b0527b5 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -82,7 +82,10 @@ const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
+ const strokeColor = computed(() => {
+   if (props.isSolved) return "url(#solver-ink)";
+   if (isGivenOriginal.value) return "var(--color-foreground)";
+-  return "var(--color-user-ink, #2563eb)";
++  // No fallback hex. The old literal was a second spelling of the pen that stopped being
++  // true the moment --color-user-ink moved (T9-W7 §3), and it only ever fired if the token
++  // were undefined — which index.css cannot be, since the glyph is unreachable without it.
++  return "var(--color-user-ink)";
+ });
+ 
+ const strokeWidth = computed(() => {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..91ccb1f3 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,7 +1,19 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+-import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+-import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
++import {
++  createSequenceSubscription,
++  easeOutCubic,
++  heldFrameCount,
++  serializePoseSvg,
++  usePrefersReducedMotion,
++  useRasterStack,
++} from "@mkbabb/pencil-boil";
++import {
++  generateGridBoilFrames,
++  generateFrameTraceFrames,
++  poseFronts,
++  frontGate,
++} from "../gridPaths";
+ import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+@@ -18,15 +30,18 @@ const props = defineProps<{
+   boardSize: number;
+   subgridSize: number;
+   animState: AnimationState;
+-  /** T4-W9 board FILL fraction in [0,1] (default 0). The GAME owns the number — a
+-   *  `computed` over its own values/givens, re-evaluated on a fill/clear, NEVER on the
+-   *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+-   *  twin is automatic: there is no second implementation to keep in sync. */
+-  progress?: number;
+-  /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+-   *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+-   *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+-   *  bow-out that hands the frame to the gold has nothing left to fade. Pinned, not deleted. */
++  /** T4-W9 board FILL, as the two COUNTS (T9-W7 §2.3, ACC-SIX's shape): cells WRITTEN
++   *  (non-given, any digit, wrong ones included) out of cells writable (defaults 0 of 1). The
++   *  GAME owns the numbers — a `computed` over its own values/givens, re-evaluated on a
++   *  fill/clear, NEVER on the beat — and this frame owns the render and the fraction. Both
++   *  boards pass the identical props, so the twin is automatic. */
++  filled?: number;
++  fillable?: number;
++  /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the pose stack must stop
++   *  trading opacity 8/s over the whole board box — but it must NOT be unmounted, because the
++   *  trace is what the win recolours (T9-W7 §4: gold ink lifts to gold wax on the same rect).
++   *  The pin holds the stack on ONE pose for that stroke swap, so the lift reads as a single
++   *  line changing pressure rather than four. Pinned, not deleted. */
+   solveSuccess?: boolean;
+   /** T8-W3 M14 — the JOIN ring's dash front in [0,1] (default 0). A SECOND trace stack, not a
+    *  commandeering of the first: `progress` above is the live fill gauge and is in use whenever
+@@ -78,21 +93,38 @@ const boilFrame = useBeatFrame(
+ // Freeze on frame 0 during draw-in (strokeDashoffset needs stable paths)
+ const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+ 
+-// ── T4-W9 progress trace: the violet second-pencil FILL gauge ──
++// ── T4-W9 progress trace: the gold second-pencil FILL gauge ──
+ //
+ // A grain-BAKED filterless sibling of the frame — generateFrameTraceFrames emits the SAME
+ // ring geometry as generateGridBoilFrames' frame with the grain folded IN (the
+-// HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the violet retraces the
++// HandDrawnOutline grammar, NOT the grid's live-filter grammar), so the gold retraces the
+ // graphite frame in registration. frameCount static poses, opacity-swapped on the SAME
+ // boilFrame beat as the grid: steady-state raster zero (no live `filter=` to invalidate).
+-const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
++const filled = computed(() => Math.max(0, Math.round(props.filled ?? 0)));
++const fillable = computed(() => Math.max(1, Math.round(props.fillable ?? 1)));
++const progress = computed(() =>
++  Math.max(0, Math.min(1, filled.value / fillable.value)),
++);
+ const progressPercent = computed(() => Math.round(progress.value * 100));
++// THE PROGRESSBAR CONTRACT IS ONE (T9-W7 §2.3): `aria-valuenow` is the PERCENT against its
++// 0–100 range, and the COUNT rides `aria-valuetext` in ACC-SIX's words — the margin line's own
++// literal (`countLine` on SIX's tree), so the sentence a reader hears is the one the page draws.
++const fillLine = computed(() => `${filled.value} of ${fillable.value} on the board`);
+ 
+-// pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+-// every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+-// top-left. A fill event mutates exactly this one custom value — a cheap paint, never the
+-// beat, never a filter re-raster.
+-const traceDashOffset = computed(() => 1000 * (1 - progress.value));
++// ── THE GAUGE'S TWO MOTION VALUES ARE CONSUMED, NOT MINTED (T9-W7 §5) ──
++//
++// MOT-LADDER owns the ONE ladder and its publisher has not landed in this tree (`grep -rn
++// -- "--motion-" src/` is 0). So these are HEAD's own literals, v-bound, each naming the rung it
++// is a consumer OF — never a second ladder in pencilConfig. When the publisher lands, both read
++// `var(--motion-…)` and these two lines die.
++//
++//   the front's draw → the ladder's WRITE-IN rung (the `note` band). HEAD's literal is 240ms;
++//                      if the rung lands at 250 that is a declared ≤10ms move.
++//   the win's lift   → the rung whose value is 500 (index.css:588-611's `.solve-success`
++//                      transitions are already its consumers).
++const TRACE_FILL_MS = 240;
++const TRACE_WIN_MS = 500;
++const traceWinMs = `${TRACE_WIN_MS}ms`;
+ 
+ // Grain-static baked in (the grid's own tooth, in the 1000-unit viewBox regime the trace
+ // lives in — the T3-W13 grain-in-geometry discipline reused verbatim). Reactive on
+@@ -107,6 +139,77 @@ const traceFrames = computed(() =>
+   ),
+ );
+ 
++// THE FRONT IS GEOMETRY, NOT A DASH (T9-W7 §4). `poseFronts` cuts each pose at its own
++// arc-length fraction, so the path simply ENDS where the player's work has got to. The dash
++// this replaces read 92% filled at a quarter in WebKit, and the cause is not `pathLength` (the
++// synthesis's guess, falsified on the built tree) — WebKit restarts a polyline's dash phase
++// every ~128 segments and a hand-drawn ring is ~490. There is no pattern left for an engine to
++// restart.
++//
++// AND THE FRONT DRAWS (T9-W7 §5). A truncated `d` is not animatable by CSS, so the tween moved
++// up one level: the FRACTION eases on the estate's own one-shot `sequence` subscriber — the
++// same pencil-boil chain the beat rides, the same handle DifficultyTally's draw-in and
++// useJoinWash's ring already use. Without it the front STEPS ~31px per digit at 9x9 and ~158px
++// at 4x4, which is the PRM arm below and the buildable fallback if the rung ever reads 0.
++//
++// ── THE RE-CUT IS A RATE, AND THAT IS THE WHOLE OF GATE G10 (pass-3 critique §3.1) ──
++//
++// A `sequence` subscriber holds the continuous rAF chain while it runs, so "one re-cut per
++// frame" is not a budget at all — it is the panel's refresh rate wearing a budget's clothes.
++// Measured at no-preference on one write: chromium 29 re-cut frames in 233.7 ms (a 120 Hz box)
++// against webkit's 15 in 234.0 ms (60 Hz), both against a stated ceiling of 15. The estate's
++// owner runs a 120 Hz Mac and a 120 Hz phone; a gate whose number is the reviewer's display is
++// a gate that reds on one CI runner and passes on another.
++//
++// So the front is committed on a LEADING-EDGE time gate (`frontGate`, beside `poseFronts` in
++// gridPaths, the one budget every consumer of the front rides): the first frame of a write cuts
++// immediately (the front never lags the digit), and afterwards at most one cut per
++// FRONT_MIN_MS. The tween keeps every frame it has — only the `d` re-cut is coalesced — and the
++// exact end value is FORCED on completion, so the gauge and its a11y mirror still agree to the
++// digit. The budget is a declared constant divided by a declared constant: ≤62.5 re-cuts per
++// second at any refresh rate, ≤16 for a 240 ms fill event — and the join ring gets the same
++// gate, which it never had (critique §3.5:
++// ~560 `d` writes and ~60 ms of JS per join, priced by nobody). A committed cut writes one `d`
++// per pose, four per ring; `e2e/front-rate.spec.ts` counts the rings it read.
++
++const fillFraction = ref(progress.value);
++const fillGate = frontGate((v) => (fillFraction.value = v));
++const reducedMotion = usePrefersReducedMotion();
++let fillSeq: { stop: () => void } | null = null;
++
++watch(progress, (to, from) => {
++  fillSeq?.stop();
++  fillSeq = null;
++  fillGate.rearm();
++  // PRM, and the first paint: the front LANDS on the exact fraction in the same frame. No
++  // tween, no re-cuts — the arm W8's device trace reads, and the fallback the rung's value 0
++  // selects.
++  if (reducedMotion.value) {
++    fillGate.write(to, true);
++    return;
++  }
++  const start = from ?? to;
++  const span = to - start;
++  const seq = createSequenceSubscription({
++    durationMs: TRACE_FILL_MS,
++    easing: easeOutCubic, // --ease-drawOn's curve, the pencil stroke's own draw-on
++    onProgress: (eased) => {
++      fillGate.write(start + span * eased);
++    },
++    // Ends ON the fraction, never near it: the gauge and the a11y mirror must agree exactly.
++    onComplete: () => {
++      fillGate.write(to, true);
++      fillSeq = null;
++    },
++  });
++  fillSeq = seq;
++  seq.start();
++});
++
++onUnmounted(() => fillSeq?.stop());
++
++const traceFront = computed(() => poseFronts(traceFrames.value, fillFraction.value));
++
+ // ── T8-W3 join trace: the SECOND hand on the same rectangle ──
+ //
+ // The estate's own retrace idiom, the one `scribbleUnderline`'s selected state uses: a second
+@@ -116,7 +219,20 @@ const traceFrames = computed(() =>
+ // pencil rather than a thicker first one. Filterless and grain-baked like its sibling: no
+ // `filter=` is minted, so the census is unmoved.
+ const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?? 0)));
+-const joinDashOffset = computed(() => 1000 * (1 - joinProgress.value));
++
++// THE SAME RATE GATE, and this ring is why the gate exists at all. `useJoinWash` drives this
++// prop from `createSequenceSubscription`'s onProgress over 740–1180 ms — ~140 frames on a 120 Hz
++// panel, ~560 `d` writes and ~60 ms of main-thread JS per join, against a fill gauge that
++// declared 15. It replaced a `strokeDashoffset` style write that cost no re-parse at all, so the
++// cost went UP and nothing priced it (pass-3 critique §3.5). Gated, a join COUNTS 25–28 re-cuts
++// in one ~500 ms burst, both engines (G10, passes 5 and 6; 51–70 with the gate removed); once
++// the ring stands whole nothing re-cuts and the rest of the handle is opacity. The ends are
++// forced: 0 must unmount the stack, 1 must be the whole ring.
++const joinFraction = ref(joinProgress.value);
++const joinGate = frontGate((v) => (joinFraction.value = v));
++watch(joinProgress, (to) =>
++  joinGate.write(to, to <= 0 || to >= 1 || reducedMotion.value),
++);
+ 
+ const joinTraceFrames = computed(() =>
+   generateFrameTraceFrames(
+@@ -127,6 +243,9 @@ const joinTraceFrames = computed(() =>
+     FILTER_PRESETS["grain-static"]?.grain,
+   ),
+ );
++// Its sibling's front, verbatim — and cured in the same diff, because the join ring carried
++// the same dash and the same broken front in WebKit.
++const joinFront = computed(() => poseFronts(joinTraceFrames.value, joinFraction.value));
+ 
+ // Current frame's path data (transition layer — draw-in/erase only, see template)
+ const currentPaths = computed(() => {
+@@ -294,8 +413,9 @@ onUnmounted(() => {
+ <template>
+   <!-- FILL-gauge a11y mirror (T4-W9 ROW 3): the trace counts cells WRITTEN — wrong ones
+        included — because the app grades correctness only on Solve. So this reads how FULL,
+-       never how RIGHT: role=progressbar, aria-valuetext "board N% filled" (never "correct").
+-       A visually-hidden multi-root sibling of the decorative svg. -->
++       never how RIGHT: role=progressbar, never "correct". A visually-hidden multi-root
++       sibling of the decorative svg. The value is the percent; the valuetext is the count
++       (T9-W7 §2.3). -->
+   <div
+     class="progress-trace-a11y"
+     role="progressbar"
+@@ -303,7 +423,7 @@ onUnmounted(() => {
+     aria-valuemin="0"
+     aria-valuemax="100"
+     :aria-valuenow="progressPercent"
+-    :aria-valuetext="`board ${progressPercent}% filled`"
++    :aria-valuetext="fillLine"
+   ></div>
+   <!-- Decorative: the board's drawn rules. Its shape is already published by the grid's own
+        role/rowcount/colcount and by every cell's name (a11y r1 M6). -->
+@@ -446,20 +566,23 @@ onUnmounted(() => {
+       </g>
+     </template>
+ 
+-    <!-- Progress trace (T4-W9): the violet second-pencil FILL gauge. Its own filterless
++    <!-- Progress trace (T4-W9): the gold second-pencil FILL gauge. Its own filterless
+              grain-baked sibling layer (never gated on animState — the fill is orthogonal to
+              draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
+              and painted LAST so it sits over the graphite. The dash draws it to the current
+-             fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
+-             win. Zero steady-state raster: filterless static geometry, compositor-only swap.
++             fill-front; at the win `.solve-success` lifts its stroke from the gold ink to the
++             gold wax (index.css) and the trace STAYS — it is the gold the win actually paints,
++             because the frame's own recolour lands on the bake-hidden vector stack. Zero
++             steady-state raster: filterless static geometry, compositor-only swap, and the
++             win is a stroke colour change on geometry that is already on screen.
+              P1-W3 / r3 §4.4 — the stack used to render and flip 8/s UNCONDITIONALLY. At
+              `progress === 0` the dash offset is 1000, so the path draws nothing and four
+              invisible <g>s traded opacity over the whole board box forever; now they are not
+-             rendered at all. At the win the trace is opacity 0 but must still FADE, so the
+-             stack is PINNED to pose 0 rather than unmounted (the logo's during-bake idiom) —
+-             the trade stops and the 500 ms bow-out survives. -->
++             rendered at all. At the win the stack is PINNED to pose 0 rather than left on the
++             beat (the logo's during-bake idiom): the boil trade stops, so the wax lands on one
++             held pose and the lift reads as one line changing pressure, not four. -->
+     <g
+-      v-for="(d, f) in progress > 0 ? traceFrames : []"
++      v-for="(d, f) in fillFraction > 0 ? traceFront : []"
+       :key="'trace-' + f"
+       class="progress-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -470,12 +593,9 @@ onUnmounted(() => {
+         fill="none"
+         stroke="var(--color-progress-ink)"
+         stroke-width="8"
+-        stroke-opacity="0.95"
++        stroke-opacity="1"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: traceDashOffset }"
+       />
+     </g>
+ 
+@@ -483,7 +603,7 @@ onUnmounted(() => {
+              Everything the progress trace is — filterless grain-baked poses, opacity-swapped on
+              the SAME beat, unmounted whole at rest — with three differences that are the whole
+              feature: its own `baseSeed` (a second hand, in registration), its ink rebound to the
+-             peer's `--color-user-ink` off the group, and a dash driven by a finite one-shot
++             peer's `--color-user-ink` off the group, and a front driven by a finite one-shot
+              instead of the fill fraction. Painted last, over the graphite AND over the fill
+              gauge, because for its 1180ms it is the thing being said.
+              At `joinProgress === 0` — at rest, and under PRM, where the wash never runs — the
+@@ -491,7 +611,7 @@ onUnmounted(() => {
+              its sibling's, verbatim: the win freezes the stack on pose 0 rather than trading
+              opacity 8/s under gold that owns the frame. -->
+     <g
+-      v-for="(d, f) in joinProgress > 0 ? joinTraceFrames : []"
++      v-for="(d, f) in joinFraction > 0 ? joinFront : []"
+       :key="'join-' + f"
+       class="join-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -506,9 +626,6 @@ onUnmounted(() => {
+         :stroke-opacity="joinOpacity ?? 0"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: joinDashOffset }"
+       />
+     </g>
+   </svg>
+@@ -577,17 +694,19 @@ onUnmounted(() => {
+   opacity: 1;
+ }
+ 
+-/* The fill-front advances on FILL events only (progress is a computed over the game's
+-   values, never the beat). No-preference-gated: under PRM there is NO transition — the
+-   offset snaps to its correct static value and the beat is already frozen (boilBeat.ts),
+-   so the layer freezes on pose 0 with the right offset (PRM-safe by construction). The
+-   opacity term is the .solve-success bow-out (index.css asserts the end state); it lives
+-   here, unlayered, so a CSS-layer `transition` can't win over it. */
++/* THE WIN, and only the win (T9-W7 §4/§5). At 100% the stroke lifts from gold ink to gold wax
++   (index.css asserts the end state) and this is the tween that carries it. It lives here,
++   unlayered, so a CSS-layer `transition` can't win over it; under PRM the stroke swaps in the
++   same frame, which is the right answer for a colour change. The duration v-binds the rung
++   whose value is 500 — MOT-LADDER's, consumed (see TRACE_WIN_MS above), not minted here.
++
++   The FRONT's tween is not a CSS one and cannot be: `d` is not animatable across engines. It
++   rides the sequence subscriber in the script above, on the same pencil-boil chain — which is
++   also why there is no PRM arm to write here. The library's central gate hands PRM an inert
++   handle and the watcher lands the fraction in the same frame. */
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+-    transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++    transition: stroke v-bind(traceWinMs) var(--ease-noteWrite);
+   }
+ }
+ 
+@@ -596,10 +715,14 @@ onUnmounted(() => {
+   opacity: 0;
+   will-change: opacity;
+   /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+-     A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+-     the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+-     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+-     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
++     A second seed on the same rect is not a second ring: at a peer hue near the ink the other
++     ring is wearing, the two strokes fuse into one fringed band and the fill gauge is simply
++     gone. That is not hypothetical — `inkFor` walks the golden angle and index 2 lands at
++     275deg. The SUBJECT of that reading has moved (T9-W7 §4): the progress ink is gold now, so
++     index 2 is 168deg away from it and its true nearest house accent is the blue arc the pen
++     and the ring reserve, 22-25deg off. The ratio below is unchanged, and so is the finding —
++     a co-located retrace reads as ONE ring whenever two hues land within ~17.7deg, and the
++     peer walk still puts indices there (the sweep is PAL-TIN's gate).
+      So the second pass is offset, which is what the estate's own retrace idiom always was
+      (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+      stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.
+diff --git a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+new file mode 100644
+index 00000000..641505a8
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+@@ -0,0 +1,105 @@
++import { describe, it, expect, vi } from "vitest";
++import {
++  poseFronts,
++  generateFrameTraceFrames,
++  frontGate,
++  FRONT_MIN_MS,
++} from "./gridPaths";
++
++/**
++ * THE FRONT'S CONTRACT (T9-W7 §1/§4, the cross-family hand-off).
++ *
++ * `poseFronts` is exported to ACC-SIX, the §10 tally and PLR-COUNT, and it carries a
++ * precondition the pass-3 critique found unstated (§3.7): it parses a pose as ONE polyline.
++ * Handed a multi-subpath pose it would count the JUMPS between subpaths as drawn length and
++ * return a single connected path crossing the board — a wrong shape that looks plausible. The
++ * guard hands such a pose back uncut, and these rows are what make that a contract rather than
++ * a comment. The positive rows cut the estate's own grain-baked ring; the two guard rows use
++ * HAND-WRITTEN poses (a two-subpath string and a `catmullRomToBezier`-shaped curve), because on
++ * this tree no estate generator emits either shape: `generateFrameTraceFrames`' un-grained
++ * branch strips each side's leading `M` into one polyline, and `generateGridBoilFrames`' frame
++ * is an array of closed rects. The hazard is real and its named instances were not.
++ */
++const subpaths = (d: string) => (d.match(/[Mm]/g) ?? []).length;
++const points = (d: string) => (d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi) ?? []).length / 2;
++
++// the board gauge's own ring, grain-baked exactly as HandDrawnGrid bakes it (grain-static)
++const RING = generateFrameTraceFrames(1000, 42, 4, 1.5, {
++  baseFrequency: 0.04,
++  numOctaves: 2,
++  scale: 2.5,
++  seed: 7,
++});
++
++describe("poseFronts — the drawn front, as geometry", () => {
++  it("cuts a single-subpath ring at its own arc-length fraction", () => {
++    expect(subpaths(RING[0])).toBe(1);
++    const half = poseFronts(RING, 0.5);
++    expect(half).toHaveLength(RING.length);
++    // a cut pose is shorter than the whole one, and still one subpath
++    expect(points(half[0])).toBeLessThan(points(RING[0]));
++    expect(points(half[0])).toBeGreaterThan(2);
++    expect(subpaths(half[0])).toBe(1);
++    // and the cut is monotone in the fraction
++    expect(points(poseFronts(RING, 0.25)[0])).toBeLessThan(points(half[0]));
++  });
++
++  it("returns the poses UNCHANGED at f >= 1 and empty at f <= 0", () => {
++    expect(poseFronts(RING, 1)).toBe(RING);
++    expect(poseFronts(RING, 1.7)).toBe(RING);
++    expect(poseFronts(RING, 0)).toEqual(RING.map(() => ""));
++    expect(poseFronts(RING, -0.3)).toEqual(RING.map(() => ""));
++  });
++
++  it("hands a MULTI-SUBPATH pose back uncut rather than joining its subpaths", () => {
++    const multi = "M0,0 L100,0 L100,100 M300,300 L400,300 L400,400";
++    expect(subpaths(multi)).toBe(2);
++    expect(poseFronts([multi], 0.5)[0]).toBe(multi);
++  });
++
++  it("hands a CURVE pose back uncut — control points are not vertices", () => {
++    // the shape `catmullRomToBezier` emits: `wobbleLine`'s non-jagged branch, which every
++    // caller avoids today by passing `jagged: true`. Parsed as a polyline its control points
++    // would be counted as points on the line and both the length and the cut would be wrong.
++    const curved = "M0,0 C10,0 20,10 20,20 C20,30 30,40 40,40";
++    expect(subpaths(curved)).toBe(1);
++    expect(poseFronts([curved], 0.5)[0]).toBe(curved);
++  });
++
++  it("BORN-RED CONTROL: the guard discriminates, it does not refuse everything", () => {
++    // a single linear pose of the same family IS cut — so the two rows above fail the moment
++    // `poseIsLinearSinglePath` stops discriminating and starts returning false for everything.
++    const single = RING[0];
++    expect(subpaths(single)).toBe(1);
++    expect(poseFronts([single], 0.5)[0]).not.toBe(single);
++    expect(poseFronts(["M0,0 L100,0 L100,100"], 0.5)[0]).not.toBe(
++      "M0,0 L100,0 L100,100",
++    );
++  });
++
++  it("memoises on the frames array's identity without changing the answer", () => {
++    const a = poseFronts(RING, 0.37);
++    const b = poseFronts(RING, 0.37);
++    expect(b).toEqual(a);
++    // a fresh array of the same strings is a memo MISS and must still agree
++    expect(poseFronts([...RING], 0.37)).toEqual(a);
++  });
++});
++
++describe("frontGate — the front's rate budget", () => {
++  it("commits at most once per FRONT_MIN_MS, forces the end, and re-arms the leading edge", () => {
++    let now = 0;
++    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    // one write per 4 ms "frame" over 60 ms: a 250 Hz panel, the ceiling is what binds
++    for (now = 0; now <= 60; now += 4) gate.write(now);
++    expect(seen).toEqual([0, 16, 32, 48]);
++    expect(1000 / FRONT_MIN_MS).toBe(62.5);
++    gate.write(61, true); // the exact end value is never swallowed
++    gate.rearm();
++    gate.write(62); // and a new write's first frame lands at once
++    expect(seen.slice(-2)).toEqual([61, 62]);
++    clock.mockRestore();
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..8aa9d269 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -333,21 +333,27 @@ export function generateRectBoilFrames(
+ // The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom
+ // (top/bottom flush with the card edge, sides pulled in slightly). Module-level so
+ // generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below, same file)
+-// build off ONE source and the violet trace provably hugs the frame (A-1c) — never a
++// build off ONE source and the gold trace provably hugs the frame (A-1c) — never a
+ // re-declared magic number that could drift out of registration.
++//
++// The pads are NOT a colour family's to move: equalising them slides the frame 7.63 CSS px
++// at 1280 on every board, and the board goldens are blind to it (a thin line's 7 px move
++// sits under `maxDiffPixelRatio` 0.02). T9-W7 chair §6.2 — FRAME_PAD is one row of its own,
++// landed with a geometric assertion in viewBox units, a golden re-mint off a built dist, and
++// an owner disposition. This family ships its palette at HEAD's pads.
+ const FRAME_X_PAD = 12;
+ const FRAME_Y_PAD = 0;
+ 
+ /**
+  * The board frame ring as `frameCount` grain-BAKED closed poses — the T4-W9 progress
+  * trace's geometry. Same rect / seed / roughness / boil as `generateGridBoilFrames`'
+- * frame (so the violet trace retraces the graphite frame in registration), but the
++ * frame (so the gold trace retraces the graphite frame in registration), but the
+  * grain is folded INTO the pose geometry (gridPaths §Grain bake) — the HandDrawnOutline
+  * grammar, NOT the grid's live-filter grammar. The consumer renders these as filterless
+  * static siblings, opacity-swapped on the shared boil beat: steady-state raster zero.
+  *
+- * pathLength normalisation, dash draw, and the fill-front tween live at the consumer
+- * (HandDrawnGrid) — this function owns only the ring geometry.
++ * The dash draw and the fill-front tween live at the consumer (HandDrawnGrid) — this
++ * function owns only the ring geometry; `poseLengths` below measures it.
+  */
+ export function generateFrameTraceFrames(
+   viewBoxSize: number,
+@@ -369,6 +375,191 @@ export function generateFrameTraceFrames(
+   );
+ }
+ 
++/** A closed linear pose (`pointsToLinear` + ` Z`) back to its points, the close made explicit. */
++function posePoints(d: string): [number, number][] {
++  const nums = d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
++  if (!nums || nums.length < 4) return [];
++  const pts: [number, number][] = [];
++  for (let i = 0; i + 1 < nums.length; i += 2)
++    pts.push([Number(nums[i]), Number(nums[i + 1])]);
++  if (/z\s*$/i.test(d) && pts.length) pts.push(pts[0]);
++  return pts;
++}
++
++/** One pose, parsed once: its points, the arc length at each point, and whether it may be cut. */
++type PoseGeometry = {
++  pts: [number, number][];
++  /** cum[k] = arc length from pts[0] to pts[k]; cum[last] is the pose's own length. */
++  cum: number[];
++  /** ONE subpath — the precondition below. False poses are handed back uncut. */
++  single: boolean;
++};
++
++/**
++ * `poseFronts`' PRECONDITION, enforced rather than assumed (T9-W7 §1, the cross-family hand-off).
++ *
++ * This file parses a pose by pulling every number pair out of the `d` and treating them as ONE
++ * polyline. That is exactly true of `pointsToLinear`'s output — `M x,y L x,y … Z` — which is
++ * what every caller passes today. It is false of two other shapes this estate can emit, and in
++ * both the cut would come back as a wrong path that looks plausible:
++ *
++ *   - MORE THAN ONE SUBPATH. The jumps between subpaths would be counted as drawn length and
++ *     the cut would return one connected path crossing the gap.
++ *   - A CURVE. `wobbleLine`'s non-jagged branch serialises through `catmullRomToBezier`, and
++ *     `C`'s control points are not vertices: they would be counted as points on the line, so
++ *     both the length and the cut would be wrong. Every caller passes `jagged: true` today —
++ *     the ring's generator hardcodes it — which is precisely the kind of fact that stops being
++ *     true without anyone noticing.
++ *
++ * So a pose that is not a single linear polyline is handed back UNCUT: the function declines to
++ * cut geometry it cannot measure, rather than guessing. `poseFronts` is §1's hand-off to
++ * ACC-SIX, the §10 tally and PLR-COUNT, and this is the sentence that travels with it.
++ */
++function poseIsLinearSinglePath(d: string): boolean {
++  const cmds = d.match(/[A-DF-Za-df-z]/g) ?? [];
++  if (cmds.filter((c) => c === "M" || c === "m").length > 1) return false;
++  return cmds.every(
++    (c) => c === "M" || c === "m" || c === "L" || c === "l" || /^[Zz]$/.test(c),
++  );
++}
++
++/**
++ * Points + cumulative arc length per pose, in the poses' own user units. Pure, geometry-only.
++ *
++ * The poses differ from one another by 3.59 units in 3,965 (0.091%), so anything measured on
++ * one pose is within ~2.3 px of the others on a 2,513-px perimeter. Measured, not assumed.
++ *
++ * MEMOISED ON THE FRAMES ARRAY'S IDENTITY, and the memo is half the call (T9-W7 §5, pass-3
++ * critique §3.4). The geometry is INVARIANT for the whole tween — only the fraction moves — yet
++ * a naive cut re-parsed an 18.7 KB path string twice per pose per frame: 0.427 ms/call, of which
++ * 0.204 ms was arc length and 0.198 ms the second parse. The consumers hold their poses in a
++ * `computed`, so the array's identity is stable for exactly as long as the geometry is, and a
++ * `WeakMap` keyed on it expires with it — no cache size, no invalidation rule, nothing to get
++ * wrong. Measured on the ring (4 poses, 492 segments, node, 2,000 calls after a 200-call warm):
++ * 0.0604 ms/call on a hit against 0.2595 on a miss, a 76.7 % saving.
++ *
++ * THE CALL-SHAPE TRAP: `poseFronts([d], f)` builds a fresh one-element array on every call and
++ * MISSES the memo every time. Pass the `computed`'s own array (`poseFronts(frames, f)`) and pick
++ * the pose out of the result; DifficultyTally does exactly that per stroke.
++ *
++ * Module-private: an export with no consumer is the decoy the theme-token census exists to kill,
++ * one namespace over (knip reds on it). ACC-SIX and the §10 tally take arc length THROUGH
++ * `poseFronts`; the day one of them wants the raw number, it exports here, with its consumer, in
++ * the same diff.
++ */
++const poseGeometryCache = new WeakMap<readonly string[], PoseGeometry[]>();
++
++function poseGeometry(frames: string[]): PoseGeometry[] {
++  const hit = poseGeometryCache.get(frames);
++  if (hit) return hit;
++  const built = frames.map((d) => {
++    const single = poseIsLinearSinglePath(d);
++    const pts = single ? posePoints(d) : [];
++    const cum: number[] = pts.length ? [0] : [];
++    for (let i = 1; i < pts.length; i++)
++      cum.push(
++        cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
++      );
++    return { pts, cum, single };
++  });
++  if (import.meta.env.DEV && built.some((g) => !g.single))
++    console.warn(
++      "[gridPaths] poseFronts: a pose is not a single linear polyline and was handed back uncut " +
++        "(gridPaths §poseIsLinearSinglePath).",
++    );
++  poseGeometryCache.set(frames, built);
++  return built;
++}
++
++/**
++ * Each pose CUT at `fraction` of its own arc length — the fill gauge's front, as geometry.
++ *
++ * THE DASH IS GONE, AND THAT IS THE CURE (T9-W7 §4). The gauge used to draw its front with
++ * `stroke-dasharray` over `pathLength="1000"`, and in WebKit it read 92% filled at a quarter.
++ * The pass-2 synthesis named `pathLength` as the cause; on the built prototype that is FALSE.
++ * Measured on this ring, both engines, four declaration arms (attribute dash, CSS dash, a
++ * period equal to the path, an offset of zero): every arm reads 4 runs at 0.215 share in
++ * WebKit for a requested 0.05. Decimating the same pose walks it back — 492 segments → 4 runs,
++ * 123 → 1, and a perfectly straight 599-segment rectangle breaks identically, so it is not the
++ * wobble either. WebKit restarts the dash phase every ~128 segments of a polyline; Chromium
++ * dashes the path whole. A hand-drawn ring is ~490 segments by construction.
++ *
++ * So the front is not dashed. It is DRAWN: the pose is truncated at `fraction · length`, with
++ * the final point interpolated, and the renderer paints a path that ends exactly where the
++ * player's work has got to. Engine-independent by construction, because there is no dash
++ * pattern for an engine to restart, and it cannot regress when a board size or a grain setting
++ * moves the segment count past somebody's chunk boundary.
++ *
++ * The price, declared and then PAID: `stroke-dashoffset` was tweenable and a truncated `d` is
++ * not, so a bare swap would STEP the front ~31px per digit at 9x9 and ~158px at 4x4. The tween
++ * moved up one level instead — the consumer eases the FRACTION on the boil scheduler's sequence
++ * chain and calls this on a RATE-GATED subset of its frames (HandDrawnGrid, T9-W7 §5), never
++ * once per vsync: the budget is re-cuts per SECOND, because a per-event frame count is the
++ * reviewer's display talking (29 on a 120 Hz panel against 15 on a 60 Hz one — pass-3 critique
++ * §3.1). The step survives as the PRM arm and as the fallback should the rung ever read 0.
++ *
++ * PRECONDITION: one subpath per pose, enforced at the parse (`poseIsLinearSinglePath` above); a
++ * multi-subpath pose comes back uncut and unchanged.
++ */
++export function poseFronts(frames: string[], fraction: number): string[] {
++  const f = Math.max(0, Math.min(1, fraction));
++  if (f >= 1) return frames;
++  if (f <= 0) return frames.map(() => "");
++  const geom = poseGeometry(frames);
++  return frames.map((d, i) => {
++    const { pts, cum, single } = geom[i];
++    if (!single) return d;
++    const target = cum.length ? cum[cum.length - 1] * f : 0;
++    if (!pts.length || target <= 0) return "";
++    const out = [pts[0]];
++    for (let k = 1; k < pts.length; k++) {
++      if (cum[k] >= target) {
++        const seg = cum[k] - cum[k - 1];
++        const t = seg === 0 ? 0 : (target - cum[k - 1]) / seg;
++        out.push([
++          pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * t,
++          pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * t,
++        ]);
++        break;
++      }
++      out.push(pts[k]);
++    }
++    return pointsToLinear(out);
++  });
++}
++
++/**
++ * THE FRONT'S RATE BUDGET, and every `poseFronts` consumer rides it (T9-W7 §5).
++ *
++ * A `sequence` subscriber holds the continuous rAF chain while it runs, so "one re-cut per
++ * frame" is the panel's refresh rate wearing a budget's clothes: ungated, the tally re-cut at
++ * 134.2/s on a 128 Hz panel and 60.9/s on a 63 Hz one (pass-4 critique §3.1). The budget is a
++ * declared constant instead: at most one commit per FRONT_MIN_MS, ≤62.5 re-cuts per second at
++ * any refresh rate. `e2e/front-rate.spec.ts` counts it on every consumer.
++ */
++export const FRONT_MIN_MS = 16;
++
++/**
++ * Leading-edge rate gate on a front's commit: the first write lands now (the front never lags
++ * the act), then at most once per FRONT_MIN_MS. `force` commits regardless, for a tween's exact
++ * end value or a rest pose, so a gauge and its a11y mirror still agree to the digit.
++ */
++export function frontGate(commit: (v: number) => void) {
++  let last = -Infinity;
++  return {
++    write(v: number, force = false) {
++      const now = performance.now();
++      if (!force && now - last < FRONT_MIN_MS) return;
++      last = now;
++      commit(v);
++    },
++    /** A new write re-arms the leading edge, so its first frame is never swallowed. */
++    rearm() {
++      last = -Infinity;
++    },
++  };
++}
++
+ /**
+  * Generate boil frame variants for a standalone line segment.
+  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.

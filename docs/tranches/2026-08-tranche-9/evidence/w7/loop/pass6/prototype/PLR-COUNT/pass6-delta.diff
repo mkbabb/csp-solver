@@ -1,0 +1,1552 @@
+diff --git a/web/frontend/e2e/player-mark.spec.ts b/web/frontend/e2e/player-mark.spec.ts
+index d14ac531..2f4ae499 100644
+--- a/web/frontend/e2e/player-mark.spec.ts
++++ b/web/frontend/e2e/player-mark.spec.ts
+@@ -18,9 +18,9 @@
+  *   4  the sheet never scrolls, and the sentence, the rows and `and N more` count one population
+  *   5  the head rule is registered and its absence is visible
+  *   6  Escape has one owner while the sheet is open
+- *   7  the row budget is keyed on the band the sheet has (desk, short portrait, landscape)
+- *   8  a tap opens the mark on a coarse phone in both engines
+- *   9  both head disclosures wear a drawn edge and no CSS border
++ *   7  the row budget is keyed on the MEASURED space: the tall sheet laps a board under its rows
++ *   8  a tap opens the mark on a coarse phone in both engines, and is a look, not a look-away
++ *   9  both head disclosures PAINT a drawn edge and no CSS border
+  *  10  the deck's swatch for you is the colour the room paints you (F1's fourth surface)
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+@@ -446,31 +446,39 @@ test('Escape reaches only the open sheet, and reaches the peek when the sheet is
+ });
+ 
+ /**
+- * THE ROW BUDGET IS KEYED ON THE BAND THE SHEET HAS (pass-4 gap 4; pass-5 row 8).
++ * THE ROW BUDGET IS KEYED ON THE SPACE, MEASURED (pass-5 critic gap 1; pass-6 row 1).
+  *
+- * At `(min-height: 800px)` one pixel of desk viewport turned four names into one (pass 3). Pass 4
+- * re-keyed it on `(pointer: coarse) and (max-height: 799px)`, which fixed the desk and misfired
+- * on a coarse LANDSCAPE phone, whose board sits beside the sheet. The regime is now the short
+- * PORTRAIT band — the board under the sheet's whole width and under 800px to put both in — and
+- * each row below carries the query it replaced, evaluated live on the same page, as its control.
++ * Pass 3 keyed it on `(min-height: 800px)` (a one-pixel desk cliff), pass 4 on the pointer (a
++ * landscape misfire), pass 5 on `(orientation: portrait) and (max-height: 799px)` — which moved
++ * the cliff to 390×799/800: four rows at 390×800 lapped seven cells where one row lapped none.
++ * The sheet now compresses when, drawn tall, it would lap a board that runs under its rows. Each
++ * row reads the cells the sheet actually covers, and carries the retired query, evaluated live on
++ * the same page, as the witness of why the old key drew the wrong budget there.
+  */
+-const REGIME = '(orientation: portrait) and (max-height: 799px)';
+ const PASS3 = '(min-height: 800px)';
+-const PASS4 = '(pointer: coarse) and (max-height: 799px)';
++const PASS5 = '(orientation: portrait) and (max-height: 799px)';
+ 
+ async function drawSheet(page: Page) {
+   if ((await mark(page).getAttribute('aria-expanded')) !== 'true') await mark(page).click();
+   await openSheet(page);
+   return lobby(page).evaluate(
+-    (el, q) => ({
+-      rows: el.querySelectorAll('.pl-row').length,
+-      more: el.querySelector('.pl-more')?.textContent?.trim() ?? '',
+-      bottom: +el.getBoundingClientRect().bottom.toFixed(1),
+-      regime: matchMedia(q.REGIME).matches,
+-      pass3: matchMedia(q.PASS3).matches,
+-      pass4: matchMedia(q.PASS4).matches,
+-    }),
+-    { REGIME, PASS3, PASS4 },
++    (el, q) => {
++      const s = el.getBoundingClientRect();
++      const lapped = [...document.querySelectorAll('.sudoku-cell')]
++        .map((c) => c.getBoundingClientRect())
++        .filter(
++          (c) =>
++            c.width > 0 && c.left < s.right && c.right > s.left && c.top < s.bottom && c.bottom > s.top,
++        ).length;
++      return {
++        rows: el.querySelectorAll('.pl-row').length,
++        more: el.querySelector('.pl-more')?.textContent?.trim() ?? '',
++        lapped,
++        pass3: matchMedia(q.PASS3).matches,
++        pass5: matchMedia(q.PASS5).matches,
++      };
++    },
++    { PASS3, PASS5 },
+   );
+ }
+ 
+@@ -486,140 +494,226 @@ test('the desk draws the same rows at 800 and at 799, and the pass-3 query is wh
+   const tall = await drawSheet(page);
+   await page.setViewportSize({ width: 1280, height: 799 });
+   await expect.poll(() => page.evaluate(() => innerHeight)).toBe(799);
++  await mark(page).click();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   const short = await drawSheet(page);
++  // The desk's corner lap is CH-71's ratified pose: the board is BESIDE the rows' start.
+   expect(tall.rows).toBe(4);
+   expect(tall.more).toBe('and 3 more');
+   // THE ROW: one pixel of desk viewport moves nothing.
+   expect(short.rows).toBe(tall.rows);
+   expect(short.more).toBe(tall.more);
+-  expect(short.regime).toBe(false);
+   // THE NEGATIVE CONTROL: the query pass 3 keyed on DID flip across that pixel.
+   expect(tall.pass3).toBe(true);
+   expect(short.pass3).toBe(false);
+ });
+ 
+-test('a short portrait phone compresses and a coarse landscape phone does not', async ({
++test('a portrait phone compresses exactly where four rows would lap the board', async ({
+   browser,
+ }) => {
+-  // THE SHORT BAND: 390×664, coarse, seven at the table — the board runs under the sheet.
+-  const p = await coarsePage(browser, 390, 664);
+-  await invite(p.page);
+-  await crowd(p.page, 6, 'band-spec');
+-  const portrait = await drawSheet(p.page);
+-  expect(portrait.regime).toBe(true);
+-  expect(portrait.rows).toBe(1);
+-  expect(portrait.more).toBe('and 6 more');
+-  await p.ctx.close();
+-
+-  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board sits BESIDE the sheet, so the tall budget.
+-  const l = await coarsePage(browser, 844, 390);
+-  await invite(l.page);
+-  await crowd(l.page, 6, 'band-spec');
+-  const landscape = await drawSheet(l.page);
+-  expect(landscape.regime).toBe(false);
+-  expect(landscape.rows).toBe(4);
+-  expect(landscape.more).toBe('and 3 more');
+-  // THE NEGATIVE CONTROL: the pass-4 key reads TRUE here, and it drew one row.
+-  expect(landscape.pass4).toBe(true);
+-  await l.ctx.close();
++  const cell = async (w: number, h: number, long = false) => {
++    const p = await coarsePage(browser, w, h);
++    await invite(p.page);
++    if (long) {
++      // `long-66737` slugs to `straightforward-tyrannosaurus`, 29 characters, the longest pair
++      // the dictionaries make. 21s on, every peer is QUIET, so its row carries a qualifier too.
++      await p.page.evaluate((room) => {
++        const ch = new BroadcastChannel(`board:${room}`);
++        for (const id of ['long-66737', 'q-1', 'q-2', 'q-3', 'q-4', 'q-5'])
++          ch.postMessage({ kind: 'hi', data: {}, from: id });
++        setTimeout(() => ch.close(), 0);
++      }, new URL(p.page.url()).searchParams.get('s')!);
++      await expect(p.page.locator('.players-roster .player-row')).toHaveCount(7);
++      await expect(p.page.locator('.players-roster')).toContainText('straightforward-tyrannosaurus');
++      await p.page.clock.setSystemTime(new Date(Date.now() + 21000));
++    } else await crowd(p.page, 6, `band-${w}x${h}`);
++    const r = await drawSheet(p.page);
++    await p.ctx.close();
++    return r;
++  };
++  // THE CLIFF, BOTH SIDES OF IT. At 390×800 and 360×800 the board's top sits above the tall
++  // sheet's bottom: one row, nothing lapped. The pass-5 key read FALSE there and drew four rows
++  // over seven cells — the witness is the query itself, evaluated on the same page.
++  for (const [w, h] of [
++    [390, 800],
++    [360, 800],
++    [390, 799],
++  ] as const) {
++    const r = await cell(w, h);
++    expect(r, `${w}x${h}`).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
++    if (h === 800) expect(r.pass5, `${w}x${h} pass-5 key`).toBe(false);
++  }
++  // A tall phone keeps four rows and laps nothing...
++  expect(await cell(390, 844)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 0 });
++  // ...until its rows WRAP: the longest slug, quiet, takes two lines (a row-count law would
++  // miss it; the tall sheet measures 212.13 tall at 390×1000). The same phone compresses.
++  expect(await cell(390, 844, true)).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
++  // A short phone laps whatever it does with one row: the least the sheet can hold.
++  expect(await cell(390, 664)).toMatchObject({ rows: 1, more: 'and 6 more' });
++  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board is BESIDE the rows' start, so four rows,
++  // and the price is stated, not denied: six cells lapped where one row would lap four.
++  expect(await cell(844, 390)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 6 });
+ });
+ 
+ /**
+- * A TAP OPENS THE MARK (PLR-PLACE pass 4, grafted back; pass-5 row 2). `@pointerdown.prevent`
+- * for every pointer cancelled a WebKit tap's click, so the mark never opened on a tapped phone.
+- * The pass-4 seam is planted in-run as the negative control: under it WebKit stays shut and
+- * Chromium opens regardless — which is why the row reads the engine it runs in.
++ * A TAP OPENS THE MARK, AND A TAP IS A LOOK (PLR-PLACE's seam; `TAP_IS_A_LOOK`, arm (b)).
++ * `@pointerdown.prevent` for every pointer cancelled a WebKit tap's click (pass 4), so the sheet
++ * toggles on the touch's own `pointerup`; and because the touch is prevented, the cell you were
++ * writing in keeps focus and the room hears nothing — as for a mouse press (row 2). The negative
++ * control swallows that `pointerup` in-run: the mark then stays shut in BOTH engines, which is
++ * what proves the open is the release's and not a click's.
+  */
+-test('a tap opens the mark on a coarse phone, and the pass-4 seam is why it did not', async ({
++test('a tap opens the mark on a coarse phone, keeps the cell, and tells the room nothing', async ({
+   browser,
+-}, info) => {
++}) => {
+   const { ctx, page } = await coarsePage(browser, 390, 844);
+   await invite(page);
+-  const plant = () =>
+-    page.evaluate(() => {
+-      const m = [...document.querySelectorAll('[data-player-mark]')].find(
+-        (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
+-      )!;
+-      const cancel = (e: Event) => e.preventDefault();
+-      m.addEventListener('pointerdown', cancel, { capture: true });
+-      (window as any).__unplant = () =>
+-        m.removeEventListener('pointerdown', cancel, { capture: true });
+-    });
++  await page.evaluate(() => {
++    const room = new URL(location.href).searchParams.get('s')!;
++    const seen: unknown[] = [];
++    (window as any).__frames = seen;
++    const ch = new BroadcastChannel(`board:${room}`);
++    ch.onmessage = (e: MessageEvent) => seen.push(e.data);
++  });
++  const curs = () =>
++    page.evaluate(
++      () =>
++        ((window as any).__frames as { kind?: string }[]).filter((f) => f?.kind === 'cur').length,
++    );
++  await page.locator('.sudoku-cell input').first().tap();
++  await expect.poll(curs).toBeGreaterThan(0);
++  await expect.poll(() => inCell(page)).toBe(true);
+ 
+-  // THE NEGATIVE CONTROL.
+-  await plant();
++  // THE NEGATIVE CONTROL: the release swallowed, the mark stays shut in both engines.
++  await page.evaluate(() => {
++    const m = [...document.querySelectorAll('[data-player-mark]')].find(
++      (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
++    )!;
++    const swallow = (e: Event) => e.stopImmediatePropagation();
++    m.addEventListener('pointerup', swallow, { capture: true });
++    (window as any).__unplant = () =>
++      m.removeEventListener('pointerup', swallow, { capture: true });
++  });
+   await mark(page).tap();
+-  const planted = info.project.name === 'webkit' ? 'false' : 'true';
+-  await expect(mark(page)).toHaveAttribute('aria-expanded', planted);
+-  if (planted === 'true') {
+-    await mark(page).tap();
+-    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+-  }
++  await stable(() => mark(page).getAttribute('aria-expanded'));
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   await page.evaluate(() => (window as any).__unplant());
+ 
+-  // THE ROW: the built mark opens on a tap, both engines.
++  // THE ROW.
++  await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
+   await mark(page).tap();
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'true');
++  // sleep-ok: an ABSENCE has no event to poll — a look-away reaches the wire CUR_MS (120ms) after
++  // the cell lets go, so a 500ms window with nothing in it is the measurement, not a settle.
++  await page.waitForTimeout(500);
++  expect(await curs()).toBe(0);
++  expect(await inCell(page)).toBe(true);
++  // A second tap shuts it, once (Chromium's click for the touch is not a second toggle).
++  await mark(page).tap();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+   await ctx.close();
+ });
+ 
+ /**
+- * BOTH HEAD DISCLOSURES WEAR A DRAWN EDGE AND NO CSS BORDER (R6 L5; CH-71: a pose decision for
+- * both at once). `HeadSheet` is the one pose. The reading is the computed border on all four
+- * sides plus the frame's painted path inside the sheet; the negative control plants the pass-4
+- * `border: 2px solid` on each sheet in the same run and the same reading goes red on it.
++ * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE AND NO CSS BORDER (R6 L5; CH-71; pass-5 critic
++ * gap 3). A rect and a computed stroke are not paint: an `opacity: 0` edge (X1) and an inkless
++ * one (X2) both passed the pass-5 row. The row now photographs the sheet's top band twice —
++ * edge ON, then edge OFF (`visibility: hidden` on the edge layer) — and counts the columns
++ * whose best contrast against the sheet's own ground rises by half again when the edge is on.
++ * That is an EXISTENCE reading, so it holds for either edge ink the owner is shown (full:
++ * ~16:1, quiet: ~4.7:1, off: 1.00); the edge's contrast is a number in the record, not this
++ * row's. X1 and X2 are planted in the same run and must drive the count to zero; the pass-4
++ * border, planted, must read on the computed box.
+  */
+-test('both head disclosures are framed by a drawn edge and paint no CSS border', async ({
+-  page,
+-}) => {
++async function edgePaint(page: Page, sel: string) {
++  const sheet = page.locator(`${sel}:visible`).first();
++  const box = (await sheet.boundingBox())!;
++  const clip = { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width), height: 14 };
++  const shoot = async () => (await page.screenshot({ clip })).toString('base64');
++  const on = await shoot();
++  const off = await page.addStyleTag({ content: '.head-sheet-edge { visibility: hidden !important; }' });
++  const bare = await shoot();
++  await off.evaluate((e) => (e as Element).remove());
++  return page.evaluate(
++    async ({ on, bare }) => {
++      const read = async (b64: string) => {
++        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++        const c = document.createElement('canvas');
++        c.width = bmp.width;
++        c.height = bmp.height;
++        const x = c.getContext('2d')!;
++        x.drawImage(bmp, 0, 0);
++        return x.getImageData(0, 0, c.width, c.height);
++      };
++      const lum = (d: Uint8ClampedArray, i: number) => {
++        const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
++        return 0.2126 * f(d[i]) + 0.7152 * f(d[i + 1]) + 0.0722 * f(d[i + 2]);
++      };
++      const [a, b] = [await read(on), await read(bare)];
++      const best = (img: ImageData, x: number) => {
++        const g = lum(img.data, (10 * img.width + x) * 4);
++        let r = 1;
++        for (let y = 0; y < 5; y++) {
++          const l = lum(img.data, (y * img.width + x) * 4);
++          r = Math.max(r, (Math.max(l, g) + 0.05) / (Math.min(l, g) + 0.05));
++        }
++        return r;
++      };
++      const x0 = Math.floor(a.width * 0.2);
++      const x1 = Math.floor(a.width * 0.8);
++      let drawn = 0;
++      for (let x = x0; x < x1; x++) if (best(a, x) >= 1.5 * best(b, x)) drawn++;
++      return drawn / (x1 - x0);
++    },
++    { on, bare },
++  );
++}
++const border = (page: Page, sel: string) =>
++  page.locator(`${sel}:visible`).first().evaluate((el) => {
++    const cs = getComputedStyle(el);
++    return ['top', 'right', 'bottom', 'left'].reduce(
++      (n, s) =>
++        n + (cs.getPropertyValue(`border-${s}-style`) === 'none' ? 0 : parseFloat(cs.getPropertyValue(`border-${s}-width`))),
++      0,
++    );
++  });
++
++test('both head disclosures paint a drawn edge and no CSS border', async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 800 });
+   await page.goto(SOLO);
+   await settled(page);
+-  const edge = (sel: string) =>
+-    page.evaluate((sel) => {
+-      const el = [...document.querySelectorAll<HTMLElement>(sel)].find(
+-        (e) => e.getBoundingClientRect().width > 0,
+-      )!;
+-      const cs = getComputedStyle(el);
+-      const border = ['Top', 'Right', 'Bottom', 'Left'].reduce(
+-        (n, s) => n + parseFloat(cs.getPropertyValue(`border-${s.toLowerCase()}-width`)) *
+-          (cs.getPropertyValue(`border-${s.toLowerCase()}-style`) === 'none' ? 0 : 1),
+-        0,
+-      );
+-      const path = [...el.querySelectorAll<SVGPathElement>('.head-sheet-edge .outline-svg path')].find(
+-        (p) => p.getBoundingClientRect().width > 0,
+-      );
+-      const box = el.getBoundingClientRect();
+-      const pb = path?.getBoundingClientRect();
+-      return {
+-        border,
+-        drawn: !!path && getComputedStyle(path).stroke !== 'none',
+-        // the frame hugs its sheet: within 3px on every side
+-        hugs: !!pb && Math.max(
+-          Math.abs(pb.left - box.left), Math.abs(pb.top - box.top),
+-          Math.abs(pb.right - box.right), Math.abs(pb.bottom - box.bottom),
+-        ) <= 3,
+-      };
+-    }, sel);
+ 
+   // The lobby, open. (Solo: one person, one row, the sheet still draws.)
+   await mark(page).click();
+   await openSheet(page);
+-  expect(await edge('[data-lobby]')).toEqual({ border: 0, drawn: true, hugs: true });
++  expect(await border(page, '[data-lobby]')).toBe(0);
++  expect(await edgePaint(page, '[data-lobby]')).toBeGreaterThan(0.9);
+   await page.keyboard.press('Escape');
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+ 
+-  // The @mbabb card, open by its own hover (a fine pointer's disclosure; a click would toggle
+-  // the hover's open back shut).
++  // The @mbabb card, open by its own hover (a click would toggle the hover's open back shut).
+   await page.locator('.corner-left .attribution-trigger').hover();
+-  await expect(page.locator('.corner-left .hover-card')).toHaveClass(/is-open/);
+-  expect(await edge('.hover-card')).toEqual({ border: 0, drawn: true, hugs: true });
+-
+-  // THE NEGATIVE CONTROL: the pass-4 border, planted, reads red on the same reading.
++  const card = page.locator('.corner-left .hover-card');
++  await expect(card).toHaveClass(/is-open/);
++  await stable(() => card.evaluate((e) => getComputedStyle(e).opacity + JSON.stringify(e.getBoundingClientRect())));
++  expect(await border(page, '.corner-left .hover-card')).toBe(0);
++  expect(await edgePaint(page, '.corner-left .hover-card')).toBeGreaterThan(0.9);
++
++  // THE NEGATIVE CONTROLS, same run, same reading. X1: the edge at opacity 0. X2: the edge
++  // inkless. Each paints nothing, and the count must say so.
++  for (const plant of [
++    '.head-sheet-edge { opacity: 0 !important; }',
++    '.head-sheet-edge { color: transparent !important; } .head-sheet-edge path { stroke: rgba(0, 0, 0, 0) !important; }',
++  ]) {
++    const tag = await page.addStyleTag({ content: plant });
++    expect(await edgePaint(page, '.corner-left .hover-card'), plant).toBe(0);
++    await tag.evaluate((e) => (e as Element).remove());
++  }
++  // And the pass-4 border, planted, reads on the computed box.
+   await page.addStyleTag({
+     content: `.hover-card, [data-lobby] { border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent) !important; }`,
+   });
+-  expect((await edge('.hover-card')).border).toBe(8);
++  expect(await border(page, '.corner-left .hover-card')).toBe(8);
+ });
+ 
+ /**
+diff --git a/web/frontend/e2e/player-tally.spec.ts b/web/frontend/e2e/player-tally.spec.ts
+index 20cf03b3..23471322 100644
+--- a/web/frontend/e2e/player-tally.spec.ts
++++ b/web/frontend/e2e/player-tally.spec.ts
+@@ -20,9 +20,36 @@
+  * LOCAL (O-12): CI is browserless; this is an instrument, run against a dev server by hand.
+  */
+ import { test, expect, type Page } from "@playwright/test";
++import { readFileSync } from "node:fs";
++import { fileURLToPath } from "node:url";
+ 
+ const mark = (page: Page) => page.locator("[data-player-mark]:visible").first();
+ 
++/**
++ * THE ESTATE IS KEYED ON THE OWNER'S FORK (PLR-COUNT pass-5 critic, gap 3). `SIX_ARM` is read
++ * from the component's own source, so a run under any arm asserts THAT arm's promises and no
++ * other's: a row written for arm (a) and run under (c) was the pass-5 blind spot.
++ */
++const SIX_ARM = /const SIX_ARM = "(title|heading|remainder)"/.exec(
++  readFileSync(
++    fileURLToPath(new URL("../src/pencil/chrome/PlayerMark/PlayerMark.vue", import.meta.url)),
++    "utf8",
++  ),
++)![1] as "title" | "heading" | "remainder";
++/** What the mark writes at N people under this arm (null: nothing written). */
++const writtenAt = (N: number) =>
++  N <= 5 ? null : SIX_ARM === "remainder" ? String(N - 5) : String(N);
++/** The mark's accessible name at N people under this arm. */
++const nameAt = (N: number) =>
++  N === 1
++    ? "1 player"
++    : N > 5 && SIX_ARM === "remainder"
++      ? `5 players and ${N - 5} more`
++      : `${N} players`;
++/** How many people a name counts: `6 players` is 6, arm (c)'s `5 players and 1 more` is 6. */
++const countOf = (label: string | null) =>
++  (label ?? "").match(/\d+/g)?.reduce((a, d) => a + Number(d), 0) ?? 0;
++
+ /** A pose is settled when two reads 150ms apart agree (the leader's `stable`, one rule). */
+ async function stable(read: () => Promise<unknown>) {
+   let last: unknown = Symbol("unread");
+@@ -64,7 +91,7 @@ async function peers(page: Page, room: string, k: number) {
+   if (k <= 0) return;
+   const from = cursor;
+   cursor += k;
+-  const was = parseInt((await mark(page).getAttribute("aria-label")) ?? "1", 10);
++  const was = countOf(await mark(page).getAttribute("aria-label", { timeout: 5000 })) || 1;
+   await page.evaluate(
+     ({ room, k, from }) => {
+       const w = window as unknown as { __ch?: BroadcastChannel };
+@@ -75,27 +102,22 @@ async function peers(page: Page, room: string, k: number) {
+     { room, k, from },
+   );
+   // the room has heard all k when the mark's name counts them, and every stroke has landed
+-  await expect.poll(async () => parseInt((await mark(page).getAttribute("aria-label"))!, 10)).toBe(was + k);
++  await expect
++    .poll(async () => countOf(await mark(page).getAttribute("aria-label", { timeout: 5000 })))
++    .toBe(was + k);
+   await inked(page);
+ }
+ 
+ 
+ // ── Painted bytes, decoded IN the page (the estate's idiom, `multiplayer.spec.ts:466`) ─────
+ // Ground = the modal colour of the crop's four 6px corners. `d` = a pixel's manhattan distance
+-// from it. A crop comes back as a histogram of `d` (so one normaliser can serve many crops) plus
+-// its WCAG reading: the core (the pixel farthest from the ground) and the COLUMN statistic the
+-// LAWS ask of a painted row (coverage mass per column; the worst column peak among columns
+-// holding >= 50/70/90/100 % of the median mass; the fraction of those under the floor).
+-type Painted = {
+-  hist: number[];
+-  core: number;
+-  coreContrast: number;
+-  worst: Record<number, number | null>;
+-  fracUnder: number | null;
+-};
+-async function painted(page: Page, png: Awaited<ReturnType<Page["screenshot"]>>, floor: number): Promise<Painted> {
++// from it. A crop comes back as a histogram of `d`, so one normaliser can serve many crops (G16),
++// and its core (the largest `d`). Text contrast is not read here: that is G14's glyph-text
++// statistic, whose population is keyed on the glyph and not on the crop's own maximum.
++type Painted = { hist: number[]; core: number };
++async function painted(page: Page, png: Awaited<ReturnType<Page["screenshot"]>>): Promise<Painted> {
+   return page.evaluate(
+-    async ({ b64, floor }) => {
++    async ({ b64 }) => {
+       const bmp = await createImageBitmap(
+         await (await fetch(`data:image/png;base64,${b64}`)).blob(),
+       );
+@@ -121,59 +143,19 @@ async function painted(page: Page, png: Awaited<ReturnType<Page["screenshot"]>>,
+             tally.set(k, (tally.get(k) ?? 0) + 1);
+           }
+       const ground = [...tally].sort((a, b) => b[1] - a[1])[0][0].split(",").map(Number);
+-      const dist = (q: number[]) =>
+-        Math.abs(q[0] - ground[0]) + Math.abs(q[1] - ground[1]) + Math.abs(q[2] - ground[2]);
+-      const lin = (c: number) =>
+-        (c /= 255) <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+-      const lum = (q: number[]) => 0.2126 * lin(q[0]) + 0.7152 * lin(q[1]) + 0.0722 * lin(q[2]);
+-      const wcag = (a: number[], b: number[]) => {
+-        const [x, y] = [lum(a), lum(b)].sort((m, n) => n - m);
+-        return (x + 0.05) / (y + 0.05);
+-      };
+       const hist = new Array(766).fill(0);
+       let core = 0;
+-      let corePx = ground;
+       for (let y = 0; y < H; y++)
+         for (let x = 0; x < W; x++) {
+           const q = at(x, y);
+-          const d = dist(q);
++          const d =
++            Math.abs(q[0] - ground[0]) + Math.abs(q[1] - ground[1]) + Math.abs(q[2] - ground[2]);
+           hist[d]++;
+-          if (d > core) {
+-            core = d;
+-            corePx = q;
+-          }
++          core = Math.max(core, d);
+         }
+-      const cols: { mass: number; peak: number }[] = [];
+-      for (let x = 0; x < W; x++) {
+-        let mass = 0;
+-        let peak = 1;
+-        for (let y = 0; y < H; y++) {
+-          const q = at(x, y);
+-          const d = dist(q);
+-          if (core > 0 && d / core >= 0.5) mass++;
+-          peak = Math.max(peak, wcag(q, ground));
+-        }
+-        if (mass > 0) cols.push({ mass, peak });
+-      }
+-      const masses = cols.map((c) => c.mass).sort((a, b) => a - b);
+-      const median = masses.length ? masses[Math.floor(masses.length / 2)] : 0;
+-      const worst: Record<number, number | null> = {};
+-      for (const pct of [50, 70, 90, 100]) {
+-        const held = cols.filter((c) => c.mass >= (pct / 100) * median);
+-        worst[pct] = held.length ? +Math.min(...held.map((c) => c.peak)).toFixed(3) : null;
+-      }
+-      const body = cols.filter((c) => c.mass >= 0.5 * median);
+-      return {
+-        hist,
+-        core,
+-        coreContrast: +wcag(corePx, ground).toFixed(3),
+-        worst,
+-        fracUnder: body.length
+-          ? +(body.filter((c) => c.peak < floor).length / body.length).toFixed(3)
+-          : null,
+-      };
++      return { hist, core };
+     },
+-    { b64: png.toString("base64"), floor },
++    { b64: png.toString("base64") },
+   );
+ }
+ /** INK WEIGHT, DEFINED ONCE (G16): Σ over pixels with d > 8 of min(1, d / D), ÷ dpr². D is ONE
+@@ -217,8 +199,12 @@ const head = (page: Page) =>
+     };
+   });
+ 
+-// ── G7 · one base ──────────────────────────────────────────────────────────────────────────
+-test("the name counts what the strokes count, and the number takes over at six", async ({
++// ── G7 · one base, and WCAG 2.5.3 under EVERY arm ──────────────────────────────────────────
++// The written glyph must be a substring of the name (label-in-name), read per `SIX_ARM`: arm (a)
++// and (b) write the count, arm (c) writes the remainder after five strokes and names itself
++// `5 players and 1 more`. Pass 5 wrote "(c) would pass" and (c) failed at N = 6/9/14/15/16.
++// The widths are printed per N: arm (c)'s head grows with its digits (row 4 of the ballot).
++test(`the name counts what the strokes count, and carries every digit it paints (${SIX_ARM})`, async ({
+   page,
+ }) => {
+   const room = `tally-base-${Date.now()}`;
+@@ -226,23 +212,28 @@ test("the name counts what the strokes count, and the number takes over at six",
+   await settled(page);
+ 
+   let at = 1;
+-  for (const N of [1, 2, 3, 4, 5, 6, 16]) {
++  const widths: Record<number, number | null> = {};
++  for (const N of [1, 2, 3, 4, 5, 6, 9, 10, 14, 15, 16]) {
+     await peers(page, room, N - at);
+     at = N;
++    await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+     const h = await head(page);
+-    // 2.5.3 BY CONSTRUCTION: the name carries the glyph's digits, because it IS the count.
+-    expect(h.label).toBe(N === 1 ? "1 player" : `${N} players`);
+-    expect(h.strokes).toBe(N <= 5 ? N : 0);
+-    if (N > 5) {
+-      expect(h.label).toContain(h.written!);
+-      // THE RUNG IS THE PRICE OF THE SWAP: the numeral sits at `--type-title` (32.9), the
+-      // smallest rung whose painted ink clears one graphite stroke in both themes (pass 4, G16);
+-      // pass 3's heading (25.888) cleared it only under a per-crop normaliser.
+-      expect(parseFloat(h.writtenPx!)).toBeGreaterThan(32);
++    widths[N] = h.width;
++    expect(h.label).toBe(nameAt(N));
++    expect(h.strokes).toBe(N <= 5 ? N : SIX_ARM === "remainder" ? 5 : 0);
++    expect(h.written).toBe(writtenAt(N));
++    if (h.written !== null) {
++      expect(h.label, `2.5.3: the painted "${h.written}" is in the name`).toContain(h.written);
++      // THE RUNG IS THE PRICE OF THE SWAP under arm (a): `--type-title` (32.9), the smallest rung
++      // whose painted ink clears one graphite stroke in both themes (G16). (b) and (c) write at
++      // the heading rung (25.888) by construction.
++      if (SIX_ARM === "title") expect(parseFloat(h.writtenPx!)).toBeGreaterThan(32);
++      else expect(parseFloat(h.writtenPx!)).toBeLessThan(26);
+     }
+     // the head line never steps: the mark is its own height at every count
+     expect(h.height).toBeGreaterThanOrEqual(36);
+   }
++  console.log(`G7 WIDTHS ${SIX_ARM} ${test.info().project.name}`, JSON.stringify(widths));
+ });
+ 
+ // ── G3 · the width table ───────────────────────────────────────────────────────────────────
+@@ -263,13 +254,20 @@ test("the width table, and the floor at the smallest count", async ({ page }) =>
+   for (const N of [1, 2, 3, 4, 5, 6]) {
+     await peers(page, room, N - at);
+     at = N;
++    await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+     const h = await head(page);
+     got[N] = h.width!;
++    // Arm (c) does not swap at six: its head is five strokes and a written remainder, wider
++    // than five (G7 prints its table to 16). Arms (a) and (b) fall back to the 44 floor.
++    if (N === 6 && SIX_ARM === "remainder") {
++      expect(h.width!, "arm (c) at six is wider than five").toBeGreaterThan(want[5]);
++      continue;
++    }
+     // TO 0.01, not "to within 1.5": pass 2 reported a table to two places and asserted a
+     // tolerance that would have passed on a different table.
+     expect(Math.abs(h.width! - want[N]), `width at N=${N} (got ${h.width})`).toBeLessThan(0.02);
+   }
+-  console.log("WIDTH TABLE", JSON.stringify(got));
++  console.log(`WIDTH TABLE ${SIX_ARM}`, JSON.stringify(got));
+ });
+ 
+ // ── G9 · the crossing, both ways and both at once ──────────────────────────────────────────
+@@ -298,11 +296,13 @@ test("a departure re-draws no survivor, and a depart-and-arrive draws exactly th
+   await expect.poll(async () => (await head(page)).strokes).toBe(5);
+   await inked(page);
+   await say([{ kind: "hi", from: ids[4] }]);
+-  await expect.poll(async () => (await head(page)).written).toBe("6");
++  await expect.poll(async () => (await head(page)).written).toBe(writtenAt(6));
+ 
+   // SIX TO FIVE: the number gives way to five strokes, and not one of them tweens. A watch
+-  // that only knows `now > was` re-draws all five here, because `drawn` goes 0 -> 5.
++  // that only knows `now > was` re-draws all five here, because `drawn` goes 0 -> 5. (Arm (c)
++  // keeps the five through six; its remainder goes and nothing draws either.)
+   await say([{ kind: "bye", from: ids[4] }]);
++  await expect.poll(async () => countOf((await head(page)).label)).toBe(5);
+   for (let i = 0; i < 5; i++) {
+     // sleep-ok: the elapsed window IS the subject, five reads across 400ms in which no stroke may tween
+     await page.waitForTimeout(80);
+@@ -337,7 +337,10 @@ test("a departure re-draws no survivor, and a depart-and-arrive draws exactly th
+   expect(drawing, `exactly the newcomer draws in (offs ${JSON.stringify(mid.offs)})`).toBe(1);
+   await inked(page);
+   const after = await head(page);
+-  expect(after.ds.filter((d) => four.ds.includes(d)).length).toBe(3);
++  // BY SLOT, not by set membership: the seed space is 97 poses (`seedFor`), so the newcomer can
++  // be drawn with the same `d` as the page's own stroke (a random id), and a membership count
++  // then reads 4 (pass 6, one chromium run in eight). The survivors keep their bytes in order.
++  expect(after.ds.slice(0, 3)).toEqual([four.ds[0], four.ds[2], four.ds[3]]);
+ });
+ 
+ // ── G9 · the INNER leaver at six: the promoted sixth draws in, and nobody else moves ───────
+@@ -359,9 +362,11 @@ test("at six, an inner leaver promotes the sixth and only that stroke draws", as
+   await expect.poll(async () => (await head(page)).strokes).toBe(5);
+   await inked(page);
+   await say([{ kind: "hi", from: ids[4] }]);
+-  await expect.poll(async () => (await head(page)).written).toBe("6");
++  await expect.poll(async () => (await head(page)).written).toBe(writtenAt(6));
+   // q1 is INSIDE the five (you, q0, q1, q2, q3); q4 is the sixth and is promoted by the leave.
++  // Wait on the NAME (five), not the stroke count: under arm (c) five strokes stand before it.
+   await say([{ kind: "bye", from: "q1" }]);
++  await expect.poll(async () => countOf((await head(page)).label)).toBe(5);
+   await expect.poll(async () => (await head(page)).strokes).toBe(5);
+   const first = (await head(page)).offs;
+   console.log("INNER LEAVER first frame", JSON.stringify(first));
+@@ -506,13 +511,9 @@ test.describe("the short phone", () => {
+     const room = `tally-short-${Date.now()}`;
+     await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+     await settled(page);
+-    // THE REGIME IS WITNESSED, never assumed.
+-    const regime = await page.evaluate(() => ({
+-      coarse: matchMedia("(pointer: coarse)").matches,
+-      short: matchMedia("(orientation: portrait) and (max-height: 799px)").matches,
+-    }));
+-    expect(regime.coarse).toBe(true);
+-    expect(regime.short).toBe(true);
++    // THE POINTER IS WITNESSED, never assumed. The budget is the leader's MEASURED key (pass 6:
++    // the media query is deleted); at 390×664 the board's top sits under a tall sheet's rows.
++    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+     await peers(page, room, 2); // N = 3
+     await mark(page).click();
+     const sheet = page.locator("[data-lobby]:visible").first();
+@@ -540,12 +541,7 @@ test.describe("the tall phone", () => {
+     const room = `tally-tall-${Date.now()}`;
+     await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+     await settled(page);
+-    const regime = await page.evaluate(() => ({
+-      coarse: matchMedia("(pointer: coarse)").matches,
+-      short: matchMedia("(orientation: portrait) and (max-height: 799px)").matches,
+-    }));
+-    expect(regime.coarse).toBe(true);
+-    expect(regime.short).toBe(false);
++    expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches)).toBe(true);
+     await peers(page, room, 15); // N = 16
+     await mark(page).click();
+     const sheet = page.locator("[data-lobby]:visible").first();
+@@ -571,56 +567,185 @@ test.describe("the tall phone", () => {
+ });
+ 
+ // ── G14 · the sheet's quiet rungs, PAINTED, on a ground that is opaque in any serialisation ──
+-// RE-CUT (pass-4 critic §2.3, registry-v4 §2.10): the pass-4 row asserted `not /,\s*0?\.\d+\)/`
+-// on the ground, and both engines serialise `color-mix(… 80%, transparent)` as
+-// `color(srgb … / 0.8)` — no comma, so the planted regression passed 2/2; and no contrast was
+-// read anywhere. Now: the alpha is parsed from any form (`alphaOf`), the pass-4 regression is
+-// PLANTED IN THIS RUN and must read < 1 (the negative control), and the three quiet lines are
+-// read off painted bytes on the ground they abut. The gate is the CORE (text, 4.5:1). The column
+-// statistic is logged beside it and is a READING, not a gate: the tag rung is thin in light on
+-// this sheet and on the control's own @mbabb caption alike (PLR-SELF pass 5, gap 2).
+-test.describe("the sheet's ground", () => {
+-  test.use({ viewport: { width: 1280, height: 720 }, deviceScaleFactor: 2 });
+-  test("the register's ground is opaque and its quiet lines paint 4.5:1 on it", async ({
+-    page,
+-  }) => {
+-    const room = `tally-aa-${Date.now()}`;
+-    await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+-    await settled(page);
+-    await peers(page, room, 15);
+-    await mark(page).click();
+-    await settle(page);
+-    const sheet = page.locator("[data-lobby]:visible").first();
+-    const ground = () => sheet.evaluate((e) => getComputedStyle(e).backgroundColor);
+-    const shipped = await ground();
+-    // THE NEGATIVE CONTROL, same page: the pass-4 regression, planted and then struck.
+-    const plant = await page.addStyleTag({
+-      content:
+-        ".player-lobby { background: color-mix(in srgb, var(--color-popover) 80%, transparent) !important; }",
+-    });
+-    const planted = await ground();
+-    await plant.evaluate((s) => (s as HTMLElement).remove());
+-    await expect.poll(ground).toBe(shipped);
+-    const rows = await sheet.locator(".pl-row").count();
+-    const foot = (await sheet.locator(".pl-more").textContent())?.trim();
+-    const reads: Record<string, Omit<Painted, "hist">> = {};
+-    for (const sel of [".pl-state", ".pl-qual", ".pl-more"]) {
+-      const { hist: _h, ...r } = await painted(page, await sheet.locator(sel).first().screenshot(), 4.5);
+-      reads[sel] = r;
+-    }
+-    console.log(
+-      "G14",
+-      JSON.stringify({ shipped, planted, alpha: [alphaOf(shipped), alphaOf(planted)], rows, foot, reads }),
+-    );
+-    expect(alphaOf(planted), "the planted translucent ground is SEEN").toBeLessThan(1);
+-    expect(alphaOf(shipped), "the shipped ground is opaque").toBe(1);
+-    // a 720-tall desk draws the TALL budget (the leader's band regime: a landscape desk is tall)
+-    expect(rows).toBe(4);
+-    expect(foot).toBe("and 12 more");
+-    for (const [sel, r] of Object.entries(reads))
+-      expect(r.coreContrast, `${sel} core on the sheet's ground`).toBeGreaterThanOrEqual(4.5);
++// RE-CUT TWICE. Pass 4 asserted `not /,\s*0?\.\d+\)/` on the ground (blind to `color(srgb … / a)`);
++// pass 5 parsed the alpha in any form and planted the regression in-run — that half stands — but
++// read the lines' contrast as a BEST PIXEL, which is the declared ink at full coverage and 5.159
++// whatever the page painted (the critic's X1b ghosted two thirds of each line and it stayed green;
++// X2 had no dark arm to fail). Now the contrast half is the GLYPH-TEXT statistic (LAWS P5,
++// registry-v5 §2.11) on PAL-WALK's painted-text instrument, with the population keyed on the
++// GLYPH'S OWN COVERAGE — never on the ink the page chose, so a fade cannot drop out of it:
++//   A, A2  the line as painted, photographed twice (a one-shot minimum reds on a transient pixel)
++//   B      the same box with the text transparent: the painted ground under every glyph pixel
++//   R      the text re-inked at the theme's extreme (black / white) with every fade the author
++//          could apply struck (opacity, mask, filter, shadow) — the glyph's coverage
++// A pixel is in the core when its R coverage is ≥ 0.5; the row is the core's median contrast
++// (A against B, pixel for pixel) ≥ 4.5 in both photographs, with the fraction under 4.5 STATED
++// (bounded by the estate's T9-R6 row, not by this lane). An empty core is RED (a missing subject).
++// Each cell plants its negative control IN THE RUN and the statistic must see it: X1b (the
++// critic's: everything after the first 1.2em masked to 25 % alpha) in both themes, X2 (the quiet
++// lines at rgb(70, 68, 66)) in dark. Light at DPR 1 is the hand's tag rung, the estate's T9-R6
++// (pass6/CHAIR-RULINGS §1.4): read and printed, never gated here.
++type GlyphText = { n: number; median: number | null; median2: number | null; under: number | null };
++async function glyphText(page: Page, sel: string, tag: string): Promise<GlyphText> {
++  const el = page.locator(sel).first();
++  await el.evaluate((e, t) => e.setAttribute("data-aa-probe", t), tag);
++  const b = (await el.boundingBox())!;
++  const clip = {
++    x: Math.floor(b.x) - 2,
++    y: Math.floor(b.y) - 2,
++    width: Math.ceil(b.width) + 4,
++    height: Math.ceil(b.height) + 4,
++  };
++  const snap = async () =>
++    (await page.screenshot({ clip, animations: "disabled" })).toString("base64");
++  const probe = `html body [data-aa-probe="${tag}"]:not(#aa-none)`;
++  const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
++  const ref = dark ? "#ffffff" : "#000000";
++  const A = await snap();
++  const A2 = await snap();
++  const off = await page.addStyleTag({
++    content: `${probe} { color: transparent !important; -webkit-text-fill-color: transparent !important; }`,
+   });
+-});
++  const B = await snap();
++  await off.evaluate((t) => (t as HTMLElement).remove());
++  const on = await page.addStyleTag({
++    content: `${probe} { color: ${ref} !important; -webkit-text-fill-color: ${ref} !important; opacity: 1 !important; filter: none !important; mask-image: none !important; -webkit-mask-image: none !important; text-shadow: none !important; }`,
++  });
++  const R = await snap();
++  await on.evaluate((t) => (t as HTMLElement).remove());
++  await el.evaluate((e) => e.removeAttribute("data-aa-probe"));
++  return page.evaluate(
++    async ({ A, A2, B, R, dark }) => {
++      const decode = async (b64: string) => {
++        const bmp = await createImageBitmap(
++          await (await fetch(`data:image/png;base64,${b64}`)).blob(),
++        );
++        const g = new OffscreenCanvas(bmp.width, bmp.height).getContext("2d")!;
++        g.drawImage(bmp, 0, 0);
++        return g.getImageData(0, 0, bmp.width, bmp.height).data;
++      };
++      const [a, a2, bg, r] = await Promise.all([A, A2, B, R].map(decode));
++      const lin = (c: number) =>
++        (c /= 255) <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
++      const L = (d: Uint8ClampedArray, i: number) =>
++        0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
++      const ratio = (x: number, y: number) => (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
++      const li = dark ? 1 : 0;
++      const one: number[] = [];
++      const two: number[] = [];
++      for (let i = 0; i < bg.length; i += 4) {
++        const lg = L(bg, i);
++        if (Math.abs(li - lg) < 1e-6) continue;
++        if (Math.abs(L(r, i) - lg) / Math.abs(li - lg) < 0.5) continue;
++        one.push(ratio(L(a, i), lg));
++        two.push(ratio(L(a2, i), lg));
++      }
++      const med = (xs: number[]) =>
++        xs.length ? +[...xs].sort((m, n) => m - n)[Math.floor(xs.length / 2)].toFixed(3) : null;
++      return {
++        n: one.length,
++        median: med(one),
++        median2: med(two),
++        under: one.length ? +(one.filter((c) => c < 4.5).length / one.length).toFixed(3) : null,
++      };
++    },
++    { A, A2, B, R, dark },
++  );
++}
++const QUIET = [".pl-state", ".pl-qual", ".pl-more"] as const;
++const X1B = QUIET.map((q) => `html body [data-lobby] ${q}`).join(", ") +
++  " { -webkit-mask-image: linear-gradient(to right, #000 1.2em, rgba(0, 0, 0, 0.25) 1.2em) !important;" +
++  " mask-image: linear-gradient(to right, #000 1.2em, rgba(0, 0, 0, 0.25) 1.2em) !important; }";
++const X2 = QUIET.map((q) => `html.dark body [data-lobby] ${q}`).join(", ") +
++  " { color: rgb(70, 68, 66) !important; }";
++const holds = (r: GlyphText) =>
++  r.n > 0 && (r.median ?? 0) >= 4.5 && (r.median2 ?? 0) >= 4.5;
++
++for (const theme of ["light", "dark"] as const)
++  for (const dpr of [1, 2])
++    test.describe(`the sheet's ground · ${theme} · dpr ${dpr}`, () => {
++      test.use({
++        viewport: { width: 1280, height: 720 },
++        deviceScaleFactor: dpr,
++        colorScheme: theme,
++        contextOptions: { reducedMotion: "reduce" },
++      });
++      const gated = !(theme === "light" && dpr === 1);
++      test(`the register's ground is opaque and its quiet lines paint 4.5:1 on it (${theme}, dpr ${dpr})`, async ({
++        page,
++      }) => {
++        const room = `tally-aa-${theme}-${dpr}-${Date.now()}`;
++        await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
++        await settled(page);
++        expect(
++          await page.evaluate(() => document.documentElement.classList.contains("dark")),
++          "the theme is witnessed",
++        ).toBe(theme === "dark");
++        await peers(page, room, 15);
++        await mark(page).click();
++        await settle(page);
++        const sheet = page.locator("[data-lobby]:visible").first();
++        const ground = () => sheet.evaluate((e) => getComputedStyle(e).backgroundColor);
++        const shipped = await ground();
++        // THE OPAQUE HALF'S NEGATIVE CONTROL, same page: the pass-4 regression, planted, struck.
++        const plant = await page.addStyleTag({
++          content:
++            ".player-lobby { background: color-mix(in srgb, var(--color-popover) 80%, transparent) !important; }",
++        });
++        const planted = await ground();
++        await plant.evaluate((t) => (t as HTMLElement).remove());
++        await expect.poll(ground).toBe(shipped);
++        const rows = await sheet.locator(".pl-row").count();
++        const foot = (await sheet.locator(".pl-more").textContent())?.trim();
++        const read = async (tag: string) => {
++          const out: Record<string, GlyphText> = {};
++          for (const q of QUIET) out[q] = await glyphText(page, `[data-lobby]:visible ${q}`, `${tag}${q}`);
++          return out;
++        };
++        const shippedRead = await read("ship");
++        const plants: Record<string, Record<string, GlyphText>> = {};
++        for (const [name, css] of theme === "dark" ? [["X1b", X1B], ["X2", X2]] : [["X1b", X1B]]) {
++          const t = await page.addStyleTag({ content: css });
++          plants[name] = await read(name);
++          await t.evaluate((e) => (e as HTMLElement).remove());
++        }
++        console.log(
++          "G14",
++          JSON.stringify({
++            engine: test.info().project.name,
++            theme,
++            dpr,
++            gated,
++            shipped,
++            planted,
++            rows,
++            foot,
++            read: shippedRead,
++            plants,
++          }),
++        );
++        expect(alphaOf(planted), "the planted translucent ground is SEEN").toBeLessThan(1);
++        expect(alphaOf(shipped), "the shipped ground is opaque").toBe(1);
++        // a 1280×720 desk draws the TALL budget: its board sits beside the sheet, not under it
++        expect(rows).toBe(4);
++        expect(foot).toBe("and 12 more");
++        for (const q of QUIET) expect(shippedRead[q].n, `${q} has a glyph core`).toBeGreaterThan(0);
++        // every plant is SEEN: the row it gates would red under it
++        for (const [name, r] of Object.entries(plants))
++          expect(QUIET.every((q) => holds(r[q])), `${name} is seen by the statistic`).toBe(false);
++        if (!gated) {
++          test.info().annotations.push({
++            type: "T9-R6",
++            description: "light DPR 1 is the hand's tag rung, the estate's row (pass6/CHAIR-RULINGS §1.4)",
++          });
++          return;
++        }
++        for (const q of QUIET) {
++          expect(shippedRead[q].median!, `${q} core median`).toBeGreaterThanOrEqual(4.5);
++          expect(shippedRead[q].median2!, `${q} core median, second photograph`).toBeGreaterThanOrEqual(4.5);
++        }
++      });
++    });
+ 
+ // ── PRM · the draw-in snaps ────────────────────────────────────────────────────────────────
+ test("reduced motion: every stroke lands inked, no tween", async ({ page }) => {
+@@ -750,41 +875,150 @@ test("two arrivals a beat apart each draw in once, and neither holds the other",
+   expect(b[b.length - 1], "the second lands").toBe(0);
+ });
+ 
+-// ── G16 · the written count out-weighs one stroke, ON PAINTED BYTES (an estate row now) ─────
+-// Pass 4 banked this as an instrument; nothing red if `.pt-count` fell back to `--type-heading`.
++// ── LEAVE-WHILE-PENDING (PLR-PLACE's critic, registry-v5 §3.14): a key that leaves mid-draw ─
++// The tween map is per key, so its cleanup must reach a key whose first draw-in has not landed.
++// A person arrives, leaves 150ms into the draw-in, and returns 100ms later. Their stroke must
++// draw from nothing ONCE: the dash only falls from the return and lands. If `forget` leaves the
++// first tween running, it lands first, deletes the SECOND tween's handle and writes 1; the
++// second then writes its own progress back over it — the dash jumps to 0 and rises.
++// (A key pending on its STAGGER delay is not reachable from the wire: every message is its own
++// task, so each arrival reaches `drawIn` alone, at position 0.)
++test("a person who leaves mid-draw and comes back draws once, from nothing", async ({ page }) => {
++  const room = `tally-lwp-${Date.now()}`;
++  await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
++  await settled(page);
++  await peers(page, room, 1);
++  const trace = await page.evaluate(
++    ({ room }) =>
++      new Promise<{ t: number; n: number; off: number; back: boolean }[]>((done) => {
++        const ch = new BroadcastChannel(`board:${room}`);
++        const out: { t: number; n: number; off: number; back: boolean }[] = [];
++        let back = false;
++        const t0 = performance.now();
++        const read = () => {
++          const ps = [...document.querySelectorAll("[data-player-mark]")]
++            .find((m) => m.getBoundingClientRect().width > 0)!
++            .querySelectorAll(".pt-pose.is-active path");
++          const last = ps[ps.length - 1];
++          return { n: ps.length, off: last ? Number(last.getAttribute("stroke-dashoffset")) : NaN };
++        };
++        ch.postMessage({ kind: "hi", data: {}, from: "lwp" });
++        // sleep-ok: the elapsed time IS the subject, the leave lands mid-draw and the return after
++        setTimeout(() => ch.postMessage({ kind: "bye", data: {}, from: "lwp" }), 150);
++        setTimeout(() => {
++          ch.postMessage({ kind: "hi", data: {}, from: "lwp" });
++          back = true;
++        }, 250);
++        const tick = () => {
++          out.push({ t: performance.now() - t0, ...read(), back });
++          // sleep-ok: the elapsed window IS the subject, the return's whole draw-in and the first's end
++          if (performance.now() - t0 < 1500) requestAnimationFrame(tick);
++          else {
++            ch.close();
++            done(out);
++          }
++        };
++        requestAnimationFrame(tick);
++      }),
++    { room },
++  );
++  const midFirst = trace.filter((s) => !s.back && s.n === 3).map((s) => s.off);
++  const left = trace.some((s) => !s.back && s.n === 2 && s.t > 150);
++  const ret = trace.filter((s) => s.back && s.n === 3).map((s) => s.off);
++  const start = ret.findIndex((v) => v > 0);
++  const tail = ret.slice(Math.max(0, start));
++  const rises = tail.filter((v, i) => i > 0 && v > tail[i - 1] + 0.01).length;
++  console.log(
++    "LEAVE WHILE PENDING",
++    JSON.stringify({
++      frames: trace.length,
++      firstLastOff: midFirst[midFirst.length - 1],
++      left,
++      returnHead: tail.slice(0, 8).map((v) => +v.toFixed(1)),
++      rises,
++      last: tail[tail.length - 1],
++    }),
++  );
++  expect(midFirst[midFirst.length - 1], "the first draw-in was cut mid-flight").toBeGreaterThan(0);
++  expect(left, "the leave landed").toBe(true);
++  expect(start, "the return draws in").toBeGreaterThanOrEqual(0);
++  expect(rises, "the return's dash only ever falls").toBe(0);
++  expect(tail[tail.length - 1], "and lands").toBe(0);
++});
++
++// ── G16 · the written count's weight, ON PAINTED BYTES, per arm and per theme ────────────────
+ // Ink weight, one normaliser for the crops compared, reduced motion so every stroke is inked.
+-// NEGATIVE CONTROL, same page: the heading rung is planted on the written count and must read
+-// LIGHTER than one graphite stroke (it did in pass 4, in light, both engines).
+-test.describe("the written count's weight", () => {
+-  test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2 });
+-  test("six people paint more ink than one, and the rung below would not", async ({ page }) => {
+-    await page.emulateMedia({ reducedMotion: "reduce", colorScheme: "light" });
+-    const room = `tally-ink-${Date.now()}`;
+-    await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+-    await settled(page);
+-    const crop = async () => painted(page, await mark(page).screenshot(), 3);
+-    await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+-    const one = await crop();
+-    await peers(page, room, 5);
+-    await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+-    const six = await crop();
+-    const plant = await page.addStyleTag({
+-      content: ".pt-count { font-size: var(--type-heading) !important; }",
++// KEYED ON `SIX_ARM` (the pass-5 critic: the row was arm (a)'s, and its negative control was arm
++// (c)'s shipped rung): each arm is held to its own promise, with the plant that breaks THAT
++// promise read in the same run.
++//   (a) title / (b) heading — the FLOOR: six out-weighs one graphite stroke. Plant: a rung the
++//       floor must see as lighter than one. In light that is the rung below title (heading: why
++//       the title rung ships). In DARK the heading rung CLEARS one stroke (79.52 against 59.48,
++//       pass 6), so the dark plant is the body rung. Arm (b) is RED in light by design: that is
++//       its ballot price.
++//   (c) remainder — MONOTONE, PER PERSON: six paints at least 6/5 of five's ink (the ink per
++//       person never falls; measured 1.44 light / 1.51 dark). Plant: the remainder and its plus
++//       hidden, and it must read under that bar. A first cut at ≥ 1.05 could NOT see this plant:
++//       the hidden arm still reads 1.09–1.10 of five in both engines (an unexplained residue of
++//       the 24 px wider crop), so the bar is the count's own ratio.
++const G16_PLANT = (theme: "light" | "dark"): string =>
++  SIX_ARM === "remainder"
++    ? ".pt-count.is-rest, .pt-plus { visibility: hidden !important; }"
++    : SIX_ARM === "title" && theme === "light"
++      ? ".pt-count { font-size: var(--type-heading) !important; }"
++      : ".pt-count { font-size: var(--type-body) !important; }";
++for (const theme of ["light", "dark"] as const)
++  test.describe(`the written count's weight · ${theme}`, () => {
++    test.use({
++      viewport: { width: 1280, height: 800 },
++      deviceScaleFactor: 2,
++      colorScheme: theme,
++      contextOptions: { reducedMotion: "reduce" },
++    });
++    test(`six people against one and five, and the plant that breaks the promise (${SIX_ARM}, ${theme})`, async ({
++      page,
++    }) => {
++      const room = `tally-ink-${theme}-${Date.now()}`;
++      await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
++      await settled(page);
++      expect(
++        await page.evaluate(() => document.documentElement.classList.contains("dark")),
++      ).toBe(theme === "dark");
++      await page.mouse.move(640, 790);
++      const crop = async () => {
++        await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
++        return painted(page, await mark(page).screenshot({ animations: "disabled" }));
++      };
++      const one = await crop();
++      await peers(page, room, 4);
++      const five = await crop();
++      await peers(page, room, 1);
++      const six = await crop();
++      const plant = await page.addStyleTag({ content: G16_PLANT(theme) });
++      const sixPlanted = await crop();
++      await plant.evaluate((t) => (t as HTMLElement).remove());
++      const D = Math.max(one.core, five.core, six.core, sixPlanted.core);
++      const ink = {
++        one: inkOf(one.hist, D, 2),
++        five: inkOf(five.hist, D, 2),
++        six: inkOf(six.hist, D, 2),
++        sixPlanted: inkOf(sixPlanted.hist, D, 2),
++      };
++      console.log(
++        "G16",
++        JSON.stringify({ engine: test.info().project.name, arm: SIX_ARM, theme, D, ink }),
++      );
++      if (SIX_ARM === "remainder") {
++        expect(ink.six, "six paints 6/5 of five (monotone)").toBeGreaterThanOrEqual((6 / 5) * ink.five);
++        expect(ink.sixPlanted, "the remainder hidden is SEEN as not monotone").toBeLessThan(
++          (6 / 5) * ink.five,
++        );
++      } else {
++        expect(ink.six, "six out-weighs one").toBeGreaterThanOrEqual(ink.one);
++        expect(ink.sixPlanted, "the planted rung is SEEN as lighter than one").toBeLessThan(ink.one);
++      }
+     });
+-    await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+-    const sixAtHeading = await crop();
+-    await plant.evaluate((s) => (s as HTMLElement).remove());
+-    const D = Math.max(one.core, six.core, sixAtHeading.core);
+-    const ink = {
+-      one: inkOf(one.hist, D, 2),
+-      six: inkOf(six.hist, D, 2),
+-      sixAtHeading: inkOf(sixAtHeading.hist, D, 2),
+-    };
+-    console.log("G16", JSON.stringify({ D, ink }));
+-    expect(ink.six, "six out-weighs one").toBeGreaterThanOrEqual(ink.one);
+-    expect(ink.sixAtHeading, "the rung below is SEEN as lighter than one").toBeLessThan(ink.one);
+   });
+-});
+ 
+ // ── G4 · the board's own ink, with a room on it (two pages, one context) ───────────────────
+ // F1 is the head's; the BOARD is not moved by it. `authorInk` binds a cell only for a PEER's
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 8d9f5c26..76ddb1c2 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -740,6 +740,10 @@ const markRows = computed<MarkRow[]>(() =>
+   })),
+ );
+ const selfInk = computed(() => session.players.value.find((p) => p.self)?.ink ?? {});
++/** The board's box, read by the mark when its sheet opens (the row budget is keyed on it). */
++const boardBox = () =>
++  document.querySelector<HTMLElement>(".board-peek-host")?.getBoundingClientRect() ??
++  null;
+ 
+ /** THE FUSED TRANSACTION: pick a game AND its settings, deal once. Same game → the mounted
+  *  state's own `deal()` through the bridge (no remount, no second solver dispatch). Different
+@@ -828,6 +832,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+           :rows="markRows"
+           :quiet-after-ms="PRESENCE_QUIET_MS"
+           :quiet-ms-of="quietMsOf"
++          :board-box="boardBox"
+         />
+       </template>
+     </AttributionCard>
+@@ -848,6 +853,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+           :rows="markRows"
+           :quiet-after-ms="PRESENCE_QUIET_MS"
+           :quiet-ms-of="quietMsOf"
++          :board-box="boardBox"
+         />
+       </template>
+     </AttributionCard>
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 52c0a3c1..502bfc26 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -1,5 +1,11 @@
+ import { afterEach, beforeEach, describe, it, expect, vi } from "vitest";
+-import { wins, type Handlers, type Msg, type Wire } from "./useSession";
++import {
++  SELF_TAKES_A_HAND,
++  wins,
++  type Handlers,
++  type Msg,
++  type Wire,
++} from "./useSession";
+ import { inkFor, slugFor } from "./playerIdentity";
+ 
+ /**
+@@ -349,6 +355,23 @@ describe("ink is the room's, not the page's — `k` adoption", () => {
+     expect(inkOf("peer-3")).toEqual(inkFor(6));
+   });
+ 
++  it("F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND", async () => {
++    const p = await bootPage();
++    await p.session.joinSession("room-f1");
++    const mine = () => p.session.session.players.value.find((r) => r.self)?.ink ?? {};
++    // minted at the join (`mint`): an index of your own, or nothing
++    expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
++    // adopted from the room's `k` (`adoptInk`): the room's index for you, or nothing
++    const me = p.selfId();
++    p.hear(
++      "st",
++      stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3, k: { [me]: 4, "peer-1": 5 } }),
++      "peer-1",
++    );
++    p.peer("peer-1", true);
++    expect(mine()).toEqual(SELF_TAKES_A_HAND ? inkFor(4) : {});
++  });
++
+   it("names a peer who left before this page arrived", async () => {
+     const p = await bootPage();
+     await p.session.joinSession("room-departed");
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 9ce40fca..2c07498e 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -523,25 +523,21 @@ function writeSessionParam(id: string | null): void {
+ // ── Joining, leaving, and the wire itself ─────────────────────────────────────────
+ 
+ /**
+- * F1, BEHIND ONE CONST (T9-W7 §11 · PLR-SELF; chair §6.10 — both arms buildable, the owner
+- * disposes at the re-look).
++ * F1 — DOES YOUR OWN HAND TAKE THE ROOM'S COLOUR? ONE switch, one name, one home (T9-W7
++ * registry-v5 §2.8; chair §6.10 — both arms buildable, the owner disposes at the re-look).
+  *
+- * TRUE: your own id takes its index from `k` like everyone else's, so the three surfaces that
+- * draw a person — the head's mark, the lobby row, the deck's caption swatch — say the colour
+- * the ROOM says about you. FALSE: your own row binds nothing and those three surfaces keep the
+- * incumbent's graphite/blue, i.e. your page paints you one colour while every other page paints
+- * you another (the defect r0's I2 was written to name).
++ * TRUE: your own id takes its index from `k` like everyone else's, so the surfaces that draw a
++ * person — the head's mark, the lobby row, the deck's caption swatch — say the colour the ROOM
++ * says about you. FALSE: your own row binds nothing and those surfaces keep the incumbent's
++ * graphite/blue, i.e. your page paints you one colour while every other page paints you another
++ * (the defect r0's I2 was written to name).
+  *
+- * `mint` runs ONLY inside a room (`joinSession` for self, `onPeer` for everyone else), so a
+- * SOLO board binds nothing anywhere under either arm and stays byte-identical; `authorInk`
+- * skips self-authored cells by id, so the board's own digits are untouched either way. Flipping
+- * this const is the whole false arm: no other line changes.
+- *
+- * NOT EXPORTED. Nothing outside this module decides F1 — the three surfaces read `p.ink`, which
+- * is this file's answer — and an exported flag with no importer is a consumer-less substrate
+- * (`lint:knip` says so, and it did).
++ * `mint` runs ONLY inside a room (`joinSession` for self, `onPeer` for everyone else), so a SOLO
++ * board binds nothing anywhere under either arm; `authorInk` skips self-authored cells by id, so
++ * the board's own digits are untouched either way. Flipping this const is the whole false arm.
++ * Exported because the unit that holds each arm reads it (`useSession.test.ts`).
+  */
+-const SELF_TAKES_ROOM_INK = true;
++export const SELF_TAKES_A_HAND: boolean = true;
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+@@ -555,8 +551,8 @@ function mint(id: string): Omit<Player, "self"> {
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+-    // T9-W7 PLR-SELF F1, the one const above. Both arms run; the owner disposes.
+-    ink: SELF_TAKES_ROOM_INK || id !== selfId.value ? ident!.inkFor(index) : {},
++    // F1, the one const above. Both arms run; the owner disposes.
++    ink: SELF_TAKES_A_HAND || id !== selfId.value ? ident!.inkFor(index) : {},
+   };
+ }
+ 
+@@ -576,7 +572,7 @@ function adoptInk(k: Record<string, number>): void {
+     inkIndex[id] = index;
+     if (index > top) top = index;
+     // F1, as in `mint`: under the true arm your index is the room's, not a page's.
+-    const ink = SELF_TAKES_ROOM_INK || id !== selfId.value ? ident!.inkFor(index) : {};
++    const ink = SELF_TAKES_A_HAND || id !== selfId.value ? ident!.inkFor(index) : {};
+     const held = next[id];
+     if (held) {
+       next[id] = { ...held, ink };
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue b/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+index 73780029..1a137bc1 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
++++ b/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+@@ -10,25 +10,36 @@ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+  *
+  * THE EDGE IS DRAWN, NEVER A CSS BORDER (R6 L5: one box grammar). Both sheets wore
+  * `border: 2px solid` at 30% of `--color-border`; the edge is now the wells' own frame
+- * (`HandDrawnOutline`, 1.5px, radius 3, frozen at `:pose="0"` so it enrols no beat and mints
+- * one node), drawn in the sheet's inherited ink over a rounded ground, as `SolverErrorNote`
+- * already does. The box does not move: the 2px band the border held is kept as padding, and
+- * the frame's centre line runs 1px inside the edge, in that band.
++ * (`HandDrawnOutline`, 1.5px, frozen at `:pose="0"` so it enrols no beat and mints one node).
++ * The box does not move: the 2px band the border held is kept as padding, and the frame's
++ * centre line runs 1px inside the edge, in that band.
++ *
++ * THE FRAME'S CORNER IS THE GROUND'S. The ground is rounded at 1rem; the edge sits 1px inside
++ * it, so the frame's radius is 15. At the wells' radius 3 it drew square corners past the
++ * ground and moved 67–70 of the 106 px outside the card's rounded corners (pass-5 critic).
++ *
++ * THE EDGE'S INK IS THE OWNER'S (U-10), ONE CONST. `false`: the sheet's own inherited ink, the
++ * wells' weight. `true`: the house's quiet press ink, the rung the sheet's captions use.
+  *
+  * Every attribute a consumer passes (`id`, `data-lobby`, `class`, `@click.stop`) lands on the
+  * root, so each consumer keeps its own ground and its own hooks.
+  */
+ defineProps<{ open: boolean }>();
++const EDGE_QUIET = false;
+ </script>
+ 
+ <template>
+   <div class="head-sheet" :class="{ 'is-open': open }">
+-    <span class="head-sheet-edge" aria-hidden="true">
++    <span
++      class="head-sheet-edge"
++      :class="{ 'is-quiet': EDGE_QUIET }"
++      aria-hidden="true"
++    >
+       <HandDrawnOutline
+         class="head-sheet-frame"
+         :stroke-width="1.5"
+         :outset="0"
+-        :radius="3"
++        :radius="15"
+         :pose="0"
+       />
+     </span>
+@@ -75,6 +86,10 @@ defineProps<{ open: boolean }>();
+   pointer-events: none;
+ }
+ 
++.head-sheet-edge.is-quiet {
++  color: var(--ink-press-quiet);
++}
++
+ .head-sheet-frame {
+   height: 100%;
+ }
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 86835035..4735db18 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -1,46 +1,5 @@
+-<script lang="ts">
+-import { ref, type Ref } from "vue";
+-
+-/**
+- * ONE MediaQueryList PER QUERY, AT MODULE SCOPE — `useHoverCard`'s own idiom one file over,
+- * and the reason this component carries a second `<script>` block: `<script setup>` is the
+- * setup function, so a probe written there is one listener per instance and the head mounts
+- * two. The `matchMedia` guard is for the no-DOM case (jsdom), not for any browser.
+- */
+-function probe(query: string): Ref<boolean> {
+-  const m = ref(false);
+-  if (typeof window !== "undefined" && typeof window.matchMedia === "function") {
+-    const l = window.matchMedia(query);
+-    m.value = l.matches;
+-    l.addEventListener("change", (e) => {
+-      m.value = e.matches;
+-    });
+-  }
+-  return m;
+-}
+-
+-/**
+- * THE COMPRESSION REGIME IS KEYED ON THE SPACE THE SHEET HAS (pass-5 row 8; LAWS: a regime is
+- * keyed on the space the surface has, never on a proxy for it).
+- *
+- * Pass 4 read `(pointer: coarse) and (max-height: 799px)`. The pointer was the proxy, and it
+- * misfired: a coarse LANDSCAPE phone (844×390, 812×375) compressed to one row while its board
+- * sits BESIDE the sheet (15px of overlap, 3–4 cells under a 256px sheet whatever it holds).
+- * The space the sheet has is two facts, measured at six cells, seven at the table, both engines:
+- *   · WHERE THE BOARD IS. In portrait it runs under the sheet's whole width (left edge 14); in
+- *     landscape it is beside it (241 / 232.5); on the desk it takes a corner (CH-71's pose).
+- *   · HOW TALL THE BAND ABOVE IT IS. The height below the sheet's top alone cannot decide it:
+- *     334 (landscape, where compression buys one cell) < 620 (the 664 phone, where one row
+- *     already laps seven cells) < 668 (the 720 desk, the ratified lap).
+- * So the regime is the portrait band that is short: the board under the sheet and 799px or less
+- * of viewport to put both in. A 390×844 portrait holds four rows 4.1px clear of the board.
+- */
+-const shortBand = probe("(orientation: portrait) and (max-height: 799px)");
+-</script>
+-
+ <script setup lang="ts">
+-// `ref` comes from the module block above — the two script blocks share one scope.
+-import { computed, onBeforeUnmount, useId, watch } from "vue";
++import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
+ import PlayerLobby from "./PlayerLobby.vue";
+ import { LOBBY_COPY } from "./copy";
+ import type { LobbyLine, MarkRow } from "./types";
+@@ -67,7 +26,8 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  *
+  * ONE COUNTING BASE. The strokes, the written number, the accessible name, the rows and
+  * `and N more` count the same people, and the name is computed HERE from the array the strokes
+- * are drawn from — so the glyph's digits are a substring of the name by construction (2.5.3).
++ * are drawn from — so every digit the glyph paints is a substring of the name (WCAG 2.5.3) in
++ * each `SIX_ARM`, read per arm by `player-tally.spec.ts`'s G7.
+  *
+  * THE POSE IS KEYED TO THE PERSON, not the slot: the seed comes from the id, every `d` is
+  * generated at one local origin, and the slot is a translate. A departure moves the survivors
+@@ -88,8 +48,10 @@ const props = withDefaults(
+     quietAfterMs?: number;
+     /** How long a peer has been silent, in ms — read at OPEN, never on a timer. */
+     quietMsOf?: (id: string) => number | null;
++    /** Where the board is, read at OPEN — the one fact the row budget needs from outside pencil. */
++    boardBox?: () => DOMRect | null;
+   }>(),
+-  { quietAfterMs: 20000, quietMsOf: undefined },
++  { quietAfterMs: 20000, quietMsOf: undefined, boardBox: undefined },
+ );
+ 
+ /**
+@@ -116,7 +78,8 @@ const people = computed<MarkRow[]>(() =>
+   props.rows.length ? props.rows : SOLO_ARM === "keep" ? SOLO : [],
+ );
+ const count = computed(() => people.value.length);
+-/** The accessible name AND the sheet's first line, from the array the strokes count. */
++/** The sheet's first line, from the array the strokes count — and the mark's name, but for
++ *  arm (c) below, whose name has to carry the remainder it paints. */
+ const stateLine = computed(() => LOBBY_COPY.count(count.value));
+ 
+ const { isOpen, toggle, close } = useHoverCard();
+@@ -157,13 +120,22 @@ const ids = computed(() => tallied.value.map(keyOf));
+  * stroke and not five, so six people paint lighter than five (G16, below).
+  * `heading`: pass 3's rung, lighter than one stroke in light.
+  * `remainder`: no swap. The five strokes stay and the rest is written after a drawn plus, `+1`,
+- * so the ink never falls as the room grows. Its price: the head keeps growing past five, and
+- * the written `1` is not a substring of `6 players` (2.5.3 holds for the strokes only).
++ * so the ink never falls as the room grows. Its prices: the head keeps growing past five (97.06
++ * at six, 108.66 at fifteen, 106.45 at sixteen, pass 5's critic), and the name is no longer the
++ * sheet's first line. A written `1` is not in `6 players`, so the name is the mark's own reading
++ * out of the lobby's two lines, `5 players and 1 more` (WCAG 2.5.3: the painted digits are in
++ * it), while the sheet still says `6 players`.
+  */
+ const SIX_ARM = "title" as "title" | "heading" | "remainder";
+ const remainder = computed(() =>
+   SIX_ARM === "remainder" && count.value > TALLY_MAX ? count.value - TALLY_MAX : 0,
+ );
++/** The mark's accessible name: the state line, or under arm (c) the tally read as painted. */
++const markName = computed(() =>
++  remainder.value
++    ? `${LOBBY_COPY.count(TALLY_MAX)} ${LOBBY_COPY.more(remainder.value)}`
++    : stateLine.value,
++);
+ const drawn = computed(
+   () => count.value > 0 && (count.value <= TALLY_MAX || remainder.value > 0),
+ );
+@@ -217,13 +189,28 @@ watch(reducedMotion, (reduced) => reduced && settle(ids.value));
+ const slotAt = (i: number) => `translate(${PITCH * i} 0)`;
+ 
+ /**
+- * THE SEAM, FOR A MOUSE AND A PEN ONLY (PLR-PLACE pass 4, grafted back). A mouse press must not
+- * move focus: the cell you were writing in keeps it and the room is not told you looked away.
+- * Under a WebKit touch a cancelled `pointerdown` cancels the tap's CLICK with it, so the mark
+- * never opened on a tapped phone. A tap therefore moves focus like any other tap.
++ * THE SEAM (PLR-PLACE pass 4; the leader's ballot, both arms built behind ONE const).
++ *
++ * A mouse press never moves focus: the cell you were writing in keeps it, so `onGridFocusout`
++ * never fires and the room is not told you looked away. The question is a TAP.
++ *   (a) `false`: a tap moves focus like any other tap. Honest, and the room hears `null` — your
++ *       ring leaves every other board while you read who is here.
++ *   (b) `true`: the tap is a look too. The touch is prevented like the mouse press, and because a
++ *       cancelled WebKit `pointerdown` cancels the tap's CLICK with it, the sheet toggles on the
++ *       touch's own `pointerup`; the click Chromium still sends for that touch is ignored.
++ * A keyed open is neither: Tab leaves the cell before the mark is reached, in both arms.
+  */
++const TAP_IS_A_LOOK = true;
++
+ function onPress(e: PointerEvent): void {
+-  if (e.pointerType !== "touch") e.preventDefault();
++  if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
++}
++function onRelease(e: PointerEvent): void {
++  if (TAP_IS_A_LOOK && e.pointerType === "touch") toggle();
++}
++function onClick(e: MouseEvent): void {
++  if (TAP_IS_A_LOOK && (e as PointerEvent).pointerType === "touch") return;
++  toggle();
+ }
+ 
+ // ── Escape, window-bound, one owner — AND THE PHASE IS THE WHOLE OF IT ──────────────────────
+@@ -288,16 +275,45 @@ watch(isOpen, (open) => {
+ const quietAt = ref<Record<string, number | null>>({});
+ 
+ /**
+- * THE SHEET NEVER SCROLLS, SO THE VIEWPORT DECIDES HOW MANY ROWS IT HOLDS.
++ * THE SHEET NEVER SCROLLS, SO THE SPACE DECIDES HOW MANY ROWS IT HOLDS — AND THE SPACE IS READ.
+  *
+- * `H(r, m) = 36 + S + 5.6 + 22.4·r + (1.6 + S)·m` with S read from the sheet (measured exact to
+- * 0.05px at three points, both engines). A tall phone (844) has 5.3px between five rows and the
+- * board's top; a short one (664) has none, so it takes two. One media query — the regime above
+- * — and no scrollport anywhere: a list you scroll inside a disclosure is a second surface, and
+- * the compression line is the honest answer instead.
++ * Two budgets: `tall` draws four rows and `and N more`, `short` draws your row and `and N more`.
++ * The sheet takes `short` when, drawn tall, it would lap a board that runs under its rows from
++ * where they start. Both facts are MEASURED at the open (and again when the room changes while it
++ * is open), never keyed on a media query: the pass-5 key `(orientation: portrait) and
++ * (max-height: 799px)` drew four rows at 390×800 and lapped seven cells where one row lapped none,
++ * because what decides the lap is where the board's top sits, and that moves with the width.
++ *   · the tall sheet's bottom is read off the sheet ITSELF, laid out and untransformed (the
++ *     offset box, so the 150ms scale-in is not in it) — a wrapped 29-character slug is in it too;
++ *   · the board's box comes from `App.vue`, because pencil may not import a board.
++ * The board BESIDE the sheet is not under its rows: the desk's corner lap is CH-71's ratified
++ * pose (1280×800: four rows over two or three cells, one row over one or two), and a coarse
++ * landscape phone keeps four rows AT A PRICE — at 844×390 six cells where one row laps four, at
++ * 812×375 five against three, and on the widest board (16×16) nine against six and eighteen
++ * against twelve. Stated, not denied; the landscape cell is ONE π row the fold reads.
++ * The re-read and the budget flip happen in one microtask pair, so no tall frame is painted.
+  */
+ const ROWS = { tall: 5, short: 2 } as const;
+-const budget = computed(() => (shortBand.value ? ROWS.short : ROWS.tall));
++const cramped = ref(false);
++const budget = computed(() => (cramped.value ? ROWS.short : ROWS.tall));
++
++async function fit(): Promise<void> {
++  cramped.value = false;
++  await nextTick();
++  const sheet = document.getElementById(lobbyId);
++  const host = sheet?.offsetParent;
++  const board = props.boardBox?.();
++  if (!sheet || !(host instanceof HTMLElement) || !board) return;
++  const at = host.getBoundingClientRect();
++  const rowsStart =
++    at.left + sheet.offsetLeft + parseFloat(getComputedStyle(sheet).paddingLeft);
++  const bottom = at.top + sheet.offsetTop + sheet.offsetHeight;
++  cramped.value = board.left <= rowsStart && board.top < bottom;
++}
++watch([isOpen, () => people.value.length], ([open]) => {
++  if (open) void fit();
++});
++
+ const shown = computed(() =>
+   people.value.length <= budget.value
+     ? people.value
+@@ -327,11 +343,9 @@ const lines = computed<LobbyLine[]>(() =>
+ </script>
+ 
+ <template>
+-  <!-- `onPress` is the seam (PLR-PLACE arm I). A mouse press on this mark must not move focus,
+-       so `onGridFocusout` never fires and the room is not told you looked away. The click still
+-       lands, so Enter and Space are untouched: a native button's activation is the whole
+-       contract, and the `@keydown.enter` that used to sit beside it ran the handler AND the
+-       synthesised click, netting zero (CH-70). A touch is not prevented: see `onPress`. -->
++  <!-- `onPress` / `onRelease` are the seam (`TAP_IS_A_LOOK`). Enter and Space are a native
++       button's click and nothing else: the `@keydown.enter` that used to sit beside it ran the
++       handler AND the synthesised click, netting zero (CH-70). -->
+   <button
+     v-if="count"
+     ref="el"
+@@ -340,11 +354,12 @@ const lines = computed<LobbyLine[]>(() =>
+     class="player-mark"
+     :class="{ 'is-live': live }"
+     :style="[live ? ink : null, { '--presence-ink-dur': `${MOTION.presenceInkMs}ms` }]"
+-    :aria-label="stateLine"
++    :aria-label="markName"
+     :aria-expanded="isOpen"
+     :aria-controls="lobbyId"
+-    @click.stop="toggle"
++    @click.stop="onClick"
+     @pointerdown="onPress"
++    @pointerup="onRelease"
+     @focusout="close"
+   >
+     <svg
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts b/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+index df07f227..d150e857 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
++++ b/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+@@ -14,7 +14,8 @@
+  * says so with your own row. The pass-4 `alone` / `others` pair counted OTHER players while the
+  * rows counted everyone, three populations in one sheet; it is retired. The mark draws one stroke
+  * per person and writes the number from six, so its name carries every digit the glyph paints
+- * (WCAG 2.5.3 by construction): `6` is a substring of `6 players`.
++ * (WCAG 2.5.3): `6` is a substring of `6 players`. The owner's arm (c) writes the REMAINDER
++ * after five strokes instead, and its name is two of these lines joined, `5 players and 1 more`.
+  *
+  * M16: plain English, no em dash, no first person, no colon, no `j`, no `x` (the cut).
+  */
+diff --git a/web/frontend/src/pencil/composables/useTallyStrokes.ts b/web/frontend/src/pencil/composables/useTallyStrokes.ts
+index 95383f67..1d7d9c44 100644
+--- a/web/frontend/src/pencil/composables/useTallyStrokes.ts
++++ b/web/frontend/src/pencil/composables/useTallyStrokes.ts
+@@ -178,7 +178,6 @@ export function useTallyStrokes(strokes: () => TallyStroke[]) {
+   return {
+     poses,
+     boilFrame,
+-    reveal,
+     reducedMotion,
+     drawIn,
+     settle,

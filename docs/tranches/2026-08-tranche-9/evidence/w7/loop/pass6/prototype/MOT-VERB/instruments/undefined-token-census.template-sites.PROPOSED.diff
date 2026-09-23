@@ -1,0 +1,206 @@
+--- pass6/instruments/undefined-token-census.mjs (prettier-normalised)
++++ §13 tree scripts/check-theme-tokens.mjs (pass 6)
+@@ -64,6 +64,13 @@
+ //     species (a declaration that exists only while a condition holds).
+ // Self-test controls 7–10 carry the plants (S1/S2 the critic's, S3/S4 its siblings, 8b/8c the
+ // negative-negatives, 9 the at-rule arm).
++// PASS 6 (MOT-VERB, pass6/CHAIR-RULINGS A.5 ruling 5) — THE TEMPLATE IS A STYLESHEET TOO. A
++// declaration opened by a quote or a comma (`style="animation-duration: var(--x)"`, a `:style`
++// string literal, a style object's second key) is a consumer; the scan read only declarations
++// opened by `;{}` and so never saw one. And a FALLBACK on a REGISTERED token (`@property`) is a
++// MASKED DEFAULT: the registration's initial value is the failure value, so the fallback text is
++// dead and lies about it (plant X5, `animation-duration: var(--motion-note, 280ms)` on the
++// laminate's root). Controls 10/10b/10c/10d carry them.
+ const ROOT = process.env.FE ?? path.join(import.meta.dirname, "..");
+ const INDEX_CSS = path.join(ROOT, "src", "assets", "index.css");
+ 
+@@ -285,25 +292,6 @@
+   ],
+ ]);
+ 
+-/** For a declaration at `at` inside CSS `text`, the selector of its innermost enclosing rule
+- *  (`@theme` counts as a selector), or null when the offset is not inside any rule. */
+-function enclosingSelector(text, at) {
+-  let depth = 0;
+-  for (let i = at - 1; i >= 0; i--) {
+-    const c = text[i];
+-    if (c === "}") depth++;
+-    else if (c === "{") {
+-      if (depth === 0) {
+-        let j = i - 1;
+-        while (j >= 0 && !"{};".includes(text[j])) j--;
+-        return text.slice(j + 1, i).trim();
+-      }
+-      depth--;
+-    }
+-  }
+-  return null;
+-}
+-
+ /** The `<style>` blocks of a `.vue` file as [start, end, scoped] (a `.css` file is one unscoped
+  *  block). `scoped` is read off the opening tag — pass 6's cure keys every root rule on it. */
+ function styleRanges(file, text) {
+@@ -363,13 +351,6 @@
+   if (!ats.length && parts.some((p) => BARE_ROOT.test(p))) return { kind: "global" };
+   const tails = parts.map((p) => p.replace(/^(?::root|html|\*)/, "")).filter(Boolean);
+   return { kind: "cond", tails, ats };
+-}
+-
+-function isGlobalRule(selector) {
+-  if (selector == null) return false;
+-  if (/^@theme\b/.test(selector)) return true;
+-  if (selector.startsWith("@")) return false;
+-  return selector.split(",").every((s) => ROOT_SELECTOR.test(s.trim()));
+ }
+ 
+ /** The census. `extra` is a map {file: text} that REPLACES the file's own bytes — the
+@@ -383,6 +364,7 @@
+   const ranges_ = new Map(); // file -> style ranges
+   const conditional = new Map(); // token -> [{ tails, ats, file }]
+   const deadDecl = []; // declarations a scoped root selector kills
++  const registered = new Set(); // `@property` names (pass 6: a fallback on one is masked)
+   for (const f of files) {
+     const raw = extra[f] ?? fs.readFileSync(f, "utf8");
+     const masked = maskComments(raw);
+@@ -406,8 +388,10 @@
+         });
+       else deadDecl.push({ token: m[1], file: f });
+     }
+-    for (const m of masked.matchAll(/@property\s+(--[a-zA-Z0-9_-]+)/g))
++    for (const m of masked.matchAll(/@property\s+(--[a-zA-Z0-9_-]+)/g)) {
+       global.add(m[1]);
++      registered.add(m[1]);
++    }
+     for (const m of masked.matchAll(
+       /(documentElement\s*\.\s*)?style\s*\.\s*setProperty\(\s*["'`](--[a-zA-Z0-9_-]+)/g,
+     ))
+@@ -420,16 +404,28 @@
+   const used = new Set();
+   const timing = [];
+   const any = [];
++  const maskedDefaults = []; // fallbacks on registered tokens (pass 6)
+   for (const [f, masked] of texts) {
+     const lineAt = (at) => masked.slice(0, at).split("\n").length;
+     for (const d of masked.matchAll(
+-      /(?:^|[;{}])\s*(-{0,2}[a-zA-Z][\w-]*)\s*:\s*([^;{}]*)/g,
++      /(?:^|[;{},"'`])\s*(-{0,2}[a-zA-Z][\w-]*)\s*:\s*([^;{}"'`]*)/g,
+     )) {
+       const [, prop, value] = d;
+       const at = d.index + d[0].indexOf(value);
+       for (const m of value.matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)\s*(,?)/g)) {
+         const [, name, comma] = m;
+-        if (comma) continue; // a HOOK names its own failure value
++        // a HOOK names its own failure value — unless the token is REGISTERED, where the
++        // initial value is the failure value and the fallback is a masked default (pass 6)
++        if (comma) {
++          if (registered.has(name))
++            maskedDefaults.push({
++              file: path.relative(ROOT, f),
++              line: lineAt(at + m.index),
++              token: name,
++              prop,
++            });
++          continue;
++        }
+         if (name.endsWith("-")) continue; // `var(--ease-${x})` — a template stem, not a name
+         if (global.has(name) || local.get(f).has(name)) continue;
+         // CONDITIONAL (pass 6): satisfied only inside a rule carrying the same tail and the same
+@@ -495,6 +491,7 @@
+     dead: deadDecl.length,
+     timing,
+     any,
++    masked: maskedDefaults,
+     stale,
+   };
+ }
+@@ -545,6 +542,11 @@
+   console.log(
+     `conditional tokens (tailed root / conditional at-rule, no bare-root twin): ${rev.conditional}${rev.conditional ? ` (${rev.conditionalNames.join(" ")})` : ""} · scoped-root declarations (dead): ${rev.dead}`,
+   );
++  console.log(
++    `fallbacks on a REGISTERED token (masked defaults): ${rev.masked.length}`,
++  );
++  for (const r of rev.masked)
++    console.log(`  MASKED  ${r.file}:${r.line}  ${r.prop}: var(${r.token}, …)`);
+   for (const r of [...rev.timing, ...rev.any])
+     console.log(
+       `  ${r.file}:${r.line}  ${r.token}` +
+@@ -692,6 +694,52 @@
+           `\n@media (prefers-reduced-motion: no-preference) { :root { ${G}: 250ms; } }\n`,
+       }),
+     };
++    // ── CONTROLS 10 (pass 6, MOT-VERB; CHAIR-RULINGS A.5 ruling 5): the template's own sites ──
++    const lam = path.join(ROOT, "src", "pencil", "sheet", "AnswerKeyLaminate.vue");
++    const lamText = fs.existsSync(lam) ? fs.readFileSync(lam, "utf8") : null;
++    const onRoot = (attr) =>
++      lamText && lamText.replace(/<template>\s*<div\b/, (m) => `${m}\n    ${attr}`);
++    const m10 = (res, tok) => res.masked.some((r) => r.token === tok);
++    const reg = /@property\s+(--motion-[a-z]+)/.exec(duskText)?.[1] ?? null;
++    Object.assign(ctl, {
++      // 10 · X5b: an undeclared token in a template `style=` attribute's timing slot
++      s10:
++        !!lamText &&
++        t(
++          undefinedTokens({ [lam]: onRoot(`style="animation-duration: var(${G})"`) }),
++          G,
++        ),
++      // 10b · the same in a `:style` STRING literal (the lazy SFC's form)
++      s10b:
++        !!lamText &&
++        t(
++          undefinedTokens({
++            [lam]: onRoot(`:style="'animation-duration: var(${G})'"`),
++          }),
++          G,
++        ),
++      // 10c · X5 verbatim: a fallback on a REGISTERED rung in a `style=` attribute (masked default)
++      // (n/a — counted green — on a tree that registers no rung: the control has none to mask)
++      s10c:
++        !reg ||
++        (!!lamText &&
++          m10(
++            undefinedTokens({
++              [lam]: onRoot(`style="animation-duration: var(${reg}, 280ms)"`),
++            }),
++            reg,
++          )),
++      // 10d · negative-negative: the registered rung read BARE in the same attribute is green
++      g10d:
++        !reg ||
++        (!!lamText &&
++          (() => {
++            const r = undefinedTokens({
++              [lam]: onRoot(`style="animation-duration: var(${reg})"`),
++            });
++            return !m10(r, reg) && !t(r, reg);
++          })()),
++    });
+     const scopedOk = !!scopedOpen(marginText);
+     if (!scopedOk) {
+       console.log(
+@@ -710,6 +758,13 @@
+         `8c tail + bare root ${ctl.g8c ? "green as required" : "FAILED"} · ` +
+         `9 @media-only root ${ctl.s9 ? "RED as required" : "FAILED"}`,
+     );
++    console.log(
++      `template-site controls (pass 6, X5): ` +
++        `10 style= undeclared ${ctl.s10 ? "RED as required" : "FAILED"} · ` +
++        `10b :style string undeclared ${ctl.s10b ? "RED as required" : "FAILED"} · ` +
++        `10c style= fallback on a registered rung ${!reg ? "n/a (no registered rung on this tree)" : ctl.s10c ? "MASKED as required" : "FAILED"} · ` +
++        `10d the rung bare ${!reg ? "n/a" : ctl.g10d ? "green as required" : "FAILED"}`,
++    );
+     if (
+       !red1 ||
+       !red2 ||
+@@ -727,9 +782,9 @@
+     console.error(`\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens`);
+     process.exit(1);
+   }
+-  if (rev.timing.length || rev.any.length || rev.stale.length) {
++  if (rev.timing.length || rev.any.length || rev.stale.length || rev.masked.length) {
+     console.error(
+-      `\ncheck-theme-tokens: ${rev.timing.length + rev.any.length} bare var() naming no declaration in scope, ${rev.stale.length} stale inheritance rows`,
++      `\ncheck-theme-tokens: ${rev.timing.length + rev.any.length} bare var() naming no declaration in scope, ${rev.masked.length} masked defaults, ${rev.stale.length} stale inheritance rows`,
+     );
+     process.exit(1);
+   }

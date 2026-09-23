@@ -1,0 +1,63 @@
+# CTRL-FACE pass-6 critic readings (summaries; raw JSON not banked). tree :4244 index-x0ZH4Sjqstwx.js · control :4245 index-CubiZsMVSwTc.js
+## browserless battery (tree | control)
+check-theme-tokens.mjs --self-test | tree 0 | control 0
+check-lane-membership.mjs --self-test | tree 0 | control 0
+check-sleep-lint.mjs --self-test | tree 0 | control 0
+check-motion-contract.mjs --self-test | tree 0 | control 0
+check-copy-register.mjs --self-test | tree 0 | control 0
+check-face-engine-identity.mjs --self-test | tree 0 | control absent
+check-pw-projects.mjs --self-test | tree 1 | control 0
+check-font-coverage.mjs | tree 0 | control 0
+eslint . EXIT 1
+npm run lint EXIT 0
+vue-tsc -b EXIT 0
+DONE
+## property block / census
+check-property-block: GREEN — names unique, one block per home, none nested, none from script, every ladder inherits
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+bare var() naming no declaration — TIMING slots: 1
+  src/games/shared/GameControlPanel.vue:2775  --motion-whisper
+## park (stuck publisher)
+{"engine":"chromium","mode":"single","before":{"pub":"121px","truth":"121px","pubPadT":"34.4px","truthPadT":"34.4px","open":false,"writes":1},"afterPress":{"pub":"223px","truth":"223px","pubPadT":"34.4px","truthPadT":"34.4px","open":true,"writes":2},"afterFont":{"pub":"244px","truth":"244px","pubPadT":"38.7px","truthPadT":"38.7px","open":true,"writes":3}}
+{"engine":"chromium","mode":"double-sync","before":{"pub":"121px","truth":"121px","pubPadT":"34.4px","truthPadT":"34.4px","open":false,"writes":1},"afterPress":{"pub":"121px","truth":"121px","pubPadT":"34.4px","truthPadT":"34.4px","open":false,"writes":1},"afterFont":{"pub":"121px","truth":"132px","pubPadT":"34.4px","truthPadT":"34.7px","open":false,"writes":1}}
+{"engine":"webkit","mode":"single","before":{"pub":"121px","truth":"121px","pubPadT":"34.400002px","truthPadT":"34.400002px","open":false,"writes":1},"afterPress":{"pub":"223px","truth":"223px","pubPadT":"34.400002px","truthPadT":"34.400002px","open":true,"writes":2},"afterFont":{"pub":"244px","truth":"244px","pubPadT":"38.700001px","truthPadT":"38.700001px","open":true,"writes":3}}
+{"engine":"webkit","mode":"double-sync","before":{"pub":"121px","truth":"121px","pubPadT":"34.400002px","truthPadT":"34.400002px","open":false,"writes":1},"afterPress":{"pub":"121px","truth":"121px","pubPadT":"34.400002px","truthPadT":"34.400002px","open":false,"writes":1},"afterFont":{"pub":"121px","truth":"132px","pubPadT":"34.400002px","truthPadT":"34.700001px","open":false,"writes":1}}
+## coarse Deal vs fade
+chromium tree +7.14 · control -67.22 | webkit tree -9.81 · control -84.19 (scrollW 282 / clientW 218 every arm)
+## whole files
+tree viewport-law chromium EXIT 0
+tree viewport-law webkit EXIT 0
+tree keys-crib chromium EXIT 0
+tree keys-crib webkit EXIT 0
+tree face-law chromium EXIT 0
+tree face-law webkit EXIT 1
+ctl viewport-law chromium EXIT 0
+ctl viewport-law webkit EXIT 0
+DONE
+## filter-census
+tree chromium EXIT 0
+tree webkit EXIT 0
+ctl chromium EXIT 0
+ctl webkit EXIT 0
+DONE
+## pi-dock-probe (rest; sheet open on coarse)
+chromium tree 1280x800-fine board [131.89,124.45,636,636] card [825.89,140.45,324.22,608] padT 34.4px sH 817 tape0 [859.15,158.97,147.8,31.54] btn0 [853.89,240.3,48.81,38] tab [761.89,398.45,48,92]
+chromium tree 1440x900-fine board [193,158.17,668,668] card [919,174.17,330,640] padT 34.4px sH 818 tape0 [952.26,192.69,147.8,31.54] btn0 [947,274.02,48.81,38] tab [855,448.17,48,92]
+chromium tree 390x844-coarse board [14,221.73,362,362] card [0,216,390,628] padT 34.4px sH 698 tape0 [21.26,240.93,147.8,31.54] btn0 [96.72,281.59,52.08,45.86] tab [342,124,44,92]
+chromium tree 430x932-coarse board [14,245.73,402,402] card [0,233.72,430,698.28] padT 34.4px sH 698 tape0 [21.26,258.65,147.8,31.54] btn0 [110.06,299.31,52.08,45.86] tab [326,185.72,92,48]
+chromium tree 320x568-coarse board [14,114.31,292,292] card [0,216,320,352] padT 34.4px sH 737 tape0 [21.26,240.93,147.8,31.54] btn0 [73.39,281.59,52.08,45.86] tab [272,124,44,92]
+chromium ctl 1280x800-fine board [131.89,124.45,636,636] card [825.89,140.45,324.22,608] padT 20px sH 1142 tape0 [859.22,151.72,64.69,23.32] btn0 [853.89,212.28,268.22,38] tab [761.89,398.45,48,92]
+chromium ctl 1440x900-fine board [193,158.17,668,668] card [919,174.17,330,640] padT 20px sH 1144 tape0 [952.32,184.92,65.94,23.86] btn0 [947,246.02,274,38] tab [855,448.17,48,92]
+chromium ctl 390x844-coarse board [14,221.73,362,362] card [0,216,390,628] padT 6px sH 699 tape0 [21.33,219.75,64.53,23.25] btn0 [103.88,245.19,44,44] tab [342,124,44,92]
+chromium ctl 430x932-coarse board [14,245.73,402,402] card [0,256.84,430,675.16] padT 6px sH 675 tape0 [21.33,260.59,64.53,23.25] btn0 [117.2,286.03,44,44] tab [326,208.84,92,48]
+chromium ctl 320x568-coarse board [14,114.31,292,292] card [0,216,320,352] padT 6px sH 699 tape0 [21.33,219.75,64.53,23.25] btn0 [80.53,245.19,44,44] tab [272,124,44,92]
+webkit tree 1280x800-fine board [131.84,124.16,636,636] card [825.84,140.16,324.31,608] padT 34.400002px sH 816 tape0 [859.1,158.67,147.85,31.52] btn0 [853.84,239.97,48.81,38] tab [761.84,398.16,48,92]
+webkit tree 1440x900-fine board [193,157.88,668,668] card [919,173.88,330,640] padT 34.400002px sH 817 tape0 [952.26,192.39,147.85,31.52] btn0 [947,273.69,48.81,38] tab [855,447.88,48,92]
+webkit tree 390x844-coarse board [14,221.42,362,362] card [0,216,390,627.98] padT 34.400002px sH 699 tape0 [21.27,240.93,147.85,31.52] btn0 [96.72,281.58,52.09,45.84] tab [342,124,44,92]
+webkit tree 430x932-coarse board [14,245.42,402,402] card [0,233.33,430,698.53] padT 34.400002px sH 699 tape0 [21.27,258.26,147.85,31.52] btn0 [110.05,298.91,52.09,45.84] tab [326,185.33,92,48]
+webkit tree 320x568-coarse board [14,114.02,292,292] card [0,216,320,351.98] padT 34.400002px sH 738 tape0 [21.26,240.92,147.85,31.52] btn0 [73.38,281.58,52.09,45.84] tab [272,124,44,92]
+webkit ctl 1280x800-fine board [131.84,124.16,636,636] card [825.84,140.16,324.31,608] padT 20px sH 1142 tape0 [859.17,151.42,64.7,23.32] btn0 [853.84,211.97,268.31,38] tab [761.84,398.16,48,92]
+webkit ctl 1440x900-fine board [193,157.88,668,668] card [919,173.88,330,640] padT 20px sH 1144 tape0 [952.32,184.62,65.95,23.85] btn0 [947,245.69,274,38] tab [855,447.88,48,92]
+webkit ctl 390x844-coarse board [14,221.42,362,362] card [0,216,390,627.98] padT 6px sH 699 tape0 [21.33,219.75,64.53,23.25] btn0 [103.88,245.19,44,44] tab [342,124,44,92]
+webkit ctl 430x932-coarse board [14,245.42,402,402] card [0,256.67,430,675.48] padT 6px sH 675 tape0 [21.33,260.42,64.53,23.25] btn0 [117.2,285.85,44,44] tab [326,208.67,92,48]
+webkit ctl 320x568-coarse board [14,114.02,292,292] card [0,216,320,351.98] padT 6px sH 699 tape0 [21.33,219.75,64.53,23.25] btn0 [80.53,245.19,44,44] tab [272,124,44,92]

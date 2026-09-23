@@ -1,0 +1,216 @@
+APPLYABLE (the CTRL-RULE arm) — the chair's §2.6 settle (pass6/CHAIR-RULINGS §1.4; registry-v5 §8 act 4), landed by the
+§10 integrator at the fold. Cut by the chair's instruments lane from CTRL-TAPE's pass-4 PROPOSED
+(schematic, not git-applyable — pass5/critique/CTRL-TAPE.md §3.4) and its pass-5 critic's rAF ladder.
+
+The census scrolls ONE group per call and reads its tag at the scroll's own task and after each of
+8 animation frames; the row asserts the SETTLED read (frame 8) and admits the publisher's lag
+exactly — `lagFrames ≤ 2` (sync and rAF1 static, rAF2 sticky, both engines, both cells) — so it
+forgives the mechanism's frame and nothing longer. The subject is named ONCE (`STICKY_SUBJECT`:
+group, tag, head offset, floor), so CTRL-RULE's re-aim is a four-constant change
+(`viewport-law-2.6-settle.on-RULE.diff` is that arm, applyable on 74a2b5d9 + CTRL-RULE). The
+assertion, LEGIBLE (0.9) and the 40 px head are the row's own; nothing is re-worded to pass.
+
+`git apply --check` exits 0 on 74a2b5d9 + each of CTRL-TAPE, ACC-GRAPHITE, ACC-FIVE, MOT-VERB and
+FACE×VERB (the §2.6 block is byte-identical there); exit 1 on 74a2b5d9 + CTRL-RULE (RULE re-aims the
+same census — use the on-RULE arm). Readings and negative controls: README.md §6.
+
+--- a/web/frontend/e2e/viewport-law.spec.ts
++++ b/web/frontend/e2e/viewport-law.spec.ts
+@@ -526,54 +526,121 @@
+ 
+ /** Push each well's head past the scrollport's top, then read whether its tag stayed. Returns
+  *  one row per well; wells that cannot reach the state (too short, or too near the content's
+- *  end to be scrolled that far) are reported `unreachable` rather than silently passed. */
+-const STICKY_CENSUS = (cardSel: string) => {
++ *  end to be scrolled that far) are reported `unreachable` rather than silently passed.
++ *
++ *  THE READ IS TAKEN AFTER THE POSE IS PUBLISHED, AND THE WAIT IS COUNTED (the chair's §2.6
++ *  settle, pass6/CHAIR-RULINGS §1.4, from CTRL-TAPE's pass-4 PROPOSED diff and its pass-5
++ *  critic's rAF ladder). The release pose (`data-released`) is an `IntersectionObserver`'s, so a
++ *  census that writes `scrollTop` and reads `getComputedStyle` in one synchronous task reads the
++ *  pose from BEFORE the scroll. Each well is scrolled on its own and read at the scroll's own
++ *  task (sync) and after each of the next STICKY_FRAMES (8) animation frames; the row asserts the
++ *  SETTLED read (the last frame) and prints `lagFrames`, the first frame from which the read
++ *  already equals the settled one. The mechanism's lag is one painted frame (sync and rAF1
++ *  static, rAF2 sticky, both engines — the pass-5 critic), so the row admits exactly that:
++ *  `lagFrames ≤ STICKY_MAX_LAG`. A settle that waited forever would forgive a pose that loses its
++ *  tag for as long as it likes; this one forgives the IO's frame and nothing else. */
++const STICKY_FRAMES = 8;
++const STICKY_MAX_LAG = 2;
++/** The census's SUBJECT, named once (CTRL-RULE's re-aim changes these four and nothing else:
++ *  `[data-ruled-group]`, `.rp-name`, min(40, h/2), 48). */
++const STICKY_SUBJECT = { group: '[data-ruled-group]', tag: '.rp-name', head: 40, headFrac: 0.5, minH: 48 };
++
++type StickyRow = {
++  tag: string;
++  unreachable?: string;
++  wellInView?: number;
++  tagVisFrac?: number;
++  position?: string;
++  lagFrames?: number;
++  ladder?: string;
++};
++
++/** The census's plan: per well, the scrollTop that pushes 40px of its head above the fold. */
++const STICKY_PLAN = ([cardSel, S]: [string, typeof STICKY_SUBJECT]) => {
+   const card = document.querySelector(cardSel) as HTMLElement | null;
+   if (!card) return null;
+-  const vis = (window as unknown as Record<string, (el: Element) => number>).__visFrac;
+   const max = card.scrollHeight - card.clientHeight;
+-  const rows: {
+-    tag: string;
+-    unreachable?: string;
+-    wellInView?: number;
+-    tagVisFrac?: number;
+-    position?: string;
+-  }[] = [];
+-  // T9-W7 CTRL-RULE pass-4 RE-AIM: a group is a ruled group and its tag is its pinned margin name.
+-  for (const well of card.querySelectorAll('[data-ruled-group]')) {
+-    const tag = well.querySelector('.rp-name');
+-    if (!tag) continue;
++  const wells: { i: number; tag: string; want?: number; unreachable?: string }[] = [];
++  card.querySelectorAll(S.group).forEach((well, i) => {
++    const tag = well.querySelector(S.tag);
++    if (!tag) return;
+     const name = (tag.textContent || '').trim();
+     card.scrollTop = 0;
+     const c0 = card.getBoundingClientRect();
+     const w0 = well.getBoundingClientRect();
+-    // 40px of the head above the fold, or half a short group's height (ruled groups run
+-    // 70–150px where wells ran ≥120) — the group must stay in view for the row to mean anything.
+-    const want = w0.top - c0.top + Math.min(40, w0.height / 2);
+-    if (w0.height < 48) {
+-      rows.push({ tag: name, unreachable: `well is ${w0.height.toFixed(1)}px tall` });
+-      continue;
+-    }
+-    if (want <= 0 || want > max) {
+-      rows.push({ tag: name, unreachable: `needs scrollTop ${want.toFixed(1)} of ${max}` });
+-      continue;
+-    }
+-    card.scrollTop = want;
++    const want = w0.top - c0.top + Math.min(S.head, w0.height * S.headFrac); // the head above the fold
++    if (w0.height < S.minH) wells.push({ i, tag: name, unreachable: `well is ${w0.height.toFixed(1)}px tall` });
++    else if (want <= 0 || want > max)
++      wells.push({ i, tag: name, unreachable: `needs scrollTop ${want.toFixed(1)} of ${max}` });
++    else wells.push({ i, tag: name, want });
++  });
++  card.scrollTop = 0;
++  return { max, wells };
++};
++
++/** One well: scroll, then read the tag at sync and after each of `frames` animation frames. */
++const STICKY_LADDER = async ([cardSel, S, i, want, frames]: [
++  string,
++  typeof STICKY_SUBJECT,
++  number,
++  number,
++  number,
++]) => {
++  const card = document.querySelector(cardSel) as HTMLElement;
++  const well = card.querySelectorAll(S.group)[i];
++  const tag = well.querySelector(S.tag)!;
++  const vis = (window as unknown as Record<string, (el: Element) => number>).__visFrac;
++  const read = () => {
+     const c = card.getBoundingClientRect();
+     const w = well.getBoundingClientRect();
+-    rows.push({
+-      tag: name,
++    return {
+       position: getComputedStyle(tag).position,
+-      wellInView: +(
+-        (Math.min(w.bottom, c.bottom) - Math.max(w.top, c.top)) /
+-        w.height
+-      ).toFixed(3),
++      wellInView: +((Math.min(w.bottom, c.bottom) - Math.max(w.top, c.top)) / w.height).toFixed(3),
+       tagVisFrac: +vis(tag).toFixed(4),
+-    });
++    };
++  };
++  card.scrollTop = 0;
++  await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++  card.scrollTop = want;
++  const ladder = [read()];
++  for (let f = 1; f <= frames; f++) {
++    await new Promise((r) => requestAnimationFrame(r));
++    ladder.push(read());
+   }
+   card.scrollTop = 0;
+-  return { max, rows };
++  return ladder;
+ };
++
++async function stickyCensus(page: Page, cardSel: string) {
++  const plan = await page.evaluate(STICKY_PLAN, [cardSel, STICKY_SUBJECT] as [string, typeof STICKY_SUBJECT]);
++  if (!plan) return null;
++  const rows: StickyRow[] = [];
++  for (const w of plan.wells) {
++    if (w.want === undefined) {
++      rows.push({ tag: w.tag, unreachable: w.unreachable });
++      continue;
++    }
++    const ladder = await page.evaluate(STICKY_LADDER, [cardSel, STICKY_SUBJECT, w.i, w.want, STICKY_FRAMES] as [
++      string,
++      typeof STICKY_SUBJECT,
++      number,
++      number,
++      number,
++    ]);
++    const settled = ladder[ladder.length - 1];
++    const same = (r: (typeof ladder)[number]) =>
++      r.position === settled.position && r.tagVisFrac > LEGIBLE === settled.tagVisFrac > LEGIBLE;
++    let lagFrames = ladder.length - 1;
++    while (lagFrames > 0 && same(ladder[lagFrames - 1])) lagFrames--;
++    rows.push({
++      tag: w.tag,
++      ...settled,
++      lagFrames,
++      ladder: ladder.map((r) => `${r.position}/${r.tagVisFrac}`).join(' → '),
++    });
++  }
++  return { max: plan.max, rows };
++}
+ 
+ test.describe('§2.6 the section tag pins @ 1440×900 (the rail)', () => {
+   test.use({ viewport: { width: 1440, height: 900 } });
+@@ -584,7 +651,7 @@
+     await boot(page);
+     await loadBoard(page);
+ 
+-    const census = await page.evaluate(STICKY_CENSUS, '.controls-card');
++    const census = await stickyCensus(page, '.controls-card');
+     console.log(`[W2-§2.6 rail] ${JSON.stringify(census)}`);
+ 
+     expect(census, 'the rail card must be mounted').not.toBeNull();
+@@ -602,6 +669,11 @@
+       lost,
+       `a group's tag must stay visible while the group is in view; measured ${JSON.stringify(tested)}`,
+     ).toEqual([]);
++    const late = tested.filter((r) => (r.lagFrames ?? 0) > STICKY_MAX_LAG);
++    expect(
++      late,
++      `the pose may lag the scroll by the observer's frame and no more (≤ ${STICKY_MAX_LAG}); measured ${JSON.stringify(tested)}`,
++    ).toEqual([]);
+   });
+ });
+ 
+@@ -622,7 +694,7 @@
+     await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+     await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+ 
+-    const census = await page.evaluate(STICKY_CENSUS, '#controls-drawer .controls-card');
++    const census = await stickyCensus(page, '#controls-drawer .controls-card');
+     console.log(`[W2-§2.6 drawer] ${JSON.stringify(census)}`);
+ 
+     expect(census, 'the drawer card must be mounted').not.toBeNull();
+@@ -639,6 +711,11 @@
+       lost,
+       `a group's tag must stay visible while the group is in view; measured ${JSON.stringify(tested)}`,
+     ).toEqual([]);
++    const late = tested.filter((r) => (r.lagFrames ?? 0) > STICKY_MAX_LAG);
++    expect(
++      late,
++      `the pose may lag the scroll by the observer's frame and no more (≤ ${STICKY_MAX_LAG}); measured ${JSON.stringify(tested)}`,
++    ).toEqual([]);
+   });
+ });
+ 

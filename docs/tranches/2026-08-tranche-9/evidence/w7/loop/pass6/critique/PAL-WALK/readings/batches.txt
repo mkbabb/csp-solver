@@ -1,0 +1,74 @@
+# critic batch 1 (plants F/F2/a first, then negatives on the restored tree, then the control's name printed) — replica of wf_308fa864-c94-1 served dev on :4236, control 74a2b5d9 archive dev on :4237
+GameBoard sha 14ae970298f936398aa67edba380bd638c4814e1
+(F) §C chromium dpr3 EXIT=1
+(F) §C webkit dpr3 EXIT=1
+(F) restored sha1-equal
+(F2) §C chromium dpr3 EXIT=1
+(F2) §C webkit dpr3 EXIT=1
+(F2) restored sha1-equal
+(a) §C chromium dpr3 EXIT=1
+(a) §C webkit dpr3 EXIT=1
+(a) restored sha1-equal
+(neg) whole file chromium dpr1 EXIT=0
+(neg) whole file webkit dpr1 EXIT=0
+(neg) whole file webkit dpr3 run 1 EXIT=0
+(neg) whole file webkit dpr3 run 2 EXIT=0
+(neg) whole file webkit dpr3 run 3 EXIT=0
+(neg) whole file chromium dpr3 EXIT=0
+(ctl print) §C chromium dpr1 EXIT=0
+(ctl print) §C webkit dpr1 EXIT=0
+(ctl print) §C chromium dpr3 EXIT=0
+(ctl print) §C webkit dpr3 EXIT=0
+(neg) §C chromium dpr2 EXIT=0
+BATCH1_DONE
+
+# batch 2 (faint-TEXT plants, colour unchanged)
+GameBoard sha 14ae970298f936398aa67edba380bd638c4814e1
+(T65) §C chromium dpr3 EXIT=0
+(T65) §C webkit dpr3 EXIT=0
+(T65) restored sha1-equal
+(T80) §C chromium dpr3 EXIT=0
+(T80) §C webkit dpr3 EXIT=0
+(T80) restored sha1-equal
+(T15) §C chromium dpr3 EXIT=1
+(T15) restored sha1-equal
+(neg) §C webkit dpr3 EXIT=0
+(neg) §C chromium dpr3 EXIT=0
+BATCH2_DONE
+
+# batch 3 (faint plant re-cut for WebKit: color-mix on var() — VOID, the instrument's bare shot sets color only, the fill stays inked, 0 px moved → reds on 'the name paints')
+GameBoard sha 14ae970298f936398aa67edba380bd638c4814e1
+(V65) §C webkit dpr3 EXIT=1
+(V65) §C chromium dpr3 EXIT=1
+(V65) restored sha1-equal
+(neg) §C webkit dpr3 EXIT=0
+BATCH3_DONE
+
+# batch 4 (rgb(from currentColor … / 0.65) — VOID, the bare shot paints black at 0.65 → reds on a dark 'ground')
+GameBoard sha 14ae970298f936398aa67edba380bd638c4814e1
+(R65) §C webkit dpr3 EXIT=1
+(R65) §C chromium dpr3 EXIT=1
+(R65) restored sha1-equal
+(neg) §C webkit dpr3 EXIT=0
+BATCH3_DONE
+
+# faint-TEXT plant T65/T80 (chromium, lawful: the bare shot is bare) — §C GREEN while the painted name falls
+== pT65-chromium-dpr3
+  light p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.891 under 0 | painted core median 4.376 frac<4.5 1.000
+  dark p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.691 under 0 | painted core median 3.358 frac<4.5 1.000
+  light p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.793 under 0 | painted core median 4.376 frac<4.5 1.000
+  dark p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.604 under 0 | painted core median 3.358 frac<4.5 1.000
+  1 passed (32.5s)
+== pT80-chromium-dpr3
+  light p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.891 under 0 | painted core median 6.772 frac<4.5 0.102
+  dark p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.691 under 0 | painted core median 4.235 frac<4.5 1.000
+  light p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.793 under 0 | painted core median 6.776 frac<4.5 0.105
+  dark p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.604 under 0 | painted core median 4.189 frac<4.5 1.000
+  1 passed (34.0s)
+== pT65-webkit-dpr3
+  light p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.891 under 0 | painted core median 11.548 frac<4.5 0.048
+  dark p-0000000b0b0b (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.691 under 0 | painted core median 5.580 frac<4.5 0.136
+  light p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 11.891 under 0 | painted core median 11.548 frac<4.5 0.055
+  dark p-00000000002e (cells 8/11/12/14 identical to 3 d.p.) asserted min 5.691 under 0 | painted core median 5.580 frac<4.5 0.139
+  1 passed (35.7s)
+  (webkit T65: color-mix(currentColor) in -webkit-text-fill-color barely moved the paint — 11.548 vs 11.891 light, 5.580 vs 5.691 dark — so the WebKit row is a void plant, declared)

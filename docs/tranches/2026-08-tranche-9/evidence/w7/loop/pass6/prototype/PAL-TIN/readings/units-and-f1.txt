@@ -1,0 +1,19 @@
+# F1, ONE switch (SELF_TAKES_A_HAND in useSession.ts): the session unit file under both arms
+## before the two YES-assuming units followed the switch (NO arm planted, restored sha1-equal):
+VUETSC_NO_ARM=0
+     × a joiner's own publish agrees nothing 8ms
+     × no two known ids share an ink across two epochs by two authors 3ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  2 failed | 35 passed (37)
+EXIT=1
+restored-sha1-equal
+## after (useSession.test.ts, YES arm then NO arm planted, restored):
+      Tests  37 passed (37)
+EXIT=0
+      Tests  37 passed (37)
+EXIT=0
+## vitest chunks (YES arm, before the two unit edits; the file itself re-ran 37/37 after):
+vitest-src-composables.log:  Test Files 3 passed (3)  Tests 16 passed (16) EXIT=0 
+vitest-src-games.log:  Test Files 57 passed (57)  Tests 748 passed (748) EXIT=0 
+vitest-src-pencil.log:  Test Files 8 passed (8)  Tests 73 passed (73) EXIT=0 
+vue-tsc -b: EXIT=0

@@ -1,0 +1,46 @@
+--- a/web/frontend/src/pencil/grid/gridPaths.ts	2026-09-23 14:35:43
++++ b/web/frontend/src/pencil/grid/gridPaths.ts	2026-09-23 14:35:58
+@@ -12,7 +12,7 @@
+   boilLineFrames,
+   useBoilCache,
+ } from "@mkbabb/pencil-boil";
+-import { RING_GEOMETRY, type GrainConfig } from "../config/pencilConfig";
++import type { GrainConfig } from "../config/pencilConfig";
+ 
+ interface BoilFrames {
+   /** frame[frameIdx] — closed rect path for the outer frame */
+@@ -49,29 +49,15 @@
+     ["cellRects", boardSize, subgridSize, viewBoxSize, seed],
+     () => {
+       const cellSize = viewBoxSize / boardSize;
+-      // Segments are PINNED, not derived from boardSize. σ's shape constant belongs to this
+-      // primitive at this segment count; let 16×16 drop to 2 and one wander constant no
+-      // longer buys one wander (k splits 30%). Price of the pin, paid once per deal into
+-      // the LRU: the 16×16 board's resident `d` strings go 58,761 B → 119,894 B (57.4 →
+-      // 117.1 KiB). Segments 6 (215,431 B) buys nothing the geometry can spend.
+-      const cellSegments = 4;
+-      // The ring is drawn INSIDE its square (`inset`, centred), which keeps its ink inside its
+-      // own cell at the heaviest tier (MA-N, pencilConfig.ts), and its wander is an absolute
+-      // in ghost units (`wanderUnits`). Inverting
+-      // `maxDisplace = roughness × len × 0.015` over the INSET edge makes the wander
+-      // size-free exactly — one number, every board:
+-      const { wanderUnits, inset } = RING_GEOMETRY;
+-      const ringSize = inset * cellSize;
+-      const ringPad = ((1 - inset) / 2) * cellSize;
+-      const cellRoughness = wanderUnits / (0.015 * ringSize);
++      const cellSegments = boardSize >= 16 ? 2 : 4;
+       const cellRects: Record<number, string> = {};
+       for (let r = 0; r < boardSize; r++) {
+         for (let c = 0; c < boardSize; c++) {
+           const pos = r * boardSize + c;
+-          const x = c * cellSize + ringPad;
+-          const y = r * cellSize + ringPad;
+-          cellRects[pos] = wobbleRect(x, y, ringSize, ringSize, {
+-            roughness: cellRoughness,
++          const x = c * cellSize;
++          const y = r * cellSize;
++          cellRects[pos] = wobbleRect(x, y, cellSize, cellSize, {
++            roughness: 0.4,
+             segments: cellSegments,
+             seed: seed + 500 + pos * 7,
+             jagged: true,

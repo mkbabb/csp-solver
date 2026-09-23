@@ -1,0 +1,14 @@
+clean: GREEN | 7 sheet site(s) read (AttributionCard/AttributionCard.vue .hover-card | AttributionCard/AttributionCard.vue .hover-card::before | AttributionCard/HeadSheet.vue .head-sheet | AttributionCard/HeadSheet.vue .head-sheet.is-open | AttributionCard/HeadSheet.vue .head-sheet-edge | AttributionCard/HeadSheet.vue .head-sheet-frame | PlayerMark/PlayerLobby.vue .player-lobby), each drawn, none edged
+A: RED as required · pass-4 border on AttributionCard .hover-card · AttributionCard/AttributionCard.vue .hover-card paints a CSS edge (border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent
+B: RED as required · pass-4 border on PlayerLobby .player-lobby (the pass-4 site) · PlayerMark/PlayerLobby.vue .player-lobby paints a CSS edge (border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent))
+C: RED as required · <HandDrawnOutline> deleted from HeadSheet · AttributionCard/HeadSheet.vue renders no <HandDrawnOutline> — the sheet's edge is gone
+D: RED as required · Tailwind `border` on the consumer's <HeadSheet class> · AttributionCard/AttributionCard.vue <HeadSheet class="…border…"> paints an edge by utility
+E: RED as required · border-block-start on .player-lobby.is-open · PlayerMark/PlayerLobby.vue .player-lobby.is-open paints a CSS edge (border-block-start: 2px solid currentColor)
+F: RED as required · box-shadow spread on HeadSheet .head-sheet · AttributionCard/HeadSheet.vue .head-sheet paints a CSS edge (box-shadow: 0 0 0 2px var(--color-border))
+G: RED as required · border on the data hook [data-lobby] · PlayerMark/PlayerLobby.vue [data-lobby] paints a CSS edge (border: 1px solid)
+H: RED as required · gradient hairline on .hover-card · AttributionCard/AttributionCard.vue .hover-card paints a CSS edge (background-image: linear-gradient(var(--color-border), var(--color-border
+
+l5b plants: clean GREEN, every plant RED
+exit 0
+RED | AttributionCard/AttributionCard.vue .hover-card paints a CSS edge (border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent)); AttributionCard/AttributionCard.vue .hover-card hangs a sheet that draws no HandDrawnOutline and is not a HeadSheet
+control exit 1
