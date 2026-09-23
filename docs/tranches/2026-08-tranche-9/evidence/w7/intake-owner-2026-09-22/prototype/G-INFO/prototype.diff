@@ -1,0 +1,390 @@
+diff --git a/web/frontend/e2e/share-truth.spec.ts b/web/frontend/e2e/share-truth.spec.ts
+index e617ea8a..b40ed7bb 100644
+--- a/web/frontend/e2e/share-truth.spec.ts
++++ b/web/frontend/e2e/share-truth.spec.ts
+@@ -51,7 +51,7 @@ const FAIL_INIT = () => {
+ // over a card that grows compartments is a gate that reds on furniture. The `aria-label` can't
+ // do the addressing here either — the label is exactly what these rows assert changes.
+ function shareButton(page: Page) {
+-  return page.locator('.controls-card .action-verbs button.icon-btn').last();
++  return page.locator('.controls-card .action-verbs button.icon-btn:not(.info-btn)').last();
+ }
+ 
+ // ── 1. Sudoku: success confirms off a REAL clipboard write ──────────────────
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index d073b99d..c8ed470b 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -233,6 +233,9 @@ const FACES = [
+           "wipe every digit you've written",
+           "fill the cells that have only one digit left",
+           "finishes the board for you",
++          // T9-M16 — the `i` as a fifth verb: its hover note and its written name.
++          "what each key does",
++          "keys",
+         ],
+       },
+       {
+diff --git a/web/frontend/src/games/shared/GameControlPanel.test.ts b/web/frontend/src/games/shared/GameControlPanel.test.ts
+index d951eb5e..caaea338 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.test.ts
++++ b/web/frontend/src/games/shared/GameControlPanel.test.ts
+@@ -465,6 +465,27 @@ describe("GameControlPanel — the keys fold behind the `i` (T6 mark 5)", () =>
+     expect(w.get("#keys-fold").classes()).not.toContain("is-open");
+   });
+ 
++  // T9-M16 — the crib opens inside the strip it's asked from, so the press scrolls nothing. On
++  // main the fold was the card body's last row and the press chased it with a `scrollIntoView`
++  // aimed at a 0 px box (census 24/24): this row reds there on both halves.
++  it("the crib is the strip's own first row, and the press scrolls nothing", async () => {
++    const w = mountPanel({ mobile: false });
++    const bar = w.get(".action-bar");
++    expect(bar.element.firstElementChild?.id).toBe("keys-fold");
++    const calls: unknown[] = [];
++    const orig = Element.prototype.scrollIntoView;
++    Element.prototype.scrollIntoView = function (o?: unknown) {
++      calls.push(o);
++    } as typeof orig;
++    try {
++      await w.get(INFO).trigger("click");
++      await flushPromises();
++    } finally {
++      Element.prototype.scrollIntoView = orig;
++    }
++    expect(calls).toEqual([]);
++  });
++
+   it("the crib stays in the tree at rest — collapsed is not hidden", () => {
+     // The 0fr collapse is load-bearing twice over (a11y 3.4 reads the legend's innerText at
+     // rest; the rail's width is its max-content). Neither survives a `v-if`, so the fold's
+@@ -541,7 +562,7 @@ describe("the copy acts — the sublabel flips on the coarse surfaces alone", ()
+   // Share is the LAST verb in the action bar's own row (the e2e's own addressing, and for the
+   // same reason: this button's aria-label is one of the things under test).
+   const shareBtn = (w: ReturnType<typeof mountPanel>) => {
+-    const verbs = w.findAll(".action-verbs button.icon-btn");
++    const verbs = w.findAll(".action-verbs button.icon-btn:not(.info-btn)");
+     return verbs[verbs.length - 1];
+   };
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..452f872a 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -47,7 +47,7 @@ export interface ControlSection {
+ </script>
+ 
+ <script setup lang="ts">
+-import { computed, nextTick, ref, onBeforeUnmount, useId } from "vue";
++import { computed, ref, onBeforeUnmount, useId } from "vue";
+ import { useEventListener, useResizeObserver } from "@vueuse/core";
+ import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
+ import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
+@@ -61,6 +61,8 @@ import UndoIcon from "@pencil/chrome/icons/UndoIcon.vue";
+ import RedoIcon from "@pencil/chrome/icons/RedoIcon.vue";
+ import HintIcon from "@pencil/chrome/icons/HintIcon.vue";
+ import OptionSelector from "@pencil/chrome/OptionSelector/OptionSelector.vue";
++import { scribbleUnderline } from "@pencil/chrome/OptionSelector/scribbleUnderline";
++import { useTheme } from "@/composables/useTheme";
+ import KeyboardLegend from "@pencil/chrome/KeyboardLegend.vue";
+ import BoilDivider from "@pencil/chrome/BoilDivider.vue";
+ import SheetWashiLabel from "@pencil/sheet/SheetWashiLabel.vue";
+@@ -142,19 +144,29 @@ const props = defineProps<{
+ 
+ // T6 mark 5 — the crib folds behind the action bar's `i`. Session-transient by design: a
+ // reader opens it once, reads five rows, and closes it; nothing about the board changes.
+-// Opening at the card's old scroll-end grows content above the sticky bar and leaves the
+-// crib's head under it — the fold rides into the scrollport as it opens.
++// T9-M16 — THE CRIB OPENS INSIDE THE STRIP, SO NOTHING SCROLLS. The old fold sat in the scroll
++// body under the sticky bar and a `scrollIntoView` chased it; the scroll was aimed at a 0 px box
++// against a range about to grow, so the crib opened under the bar (census 24/24). It's the
++// bar's first row now: it grows upward from a bottom that never moves, the verbs and the `i`
++// stay under the pointer, and the published `--action-bar-h` grows the scroll range to match.
+ const keysOpen = ref(false);
+ function toggleKeys() {
+   keysOpen.value = !keysOpen.value;
+-  if (keysOpen.value)
+-    void nextTick(() => {
+-      document
+-        .getElementById("keys-fold")
+-        ?.scrollIntoView?.({ block: "nearest", behavior: "smooth" });
+-    });
+ }
+ 
++// Ballot 1's alt arm (a drawn ring on the trailing track), framed side by side with the
++// default. PROTOTYPE SCAFFOLD — one arm dies at the ballot, and this flag with it.
++const keysRingArm =
++  typeof location !== "undefined" &&
++  new URLSearchParams(location.search).has("keys-ring");
++
++// The open cue is the chips' own mark: the house scribble under "keys" (OptionSelector's
++// selected grammar, one seeded pose, no boil, no filter).
++const { isDark } = useTheme();
++const keysUnderline = computed(() =>
++  scribbleUnderline(107, isDark.value ? "#ffffff" : "#1a1a1a"),
++);
++
+ const emit = defineEmits<{
+   // T4-WU/U2 — the re-homed dice, the "Deal" commit: it lifts out of the live action row into
+   // the staged New-game zone and commits the staged sections. Same button grammar (DiceIcon
+@@ -1208,24 +1220,6 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+       </template>
+     </HandDrawnOutline>
+ 
+-    <!-- T6 mark 5 — THE CRIB FOLDS, AND IT NEVER LEAVES THE FLOW. `grid-template-rows: 0fr→1fr`
+-         collapses the fold to nothing while the `<dl>` inside keeps its own box: it stays in the
+-         AX tree (a11y 3.4 reads `.keyboard-legend` for k/g/h/p/d and reds on display:none), its
+-         text stays readable to both engines' text walkers (the `clip-path` note in the style
+-         block — WebKit's `innerText` honours clipping and `overflow: hidden` blanked it), and —
+-         the load-bearing half — its 2-column max-content still sizes the rail. The card is
+-         shrink-to-fit at ≥1024; a `v-show`, a `<details>` or an absolute popover here drops that
+-         contribution, narrows the card ~48px, and walks the centered board ~24px into the
+-         `cell-light` golden. Measured at head: card 330 / boardLeft 191, and both must hold. -->
+-    <div
+-      v-if="!mobile"
+-      id="keys-fold"
+-      class="legend-fold"
+-      :class="{ 'is-open': keysOpen }"
+-    >
+-      <div><KeyboardLegend /></div>
+-    </div>
+-
+     <!-- Action buttons — hover washi for fine pointers, persistent sublabels on coarse
+          (UI-5: the washi is a hover grammar, so sighted touch users got no text; an iPad in the
+          row regime reaches this layout with no hover either). Deal re-homed OUT of this row
+@@ -1242,7 +1236,26 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+          `position: relative` — is the containing block, so every note lands in ONE berth under
+          the bar's own rule, in the card's reserved foot (`scene.css`'s `padding-bottom`).
+          `group` STAYS: it is the hover seam each note is revealed by. -->
+-    <div ref="actionBarEl" class="action-bar">
++    <div ref="actionBarEl" class="action-bar" :class="{ 'ring-arm': keysRingArm }">
++      <!-- T6 mark 5 — THE CRIB FOLDS, AND IT NEVER LEAVES THE FLOW. `grid-template-rows: 0fr→1fr`
++           collapses the fold to nothing while the `<dl>` inside keeps its own box: it stays in the
++           AX tree (a11y 3.4 reads `.keyboard-legend` for k/g/h/p/d and reds on display:none), its
++           text stays readable to both engines' text walkers (the `clip-path` note in the style
++           block — WebKit's `innerText` honours clipping and `overflow: hidden` blanked it), and —
++           the load-bearing half — its 2-column max-content still sizes the rail. The card is
++           shrink-to-fit at ≥1024; a `v-show`, a `<details>` or an absolute popover here drops that
++           contribution, narrows the card ~48px, and walks the centered board ~24px into the
++           `cell-light` golden. Measured at head: card 330 / boardLeft 191, and both must hold.
++           T9-M16 — it's the STRIP'S FIRST ROW, directly above the verbs and the `i` that opens it:
++           the answer arrives where the question was asked, and no scroll has a job left. -->
++      <div
++        v-if="!mobile"
++        id="keys-fold"
++        class="legend-fold"
++        :class="{ 'is-open': keysOpen }"
++      >
++        <div><KeyboardLegend /></div>
++      </div>
+       <div class="action-verbs">
+         <button
+           @click="onClear()"
+@@ -1324,13 +1337,31 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+             wide
+           />
+         </button>
++        <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
++             `<dl>` above already carries that name, and a11y 3.4 requires exactly one node to
++             answer to it. Fine-pointer only (CSS) — the legend it opens is itself fine-only, so
++             a coarse iPad rail would otherwise get a toggle for a crib it can never see.
++             T9-M16/M18 (ballot 1, default) — a FIFTH VERB in the strip's own grammar: the
++             letter in the hand at the verbs' glyph rank, a written name, a hover note, and the
++             chips' scribble as the open cue. Its CSS ring is gone, so the strip holds one hand. -->
++        <button
++          v-if="!mobile && !keysRingArm"
++          type="button"
++          class="icon-btn info-btn group"
++          aria-label="what the keys do"
++          :aria-expanded="keysOpen"
++          aria-controls="keys-fold"
++          :style="{ '--keys-underline': keysUnderline }"
++          @click="toggleKeys"
++        >
++          <span class="info-glyph" aria-hidden="true">i</span>
++          <span class="icon-sublabel" aria-hidden="true">keys</span>
++          <SheetWashiLabel text="what each key does" :seed="89" wide />
++        </button>
+       </div>
+-      <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
+-           `<dl>` above already carries that name, and a11y 3.4 requires exactly one node to
+-           answer to it. Fine-pointer only (CSS) — the legend it opens is itself fine-only, so
+-           a coarse iPad rail would otherwise get a toggle for a crib it can never see. -->
++      <!-- Ballot 1, alt arm — the `i` keeps its trailing track and wears a DRAWN ring. -->
+       <button
+-        v-if="!mobile"
++        v-if="!mobile && keysRingArm"
+         type="button"
+         class="info-btn"
+         aria-label="what the keys do"
+@@ -1338,7 +1369,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+         aria-controls="keys-fold"
+         @click="toggleKeys"
+       >
+-        <span class="info-glyph" aria-hidden="true">i</span>
++        <HandDrawnOutline :stroke-width="1.5" :outset="2" :radius="14" :pose="0">
++          <span class="info-glyph" aria-hidden="true">i</span>
++        </HandDrawnOutline>
+       </button>
+       <!-- THE INVITE VERB'S NOTE, BERTHED (T9-W2 §2.5). It belongs to a button in the players
+            well, and it is laid HERE because this is the one box in the card whose foot is
+@@ -2098,13 +2131,14 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ /* ── T6 mark 5 · the sticky action bar ─────────────────────────────────────────
+    The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs
+    sat at the bottom of the 1039 — so reading the difficulty chips and clearing the board were
+-   never on screen together. The bar stays. `1fr auto` puts the verbs on the card's spine and
+-   the `i` on its trailing edge; the ::before is a short fade so scrolled content dissolves
+-   into the bar instead of being guillotined by it. */
++   never on screen together. The bar stays. The ::before is a short fade so scrolled content
++   dissolves into the bar instead of being guillotined by it.
++   T9-M16 — ONE COLUMN, TWO ROWS: the key crib is row 1 (0 px shut) and the verbs, the `i` now
++   among them, are row 2. The ring arm keeps the old `1fr auto` trailing track for its `i`. */
+ .action-bar {
+   position: relative;
+   display: grid;
+-  grid-template-columns: 1fr auto;
++  grid-template-columns: 1fr;
+   align-items: center;
+   background: var(--color-card);
+   padding-block: 0.4rem 0.15rem;
+@@ -2284,7 +2318,12 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    in webkit while chromium passed it (both engines probed, six collapse variants). `clip-path`
+    clips the same pixels and neither engine's text walker sees it. Same box, same paint, one
+    engine-honest reading. */
++.action-bar.ring-arm {
++  grid-template-columns: 1fr auto;
++}
++
+ .legend-fold {
++  grid-column: 1 / -1;
+   display: grid;
+   grid-template-rows: 0fr;
+   clip-path: inset(0);
+@@ -2306,22 +2345,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ }
+ 
+ /* The legend the `i` opens is itself `(hover: hover) and (pointer: fine)` — so its toggle
+-   restates that gate rather than a `v-if`, and an iPad rail gets neither. */
+-.info-btn {
++   restates that gate rather than a `v-if`, and an iPad rail gets neither. Scoped to the bar so
++   it outranks `.icon-btn`'s own `display`.
++
++   T9-M16/M18 — THE RING IS GONE. `.info-glyph` wore the strip's one CSS border (1.5px, 50%); the
++   strip's edge is the house hand's (M18), and a strip holds one hand. The `i` is a fifth verb:
++   the letter set in the verbs' glyph box, its written name under it, the scribble as the open
++   cue (a mark, not a colour alone). The underline hangs OUT of flow in the verb's own padding,
++   so opening it moves no box and the bar keeps its height. */
++.action-bar .info-btn {
+   display: none;
+ }
+ 
+ @media (hover: hover) and (pointer: fine) {
+-  .info-btn {
++  .action-bar .info-btn {
+     display: inline-flex;
+-    align-items: center;
+-    justify-content: center;
+-    width: 2rem;
+-    height: 2rem;
+-    padding: 0;
+-    border: none;
+-    background: none;
+-    cursor: pointer;
+   }
+ }
+ 
+@@ -2329,32 +2367,65 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   display: inline-flex;
+   align-items: center;
+   justify-content: center;
+-  width: 1.75rem;
+-  height: 1.75rem;
+-  border: 1.5px solid var(--ink-press-rule);
+-  border-radius: 50%;
++  width: var(--icon-verb);
++  height: var(--icon-verb);
+   font-family: var(--font-hand);
+-  font-size: var(--type-small);
++  font-size: var(--icon-verb);
+   line-height: 1;
+-  color: var(--ink-press-quiet);
+ }
+ 
+-.info-btn[aria-expanded="true"] .info-glyph {
++.info-btn .icon-sublabel {
++  position: relative;
++}
++
++/* THE PRESS SCALES THE INK, NOT THE BOX. `.icon-btn:active`'s transform makes the pressed button
++   the containing block of its own hover note, so the note leaves the bar's berth and centres on the
++   button. For the strip's LAST verb that centre is 15rem of tape hung off the card's right edge:
++   the card overflowed sideways by 15 px (chromium) / 17 px (webkit, whose classic scrollbar then
++   lifted the whole sticky bar 17 px for as long as the press lasted). Same 0.93, on the children. */
++.action-bar .info-btn:active {
++  transform: none;
++}
++
++.action-bar .info-btn:active > :not(.washi-label) {
++  transform: scale(0.93);
++}
++
++.info-btn[aria-expanded="true"],
++.info-btn[aria-expanded="true"] .icon-sublabel {
+   color: var(--color-foreground);
+-  border-color: currentColor;
+ }
+ 
+-/* T8-W1 (agent C's M5 census, R2) — THE `i` ANSWERS THE POINTER. Every other interactive text
+-   surface in this card lifts its ink under a hover (`.icon-btn`, `.players-leave`, the chips'
+-   ghost underline); this one had a pressed state and nothing before it, so the only control in
+-   the action bar that opens something gave no sign it was a control. The lift is the SAME two
+-   properties the pressed rule above already writes — no new vocabulary, and hovering an open
+-   `i` is therefore a no-op rather than a third appearance. Fenced to hover-capable pointers
+-   like every ink lift in the estate; the button itself is fine-pointer-only anyway. */
++.info-btn[aria-expanded="true"] .icon-sublabel::after {
++  content: "";
++  position: absolute;
++  inset: calc(100% - 1px) -2px auto;
++  height: 6px;
++  background: var(--keys-underline) no-repeat left top / 100% 6px;
++}
++
++/* Ballot 1's alt arm: the trailing `i` inside a DRAWN 28px ring (HandDrawnOutline, pose 0). */
++.action-bar.ring-arm .info-btn {
++  width: 2rem;
++  height: 2rem;
++  align-items: center;
++  justify-content: center;
++  padding: 0;
++  border: none;
++  background: none;
++  cursor: pointer;
++  color: var(--ink-press-quiet);
++}
++
++.action-bar.ring-arm .info-glyph {
++  width: 1.75rem;
++  height: 1.75rem;
++  font-size: var(--type-small);
++}
++
+ @media (hover: hover) {
+-  .info-btn:hover .info-glyph {
++  .action-bar.ring-arm .info-btn:hover {
+     color: var(--color-foreground);
+-    border-color: currentColor;
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/KeyboardLegend.vue b/web/frontend/src/pencil/chrome/KeyboardLegend.vue
+index 63beea9b..c5fce522 100644
+--- a/web/frontend/src/pencil/chrome/KeyboardLegend.vue
++++ b/web/frontend/src/pencil/chrome/KeyboardLegend.vue
+@@ -60,7 +60,7 @@ import { SINGLE_KEY_SHORTCUTS } from "@/composables/useShortcutPolicy";
+     display: grid;
+     grid-template-columns: 1fr 1fr;
+     gap: 0.15rem 0.75rem;
+-    /* It sits ABOVE the action bar now (T6 mark 5), not at the card's tail. */
++    /* It sits inside the strip, above the verbs (T9-M16). */
+     margin: 0 0 0.5rem;
+     justify-content: center;
+     font-family: var(--font-hand);

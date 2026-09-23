@@ -1,0 +1,279 @@
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..eb6c846f 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -3,6 +3,24 @@
+ 
+ @custom-variant dark (&:is(.dark *));
+ 
++/* ── THE ZONE'S ONE STEP (T9-W7 · M17) ─────────────────────────────────────────
++ * The controls card's section air: tape → first name, the rule's air on both sides, the air
++ * above the commit. It was four `0.85rem` literals in `GameControlPanel.vue` and a missing
++ * fifth (the tape sat 2.19px over `size`). Registered so a bad value fails loudly: `0px`
++ * initial means an unset token collapses the zone's air to nothing (the tape crowds the
++ * name again), which the rhythm read catches; an invalid value at a consumer inherits the
++ * ancestor's step instead of silently resetting. Consumers read it bare, never with a
++ * fallback. */
++@property --zone-step {
++  syntax: "<length>";
++  inherits: true;
++  initial-value: 0px;
++}
++
++:root {
++  --zone-step: 0.85rem;
++}
++
+ /* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+  * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+  * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..575ef5fc 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -830,6 +830,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+               :options="section.options"
+               :selected="section.selected"
+               :boil-frame="boilFrame"
++              line
+               @change="onSectionChange(section, $event)"
+             />
+           </div>
+@@ -1548,11 +1549,18 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    A BoilDivider here is refused — it mounts four live `url(#grain-static)` poses and takes the
+    filter census 9 → 13 in both regimes. */
+ .staged-section + .staged-section {
+-  margin-top: 0.85rem;
+-  padding-top: 0.85rem;
++  margin-top: var(--zone-step);
++  padding-top: var(--zone-step);
+   border-top: 1.5px solid var(--ink-press-rule);
+ }
+ 
++/* T9-W7 · M17 — the tape and the first name were the closest pair on the ladder (2.19px, under
++   the 7.2 chip seam). The first section takes the zone's step BELOW the tape, inside itself, so
++   the tape's own lane is untouched: name → values 4 < seam 7.2 < tape → name = rule air 13.6. */
++.staged-section:first-child {
++  padding-top: var(--zone-step);
++}
++
+ /* A row inside a compartment: the control's own quiet name beside it (over it, on the narrow
+    rail). Not a heading — a caption in the hand, one pressure step under the tape, which is how
+    a second control in one compartment gets named without the compartment growing a second
+@@ -1631,6 +1639,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ /* The rail is one narrow column: the caption sits over its control instead of beside it. */
+ .zone-row-stacked {
+   flex-direction: column;
++  /* One line, never a wrap (T9-W7 · M17). A multi-line column flex sizes its items at their
++     fit-content width before it stretches them, and the chips' line is `contain: inline-size`
++     (fit-content 0), so the row was priced one chip per line and then stretched to that height
++     (marks' chips drew 60.59 tall). Single-line, the stretch is known before the price. */
++  flex-wrap: nowrap;
+   align-items: stretch;
+   gap: 0;
+ }
+@@ -1834,26 +1847,21 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   }
+ }
+ 
+-/* The Deal commit sits centered under the staged selectors, a comfortable target from the peek
+-   divider that partitions it off from the live play tools (the spatial prophylaxis).
+-
+-   TWO ROWS, ONE AXIS (mark 6, re-cut at T6 mark 8). Neither obvious layout survived measurement
+-   when the receipt first joined this row. A centered flex row is not a centered verb —
+-   `justify-content: center` over two items slides Deal ~43px off the well's own spine, the axis
+-   its staged chips are centered on. `grid-template-columns: 1fr auto 1fr` holds the spine but is
+-   worse: under the rail's shrink-to-fit MAX-CONTENT sizing the two `1fr` tracks resolve equal,
+-   so the EMPTY left track mirrors the receipt's width and the row's max-content becomes verb +
+-   2× receipt. It widened the rail 276.25 → 283.14 and the centered `.app-layout` walked the
+-   board 3.45px left — a sub-pixel phase change under `cell-light`, a committed golden.
+-
+-   Mark 6's answer was ONE shared cell — verb centred, receipt end-aligned — and it worked on a
+-   clearance of 7.53px that mark 8's bigger die spends outright. So the receipt takes its own
+-   row: die and name on row 1, `dealt |卅` centred beneath on row 2, both on the well's spine.
+-   The single implicit column still resolves to `max(verb, receipt)`, exactly as the shared cell
+-   did, so the rail's max-content is unchanged and the board does not move — measured, not
+-   assumed. What the move retires is the hazard CLASS: no growth of either box can occlude the
+-   other, because they no longer overlap. `visual-regression.spec.ts` reads the clearance
+-   vertically now, with the shared cell as its negative control. */
++/* The Deal commit sits under the staged selectors, a full divider away from the live play tools
++   (the spatial prophylaxis).
++
++   ONE LINE, TWO TRACKS (T9-W7 · M17, reversing T6 mark 8's two rows — the chair's row). Mark 8
++   stacked the receipt under the verb because the two SHARED one grid cell and mark 8's die spent
++   the 7.53px between them; a `1fr auto 1fr` grid was refused because, under the rail's
++   max-content sizing, its empty left track mirrored the receipt and walked the board 3.45px.
++   Both hazards were about the pair SIZING the row. `contain: inline-size` retires that: the row
++   contributes nothing to the rail's max-content, so the verb and its receipt can sit in their own
++   tracks on one baseline without either the overlap or the walk. The rail is left-ruled (the die
++   starts the row at the names' x, the button's gutter being the chip's own inset); the dock keeps
++   the verb on the well's spine in a `1fr auto 1fr` grid, the receipt in the right track. Too
++   narrow a rail wraps the receipt beneath (today's pose), never an overflow.
++   `visual-regression.spec.ts` "the deal receipt keeps off the commit verb" reads the clearance in
++   x, with the shared cell as its control. */
+ /* T8-W1 M2 — THE RULE ABOVE THE COMMIT. The well stacks two questions and then an ACT, and
+    nothing said where the asking stopped: `Hard` and the die sat in one undifferentiated
+    column. The divider is the estate's own, not a new one — the same 1.5px `--ink-press-rule`
+@@ -1865,22 +1873,36 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    rule never matches there and this is the only rule the sheet gets — which is the surface the
+    owner marked. */
+ .deal-row {
+-  display: grid;
+-  align-items: center;
+-  margin-top: 0.85rem;
+-  padding-top: 0.85rem;
++  display: flex;
++  flex-wrap: wrap;
++  align-items: last baseline;
++  column-gap: 0.45rem;
++  row-gap: 0.15rem;
++  contain: inline-size;
++  margin-top: var(--zone-step);
++  padding-top: var(--zone-step);
+   border-top: 1.5px solid var(--ink-press-rule);
+ }
+ 
+-.deal-row > .deal-btn {
+-  grid-area: 1 / 1;
+-  justify-self: center;
++.mobile-control-panel .deal-row {
++  display: grid;
++  grid-template-columns: 1fr auto 1fr;
++}
++
++.mobile-control-panel .deal-row > .deal-btn {
++  grid-column: 2;
++}
++
++.mobile-control-panel .deal-row > .difficulty-tally {
++  grid-column: 3;
++  justify-self: start;
+ }
+ 
++/* The receipt's own row is centred, so its LAST baseline is its last item's — the marks' svg,
++   synthesized from its bottom edge — and `dealt` rode 9.2px above `Deal`. Baseline-aligned
++   inside, the word and the marks stand on one line and that line is the receipt's baseline. */
+ .deal-row > .difficulty-tally {
+-  grid-area: 2 / 1;
+-  justify-self: center;
+-  margin-top: 0.15rem;
++  align-items: baseline;
+   min-width: 0;
+ }
+ 
+@@ -1905,7 +1927,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    Geometry is gated: e2e/visual-regression.spec.ts "the Deal die is not crushed". */
+ .icon-btn.deal-btn {
+   gap: 0.3rem;
+-  padding: 0.5rem 1.1rem;
++  /* The gutter is the chip's inset (`px-3`) and the heading's (`typography.css`), so the die's
++     box starts at the names' x on the left-ruled rail (T9-W7 · M17; was 1.1rem). */
++  padding: 0.5rem 0.75rem;
+ }
+ 
+ /* T6 mark 8 — Deal is the card's one primary verb and it wore the same caption its four
+@@ -2070,11 +2094,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   }
+ 
+   /* Restated at (0,2,0) because `.icon-btn.deal-btn` above now outranks this block. Deal's
+-     die grows with mark 8 at every pointer, but its GUTTER stays the touch gutter — every
+-     icon button wears the same 0.5rem on a phone, where the fine rail's 1.1rem would push a
+-     four-verb strip toward the card's edges. */
++     die grows with mark 8 at every pointer; its block padding stays the touch padding and its
++     gutter is the chip's inset at every pointer (T9-W7 · M17; was 0.5rem here). */
+   .icon-btn.deal-btn {
+-    padding: 0.3rem 0.5rem;
++    padding: 0.3rem 0.75rem;
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index dd11a752..dc05ec79 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -1,16 +1,26 @@
+ <script setup lang="ts">
++import { computed } from "vue";
+ import { useTheme } from "@/composables/useTheme";
+ import { ghostUnderline, scribbleUnderline } from "./scribbleUnderline";
+ 
+ const { isDark } = useTheme();
+ 
+-defineProps<{
++const props = defineProps<{
+   options: { value: string | number; label: string; colorClass?: string }[];
+   selected: string | number;
+   boilFrame: number;
+   mobile?: boolean;
++  /** the rail's line arm for this group alone (read only when `LINE_SCOPE` is `"staged"`) */
++  line?: boolean;
+ }>();
+ 
++/* THE RAIL'S LINE (T9-W7 · M17), and how far it reaches. `"component"`: every 3–4-value group
++ * on the rail lays its chips on one wrapping line — the staged zone AND the live wells, one
++ * grammar. `"staged"`: only a caller passing `line` takes it and the live wells keep the
++ * column. The owner's ballot; the default is one grammar. */
++const LINE_SCOPE: "component" | "staged" = "component";
++const lineArm = computed(() => LINE_SCOPE === "component" || props.line);
++
+ const emit = defineEmits<{
+   (e: "change", value: string | number): void;
+ }>();
+@@ -41,7 +51,9 @@ function scribbleSeed(val: string | number): number {
+         ? 'options-row'
+         : options.length === 2
+           ? 'options-pair'
+-          : 'flex flex-col items-center md:items-stretch'
++          : lineArm
++            ? 'options-line'
++            : 'flex flex-col items-center md:items-stretch'
+     "
+   >
+     <button
+@@ -172,7 +184,7 @@ function scribbleSeed(val: string | number): number {
+ }
+ 
+ /* A BINARY IS A PAIR, NOT A STACK (T4-P1, stage BC — the price reconciliation).
+-   The rail is a 165px column and every option in it is a full-width chip on its own line. A
++   The rail was then a 165px column and every option in it a full-width chip on its own line. A
+    two-option group read as two more entries in a list of fourteen; it is one control with two
+    states, and the phone's row branch has always drawn it that way — the rail was the outlier.
+    Split, the pair costs ONE chip-height instead of two plus a seam (95.19 → 44.00 at
+@@ -205,6 +217,37 @@ function scribbleSeed(val: string | number): number {
+   display: flex;
+ }
+ 
++/* ONE QUESTION, ONE LINE (T9-W7 · M17, the owner's "poor usage of space"). The column arm put a
++   36–72px word in a full-width chip per line, so the size and level sections spent 87–89 % of
++   their area on paper. The premise it rode ("the rail is a 165px column") is stale: the fine
++   rail's content column measures 259.59 (1024) · 268.22 (1280) · 271.25 (1366) · 274 (1440) ·
++   276.31 (1512) · 283.69 (1728), sized by the folded crib, and the coarse rail (no crib) 168.
++   Chips are word + 24; three of them need 218.4 (size) / 254.4 (level) / 261.6 (latin, four), so
++   every fine rung takes a group on one line except latin at 1024 (−2.01), which wraps. A line that
++   runs out WRAPS — left-ruled, so each line starts at the first line's x — and the seam is the
++   same 0.45rem in both axes.
++   `contain: inline-size`: the line adds nothing to the rail's max-content, so the card's width is
++   the crib's (fine) or the strip's (coarse) exactly as before and the board cannot walk.
++   Coarse: a chip GROWS to fill its line, so a line holding one chip is the column's 168 × 44
++   chip, byte-identical, and a thumb's box never shrinks (M01); `md:text-left` keeps the word and
++   its scribble at the left of a grown chip. */
++.options-line {
++  display: flex;
++  flex-wrap: wrap;
++  justify-content: flex-start;
++  contain: inline-size;
++}
++
++.options-line > .ctrl-btn {
++  flex: 0 0 auto;
++}
++
++@media (pointer: coarse) {
++  .options-line > .ctrl-btn {
++    flex: 1 1 auto;
++  }
++}
++
+ .options-pair > .ctrl-btn {
+   flex: 1 1 0;
+ }

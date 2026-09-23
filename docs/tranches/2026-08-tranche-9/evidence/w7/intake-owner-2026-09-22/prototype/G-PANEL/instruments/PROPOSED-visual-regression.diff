@@ -1,0 +1,238 @@
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index dfd467f8..47e37e11 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -569,53 +569,51 @@ test("the glass curve is the same curve in both layers", async ({ page }) => {
+ test("the deal receipt keeps off the commit verb, hover included", async ({ page }) => {
+   await loadApp(page);
+ 
+-  // Mark 6 moved the difficulty tally out of the board's margin into the ticket's deal row,
+-  // where it SHARED one grid cell with Deal — verb centred, receipt end-aligned, 7.53px of
+-  // horizontal clearance between them. This row read that gap in x, and T6 mark 8 spent it:
+-  // a 36px die and a 1.9em tally leave no room to be side by side, so the receipt takes its
+-  // own grid row beneath the verb.
+-  //
+-  // THE READ IS RE-AIMED, NOT RELAXED. In x the two boxes now overlap by construction — the
+-  // old assertion would red on the cure and its old control (a child growing on hover) can no
+-  // longer cross anything, so it had inverted into a row that greened on the defect. The
+-  // clearance that carries the same claim is VERTICAL: the receipt's top at or below the
+-  // verb's bottom, and both centred on the well's one spine. It still fails for any growth of
+-  // either box toward the other, which is what the row is for.
+-  const clearance = async () =>
++  // T9-W7 · M17 — ONE LINE, TWO TRACKS. Mark 6 put the receipt in Deal's grid cell (7.53px of
++  // clearance in x), mark 8 moved it to its own row beneath (clearance in y). M17's cure puts it
++  // BESIDE the verb again, on the verb's own baseline, as its own flex item; `contain:
++  // inline-size` on the row retires the board walk the side-by-side pose once caused. So the
++  // read goes back to x, stronger than mark 6's: the two words share one baseline (|Δ| ≤ 1.5
++  // between the glyph boxes' bottoms), the boxes never intersect, and the gap is at least the
++  // chip seam. Any growth that crowds the pair closes the gap or wraps the receipt off the
++  // verb's line, and both red here.
++  const read = async () =>
+     page.evaluate(() => {
+       const row = document.querySelector(".controls-card .deal-row");
+       const verb = row?.querySelector(".deal-btn");
+       const receipt = row?.querySelector(".difficulty-tally");
+-      if (!verb || !receipt) return null;
++      const word = verb?.querySelector(".icon-sublabel");
++      const dealt = receipt?.querySelector(".dt-label");
++      if (!verb || !receipt || !word || !dealt) return null;
++      const box = (el: Element) => {
++        const r = document.createRange();
++        r.selectNodeContents(el);
++        return r.getBoundingClientRect();
++      };
+       const v = verb.getBoundingClientRect();
+       const t = receipt.getBoundingClientRect();
++      const ix = Math.max(0, Math.min(v.right, t.right) - Math.max(v.left, t.left));
++      const iy = Math.max(0, Math.min(v.bottom, t.bottom) - Math.max(v.top, t.top));
+       return {
+-        gap: +(t.top - v.bottom).toFixed(2),
+-        axis: +Math.abs((t.left + t.right) / 2 - (v.left + v.right) / 2).toFixed(2),
++        gap: +(t.left - v.right).toFixed(2),
++        baseline: +Math.abs(box(dealt).bottom - box(word).bottom).toFixed(2),
++        overlap: +(ix * iy).toFixed(2),
+         receiptW: +t.width.toFixed(2),
+       };
+     });
+ 
+   /**
+-   * THE SETTLED READ (T7-W3, the sleep-lint residue). The hover reveal is a real transition and
+-   * the old form waited a fixed 320ms for it — "longer than any reveal transition the estate has
+-   * owned", which is a claim about the estate rather than about this frame, and it reds nowhere
+-   * when the frame runs long. The two boxes are now read until two consecutive reads AGREE; only
+-   * a settled figure reaches an assertion, and a row that never stops moving reds saying so
+-   * rather than handing a mid-transition sample to a non-retrying `expect`.
++   * THE SETTLED READ (T7-W3, the sleep-lint residue). The hover reveal is a real transition, so
++   * the boxes are read until two consecutive reads AGREE; only a settled figure reaches an
++   * assertion, and a row that never stops moving reds saying so.
+    */
+-  const settledClearance = async (where: string) => {
+-    let held = await clearance();
++  const settled = async (where: string) => {
++    let held = await read();
+     await expect
+       .poll(
+         async () => {
+-          const now = await clearance();
+-          const same =
+-            !!now &&
+-            !!held &&
+-            now.gap === held.gap &&
+-            now.axis === held.axis &&
+-            now.receiptW === held.receiptW;
++          const now = await read();
++          const same = !!now && !!held && JSON.stringify(now) === JSON.stringify(held);
+           held = now;
+           return same;
+         },
+@@ -628,36 +626,41 @@ test("the deal receipt keeps off the commit verb, hover included", async ({ page
+     return held!;
+   };
+ 
+-  const rest = await clearance();
++  const rest = await settled("rest");
+   expect(rest).not.toBeNull();
+-  expect(rest!.gap).toBeGreaterThanOrEqual(0);
+-  expect(rest!.axis, "verb and receipt share one centre").toBeLessThanOrEqual(1);
++  expect(rest.gap, "the receipt keeps the seam off the verb").toBeGreaterThanOrEqual(7.15);
++  expect(rest.baseline, "Deal and dealt on one baseline").toBeLessThanOrEqual(1.5);
++  expect(rest.overlap).toBe(0);
+ 
+   await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+-  const hovered = await settledClearance("the hovered receipt");
+-  expect(hovered.gap).toBeGreaterThanOrEqual(0);
+-  expect(hovered.axis).toBeLessThanOrEqual(1);
+-  // …and the receipt is the same receipt. A reveal that grows it is the defect even when the
+-  // gap happens to survive on a wide rail.
+-  expect(hovered.receiptW).toBeCloseTo(rest!.receiptW, 1);
+-
+-  // CONTROL: put the SHARED CELL back — mark 6's own two declarations, verbatim — and the same
+-  // probe must see the clearance collapse and the axes part.
+-  //
+-  // The audit rider named `grid-area: auto` for this injection. It cannot red and the reason
+-  // is auto-placement: Deal keeps its explicit `1 / 1`, so an auto-placed receipt takes the
+-  // first free cell, which IS row 2 column 1 — the cure, spelled differently. The injection
+-  // that actually inverts the assertion is the state the cure replaced, so that is the one
+-  // written here; it is the stronger control of the two, because it reproduces a shape this
+-  // estate has really shipped rather than one it never could.
++  const hovered = await settled("the hovered receipt");
++  expect(hovered.gap).toBeGreaterThanOrEqual(7.15);
++  expect(hovered.baseline).toBeLessThanOrEqual(1.5);
++  expect(hovered.overlap).toBe(0);
++  // …and the receipt is the same receipt. A reveal that grows it is the defect.
++  expect(hovered.receiptW).toBeCloseTo(rest.receiptW, 1);
++
++  // CONTROL 1: the verb GROWS 200px under the pointer, past the 109.9px the 1280 rail spares the
++  // pair (at +120 the receipt simply moves over and keeps its seam, which is the design). The
++  // read must see the pair lose its line (the receipt wraps off the verb's baseline) or its gap.
+   await page.addStyleTag({
+-    content:
+-      ".controls-card .deal-row > .difficulty-tally { grid-area: 1 / 1; justify-self: end; }",
++    content: ".controls-card .deal-row > .deal-btn:hover { padding-right: 200px !important }",
+   });
+-  await page.locator(".controls-card .deal-row .difficulty-tally").hover();
+-  const broken = await settledClearance("the shared-cell control");
+-  expect(broken.gap).toBeLessThan(0);
+-  expect(broken.axis).toBeGreaterThan(1);
++  await page.locator(".controls-card .deal-row .deal-btn").hover();
++  const grown = await settled("the grown-verb control");
++  expect(
++    grown.gap < 7.15 || grown.baseline > 1.5 || grown.overlap > 0,
++    "control: a verb that grows into its receipt must red the read",
++  ).toBe(true);
++
++  // CONTROL 2: the shared cell, spelled for a flex row: the receipt pulled back over the verb.
++  await page.addStyleTag({
++    content: ".controls-card .deal-row > .difficulty-tally { margin-left: -80px !important }",
++  });
++  await page.mouse.move(0, 0);
++  const shared = await settled("the shared-cell control");
++  expect(shared.gap).toBeLessThan(7.15);
++  expect(shared.overlap).toBeGreaterThan(0);
+ });
+ 
+ // ── Test 9: chip separation — the seam between adjacent option chips ─
+@@ -671,8 +674,15 @@ const CHIP_SEPARATION = () => {
+     ".controls-card .control-panel-wrap",
+   );
+   const vis = (el: Element) => el.getClientRects().length > 0;
+-  const out: { axis: string | null; n: number; gap: number | null; first: string }[] =
+-    [];
++  const out: {
++    axis: string | null;
++    n: number;
++    gap: number | null;
++    gapX: number | null;
++    gapY: number | null;
++    lines: number;
++    first: string;
++  }[] = [];
+   const parents = new Set(
+     [...(panel?.querySelectorAll(".ctrl-btn") ?? [])]
+       .filter(vis)
+@@ -684,22 +694,32 @@ const CHIP_SEPARATION = () => {
+     );
+     const first = kids[0]?.textContent?.trim() ?? "";
+     if (kids.length < 2) {
+-      out.push({ axis: null, n: kids.length, gap: null, first });
++      out.push({ axis: null, n: kids.length, gap: null, gapX: null, gapY: null, lines: 1, first });
+       continue;
+     }
++    // T9-W7 · M17: a group is a LINE that may wrap, so it has both axes at once. Neighbours on
++    // one line separate in x; consecutive lines separate in y. A column is the one-per-line case.
+     const r = kids.map((k) => k.getBoundingClientRect());
+-    const axis =
+-      Math.abs(r[1].left - r[0].left) >= Math.abs(r[1].top - r[0].top)
+-        ? "row"
+-        : "column";
+-    let gap = Infinity;
+-    for (let i = 1; i < r.length; i++) {
+-      gap = Math.min(
+-        gap,
+-        axis === "row" ? r[i].left - r[i - 1].right : r[i].top - r[i - 1].bottom,
+-      );
++    const lines: DOMRect[][] = [];
++    for (const q of r) {
++      const line = lines.find((l) => Math.abs(l[0].top - q.top) < 0.5);
++      if (line) line.push(q);
++      else lines.push([q]);
+     }
+-    out.push({ axis, n: kids.length, gap: +gap.toFixed(2), first });
++    let gapX = Infinity;
++    for (const l of lines)
++      for (let i = 1; i < l.length; i++) gapX = Math.min(gapX, l[i].left - l[i - 1].right);
++    let gapY = Infinity;
++    for (let i = 1; i < lines.length; i++)
++      gapY = Math.min(
++        gapY,
++        Math.min(...lines[i].map((q) => q.top)) - Math.max(...lines[i - 1].map((q) => q.bottom)),
++      );
++    const fx = gapX === Infinity ? null : +gapX.toFixed(2);
++    const fy = gapY === Infinity ? null : +gapY.toFixed(2);
++    const axis = fx === null ? "column" : fy === null ? "row" : "both";
++    const gap = Math.min(fx ?? Infinity, fy ?? Infinity);
++    out.push({ axis, n: kids.length, gap: +gap.toFixed(2), gapX: fx, gapY: fy, lines: lines.length, first });
+   }
+   return out;
+ };
+@@ -727,7 +747,7 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
+     for (const g of paired) {
+       expect(
+         g.gap!,
+-        `${label}: ${g.axis} group "${g.first}" (n=${g.n})`,
++        `${label}: ${g.axis} group "${g.first}" (n=${g.n}, ${g.lines} line(s))`,
+       ).toBeGreaterThanOrEqual(FLOOR);
+     }
+     return Math.min(...paired.map((g) => g.gap!));
+@@ -856,6 +876,11 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+     await p.addStyleTag({
+       content: `.ctrl-options.options-pair { flex-direction: column !important }
+                 .ctrl-options.options-pair > .ctrl-btn { flex: 0 0 auto !important }
++                .ctrl-options.options-line { flex-direction: column !important; flex-wrap: nowrap !important }
++                .ctrl-options.options-line > .ctrl-btn { flex: 0 0 auto !important }
++                .deal-row { display: grid !important }
++                .deal-row > .difficulty-tally { grid-area: 2 / 1 !important; justify-self: center !important }
++                .deal-row > .deal-btn { grid-area: 1 / 1 !important; justify-self: center !important }
+                 .peek-hold-surface { margin-block: 0.5rem !important }`,
+     });
+     await p.waitForTimeout(120);

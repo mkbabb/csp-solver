@@ -198,3 +198,32 @@ waits, and it never guesses the fold.
   a baked script stays under the 524,288 B cap (the raw pass-4 bake was 673,858 B).
 - The port band 4230–4249 read 0 listeners at the fold; the owner's server holds :3001; :3000 is
   foreign. Kill by recorded PID.
+
+## Addendum A · The intake's fold (2026-09-22 21:34) — booked
+
+The owner-marks intake `wf_3b66f064-970` returned whole (24 agents: census ×3, portfolio ×8,
+adjudication ×4, prototypes ×4 in isolated worktrees `wf_3b66f064-970-16/-17/-20/-21`, critiques ×4,
+Fable's fold `intake-owner-2026-09-22/INTAKE.md`, 891 lines). Critics: G-MOTION 64 (the wordmark's
+rest identity blocks the logo arm), G-INFO 74, G-PANEL 72, G-BAR 72 — all ADVANCE.
+
+- **The twelve provisional ballots are ASSIGNED as INTAKE.md §8 numbers them: T9-B12 … T9-B23**
+  (B12 M18's pen · B13 M18's form · B14 M16's "i" once its ring dies · B15 M16 scroll vs no scroll ·
+  B16 M17 one grammar · B17 M17 the receipt beside the verb (T6 mark 8's reversal, the chair's) ·
+  B18 M17 the marks well, conditional · B19 M17 chip boxes · B20 M17 the coarse rail · B21 M19 the
+  deal under the sheet · B22 M15 who plays the Bloom · B23 M15 the ink at the flip). T9-B8's state is
+  INTAKE.md §6 (answered; what remains is B12/B13). The loop's ballots (B8–B23) are consolidated into
+  `DISPOSITIONS.md` §2 at the W7 fold, as pass-4 rulings §3 did for B8; none fires before the re-look.
+- **INTAKE.md §0.5 is spent**: the G-BAR prototype's evidence was copied out of `-21` by the chair at
+  the critic's return (before the fold finished), as were G-INFO's (`-17`), G-MOTION's (`-16`) and
+  G-PANEL's (`-20`). All four live under `intake-owner-2026-09-22/prototype/<group>/` with their
+  `prototype.diff`. The four worktrees STAND (their trees are the diffs' proof) until the W7 fold.
+- **The intake sweep**: `intake-owner-2026-09-22/SWEEP.md` — 35 PNGs → 21 kept (INTAKE.md's cites),
+  14 deleted; the six kept crops over 60 KB were re-quantized in place (pngquant, quality 60–90:
+  G-MOTION c1–c4 and G-PANEL c1/c3, 132 KB → 76 KB at worst; the record says so here, the bytes are
+  the illustration and the numbers in INTAKE.md are the claim). The committed wave now reads
+  2,026,952 B against the 2,097,152 B cap (r0 + pass1 + exec + intake; pass4 holds 0; pass5's crops
+  are swept at ITS fold and are not in any commit until then).
+- **Batch 3 opened ~10 min before INTAKE.md landed** (NOTE-LEDGER's critic returned at 21:2x; the
+  fold at 21:34). CTRL-FACE, CTRL-TAPE and MOT-LADDER started on the adjudications + both designs as
+  §3 allows; INTAKE.md was on disk within their first minutes and their returns say what they read.
+  MOT-VERB (after LADDER) starts with the fold on disk.

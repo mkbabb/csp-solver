@@ -1,0 +1,1499 @@
+diff --git a/web/frontend/e2e/mobile-platform.spec.ts b/web/frontend/e2e/mobile-platform.spec.ts
+index 17d81e98..92b86cba 100644
+--- a/web/frontend/e2e/mobile-platform.spec.ts
++++ b/web/frontend/e2e/mobile-platform.spec.ts
+@@ -533,7 +533,7 @@ test.describe("the 296px keypad band (measured constant, driven through the comp
+           const doc = document.scrollingElement || document.documentElement;
+           doc.scrollTop = 0;
+           const port = document.querySelector(
+-            "#controls-drawer .controls-card",
++            "#controls-drawer .card-body",
+           ) as HTMLElement | null;
+           if (port) port.scrollTop = deep ? port.scrollHeight : 0;
+           void document.body.offsetHeight;
+diff --git a/web/frontend/e2e/viewport-law.spec.ts b/web/frontend/e2e/viewport-law.spec.ts
+index 0af6ff66..1c310e8d 100644
+--- a/web/frontend/e2e/viewport-law.spec.ts
++++ b/web/frontend/e2e/viewport-law.spec.ts
+@@ -19,7 +19,7 @@ import { test, expect, type Page } from '@playwright/test';
+  *
+  * Selector discipline: first-party hooks only — `.game-gallery`, `.gallery-viewport`,
+  * `#gallery-card-{i}`, `.game-card-name`, `.drawer-tab`, `.fold-tools`, `.drawer-handle`,
+- * `.controls-card`, `.tray-well`, `.washi-label`/`.washi-tag`, `.action-bar`, `.board-wrapper`,
++ * `.controls-card`, `.card-body` (its scrollport), `.tray-well`, `.washi-label`/`.washi-tag`, `.action-bar`, `.board-wrapper`,
+  * `button.sun-moon-toggle`.
+  */
+ 
+@@ -421,7 +421,7 @@ test.describe('§2.5 the washi tape yields @ 1440×900', () => {
+         // that strip is hidden by the CARD, not covered by a tape (the adjudication's
+         // "a reserved band is paper by construction"). At rest the attribute is absent,
+         // so every born-RED overlap this row opened with stays fully counted.
+-        const cardEl = tape.closest('.controls-card');
++        const cardEl = tape.closest('.card-body');
+         const liveTop =
+           cardEl && cardEl.hasAttribute('data-fold-above')
+             ? cardEl.getBoundingClientRect().top +
+@@ -578,7 +578,7 @@ test.describe('§2.6 the section tag pins @ 1440×900 (the rail)', () => {
+     await boot(page);
+     await loadBoard(page);
+ 
+-    const census = await page.evaluate(STICKY_CENSUS, '.controls-card');
++    const census = await page.evaluate(STICKY_CENSUS, '.card-body');
+     console.log(`[W2-§2.6 rail] ${JSON.stringify(census)}`);
+ 
+     expect(census, 'the rail card must be mounted').not.toBeNull();
+@@ -616,7 +616,7 @@ test.describe('§2.6 the section tag pins @ 375×667 (the drawer)', () => {
+     await expect(page.locator('#controls-drawer .drawer-case')).toBeVisible();
+     await page.waitForTimeout(700); // the Band-D glide's own clock, then settle
+ 
+-    const census = await page.evaluate(STICKY_CENSUS, '#controls-drawer .controls-card');
++    const census = await page.evaluate(STICKY_CENSUS, '#controls-drawer .card-body');
+     console.log(`[W2-§2.6 drawer] ${JSON.stringify(census)}`);
+ 
+     expect(census, 'the drawer card must be mounted').not.toBeNull();
+@@ -802,7 +802,7 @@ for (const cell of FOLD_CELLS) {
+       await loadBoard(page);
+ 
+       const fold = await page.evaluate(() => {
+-        const card = document.querySelector('.controls-card') as HTMLElement;
++        const card = document.querySelector('.card-body') as HTMLElement;
+         const cs = getComputedStyle(card);
+         const cb = card.getBoundingClientRect();
+         const straddle: { cls: string; label: string; cut: number; visFrac: number }[] = [];
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index b31bfeec..19246739 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -301,60 +301,60 @@ test("selection is announced: every option chip carries aria-pressed, exactly on
+   await expect(rows.first()).toBeVisible();
+ });
+ 
+-/** The bar against the card's VISIBLE frame, plus the reading that says the frame is real.
+- *  Returned as data so the same probe can be taken again after the sticky is struck. */
++/** The strip against the card's VISIBLE frame, plus the reading that says the frame is real.
++ *  Returned as data so the same probe can be taken again after the card's grid row is struck. */
+ const BAR_IN_FRAME = () => {
+   const card = document.querySelector(".controls-card") as HTMLElement | null;
++  const body = document.querySelector(".controls-card .card-body") as HTMLElement | null;
+   const bar = document.querySelector(".controls-card .action-bar");
+-  if (!card || !bar) return null;
++  if (!card || !body || !bar) return null;
+   const c = card.getBoundingClientRect();
+   const b = bar.getBoundingClientRect();
+   return {
+-    scrollTop: card.scrollTop,
+-    scrollable: card.scrollHeight - card.clientHeight,
++    scrollTop: body.scrollTop,
++    scrollable: body.scrollHeight - body.clientHeight,
+     belowFold: +(b.top - c.bottom).toFixed(2),
+     overhang: +(b.bottom - c.bottom).toFixed(2),
++    inFoot: !!bar.closest("#card-foot"),
+     position: getComputedStyle(bar).position,
+   };
+ };
+ 
+-test("the action bar rides the card's own scrollport — at the TOP of a 1039px card, not only at its end", async ({
++test("the tool strip is the card's foot — in frame at the TOP of a 1039px card, not only at its end", async ({
+   page,
+ }) => {
+   await loadSudoku(page);
+ 
+-  // T6 mark 5. The read is taken at `scrollTop 0` ON PURPOSE, and the audit rider is why: at
+-  // the scroll END a static last child also sits at the card's bottom edge, so a scroll-end
+-  // assertion greens on the incumbent and proves nothing. The discriminating state is the
+-  // TOP of a card whose content is 400px taller than its frame — sticky puts the four verbs
+-  // in view there and static leaves them a screenful below the fold.
+-  await page.locator(".controls-card").evaluate((el) => {
++  // T6 mark 5, re-aimed at T9-W7 M18. The read is taken at `scrollTop 0` ON PURPOSE: at the
++  // scroll END a last child in flow also sits at the card's bottom edge, so a scroll-end
++  // assertion greens on the incumbent and proves nothing. The discriminating state is the TOP
++  // of a body whose content is ~400px taller than its frame — the foot puts the four verbs in
++  // view there, and a strip left in the body's flow is a screenful below the fold.
++  await page.locator(".controls-card .card-body").evaluate((el) => {
+     el.scrollTop = 0;
+   });
+   const at = await page.evaluate(BAR_IN_FRAME);
+-  expect(at, "the rail card and its action bar must both be mounted").not.toBeNull();
++  expect(at, "the rail card, its body and its strip must all be mounted").not.toBeNull();
+ 
+-  // The frame has to be a real scrollport or the row asserts nothing: a card that fits its
+-  // content puts the bar in view whatever its `position` is.
+-  expect(at!.scrollable, "the card must overflow its frame at this viewport").toBeGreaterThan(
+-    40,
+-  );
++  // The frame has to be a real scrollport or the row asserts nothing.
++  expect(at!.scrollable, "the body must overflow its frame at this viewport").toBeGreaterThan(40);
+   expect(at!.scrollTop).toBe(0);
+-  expect(at!.position).toBe("sticky");
+-  // In frame: the bar's bottom sits at or above the card's visible bottom edge.
+-  expect(at!.overhang, "the bar hangs below the card's visible bottom").toBeLessThanOrEqual(1);
+-  expect(at!.belowFold, "the bar's top is inside the frame").toBeLessThan(0);
+-
+-  // NEGATIVE CONTROL — strike the one declaration that does the work. The same probe must
+-  // report the bar below the fold by roughly the card's whole unscrolled overflow.
++  expect(at!.inFoot, "the strip lives in #card-foot on the rail").toBe(true);
++  expect(at!.position, "the foot needs no sticky").not.toBe("sticky");
++  expect(at!.overhang, "the strip hangs below the card's visible bottom").toBeLessThanOrEqual(1);
++  expect(at!.belowFold, "the strip's top is inside the frame").toBeLessThan(0);
++
++  // NEGATIVE CONTROL — strike the grid row that makes the foot the card's second row: the card
++  // becomes a block whose body runs its full height, and the foot is laid under it. The same
++  // probe must then read the strip below the card's frame.
+   await page.addStyleTag({
+-    content: ".controls-card .action-bar { position: static !important; }",
++    content:
++      ".controls-card { display: block !important; } .controls-card .card-foot { position: absolute !important; top: 100% !important; left: 0; right: 0; }",
+   });
+   const struck = await page.evaluate(BAR_IN_FRAME);
+-  expect(struck!.position).toBe("static");
+   expect(
+     struck!.belowFold,
+-    "negative control: a static bar must fall out of the card's frame",
++    "negative control: a strip outside the grid row must fall out of the card's frame",
+   ).toBeGreaterThan(0);
+ });
+ 
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..112f2fd3 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -633,10 +633,10 @@ html {
+      three tranches. The commit's own words: "the cure if the owner wants the dusk back is to
+      NARROW the 46 tweening selectors, not to re-blanket them." This IS the narrowing, and it
+      is enforced by specificity rather than argued in prose: among `!important` declarations
+-     the more specific selector wins, so exactly the FIVE named below out-rank the page-wide
++     the more specific selector wins, so exactly the FOUR named below out-rank the page-wide
+      kill and everything else keeps it along with the +23.5 fps it bought. Measured on this
+-     tree, they resolve to THREE elements in the default board scene (page-root, board-wrapper,
+-     action-bar; body is a fourth, occluded) against the 46 the flip used to tween. It is the
++     tree, they resolve to TWO elements in the default board scene (page-root, board-wrapper;
++     body is a third, occluded) against the 46 the flip used to tween. It is the
+      same instrument `827905fa` used one surface over for the toggle's own gesture
+      transitions; the dusk is the half of that cure that was left banked. Doubly narrow in
+      TIME as well: `html.theme-turning` is up for ~400ms per click and never otherwise, so
+@@ -651,7 +651,9 @@ html {
+      >4000 px² are SIX: body (1024000, occluded) · .page-root/.bg-background (1024000) ·
+      .board-wrapper (409600) · .controls-card (197125) · .action-bar (18421) ·
+      .drawer-tab-tongue (4416). Both of the last two sit ON a dusking .bg-card and would
+-     otherwise cut a lit rectangle out of it, so they are named. Two tokens carry all six —
++     otherwise cut a lit rectangle out of it, so they are named — and `.action-bar` left the
++     list at T9-W7 M18, when the strip moved to the card's foot and stopped painting a slab of
++     its own (no ground, nothing to dusk). Two tokens carry all six —
+      `--color-background` and `--color-card` — and the list below is those two tokens'
+      consumers, nothing wider. RE-DERIVE THIS LIST whenever a new full-bleed ground lands.
+      The instrument is three lines in a page context: snapshot every element's computed
+@@ -662,7 +664,6 @@ html {
+     html.theme-turning body,
+     html.theme-turning .bg-background,
+     html.theme-turning .bg-card,
+-    html.theme-turning .action-bar,
+     html.theme-turning .drawer-tab-tongue {
+       transition:
+         background-color 350ms ease,
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..2b16f8c3 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -47,7 +47,7 @@ export interface ControlSection {
+ </script>
+ 
+ <script setup lang="ts">
+-import { computed, nextTick, ref, onBeforeUnmount, useId } from "vue";
++import { computed, nextTick, ref, onBeforeUnmount, onMounted, useId } from "vue";
+ import { useEventListener, useResizeObserver } from "@vueuse/core";
+ import SolveIcon from "@pencil/chrome/icons/SolveIcon.vue";
+ import FillForcedIcon from "@pencil/chrome/icons/FillForcedIcon.vue";
+@@ -71,7 +71,7 @@ import type { TallyDescriptor } from "@games/shared/techniqueVoice";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+ import type { ErrorCheckMode } from "@games/shared/useAssists";
+ import { useButtonAnimation } from "@games/shared/useButtonAnimation";
+-import { useCoarsePointer } from "@games/shared/useCoarsePointer";
++import { mediaRef, useCoarsePointer } from "@games/shared/useCoarsePointer";
+ import { portraitDock, useControlsDrawer } from "@games/shared/useControlsDrawer";
+ import { leaveSession, session } from "@games/shared/useSession";
+ import { useLiveRegion } from "@/composables/useLiveRegion";
+@@ -584,100 +584,62 @@ function onHint() {
+   emit("hint");
+ }
+ 
+-// ── T7-W2 A1 — THE SCROLLPORT CLEARS ITS OWN STICKY BAR ──────────────────────────────────
+-// Tabbing into the card reached controls the sticky `.action-bar` painted over end to end (the
+-// marks-mode "Normal", 25/25 sample points at 1440×900). Nothing scrolled and the browser was
+-// not wrong: the button's box (751–789) is ALREADY inside the scrollport's client box
+-// (189–829) — the bar (744–809) simply paints on top of it where it sits. `scroll-padding-bottom`
+-// is the one property that models that: it shrinks the region focus-scroll aims at, so a control
+-// under the bar gets lifted clear of it.
+-//
+-// THE NUMBER IS THE BAR'S OWN BOX, never a constant. Two terms, both measured:
+-//   · the bar's BORDER-box height — `getBoundingClientRect`, not `contentRect`, because the bar
+-//     carries `padding-block` and a content-box read is precisely the blindness that went stale
+-//     on T6.2's deleted `--fold-bottom`;
+-//   · the card's own `padding-bottom` — `bottom: 0` pins the stuck bar to the scrollport's
+-//     PADDING edge, so that gap is part of the band the bar owns (ceil(65.16) + 20 = 86px at head).
+-// Republished whenever the bar's box changes; the card is where it lands, since the card is the
+-// scrollport (`scene.css` reads `--action-bar-h` there).
++// ── T9-W7 M18 — THE TOOL STRIP IS THE CARD'S FOOT ───────────────────────────────────────────
++// Wherever the card is a capped scrollport with the strip at its bottom (the rail, and the
++// portrait dock) the strip teleports into `GameScene`'s `#card-foot`: the card's second grid
++// row, below the scrollport's clip edge. Nothing scrolls under it, so it needs no sticky, no
++// z-rung, no opaque slab, no skirt, and no measured height for focus-scroll to clear
++// (`scene.css`'s `scroll-padding-bottom` is the bottom fade's static 2rem). The landscape dock
++// keeps it in the body's flow above the play tools (W2 §2.2's order). The query is the one the
++// sticky block used to restate; `mediaRef`'s no-DOM default (false) leaves it in place.
++const footRegime = mediaRef(
++  "(min-width: 1024px), (max-width: 1023.98px) and (orientation: portrait)",
++);
++
++// THE LIP — the strip wears the wells' own pen (`.tray-well`'s four props), so it reads as the
++// case's fifth compartment and its side strokes land on the wells' x.
++// PROTOTYPE ONLY (G-BAR ballot 1, arm b): `?lip=tab` draws it with the drawer tongue's pen.
++const LIP =
++  typeof location !== "undefined" &&
++  new URLSearchParams(location.search).get("lip") === "tab"
++    ? { stroke: 2.5, outset: 3, radius: 0 }
++    : { stroke: 1.5, outset: 4, radius: 3 };
++
++// ── T9-W2 §2.3 — THE FOLD'S STATE, PUBLISHED ON THE SCROLLPORT ───────────────────────────────
++// The two fades (`scene.css`'s top sentinel on the body, the bottom band hung from the foot) are
++// HONEST rather than decorative: each paints only while content is actually hidden on that
++// side. The state is MEASURED, never spelled — the card's cap, its padding and its content all
++// live in other files and every one of them moves. `cardEl` is the card's BODY, the scrollport.
+ //
+-// ── T7-W7 — THE SECOND TERM IS NOW SPENT TWICE, AND THE SUM IS UNCHANGED ─────────────────
+-// W2 derived that pad because the band the bar OWNS runs to the padding edge even though the
+-// bar's own box stops short of it. W7 makes that band opaque (the bar's skirt — see
+-// `.action-bar::after` in the style block), so the same padding is now also what the skirt is
+-// tall. One measurement, two readers: `--action-bar-h` (W2's, arithmetic and formula untouched)
+-// and `--card-pad-b` (W7's, the skirt's height).
++// `--card-pad-t` is the body's own top padding: a scrollport clips at its PADDING box while a
++// sticky child is offset from its CONTENT box, so the top sentinel and the pinned tags spend it
++// to reach the case edge itself (`scene.css`, `.tray-well`). Measured because the padding is a
++// utility class on `GameScene`'s template and differs by regime.
+ //
+-// MEASURED, NOT SPELLED, for the same reason W2's is: the card's padding is a utility class on
+-// someone else's template (`GameScene.vue` — `p-5` on the rail, `px-2 py-1.5` on the dock), so a
+-// number written here would go stale the first time that class is re-cut, silently, and in the
+-// one direction that reopens this row.
+-const actionBarEl = ref<HTMLElement | null>(null);
++// `data-under-bar` is the same law seen from a tape's side: a well riding down into the bottom
++// fade takes its `anchor="tag"` tape with it, and the tape leaves in the fade's band rather
++// than lying across it. Four elements, one rect each, on a rAF-coalesced passive scroll.
++const FOLD_EPS = 4;
++const BAR_FADE_PX = 32; // `.card-foot::before` height (2rem, `scene.css`) — re-cut the pair together
++
+ const cardEl = ref<HTMLElement | null>(null);
+ const wrapEl = ref<HTMLElement | null>(null);
+ 
+-useResizeObserver(actionBarEl, () => {
+-  const bar = actionBarEl.value;
+-  const card = bar?.closest<HTMLElement>(".controls-card");
+-  if (!bar || !card) return;
+-  cardEl.value = card;
+-  const cs = getComputedStyle(card);
+-  const pad = parseFloat(cs.paddingBottom) || 0;
+-  card.style.setProperty("--card-pad-b", `${pad}px`);
+-  card.style.setProperty(
+-    "--action-bar-h",
+-    `${Math.ceil(bar.getBoundingClientRect().height + pad)}px`,
+-  );
+-  // T9-W2 §2.3 — THE THIRD READER OF THE SAME MEASUREMENT, and it is the TOP padding this
+-  // time. A scrollport clips at its PADDING box while a sticky child is offset from its
+-  // CONTENT box, so `top: 0` lands a full padding-band BELOW the case edge — 20px of live
+-  // content scrolling past, undissolved, above a fade that claims to own the edge. Both the
+-  // top sentinel and the pinned tags spend this number to reach the edge itself (`scene.css`,
+-  // `.tray-well`). Measured for the same reason its twin is: the padding is a utility class on
+-  // `GameScene`'s template and it differs by regime (`p-5` on the rail, `py-1.5` on the dock).
+-  card.style.setProperty("--card-pad-t", `${parseFloat(cs.paddingTop) || 0}px`);
+-  publishFold();
++onMounted(() => {
++  cardEl.value = wrapEl.value?.closest<HTMLElement>(".card-body") ?? null;
+ });
+ 
+-// ── T9-W2 §2.3 — THE FOLD'S STATE, PUBLISHED WHERE THE BAR'S HEIGHT ALREADY LANDS ─────────
+-// The two fade skirts (`scene.css`'s top sentinel, the bar's own `::before` below) are HONEST
+-// rather than decorative: each paints only while content is actually hidden on that side. The
+-// state is MEASURED, never spelled, for the same reason `--action-bar-h` is — the card's cap,
+-// its padding and its content all live in other files and every one of them moves.
+-//
+-// `data-under-bar` is the third reading and it is the same law seen from the tape's side: a
+-// well riding down toward the bar used to slide its `anchor="tag"` tape UNDER an opaque band,
+-// where nothing was ever drawn but the tape still lay across the verbs' hit boxes (§2.5's
+-// census reads geometry, and it read exactly that — "pencils" over Clear at 15.7%, "players"
+-// at 15.4%). The tape leaves in the bar's own fade band instead. This is a per-TAPE reading and
+-// deliberately nothing more: four elements, one rect each, on a rAF-coalesced passive scroll —
+-// not the elementsFromPoint collision engine the design ruling refused, which would have to
+-// answer for every tape against every control on every frame.
+-//
+-// The band the tape must clear is the bar's box plus the fade above it, so the bar's own
+-// `::before` height is the one constant here and it is read off the rule that draws it.
+-const FOLD_EPS = 4;
+-const BAR_FADE_PX = 32; // `.action-bar::before` height (2rem) — re-cut the pair together
+-
+ function publishFold() {
+   const card = cardEl.value;
+-  const bar = actionBarEl.value;
+   if (!card) return;
+   card.toggleAttribute("data-fold-above", card.scrollTop > FOLD_EPS);
+   card.toggleAttribute(
+     "data-fold-below",
+     card.scrollHeight - card.clientHeight - card.scrollTop > FOLD_EPS,
+   );
+-  if (!bar) return;
+-  // The bar only paints over content where it is STICKY; in the <1024 landscape card it is a
+-  // row in flow with siblings below it, and a tape there hides nothing.
+-  const stuck = getComputedStyle(bar).position === "sticky";
+-  const edge = bar.getBoundingClientRect().top - BAR_FADE_PX;
++  const edge = card.getBoundingClientRect().bottom - BAR_FADE_PX;
+   for (const tag of card.querySelectorAll<HTMLElement>(".washi-tag"))
+-    tag.toggleAttribute(
+-      "data-under-bar",
+-      stuck && tag.getBoundingClientRect().bottom > edge,
+-    );
++    tag.toggleAttribute("data-under-bar", tag.getBoundingClientRect().bottom > edge);
+ }
+ 
+ let foldFrame = 0;
+@@ -694,9 +656,17 @@ useEventListener(
+   { passive: true },
+ );
+ // The fold moves without a scroll too (a rotation, the crib opening, a joiner arriving): the
+-// CARD's box answers the first, the CONTENT's box answers the other two, and neither observer
+-// alone sees both.
+-useResizeObserver([cardEl, wrapEl], publishFold);
++// BODY's box answers the first, the CONTENT's box answers the other two, and neither observer
++// alone sees both. The top padding is re-read here because only a regime change moves it.
++useResizeObserver([cardEl, wrapEl], () => {
++  const card = cardEl.value;
++  if (card)
++    card.style.setProperty(
++      "--card-pad-t",
++      `${parseFloat(getComputedStyle(card).paddingTop) || 0}px`,
++    );
++  publishFold();
++});
+ 
+ onBeforeUnmount(() => {
+   if (foldFrame) cancelAnimationFrame(foldFrame);
+@@ -1230,131 +1200,146 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+          (UI-5: the washi is a hover grammar, so sighted touch users got no text; an iPad in the
+          row regime reaches this layout with no hover either). Deal re-homed OUT of this row
+          into the staged zone above (spatial prophylaxis).
+-         T6 mark 5: the row is a BAR now — it sticks to the bottom of the card's scrollport, so
+-         clear / fill / solve / share are reachable from anywhere in a 1039px-tall card, and the
+-         `i` at its trailing edge is the only thing between the reader and the shortcuts. -->
+-    <!-- T7-W2 A1 — the bar publishes its own height to the scrollport it sticks to (see the
+-         `--action-bar-h` publisher above); `scene.css` spends it as `scroll-padding-bottom`. -->
+-    <!-- T9-W2 §2.5 — `relative` LEAVES THE FOUR VERBS, and that one word is the note berth.
+-         A tape resolves against its nearest positioned ancestor: on the button, four notes rose
+-         from four different boxes into whatever the scrollport had put above them (the Play
+-         entry, at 16.9 / 57.4 / 23.6 / 17.4%). With the buttons static the bar itself — already
+-         `position: relative` — is the containing block, so every note lands in ONE berth under
+-         the bar's own rule, in the card's reserved foot (`scene.css`'s `padding-bottom`).
+-         `group` STAYS: it is the hover seam each note is revealed by. -->
+-    <div ref="actionBarEl" class="action-bar">
+-      <div class="action-verbs">
+-        <button
+-          @click="onClear()"
+-          :disabled="loading"
+-          class="icon-btn"
+-          :class="{ group: !mobile }"
+-          :aria-label="
+-            clearArmed ? 'Press again to clear the board' : 'Clear the board'
+-          "
+-        >
+-          <span :class="{ 'eraser-scrub': clearAnimating }">
+-            <EraserIcon :size="28" />
+-          </span>
+-          <span
+-            class="icon-sublabel"
+-            :class="{ 'is-armed': clearArmed }"
+-            aria-hidden="true"
+-            >{{ clearArmed ? "sure?" : "Clear" }}</span
+-          >
+-          <SheetWashiLabel
+-            v-if="!mobile"
+-            text="wipe every digit you've written"
+-            :seed="23"
+-            wide
+-          />
+-        </button>
+-        <button
+-          @click="onFillForced()"
+-          :disabled="loading"
+-          class="icon-btn"
+-          :class="{ group: !mobile }"
+-          aria-label="Fill in every cell that has only one possible number"
++         T9-W7 M18 — THE STRIP IS THE CARD'S FOOT where the card scrolls (`footRegime`), so
++         clear / fill / solve / share are on screen from anywhere in the card, and it wears the
++         wells' drawn frame (the lip). `defer`: `#card-foot` is minted after this slot.
++         T9-W2 §2.5 — the four verbs are STATIC, so each hover note resolves against the lip's
++         own box (`HandDrawnOutline` is `position: relative`) and every note lands in ONE berth
++         under the strip, in the foot's reserved bottom band (`scene.css`). `group` stays: it
++         is the hover seam each note is revealed by. -->
++    <Teleport defer to="#card-foot" :disabled="!footRegime">
++      <div class="action-bar">
++        <HandDrawnOutline
++          class="tool-lip"
++          :stroke-width="LIP.stroke"
++          :outset="LIP.outset"
++          :radius="LIP.radius"
++          :pose="0"
+         >
+-          <FillForcedIcon :size="26" :playing="fillAnimating" />
+-          <span class="icon-sublabel" aria-hidden="true">Fill</span>
+-          <SheetWashiLabel
+-            v-if="!mobile"
+-            text="fill the cells that have only one digit left"
+-            :seed="43"
+-            wide
+-          />
+-        </button>
+-        <button
+-          @click="onSolve()"
+-          :disabled="loading"
+-          class="icon-btn"
+-          :class="{ group: !mobile }"
+-          aria-label="Solve puzzle"
+-        >
+-          <ScribbleLoader
+-            v-if="solvePending && !solveAnimating"
+-            :size="22"
+-            class="text-muted-foreground"
+-          />
+-          <SolveIcon v-else :size="28" class="sparkle-icon" :playing="solveAnimating" />
+-          <span class="icon-sublabel" aria-hidden="true">Solve</span>
+-          <SheetWashiLabel
+-            v-if="!mobile"
+-            text="finishes the board for you"
+-            :seed="37"
+-            wide
+-          />
+-        </button>
+-        <button
+-          @click="shareAct.press()"
+-          :disabled="loading"
+-          class="icon-btn"
+-          :class="{ group: !mobile }"
+-          :aria-label="shareAct.aria.value"
+-        >
+-          <ShareIcon :size="26" :class="{ 'share-pop': shareAct.animating.value }" />
+-          <span class="icon-sublabel" aria-hidden="true">{{
+-            shareAct.sublabel.value
+-          }}</span>
+-          <SheetWashiLabel
+-            v-if="!mobile"
+-            :text="shareAct.washi.value"
+-            :seed="71"
+-            wide
+-          />
+-        </button>
+-      </div>
+-      <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
++          <div class="strip-row">
++            <div class="action-verbs">
++              <button
++                @click="onClear()"
++                :disabled="loading"
++                class="icon-btn"
++                :class="{ group: !mobile }"
++                :aria-label="
++                  clearArmed ? 'Press again to clear the board' : 'Clear the board'
++                "
++              >
++                <span :class="{ 'eraser-scrub': clearAnimating }">
++                  <EraserIcon :size="28" />
++                </span>
++                <span
++                  class="icon-sublabel"
++                  :class="{ 'is-armed': clearArmed }"
++                  aria-hidden="true"
++                  >{{ clearArmed ? "sure?" : "Clear" }}</span
++                >
++                <SheetWashiLabel
++                  v-if="!mobile"
++                  text="wipe every digit you've written"
++                  :seed="23"
++                  wide
++                />
++              </button>
++              <button
++                @click="onFillForced()"
++                :disabled="loading"
++                class="icon-btn"
++                :class="{ group: !mobile }"
++                aria-label="Fill in every cell that has only one possible number"
++              >
++                <FillForcedIcon :size="26" :playing="fillAnimating" />
++                <span class="icon-sublabel" aria-hidden="true">Fill</span>
++                <SheetWashiLabel
++                  v-if="!mobile"
++                  text="fill the cells that have only one digit left"
++                  :seed="43"
++                  wide
++                />
++              </button>
++              <button
++                @click="onSolve()"
++                :disabled="loading"
++                class="icon-btn"
++                :class="{ group: !mobile }"
++                aria-label="Solve puzzle"
++              >
++                <ScribbleLoader
++                  v-if="solvePending && !solveAnimating"
++                  :size="22"
++                  class="text-muted-foreground"
++                />
++                <SolveIcon
++                  v-else
++                  :size="28"
++                  class="sparkle-icon"
++                  :playing="solveAnimating"
++                />
++                <span class="icon-sublabel" aria-hidden="true">Solve</span>
++                <SheetWashiLabel
++                  v-if="!mobile"
++                  text="finishes the board for you"
++                  :seed="37"
++                  wide
++                />
++              </button>
++              <button
++                @click="shareAct.press()"
++                :disabled="loading"
++                class="icon-btn"
++                :class="{ group: !mobile }"
++                :aria-label="shareAct.aria.value"
++              >
++                <ShareIcon
++                  :size="26"
++                  :class="{ 'share-pop': shareAct.animating.value }"
++                />
++                <span class="icon-sublabel" aria-hidden="true">{{
++                  shareAct.sublabel.value
++                }}</span>
++                <SheetWashiLabel
++                  v-if="!mobile"
++                  :text="shareAct.washi.value"
++                  :seed="71"
++                  wide
++                />
++              </button>
++            </div>
++            <!-- The keys live behind ONE glyph, and its name is never "keyboard shortcuts": the
+            `<dl>` above already carries that name, and a11y 3.4 requires exactly one node to
+            answer to it. Fine-pointer only (CSS) — the legend it opens is itself fine-only, so
+            a coarse iPad rail would otherwise get a toggle for a crib it can never see. -->
+-      <button
+-        v-if="!mobile"
+-        type="button"
+-        class="info-btn"
+-        aria-label="what the keys do"
+-        :aria-expanded="keysOpen"
+-        aria-controls="keys-fold"
+-        @click="toggleKeys"
+-      >
+-        <span class="info-glyph" aria-hidden="true">i</span>
+-      </button>
+-      <!-- THE INVITE VERB'S NOTE, BERTHED (T9-W2 §2.5). It belongs to a button in the players
++            <button
++              v-if="!mobile"
++              type="button"
++              class="info-btn"
++              aria-label="what the keys do"
++              :aria-expanded="keysOpen"
++              aria-controls="keys-fold"
++              @click="toggleKeys"
++            >
++              <span class="info-glyph" aria-hidden="true">i</span>
++            </button>
++            <!-- THE INVITE VERB'S NOTE, BERTHED (T9-W2 §2.5). It belongs to a button in the players
+            well, and it is laid HERE because this is the one box in the card whose foot is
+            reserved paper. Its reveal is `:has()` rather than the `.group` seam every sibling
+            uses — the seam is a DESCENDANT relation and the note is no longer a descendant of
+            the verb it names — and the pair of conditions below is the same hover/focus pair
+            `SheetWashiLabel` ships. Its `v-if` restates the button's own because a note for a
+            verb that is not on screen is furniture (T5-W3's finding, in the small). -->
+-      <SheetWashiLabel
+-        v-if="!mobile && (!session.roomId.value || aloneInRoom)"
+-        class="berth-note"
+-        :text="inviteAct.washi.value"
+-        :seed="73"
+-        wide
+-      />
+-    </div>
++            <SheetWashiLabel
++              v-if="!mobile && (!session.roomId.value || aloneInRoom)"
++              class="berth-note"
++              :text="inviteAct.washi.value"
++              :seed="73"
++              wide
++            />
++          </div>
++        </HandDrawnOutline>
++      </div>
++    </Teleport>
+ 
+     <!-- Play tools (T4-WM §2) — the coarse touch surface for undo / redo / hint, the acts a fine
+          pointer reaches by ⌘Z / ⇧⌘Z / H. Coarse-only (CSS gate), so a fine desktop shows the
+@@ -1525,7 +1510,7 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ /* The tape rides ABOVE the drawn stroke it straddles (the outline svg is z-index 1) — and now
+    also above the card's top fade sentinel (z 30, `scene.css`), because a PINNED tape is read
+    inside that band: it is chrome laid on chrome, not content dissolving under it. The ladder is
+-   frames/content ≤1 < sentinel 30 < pinned tag 35 < hover tape 50 < action bar 60; re-cut any
++   frames/content ≤1 < sentinel 30 < pinned tag 35 < bottom fade 40 < hover tape 50; re-cut any
+    rung and re-cut them together (noted at all three ends). */
+ .tray-well :deep(.washi-tag) {
+   z-index: 35;
+@@ -2095,49 +2080,34 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   }
+ }
+ 
+-/* ── T6 mark 5 · the sticky action bar ─────────────────────────────────────────
+-   The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs
+-   sat at the bottom of the 1039 — so reading the difficulty chips and clearing the board were
+-   never on screen together. The bar stays. `1fr auto` puts the verbs on the card's spine and
+-   the `i` on its trailing edge; the ::before is a short fade so scrolled content dissolves
+-   into the bar instead of being guillotined by it. */
++/* ── T6 mark 5 · the tool strip; T9-W7 M18 · the card's foot, drawn ─────────────────────────
++   The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs sat
++   at the bottom of the 1039 — so the strip stays on screen: it is `#card-foot` (`scene.css`),
++   below the scrollport, wherever the card scrolls. `1fr auto` puts the verbs on the card's spine
++   and the `i` on its trailing edge.
++   THE LIP is the owner's M18 ("this needs to have a border in some way"): the wells' own drawn
++   frame, `HandDrawnOutline` 1.5 / outset 4 / radius 3 / pose 0, so the strip reads as the case's
++   fifth compartment with its side strokes on the wells' x. No slab, no CSS border: the foot is
++   card paper already, and the bottom fade that dissolves the body into it hangs from the foot.
++   THE GAP ABOVE IT is a well's own 0.5rem, added to the body's last well's 0.5rem: 16px box to
++   box, the rail's gap between two wells (a flex column, so theirs add too). The foot is a grid
++   item, so nothing collapses it. The dock's wells sit only 8px apart (a block parent collapses
++   theirs), and 8px was measured and REFUTED for the strip: the lip's top side wanders up to
++   ~7.7px off its box at 374px wide, and at 8px its ink crossed the last well's (painted
++   daylight min -0.5 to 1px, both engines) where at 16px it keeps 7.5-9px. So 16 everywhere. */
+ .action-bar {
+   position: relative;
+-  display: grid;
+-  grid-template-columns: 1fr auto;
+-  align-items: center;
+-  background: var(--color-card);
+-  padding-block: 0.4rem 0.15rem;
+ }
+ 
+-/* ── T9-W2 §2.3 · THE FADE IS DEEPER, AND IT IS HONEST ────────────────────────────────────
+-   0.9rem of dissolve under a 65px bar is a hint, not a cue — V7 measured a reader meeting the
+-   Play entry 316.8px below an edge whose only tell was a half-cut control. 2rem is the mirror
+-   of the top sentinel's band (`scene.css`), so both clip edges dissolve over the same distance.
+-   HONEST is the other half and it is the reason the state exists at all: an always-on gradient
+-   LIES at the boundary — scrolled to the end, the last row reads half-erased under a fade with
+-   nothing left to hide. `data-fold-below` is published from the card's own scroll box by
+-   `publishFold` above, so the band paints only while there is something below it to dissolve.
+-   The window is the washi's own 150ms; under PRM it snaps, and a cue that is either on or off
+-   loses nothing by arriving instantly. */
+-.action-bar::before {
+-  content: "";
+-  position: absolute;
+-  inset: auto 0 100% 0;
+-  height: 2rem;
+-  background: linear-gradient(to top, var(--color-card), transparent);
+-  opacity: 0;
+-  pointer-events: none;
++.card-foot .action-bar {
++  margin-top: 0.5rem;
+ }
+ 
+-.controls-card[data-fold-below] .action-bar::before {
+-  opacity: 1;
+-}
+-
+-@media (prefers-reduced-motion: no-preference) {
+-  .action-bar::before {
+-    transition: opacity 150ms;
+-  }
++.strip-row {
++  display: grid;
++  grid-template-columns: 1fr auto;
++  align-items: center;
++  padding-block: 0.4rem 0.15rem;
+ }
+ 
+ /* ── T9-W2 §2.5 · THE ONE NOTE BERTH ──────────────────────────────────────────────────────
+@@ -2147,7 +2117,8 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    bar's rule, not above it — the band above the bar is live content at every scroll offset, and
+    the band below it is the card's `padding-bottom`, which content can never enter. The tape
+    therefore covers air by construction: not at the poses a census happens to read, but at all
+-   of them. `scene.css` reserves the 3.5rem this note is tall; re-cut the pair together. */
++   of them. `scene.css` reserves the 3.5rem this note is tall on the foot; re-cut the pair
++   together. */
+ .action-bar .washi-label {
+   top: 100%;
+   bottom: auto;
+@@ -2157,9 +2128,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ /* The berthed note's seam. `.group:hover` is a DESCENDANT relation and this note is not a
+    descendant of its verb, so the relation is read the other way round — same hover, same
+-   `:focus-visible`, same 150ms, no second reveal grammar. */
+-.control-panel-wrap:has(.invite-btn:hover) .berth-note,
+-.control-panel-wrap:has(.invite-btn:focus-visible) .berth-note {
++   `:focus-visible`, same 150ms, no second reveal grammar. Keyed on the CARD: the note is in
++   the foot and the verb in the body, and the card is the one box holding both. */
++.controls-card:has(.invite-btn:hover) .berth-note,
++.controls-card:has(.invite-btn:focus-visible) .berth-note {
+   opacity: 1;
+ }
+ 
+@@ -2170,67 +2142,14 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   flex: 1;
+ }
+ 
+-/* Sticky ONLY where the card is a scrollport. In `scene.css` it's `.controls-card` that takes
+-   `overflow-y: auto`, and it does so twice: under `@media (min-width: 1024px)` (the rail) and
+-   under `@media (max-width: 1023.98px) and (orientation: portrait)` (the dock). The <1024
+-   LANDSCAPE card is IN FLOW — the stacked `@media (max-width: 1023px)` block gives
+-   `.scene-controls` a `--board-col` width and nothing else — so `bottom: 0` there would pin the
+-   bar to the viewport and move a ratified rung. This condition is that pair of regime keys
+-   restated in a second file — re-cut one and re-cut both. */
+-@media (min-width: 1024px), (max-width: 1023.98px) and (orientation: portrait) {
++/* THE LANDSCAPE DOCK keeps the strip in the body's flow, between the last well and the play
++   tools, and gives it 1rem each side. The block parent collapses the last well's 0.5rem into the
++   top one, so the box gap is the rail's 16px; below, the play row's 0.35rem collapses into it.
++   An 828px hand-drawn side wanders ~10.5px off its box (the jagged path's segments scale with
++   the side), so 8px let the lip's ink cross the last well's (measured) and sit on the play row. */
++@media (max-width: 1023.98px) and (orientation: landscape) {
+   .action-bar {
+-    position: sticky;
+-    bottom: 0;
+-    /* ── T7-W7 · THE BAR OCCLUDES THE TAPE ───────────────────────────────────────────────
+-       Was 3 — above the well's drawn outline (z 1) and its `.washi-tag` (z 2), and BELOW every
+-       hover/hint tape in the card: `SheetWashiLabel` ships `z-index: 50`, and the card is one
+-       stacking context (`.controls-card`, z 45 in `scene.css`), so a tape hanging off a control
+-       under the bar painted straight THROUGH it — "invite someone to write on this board with
+-       you" over the clear/fill/solve/share sublabels, 20.26px of overlap at 1440×900, 10.43px
+-       at 1280×720. A bar that content scrolls under is opaque by definition; it is the last
+-       thing painted in this card. 60 keeps all three older relations intact and clears 50 by a
+-       rung. Its OWN tapes are children of this stacking context and still ride above it.
+-       Re-cut `SheetWashiLabel`'s 50 and re-cut this — the pair is noted at both ends. */
+-    z-index: 60;
+-  }
+-
+-  /* ── T7-W7 · THE FLUSH — THE BAR'S SKIRT ────────────────────────────────────────────────
+-     `bottom: 0` was never the bottom the eye reads, and the 20px it left over is not a tuning
+-     anybody chose. A sticky box is constrained to its CONTAINING BLOCK — the card's CONTENT box
+-     — while the scrollport it sticks to is the card's PADDING box; the card carries `p-5`, so
+-     the bar halted exactly one `padding-bottom` above the edge and the card scrolled LIVE
+-     CONTENT through the leftover band. Measured on the dev server before the cure: 20.00px at
+-     1440×900 and 20.00px at 1280×720 — the padding to the hundredth, at both — reading as a
+-     severed line under the verbs ("how your marks are writt", "Corner", "Live") and, at
+-     1280×720, 34% of the Deal button with its sublabel swallowed.
+-
+-     THE BAND IS THE BAR'S, SO THE BAR PAINTS IT. Three geometric cures were tried against the
+-     real surface first, and all three are worse:
+-       · `margin-bottom: -20px` + an equal `padding-bottom` — MEASURED INERT. Chrome constrains
+-         the sticky BORDER box, not the margin box, so the bar grew UPWARD (top 598.64 → 578.64)
+-         and its bottom never left 663.45. The sliver survived the change untouched.
+-       · `bottom: -20px` — a negative inset extends the sticky rectangle below the scrollport,
+-         but the containing block still binds first: a no-op that reads like a fix.
+-       · zeroing the card's `padding-bottom` and re-housing that air — the only true geometry,
+-         and it costs a spelled constant here, against a Tailwind class in a second file
+-         (`GameScene.vue`'s `p-5` / `px-2 py-1.5`), which is exactly the drift W2 refused.
+-     The skirt is one absolutely-positioned strip, `--card-pad-b` tall — published by the bar's
+-     own observer off the card's computed padding, measured, never spelled — hanging from the
+-     bar's bottom edge in the card's own colour. It rides the bar's stacking context, so it
+-     occludes what the bar occludes; it stops exactly at the padding edge, so the card's overflow
+-     clip and its `rounded-xl` corner take it; and it is deliberately NOT `pointer-events: none`
+-     — everything the old sliver showed was also clickable through it, and a control you cannot
+-     see must not be a control you can press.
+-     Layout-neutral by construction: no box moves, `scrollHeight`/`maxScroll` hold (1113/585 at
+-     1440×900 across the cure), and W2's `--action-bar-h` keeps both its terms and its value.
+-     INSIDE the sticky block on purpose — the <1024 landscape card is in flow and its bar has
+-     siblings below it, where a skirt would paint over the play tools instead of over nothing. */
+-  .action-bar::after {
+-    content: "";
+-    position: absolute;
+-    inset: 100% 0 auto 0;
+-    height: var(--card-pad-b, 0px);
+-    background: var(--color-card);
++    margin-block: 1rem;
+   }
+ }
+ 
+@@ -2283,11 +2202,18 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    returns the EMPTY STRING, so a11y 3.4's `help.innerText()` read nothing and the row went red
+    in webkit while chromium passed it (both engines probed, six collapse variants). `clip-path`
+    clips the same pixels and neither engine's text walker sees it. Same box, same paint, one
+-   engine-honest reading. */
++   engine-honest reading.
++   `contain: layout` because a clip is paint, not layout: the shut crib's `<dl>` still OVERFLOWS
++   the 0-tall fold, and that overflow counted as the scrollport's scrollable overflow — 94px of
++   blank scroll at the card's end once the tool strip left the body for the foot (measured,
++   1280×800; the sticky bar used to sit over it). Layout containment turns that overflow into
++   ink overflow, which scrolls nothing; it does not size-contain, so the crib's max-content still
++   sizes the rail, and it clips nothing a text walker reads. */
+ .legend-fold {
+   display: grid;
+   grid-template-rows: 0fr;
+   clip-path: inset(0);
++  contain: layout;
+   transition: grid-template-rows 200ms var(--ease-drawOn);
+ }
+ 
+@@ -2331,8 +2257,6 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   justify-content: center;
+   width: 1.75rem;
+   height: 1.75rem;
+-  border: 1.5px solid var(--ink-press-rule);
+-  border-radius: 50%;
+   font-family: var(--font-hand);
+   font-size: var(--type-small);
+   line-height: 1;
+@@ -2341,20 +2265,19 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ 
+ .info-btn[aria-expanded="true"] .info-glyph {
+   color: var(--color-foreground);
+-  border-color: currentColor;
+ }
+ 
+ /* T8-W1 (agent C's M5 census, R2) — THE `i` ANSWERS THE POINTER. Every other interactive text
+    surface in this card lifts its ink under a hover (`.icon-btn`, `.players-leave`, the chips'
+    ghost underline); this one had a pressed state and nothing before it, so the only control in
+-   the action bar that opens something gave no sign it was a control. The lift is the SAME two
+-   properties the pressed rule above already writes — no new vocabulary, and hovering an open
++   the action bar that opens something gave no sign it was a control. The lift is the SAME
++   property the pressed rule above already writes (its CSS ring died at M18: no CSS border in
++   the strip; the ring's drawn form is G-INFO's ballot) — no new vocabulary, and hovering an open
+    `i` is therefore a no-op rather than a third appearance. Fenced to hover-capable pointers
+    like every ink lift in the estate; the button itself is fine-pointer-only anyway. */
+ @media (hover: hover) {
+   .info-btn:hover .info-glyph {
+     color: var(--color-foreground);
+-    border-color: currentColor;
+   }
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameScene.vue b/web/frontend/src/games/shared/GameScene.vue
+index 75d02d5d..7043ba98 100644
+--- a/web/frontend/src/games/shared/GameScene.vue
++++ b/web/frontend/src/games/shared/GameScene.vue
+@@ -184,18 +184,22 @@ onUnmounted(() => unregisterDrawer?.());
+         class="drawer-case"
+         :inert="!rowRegime && drawerInert"
+       >
+-        <!-- T9-W2 §2.3/§2.5 — THE CARD'S PADDING IS READ IN TWO OTHER PLACES NOW, and both
+-             are noted at their own end too. `scene.css` takes the rail's 6px scrollbar gutter
+-             back out of `p-5`'s right side (so the card's outer box, and the board it is
+-             centred against, do not move) and overrides the BOTTOM to reserve the note berth
+-             under the action bar; `GameControlPanel` publishes the resulting `padding-bottom`
+-             as `--card-pad-b` / `--action-bar-h`. Re-cut this binding and re-cut those. -->
++        <!-- T9-W7 M18 — THE CARD IS TWO ROWS: `.card-body`, the scrollport (the controls slot),
++             and `#card-foot`, the strip's berth outside it (`GameControlPanel` teleports the
++             tool strip there wherever the card scrolls past its frame: the rail and the portrait
++             dock). The card's padding is SPLIT between them — top + inline on the body, inline
++             on the foot, the foot's bottom in `scene.css` (the rail's note berth, the dock's
++             safe-area inset). `scene.css` also takes the rail's 6px gutter back out of the
++             body's right side. Re-cut these classes and re-cut those rules. -->
+         <div
+           ref="panelEl"
+           class="controls-card bg-card"
+-          :class="rowRegime ? 'rounded-xl p-5' : 'rounded-lg px-2 py-1.5'"
++          :class="rowRegime ? 'rounded-xl' : 'rounded-lg'"
+         >
+-          <slot name="controls" :mobile="!rowRegime" />
++          <div class="card-body" :class="rowRegime ? 'px-5 pt-5' : 'px-2 pt-1.5'">
++            <slot name="controls" :mobile="!rowRegime" />
++          </div>
++          <div id="card-foot" class="card-foot" :class="rowRegime ? 'px-5' : 'px-2'" />
+         </div>
+       </HandDrawnOutline>
+     </div>
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 03586eb0..862d7b00 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -7,7 +7,9 @@
+  * or the layout silently breaks (there is no build-time link between this file and the templates):
+  *   .app-layout        the outer board+controls flex row (column when stacked)
+  *   .board-peek-host   the positioning context wrapping the board + answer-key laminate
+- *   .controls-card     THE controls card — one of them now, at every width
++ *   .controls-card     THE controls card — one of them now, at every width; two rows:
++ *   .card-body         its scrollport (the controls slot)
++ *   .card-foot         `#card-foot`, the tool strip's berth below the scrollport (T9-W7 M18)
+  *   .drawer-case       the HandDrawnOutline frame around it (the portrait sheet's inert half)
+  *   .drawer-handle     the tongue's berth while the sheet is UP (the case's top-right)
+  *   .fold-tools        the portrait fold's RIBBON (`#fold-tools`, a Teleport berth for the
+@@ -129,30 +131,21 @@
+ @media (min-width: 1024px) {
+   .controls-card {
+     max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
+-    overflow-y: auto;
+-    overscroll-behavior: contain;
+-
+-    /* ── T9-W2 §2.5 · THE NOTE BERTH ────────────────────────────────────────────────────────
+-       THE CARD'S FOOT IS RESERVED PAPER, AND THAT IS WHY THE NOTES LIVE THERE. A hover note is
+-       a floating layer, and no floating layer inside a SCROLLPORT is ever safe: whatever band
+-       it hangs in, some scroll offset puts a control there (measured at head, 1440×900 — the
+-       four verbs' notes covered the Play entry at 16.9 / 57.4 / 23.6 / 17.4%, and the invite
+-       note covered the Live option at 68.4%). One band in this card can never hold content:
+-       the strip between the scrollport's CONTENT edge — where `.action-bar`'s `bottom: 0`
+-       parks it — and its PADDING edge, which is the card's own `padding-bottom`. Content
+-       cannot enter a padding band at any scroll offset, so a note laid there covers air by
+-       construction rather than by pricing.
+-       THE NUMBER IS THE TALLEST NOTE: `--type-small` in the hand at `line-height: 1.3`,
+-       wrapping to two lines inside `.washi-wide`'s 15rem cap, measures 51.6px ("fill the cells
+-       that have only one digit left") — 3.5rem is that plus the note's 0.1rem drop off the
+-       bar's rule and 2.8px of slack. Re-cut `.washi-wide`'s cap or the tape's type and re-cut
+-       this; the pair is noted at both ends (`GameControlPanel`'s `.action-bar .washi-label`).
+-       The bar's skirt already paints this band (`--card-pad-b`, published from this very
+-       declaration), so the note lands on paper and not on a hole; `--action-bar-h` is the same
+-       measurement plus the bar, so `scroll-padding-bottom` grows with the berth and focus-scroll
+-       still parks nothing under it. RAIL ONLY: below 1024 the card renders `:mobile`, which
+-       mounts no hover tape at all (`v-if="!mobile"` on every one), so a phone would be paying
+-       3.5rem of its short card for a berth it can never fill. */
++  }
++
++  /* ── T9-W2 §2.5 · THE NOTE BERTH, NOW THE FOOT'S OWN BOTTOM (T9-W7 M18) ─────────────────────
++     A hover note is a floating layer, and no floating layer inside a SCROLLPORT is ever safe:
++     some scroll offset always puts a control under it (measured at 1440×900 before the berth:
++     the four verbs' notes over the Play entry at 16.9 / 57.4 / 23.6 / 17.4%). The notes hang
++     under the tool strip, and the strip now lives in `#card-foot`, OUTSIDE the scrollport, so
++     the band below it holds air by construction at every scroll offset.
++     THE NUMBER IS THE TALLEST NOTE: `--type-small` in the hand at `line-height: 1.3`, wrapping
++     to two lines inside `.washi-wide`'s 15rem cap, measures 51.6px ("fill the cells that have
++     only one digit left"); 3.5rem is that plus the note's 0.1rem drop and 2.8px of slack. Re-cut
++     `.washi-wide`'s cap or the tape's type and re-cut this (noted at both ends:
++     `GameControlPanel`'s `.action-bar .washi-label`). RAIL ONLY: below 1024 the card renders
++     `:mobile`, which mounts no hover note at all. */
++  .card-foot {
+     padding-bottom: 3.5rem;
+   }
+ }
+@@ -247,21 +240,60 @@
+   }
+ }
+ 
++/* ── T9-W7 M18 · THE CARD IS A SCROLLPORT OVER A FOOT ─────────────────────────────────────
++   Two rows: `.card-body` scrolls, `.card-foot` does not (`GameScene`'s template). The body takes
++   the free height and gives it back when the card is capped (`minmax(0, 1fr)` plus the body's
++   `min-height: 0`); the foot sizes to the tool strip `GameControlPanel` teleports into it on the
++   rail and the portrait dock, and to its own padding alone in the landscape dock, where the
++   strip stays in the body's flow above the play tools. Every regime caps the card, so the body
++   is the scrollport in all three and the rules below are unscoped.
++   `--card-gutter` is 0 here and 6px on the rail (below); the bottom fade reads it. */
+ .controls-card {
+   position: relative;
+   z-index: 45;
+-  /* T7-W2 A1 — FOCUS-SCROLL CLEARS THE BAR THAT STICKS TO THIS EDGE. `.action-bar` is
+-     `position: sticky; bottom: 0` in both regimes where this card is a scrollport, and it
+-     painted the marks-mode "Normal" out end to end (25/25 sample points) with `scrollTop` at 0
+-     — the button's box was already inside the client box, so nothing scrolled and the bar just
+-     sat on top of it. Shrinking the optimal viewing region by the bar's band is what lifts a
+-     focused control clear.
+-     THE VALUE IS MEASURED, NOT SPELLED: `GameControlPanel` publishes `--action-bar-h` on this
+-     element from the bar's own border box plus this card's `padding-bottom` (86px at head =
+-     ceil(65.16) + 20), republished whenever that box changes. Declared unscoped because it is inert
+-     wherever the card doesn't scroll — the `<1024` landscape card is in flow, and a scrollport
+-     that cannot scroll spends no padding. */
+-  scroll-padding-bottom: var(--action-bar-h, 0px);
++  display: grid;
++  grid-template-rows: minmax(0, 1fr) auto;
++  --card-gutter: 0px;
++}
++
++.card-body {
++  min-height: 0;
++  overflow-y: auto;
++  overscroll-behavior: contain;
++  /* T7-W2 A1 — FOCUS-SCROLL CLEARS THE BOTTOM FADE. The tool strip no longer paints over the
++     scrollport (it is the foot, below the body's clip edge), so what a focused control must
++     clear is the 2rem fade hung above the foot: this is that band's own height, static. The
++     measured bar-plus-pad it replaces (86px at head) priced a sticky bar that is gone. */
++  scroll-padding-bottom: 2rem;
++}
++
++.card-foot {
++  position: relative;
++}
++
++/* ── THE BOTTOM FADE, HUNG FROM THE FOOT (T9-W2 §2.3's second edge, re-housed at M18) ───────
++   The mirror of the top sentinel: card colour into transparent over the last 2rem of the
++   body, painted only while `data-fold-below` says content is hidden below (published from the
++   body's scroll box by `GameControlPanel`). It hangs from the FOOT rather than riding the
++   body as a sticky pseudo because the foot spans the card's whole width, so the band covers
++   the body's PADDING box by construction — the wells' drawn strokes sit 4px outside the
++   body's content edge, and a content-box fade let them run on beside it (the M18 leak: 88–151
++   ink px per 7px column at head). It stops short of the rail's scrollbar track. z 40: over a
++   well's pinned tape (35), under a hover note (50). The window is the washi's own 150ms; under
++   PRM it snaps. */
++.card-foot::before {
++  content: "";
++  position: absolute;
++  inset: auto var(--card-gutter) 100% 0;
++  z-index: 40;
++  height: 2rem;
++  background: linear-gradient(to top, var(--color-card), transparent);
++  opacity: 0;
++  pointer-events: none;
++}
++
++.card-body[data-fold-below] + .card-foot::before {
++  opacity: 1;
+ }
+ 
+ /* ── T9-W2 §2.3 · THE FOLD IS CHROME'S PROPERTY, NEVER CONTENT'S ────────────────────────────
+@@ -270,21 +302,22 @@
+    card goes on was a half-cut control straddling the case edge, with the Play entry 316.8px of
+    unhinted scroll below it. Both clip edges become chrome here, and the law is one sentence:
+    NOTHING STRADDLES THE CASE EDGE — a stroke crossing it dissolves into card colour, or it is
+-   the opaque bar, or it is a tape that has left.
++   a tape that has left.
+ 
+    THE TOP is this sentinel: a sticky pseudo-element, zero DOM and zero flow cost (its height is
+    given straight back as a negative margin), painting card colour into transparent over the
+    first 2rem of the scrollport. It is HONEST — `data-fold-above` is published from the card's
+    own scroll box by `GameControlPanel`'s measure pass, so at rest the band is not painted at
+-   all and the first row reads whole. The bottom edge is the same idea one file over: the bar's
+-   `::before` fade, deepened and gated on `data-fold-below`.
++   all and the first row reads whole. The bottom edge is the same idea: `.card-foot::before`,
++   above, gated on `data-fold-below`.
+ 
+-   `scroll-padding-top` is the twin of T7-W2 A1's `scroll-padding-bottom`: focus-scroll may no
+-   more park a control under the top fade than under the bar.
++   `scroll-padding-top` is the twin of `scroll-padding-bottom`: focus-scroll may no more park a
++   control under the top fade than under the bottom one.
+ 
+    THE Z-LADDER, re-cut together and noted at both ends: the wells' drawn frames and their
+-   content ≤ 1 < this sentinel 30 < a pinned tag 35 (`GameControlPanel`) < a hover tape 50
+-   (`SheetWashiLabel`) < the action bar 60 (`GameControlPanel`).
++   content ≤ 1 < this sentinel 30 < a pinned tag 35 (`GameControlPanel`) < the bottom fade 40
++   (above) < a hover tape 50 (`SheetWashiLabel`). The tool strip has no rung: it is the foot,
++   outside the scrollport, and nothing scrolls under it.
+ 
+    UNSCOPED SINCE T9-W2 §2.2, and the query it lost is the record of why: it was written as the
+    media pair "≥1024, or the portrait dock", because those were the only two regimes where this
+@@ -292,9 +325,8 @@
+    That rung is now the landscape DOCK (below), a third scrollport, so the pair had become a
+    list of two of three. The rules are inert wherever the card cannot scroll — a scrollport with
+    no overflow spends no scroll-padding, and the sentinel is `opacity: 0` until `publishFold`
+-   says otherwise and gives its own height back as a negative margin — which is exactly the
+-   argument `scroll-padding-bottom` above already makes for being declared unscoped. */
+-.controls-card {
++   says otherwise and gives its own height back as a negative margin. */
++.card-body {
+   scroll-padding-top: 2.4rem;
+ }
+ 
+@@ -305,7 +337,7 @@
+    takes it to the edge, the height gives the same distance back, and the first colour stop
+    holds SOLID across the padding band so the tape pinned there (the tags, below) is read on
+    paper rather than over half-dissolved content. Flow cost stays zero. */
+-.controls-card::before {
++.card-body::before {
+   content: "";
+   position: sticky;
+   top: calc(-1 * var(--card-pad-t, 0px));
+@@ -322,7 +354,7 @@
+   pointer-events: none;
+ }
+ 
+-.controls-card[data-fold-above]::before {
++.card-body[data-fold-above]::before {
+   opacity: 1;
+ }
+ 
+@@ -351,20 +383,23 @@
+ @media (min-width: 1024px) {
+   .controls-card {
+     --card-gutter: 6px;
++  }
++
++  .card-body {
+     scrollbar-gutter: stable;
+     padding-right: calc(1.25rem - var(--card-gutter));
+   }
+ 
+-  .controls-card::-webkit-scrollbar {
++  .card-body::-webkit-scrollbar {
+     width: var(--card-gutter);
+   }
+ 
+-  .controls-card::-webkit-scrollbar-thumb {
++  .card-body::-webkit-scrollbar-thumb {
+     background: var(--ink-press-quiet);
+     border-radius: 3px;
+   }
+ 
+-  .controls-card::-webkit-scrollbar-track {
++  .card-body::-webkit-scrollbar-track {
+     background: transparent;
+   }
+ }
+@@ -374,7 +409,8 @@
+    cue nothing — the band is either painted or it is not. (The regime pair this used to carry
+    went with the sentinel's own — T9-W2 §2.2, above.) */
+ @media (prefers-reduced-motion: no-preference) {
+-  .controls-card::before {
++  .card-body::before,
++  .card-foot::before {
+     transition: opacity 150ms;
+   }
+ }
+@@ -382,7 +418,7 @@
+ /* The engines that have no `::-webkit-scrollbar` at all (Gecko) take the standard pair. Never
+    declare these unguarded: Blink reads `scrollbar-width` and silently drops the block above. */
+ @supports not selector(::-webkit-scrollbar) {
+-  .controls-card {
++  .card-body {
+     scrollbar-width: thin;
+     scrollbar-color: var(--ink-press-quiet) transparent;
+   }
+@@ -505,13 +541,17 @@
+     will-change: transform;
+   }
+ 
+-  /* The card fills the sheet and scrolls INSIDE it — the sheet's own box never moves, so an
+-     interior scroll can never become a page scroll. 1.5rem is the outline frame's own outset
+-     plus the card's padding-block, measured, not guessed. */
++  /* The card fills the sheet and its BODY scrolls inside it — the sheet's own box never moves,
++     so an interior scroll can never become a page scroll. 1.5rem is the outline frame's own
++     outset plus the card's padding-block, measured, not guessed. */
+   .controls-card {
+     max-height: calc(100dvh - var(--sheet-chrome) - 1.5rem);
+-    overflow-y: auto;
+-    overscroll-behavior: contain;
++  }
++
++  /* The landscape dock's foot is empty (the strip stays in the body's flow there): it keeps
++     the dock's old `py-1.5` bottom and nothing else. The portrait arm re-cuts it below. */
++  .card-foot {
++    padding-bottom: 0.375rem;
+   }
+ 
+   .drawer-case {
+@@ -541,6 +581,14 @@
+ }
+ 
+ @media (max-width: 1023.98px) and (orientation: portrait) {
++  /* THE FOOT ON THE INSET (pass-4 rulings §6.1, T9-W7 M18). On the portrait dock the tool
++     strip is the lowest thing on the phone and its drawn frame's ink reaches ~5.2px below its
++     box (outset 4 + half the 1.5 stroke + the corner's overshoot), so the pad is that excursion
++     plus air, and never less than the home indicator's own band. */
++  .card-foot {
++    padding-bottom: max(0.625rem, env(safe-area-inset-bottom));
++  }
++
+   /* THE RIBBON — one row of verbs, under the reserved line (T6.2 mark A). Its children arrive
+      by Teleport: `.play-controls` from `GameControlPanel`, which owns their grammar, and the
+      drawer's own tongue from `GameScene` while the sheet is shut. The row is composed rather
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 157ad47f..9e2a12a1 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -107,12 +107,10 @@ const geom = computed(() => {
+   opacity: 0;
+   pointer-events: none;
+   transition: opacity 150ms;
+-  /* T7-W7 — 50 IS HALF OF A PAIR. A tape floats over its own neighbourhood, so it needs to beat
+-     the ordinary content around it; it must NOT beat a surface that content scrolls UNDER. The
+-     controls card's sticky `.action-bar` was at 3 and a tape hanging off a control beneath it
+-     painted straight through (20.26px of overlap at 1440×900, 10.43px at 1280×720, measured);
+-     the bar now sits at 60 in that same stacking context. Raise this number past 60 and the
+-     tape goes back through the bar — re-cut them together. */
++  /* T7-W7 — 50 beats the ordinary content around a tape, and the controls card's bottom fade
++     (40, `scene.css`). It used to be half of a pair with the card's sticky action bar at 60; at
++     T9-W7 M18 the bar left the scrollport for the card's foot, so nothing scrolls under it and
++     the pair is gone. */
+   z-index: 50;
+ }
+ 
+@@ -181,11 +179,11 @@ const geom = computed(() => {
+ }
+ 
+ /* THE TAPE DISSOLVES AT THE CASE EDGE (T9-W2 §2.3, the charter's own words: "the card's own
+-   chrome never straddles its case edge"). A well riding down toward the card's sticky action
+-   bar used to slide its tape UNDER an opaque band — occluded, so nothing was ever drawn there,
+-   but the tape was still laid across the verbs' boxes. `data-under-bar` is published by the
+-   same measure pass that publishes the fold (`GameControlPanel`), and the tape leaves in the
+-   bar's own fade band rather than being guillotined by it. It rides the tape's OWN 150ms
++   chrome never straddles its case edge"). A well riding down toward the card's bottom edge
++   takes its tape with it, and the tape must not lie across that edge's fade band.
++   `data-under-bar` is published by the same measure pass that publishes the fold
++   (`GameControlPanel`), and the tape leaves in the fade's band rather than being guillotined
++   at the clip edge. It rides the tape's OWN 150ms
+    opacity transition, declared once on `.washi-label` above — no second window to drift. */
+ .washi-tag[data-under-bar] {
+   opacity: 0;
+diff --git a/web/frontend/e2e/tool-strip.spec.ts b/web/frontend/e2e/tool-strip.spec.ts
+new file mode 100644
+index 00000000..851eac13
+--- /dev/null
++++ b/web/frontend/e2e/tool-strip.spec.ts
+@@ -0,0 +1,271 @@
++import { test, expect, type Page } from "@playwright/test";
++
++// PRM: live, because the dock sheet's rise is the app's own motion and the strip rides it; every
++//   read here is a box, a computed style, an attribute or a count, and the boil moves none of them.
++
++/**
++ * T9-W7 M18 · THE TOOL STRIP WEARS AN EDGE ("This needs to have a border in some way").
++ *
++ * The strip is the card's fifth compartment: the wells' own drawn frame (`HandDrawnOutline`
++ * 1.5 / outset 4 / radius 3 / pose 0) around the verbs row, in `#card-foot` below the card's
++ * scrollport on the rail and the portrait dock, in the body's flow on the landscape dock. Every
++ * row carries its negative control. The painted reads (coverage per side, the leak differential,
++ * stroke daylight, painted contrast) live in the G-BAR prototype instrument
++ * (`docs/.../intake-owner-2026-09-22/prototype/G-BAR/instruments/gbar.mjs`); this file gates the
++ * geometry and the DOM that make them true.
++ */
++
++const PINNED =
++  "./?board=ATMuNTA4MDAwMDAwMDAzMDAwMDAwNjA5MDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAwMDAw";
++
++async function load(page: Page, touch = false) {
++  await page.goto(PINNED);
++  await page.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
++  await expect
++    .poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 15000 })
++    .toBeGreaterThan(0);
++  const tab = page.locator(".drawer-tab").first();
++  if ((await tab.getAttribute("aria-expanded")) === "false") {
++    if (touch) await tab.tap();
++    else await tab.click();
++  }
++  // THE DOCK SHEET SLIDES — poll the settled pose (three reads agreeing), never a sleep.
++  let last = "";
++  let same = 0;
++  await expect
++    .poll(
++      async () => {
++        const s = await page.evaluate(() =>
++          JSON.stringify(document.querySelector(".controls-card")?.getBoundingClientRect()),
++        );
++        same = s === last ? same + 1 : 0;
++        last = s;
++        return same;
++      },
++      { timeout: 5000, intervals: [120] },
++    )
++    .toBeGreaterThanOrEqual(3);
++}
++
++const STRIP = () => {
++  const R = (el: Element | null) => {
++    if (!el) return null;
++    const b = el.getBoundingClientRect();
++    return { x: b.x, y: b.y, r: b.right, b: b.bottom, w: b.width, h: b.height };
++  };
++  const card = document.querySelector(".controls-card")!;
++  const body = document.querySelector(".card-body") as HTMLElement;
++  const bar = document.querySelector(".action-bar")!;
++  const lip = document.querySelector(".tool-lip");
++  const svg = lip?.querySelector(":scope > svg.outline-svg") ?? null;
++  const paths = svg
++    ? [...svg.querySelectorAll("path")].filter(
++        (p) => getComputedStyle(p.parentElement!).display !== "none",
++      )
++    : [];
++  const wells = [...document.querySelectorAll(".control-panel-wrap .tray-well > svg.outline-svg")];
++  const borders = [bar, ...bar.querySelectorAll("*")]
++    .filter((e) => !(e instanceof SVGElement) && e.tagName !== "KBD")
++    .map((e) => {
++      const s = getComputedStyle(e);
++      return Math.max(
++        ...["Top", "Right", "Bottom", "Left"].map(
++          (k) => parseFloat(s.getPropertyValue(`border-${k.toLowerCase()}-width`)) || 0,
++        ),
++      );
++    });
++  const fade = getComputedStyle(document.querySelector("#card-foot")!, "::before");
++  const foot = document.querySelector("#card-foot") as HTMLElement;
++  return {
++    card: R(card),
++    body: R(body),
++    foot: R(foot),
++    footPadB: getComputedStyle(foot).paddingBottom,
++    bar: R(bar),
++    inFoot: !!bar.closest("#card-foot"),
++    svg: R(svg),
++    paths: paths.length,
++    strokeWidth: paths.map((p) => p.getAttribute("stroke-width")),
++    pruned: !!svg?.classList.contains("is-pruned"),
++    wellSvgs: wells.map(R),
++    maxBorder: Math.max(0, ...borders),
++    fadeLeft: fade.left,
++    fadeRight: fade.right,
++    spb: getComputedStyle(body).scrollPaddingBottom,
++    vpH: innerHeight,
++  };
++};
++
++const RAIL = [
++  { width: 1280, height: 800 },
++  { width: 1024, height: 768 },
++  { width: 1440, height: 900 },
++];
++
++for (const vp of RAIL) {
++  test.describe(`the rail @ ${vp.width}×${vp.height}`, () => {
++    test.use({ viewport: vp });
++
++    test("G1 · G6 · G2 — one drawn frame in the foot, no CSS border, nothing scrolls beside it", async ({
++      page,
++    }) => {
++      await load(page);
++      const s = await page.evaluate(STRIP);
++      expect(s.inFoot).toBe(true);
++      expect(s.paths, "one pose node, pruned").toBe(1);
++      expect(s.pruned).toBe(true);
++      expect(s.strokeWidth).toEqual(["1.5"]);
++      expect(s.maxBorder, "no CSS border anywhere in the strip").toBe(0);
++      // G2 by construction: the frame's box lies wholly below the scrollport's clip edge.
++      expect(s.svg!.y).toBeGreaterThanOrEqual(s.body!.b - 0.5);
++      // …and the bottom fade spans the body's padding box (it hangs from the full-width foot).
++      expect(s.fadeLeft).toBe("0px");
++
++      // NEGATIVE CONTROL (G1): the frame struck → no path is left to read.
++      await page.addStyleTag({ content: ".tool-lip > svg.outline-svg { display: none !important; }" });
++      const struck = await page.evaluate(() =>
++        [...document.querySelectorAll(".tool-lip > svg path")].filter((p) => p.getClientRects().length > 0).length,
++      );
++      expect(struck).toBe(0);
++    });
++
++    test("G3 · G4 — the frame on the wells' x, and the wells' 16px box rhythm at scroll end", async ({
++      page,
++    }) => {
++      await load(page);
++      await page.locator(".card-body").evaluate((el) => (el.scrollTop = el.scrollHeight));
++      const s = await page.evaluate(STRIP);
++      const last = s.wellSvgs.filter((w) => w!.b <= s.svg!.y + 1).pop()!;
++      expect(Math.abs(s.svg!.x - last.x), "left edge on the wells' x").toBeLessThanOrEqual(0.5);
++      expect(Math.abs(s.svg!.r - last.r), "right edge on the wells' x").toBeLessThanOrEqual(0.5);
++      // box gap = svg gap + 2·outset
++      expect(Math.abs(s.svg!.y - last.b + 8 - 16)).toBeLessThanOrEqual(0.5);
++      // NEGATIVE CONTROL (G4): the gap struck → the strip's box sits 8px under the last well's.
++      await page.addStyleTag({ content: ".card-foot .action-bar { margin-top: 0 !important; }" });
++      await page.locator(".card-body").evaluate((el) => (el.scrollTop = el.scrollHeight));
++      const n = await page.evaluate(STRIP);
++      const last2 = n.wellSvgs.filter((w) => w!.b <= n.svg!.y + 1).pop()!;
++      expect(n.svg!.y - last2.b + 8).toBeLessThan(10);
++    });
++  });
++}
++
++test.describe("the rail @ 1280×800 · keyboard and notes", () => {
++  test.use({ viewport: { width: 1280, height: 800 } });
++
++  const WALK = async (page: Page) =>
++    page.evaluate(async () => {
++      const body = document.querySelector(".card-body") as HTMLElement;
++      body.scrollTop = 0;
++      const foc = [...body.querySelectorAll<HTMLElement>("button, a[href], input, select")].filter(
++        (e) => !(e as HTMLButtonElement).disabled && e.getClientRects().length > 0 && !e.closest("[inert]"),
++      );
++      let under = 0;
++      for (const e of foc) {
++        e.focus();
++        await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++        const edge = body.getBoundingClientRect().bottom - (body.hasAttribute("data-fold-below") ? 32 : 0);
++        if (e.getBoundingClientRect().bottom - edge > 0.5) under++;
++      }
++      return { n: foc.length, under };
++    });
++
++  test("G10 — focus-scroll lands every control above the bottom fade", async ({ page }) => {
++    await load(page);
++    expect(await page.locator(".card-body").evaluate((el) => getComputedStyle(el).scrollPaddingBottom)).toBe("32px");
++    const w = await WALK(page);
++    expect(w.n).toBeGreaterThan(8);
++    expect(w.under).toBe(0);
++    // NEGATIVE CONTROL: without the static 2rem at least one control parks under the fade.
++    await page.addStyleTag({ content: ".card-body { scroll-padding-bottom: 0 !important; }" });
++    expect((await WALK(page)).under).toBeGreaterThanOrEqual(1);
++  });
++
++  test("G11 — each verb's note lies astride the frame's bottom stroke, in the foot", async ({ page }) => {
++    await load(page);
++    for (let i = 0; i < 4; i++) {
++      await page.locator(".action-verbs > .icon-btn").nth(i).hover();
++      await expect
++        .poll(() =>
++          page.evaluate((i) => +getComputedStyle(document.querySelectorAll(".action-verbs .washi-label")[i]).opacity, i),
++        )
++        .toBe(1);
++      const g = await page.evaluate((i) => {
++        const n = document.querySelectorAll(".action-verbs .washi-label")[i].getBoundingClientRect();
++        const svg = document.querySelector(".tool-lip > svg.outline-svg")!.getBoundingClientRect();
++        const card = document.querySelector(".controls-card")!.getBoundingClientRect();
++        return { top: n.top - svg.bottom, bottom: card.bottom - n.bottom };
++      }, i);
++      expect(g.top, "note top within 5px of the stroke").toBeLessThanOrEqual(5);
++      expect(g.bottom, "note inside the card").toBeGreaterThanOrEqual(0);
++    }
++    // the berthed invite note answers its verb across the body/foot seam
++    const invite = page.locator(".invite-btn").first();
++    if (await invite.count()) {
++      await invite.scrollIntoViewIfNeeded();
++      await invite.hover();
++      await expect
++        .poll(() => page.evaluate(() => +getComputedStyle(document.querySelector(".berth-note")!).opacity))
++        .toBe(1);
++    }
++  });
++});
++
++test.describe("the portrait dock @ 390×844 (coarse)", () => {
++  test.use({ viewport: { width: 390, height: 844 }, hasTouch: true, isMobile: true });
++
++  test("G5 — the foot sits on the inset, the frame's box clear of the viewport bottom", async ({ page }) => {
++    await load(page, true);
++    const s = await page.evaluate(STRIP);
++    expect(s.inFoot).toBe(true);
++    expect(s.footPadB).toBe("10px");
++    const src = await page.evaluate(() =>
++      [...document.styleSheets].some((sh) => {
++        try {
++          return [...sh.cssRules].some((r) => r.cssText.includes("safe-area-inset-bottom") && r.cssText.includes("card-foot"));
++        } catch {
++          return false;
++        }
++      }),
++    );
++    expect(src, "env(safe-area-inset-bottom) in the foot's rule").toBe(true);
++    // the frame's svg box (stroke + outset) ends above the viewport bottom
++    expect(s.vpH - s.svg!.b).toBeGreaterThanOrEqual(2);
++    // NEGATIVE CONTROL: the foot's pad struck → the frame's box runs off the bottom
++    await page.addStyleTag({ content: ".card-foot { padding-bottom: 0 !important; }" });
++    const n = await page.evaluate(STRIP);
++    expect(n.vpH - n.svg!.b).toBeLessThan(2);
++  });
++});
++
++for (const vp of [
++  { width: 844, height: 390 },
++  { width: 812, height: 375 },
++]) {
++  test.describe(`the landscape dock @ ${vp.width}×${vp.height} (coarse)`, () => {
++    test.use({ viewport: vp, hasTouch: true, isMobile: true });
++
++    test("G13 — the frame drawn in place, clear of the last well and the play row, no foot", async ({ page }) => {
++      await load(page, true);
++      const g = await page.evaluate(() => {
++        const bar = document.querySelector(".action-bar")!;
++        const svg = document.querySelector(".tool-lip > svg.outline-svg")!.getBoundingClientRect();
++        const play = document.querySelector(".play-controls")!.getBoundingClientRect();
++        const wells = [...document.querySelectorAll(".control-panel-wrap .tray-well > svg.outline-svg")].map((w) =>
++          w.getBoundingClientRect(),
++        );
++        const last = wells.filter((w) => w.bottom <= svg.top + 1).pop()!;
++        return {
++          inFoot: !!bar.closest("#card-foot"),
++          shadow: getComputedStyle(bar).boxShadow,
++          toPlay: play.top - svg.bottom,
++          toWell: svg.top - last.bottom,
++        };
++      });
++      expect(g.inFoot).toBe(false);
++      expect(g.shadow).toBe("none");
++      expect(g.toPlay).toBeGreaterThanOrEqual(0);
++      expect(g.toWell).toBeGreaterThanOrEqual(0);
++    });
++  });
++}

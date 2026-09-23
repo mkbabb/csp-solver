@@ -1,0 +1,733 @@
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 31ec977e..41ac382e 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -448,7 +448,55 @@ const coarse = useCoarsePointer();
+ // (`setLiveFaceTarget`); the board itself is the FLIP mover, folding from its full pose into the
+ // face. Every view/URL/game transition still fires as Wave B, so a missing rect / PRM degrades
+ // to the same-frame cut and no state/visibility assertion sees mid-glide pixels.
+-const foldCtl = useFlipGlide({ durationMs: MOTION.boardFoldMs });
++const foldCtl = useFlipGlide({
++  durationMs: MOTION.boardFoldMs,
++  onSettle: () => markFold([]),
++});
++
++// T9-M19 · THE VERB'S MARKS LIVE AS LONG AS ITS GLIDE. The fold unclips and lifts the centre
++// card (`.is-folding`), the unfold raises the board over the leaving deck (`.is-unfolding`), and
++// `folding` holds the wordmark's bake key so nothing re-bakes under the move. Each run replaces
++// the last run's marks (a re-press supersedes without a settle) and the settle clears them.
++const folding = ref(false);
++let foldUndo: (() => void)[] = [];
++function markFold(marks: [Element | null | undefined, string][]) {
++  for (const undo of foldUndo) undo();
++  foldUndo = [];
++  for (const [el, cls] of marks) {
++    if (!el) continue;
++    // the scroll offset is read BEFORE the class ends the scroller; the undo restores it after
++    const lift = el.matches(".gallery-viewport")
++      ? liftScrollport(el as HTMLElement)
++      : null;
++    el.classList.add(cls);
++    foldUndo.push(() => el.classList.remove(cls));
++    if (lift) foldUndo.push(lift);
++  }
++  folding.value = marks.length > 0;
++}
++/** THE SCROLLPORT IS A CLIP TOO. The deck's viewport scrolls on x, which makes it clip on y,
++ *  and the full board is taller than the case (640 against 456 at 1280): unclipping the slot
++ *  alone leaves 29 % of the board cut off at the fold's head. For the fold, the viewport stops
++ *  scrolling (GameGallery `.is-folding`: overflow visible, clipped on x only) and the track
++ *  holds its scrolled pose by a translate; the settle restores the scroll in the same task. */
++function liftScrollport(vp: HTMLElement): () => void {
++  const track = vp.firstElementChild as HTMLElement | null;
++  const left = vp.scrollLeft;
++  if (track) track.style.translate = `${-left}px 0`;
++  return () => {
++    if (track) track.style.translate = "";
++    vp.scrollLeft = left;
++  };
++}
++/** One board verb: mark, then run with the first frame held at FIRST (useFlipGlide
++ *  §holdFirstFrame — the run starts at the tail of the deck's mount or the game swap). */
++function runBoardVerb(
++  movers: FlipMover[],
++  marks: [Element | null | undefined, string][],
++) {
++  markFold(marks);
++  foldCtl.run(movers, { holdFirstFrame: true });
++}
+ 
+ // Was the current gallery opened INTERACTIVELY (wordmark / `g` fold), not a ?view=gallery boot?
+ // Drives BEAT 2 "the deal" (flanks draw IN) — passed to the gallery as `:animate-entry`.
+@@ -556,11 +604,6 @@ function moveLiveBoard(el: HTMLElement | null) {
+   setLiveFaceTarget(el);
+   void nextTick(() => restoreBoardAnims(phase));
+ }
+-/** The centered card's box — the exit unfold's card-pose anchor. */
+-function centerCardEl(): HTMLElement | null {
+-  return document.querySelector<HTMLElement>(".game-card.is-center");
+-}
+-
+ function onGallerySnap(index: number) {
+   snapTo(index);
+ }
+@@ -633,15 +676,25 @@ function onLiveFace(el: HTMLElement | null) {
+       // re-bake at settle — the drawer's own masthead precedent, verbatim. The referent is the
+       // wordmark's own box and not the `<h1>`'s (§wordmarkEl) — the heading's width is mostly
+       // whitespace, and FLIP-ing whitespace magnified the baked ink 2.6× more than the fold does.
+-      foldCtl.run([
+-        {
+-          el: board,
+-          from: flipTransform(from, last),
+-          to: "translate(0px, 0px) scale(1)",
+-          transformOrigin: "50% 50%",
+-        },
+-        ...mastheadMover(headFrom),
+-      ]);
++      // The fit is an ANCESTOR scale on the mover's path, so the translate is divided by it
++      // (flipTransform §ONE SPACE); the card is unclipped and lifted while the board shrinks
++      // into it whole (GameCard `.is-folding`).
++      const fit = Number(el.style.getPropertyValue("--live-fit")) || 1;
++      runBoardVerb(
++        [
++          {
++            el: board,
++            from: flipTransform(from, last, fit),
++            to: "translate(0px, 0px) scale(1)",
++            transformOrigin: "50% 50%",
++          },
++          ...mastheadMover(headFrom),
++        ],
++        [
++          [el.closest(".game-card"), "is-folding"],
++          [el.closest(".gallery-viewport"), "is-folding"],
++        ],
++      );
+     }
+   });
+ }
+@@ -665,6 +718,7 @@ function mastheadMover(first: DOMRect | null): FlipMover[] {
+  *  is on-screen from frame ONE (no rest-pose flash). A null mover drops out; all of them
+  *  dropping out leaves the cut standing. */
+ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[]) {
++  const group = document.querySelector(".board-group");
+   void nextTick(() => {
+     const movers: FlipMover[] = [];
+     for (const pair of pairs) {
+@@ -677,7 +731,9 @@ function runFold(pairs: { first: DOMRect | null; el: () => HTMLElement | null }[
+         transformOrigin: "50% 50%",
+       });
+     }
+-    if (movers.length) foldCtl.run(movers);
++    // The board rises OVER the pinned, dissolving deck (§pinLeavingDeck) — a stacking order
++    // for the glide's life, cleared at settle.
++    if (movers.length) runBoardVerb(movers, [[group, "is-unfolding"]]);
+   });
+ }
+ 
+@@ -721,8 +777,17 @@ function enterGallery() {
+ // under the still-small card — or cancel), then FLIP the board UP from that pose to full.
+ // `sameGame` = a pure unfold, no seam.
+ function unfoldToBoard(applyState: () => void) {
+-  const card = centerCardEl();
+-  const first = card?.getBoundingClientRect() ?? null;
++  // T9-M19 · FIRST IS THE PAINTED FACE, in both cases: the live board where it is painted
++  // (mid-fold included), else the centred poster's face — never the card's whole box, whose
++  // caption and paper put the first frame 35 px off.
++  const face =
++    document.querySelector<HTMLElement>(".game-card.is-center .board-peek-host") ??
++    document.querySelector<HTMLElement>(".game-card.is-center .game-card-face");
++  const first = face?.getBoundingClientRect() ?? null;
++  // The deck's painted box, read before the state flip reflows it (§pinLeavingDeck).
++  leavingDeckRect = reducedMotion.value
++    ? null
++    : (document.querySelector(".game-gallery")?.getBoundingClientRect() ?? null);
+   // BOTH firsts before `applyState()` — the state flip is what moves the wordmark back to its
+   // playing pose, so its gallery rect has to be in hand before that happens.
+   const headFirst = wordmarkEl()?.getBoundingClientRect() ?? null;
+@@ -735,6 +800,32 @@ function unfoldToBoard(applyState: () => void) {
+   ]);
+ }
+ 
++// T9-M19 · THE LEAVING DECK STEPS OUT OF FLOW. It dissolves over the chrome-leave band while
++// the board unfolds, and in flow it was squeezed into what the playing layout left (the centre
++// card 407.9 → 104 px on frame 1) and then, at unmount, moved the home layout under a running
++// glide (a 135 px drop at 390). Pinned `fixed` at the box it was painted in — read before the
++// state flip — the home layout is final before the unfold reads LAST, and the unmount moves
++// nothing. Inline px for a one-shot measurement; the element dies with the leave.
++let leavingDeckRect: DOMRect | null = null;
++function pinLeavingDeck(el: Element) {
++  const style = (el as HTMLElement).style;
++  const r = leavingDeckRect;
++  leavingDeckRect = null;
++  if (reducedMotion.value) return; // PRM: the leave is a cut (`transition: none` below)
++  style.transitionDuration = `${MOTION.chromeLeaveMs}ms`; // the dissolve's band, homed
++  if (!r) return;
++  Object.assign(style, {
++    position: "fixed",
++    left: `${r.left}px`,
++    top: `${r.top}px`,
++    width: `${r.width}px`,
++    height: `${r.height}px`,
++    margin: "0",
++    zIndex: "0",
++    pointerEvents: "none",
++  });
++}
++
+ function onGallerySelect(id: string) {
+   unfoldToBoard(() => {
+     select(); // view → playing, `?view` cleared
+@@ -933,6 +1024,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+             ref="logoMenu"
+             :game="headerName"
+             :inert-heading="view === 'gallery'"
++            :hold-bake="folding"
+             @open="enterGallery"
+           />
+         </h1>
+@@ -960,7 +1052,7 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+            hole for two rules and no added latency (`unfoldToBoard` parks the live board home
+            BEFORE the view flips, so the fading deck never contains the board). Entry needs
+            nothing — BEAT 2, the deal, already animates it. -->
+-      <Transition name="gallery-fade">
++      <Transition name="gallery-fade" @before-leave="pinLeavingDeck">
+         <component
+           :is="galleryComp"
+           v-if="view === 'gallery' && galleryComp"
+@@ -1223,9 +1315,16 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+   --logo-scale: 0.72;
+ }
+ 
+-/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock. */
++/* The deck's leave-only dissolve — the twin of BEAT 0's chrome-leave, on the same clock: the
++   duration is `MOTION.chromeLeaveMs`, written by `pinLeavingDeck` (T9-M19), not a literal. */
+ .gallery-fade-leave-active {
+-  transition: opacity 200ms var(--ease-glassGlide);
++  transition: opacity var(--ease-glassGlide);
++}
++
++/* T9-M19 — the unfolding board rises over the pinned deck (z 0) for the glide's life. */
++.board-group.is-unfolding {
++  position: relative;
++  z-index: 1;
+ }
+ 
+ .gallery-fade-leave-to {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..4112f8db 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -3,6 +3,18 @@
+ 
+ @custom-variant dark (&:is(.dark *));
+ 
++/* ── T9-M19 · MEASURED TOKENS ARE REGISTERED ─────────────────────────────────────────────
++ * `--live-fit` is the gallery face's contain-fit, written by App (`fitLiveBoard`) on the live
++ * mount and read bare by GameCard's `.live-face-fit`. Its initial value is 0, so a face whose
++ * fit never landed paints NOTHING rather than a full-size board overrunning the card — the
++ * failure is visible, never plausible. `inherits: true` keeps it an ordinary custom property
++ * to every descendant. */
++@property --live-fit {
++  syntax: "<number>";
++  inherits: true;
++  initial-value: 0;
++}
++
+ /* ── P5 (Tranche II) — self-hosted subset faces ────────────────────────────
+  * Replaces the Google Fonts CDN `<link>` (index.html) + its `fonts.googleapis.com`/
+  * `fonts.gstatic.com` CSP clauses (see public/_headers). Each woff2 is
+diff --git a/web/frontend/src/games/shared/useFlipGlide.ts b/web/frontend/src/games/shared/useFlipGlide.ts
+index bf1e8e57..f9b3904d 100644
+--- a/web/frontend/src/games/shared/useFlipGlide.ts
++++ b/web/frontend/src/games/shared/useFlipGlide.ts
+@@ -78,9 +78,19 @@ const cy = (r: FlipRect) => r.top + r.height / 2;
+  * tweens. `scale = first.width / last.width`; pair with `transformOrigin: "50% 50%"` so
+  * the translate maps centers. (Byte-identical to the drawer host mover's own string.)
+  */
+-export function flipTransform(first: FlipRect, last: FlipRect): string {
++export function flipTransform(
++  first: FlipRect,
++  last: FlipRect,
++  parentScale = 1,
++): string {
+   const s = last.width === 0 ? 1 : first.width / last.width;
+-  return `translate(${cx(first) - cx(last)}px, ${cy(first) - cy(last)}px) scale(${s})`;
++  // T9-M19 · ONE SPACE. The translate lands in the mover's LOCAL space, so under an ancestor
++  // scale (the gallery face's `--live-fit`) a viewport-px delta arrives shrunk by it — the
++  // census's 92.7 px centre jump at 1280. Dividing by that scale puts it back in viewport px;
++  // at 1 (the drawer, every unscaled mover) the division is exact and the string unchanged.
++  const tx = (cx(first) - cx(last)) / parentScale;
++  const ty = (cy(first) - cy(last)) / parentScale;
++  return `translate(${tx}px, ${ty}px) scale(${s})`;
+ }
+ 
+ /** One mover: an element, its FROM transform (the inverted old-pose delta), its TO
+@@ -105,11 +115,20 @@ export interface FlipGlideOptions {
+   onSettle?: () => void;
+ }
+ 
++export interface FlipRunOptions {
++  /** T9-M19 · THE FIRST PAINTED FRAME IS THE FIRST POSE. Leave the movers' `startTime` pending
++   *  rather than pinned to the current frame, so a run started at the tail of a long task (the
++   *  deck's mount) paints progress 0 and the UA starts the clock on the next frame. Pinned (the
++   *  default, the drawer's), that task's frame paints the curve already part-way in. One clock
++   *  survives: every mover of the run is started pending in the same task. */
++  holdFirstFrame?: boolean;
++}
++
+ export interface FlipGlideController {
+   /** Start a glide: one WAAPI animation per mover (`composite: replace`, `fill: none`)
+    *  on the glass curve, ALL pinned to one clock. Supersedes any in-flight glide
+    *  silently (no `onSettle` — the new gesture owns the settle). */
+-  run(movers: FlipMover[]): void;
++  run(movers: FlipMover[], opts?: FlipRunOptions): void;
+   /** Mid-glide retarget: each mover plays its own curve backwards from its current
+    *  pose. Resets the settle guard; a no-op when nothing is in flight. */
+   reverse(): void;
+@@ -160,7 +179,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     options.onSettle?.();
+   }
+ 
+-  function run(specs: FlipMover[]) {
++  function run(specs: FlipMover[], opts?: FlipRunOptions) {
+     // A fresh gesture supersedes any prior one WITHOUT firing its settle side-effects
+     // (the new gesture owns the settle): clear the guard + old animations, then build.
+     // From idle (the drawer's only entry) `movers` is already empty — a strict no-op.
+@@ -182,7 +201,7 @@ export function useFlipGlide(options: FlipGlideOptions): FlipGlideController {
+     // One clock, literally (§3-S3): every mover pinned to the same startTime — zero
+     // stagger, and the FIRST painted frame already carries motion (no pending-start
+     // dead frame — a pending animation renders progress 0 until the UA assigns a start).
+-    const clock = document.timeline.currentTime;
++    const clock = opts?.holdFirstFrame ? null : document.timeline.currentTime;
+     if (typeof clock === "number") for (const m of movers) m.anim.startTime = clock;
+     active = true;
+     // Settle keys off the movers themselves; the guard stays the never-never backstop.
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..0d9f1d30 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -460,11 +460,25 @@ const dealStyle = computed(() => {
+   border-radius: inherit;
+ }
+ 
++/* T9-M19 · THE FOLD IS SEEN WHOLE. For the fold's 520 ms (App marks `.is-folding`, and clears
++   it at the settle) the slot stops clipping and the centre card rises over its flanks, so the
++   full board visibly shrinks into its page instead of cutting to a crop. At rest: unchanged. */
++.game-card.is-folding {
++  position: relative;
++  z-index: 1;
++}
++
++.game-card.is-folding .live-face-slot {
++  overflow: visible;
++}
++
++/* `--live-fit` is REGISTERED (index.css, initial 0): a face whose fit never landed shows an
++   empty face, not a full-size board spilling out of it. Consumed bare. */
+ .live-face-fit {
+   position: absolute;
+   top: 50%;
+   left: 50%;
+-  transform: translate(-50%, -50%) scale(var(--live-fit, 1));
++  transform: translate(-50%, -50%) scale(var(--live-fit));
+   transform-origin: center center;
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..d0117cdb 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -369,7 +369,7 @@ function startDeal() {
+     return;
+   }
+   const base = Math.round(MOTION.boardFoldMs * 0.42); // after the fold has begun
+-  const stagger = 90; // outward-from-center step
++  const stagger = MOTION.dealStaggerMs; // outward-from-center step
+   props.cards.forEach((_, i) => {
+     if (i === center) return;
+     const dist = Math.abs(i - center);
+@@ -1161,6 +1161,18 @@ onMounted(async () => {
+   max-block-size: calc(var(--card-face-w) + var(--card-chrome) + 2 * var(--deck-air));
+ }
+ 
++/* T9-M19 · THE FOLD IS SEEN WHOLE, and the scrollport is a clip too: scrolling on x makes this
++   box clip on y, and the full board is taller than the case. For the fold's 520 ms (App marks
++   `.is-folding`, holds the scrolled pose on the track by a translate, and restores the scroll at
++   the settle) the viewport stops scrolling, keeps its x edges by a clip that is open on y, and
++   rises over its own siblings so the shrinking board passes over the pips and the band. */
++.gallery-viewport.is-folding {
++  overflow: visible;
++  clip-path: inset(-100vmax 0);
++  position: relative;
++  z-index: 1;
++}
++
+ .gallery-viewport::-webkit-scrollbar {
+   display: none;
+ }
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index fc7d2d14..2b02ee24 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -170,14 +170,23 @@ function bakeFace(): Promise<string | null> {
+ </script>
+ 
+ <script setup lang="ts">
+-import { ref, computed, watch, watchEffect, onMounted, nextTick, type Ref } from "vue";
++import {
++  ref,
++  computed,
++  watch,
++  watchEffect,
++  onMounted,
++  nextTick,
++  useId,
++  type Ref,
++} from "vue";
+ import {
+   heldFrameCount,
+   usePrefersReducedMotion,
+   serializePoseSvg,
+   useRasterStack,
++  type RasterStackOptions,
+ } from "@mkbabb/pencil-boil";
+-import { useTheme } from "@/composables/useTheme";
+ import {
+   FILTER_PRESETS,
+   MOTION,
+@@ -188,7 +197,6 @@ import {
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   readFilterDefs,
+-  resolveCssValue,
+   retainedPoseUrls,
+   useLayoutBoxSize,
+ } from "@pencil/composables/rasterPose";
+@@ -206,6 +214,10 @@ const props = defineProps<{
+    *  activation. The `<h1>` keeps an accessible name off the visually-hidden label, since the
+    *  svg that carries all the ink is `aria-hidden`. */
+   inertHeading?: boolean;
++  /** T9-M19 · A VERB NEVER BAKES. True while the board's fold or unfold is in flight: the
++   *  capture key is held at its last value, so the gallery's `--logo-scale` lands as ONE bake
++   *  after the move instead of a round of encodes inside it. */
++  holdBake?: boolean;
+ }>();
+ 
+ const emit = defineEmits<{
+@@ -214,7 +226,7 @@ const emit = defineEmits<{
+   (e: "open"): void;
+ }>();
+ 
+-const { isDark } = useTheme();
++const maskId = useId();
+ const reducedMotion = usePrefersReducedMotion();
+ 
+ // ── The wordmark boil, pose-stacked (T3-W13 §1-P3) ──
+@@ -406,7 +418,6 @@ function escapeXml(s: string): string {
+ 
+ function logoPoseSvg(f: number): string {
+   const pid = logoPoseIds.value[f];
+-  const ink = resolveCssValue(logoSvgRef.value, "color", "#1a1a1a");
+   const w = vbWidth.value;
+   const defs =
+     readFilterDefs(pid) +
+@@ -420,7 +431,9 @@ function logoPoseSvg(f: number): string {
+     // against the base dist: ink reached the final column of every one of the five bitmaps).
+     // Pinning both sides makes the measure and the paint the same font.
+     `font-weight:900;font-size:52px;letter-spacing:0.02em;font-variation-settings:'opsz' 52;` +
+-    `fill:${ink};}</style>`;
++    // T9-M15 · THE INK IS PAINT: the pose bakes COVERAGE (black at full alpha) and the page
++    // paints it through a mask in `currentColor` (template), so no theme is in the bitmap.
++    `fill:#000;}</style>`;
+   const body = `<g filter="url(#${pid})"><text x="4" y="48" text-anchor="start">${escapeXml(label.value)}</text></g>`;
+   return serializePoseSvg({ width: w, height: 60, viewBox: `0 0 ${w} 60`, defs, body });
+ }
+@@ -452,26 +465,34 @@ function logoPoseSvg(f: number): string {
+  * derived from it rather than observed a second time (T6.2, above), and `dpr` is the library's
+  * (`matchMedia` re-arm, so a monitor change re-bakes).
+  */
+-const logoRaster = useRasterStack(() => ({
+-  cacheKey: `logo-${label.value}-${isDark.value ? "d" : "l"}-${vbWidth.value}`,
+-  poseCount: logoPoseIds.value.length,
+-  poseSvg: logoPoseSvg,
+-  // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
+-  // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
+-  // an <svg> needs because it has no offsetWidth, so any element-size seed reads 0 — is the
+-  // library's problem now, and it solves it by NOT baking rather than by baking wrong.
+-  // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
+-  // `latchWholePx` above for the measurement that rejected quantization in its favour.
+-  // T9-W8 C01, AND THE TEXTLESS GATE STOPS HERE: this surface hands the library its measured
+-  // box the moment it has one. `fontGatedBox` (`rasterPose.ts`) holds the three TEXTLESS
+-  // surfaces past the page's font settle, which is the wrong readiness for this one — what
+-  // the wordmark waits on is the face painting inside an IMAGE document, and `captureW`
+-  // already holds the box until `warmBakeFace` proves it does. MEASURED (WebKit, Playwright,
+-  // unthrottled, cold, 1280×800 dpr2, the built dist): gated and unwarmed, this surface ran
+-  // two rounds in 8 of 8 cold windows, the first one blank; warmed, it runs ONE in 5 of 5,
+-  // and the kept stack's per-pose digests equal the base arm's in all three π regimes.
+-  cssSize: { width: captureW.value, height: captureH.value },
+-}));
++let heldBake: RasterStackOptions | null = null;
++const logoRaster = useRasterStack(() => {
++  if (props.holdBake && heldBake) return heldBake; // §holdBake — no key moves under a verb
++  return (heldBake = logoBakeOpts());
++});
++function logoBakeOpts(): RasterStackOptions {
++  return {
++    // T9-M15: no theme in the key — the bitmap is coverage and the ink is painted (§logoPoseSvg).
++    cacheKey: `logo-${label.value}-${vbWidth.value}`,
++    poseCount: logoPoseIds.value.length,
++    poseSvg: logoPoseSvg,
++    // No fallback arithmetic: pencil-boil 0.10.0's F2 returns before the token bump at a
++    // non-positive cssSize and re-bakes when the box lands, so the invented 72 px seed — which
++    // an <svg> needs because it has no offsetWidth, so any element-size seed reads 0 — is the
++    // library's problem now, and it solves it by NOT baking rather than by baking wrong.
++    // BC6-G1: the latched whole-pixel box, not a fresh round of every observation — see
++    // `latchWholePx` above for the measurement that rejected quantization in its favour.
++    // T9-W8 C01, AND THE TEXTLESS GATE STOPS HERE: this surface hands the library its measured
++    // box the moment it has one. `fontGatedBox` (`rasterPose.ts`) holds the three TEXTLESS
++    // surfaces past the page's font settle, which is the wrong readiness for this one — what
++    // the wordmark waits on is the face painting inside an IMAGE document, and `captureW`
++    // already holds the box until `warmBakeFace` proves it does. MEASURED (WebKit, Playwright,
++    // unthrottled, cold, 1280×800 dpr2, the built dist): gated and unwarmed, this surface ran
++    // two rounds in 8 of 8 cold windows, the first one blank; warmed, it runs ONE in 5 of 5,
++    // and the kept stack's per-pose digests equal the base arm's in all three π regimes.
++    cssSize: { width: captureW.value, height: captureH.value },
++  };
++}
+ 
+ // The baked poses ARE object URLs now (pencil-boil 0.11) — `useRasterStack` reads its own
+ // capture canvas and mints the handles, so there is no bitmap to re-draw, re-encode or close
+@@ -482,8 +503,8 @@ const logoRaster = useRasterStack(() => ({
+ // the post-font re-measure changes `vbWidth`, and retained poses baked at the OLD width
+ // stretch into the new viewBox (`preserveAspectRatio="none"`) until the re-bake lands —
+ // a fringed wordmark, wider the slower the fonts. Dropping them takes the live-filter
+-// fallback (pinned pose 0, correct geometry) across the window instead. A re-tint keeps
+-// retaining: `isDark` stays out of the key.
++// fallback (pinned pose 0, correct geometry) across the window instead. A re-tint never
++// reaches this seam at all: the ink is painted, not baked (T9-M15).
+ const logoUrls = retainedPoseUrls(logoRaster, () => `${label.value}-${vbWidth.value}`);
+ const logoBaked = computed(
+   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
+@@ -557,19 +578,38 @@ const logoBaked = computed(
+         </text>
+         <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+                      opacity-swapped on the beat (no filter, no per-beat raster). -->
++        <!-- T9-M15 · the bitmap is coverage, the ink is paint: each pose masks a rect filled
++             `currentColor`, so a theme flip re-inks at frame 2 and re-bakes nothing. -->
+         <template v-if="logoBaked">
+-          <image
+-            v-for="(url, f) in logoUrls"
+-            :key="`lg-${f}`"
+-            class="logo-pose-bmp"
+-            :class="{ 'is-active': logoPose === f }"
+-            :href="url"
+-            x="0"
+-            y="0"
+-            :width="vbWidth"
+-            height="60"
+-            preserveAspectRatio="none"
+-          />
++          <template v-for="(url, f) in logoUrls" :key="`lg-${f}`">
++            <mask
++              :id="`${maskId}-${f}`"
++              class="logo-pose-mask"
++              maskUnits="userSpaceOnUse"
++              x="0"
++              y="0"
++              :width="vbWidth"
++              height="60"
++            >
++              <image
++                :href="url"
++                x="0"
++                y="0"
++                :width="vbWidth"
++                height="60"
++                preserveAspectRatio="none"
++              />
++            </mask>
++            <rect
++              class="logo-pose-bmp"
++              :class="{ 'is-active': logoPose === f }"
++              x="0"
++              y="0"
++              :width="vbWidth"
++              height="60"
++              :mask="`url(#${maskId}-${f})`"
++            />
++          </template>
+         </template>
+         <!-- Fallback while baking: the live #wobble-logo-p{i} pose stack
+                      (T3-W13 §1-P3). T4-WM rank 1: PINNED to pose 0 — `is-active` never
+@@ -711,6 +751,11 @@ span.logo-trigger {
+ .logo-pose-bmp {
+   opacity: 0;
+   will-change: opacity;
++  fill: currentColor;
++}
++
++.logo-pose-mask {
++  mask-type: alpha;
+ }
+ 
+ .logo-pose-bmp.is-active {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..52b87423 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -161,6 +161,10 @@ export const MOTION = {
+    *  begins as the chrome clears. Matches scene.css's `.scene-leaving` fade; lands HERE per
+    *  the covenant. PRM skips it (same-frame cut, no fade, no delay). */
+   chromeLeaveMs: 200,
++  /** BEAT 2 — the deal's outward step (T4-W12 Wave C2): each flank a card further from the
++   *  centre draws in this much later, after the fold's 0.42 head. Homed here from
++   *  `GameGallery`'s local literal (T9-M19); the value is unchanged. */
++  dealStaggerMs: 90,
+   /** House easing ledger — curves recorded as named decisions, one row per ruling.
+    *
+    *  THE TWO-LAYER EASING RULE (T4-W10). The house easing family lives in a
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3fa9042d..a93f3846 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,5 +1,5 @@
+ <script setup lang="ts">
+-import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
++import { computed, onMounted, onUnmounted, watch, nextTick, ref, useId } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+ import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+ import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
+@@ -7,11 +7,9 @@ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+   fontGatedBox,
+   readFilterDefs,
+-  resolveCssValue,
+   retainedPoseUrls,
+   useLayoutBoxSize,
+ } from "@pencil/composables/rasterPose";
+-import { useTheme } from "@/composables/useTheme";
+ import { usePathAnimation } from "./usePathAnimation";
+ import type { AnimationState } from "@pencil/types";
+ 
+@@ -176,9 +174,12 @@ const steadyFrames = computed(() =>
+ // residual ~8/s tile churn zeroes with it. The live-filter <g> stack (template §fallback)
+ // renders until the bitmaps resolve, so the swap never flashes and the mount's synchronous
+ // burst is never blocked (the bake is async — the old W8 mount-chunking concern folds into
+-// this path). Re-bake fires on DPR (useRasterStack's matchMedia), theme flip (the cacheKey
+-// token, masked by the toggle's Bloom), and container resize (useElementSize).
+-const { isDark } = useTheme();
++// this path). Re-bake fires on DPR (useRasterStack's matchMedia) and container resize
++// (useElementSize) — NEVER on a theme flip (T9-M15): the poses bake coverage and the page
++// paints the ink through a mask (template), so the flip swaps no bitmap and encodes nothing.
++// The census measured the re-bake this replaces: 4 × 1272² encodes landing inside the
++// toggle's Bloom and starving it — it was never masked by it.
++const maskId = useId();
+ // CH-67's lens (T8-W4): `useElementSize` reads the TRANSFORM-inclusive rect for SVG targets,
+ // and a resize tick landing inside a transform window latches the wrong box permanently —
+ // measured here as board rules drifting 0.918/1.0898 across drawer toggles. The layout box
+@@ -210,7 +211,7 @@ const captureSide = computed(() => {
+ });
+ 
+ function gridPoseSvg(pose: number): string {
+-  const color = resolveCssValue(svgRef.value, "--grid-line-color", "#262626");
++  const color = "#000"; // coverage, not ink — the mask's rect paints `--grid-line-color`
+   const defs = readFilterDefs("grain-static");
+   const paths = steadyFrames.value[pose];
+   const stroke = (d: string, w: number, op: number, join = false): string =>
+@@ -227,10 +228,9 @@ function gridPoseSvg(pose: number): string {
+ }
+ 
+ const gridRaster = useRasterStack(() => ({
+-  // The theme token separates light/dark bitmaps in the shared cache and re-bakes on a
+-  // flip; the literal stroke color is read fresh in gridPoseSvg at capture time (the grid
+-  // line color snaps with the theme class — no transition to catch mid-tween).
+-  cacheKey: `grid-${props.boardSize}-${props.subgridSize}-${isDark.value ? "d" : "l"}`,
++  // No theme token (T9-M15): one coverage stack serves both themes, and the grid line color
++  // snaps with the theme class through the mask's fill — no transition to catch mid-tween.
++  cacheKey: `grid-${props.boardSize}-${props.subgridSize}`,
+   poseCount: BOIL_CONFIG.frameCount,
+   poseSvg: gridPoseSvg,
+   // Zero until the face lands — `rasterPose.ts` §THE FONT GATE. The grid carries no text,
+@@ -251,12 +251,12 @@ const gridRaster = useRasterStack(() => ({
+   ),
+ }));
+ 
+-// The baked poses ARE object URLs (pencil-boil 0.11) backing static <image> siblings —
++// The baked poses ARE object URLs (pencil-boil 0.11) backing static masked siblings —
+ // opacity flips only, no per-beat drawImage, and no bitmap re-draw/encode/close between the
+ // capture and the render. `urls` goes null while a (re-)bake is in flight and the set is
+-// RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the old theme's
+-// <image> stack keeps rendering until the new poses land, then one assignment swaps — no
+-// mid-gesture drop to the live-filter fallback (the toggle Bloom masks the moment).
++// RETAINED across that null (the atomic-swap discipline, T4-WM rank 3): the old stack keeps
++// rendering until the new poses land (a resize, a DPR move), then one assignment swaps — no
++// drop to the live-filter fallback.
+ //
+ // The reset key is the STRUCTURAL escape: a board/subgrid change is not a re-tint, so the
+ // retained poses carry the wrong geometry. Dropping them takes the FROZEN-pose path —
+@@ -397,19 +397,40 @@ onUnmounted(() => {
+       <!-- T4-W1 baked poses: static <image> siblings of the captured bitmaps,
+                  opacity-swapped on the beat. No filter, no per-beat raster — the WebKit
+                  re-raster and Chromium's tile churn both go to zero. -->
++      <!-- T9-M15 · each pose's coverage masks a rect filled `--grid-line-color`: the ink
++           follows the theme class with no bitmap swap. -->
+       <template v-if="showBaked">
+-        <image
+-          v-for="(url, f) in bitmapUrls"
+-          :key="'bmp-' + f"
+-          class="boil-frame-bitmap"
+-          :class="{ 'is-active': boilFrame === f }"
+-          :href="url"
+-          x="0"
+-          y="0"
+-          :width="VIEWBOX_SIZE"
+-          :height="VIEWBOX_SIZE"
+-          preserveAspectRatio="xMidYMid meet"
+-        />
++        <template v-for="(url, f) in bitmapUrls" :key="'bmp-' + f">
++          <!-- The region is EXPLICIT: Chromium rasters a default (bounding-box, −10 %) mask
++               region soft — max channel Δ 83 against the control; explicit, 2. -->
++          <mask
++            :id="`${maskId}-${f}`"
++            class="boil-frame-mask"
++            maskUnits="userSpaceOnUse"
++            x="0"
++            y="0"
++            :width="VIEWBOX_SIZE"
++            :height="VIEWBOX_SIZE"
++          >
++            <image
++              :href="url"
++              x="0"
++              y="0"
++              :width="VIEWBOX_SIZE"
++              :height="VIEWBOX_SIZE"
++              preserveAspectRatio="xMidYMid meet"
++            />
++          </mask>
++          <rect
++            class="boil-frame-bitmap"
++            :class="{ 'is-active': boilFrame === f }"
++            x="0"
++            y="0"
++            :width="VIEWBOX_SIZE"
++            :height="VIEWBOX_SIZE"
++            :mask="`url(#${maskId}-${f})`"
++          />
++        </template>
+       </template>
+       <!-- The live grain-static stack stays mounted: it is the during-bake fallback
+                  AND the print surface (@media print blackens its .grid-line strokes, which
+@@ -563,6 +584,11 @@ onUnmounted(() => {
+ .boil-frame-bitmap {
+   opacity: 0;
+   will-change: opacity;
++  fill: var(--grid-line-color);
++}
++
++.boil-frame-mask {
++  mask-type: alpha;
+ }
+ 
+ .boil-frame-bitmap.is-active {
