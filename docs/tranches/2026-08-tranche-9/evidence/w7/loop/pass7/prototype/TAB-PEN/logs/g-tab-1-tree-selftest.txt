@@ -1,0 +1,39 @@
+check-favicon (/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tabpen-p7/f-1d0d/web/frontend):
+  a  GREEN
+  b  GREEN
+  c  GREEN
+  d  GREEN
+  e  GREEN
+
+self-test plants:
+  RED as required  P1 main's favicon.svg verbatim: red abcd, want abcd
+  RED as required  P2 ink #1a1a1a: red c, want c
+  RED as required  P3 stroke-width 6: red bd, want bd
+  RED as required  P4 @media deleted: red c, want c
+  RED as required  P5 FAINT INK stroke-opacity 0.15: red a, want a
+  RED as required  P5b FAINT INK #e8e6e3 on the light paper: red c, want c
+  RED as required  P6 the SVG edited after the PNG: red e, want e
+  RED as required  E1 CSS stroke-width:9px (the owner's defect): red b, want b
+  RED as required  E2 FAINT INK by a later rule: red c, want c
+  RED as required  E3 a second ink element: red a, want a
+  RED as required  E4 the pen hidden: red b, want b
+  RED as required  E5 a solid-red 180 PNG, sidecar re-stamped: red e, want e
+  RED as required  E6 paper 8 x 8: red a, want a
+  RED as required  E7 viewBox 64 (the ink halves): red a, want a
+  RED as required  E8 a dashed pen: red b, want b
+  RED as required  E9 the light rule moved after @media (dark ink on dark paper): red c, want c
+  RED as required  E10 FAINT INK by alpha, #0a0a0a26: red c, want c
+  RED as required  E11 style= on the path: red a, want a
+  RED as required  E12 a second <style> (read too): red ab, want ab
+  RED as required  E13 the paper painted over the pen: red a, want a
+  RED as required  E14 @import in <style>: red b, want b
+  RED as required  E15 a rule for every element: red b, want b
+  RED as required  E16 !important: red b, want b
+  RED as required  E17 a comment hiding markup: red a, want a
+  RED as required  E18 ink by an unresolvable var(): red c, want c
+  RED as required  E19 the page's paper moved at a new site (a palette family's :root): red c, want c
+  GREEN as required  NN1 the same ink spelled rgb(10 10 10): red none, want none
+  GREEN as required  NN2 a decoy rule inside a CSS comment: red none, want none
+
+check-favicon: the tab's s is one pen line, on the page's paper, in its ink
+exit 0

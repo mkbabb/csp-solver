@@ -1,0 +1,23 @@
+load 57.30 56.06 91.05
+REST chromium self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":1,"lapped":0},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":171,"residual":0},"verdict":"GREEN"}
+LOAD 63.84 57.43 91.33
+EXIT rest chromium self-resize 0
+REST chromium self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:touch"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST chromium self-touch {"row":"a row tap inside the open sheet","focus":"INPUT[cell].cell-native-input","verdict":"GREEN"}
+LOAD 68.98 58.61 91.55
+EXIT rest chromium self-touch 0
+REST chromium self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+LOAD 68.74 58.73 91.40
+EXIT rest chromium self-touch+relabel 0
+REST webkit self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":1,"lapped":0},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":160,"residual":0},"verdict":"GREEN"}
+LOAD 75.00 60.41 91.61
+EXIT rest webkit self-resize 0
+REST webkit self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST webkit self-touch {"row":"a row tap inside the open sheet","focus":"INPUT[cell].cell-native-input","verdict":"GREEN"}
+LOAD 70.84 59.79 91.21
+EXIT rest webkit self-touch 0
+REST webkit self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+LOAD 71.17 60.04 91.12
+EXIT rest webkit self-touch+relabel 0
+load 71.17 60.04 91.12
+REST-DONE

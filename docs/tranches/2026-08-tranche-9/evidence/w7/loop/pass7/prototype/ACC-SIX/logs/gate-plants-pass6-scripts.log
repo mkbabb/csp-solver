@@ -1,0 +1,16 @@
+NEGATIVE CONTROL: the pass-6 scripts (bank 846145d) on the same plants
+clean mirror: theme-tokens 0 · font-coverage 0
+LAW20 CONTROL a literal url(#solver-ink) in the panel template: 1 (must be 1)
+LAW20 T1 dynamic url(#${id}) built in script, bound by NAME (:stroke="inkUrl"): 0
+LAW20 T2 string concatenation :stroke="'url(#' + 'solver-ink' + ')'": 0
+LAW20 T3 gradient href by NAME (:href="inkHref"): 0
+LAW20 T4 a /* inside a string (accept="image/*") swallows a literal consumer up to the next */: 0
+LAW20 CONTROL-2 the lane's own :style dynamic shape: 1 (must be 1)
+FONT CONTROL <StagingBand :safe-verb=plantedVerb>: 1 (must be 1)
+FONT F1 dynamic component <component :is="StagingBand" :safe-verb>: 0
+FONT F2 defineAsyncComponent alias <Band2 :safe-verb>: 0
+FONT F3 named-default import alias <Band3 :safe-verb>: 0
+FONT F4 render function h(StagingBand, { safeVerb }): 0
+restored src/pencil/chrome/GameGallery/GameGallery.vue OK
+restored src/games/shared/GameControlPanel.vue OK
+clean mirror again: theme-tokens 0 · font-coverage 0

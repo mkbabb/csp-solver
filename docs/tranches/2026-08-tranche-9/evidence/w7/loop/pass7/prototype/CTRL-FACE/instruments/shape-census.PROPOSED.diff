@@ -1,0 +1,30 @@
+114c114,123
+<         if (prelude.startsWith("@")) cssRules(body, line, [...ctx, prelude.replace(/\s+/g, " ")], out);
+---
+>         if (prelude.startsWith("@")) {
+>           // CTRL-FACE pass 7 (PROPOSED): an at-rule whose body holds DECLARATIONS of its own (Tailwind v4's
+>           // `@utility x { font-family: … }`, `@font-face`, `@page`) was read only for nested rules, so every
+>           // declaration in it was dropped — typography.css's twelve `@utility` families never reached a law.
+>           // `@utility name` is the class `.name`; any other at-rule keeps its prelude (a descriptor block).
+>           const own = decls(body.replace(/[^{};]*\{(?:[^{}]|\{[^{}]*\})*\}/g, ""), line);
+>           const at = prelude.replace(/\s+/g, " ");
+>           if (own.length) out.push({ ctx, prelude: /^@utility\s+([\w-]+)/.test(at) ? `.${/^@utility\s+([\w-]+)/.exec(at)[1]}` : at, decls: own, line });
+>           cssRules(body, line, [...ctx, at], out);
+>         }
+155a165
+>   if (cls === "*") return true; // CTRL-FACE pass 7 (PROPOSED): the WILDCARD subject — a law over every rule (CHECK 7: every font-family)
+185c195
+<     if (!new RegExp(`(^|[^\\w-])${cls.replace(/[-]/g, "\\-")}(?![\\w-])`).test(classes)) continue;
+---
+>     if (cls !== "*" && !new RegExp(`(^|[^\\w-])${cls.replace(/[-]/g, "\\-")}(?![\\w-])`).test(classes)) continue;
+194c204,207
+<     for (const tw of classes.split(/[\s'"{},:\[\]]+/)) { const map = TAILWIND(tw); if (map) out.push({ kind: "tailwind", prop: map[0], value: map[1], important: tw.startsWith("!"), line, token: tw }); }
+---
+>     // CTRL-FACE pass 7 (PROPOSED): the split on `[`/`]`/`:` cut every arbitrary value (`font-[Comic_Sans_MS]`
+>     // read as `font-` + `Comic_Sans_MS`, invisible) — split on whitespace, quotes, braces and commas; a
+>     // trailing `:` (an object key) is trimmed; a variant prefix (`hover:`) is TAILWIND's to strip.
+>     for (const tw of classes.split(/[\s'"{},]+/).map((x) => x.replace(/:$/, ""))) { const map = TAILWIND(tw); if (map) out.push({ kind: "tailwind", prop: map[0], value: map[1], important: tw.startsWith("!"), line, token: tw }); }
+238c251
+<       if (b.template) for (const s of templateSites(b.template.text, cls, b.template.line)) if (s.prop === prop) out.push({ file: rel, ctx: "", prelude: `<template .${cls}>`, ...s });
+---
+>       if (b.template) for (const s of templateSites(b.template.text, cls, b.template.line)) if (s.prop === prop) out.push({ ctx: "", prelude: `<template .${cls}>`, ...s, file: rel }); // pass 7 (PROPOSED): `...s` carried `file: null` over the file

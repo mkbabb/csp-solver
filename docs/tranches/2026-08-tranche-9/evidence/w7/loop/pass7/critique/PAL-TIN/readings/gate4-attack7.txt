@@ -1,0 +1,37 @@
+clean0 exit 0 · 0 findings · baseline
+D1-color-srgb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(srgb 1 0.698 0.953)";
+D2-oklab exit 1 · 1 findings · src/games/shared/p.ts: export const x = "oklab(0.856 0.1045 -0.0550)";
+D4-hwb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hwb(310 70% 0%)";
+D5-rgb-percent exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(100% 70% 95%)";
+D6-hex-concat exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#ff" + "b2f3";
+D7-numeric-triples exit 1 · 2 findings · src/games/shared/p.ts: export const TAPE = [[255, 193, 161], [178, 231, 5]];
+D8-json-table exit 1 · 2 findings · src/games/shared/palette.json: {"a":"#ffc1a1","e":"#ffb2f3"}
+D9-public-css exit 1 · 2 findings · public/peers.css: :root{--x1:#ffc1a1;--x2:#b2e705}
+D10-tsx exit 1 · 1 findings · src/games/shared/P.tsx: export const x = "#ffb2f3";
+D11-minted-concat exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty("--color-peer-" + i + "-name", "#000");
+D12-minted-key-concat exit 1 · 1 findings · src/games/shared/p.ts: declare const i: number; export const s = { ["--color-peer-" + i + "-ring"]: "#000" };
+D13-colormix-derived-arm exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: color-mix(in oklch, var(--color-peer-5-ring) 60%, white); }
+D14-hsl-turn exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(0.86turn 100% 85%)";
+D23-packed-int exit 0 · 0 findings · src/games/shared/p.ts: export const x = "#" + (0xffb2f3).toString(16);
+D24-array-join exit 0 · 0 findings · src/games/shared/p.ts: export const x = ["#ff", "b2f3"].join("");
+D25-template-const exit 0 · 0 findings · src/games/shared/p.ts: export const x = `#ff${"b2f3"}`;
+D26-display-p3 exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(display-p3 0.9554 0.7109 0.9383)";
+D27a-hsl-rad exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(5.4rad 100% 84.9%)";
+D27b-hsl-grad exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(343.8grad 100% 84.9%)";
+D28-escaped-hash exit 0 · 0 findings · src/games/shared/p.ts: export const x = "\x23ffb2f3";
+D29-css-escape-hash exit 0 · 0 findings · src/games/shared/gameCell.css += .x { color: #ff\62 2f3; }
+D30a-tailwind-indigo-200-vs-violet-name exit 0 · 0 findings · src/games/shared/Tw.vue: <template><span class="text-indigo-200">x</span></template>
+D30b-tailwind-teal-800-vs-teal-stick exit 0 · 0 findings · src/games/shared/Tw.vue: <template><span class="text-teal-800">x</span></template>
+D31-rgb-slash-alpha exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(255 178 243 / 50%)";
+D32-derived-via-indirection exit 0 · 0 findings · src/games/shared/gameCell.css += .x { color: color-mix(in oklch, var(--color-peer-cursor-ink) 60%, white); }
+D33-minted-split-template exit 0 · 0 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty(`--color-${"peer"}-${i}-name`, "#000");
+D34-minted-concat-method exit 0 · 0 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty("--color-peer-".concat(String(i), "-name"), "#000");
+D35-minted-join exit 0 · 0 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty(["--color-peer", i, "name"].join("-"), "#000");
+D36-relative-from-literal exit 0 · 0 findings · src/games/shared/p.ts: export const x = "oklch(from #000 0.856 0.121 332.4)";
+D37-cie-lab exit 1 · 1 findings · src/games/shared/p.ts: export const x = "lab(80.2 28.6 -17.4)";
+D38-oklch-alpha exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: oklch(0.856 0.121 332.4 / 0.5); }
+D39-const-ident-concat exit 0 · 0 findings · src/games/shared/p.ts: const P = "b2f3"; export const x = "#ff" + P;
+D40-mixed-case exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#FfB2F3".toLowerCase();
+clean1 exit 0 · 0 findings · after
+restored byte-equal
+DONE

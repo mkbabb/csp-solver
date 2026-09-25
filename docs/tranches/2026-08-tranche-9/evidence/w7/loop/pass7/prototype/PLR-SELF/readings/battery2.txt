@@ -1,0 +1,65 @@
+sha1 at start: PM 25b082fd57e1 HS f778030625c4 spec 677ac6bee362
+LOAD { 46.59 174.87 174.16 }
+regime names exit 0
+planted ARM-cells PlayerMark.vue
+regime cells exit 0
+after ARM-cells: PM 25b082fd57e1 HS f778030625c4 spec 677ac6bee362
+planted P1-one-axis PlayerMark.vue
+P1-one-axis exit=1 restored=OK ::  2 failed 
+   ✘  1 [chromium] › e2e/player-mark.spec.ts:508:1 › a portrait phone compresses exactly where four rows would lap the board (19.4s)
+   ✘  2 [webkit] › e2e/player-mark.spec.ts:508:1 › a portrait phone compresses exactly where four rows would lap the board (27.2s)
+planted P2-no-refit PlayerMark.vue
+P2-no-refit exit=1 restored=OK ::  2 failed 
+   ✘  2 [chromium] › e2e/player-mark.spec.ts:567:1 › an open sheet reads the space again when the window changes under it (3.4s)
+   ✘  1 [webkit] › e2e/player-mark.spec.ts:567:1 › an open sheet reads the space again when the window changes under it (4.8s)
+planted P3-label-guard PlayerMark.vue
+P3-label-guard exit=1 restored=OK ::  2 failed 
+   ✘  1 [chromium] › e2e/player-mark.spec.ts:689:1 › one tap is one toggle when the tap's click is labelled as a mouse (977ms)
+   ✘  2 [webkit] › e2e/player-mark.spec.ts:689:1 › one tap is one toggle when the tap's click is labelled as a mouse (2.0s)
+planted P4-sheet-unprevented PlayerMark.vue
+P4-sheet-unprevented exit=1 restored=OK ::  2 failed 
+   ✘  1 [chromium] › e2e/player-mark.spec.ts:605:1 › a tap opens the mark on a coarse phone, keeps the cell, and tells the room nothing (4.2s)
+   ✘  2 [webkit] › e2e/player-mark.spec.ts:605:1 › a tap opens the mark on a coarse phone, keeps the cell, and tells the room nothing (5.0s)
+planted P5-X6-file HeadSheet.vue
+P5-X6-file exit=1 restored=OK ::  2 failed 
+   ✘  1 [webkit] › e2e/player-mark.spec.ts:822:1 › both head disclosures paint a drawn edge on all four sides and no CSS border (3.1s)
+   ✘  2 [chromium] › e2e/player-mark.spec.ts:822:1 › both head disclosures paint a drawn edge on all four sides and no CSS border (2.1s)
+planted P6-half-shut HeadSheet.vue
+P6-half-shut exit=1 restored=OK ::  2 failed 
+   ✘  1 [webkit] › e2e/player-mark.spec.ts:922:1 › shut, both head disclosures paint nothing (2.6s)
+   ✘  2 [chromium] › e2e/player-mark.spec.ts:922:1 › shut, both head disclosures paint nothing (1.7s)
+planted P2-no-refit PlayerMark.vue
+REST chromium self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":4,"lapped":7},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":146,"residual":0},"verdict":"RED"}
+LOAD 129.99 129.20 152.23
+EXIT rest chromium self-resize [P2 planted] 1
+REST webkit self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":4,"lapped":7},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":129,"residual":0},"verdict":"RED"}
+LOAD 133.36 129.91 152.34
+EXIT rest webkit self-resize [P2 planted] 1
+planted P3-label-guard PlayerMark.vue
+REST chromium self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true","false"],"toggles":2,"verdict":"RED"}
+LOAD 137.00 130.79 152.39
+EXIT rest chromium self-touch+relabel [P3 planted] 1
+REST webkit self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true","false"],"toggles":2,"verdict":"RED"}
+LOAD 139.48 131.52 152.40
+EXIT rest webkit self-touch+relabel [P3 planted] 1
+planted P4-sheet-unprevented PlayerMark.vue
+REST chromium self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:touch"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST chromium self-touch {"row":"a row tap inside the open sheet","focus":"BODY.","verdict":"RED"}
+LOAD 141.20 132.15 152.37
+EXIT rest chromium self-touch [P4 planted] 1
+REST webkit self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST webkit self-touch {"row":"a row tap inside the open sheet","focus":"BODY.","verdict":"RED"}
+LOAD 138.94 131.83 152.14
+EXIT rest webkit self-touch [P4 planted] 1
+planted P7-radius-literal HeadSheet.vue
+RADIUS chromium r16 ground 16px d sha e5926b5d7f10 len 14754 | r18 ground 18px d sha 00efc347ea8a len 16070
+RADIUS webkit r16 ground 16px d sha e5926b5d7f10 len 14754 | r18 ground 18px d sha 8a21342903f3 len 16075
+LOAD 126.38 129.37 151.03
+EXIT radius [P7 literal planted] 0
+after breaks: PM 25b082fd57e1 HS f778030625c4 spec 677ac6bee362
+seam b exit 0
+planted ARM-a PlayerMark.vue
+seam a exit 0
+sha1 at end: PM 25b082fd57e1 HS f778030625c4 spec 677ac6bee362
+LOAD { 95.52 121.68 147.50 }
+BATTERY2-DONE

@@ -1,0 +1,60 @@
+diff --git a/web/frontend/e2e/keys-crib.spec.ts b/web/frontend/e2e/keys-crib.spec.ts
+index ba24301..c1a4ce1 100644
+--- a/web/frontend/e2e/keys-crib.spec.ts
++++ b/web/frontend/e2e/keys-crib.spec.ts
+@@ -111,7 +111,7 @@ for (const [w, h] of [
+           return {
+             st: c.scrollTop,
+             spb: getComputedStyle(c).scrollPaddingBottom,
+-            barH: c.style.getPropertyValue("--action-bar-h"),
++            barH: c.style.getPropertyValue("--card-foot-h"),
+           };
+         },
+         { card: CARD, start },
+@@ -140,7 +140,7 @@ for (const [w, h] of [
+           hit,
+           of: targets.length,
+           dlAboveVerbs: Math.round((verbs.top - dl.bottom) * 100) / 100,
+-          barH: c.style.getPropertyValue("--action-bar-h"),
++          barH: c.style.getPropertyValue("--card-foot-h"),
+           spb: getComputedStyle(c).scrollPaddingBottom,
+         };
+       }, CARD);
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9546a74..54d32e5 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -219,11 +219,6 @@
+   inherits: true;
+   initial-value: 0px;
+ }
+-@property --card-pad-t {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+ @property --card-pad-b {
+   syntax: "<length>";
+   inherits: true;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68b4912..9161444 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -926,12 +926,11 @@ function publishBar() {
+   const cs = getComputedStyle(card);
+   const pad = parseFloat(cs.paddingBottom) || 0;
+   put("--card-pad-b", `${pad}px`);
+-  put("--action-bar-h", `${Math.ceil(bar.getBoundingClientRect().height + pad)}px`);
+-  // The TOP padding's sample. Since the §10 integration nothing in CSS reads it — the three
+-  // readers (the padding, the top sentinel, the pin line) spend `--pin-band` directly — and it
+-  // is published only because `face-law.spec.ts` §11 names it as the registration block's
+-  // clause-4 host. DECLARED residue: the fold re-keys that row to `--pin-tape-h` and strikes it.
+-  put("--card-pad-t", `${parseFloat(cs.paddingTop) || 0}px`);
++  // CTRL-FACE pass 7 (charter row 5) — TWO LENGTHS STRUCK WITH THEIR LAST READER. `--action-bar-h`
++  // was W2's scroll-padding term while the bar lived in the scrollport; on the foot nothing reads
++  // it. `--card-pad-t` was the top padding's sample; the pin line spends `--pin-band` and
++  // `face-law` §11 now reads `--pin-tape-h`. Published with no reader, each was a number that
++  // could only go stale.
+   publishFold();
+ }
+ 

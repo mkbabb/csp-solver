@@ -1,0 +1,1066 @@
+diff --git a/web/frontend/e2e/front-rate.spec.ts b/web/frontend/e2e/front-rate.spec.ts
+index 3c37285..4bab708 100644
+--- a/web/frontend/e2e/front-rate.spec.ts
++++ b/web/frontend/e2e/front-rate.spec.ts
+@@ -34,41 +34,92 @@ import { clockFor, clockHz } from "./rate-clock";
+  * ≥ 3 strokes, then asserts ONE tally draw-in averaged MORE than 4 `d` records per re-cut frame:
+  * it saw the stagger or it says so.
+  *
++ * THE SHORTEST GAP IS GATED TOO (pass-6 critique §3.1; chair A.6). A rate over a burst can pass
++ * while single gaps break the budget: the forced end-write landed 5.9–9.5 ms after the last gated
++ * commit, and WebKit's whole-millisecond clock let 14–15 ms gaps through a 16 ms gate. Every
++ * burst prints its gaps' minimum, and every minimum must be ≥ 15.5 ms (the budget's 16 on a
++ * clock read to the half millisecond). The gap is read between the FRAMES the re-cuts belong to
++ * (the chair's "rAF timestamp", A.6), which is the clock `frontGate` times a tween's writes on:
++ * the driven clock runs a frame's callbacks in one task, so a write's DOM time waits for the
++ * rest of the frame's work, and that wait moved 0–8 ms frame to frame at load 35–50 (pass 7:
++ * WebKit's DOM gaps read 13.0 and 15.0 ms in 2 of 6 runs). The DOM gaps print beside it, never
++ * hidden. A write outside any frame (a timer's, a worker message's) is read at the DOM.
++ *
+  * BORN-REDs: `FRONT_MIN_MS` 16 → 0 in `gridPaths.ts` reds the rate on the driven clock in both
+- * engines; CLOCK=60 reds the precondition; DEAL=EASY reds the interleave witness.
++ * engines; the pass-6 compare (a forced end committed inside the window, a whole-ms reading of
++ * 16 admitted) reds the shortest gap; CLOCK=60 reds the precondition; DEAL=EASY reds the
++ * interleave witness. The pass-5 hole (the ablation passing under a 60 Hz clock with the
++ * precondition off) is the critic's instrument, not a switch this file ships.
+  */
+ const BUDGET_PER_S = 62.5;
++const MIN_GAP_MS = 15.5;
+ const MIN_CLOCK_HZ = 1.5 * BUDGET_PER_S;
+ const CONSUMERS = { gauge: ".progress-trace", tally: ".dt-stroke", join: ".join-pose path" };
+ const DEAL = process.env.DEAL ?? "HARD";
+-const PRECOND = process.env.PRECOND !== "0";
+ 
+-type Cuts = Record<string, { d: number; times: number[]; n: number[] }>;
++type Cuts = Record<string, { d: number; times: number[]; frames: number[]; n: number[]; lag: number[] }>;
+ 
+ const OBSERVE_CUTS = (selectors: Record<string, string>) => {
+   const w = window as unknown as { __cuts: Cuts };
+   w.__cuts = {};
+-  for (const k of Object.keys(selectors)) w.__cuts[k] = { d: 0, times: [], n: [] };
++  // ONE observer per consumer, so a commit's `d` writes arrive in ONE callback on ONE clock read:
++  // one callback is one re-cut. (Pass 7: an observer PER ELEMENT read the clock once per element,
++  // and on WebKit's whole-millisecond clock a commit whose callbacks straddled a millisecond
++  // boundary split into two "frames" 1.0 ms apart — the instrument's clock, not the gate's.)
++  //
++  // TWO CLOCKS PER RE-CUT. `times` is when the `d` write reached the DOM (the observer's read).
++  // `frames` is the animation frame the write belongs to: the timestamp of the rAF callback whose
++  // task wrote it, or the DOM time for a write outside any frame (an end in a timer, a start in a
++  // worker's message). The budget is "re-cuts per second at any refresh rate", and a re-cut paints
++  // with its frame however late in that frame's task the render flushes it: the flush's lag
++  // (`lag`, DOM − frame) moved 0–11 ms frame to frame at load 35–50 (pass 7) and is printed,
++  // not gated. The gap clause reads `frames`; the DOM gaps print beside it.
++  // A write belongs to a frame only if that frame's own task made it. Every timer task opens with
++  // no frame (the driven clock's pump is a timer too, and sets its frame after); a frame's writes
++  // close it once the observers have read them; and a frame that wrote nothing is closed by a
++  // posted message, the next task its own task queues. (Pass 7: a zero-delay clear let an owed
++  // end's timer, already due when the pump ended, run first and read as the pump's frame, a
++  // 14.9 ms "frame" gap between writes 16.2 ms apart at the DOM; and a draw-in started from the
++  // worker's message after a frame with no writes read as that frame, 5.0 ms against 16.0.)
++  const raf = window.requestAnimationFrame.bind(window);
++  const later = window.setTimeout.bind(window);
++  let frameTs: number | null = null;
++  window.setTimeout = ((fn: unknown, ms?: number, ...a: unknown[]) =>
++    later(() => {
++      frameTs = null;
++      if (typeof fn === "function") fn(...a);
++    }, ms)) as unknown as typeof window.setTimeout;
++  const close = new MessageChannel();
++  close.port1.onmessage = () => (frameTs = null);
++  window.requestAnimationFrame = (cb) =>
++    raf((ts) => {
++      frameTs = ts;
++      close.port2.postMessage(0);
++      cb(ts);
++    });
++  const obs: Record<string, MutationObserver> = {};
++  for (const k of Object.keys(selectors)) {
++    w.__cuts[k] = { d: 0, times: [], frames: [], n: [], lag: [] };
++    obs[k] = new MutationObserver((recs) => {
++      const t = performance.now();
++      const d = recs.filter((m) => m.attributeName === "d").length;
++      if (!d) return;
++      const r = w.__cuts[k];
++      r.d += d;
++      r.times.push(t);
++      r.frames.push(frameTs ?? t);
++      r.n.push(d);
++      r.lag.push(frameTs == null ? NaN : t - frameTs); // NaN: a write outside any frame
++      if (frameTs != null) queueMicrotask(() => (frameTs = null));
++    });
++  }
+   const seen = new WeakSet<Element>();
+   const attach = () => {
+     for (const [k, sel] of Object.entries(selectors))
+       document.querySelectorAll(sel).forEach((el) => {
+         if (seen.has(el)) return;
+         seen.add(el);
+-        new MutationObserver((recs) => {
+-          const t = performance.now();
+-          const r = w.__cuts[k];
+-          for (const m of recs) {
+-            if (m.attributeName !== "d") continue;
+-            r.d++;
+-            const last = r.times[r.times.length - 1];
+-            if (last === undefined || t - last > 0.5) {
+-              r.times.push(t);
+-              r.n.push(0);
+-            }
+-            r.n[r.n.length - 1]++;
+-          }
+-        }).observe(el, { attributes: true, attributeFilter: ["d"] });
++        obs[k].observe(el, { attributes: true, attributeFilter: ["d"] });
+       });
+   };
+   // an init script runs before <body> exists; observing a null body throws and loses the hook
+@@ -83,7 +134,7 @@ const OBSERVE_CUTS = (selectors: Record<string, string>) => {
+ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async ({
+   browser,
+ }, testInfo) => {
+-  test.setTimeout(120000);
++  test.setTimeout(180000);
+   const clock = clockFor();
+   const ctx = await browser.newContext({ reducedMotion: "no-preference" });
+   await ctx.addInitScript(clock.script as (a?: number) => void, clock.arg);
+@@ -101,14 +152,18 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+     if (!t || t.classList.contains("is-ungraded")) return -1;
+     return document.querySelector(".dt-pose")?.querySelectorAll(".dt-stroke.inked").length ?? 0;
+   };
++  const BOARD = () =>
++    Array.from(document.querySelectorAll(".sudoku-cell input[aria-label]"), (c) => c.getAttribute("aria-label")).join("|");
+   let inked: number;
+   let deals = 1;
+   for (;;) {
+     await expect.poll(() => a.evaluate(INKED), { timeout: 30000 }).toBeGreaterThanOrEqual(0);
+     inked = await a.evaluate(INKED);
+     if (inked >= 3 || deals >= 6) break;
++    // the next board, not the last one's tally: wait for the cells to change before re-reading
++    const before = await a.evaluate(BOARD);
+     await a.locator('.controls-card button[aria-label="Deal a new board"]').click();
+-    await a.waitForSelector(".difficulty-tally.is-ungraded", { timeout: 5000 }).catch(() => {});
++    await expect.poll(() => a.evaluate(BOARD), { timeout: 15000 }).not.toBe(before);
+     deals++;
+   }
+   await a.waitForTimeout(1500); // the last draw-in ends before the hints move the gauge
+@@ -117,10 +172,32 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+   await expect
+     .poll(() => a.evaluate(() => !!document.querySelector<HTMLButtonElement>('[aria-label*="Hint" i]:not([disabled])')), { timeout: 30000 })
+     .toBe(true);
+-  for (let i = 0; i < 3; i++) {
++  // three hints must FILL cells (the gauge moves), or the gauge's row measures nothing: a press
++  // does not always fill (0, 1, 1, 2 over four presses, pass 7), so the row presses until three
++  // fills have landed, at most twelve presses, one fill's tween apart
++  const FILLED = () =>
++    Number(document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuenow") ?? -1);
++  const filled0 = await a.evaluate(FILLED);
++  let fills = 0;
++  for (let press = 0; press < 12 && fills < 3; press++) {
++    const was = await a.evaluate(FILLED);
++    // a hint's fallback reveals the SELECTED cell (a HARD board often has no nameable single):
++    // keep an empty cell selected so every second press can land a digit
++    await a.evaluate(() =>
++      Array.from(document.querySelectorAll<HTMLInputElement>(".sudoku-cell input"))
++        .find((i) => !i.value)
++        ?.focus(),
++    );
+     await a.evaluate(() => document.querySelector<HTMLButtonElement>('[aria-label*="Hint" i]:not([disabled])')?.click());
++    // a loaded solver worker lands the fill late: wait for it (3 s), then one tween's settle
++    const moved = await expect
++      .poll(() => a.evaluate(FILLED), { timeout: 3000 })
++      .toBeGreaterThan(was)
++      .then(() => true, () => false);
++    if (moved) fills++;
+     await a.waitForTimeout(700);
+   }
++  expect(fills, `three hints filled no more than ${fills} cells (gauge ${filled0} → ${await a.evaluate(FILLED)} %)`).toBe(3);
+   const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
+   await expect(verb).toBeEnabled();
+   await verb.click();
+@@ -137,9 +214,10 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+   const cuts = await a.evaluate(() => (window as unknown as { __cuts: Cuts }).__cuts);
+   const rings = await a.evaluate(() => document.querySelectorAll(".progress-trace").length);
+   const lines: string[] = [
+-    `clock ${clock.name}: measured ${hz.hz.toFixed(1)} Hz over ${hz.gaps} gaps (precondition ≥ ${MIN_CLOCK_HZ} Hz${PRECOND ? "" : ", OFF"}) · deal ${DEAL} ×${deals}, tally inked ${inked} · .progress-trace nodes ${rings}`,
++    `clock ${clock.name}: measured ${hz.hz.toFixed(1)} Hz over ${hz.gaps} gaps (precondition ≥ ${MIN_CLOCK_HZ} Hz) · deal ${DEAL} ×${deals}, tally inked ${inked} · .progress-trace nodes ${rings}`,
+   ];
+   const worsts: Record<string, number> = {};
++  const minGaps: Record<string, number> = {};
+   const bursts_: Record<string, number> = {};
+   let tallyBestDPerFrame = 0;
+   for (const k of Object.keys(CONSUMERS)) {
+@@ -147,14 +225,20 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+     // bursts: one event's frames (a gap > 300 ms starts the next event)
+     const bursts: number[][] = [];
+     const burstD: number[] = [];
++    const burstLag: number[][] = [];
++    const burstFr: number[][] = [];
+     t.forEach((x, i) => {
+       const cur = bursts[bursts.length - 1];
+       if (cur && x - cur[cur.length - 1] <= 300) {
+         cur.push(x);
+         burstD[burstD.length - 1] += cuts[k].n[i];
++        burstLag[burstLag.length - 1].push(cuts[k].lag[i]);
++        burstFr[burstFr.length - 1].push(cuts[k].frames[i]);
+       } else {
+         bursts.push([x]);
+         burstD.push(cuts[k].n[i]);
++        burstLag.push([cuts[k].lag[i]]);
++        burstFr.push([cuts[k].frames[i]]);
+       }
+     });
+     const dPerFrame = bursts.map((q, i) => burstD[i] / q.length);
+@@ -164,7 +248,12 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+       .map((q) => ((q.length - 1) / (q[q.length - 1] - q[0])) * 1000);
+     worsts[k] = Math.max(0, ...rates);
+     bursts_[k] = rates.length;
+-    lines.push(`${k}: ${cuts[k].d} d records, ${t.length} frames (${(cuts[k].d / Math.max(1, t.length)).toFixed(2)} d/frame; by burst ${dPerFrame.map((v) => v.toFixed(2)).join("/")}), ${rates.length} bursts, worst ${worsts[k].toFixed(1)}/s`);
++    // each burst's shortest gap, the end-write included: on the frame clock (gated) and at the DOM
++    const minOf = (q: number[]) => Math.min(...q.slice(1).map((x, i) => x - q[i]));
++    const mins = burstFr.filter((q) => q.length > 1).map(minOf);
++    const domMins = bursts.filter((q) => q.length > 1).map(minOf);
++    minGaps[k] = Math.min(Infinity, ...mins);
++    lines.push(`${k}: ${cuts[k].d} d records, ${t.length} frames (${(cuts[k].d / Math.max(1, t.length)).toFixed(2)} d/frame; by burst ${dPerFrame.map((v) => v.toFixed(2)).join("/")}), ${rates.length} bursts, worst ${worsts[k].toFixed(1)}/s, min gap by burst ${mins.map((v) => v.toFixed(1)).join("/")} ms (DOM ${domMins.map((v) => v.toFixed(1)).join("/")}), flush lag by burst ${burstLag.map((l) => { const f = l.filter((x) => !Number.isNaN(x)); return `${Math.min(...f).toFixed(1)}–${Math.max(...f).toFixed(1)}`; }).join("/")} ms, ${cuts[k].lag.filter((x) => Number.isNaN(x)).length} of ${t.length} outside a frame`);
+   }
+   // every consumer's reading is printed BEFORE any assertion, so a red names all three
+   for (const l of lines) console.log(`G10 ${testInfo.project.name} ${l}`);
+@@ -173,11 +262,12 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second", async
+   for (const k of Object.keys(CONSUMERS))
+     expect(bursts_[k], `${k} (${CONSUMERS[k as keyof typeof CONSUMERS]}) never re-cut`).toBeGreaterThan(0);
+   // the clock first: a row whose clock cannot exceed its budget cannot see the budget broken
+-  if (PRECOND)
+-    expect(hz.hz, `the animation clock ran at ${hz.hz.toFixed(1)} Hz; a rate row needs ≥ ${MIN_CLOCK_HZ} Hz to see its budget`).toBeGreaterThanOrEqual(MIN_CLOCK_HZ);
++  expect(hz.hz, `the animation clock ran at ${hz.hz.toFixed(1)} Hz; a rate row needs ≥ ${MIN_CLOCK_HZ} Hz to see its budget`).toBeGreaterThanOrEqual(MIN_CLOCK_HZ);
+   // the interleave second: one tally draw-in must have drawn several strokes in the same frames
+   expect(tallyBestDPerFrame, `the tally never drew two strokes at once (best draw-in ${tallyBestDPerFrame.toFixed(2)} d/frame ≤ 4; inked ${inked} after ${deals} deals)`).toBeGreaterThan(4);
+-  for (const k of Object.keys(CONSUMERS))
++  for (const k of Object.keys(CONSUMERS)) {
+     expect(worsts[k], `${k} re-cuts ${worsts[k].toFixed(1)}/s against the budget`).toBeLessThanOrEqual(BUDGET_PER_S);
++    expect(minGaps[k], `${k}'s shortest gap between re-cut frames ${minGaps[k].toFixed(1)} ms is inside the budget's window`).toBeGreaterThanOrEqual(MIN_GAP_MS);
++  }
+   await ctx.close();
+ });
+diff --git a/web/frontend/e2e/progress-corridor.spec.ts b/web/frontend/e2e/progress-corridor.spec.ts
+index 5ea7786..a7fae23 100644
+--- a/web/frontend/e2e/progress-corridor.spec.ts
++++ b/web/frontend/e2e/progress-corridor.spec.ts
+@@ -368,7 +368,7 @@ const thrownBy = (run: Promise<void>) =>
+   );
+ 
+ for (const scheme of ["light", "dark"] as const) {
+-  test(`the fill gauge clears ${FLOOR}:1 against both its painted grounds — ${scheme}`, async ({
++  test(`the fill gauge clears ${FLOOR}:1 on the line and the paper, and the border floor on the wrapper — ${scheme}`, async ({
+     page,
+   }, testInfo) => {
+     await corridor(page, scheme, testInfo);
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 62199d6..9cba218 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -568,29 +568,32 @@
+ 
+   /* Progress-ink (dark) — gold's ink tier DEEPENS at night, the inversion the light-tier
+      comment names: the dark frame line is a LIGHT warm-grey, so a deeper gold is what reads
+-     over it. #79650F holds dark crayon-gold's hue (94.5°, Δ0.72° painted) at OKLCH L 0.512,
+-     C 0.100 — one tier DOWN from the wax rather than up, the only direction that clears both
+-     grounds. The dark grid line is itself a warm near-gold grey (95.2° at chroma 0.011), so in
+-     dark the trace and the frame it retraces are ONE hue and only pressure tells them apart.
+-
+-     THE CORRIDOR, and it is narrow. The dark trace has TWO painted grounds pulling opposite
+-     ways — the line (199,197,190) above it and the paper (19,18,17) below — so clearing 3:1
+-     against both at once admits painted core luminance 0.1184–0.1526 and nothing else. That is
+-     0.034 wide. This paints 0.1341, mid-corridor, for 3.303 vs the line and 3.280 vs paper.
+-     (Pass 2's first candidate painted 0.1584 — 0.006 OVER the ceiling, i.e. too light for the paper.)
+-
+-     THE THIRD GROUND HAS NO DARK ANSWER. The board wrapper's 2 px border (42,40,39) sits under the
+-     trace's outer overhang too, and against the line, the paper AND that border no colour clears
+-     3:1: the best any ink can do is 2.914 (luminance 0.1586), and it pays for it on the line. This
+-     paints 2.572 there; HEAD's violet painted 2.441. The gate holds the dark border row to "no
+-     worse than HEAD" and says why (T9-W7 pass 6); the estate row is the border's, the same class
+-     as the dark card edge ACC-SIX found infeasible.
++     over it. #7E6A17 holds dark crayon-gold's hue (94.5°) at OKLCH L 0.53, C 0.100 — one tier
++     DOWN from the wax rather than up, the only direction that clears both grounds. The dark grid
++     line is itself a warm near-gold grey (95.2° at chroma 0.011), so in dark the trace and the
++     frame it retraces are ONE hue and only pressure tells them apart.
++
++     THE CORRIDOR, and it is narrow. The dark trace has TWO 3:1 grounds pulling opposite ways —
++     the line (199,197,190) above it and the paper (19,18,17) below — so clearing 3:1 against
++     both at once admits painted core luminance 0.1184–0.1526 and nothing else. That is 0.034
++     wide.
++
++     THE THIRD GROUND HAS NO DARK ANSWER, SO THE INK SITS WHERE THE WORST GROUND IS BEST. The board
++     wrapper's 2 px border (42,40,39) sits under the trace's outer overhang too, and against the
++     line, the paper AND that border no colour clears 3:1: the best any ink can do is 2.914, and it
++     pays for it on the line. Walking the tier's own hue and chroma in paint (T9-W7 pass 7, both
++     engines, DPR 1 and 2, identical medians): #79650F 3.303 / 2.572 / 3.351 (line / border /
++     paper), #7E6A17 3.069 / 2.768 / 3.606, L 0.536 2.982 / 2.849 / 3.712. This is the deepest step
++     that keeps the line and the paper at 3:1, and it lifts the border by 0.196 for 0.234 of line
++     margin. HEAD's violet painted 2.441 on the border. The gate holds the dark border row to "no
++     worse than HEAD" and says why; the estate row is the border's, the same class as the dark card
++     edge ACC-SIX found infeasible.
+ 
+      THE COST, named rather than hidden: the night gauge can be gold at OKLCH C ≤ 0.10 AND NO
+      MORE. Nothing at C ≥ 0.12 clears both floors — the best such candidate scores 2.317. Any
+      move of --grid-line-color or --color-card re-opens this row, which is why the gate asserts
+      the CORRIDOR and not the hex. */
+-  --color-progress-ink: #79650f;
++  --color-progress-ink: #7e6a17;
+ 
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+@@ -1177,13 +1180,16 @@ html {
+       stroke: #000 !important;
+     }
+ 
+-    /* The fill trace's print arm (T9-W7 §4). It had none: the trace printed in whatever the
+-       progress ink resolved to, and at the win the `.solve-success` recolour in @layer
+-       utilities would print gold over a black frame. `@layer base` + !important wins both
+-       (for important declarations layer precedence inverts — the EARLIER layer wins), so a
+-       printed worksheet's gauge is the same graphite as the frame it retraces. */
++    /* The fill trace prints NOTHING (T9-W7 §4, pass 7; ballot B-PRINT). A progress gauge is a
++       live instrument, and pass 6's print arm was a lie by paint: #000 over the #000 frame it
++       retraces, 1.08:1 over 100 % of its footprint, a stroke that exists and cannot be seen.
++       Saying "no gauge in print" is the honest form of that arm. The LOSS, named: HEAD printed
++       its violet gauge at 4.24:1 (light) and 3.191:1 (dark) against the printed frame, and
++       this prints none. The built alternative (B-PRINT's second arm) prints the gold at its
++       text tier. `@layer base` + !important beats the win's `.solve-success` recolour in
++       @layer utilities (for important declarations the EARLIER layer wins). */
+     .progress-trace {
+-      stroke: #000 !important;
++      display: none !important;
+     }
+ 
+     /* The peer's name-tape prints nothing (T9-W7 §12). The fold gave the board a scrap of washi
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+index 8ce31d2..6cc6cd6 100644
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -23,7 +23,7 @@
+  *    the SHARED boil beat (`useBeatFrame`). Steady-state raster is zero — no live `filter=` to
+  *    invalidate, the beat toggles opacity only (compositor-only), the geometry never mutates.
+  *  - DRAW-IN with the glyph grammar: the inked strokes tick in on the shared sequence chain
+- *    (`createSequenceSubscription`, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via
++ *    (`frontTween` on the hand's clock, easeOutCubic, DRAW_IN_PRESETS.glyph duration) via
+  *    a geometric front (`poseFronts`, T9-W7 §1) — the identical primitive and easing
+  *    glyphAnimations rides, retargeted to a reactive reveal so all four pose copies of a stroke
+  *    draw as one. Transient, one-shot; at rest the reveal is constant, so the only per-beat
+@@ -33,13 +33,17 @@
+  */
+ import { computed, onMounted, onUnmounted, reactive, watch } from "vue";
+ import {
+-  createSequenceSubscription,
+   easeOutCubic,
+   linear,
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { generateLineBoilFrames, poseFronts, frontGate } from "@pencil/grid/gridPaths";
++import {
++  generateLineBoilFrames,
++  poseFronts,
++  frontGate,
++  frontTween,
++} from "@pencil/grid/gridPaths";
+ import {
+   BOIL_CONFIG,
+   FILTER_PRESETS,
+@@ -133,35 +137,43 @@ const boilFrame = useBeatFrame(
+ const reveal = reactive<number[]>(Array(TALLY_TOTAL).fill(1));
+ const reducedMotion = usePrefersReducedMotion();
+ let draw: SequenceHandle | null = null;
++// stroke i starts at i·stagger and eases over the glyph's own duration
++let inked = 0;
++const at = (ms: number) => {
++  const dur = DRAW_IN_PRESETS.glyph.duration;
++  for (let i = 0; i < TALLY_TOTAL; i++)
++    reveal[i] =
++      i >= inked
++        ? 1
++        : easeOutCubic(Math.max(0, Math.min(1, (ms - i * DRAW_STAGGER_MS) / dur)));
++};
++// ONE gate for the tally's life, not one per draw-in: every write to the strokes — a draw-in's
++// frames, its end, a snap, a re-ink that restarts a running draw-in — lands through it, so no two
++// re-cuts are ever closer than the budget (pass 7: a fresh gate per re-ink landed its first commit
++// 8.3–12.0 ms after the last one's, chromium, 4 of 4 driven runs).
++const gate = frontGate(at);
+ 
+ function stopDraw() {
+   draw?.stop();
+   draw = null;
++  gate.rearm(); // an owed end of the last draw-in never lands on the next one's strokes
+ }
+ 
+ function runDrawIn(filled: number) {
+   stopDraw();
+-  const inked = Math.max(0, Math.min(filled, TALLY_TOTAL));
+-  const dur = DRAW_IN_PRESETS.glyph.duration;
+-  // stroke i starts at i·stagger and eases over the glyph's own duration
+-  const at = (ms: number) => {
+-    for (let i = 0; i < TALLY_TOTAL; i++)
+-      reveal[i] =
+-        i >= inked
+-          ? 1
+-          : easeOutCubic(Math.max(0, Math.min(1, (ms - i * DRAW_STAGGER_MS) / dur)));
+-  };
++  inked = Math.max(0, Math.min(filled, TALLY_TOTAL));
+   // PRM (or nothing inked): snap. An un-inked (ghost) stroke is always statically present.
+-  if (reducedMotion.value || inked === 0) return at(Infinity);
+-  const span = dur + (inked - 1) * DRAW_STAGGER_MS;
+-  const gate = frontGate(at);
+-  gate.write(0, true);
+-  draw = createSequenceSubscription({
++  if (reducedMotion.value || inked === 0) return gate.write(Infinity, true);
++  const span = DRAW_IN_PRESETS.glyph.duration + (inked - 1) * DRAW_STAGGER_MS;
++  // no forced start: the draw-in's first frame writes it, on that frame's clock (a start forced
++  // from the render's flush was timed on the wall and landed 14.0 ms of frames after the last
++  // re-cut, WebKit, pass 7)
++  draw = frontTween({
+     durationMs: span,
+     easing: linear,
+-    onProgress: (t) => gate.write(t * span),
+-    onComplete: () => {
+-      gate.write(Infinity, true);
++    onProgress: (t, at) => gate.write(t * span, false, at),
++    onComplete: (at) => {
++      gate.write(Infinity, true, at);
+       draw = null;
+     },
+   });
+@@ -213,7 +225,7 @@ watch(
+ watch(reducedMotion, (reduced) => {
+   if (reduced && props.descriptor.graded) {
+     stopDraw();
+-    for (let i = 0; i < TALLY_TOTAL; i++) reveal[i] = 1;
++    gate.write(Infinity, true); // every stroke on its settled offset
+   }
+ });
+ 
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 1dda010..6a5dd30 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -1479,28 +1479,30 @@ onMounted(async () => {
+    two most consequential buttons the deck has had zero chromatic content between them: the
+    armed verb painted rgb(10,10,10), which is the same ink as `keep`. Red is already the house's
+    word for undoing work (the teacher's pencil, the conflict ring, the refusal note), so the
+-   verb writes in it — and `HandDrawnOutline` strokes `currentColor`, so the drawn box reddens
+-   with the word and the mark is a shape as well as a hue.
++   verb's ink leans to it — and `HandDrawnOutline` strokes `currentColor`, so the drawn box takes
++   the same cast as the word.
+ 
+    NO GROUND. The 8% graphite wash that used to sit here went with it, and no red one replaced
+    it: red-ink over its own 5% ground reads 4.549:1, four hundredths over the AA floor, which is
+    a number that is true today and false the next time a paper moves. The word and its box carry
+    the mark on bare card.
+ 
+-   THE INK IS RED-INK PULLED 15% TOWARD THE PAGE'S OWN INK (T9-W7 pass 6, G5). Red-ink itself
+-   painted UNDER the 4.5 body floor on the hover ground (core median 4.41 / 4.38 light, both
+-   engines, pass 5) and marginal at rest (4.62 / 4.59). Mixing in OKLab toward a near-neutral ink
+-   scales a and b together, so the hue holds (13.55 to 13.64 degrees light, 12.15 to 12.20 dark,
+-   arithmetic) and only value moves:
+-   darker on light paper, paler on dark, and in both themes further from the ground. One
+-   declaration, no new token, both themes. The painted figures live in the pass-6 record.
++   THE INK IS A QUARTER RED-INK, THREE QUARTERS THE PAGE'S OWN INK (T9-W7 pass 7, G5 on the whole
++   glyph population). Mixing in OKLab toward the near-neutral foreground scales a and b together,
++   so the hue holds and only value and chroma move. The depth is the first that meets BOTH clauses
++   of the text statistic in all sixteen cells (two engines, two themes, DPR 1 and 2, rest and
++   hover): core median >= 4.5 AND the share of the word's pixels under 4.5 no more than the black
++   control's + 0.05. Pass 6's 85% failed the median itself at DPR 1 light (3.69-3.84) and the share
++   everywhere; 30% missed one cell by 0.001. The price is chroma: C 0.050 against 85%'s 0.165, a
++   red cast on the ink rather than a red word. The deeper arms are the owner's ballot.
+ 
+    The hover ground belongs to both verbs; the ink does not, and it no longer has to be restated
+    under the pointer: the shared hover rule sets the ground only, and `keep` already inherits
+-   `--color-foreground` from `.guard-btn`. One verb marked, one bare, and the mark is legible to a
+-   reader who sees neither stroke weight nor colour, because the word itself changed value. */
++   `--color-foreground` from `.guard-btn`. One verb marked, one bare; the value step that is left
++   for a reader who sees neither weight nor colour is small at this depth (OKLab L +0.105 light,
++   -0.06 dark, arithmetic), and the ballot says so. */
+ .guard-leave .guard-face {
+-  color: color-mix(in oklab, var(--color-red-ink) 85%, var(--color-foreground));
++  color: color-mix(in oklab, var(--color-red-ink) 25%, var(--color-foreground));
+ }
+ 
+ @media (pointer: coarse) {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index d28f12c..8cd1c90 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -475,6 +475,11 @@ export const MOTION = {
+      *  re-eases under it. */
+     drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
+   },
++  /** T9-M20 D10 · the hand's displacement clause, one number for the boot hand and every
++   *  `poseFronts` consumer: a front's clock moves at most `stepMs` in one painted frame (one
++   *  60 Hz frame on a 1 ms clock), so a stalled frame pauses the front instead of teleporting
++   *  it. `frontGate`'s budget is derived from it (`FRONT_MIN_MS = stepMs − 1`, gridPaths). */
++  hand: { stepMs: 17 },
+ } as const;
+ 
+ /** THE LADDER'S VALUES, rendered from the object — pure, testable, one string.
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 60c7479..d3a124e 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -1,7 +1,13 @@
+ <script setup lang="ts">
+ import { ref, computed, inject, onMounted, onUnmounted, watch } from "vue";
+ import { getVariant, getAllVariants } from "./glyphRegistry";
+-import { createStrokeDrawIn, type SequenceHandle } from "@mkbabb/pencil-boil";
++import {
++  createStrokeDrawIn,
++  easeOutCubic,
++  usePrefersReducedMotion,
++  type SequenceHandle,
++} from "@mkbabb/pencil-boil";
++import { frontTween } from "@pencil/grid/gridPaths";
+ import {
+   createGlyphFlourish,
+   createGlyphWiggle,
+@@ -191,6 +197,37 @@ function murmurWiggleOnce() {
+   anim.play();
+ }
+ 
++// T9-B26 arm (b′), OFF: the reveal draw-in on the hand's clock (`frontTween`, the displacement
++// clause `MOTION.hand.stepMs`), stagger included, easing unchanged. It reaches every reveal on
++// this branch (the deal's wave, a hint's write-in, the solver's), the delta the ballot declares;
++// a typed digit keeps `createStrokeDrawIn`. The ballot flips this const; nothing else reads it.
++const REVEAL_ON_HAND = false;
++
++function revealOnHand(
++  el: SVGPathElement,
++  length: number,
++  delayMs: number,
++): SequenceHandle | null {
++  const settle = () => {
++    el.style.strokeDasharray = "none";
++    el.style.strokeDashoffset = "0";
++  };
++  if (usePrefersReducedMotion().value) {
++    settle();
++    return null;
++  }
++  const span = delayMs + DRAW_IN_PRESETS.glyph.duration;
++  el.style.strokeDasharray = String(length);
++  el.style.strokeDashoffset = String(length);
++  return frontTween({
++    durationMs: span,
++    easing: (t) =>
++      easeOutCubic(Math.max(0, t * span - delayMs) / DRAW_IN_PRESETS.glyph.duration),
++    onProgress: (eased) => (el.style.strokeDashoffset = String(length * (1 - eased))),
++    onComplete: settle,
++  });
++}
++
+ function setupReveal() {
+   if (!pathRef.value || !glyph.value) return;
+ 
+@@ -200,12 +237,15 @@ function setupReveal() {
+   if (props.isRevealed) {
+     // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
+     // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
+-    drawInAnim = createStrokeDrawIn(el, {
+-      pathLength: glyph.value.length,
+-      durationMs: DRAW_IN_PRESETS.glyph.duration,
+-      delayMs: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
+-    });
+-    drawInAnim.start();
++    const delayMs = props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay;
++    drawInAnim = REVEAL_ON_HAND
++      ? revealOnHand(el, glyph.value.length, delayMs)
++      : createStrokeDrawIn(el, {
++          pathLength: glyph.value.length,
++          durationMs: DRAW_IN_PRESETS.glyph.duration,
++          delayMs,
++        });
++    drawInAnim?.start();
+ 
+     // Beat 2 — only the solver's rainbow ink celebrates, and only when the BOARD is
+     // celebrating (T3-W13 §4.1 flourish gate): a hint's one-cell reveal writes itself
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index ae793de..2761052 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,7 +1,6 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import {
+-  createSequenceSubscription,
+   easeOutCubic,
+   heldFrameCount,
+   serializePoseSvg,
+@@ -13,6 +12,7 @@ import {
+   generateFrameTraceFrames,
+   poseFronts,
+   frontGate,
++  frontTween,
+ } from "../gridPaths";
+ import {
+   BOIL_CONFIG,
+@@ -167,7 +167,7 @@ const traceFrames = computed(() =>
+ // immediately (the front never lags the digit), and afterwards at most one cut per
+ // FRONT_MIN_MS. The tween keeps every frame it has — only the `d` re-cut is coalesced — and the
+ // exact end value is FORCED on completion, so the gauge and its a11y mirror still agree to the
+-// digit. The budget is a declared constant divided by a declared constant: ≤62.5 re-cuts per
++// digit — owed to the window's end when it comes early, never landed inside it (A.6). The budget is a declared constant divided by a declared constant: ≤62.5 re-cuts per
+ // second at any refresh rate, ≤16 for a 240 ms fill event — and the join ring gets the same
+ // gate, which it never had (critique §3.5:
+ // ~560 `d` writes and ~60 ms of JS per join, priced by nobody). A committed cut writes one `d`
+@@ -191,15 +191,16 @@ watch(progress, (to, from) => {
+   }
+   const start = from ?? to;
+   const span = to - start;
+-  const seq = createSequenceSubscription({
++  // on the hand's clock (`frontTween`): a lost frame pauses the front, never teleports it
++  const seq = frontTween({
+     durationMs: MOTION.rungs.note,
+     easing: easeOutCubic, // --ease-drawOn's curve, the pencil stroke's own draw-on
+-    onProgress: (eased) => {
+-      fillGate.write(start + span * eased);
++    onProgress: (eased, at) => {
++      fillGate.write(start + span * eased, false, at);
+     },
+     // Ends ON the fraction, never near it: the gauge and the a11y mirror must agree exactly.
+-    onComplete: () => {
+-      fillGate.write(to, true);
++    onComplete: (at) => {
++      fillGate.write(to, true, at);
+       fillSeq = null;
+     },
+   });
+@@ -207,7 +208,12 @@ watch(progress, (to, from) => {
+   seq.start();
+ });
+ 
+-onUnmounted(() => fillSeq?.stop());
++onUnmounted(() => {
++  fillSeq?.stop();
++  fillGate.rearm();
++  cancelAnimationFrame(joinFrame);
++  joinGate.rearm();
++});
+ 
+ const traceFront = computed(() => poseFronts(traceFrames.value, fillFraction.value));
+ 
+@@ -228,12 +234,19 @@ const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?
+ // cost went UP and nothing priced it (pass-3 critique §3.5). Gated, a join COUNTS 25–28 re-cuts
+ // in one ~500 ms burst, both engines (G10, passes 5 and 6; 51–70 with the gate removed); once
+ // the ring stands whole nothing re-cuts and the rest of the handle is opacity. The ends are
+-// forced: 0 must unmount the stack, 1 must be the whole ring.
++// forced: 0 must unmount the stack, 1 must be the whole ring. The value arrives in the render's
++// flush, which has no frame of its own, so it is written on the NEXT frame (before that frame
++// paints) and timed on it, the fill's and the tally's clock: timed on the wall at the flush, the
++// ring re-cut 15.0 ms of frames after its last (WebKit, pass 7). The latest value wins.
+ const joinFraction = ref(joinProgress.value);
+ const joinGate = frontGate((v) => (joinFraction.value = v));
+-watch(joinProgress, (to) =>
+-  joinGate.write(to, to <= 0 || to >= 1 || reducedMotion.value),
+-);
++let joinFrame = 0;
++watch(joinProgress, (to) => {
++  cancelAnimationFrame(joinFrame);
++  joinFrame = requestAnimationFrame((at) =>
++    joinGate.write(to, to <= 0 || to >= 1 || reducedMotion.value, at),
++  );
++});
+ 
+ const joinTraceFrames = computed(() =>
+   generateFrameTraceFrames(
+diff --git a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+index 641505a..6dcb677 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+@@ -1,10 +1,6 @@
+-import { describe, it, expect, vi } from "vitest";
+-import {
+-  poseFronts,
+-  generateFrameTraceFrames,
+-  frontGate,
+-  FRONT_MIN_MS,
+-} from "./gridPaths";
++import { describe, it, expect, vi, afterEach } from "vitest";
++import { poseFronts, generateFrameTraceFrames, FRONT_MIN_MS } from "./gridPaths";
++import { MOTION } from "../config/pencilConfig";
+ 
+ /**
+  * THE FRONT'S CONTRACT (T9-W7 §1/§4, the cross-family hand-off).
+@@ -86,20 +82,208 @@ describe("poseFronts — the drawn front, as geometry", () => {
+   });
+ });
+ 
+-describe("frontGate — the front's rate budget", () => {
+-  it("commits at most once per FRONT_MIN_MS, forces the end, and re-arms the leading edge", () => {
+-    let now = 0;
+-    const clock = vi.spyOn(performance, "now").mockImplementation(() => now);
++// The gate's clock state is the page's (one `performance.now()`), so every row loads a fresh
++// module and drives its own mocked clock.
++async function freshGate(times: { now: number }) {
++  vi.resetModules();
++  vi.spyOn(performance, "now").mockImplementation(() => times.now);
++  return (await import("./gridPaths")).frontGate;
++}
++afterEach(() => {
++  vi.restoreAllMocks();
++  vi.useRealTimers();
++});
++
++describe("frontGate — the front's rate budget (A.6: the end included, on the clock's own grain)", () => {
++  it("the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s", () => {
++    expect(FRONT_MIN_MS).toBe(MOTION.hand.stepMs - 1);
++    expect(1000 / FRONT_MIN_MS).toBe(62.5);
++  });
++
++  it("a fine clock: a 15 ms gap is swallowed and a 16 ms gap commits", async () => {
++    const t = { now: 0.25 };
++    const frontGate = await freshGate(t);
+     const seen: number[] = [];
+     const gate = frontGate((v) => seen.push(v));
+-    // one write per 4 ms "frame" over 60 ms: a 250 Hz panel, the ceiling is what binds
+-    for (now = 0; now <= 60; now += 4) gate.write(now);
+-    expect(seen).toEqual([0, 16, 32, 48]);
+-    expect(1000 / FRONT_MIN_MS).toBe(62.5);
+-    gate.write(61, true); // the exact end value is never swallowed
+-    gate.rearm();
+-    gate.write(62); // and a new write's first frame lands at once
+-    expect(seen.slice(-2)).toEqual([61, 62]);
+-    clock.mockRestore();
++    for (const now of [0.25, 8.35, 15.25, 16.25, 24.35, 31.2, 32.3]) {
++      t.now = now;
++      gate.write(now);
++    }
++    // 15.25 is 15.0 after 0.25 (swallowed), 16.25 is 16.0 (commits); 31.2 is 14.95 after it
++    expect(seen).toEqual([0.25, 16.25, 32.3]);
++  });
++
++  it("a whole-millisecond clock: a reading of 16 is swallowed (it may be 15.01 ms), 17 commits", async () => {
++    const t = { now: 100 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    for (const now of [100, 108, 116, 117, 125, 133, 134]) {
++      t.now = now;
++      gate.write(now);
++    }
++    expect(seen).toEqual([100, 117, 134]);
++  });
++
++  it("a forced end inside the window is owed, and lands at the window's end, never inside it", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: [number, number][] = [];
++    const gate = frontGate((v) => seen.push([v, t.now]));
++    gate.write(0.1); // lands at once: 0.5
++    t.now = 8.6; // a fine clock (8.1 ms later)
++    gate.write(1, true); // the tween's exact end, 8.1 ms after the last commit
++    expect(seen).toEqual([[0.1, 0.5]]);
++    t.now = 16.4;
++    vi.advanceTimersByTime(7.8); // a timer that fires early re-checks the clock and waits
++    expect(seen.length).toBe(1);
++    t.now = 16.5;
++    vi.advanceTimersByTime(1);
++    expect(seen).toEqual([
++      [0.1, 0.5],
++      [1, 16.5],
++    ]);
++    const gaps = seen.slice(1).map(([, at], i) => at - seen[i][1]);
++    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(FRONT_MIN_MS);
++  });
++
++  it("a write while an end is owed replaces it; a re-arm drops it and the window holds across runs", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.2);
++    t.now = 4.7;
++    gate.write(1, true); // owed
++    t.now = 6.9;
++    gate.write(0, true); // the ring unmounts: the latest value is the truth
++    t.now = 16.6;
++    vi.advanceTimersByTime(20);
++    expect(seen).toEqual([0.2, 0]);
++    t.now = 20.1;
++    gate.write(0.4, true); // owed again (3.5 ms after the last commit)
++    gate.rearm(); // a new run supersedes it
++    vi.advanceTimersByTime(40);
++    expect(seen).toEqual([0.2, 0]);
++    gate.write(0.05); // the new run's first frame, 3.5 ms after the last commit: folded
++    t.now = 24.3;
++    gate.write(0, true); // a restart's forced first write: owed to the window's end
++    expect(seen).toEqual([0.2, 0]);
++    t.now = 32.7;
++    vi.advanceTimersByTime(40);
++    expect(seen).toEqual([0.2, 0, 0]);
++    t.now = 49.8;
++    gate.write(0.3); // 17.1 ms later: the window is clear, it lands at once
++    expect(seen).toEqual([0.2, 0, 0, 0.3]);
++  });
++});
++
++describe("frontGate — a forced write is timed from the landing (pass 7)", () => {
++  it("an owed end waits for the last re-cut to LAND, not for its request", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: [number, number][] = [];
++    // the render lands the commit 3.2 ms after the request (the rest of the frame + the flush)
++    const gate = frontGate((v) => {
++      seen.push([v, t.now]);
++      queueMicrotask(() => (t.now += 3.2));
++    });
++    gate.write(0.4); // requested at 0.5, lands at 3.7
++    await Promise.resolve();
++    await Promise.resolve();
++    t.now = 8.6;
++    gate.write(1, true); // the end, owed
++    t.now = 16.6; // 16.1 after the request, 12.9 after the landing: still owed
++    vi.advanceTimersByTime(8);
++    expect(seen.length).toBe(1);
++    t.now = 19.8; // 16.1 after the landing
++    vi.advanceTimersByTime(8);
++    expect(seen.map(([v]) => v)).toEqual([0.4, 1]);
++    // a frame's own write keeps the request's clock (a 60 Hz panel keeps every frame)
++    await Promise.resolve();
++    await Promise.resolve();
++    t.now = 36.0; // 16.2 after the end's request, 13.0 after its landing
++    gate.write(0.9);
++    expect(seen.map(([v]) => v)).toEqual([0.4, 1, 0.9]);
++  });
++});
++
++describe("frontGate — a frame's write is timed on its frame (pass 7)", () => {
++  it("two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran", async () => {
++    const t = { now: 100.2 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.1, false, 100.0); // frame 100.0, its callback at 100.2
++    t.now = 116.3; // the next callback 16.1 ms later (a fine clock) ...
++    gate.write(0.2, false, 115.6); // ... in a frame 15.6 ms after the last: swallowed
++    t.now = 117.0;
++    gate.write(0.3, false, 116.0); // a frame 16.0 ms after: commits
++    expect(seen).toEqual([0.1, 0.3]);
++  });
++
++  it("a tween's end written inside a frame is timed on that frame, and owed when it is early", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 100.2 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.5, false, 100.0);
++    t.now = 117.1; // the end's callback runs 16.9 ms after the last one ...
++    gate.write(1, true, 115.5); // ... in a frame 15.5 ms after the last re-cut: owed, not landed
++    expect(seen).toEqual([0.5]);
++    t.now = 118.0;
++    vi.advanceTimersByTime(4);
++    expect(seen).toEqual([0.5, 1]);
++  });
++});
++
++describe("frontTween — the displacement clause (T9-M20 D10)", () => {
++  it("a stalled frame advances the front by at most MOTION.hand.stepMs of its clock", async () => {
++    vi.resetModules();
++    let carrier: {
++      onProgress: (e: number, raw: number) => void;
++      durationMs: number;
++    } | null = null;
++    let stopped = false;
++    vi.doMock("@mkbabb/pencil-boil", async (orig) => ({
++      ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++      createSequenceSubscription: (o: typeof carrier) => {
++        carrier = o;
++        return { start() {}, stop: () => (stopped = true) };
++      },
++    }));
++    const { frontTween } = await import("./gridPaths");
++    const seen: number[] = [];
++    let done = 0;
++    const at: number[] = [];
++    vi.spyOn(performance, "now").mockImplementation(() => 1000);
++    frontTween({
++      durationMs: 240,
++      easing: (x) => x,
++      onProgress: (v, a) => (seen.push(v), at.push(a)),
++      onComplete: (a) => (done++, at.push(a)),
++    }).start();
++    const tick = (ms: number) => carrier!.onProgress(0, ms / carrier!.durationMs);
++    tick(8); // a healthy frame keeps its whole travel
++    tick(16);
++    tick(166); // a 150 ms stall: 17 ms of travel, not 150
++    tick(174);
++    expect(seen.map((v) => +(v * 240).toFixed(6))).toEqual([
++      8,
++      16,
++      16 + MOTION.hand.stepMs,
++      41,
++    ]);
++    // each write carries its FRAME's time (the carrier's start + its rAF elapsed), stall and all
++    expect(at.map((a) => +a.toFixed(6))).toEqual([1008, 1016, 1166, 1174]);
++    for (let ms = 182; !done; ms += 8) tick(ms);
++    expect(stopped).toBe(true); // the carrier leaves the chain on the tween's clock
++    expect(at[at.length - 1]).toBe(1000 + (at.length - 4 - 1) * 8 + 182); // the end on its frame
++    expect(Math.max(...seen)).toBeLessThan(1);
++    vi.doUnmock("@mkbabb/pencil-boil");
+   });
+ });
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 6f79aa3..073bd28 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -11,8 +11,9 @@ import {
+   perturbPoints,
+   boilLineFrames,
+   useBoilCache,
++  createSequenceSubscription,
+ } from "@mkbabb/pencil-boil";
+-import type { GrainConfig } from "../config/pencilConfig";
++import { MOTION, type GrainConfig } from "../config/pencilConfig";
+ 
+ interface BoilFrames {
+   /** frame[frameIdx] — closed rect path for the outer frame */
+@@ -534,30 +535,129 @@ export function poseFronts(frames: string[], fraction: number): string[] {
+  * A `sequence` subscriber holds the continuous rAF chain while it runs, so "one re-cut per
+  * frame" is the panel's refresh rate wearing a budget's clothes: ungated, the tally re-cut at
+  * 134.2/s on a 128 Hz panel and 60.9/s on a 63 Hz one (pass-4 critique §3.1). The budget is a
+- * declared constant instead: at most one commit per FRONT_MIN_MS, ≤62.5 re-cuts per second at
+- * any refresh rate. `e2e/front-rate.spec.ts` counts it on every consumer.
++ * declared constant instead: no two commits closer than FRONT_MIN_MS, ≤62.5 re-cuts per
++ * second at any refresh rate, the forced end included. It is the hand's displacement clause
++ * less one millisecond (`MOTION.hand.stepMs`, the one home). `e2e/front-rate.spec.ts` counts
++ * it on every consumer and prints each burst's shortest gap.
+  */
+ // policy: rate
+-export const FRONT_MIN_MS = 16;
++export const FRONT_MIN_MS = MOTION.hand.stepMs - 1;
++
++// A clock that has only ever read whole-millisecond gaps is 1 ms-quantised (WebKit's
++// `performance.now()` and its rAF timestamps both are): a reading of 16 there may be 15.01 ms,
++// so the gate asks such a clock for one more millisecond. The first fractional gap anywhere on
++// the page proves a finer clock (chromium's reads 0.1 ms), and the extra millisecond goes.
++let clockSeen = NaN;
++let wholeMsClock = true;
++function readClock(): number {
++  const now = performance.now();
++  const gap = now - clockSeen;
++  if (gap > 0 && Math.abs(gap - Math.round(gap)) > 1e-6) wholeMsClock = false;
++  clockSeen = now;
++  return now;
++}
+ 
+ /**
+- * Leading-edge rate gate on a front's commit: the first write lands now (the front never lags
+- * the act), then at most once per FRONT_MIN_MS. `force` commits regardless, for a tween's exact
+- * end value or a rest pose, so a gauge and its a11y mirror still agree to the digit.
++ * Leading-edge rate gate on a front's commit: a write lands now when the window is clear (the
++ * front never lags the act by more than the window), and no two commits land closer than
++ * FRONT_MIN_MS on the clock's own grain — across runs too, so a restart, a snap or a rest pose
++ * is inside the budget like any frame. A `force`d write (a tween's exact end, a snap) is never
++ * dropped and never lands inside the window: it is owed, and lands at `last + FRONT_MIN_MS`, so
++ * a gauge and its a11y mirror still agree to the digit and the end costs no budget. A write
++ * that arrives while one is owed replaces its value (the latest is the truth).
++ *
++ * Two clocks, one per kind of write. A frame's write passes its FRAME's time (`at`, the rAF
++ * timestamp `frontTween` hands its `onProgress`): read from the callback instead, the gap took
++ * the drift of the callback's place in its frame, and two frames 15.3 ms apart re-cut through a
++ * 16 ms window (pass 7, chromium, the gauge). A forced write (an end in a timer, a start in the
++ * worker's message) has no frame, and is timed from where the last re-cut LANDED: a frame's
++ * commit reaches the DOM after the rest of that frame's work (0–9 ms, pass 7), so timed from the
++ * request a forced end landed 14.0–15.4 ms after it. The frame's clock never runs ahead of the
++ * wall's, so mixing them only ever widens a gap.
+  */
+ export function frontGate(commit: (v: number) => void) {
+   let last = -Infinity;
++  let landed = -Infinity; // when the last re-cut reached the DOM (read after the render's flush)
++  let owed: { v: number } | null = null;
++  let timer: ReturnType<typeof setTimeout> | null = null;
++  const floor = () => FRONT_MIN_MS + (wholeMsClock ? 1 : 0);
++  const cancel = () => {
++    owed = null;
++    if (timer !== null) clearTimeout(timer);
++    timer = null;
++  };
++  const land = (v: number, now: number) => {
++    cancel();
++    last = now;
++    commit(v);
++    // queued after the render's flush (the commit queued it), so this reads the landing
++    queueMicrotask(() => (landed = readClock()));
++  };
++  const from = (force: boolean) => (force ? Math.max(last, landed) : last);
++  const flush = () => {
++    timer = null;
++    if (!owed) return;
++    const now = readClock();
++    const wait = from(true) + floor() - now;
++    if (wait > 0) timer = setTimeout(flush, wait);
++    else land(owed.v, now);
++  };
+   return {
+-    write(v: number, force = false) {
+-      const now = performance.now();
+-      if (!force && now - last < FRONT_MIN_MS) return;
+-      last = now;
+-      commit(v);
++    write(v: number, force = false, at?: number) {
++      const wall = readClock(); // read on every write: the grain detector sees each one
++      const now = at ?? wall;
++      if (now - from(force) >= floor()) return land(v, now);
++      if (owed) owed.v = v;
++      else if (force) {
++        owed = { v };
++        timer = setTimeout(flush, from(true) + floor() - now);
++      }
++    },
++    /** A new run drops an owed end it supersedes. The window stands: the run's first write
++     *  lands at once if the last commit is FRONT_MIN_MS old, and is owed (forced) or folded into
++     *  the next frame's write otherwise, never landed inside it. */
++    rearm: cancel,
++  };
++}
++
++/**
++ * A front's tween on the hand's clock (T9-M20 D10, the displacement clause): one pencil-boil
++ * `sequence` carries the rAF timeline and the tween's own clock advances by at most
++ * `MOTION.hand.stepMs` per tick, so a frame the main thread lost pauses the front for one
++ * frame's travel instead of landing it wherever the wall clock says. A healthy frame at any
++ * refresh rate ≥ 60 Hz is never slowed. `onComplete` fires when the tween's clock, not the
++ * wall's, reaches `durationMs`. Under reduced motion the sequence never starts: the consumer
++ * lands its value itself, as before.
++ */
++export function frontTween(o: {
++  durationMs: number;
++  easing: (t: number) => number;
++  /** `at`: this frame's rAF timestamp, for `frontGate.write(v, force, at)` */
++  onProgress: (eased: number, at: number) => void;
++  onComplete: (at: number) => void;
++}) {
++  const SPAN_MS = 600_000; // the carrier's span: the tween ends on its own clock long before
++  let clock = 0;
++  let prev = 0;
++  let origin = 0; // the carrier's start on the rAF clock (pencil-boil reads performance.now() there)
++  const seq = createSequenceSubscription({
++    durationMs: SPAN_MS,
++    onProgress: (_eased, raw) => {
++      const t = raw * SPAN_MS;
++      clock += Math.min(Math.max(0, t - prev), MOTION.hand.stepMs);
++      prev = t;
++      if (clock < o.durationMs)
++        return o.onProgress(o.easing(clock / o.durationMs), origin + t);
++      seq.stop();
++      o.onComplete(origin + t); // the end is written in a frame too, and is timed on it
+     },
+-    /** A new write re-arms the leading edge, so its first frame is never swallowed. */
+-    rearm() {
+-      last = -Infinity;
++  });
++  return {
++    start() {
++      origin = performance.now();
++      seq.start();
+     },
++    stop: seq.stop,
+   };
+ }
+ 

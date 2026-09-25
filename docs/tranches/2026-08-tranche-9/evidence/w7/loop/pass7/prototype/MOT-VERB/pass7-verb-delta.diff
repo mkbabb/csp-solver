@@ -1,0 +1,1493 @@
+diff --git a/web/frontend/e2e/fold-verb.spec.ts b/web/frontend/e2e/fold-verb.spec.ts
+index 0d04a3bb..272df03d 100644
+--- a/web/frontend/e2e/fold-verb.spec.ts
++++ b/web/frontend/e2e/fold-verb.spec.ts
+@@ -1,4 +1,5 @@
+ import { test, expect, type Page } from '@playwright/test';
++import { loadavg } from 'node:os';
+ import { encodeSudoku } from './wire';
+ 
+ // PRM: live, because the subject is the fold's motion: under reduce both verbs are a same-frame
+@@ -11,9 +12,19 @@ import { encodeSudoku } from './wire';
+  * THE DEFINITION (pass-6 chair §1.4, written here so the gate carries it): enter frame 1 = the
+  * first frame after the reparent on which the fold's mover exists; on it the board's centre is
+  * within 3 px of its rest pose (the playing board it left, read before the press) AND its width
+- * within 3 px — the RAW delta, never a residual against a fitted curve. Measured by rAF
+- * sampling, the frame index printed; both engines; 1280 fine (light and dark) and 390×844
+- * coarse. A residual gate would pass a verb that starts part-way in on the right curve, which is
++ * within 3 px — the RAW delta, never a residual against a fitted curve. READ POST-PAINT (pass 7,
++ * LAWS P6 §D): each frame is read in a task queued from its rAF (a MessageChannel message runs after
++ * that frame's rendering update, whatever order the product's rAFs ran in), with the frame's
++ * `document.timeline` time captured in the rAF — the chair's post-paint sampler
++ * (`pass7/instruments/postpaint.mjs`, `installSampler`/`analyse`), whose semantics this reader
++ * carries. The pass-6 reader sampled IN rAF, registered before the product's own, so it read the
++ * pre-callback state: a runtime plant that painted frame 1 at ct 150, 142.9 px off, passed it 8/8.
++ * The CLOCK IDENTITY rides the same frames: ct(frame k) = tl(k) − tl(frame 1) ± 2 ms for k = 2, 3
++ * (a first frame that is at rest but whose clock then jumps is the same skip one frame later).
++ * Gated in Chromium; printed in WebKit, whose post task can run after its next animation-time
++ * update (the chair's reading) — WebKit's clock is read on the recorder's ladder. Both engines;
++ * 1280 fine (light and dark) and 390×844 coarse. PLANT skip (every explicit `startTime` write lands
++ * 150 ms early) is the negative, in this file, and it must RED. A residual gate would pass a verb that starts part-way in on the right curve, which is
+  * the defect: at 74a2b5d9 frame 1 sits 92.9 px off at 1280 in Chromium, and in WebKit the UA's
+  * own resolution of a pending start put it 3.76 px off and 7.37 px narrow (pass 5).
+  *
+@@ -48,7 +59,7 @@ const CELLS = [
+ 
+ type Frame = {
+   i: number;
+-  t: number;
++  tl: number;
+   ct: number | null;
+   x: number;
+   y: number;
+@@ -56,47 +67,85 @@ type Frame = {
+   vis: number;
+ };
+ 
+-/** Every frame from the press until the fold's mover has run its course, read in rAF. The
+- *  window is keyed on the VERB (it closes on the first frame after the mover releases, or at
++/** Every frame from the press until the fold's mover has run its course, each read POST-PAINT.
++ *  The window is keyed on the VERB (it closes on the first frame after the mover releases, or at
+  *  `cap` frames if it never starts), never on a clock. */
+-async function foldFrames(page: Page, cap = 240): Promise<Frame[]> {
++async function foldFrames(page: Page, cap = 240): Promise<{ frames: Frame[]; kPaint: number }> {
+   await page.evaluate((cap) => {
+-    const w = window as unknown as { __fold: Frame[]; __foldDone: boolean };
++    const w = window as unknown as {
++      __fold: Frame[];
++      __foldDone: boolean;
++      __foldR: number[];
++      __foldIo: number | null;
++    };
+     w.__fold = [];
+     w.__foldDone = false;
+-    const t0 = performance.now();
+-    let i = 0;
+-    let seen = false;
+-    const tick = () => {
++    // WHICH FRAME FIRST PAINTED THE MOVER (pass 7). The post-paint read is a TASK, and a task the
++    // page queued earlier (the chrome-leave timeout that runs the fold) can run between a frame's
++    // paint and that read: the read then sees a mover the frame never painted, and the next frame
++    // reads as a second copy of the first pose (chromium 1280, 1-4 of 20 runs: ct 0 twice, step 0).
++    // An IntersectionObserver's entry is computed inside the first rendering update the mover
++    // exists in, and its `time` falls after that frame's rAF stamp and before the next one's: that
++    // frame is frame 1, and the reads before it are dropped.
++    w.__foldR = [];
++    w.__foldIo = null;
++    const animate = Element.prototype.animate;
++    Element.prototype.animate = function (this: Element, ...a: Parameters<Element['animate']>) {
++      const anim = animate.apply(this, a);
++      if (w.__foldIo === null && this.classList.contains('board-peek-host')) {
++        w.__foldIo = -1;
++        const io = new IntersectionObserver((es) => {
++          w.__foldIo = es[0].time;
++          io.disconnect();
++        });
++        io.observe(this);
++      }
++      return anim;
++    };
++    const read = (i: number, tl: number): Frame | null => {
+       const board = document.querySelector('.board-peek-host');
++      if (!board) return null;
+       // the fold's mover is the board's one SCRIPT animation (WAAPI), whatever the tree tags it
+       const anim =
+         board
+-          ?.getAnimations()
++          .getAnimations()
+           .find((a) => !(a instanceof CSSTransition) && !(a instanceof CSSAnimation)) ?? null;
+-      if (board) {
+-        const r = board.getBoundingClientRect();
+-        let [l, t, rr, b] = [r.left, r.top, r.right, r.bottom];
+-        for (let a = board.parentElement; a; a = a.parentElement) {
+-          const cs = getComputedStyle(a);
+-          const ar = a.getBoundingClientRect();
+-          if (cs.overflowX !== 'visible') [l, rr] = [Math.max(l, ar.left), Math.min(rr, ar.right)];
+-          if (cs.overflowY !== 'visible') [t, b] = [Math.max(t, ar.top), Math.min(b, ar.bottom)];
+-        }
+-        const area = r.width * r.height;
+-        w.__fold.push({
+-          i: i++,
+-          t: performance.now() - t0,
+-          ct: anim ? Number(anim.currentTime ?? 0) : null,
+-          x: r.left + r.width / 2,
+-          y: r.top + r.height / 2,
+-          w: r.width,
+-          vis: area > 0 ? (Math.max(0, rr - l) * Math.max(0, b - t)) / area : 0,
+-        });
++      const r = board.getBoundingClientRect();
++      let [l, t, rr, b] = [r.left, r.top, r.right, r.bottom];
++      for (let a = board.parentElement; a; a = a.parentElement) {
++        const cs = getComputedStyle(a);
++        const ar = a.getBoundingClientRect();
++        if (cs.overflowX !== 'visible') [l, rr] = [Math.max(l, ar.left), Math.min(rr, ar.right)];
++        if (cs.overflowY !== 'visible') [t, b] = [Math.max(t, ar.top), Math.min(b, ar.bottom)];
+       }
+-      seen ||= !!anim;
+-      if ((seen && !anim) || i >= cap) w.__foldDone = true;
+-      else requestAnimationFrame(tick);
++      const area = r.width * r.height;
++      return {
++        i,
++        tl,
++        ct: anim ? Number(anim.currentTime ?? 0) : null,
++        x: r.left + r.width / 2,
++        y: r.top + r.height / 2,
++        w: r.width,
++        vis: area > 0 ? (Math.max(0, rr - l) * Math.max(0, b - t)) / area : 0,
++      };
++    };
++    const mc = new MessageChannel();
++    const q: (() => void)[] = [];
++    mc.port1.onmessage = () => q.shift()?.();
++    let i = 0;
++    let seen = false;
++    const tick = () => {
++      const k = i++;
++      w.__foldR[k] = performance.now();
++      const tl = Number(document.timeline.currentTime ?? 0);
++      q.push(() => {
++        const f = read(k, tl);
++        if (f) w.__fold.push(f);
++        seen ||= f?.ct != null;
++        if ((seen && f?.ct == null) || k + 1 >= cap) w.__foldDone = true;
++      });
++      mc.port2.postMessage(0);
++      if (!w.__foldDone) requestAnimationFrame(tick);
+     };
+     requestAnimationFrame(tick);
+   }, cap);
+@@ -106,56 +155,131 @@ async function foldFrames(page: Page, cap = 240): Promise<Frame[]> {
+       timeout: 15000,
+     })
+     .toBe(true);
+-  return page.evaluate(() => (window as unknown as { __fold: Frame[] }).__fold);
++  return page.evaluate(() => {
++    const w = window as unknown as { __fold: Frame[]; __foldR: number[]; __foldIo: number | null };
++    const io = w.__foldIo ?? -1;
++    // the last frame whose rAF stamp precedes the observer's entry; -1 when it never reported
++    const kPaint = io < 0 ? -1 : w.__foldR.reduce((k, r, i) => (r <= io ? i : k), -1);
++    return { frames: w.__fold, kPaint };
++  });
++}
++
++/** PLANT skip (the pass-6 critic's; the chair's `SKIP_PLANT`): every explicit `startTime` write
++ *  lands 150 ms early, so the fold jumps 150 ms in on the frame after the hold. */
++function skipPlant() {
++  const d = Object.getOwnPropertyDescriptor(Animation.prototype, 'startTime')!;
++  Object.defineProperty(Animation.prototype, 'startTime', {
++    get() {
++      return d.get!.call(this);
++    },
++    set(v) {
++      d.set!.call(this, typeof v === 'number' ? v - 150 : v);
++    },
++    configurable: true,
++  });
++}
++
++type Verdict = {
++  f1: Frame;
++  centre: number;
++  dw: number;
++  ci: { k: number; off: number }[];
++  inFold: Frame[];
++  /** reads of the mover taken before the frame that first painted it (dropped) */
++  dropped: number;
++};
++
++/** Open the cell, fold, and read frame 1 + the clock identity post-paint. */
++async function readFold(
++  browser: import('@playwright/test').Browser,
++  cell: (typeof CELLS)[number],
++  plant = false,
++): Promise<Verdict> {
++  const ctx = await browser.newContext({
++    viewport: { width: cell.w, height: cell.h },
++    hasTouch: cell.touch,
++    colorScheme: cell.scheme,
++    reducedMotion: 'no-preference',
++  });
++  if (plant) await ctx.addInitScript(skipPlant);
++  const page = await ctx.newPage();
++  await page.goto(cell.game === 'sudoku' ? '/?game=sudoku&board=' + BOARD : '/?game=' + cell.game);
++  await page.locator('.board-cells').first().waitFor();
++  // the payload read back through the aria-label corpus (LAWS P5), never innerText
++  if (cell.game === 'sudoku')
++    expect(await page.locator('.board-cells [aria-label*="given clue"]').count()).toBe(71);
++  if (cell.touch)
++    expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
++  await page.evaluate(() => document.fonts.ready);
++  const rest = await page.evaluate(() => {
++    const r = document.querySelector('.board-peek-host')!.getBoundingClientRect();
++    return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
++  });
++  const { frames, kPaint } = await foldFrames(page);
++  expect(kPaint, 'the mover never reported its first painted frame').toBeGreaterThanOrEqual(0);
++  const seen = frames.filter((f) => f.ct !== null).sort((a, b) => a.i - b.i);
++  const inFold = seen.filter((f) => f.i >= kPaint);
++  const f1 = inFold[0];
++  expect(f1, 'the fold never ran a mover (the cut, or the verb is gone)').toBeTruthy();
++  const ci = [2, 3]
++    .filter((k) => inFold[k - 1])
++    .map((k) => ({ k, off: inFold[k - 1].ct! - (inFold[k - 1].tl - f1.tl) }));
++  if (cell.game !== 'sudoku')
++    expect(
++      await page.locator('.game-card.is-center .board-peek-host').count(),
++      'the centre card lost the live board (the deck re-centred under the fold)',
++    ).toBe(1);
++  await ctx.close();
++  return {
++    f1,
++    centre: Math.hypot(f1.x - rest.x, f1.y - rest.y),
++    dw: f1.w - rest.w,
++    ci,
++    inFold: inFold.map((f) => ({ ...f, w: f.w - rest.w })),
++    dropped: seen.length - inFold.length,
++  };
++}
++
++/** The gate's clauses; returns every failure (empty = GREEN). CI is gated in Chromium only. */
++function failures(v: Verdict, engine: string): string[] {
++  const out: string[] = [];
++  if (v.centre > 3) out.push(`frame ${v.f1.i}: the board starts ${v.centre.toFixed(2)} px off its rest pose`);
++  if (Math.abs(v.dw) > 3) out.push(`frame ${v.f1.i}: the board starts ${v.dw.toFixed(2)} px off its rest width`);
++  if (engine === 'chromium')
++    for (const { k, off } of v.ci)
++      if (Math.abs(off) > 2) out.push(`clock identity: ct(frame ${k}) is ${off.toFixed(1)} ms off tl(${k}) − tl(1)`);
++  if (engine === 'chromium' && v.ci.length < 2) out.push('clock identity: fewer than three fold frames');
++  return out;
+ }
+ 
+ for (const cell of CELLS) {
+   test(`GA1 · the fold's first painted frame is its first pose · ${cell.name}`, async ({
+     browser,
+   }) => {
+-    const ctx = await browser.newContext({
+-      viewport: { width: cell.w, height: cell.h },
+-      hasTouch: cell.touch,
+-      colorScheme: cell.scheme,
+-      reducedMotion: 'no-preference',
+-    });
+-    const page = await ctx.newPage();
+-    await page.goto(cell.game === 'sudoku' ? '/?game=sudoku&board=' + BOARD : '/?game=' + cell.game);
+-    await page.locator('.board-cells').first().waitFor();
+-    // the payload read back through the aria-label corpus (LAWS P5), never innerText
+-    if (cell.game === 'sudoku')
+-      expect(await page.locator('.board-cells [aria-label*="given clue"]').count()).toBe(71);
+-    if (cell.touch)
+-      expect(await page.evaluate(() => matchMedia('(any-pointer: coarse)').matches)).toBe(true);
+-    await page.evaluate(() => document.fonts.ready);
+-    const rest = await page.evaluate(() => {
+-      const r = document.querySelector('.board-peek-host')!.getBoundingClientRect();
+-      return { x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
+-    });
+-
+-    const frames = await foldFrames(page);
+-    const inFold = frames.filter((f) => f.ct !== null);
+-    const f1 = inFold[0];
+-    expect(f1, 'the fold never ran a mover (the cut, or the verb is gone)').toBeTruthy();
+-    const centre = Math.hypot(f1.x - rest.x, f1.y - rest.y);
+-    const dw = f1.w - rest.w;
+-    const f2 = inFold[1];
++    const engine = test.info().project.name.includes('webkit') ? 'webkit' : 'chromium';
++    const v = await readFold(browser, cell);
++    // ROW 2 (pass 7): the FIRST MOTION INTERVAL, printed with the box load (LAWS P6 §B) — the gap
++    // from the held frame to the first moving one and the step it paints; a reading, not a gate.
++    const [a, b] = v.inFold;
++    const gap = b ? (b.tl - a.tl).toFixed(1) : 'n/a';
++    const step = b ? (Math.hypot(b.x - a.x, b.y - a.y) + Math.abs(b.w - a.w)).toFixed(1) : 'n/a';
+     console.log(
+-      `GA1 ${test.info().project.name} ${cell.name}: frame ${f1.i} (ct ${f1.ct}) centre ${centre.toFixed(2)} px, width ${dw.toFixed(2)} px; frame ${f2?.i} ct ${f2?.ct}; ${inFold.length} fold frames, visible min ${Math.min(...inFold.map((f) => f.vis)).toFixed(3)}`,
++      `GA1 ${test.info().project.name} ${cell.name}: post-paint frame ${v.f1.i} (ct ${v.f1.ct}) centre ${v.centre.toFixed(2)} px, width ${v.dw.toFixed(2)} px; CI ${v.ci.map((c) => `k${c.k} ${c.off.toFixed(1)} ms`).join(', ')}; first interval ${gap} ms, step ${step} px; reads before frame 1 dropped ${v.dropped}; ${v.inFold.length} fold frames, visible min ${Math.min(...v.inFold.map((f) => f.vis)).toFixed(3)}; load ${loadavg()[0].toFixed(1)}`,
+     );
+-    expect(centre, `frame ${f1.i}: the board starts ${centre.toFixed(2)} px off its rest pose`).toBeLessThanOrEqual(3);
+-    expect(Math.abs(dw), `frame ${f1.i}: the board starts ${dw.toFixed(2)} px off its rest width`).toBeLessThanOrEqual(3);
+-    // the glide MOVES after frame 1 (a hold that never releases would pass the two rows above)
+-    expect(inFold[inFold.length - 1].w, 'the fold never shrank the board').toBeLessThan(rest.w - 3);
+-    // the deck kept its card: the centre is still the game that folded into it
+-    if (cell.game !== 'sudoku')
+-      expect(
+-        await page.locator('.game-card.is-center .board-peek-host').count(),
+-        'the centre card lost the live board (the deck re-centred under the fold)',
+-      ).toBe(1);
++    expect(failures(v, engine)).toEqual([]);
++    // the glide MOVES after frame 1 (a hold that never releases would pass the rows above)
++    expect(v.inFold[v.inFold.length - 1].w, 'the fold never shrank the board').toBeLessThan(-3);
+     // GA2: never clipped while it folds
+-    for (const f of inFold)
++    for (const f of v.inFold)
+       expect(f.vis, `frame ${f.i}: the folding board is clipped (visible ${f.vis.toFixed(3)})`).toBeGreaterThanOrEqual(0.999);
+-    await ctx.close();
+   });
+ }
++
++// THE NEGATIVE, in-run: the same reader under PLANT skip must RED (frame 1 painted 150 ms in).
++test(`GA1 · PLANT skip reds the post-paint read · ${CELLS[0].name}`, async ({ browser }) => {
++  const engine = test.info().project.name.includes('webkit') ? 'webkit' : 'chromium';
++  const v = await readFold(browser, CELLS[0], true);
++  const red = failures(v, engine);
++  console.log(`GA1 PLANT skip ${test.info().project.name}: ${red.join(' · ') || 'GREEN (the gate is blind)'}`);
++  expect(red.length, 'PLANT skip painted frame 1 off its pose and the gate stayed green').toBeGreaterThan(0);
++});
+diff --git a/web/frontend/e2e/node.d.ts b/web/frontend/e2e/node.d.ts
+index 78d18f96..8738a0f6 100644
+--- a/web/frontend/e2e/node.d.ts
++++ b/web/frontend/e2e/node.d.ts
+@@ -28,6 +28,11 @@ declare module 'node:path' {
+   export function dirname(path: string): string
+ }
+ 
++declare module 'node:os' {
++  /** The 1/5/15-min load averages: a timing row prints its box load beside it (T9-W7 pass 7). */
++  export function loadavg(): number[]
++}
++
+ declare module 'node:url' {
+   export function fileURLToPath(url: string | URL): string
+ }
+diff --git a/web/frontend/env.d.ts b/web/frontend/env.d.ts
+index df62df53..0631aa4e 100644
+--- a/web/frontend/env.d.ts
++++ b/web/frontend/env.d.ts
+@@ -5,6 +5,12 @@
+  *  rig against `wrangler dev`, and by the chair if the deploy lands on another hostname. */
+ interface ImportMetaEnv {
+   readonly VITE_RELAY_URL?: string
++  /** T9-B25's arm (b), the ruling front; unset builds the default, one hand. */
++  readonly VITE_HAND_ORDER?: string
++  /** T9-B23's arm: `hinge` (default), `sheet` or `snap`. */
++  readonly VITE_INK_AT_FLIP?: string
++  /** INTAKE-23 row 16's option: `on` publishes `<meta name="theme-color">`. */
++  readonly VITE_THEME_COLOR?: string
+ }
+ 
+ declare module '*.vue' {
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 00e80b1c..53cf09f9 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -121,6 +121,20 @@ const EXEMPT_KEYS = {
+     ms: 1.5,
+     why: "NOT A LENGTH — the moon's speed band, a multiplier on the beat (T6 mark 11)",
+   },
++  // PASS 7 · MOT-VERB (INTAKE-23 rows 1 and 5, T9-M20): the boot hand's three numbers. None is a
++  // length on screen: a per-frame CAP on the hand's clock, a FRACTION of a line's time, a CEILING.
++  "hand.stepMs": {
++    ms: 17,
++    why: "NOT A LENGTH — the most the hand's clock moves in one frame (one 60 Hz frame at 1 ms), so a stall pauses the ruling (M20 D1)",
++  },
++  "hand.lift": {
++    ms: 0.6,
++    why: "NOT A LENGTH — the fraction of a line's time at which the one hand lands the next line (T9-B25 arm a)",
++  },
++  "hand.bakeCeilingMs": {
++    ms: 1200,
++    why: "a CEILING — the longest the ruling waits for its pose stacks, counted on the grid when it fires (M20 D5), never a length on screen",
++  },
+ };
+ /** A TS CLOCK the ratchet banks (pass 7, charter row 5 / INTAKE-23 row 18): a duration-shaped
+  *  leaf of MOTION (outside `rungs`, banked on their own) or of an admitted TS set. Offsets and
+@@ -2199,10 +2213,16 @@ const ADMITTED_ARITH = [
+   },
+   {
+     file: "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts",
+-    expr: "Math.max(0, preset.baseDelay + i * preset.stagger + jitter)",
++    expr: "delay = Math.max(0, preset.baseDelay + i * preset.stagger + jitter)",
+     ms: null,
+     why: "GRADED — the draw-in's onset: a tier's baseDelay + i × stagger (DRAW_IN_PRESETS, B9's axis)",
+   },
++  {
++    file: "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts",
++    expr: "at = Math.max(delay + MOTION.hand.lift * dur, lastEnd)",
++    ms: null,
++    why: "GRADED — the one hand's next onset: this line's lift, never before the last line lifted (T9-B25 arm a, B9's axis)",
++  },
+   {
+     file: "src/pencil/celestial/DarkModeToggle.vue",
+     expr: "(i * RAY_DEG_PER_POSE).toFixed(4)",
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 6651e083..58fdac8a 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -48,6 +48,7 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
++import { consumerSites, hasCompound } from "./shape-census.mjs";
+ 
+ // THE ONE COPY (T9-W7 pass 6, the chair's instruments lane; pass6/CHAIR-RULINGS §1.3): every
+ // rung consumer runs THIS file with FE pointed at its tree's web/frontend —
+@@ -407,13 +408,12 @@ export function undefinedTokens(extra = {}, inherited = INHERITED) {
+   const maskedDefaults = []; // fallbacks on registered tokens (pass 6)
+   for (const [f, masked] of texts) {
+     const lineAt = (at) => masked.slice(0, at).split("\n").length;
+-    for (const d of masked.matchAll(
+-      /(?:^|[;{},"'`])\s*(-{0,2}[a-zA-Z][\w-]*)\s*:\s*([^;{}"'`]*)/g,
+-    )) {
+-      const [, prop, value] = d;
+-      const at = d.index + d[0].indexOf(value);
++    const seen = new Set(); // one row per var() site, however many shapes reached it
++    for (const { prop, value, at } of consumerSites(masked)) {
+       for (const m of value.matchAll(/var\(\s*(--[a-zA-Z0-9_-]+)\s*(,?)/g)) {
+         const [, name, comma] = m;
++        if (seen.has(at + m.index)) continue;
++        seen.add(at + m.index);
+         // a HOOK names its own failure value — unless the token is REGISTERED, where the
+         // initial value is the failure value and the fallback is a masked default (pass 6)
+         if (comma) {
+@@ -426,8 +426,12 @@ export function undefinedTokens(extra = {}, inherited = INHERITED) {
+             });
+           continue;
+         }
+-        if (name.endsWith("-")) continue; // `var(--ease-${x})` — a template stem, not a name
+-        if (global.has(name) || local.get(f).has(name)) continue;
++        // `var(--ease-${x})` — a template STEM (pass 7, the SHAPE law: read as every stem): it
++        // resolves only if some declared name carries the stem; a stem nothing declares is red.
++        if (name.endsWith("-")) {
++          const stemOk = [...global, ...local.get(f)].some((t) => t.startsWith(name));
++          if (stemOk) continue;
++        } else if (global.has(name) || local.get(f).has(name)) continue;
+         // CONDITIONAL (pass 6): satisfied only inside a rule carrying the same tail and the same
+         // conditional at-rules; anywhere else the token is undefined at rest.
+         const conds = conditional.get(name);
+@@ -439,7 +443,7 @@ export function undefinedTokens(extra = {}, inherited = INHERITED) {
+           const ok = conds.some(
+             (c) =>
+               c.ats.every((a) => chain.includes(a)) &&
+-              (c.tails.length === 0 || c.tails.some((t) => sels.includes(t))),
++              (c.tails.length === 0 || c.tails.some((t) => hasCompound(sels, t))),
+           );
+           if (ok) continue;
+         }
+@@ -740,6 +744,106 @@ function main() {
+             return !m10(r, reg) && !t(r, reg);
+           })()),
+     });
++    // ── CONTROLS 11–14 (pass 7, MOT-VERB; the pass-6 critic's X5d–X7b, the SHAPE law) ────────
++    const theme = path.join(ROOT, "src", "composables", "useTheme.ts");
++    const themeText = fs.readFileSync(theme, "utf8");
++    const script = (body) => ({
++      [theme]:
++        themeText +
++        `\nexport function criticWrite(el: HTMLElement, k: string) { ${body} }\n`,
++    });
++    const ta = (res, tok) => t(res, tok) || a(res, tok);
++    Object.assign(ctl, {
++      // 11 · X5d: a `:style` OBJECT, camel key — the quote sits after the colon
++      s11:
++        !!lamText &&
++        t(
++          undefinedTokens({
++            [lam]: onRoot(`:style="{ animationDuration: 'var(${G})' }"`),
++          }),
++          G,
++        ),
++      // 11b · X5e: the same object with a quoted kebab key
++      s11b:
++        !!lamText &&
++        t(
++          undefinedTokens({
++            [lam]: onRoot(`:style="{ 'animation-duration': 'var(${G})' }"`),
++          }),
++          G,
++        ),
++      // 11c · X5f: the object form with a fallback on a REGISTERED rung (A.5 ruling 5, masked)
++      s11c:
++        !reg ||
++        (!!lamText &&
++          m10(
++            undefinedTokens({
++              [lam]: onRoot(`:style="{ animationDuration: 'var(${reg}, 280ms)' }"`),
++            }),
++            reg,
++          )),
++      // 12 · X6: a script write `el.style.animationDuration = 'var(--ghost)'`
++      s12: t(undefinedTokens(script(`el.style.animationDuration = "var(${G})";`)), G),
++      // 12b · X6b: `setProperty('animation-duration', 'var(--ghost)')`
++      s12b: t(
++        undefinedTokens(
++          script(`el.style.setProperty("animation-duration", "var(${G})");`),
++        ),
++        G,
++      ),
++      // 12c · a COMPUTED key: unresolvable, read as a site, never dropped
++      s12c: ta(undefinedTokens(script(`(el.style as any)[k] = "var(${G})";`)), G),
++      // 13 · X6c: a template STEM nothing declares
++      s13: ta(
++        undefinedTokens(
++          script(
++            'el.style.setProperty("transition-timing-function", `var(--critic-stem-${k})`);',
++          ),
++        ),
++        "--critic-stem-",
++      ),
++      // 13b · negative-negative: a stem the estate declares (`--ease-*`) stays green
++      g13b: !ta(
++        undefinedTokens(
++          script(
++            'el.style.setProperty("transition-timing-function", `var(--ease-${k})`);',
++          ),
++        ),
++        "--ease-",
++      ),
++      // 14 · X7: a turning-only token consumed under `html:not(.theme-turning)` — the rule that
++      // runs WITHOUT the tail
++      s14: t(
++        undefinedTokens({
++          [dusk]:
++            turning +
++            `html:not(.theme-turning) .critic-x { transition: opacity var(${G}) linear; }\n`,
++        }),
++        G,
++      ),
++      // 14b · X7b: the tail as a prefix of a longer class
++      s14b: t(
++        undefinedTokens({
++          [dusk]:
++            turning +
++            `html.theme-turning-done .critic-x { transition: opacity var(${G}) linear; }\n`,
++        }),
++        G,
++      ),
++    });
++    console.log(
++      `shape controls (pass 7, X5d–X7b): ` +
++        `11 :style object ${ctl.s11 ? "RED as required" : "FAILED"} · ` +
++        `11b quoted kebab key ${ctl.s11b ? "RED as required" : "FAILED"} · ` +
++        `11c object fallback on a registered rung ${!reg ? "n/a" : ctl.s11c ? "MASKED as required" : "FAILED"} · ` +
++        `12 .style.x = ${ctl.s12 ? "RED as required" : "FAILED"} · ` +
++        `12b setProperty ${ctl.s12b ? "RED as required" : "FAILED"} · ` +
++        `12c computed key ${ctl.s12c ? "RED as required" : "FAILED"} · ` +
++        `13 undeclared stem ${ctl.s13 ? "RED as required" : "FAILED"} · ` +
++        `13b declared stem ${ctl.g13b ? "green as required" : "FAILED"} · ` +
++        `14 :not() tail ${ctl.s14 ? "RED as required" : "FAILED"} · ` +
++        `14b prefix tail ${ctl.s14b ? "RED as required" : "FAILED"}`,
++    );
+     const scopedOk = !!scopedOpen(marginText);
+     if (!scopedOk) {
+       console.log(
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 031eb421..82a86cf8 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -3,7 +3,7 @@
+ // pass7/instruments/shape-census.mjs, sha1 3ba7738ee8d4, formatted by the house prettier with two
+ // value-preserving edits for `eslint .` (a needless `\[` in a class; 0.020507696433157868 written
+ // as the double it already was). Extend THIS file, never a second one.
+-// NOT-A-LANE: a library read by scripts/check-motion-bands.mjs (lint:bands, T9-W7), never run alone.
++// NOT-A-LANE: a library read by scripts/check-motion-bands.mjs (lint:bands) and scripts/check-theme-tokens.mjs (lint:theme-tokens), T9-W7, never run alone.
+ // shape-census.mjs — THE shape-census library (T9-W7 pass 7, chair's instruments; registry-v6 §2.10;
+ // LAWS P6 §F "THE SHAPE LAW"). Seeded from NOTE-LEDGER's critic's `reserve-law.PROPOSED.mjs` (pass6/
+ // critique/NOTE-LEDGER/instruments/). A source gate reads the SHAPE, not the spelling. ONE copy: a lane
+@@ -532,6 +532,50 @@ export function TAILWIND(tw) {
+     return ["color-literal", m[1]];
+   return null;
+ }
++/** THE SHAPE LAW'S CONSUMER SITES (pass 7, MOT-VERB; the pass-6 critic's §2.2; read by
++ *  check-theme-tokens.mjs, the undefined-token census, keyed on a var() name and not a subject). A `var()` is
++ *  consumed wherever a CSS property can be written, not only in a declaration a quote or a comma
++ *  opens: (a) a declaration (a stylesheet, a `style=` attribute, a `:style` string); (b) a Vue or
++ *  TS style OBJECT, quoted or unquoted key, camel or kebab (`{ animationDuration: 'var(--x)' }`
++ *  puts the quote AFTER the colon, which (a) never scans); (c) a script write `.style.x = '…'`;
++ *  (d) `setProperty('<prop>', '…')`; (e) a COMPUTED key `style[k] = '…'` — its property is
++ *  unresolvable, so it is read as a site with prop `?` and never dropped. */
++export function consumerSites(text) {
++  const out = [];
++  const kebab = (p) => p.replace(/[A-Z]/g, (c) => "-" + c.toLowerCase());
++  const push = (prop, value, at) => out.push({ prop: kebab(prop), value, at });
++  for (const d of text.matchAll(
++    /(?:^|[;{},"'`])\s*(-{0,2}[a-zA-Z][\w-]*)\s*:\s*([^;{}"'`]*)/g,
++  ))
++    push(d[1], d[2], d.index + d[0].indexOf(d[2], d[0].indexOf(":")));
++  for (const d of text.matchAll(
++    /(?:^|[{,\s])(["']?)(-{0,2}[a-zA-Z][\w-]*)\1\s*:\s*(["'`])((?:(?!\3)[^\\]|\\.)*)\3/g,
++  ))
++    push(d[2], d[4], d.index + d[0].lastIndexOf(d[4]));
++  for (const d of text.matchAll(
++    /\.style\s*\.\s*([a-zA-Z]+)\s*=\s*(["'`])((?:(?!\2).)*)\2/g,
++  ))
++    push(d[1], d[3], d.index + d[0].lastIndexOf(d[3]));
++  for (const d of text.matchAll(
++    /setProperty\(\s*(["'`])([\w-]+)\1\s*,\s*(["'`])((?:(?!\3).)*)\3/g,
++  ))
++    push(d[2], d[4], d.index + d[0].lastIndexOf(d[4]));
++  for (const d of text.matchAll(
++    /style(?:\s+as\s+[\w<>,\s]+\))?\s*\[[^\]]+\]\s*=\s*(["'`])((?:(?!\1).)*)\1/g,
++  ))
++    push("?", d[2], d.index + d[0].lastIndexOf(d[2]));
++  return out;
++}
++
++/** A conditional tail (`.theme-turning`) holds only as a COMPOUND of the consumer's chain: never
++ *  inside `:not(…)` (`html:not(.theme-turning) .x` is exactly the rule that runs WITHOUT it), and
++ *  never as a prefix of a longer name (`.theme-turning-done`). */
++export function hasCompound(sels, tail) {
++  const bare = sels.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, "");
++  const esc = tail.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
++  return new RegExp(`${esc}(?![\\w-])`).test(bare);
++}
++
+ /** Script style writes of `prop` (kebab) anywhere in `text`; computed keys are reported as unresolved sites. */
+ export function scriptWrites(text, prop, baseLine = 1) {
+   const s = stripJs(text);
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 6c38082a..49f22f98 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -792,6 +792,59 @@ html {
+     }
+   }
+ 
++  /* THE HINGE (T9-M21 P7-M21-1, T9-B23 arm c). The grounds dusk over the `dusk` rung; the
++     board's ink may not (any continuous ink path crosses its paper at 1:1), and it may not snap
++     with the class either (new ink on old paper reads under 3:1 for up to 117 ms). It STEPS, in
++     one frame, at the instant old and new graphite read equally on the darkening paper: 0.343
++     of the dusk going dark, 0.249 going light (the adjudicator's crossing, re-derived from this
++     file's own tokens): 120ms and 87ms of the 350ms `dusk` rung. They are DELAYS, so they keep their
++     literals (B9's fence); a retune of `dusk` or its curve re-derives both. The curve slot names the
++     dusk's verb because the hinge IS the dusk's instant; at 0s it moves nothing. A 0s transition with a delay holds the old value through the delay and
++     cuts to the new one, on the SAME style change as the dusk, so paper and ink share one clock.
++     Keyed on the DESTINATION class, scoped to the board (`.board-wrapper`), and set only by the
++     toggle's `ink-hinge` arm class, so the subjects' own animations and every surface off the
++     board keep their cascade. Arm (d) `ink-sheet` steps the board's paper WITH its ink at the same
++     instant, so every ink on it (user hues, conflict red, marks) holds by construction; its price
++     is a lit rectangle inside the dusking page for the hinge's length. */
++  @media (prefers-reduced-motion: no-preference) {
++    html.theme-turning.ink-hinge.dark
++      .board-wrapper
++      :is(
++        .glyph-svg path,
++        .pencil-marks,
++        .user-marks,
++        .cell-ghost-path,
++        .boil-frame-bitmap
++      ) {
++      transition:
++        stroke 0s var(--verb-dusk-ease) 120ms,
++        fill 0s var(--verb-dusk-ease) 120ms,
++        color 0s var(--verb-dusk-ease) 120ms,
++        background-color 0s var(--verb-dusk-ease) 120ms !important;
++    }
++    html.theme-turning.ink-hinge:not(.dark)
++      .board-wrapper
++      :is(
++        .glyph-svg path,
++        .pencil-marks,
++        .user-marks,
++        .cell-ghost-path,
++        .boil-frame-bitmap
++      ) {
++      transition:
++        stroke 0s var(--verb-dusk-ease) 87ms,
++        fill 0s var(--verb-dusk-ease) 87ms,
++        color 0s var(--verb-dusk-ease) 87ms,
++        background-color 0s var(--verb-dusk-ease) 87ms !important;
++    }
++    html.theme-turning.ink-sheet.dark .board-wrapper.bg-card {
++      transition: background-color 0s var(--verb-dusk-ease) 120ms !important;
++    }
++    html.theme-turning.ink-sheet:not(.dark) .board-wrapper.bg-card {
++      transition: background-color 0s var(--verb-dusk-ease) 87ms !important;
++    }
++  }
++
+   /* Solve failure — the teacher's red pencil. Shadow carries the full
+      --color-teacher-red token; grid lines take a 30% red wash over the line color
+      so the full-red conflict rings still read one tier hotter (Q8 H1;
+diff --git a/web/frontend/src/composables/useTheme.ts b/web/frontend/src/composables/useTheme.ts
+index 3dab55d0..f05c0c2e 100644
+--- a/web/frontend/src/composables/useTheme.ts
++++ b/web/frontend/src/composables/useTheme.ts
+@@ -1,5 +1,24 @@
++import { nextTick, watch } from "vue";
+ import { useDark, useToggle, createGlobalState } from "@vueuse/core";
+ 
++/** T9-M22 × MOT-VERB row 16 — an OPTION, framed and not defaulted (INTAKE-23 §4 row 16; coupled
++ *  by name to TAB-PEN row 31, Safari's tab strip): with `VITE_THEME_COLOR=on` the page publishes
++ *  `<meta name="theme-color">` as its own paper at boot and on every flip, so a browser that
++ *  tints its chrome from it tints to the page. Unset, no theme-color ships (today's page). */
++const THEME_COLOR_META = import.meta.env.VITE_THEME_COLOR === "on";
++
++function paintThemeColor(): void {
++  let meta = document.querySelector<HTMLMetaElement>('meta[name="theme-color"]');
++  if (!meta) {
++    meta = document.createElement("meta");
++    meta.name = "theme-color";
++    document.head.append(meta);
++  }
++  meta.content = getComputedStyle(document.documentElement)
++    .getPropertyValue("--color-background")
++    .trim();
++}
++
+ export const useTheme = createGlobalState(() => {
+   const isDark = useDark({
+     // T4-W10 idiom (§theme-key) — namespace the vueuse storage key. Unset, vueuse writes the
+@@ -37,5 +56,9 @@ export const useTheme = createGlobalState(() => {
+ 
+   const toggleDark = useToggle(isDark);
+ 
++  if (THEME_COLOR_META && typeof document !== "undefined") {
++    watch(isDark, () => void nextTick(paintThemeColor), { immediate: true });
++  }
++
+   return { isDark, toggleDark };
+ });
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index aac99e4f..8f61b328 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -621,6 +621,17 @@ const moonBaked = computed(() => moonUrls.value.length === 4);
+ // for free, and a FRESH plush-land instance starts when the other icon gains
+ // .is-active, so the tail always lands ~950ms after the LAST click. No phase machine.
+ const turning = ref(false);
++/** T9-B23, the ink at the flip (U-10; one variable, baked at build by `VITE_INK_AT_FLIP`):
++ *  (c) `hinge`, the default — the board's ink steps on one frame at the dusk's equal-contrast
++ *  instant (index.css §THE HINGE); (d) `sheet` — the board's paper steps with it; (a) `snap` —
++ *  the ink changes with the class, as shipped. Arm (b), the ink joining the dusk, is struck. */
++const INK_AT_FLIP = import.meta.env.VITE_INK_AT_FLIP ?? "hinge";
++const INK_ARM_CLASSES =
++  INK_AT_FLIP === "sheet"
++    ? ["ink-hinge", "ink-sheet"]
++    : INK_AT_FLIP === "snap"
++      ? []
++      : ["ink-hinge"];
+ let turnTimer: ReturnType<typeof setTimeout> | undefined;
+ let gestureTimer: ReturnType<typeof setTimeout> | undefined;
+ 
+@@ -665,11 +676,11 @@ function handleToggle() {
+   // suppressed restyle). Armed after, the dusk rule is not matching at the only instant it
+   // could have started a tween, and the page snaps however the cascade is written. Armed
+   // first, the flip frame resolves WITH the `!important` colour transition standing.
+-  document.documentElement.classList.add("theme-turning");
++  document.documentElement.classList.add("theme-turning", ...INK_ARM_CLASSES);
+   toggleDark();
+   clearTimeout(turnTimer);
+   turnTimer = setTimeout(() => {
+-    document.documentElement.classList.remove("theme-turning");
++    document.documentElement.classList.remove("theme-turning", ...INK_ARM_CLASSES);
+   }, 400);
+   turning.value = true;
+   clearTimeout(gestureTimer);
+@@ -691,7 +702,7 @@ function onGestureEnd(e: AnimationEvent) {
+ onUnmounted(() => {
+   clearTimeout(turnTimer);
+   clearTimeout(gestureTimer);
+-  document.documentElement.classList.remove("theme-turning");
++  document.documentElement.classList.remove("theme-turning", ...INK_ARM_CLASSES);
+ });
+ </script>
+ 
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 03326710..79d9a9d9 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -74,6 +74,7 @@ import {
+   wobblePoseId,
+ } from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
++import { wordmarkResident } from "@pencil/composables/bootHand";
+ import {
+   readFilterDefs,
+   resolveCssValue,
+@@ -379,6 +380,15 @@ const logoUrls = retainedPoseUrls(logoRaster, () => `${label.value}-${vbWidth.va
+ const logoBaked = computed(
+   () => logoUrls.value.length > 0 && logoUrls.value.length === logoPoseIds.value.length,
+ );
++// T9-M20 D5 · the boot's ruling waits for this stack's first landing (`bootHand`), so the
++// wordmark's encodes never run under the hand. Latched once; a later re-bake does not re-arm it.
++watch(
++  logoBaked,
++  (baked) => {
++    if (baked) wordmarkResident.value = true;
++  },
++  { immediate: true },
++);
+ 
+ /**
+  * ── CH-66 · THE STACK IS HIDDEN, NEVER TORN OUT (T7-WGATE) ───────────────────────────
+diff --git a/web/frontend/src/pencil/composables/bootHand.test.ts b/web/frontend/src/pencil/composables/bootHand.test.ts
+new file mode 100644
+index 00000000..2e61755b
+--- /dev/null
++++ b/web/frontend/src/pencil/composables/bootHand.test.ts
+@@ -0,0 +1,73 @@
++import { describe, expect, it, vi } from "vitest";
++import { MOTION, handStroke } from "@pencil/config/pencilConfig";
++
++// The master subscription is driven by hand: `raw` is the rAF timeline over the span.
++let drive: ((eased: number, raw: number) => void) | null = null;
++vi.mock("@mkbabb/pencil-boil", async (orig) => ({
++  ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++  createSequenceSubscription: (o: { onProgress: (e: number, r: number) => void }) => {
++    drive = o.onProgress;
++    return { start() {}, stop() {} };
++  },
++}));
++const { enrollStroke, beginRuling, afterRuling } = await import("./bootHand");
++const SPAN = 600_000;
++
++describe("the hand's clock (T9-M20 D1)", () => {
++  it("a healthy frame is never slowed; a stall pauses the hand one step", () => {
++    const seen: number[] = [];
++    enrollStroke((c) => {
++      seen.push(c);
++      return seen.length >= 4;
++    });
++    for (const t of [0, 16, 316, 332]) drive!(0, t / SPAN);
++    // 16 ms passes whole; the 300 ms stall advances one `stepMs`; the next frame is whole again
++    expect(seen).toEqual([0, 16, 16 + MOTION.hand.stepMs, 32 + MOTION.hand.stepMs]);
++  });
++});
++
++describe("the wave waits for the last lift (T9-M20 D15)", () => {
++  it("nothing to wait for when no ruling is in flight", () => {
++    expect(afterRuling()).toBeNull();
++  });
++  it("releases every waiter at the last ruling's lift, once", async () => {
++    const a = beginRuling();
++    const b = beginRuling();
++    const order: string[] = [];
++    void afterRuling()!.then(() => order.push("wave"));
++    a();
++    a(); // idempotent: a second release of one ruling does not end the other
++    await Promise.resolve();
++    expect(order).toEqual([]);
++    b();
++    await Promise.resolve();
++    expect(order).toEqual(["wave"]);
++    expect(afterRuling()).toBeNull();
++  });
++});
++
++describe("handStroke (the ledger string, solved in JS)", () => {
++  const bez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t * t + t ** 3;
++  it("agrees with the parametric curve at 41 samples to 1e-4", () => {
++    const [x1, y1, x2, y2] = (MOTION.curves.handStroke.match(/-?[\d.]+/g) ?? []).map(
++      Number,
++    );
++    for (let i = 0; i <= 40; i++) {
++      const t = i / 40;
++      expect(handStroke(bez(x1, x2, t))).toBeCloseTo(bez(y1, y2, t), 4);
++    }
++  });
++  it("touches down slow, peaks near a third, and stops (G-D4: ≤ 25 % drawn at 20 % of the time)", () => {
++    const speed = (x: number, h = 1e-4) =>
++      (handStroke(x + h) - handStroke(x - h)) / (2 * h);
++    expect(speed(1e-3)).toBeLessThan(0.3);
++    let [peak, at] = [0, 0];
++    for (let x = 0.01; x < 1; x += 0.001)
++      if (speed(x) > peak) [peak, at] = [speed(x), x];
++    expect(at).toBeGreaterThan(0.2);
++    expect(at).toBeLessThan(0.4);
++    expect(handStroke(0.2)).toBeLessThan(0.25);
++    expect(handStroke(0.9)).toBeGreaterThan(0.99);
++  });
++});
+diff --git a/web/frontend/src/pencil/composables/bootHand.ts b/web/frontend/src/pencil/composables/bootHand.ts
+new file mode 100644
+index 00000000..30197d82
+--- /dev/null
++++ b/web/frontend/src/pencil/composables/bootHand.ts
+@@ -0,0 +1,77 @@
++import { ref } from "vue";
++import { createSequenceSubscription, type SequenceHandle } from "@mkbabb/pencil-boil";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++/**
++ * T9-M20 · THE HAND'S CLOCK. The ruling used to read the wall clock, so a frame the main
++ * thread lost painted every line wherever the clock said (the grid's own four pose bakes landed
++ * inside its draw-in and moved one line 72–100 % in a single painted frame). Here one master
++ * `sequence` subscription carries the rAF timeline and the hand's clock advances by at most
++ * `MOTION.hand.stepMs` per tick: a healthy 60 Hz frame is never slowed, and a stall pauses the
++ * hand for one frame's travel instead of teleporting it. The library form (`stepMs` on the
++ * sequence itself, pencil-boil 0.12.1, LEDGER T9-R4) deletes the clock half of this file.
++ */
++type Stroke = (clock: number) => boolean;
++
++const SPAN_MS = 600_000;
++let clock = 0;
++let last = -1;
++let master: SequenceHandle | null = null;
++const strokes = new Set<Stroke>();
++
++function tick(_eased: number, raw: number): void {
++  const t = raw * SPAN_MS;
++  if (last >= 0) clock += Math.min(Math.max(0, t - last), MOTION.hand.stepMs);
++  last = t;
++  for (const s of [...strokes]) if (s(clock)) strokes.delete(s);
++  if (strokes.size === 0) {
++    master?.stop();
++    master = null;
++    last = -1;
++  }
++}
++
++/** Enroll a stroke on the hand clock (it returns `true` when finished); returns its withdrawal. */
++export function enrollStroke(stroke: Stroke): () => void {
++  strokes.add(stroke);
++  if (!master) {
++    master = createSequenceSubscription({ durationMs: SPAN_MS, onProgress: tick });
++    master.start();
++  }
++  return () => {
++    strokes.delete(stroke);
++  };
++}
++
++/**
++ * T9-M20 D15 · THE WAVE WAITS FOR THE LAST LIFT. A ruling in flight (from the moment the grid
++ * starts waiting for its poses to the hand's last lift) holds the deal's reveal wave, so no digit
++ * is inked on a page that is not yet ruled. `beginRuling` returns the release, idempotent; an
++ * interrupted ruling (an erase, an unmount) releases too, so the wave can never be stranded.
++ */
++let rulings = 0;
++let waiters: (() => void)[] = [];
++
++export function beginRuling(): () => void {
++  rulings++;
++  let open = true;
++  return () => {
++    if (!open) return;
++    open = false;
++    rulings--;
++    if (rulings > 0) return;
++    const run = waiters;
++    waiters = [];
++    for (const w of run) w();
++  };
++}
++
++/** Resolves at the last lift of every ruling in flight; `null` when none is. */
++export function afterRuling(): Promise<void> | null {
++  if (rulings === 0) return null;
++  return new Promise((resolve) => waiters.push(resolve));
++}
++
++/** The wordmark's pose stack has landed once (the boot's ruling waits for it, so its encodes
++ *  never run under the hand). Latched: a later re-bake (a game's label) does not re-arm it. */
++export const wordmarkResident = ref(false);
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index 41ab7d7b..548e50c0 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -424,7 +424,8 @@ export const MOTION = {
+      *  ones (`assets/index.css`), never the 46 P1-W3 killed for +23.5 fps. */
+     dusk: {
+       ease: "cubic-bezier(0.25, 0.1, 0.25, 1)",
+-      props: "background-color, color",
++      /** `stroke, fill` (T9-M21, the hinge): the board's SVG ink turns on the dusk's instant. */
++      props: "background-color, color, stroke, fill",
+       fill: "none",
+       mechanism: ["transition"],
+       rungs: ["dusk"],
+@@ -461,9 +462,61 @@ export const MOTION = {
+      *  (Band D). Scope fence: this ruling is the drawer's — no other surface
+      *  re-eases under it. */
+     drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
++    /** T9-M20 · the hand's stroke: it touches down slow (0.14× its mean speed), peaks at
++     *  2.39× near a third of the stroke, and stops at the end. The boot's ruling reads it
++     *  through `cubicBezier` below (a JS consumer only; the CSS twin is minted with its
++     *  first `<style>` consumer). */
++    handStroke: "cubic-bezier(0.35, 0.05, 0.25, 1)",
++  },
++  /** T9-M20 · THE BOOT'S ONE HAND (`@pencil/composables/bootHand`). `stepMs` caps how far
++   *  the hand's clock moves in one frame (one 60 Hz frame at 1 ms quantisation), so a stalled
++   *  frame pauses the hand instead of teleporting it. `lift` is the fraction of a line's time
++   *  at which the next line lands (the serial order). `serial` names the RUNG each tier spends
++   *  in that order, so no length is typed twice (the ORDER itself, T9-B25's one variable, is
++   *  baked at build in `usePathAnimation`). `bakeCeilingMs` is the longest the
++   *  ruling waits for the grid's and the wordmark's pose stacks before it draws anyway (a
++   *  ceiling, and every time it fires is counted on the grid as `data-hand-ceiling`). */
++  hand: {
++    stepMs: 17,
++    lift: 0.6,
++    serial: { frame: "throw", subgrid: "note", cell: "whisper" },
++    bakeCeilingMs: 1200,
+   },
+ } as const;
+ 
++/** A CSS `cubic-bezier(x1, y1, x2, y2)` string as a JS curve (Newton on x with a bisection
++ *  fallback), so one ledger string serves both layers. */
++export function cubicBezier(css: string): (x: number) => number {
++  const [x1, y1, x2, y2] = (css.match(/-?[\d.]+/g) ?? []).map(Number);
++  const bez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 * t + 3 * b * (1 - t) * t * t + t ** 3;
++  const dBez = (a: number, b: number, t: number) =>
++    3 * a * (1 - t) ** 2 + 6 * (b - a) * (1 - t) * t + 3 * (1 - b) * t * t;
++  return (x: number) => {
++    if (x <= 0) return 0;
++    if (x >= 1) return 1;
++    let t = x;
++    for (let i = 0; i < 8; i++) {
++      const d = dBez(x1, x2, t);
++      if (Math.abs(d) < 1e-6) break;
++      t -= (bez(x1, x2, t) - x) / d;
++    }
++    if (!(t >= 0 && t <= 1) || Math.abs(bez(x1, x2, t) - x) > 1e-6) {
++      let lo = 0;
++      let hi = 1;
++      for (let i = 0; i < 48; i++) {
++        t = (lo + hi) / 2;
++        if (bez(x1, x2, t) < x) lo = t;
++        else hi = t;
++      }
++    }
++    return bez(y1, y2, t);
++  };
++}
++
++/** The hand's curve, resolved once. */
++export const handStroke = cubicBezier(MOTION.curves.handStroke);
++
+ /** THE LADDER'S VALUES, rendered from the object — pure, testable, one string.
+  *
+  *  THE REGISTRATION IS NOT HERE, and the prototype is why. Emitting
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index dc291595..7856537b 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -7,6 +7,7 @@ import {
+   createGlyphWiggle,
+   type GlyphAnimHandle,
+ } from "./glyphAnimations";
++import { afterRuling } from "@pencil/composables/bootHand";
+ import {
+   registerMurmurCell,
+   unregisterMurmurCell,
+@@ -110,7 +111,11 @@ function unregisterFromMurmur() {
+   unregisterMurmurCell(props.position);
+ }
+ 
++/** Supersedes a reveal still held by a ruling (`afterRuling`) when the glyph re-sets up. */
++let revealToken = 0;
++
+ function cleanupAnimations() {
++  revealToken++;
+   if (drawInAnim) {
+     drawInAnim.stop();
+     drawInAnim = null;
+@@ -197,12 +202,25 @@ function setupReveal() {
+   if (props.isRevealed) {
+     // Beat 1 — the reveal wave: draw-in on the board-normalized noise stagger (delay
+     // supplied by the board). One-shot sequence subscriber, not a keyframes.js loop.
+-    drawInAnim = createStrokeDrawIn(el, {
+-      pathLength: glyph.value.length,
+-      durationMs: DRAW_IN_PRESETS.glyph.duration,
+-      delayMs: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
+-    });
+-    drawInAnim.start();
++    // T9-M20 D15: a ruling in flight holds the wave, off the page, until its last lift.
++    const length = glyph.value.length;
++    const start = () => {
++      drawInAnim = createStrokeDrawIn(el, {
++        pathLength: length,
++        durationMs: DRAW_IN_PRESETS.glyph.duration,
++        delayMs: props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay,
++      });
++      drawInAnim.start();
++    };
++    const held = afterRuling();
++    if (held) {
++      const token = ++revealToken;
++      el.style.strokeDasharray = String(length);
++      el.style.strokeDashoffset = String(length);
++      void held.then(() => {
++        if (token === revealToken) start();
++      });
++    } else start();
+ 
+     // Beat 2 — only the solver's rainbow ink celebrates, and only when the BOARD is
+     // celebrating (T3-W13 §4.1 flourish gate): a hint's one-cell reveal writes itself
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 46e246d1..423449d9 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -2,8 +2,14 @@
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+ import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
+-import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
++import {
++  BOIL_CONFIG,
++  FILTER_PRESETS,
++  MOTION,
++  beatsFor,
++} from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
++import { beginRuling, wordmarkResident } from "@pencil/composables/bootHand";
+ import {
+   readFilterDefs,
+   retainedPoseUrls,
+@@ -44,15 +50,17 @@ const emit = defineEmits<{
+ }>();
+ 
+ const svgRef = ref<SVGSVGElement | null>(null);
+-const { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup } =
+-  usePathAnimation(svgRef);
++const {
++  pathsVisible,
++  animateDrawIn,
++  animateErase,
++  showInstant,
++  hideLines,
++  reducedMotion,
++  cleanup,
++} = usePathAnimation(svgRef);
+ 
+ const VIEWBOX_SIZE = 1000;
+-/** T9-B23 (the owner's ballot; U-10, both arms built): at a theme flip the grid's painted ink
+- *  (a) SNAPS to the new line colour at frame 2 while the five grounds dusk — the default and the
+- *  code's documented intent, zero paint cost — or (b) JOINS the dusk, a `background-color`
+- *  transition on the masked pose boxes for the turn's length. One variable, this constant. */
+-const INK_JOINS_DUSK = false as boolean;
+ 
+ // Generate boil frame variants whenever board size changes
+ const boilFrames = computed(() =>
+@@ -256,15 +264,69 @@ const showBaked = computed(() => bitmapUrls.value.length === BOIL_CONFIG.frameCo
+ const showTransitionLayer = computed(() => props.animState !== "drawn");
+ const showSteadyLayers = computed(() => props.animState === "drawn");
+ 
++// ── T9-M20 D1 · NOTHING BAKES UNDER A MOVING HAND ─────────────────────────────────────────
++// The census (INTAKE-23 §1): the four pose encodes (50–143 ms each, one main-thread task apiece)
++// landed inside the 557–567 ms ruling in 36/36 runs, and the wordmark's eight after them. The
++// ruling now waits for its own stack AND the wordmark's first stack before its first stroke, so
++// every encode of the boot runs on a blank board and the hand draws on an idle thread. A
++// re-deal at the same size hits the size-keyed cache (0 encodes) and draws at once. The wait
++// has a ceiling; each time it fires the grid counts it (`data-hand-ceiling`), so a masked
++// fallback is a reading, never a silence. The whole ruling holds the deal's wave (D15).
++const ceilingFallbacks = ref(0);
++let releaseRuling: (() => void) | null = null;
++let drawToken = 0;
++
++function stacksResident(): Promise<void> {
++  const ready = () => gridRaster.ready.value && wordmarkResident.value;
++  if (ready()) return Promise.resolve();
++  return new Promise((resolve) => {
++    const timer = setTimeout(() => {
++      stop();
++      ceilingFallbacks.value++;
++      resolve();
++    }, MOTION.hand.bakeCeilingMs);
++    const stop = watch(ready, (ok) => {
++      if (!ok) return;
++      clearTimeout(timer);
++      stop();
++      resolve();
++    });
++  });
++}
++
++/** Hand the hold to a new ruling BEFORE releasing the old one, so the wave never sees a gap
++ *  between an erase and its redraw (a re-deal's digits would ink on the blank page). */
++function holdRuling() {
++  const prev = releaseRuling;
++  releaseRuling = beginRuling();
++  prev?.();
++}
++
+ async function doDrawIn() {
++  const token = ++drawToken;
++  holdRuling();
+   await nextTick();
++  // Reduced motion has no hand to keep the bakes off: its crisp grid stands from the first
++  // frame, as it did before the hand (M20 D6), and never waits on a pose.
++  if (!reducedMotion.value) {
++    hideLines();
++    await stacksResident();
++    if (token !== drawToken) return;
++  }
+   requestAnimationFrame(async () => {
++    if (token !== drawToken) return;
+     await animateDrawIn();
++    if (token !== drawToken) return;
++    releaseRuling?.();
++    releaseRuling = null;
+     emit("animationComplete", "drawn");
+   });
+ }
+ 
+ async function doErase() {
++  drawToken++;
++  // The erase is the first half of a re-deal's ruling: the wave waits through it too.
++  holdRuling();
+   // Steady state ('drawn') unmounts the transition layer (§ steady-state boil
+   // layer above) — wait for Vue's DOM patch to remount it before
+   // usePathAnimation's querySelectorAll('path.grid-line') looks for it, or it
+@@ -291,6 +353,8 @@ onMounted(() => {
+ });
+ 
+ onUnmounted(() => {
++  drawToken++;
++  releaseRuling?.();
+   cleanup();
+ });
+ </script>
+@@ -315,12 +379,7 @@ onUnmounted(() => {
+        SVG mask on every repaint of the board (the intake's A1 read: idle worst frame 15 → 36 ms),
+        where a CSS mask on its own layer is a compositor opacity flip. Painted under the svg, so
+        the fill trace and the join ring still sit over the rules. -->
+-  <div
+-    v-if="showSteadyLayers && showBaked"
+-    class="grid-ink"
+-    :class="{ 'ink-dusks': INK_JOINS_DUSK }"
+-    aria-hidden="true"
+-  >
++  <div v-if="showSteadyLayers && showBaked" class="grid-ink" aria-hidden="true">
+     <div
+       v-for="(url, f) in bitmapUrls"
+       :key="'bmp-' + f"
+@@ -335,6 +394,7 @@ onUnmounted(() => {
+     ref="svgRef"
+     aria-hidden="true"
+     class="hand-drawn-grid"
++    :data-hand-ceiling="ceilingFallbacks || undefined"
+     :viewBox="`0 0 ${VIEWBOX_SIZE} ${VIEWBOX_SIZE}`"
+     preserveAspectRatio="xMidYMid meet"
+     xmlns="http://www.w3.org/2000/svg"
+@@ -583,15 +643,6 @@ onUnmounted(() => {
+   }
+ }
+ 
+-/* T9-B23 arm (b): the ink joins the dusk (INK_JOINS_DUSK). The turn's own class, length and
+-   curve, on the one property the flip changes; the default arm never matches it. Important for
+-   the dusk's own reason (index.css): the flip suppresses every transition while it lands. */
+-@media (prefers-reduced-motion: no-preference) {
+-  html.theme-turning .grid-ink.ink-dusks .boil-frame-bitmap {
+-    transition: background-color var(--motion-dusk) var(--verb-dusk-ease) !important;
+-  }
+-}
+-
+ /* Print takes the vector filter stack (its .grid-line strokes blacken under @media print)
+    and drops the baked bitmaps — a static one-shot render, no perf concern. */
+ @media print {
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+index b96f91dc..c47d0724 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/usePathAnimation.ts
+@@ -6,16 +6,32 @@ import {
+   usePrefersReducedMotion,
+   type SequenceHandle,
+ } from "@mkbabb/pencil-boil";
+-import { DRAW_IN_PRESETS, MOTION } from "@pencil/config/pencilConfig";
++import { DRAW_IN_PRESETS, MOTION, handStroke } from "@pencil/config/pencilConfig";
++import { enrollStroke } from "@pencil/composables/bootHand";
+ 
+-// Grid draw-in/erase — stroke-dashoffset tweens on the unified scheduler (W8 4th workstream).
+-// Each grid line was its own keyframes.js `KeyframesAnimation` → its own `RAFPlayback` → its
+-// own native rAF loop (up to ~boardSize² lines drawing at once). Now every line is a one-shot
+-// `sequence` subscriber on the ONE shared chain, so a full board reveal costs a single rAF.
++/** T9-B25 (the owner's ballot; one variable, baked at build): (a) `serial`, THE ONE HAND, the
++ *  default; (b) `front`, THE RULING FRONT (`VITE_HAND_ORDER=front`). */
++const HAND_ORDER: "serial" | "front" =
++  import.meta.env.VITE_HAND_ORDER === "front" ? "front" : "serial";
++
++/** One line of the ruling: its onset and length on the hand clock, and (the frame) its corners. */
++interface HandLine {
++  el: SVGPathElement;
++  len: number;
++  delay: number;
++  dur: number;
++  cuts: number[] | null;
++  p: number;
++}
++
++// Grid draw-in/erase — stroke-dashoffset on the unified scheduler (W8 4th workstream). The erase
++// is one `sequence` subscriber per line on the ONE shared chain; the draw-in is the boot's hand
++// (T9-M20): every line reads one capped clock (`@pencil/composables/bootHand`) and one curve.
+ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>) {
+   const pathsVisible = ref(false);
+   const reducedMotion = usePrefersReducedMotion();
+   let drawAnimations: SequenceHandle[] = [];
++  let handStops: (() => void)[] = [];
+ 
+   function getPathElements(): SVGPathElement[] {
+     if (!svgRef.value) return [];
+@@ -38,6 +54,10 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+       a.stop();
+     });
+     drawAnimations = [];
++    handStops.forEach((stop) => {
++      stop();
++    });
++    handStops = [];
+   }
+ 
+   // Run a batch of sequence tweens and resolve once every one has completed (or been stopped).
+@@ -78,6 +98,109 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+     });
+   }
+ 
++  /** THE FRAME'S CORNERS, read off the path the page draws (never assumed): the length
++   *  fractions nearest the four corners of its own bounding box, sorted. The hand stops at
++   *  each, so the frame's one closed path is four strokes, each on its own bell. */
++  function frameJoints(el: SVGPathElement, len: number): number[] {
++    const box = el.getBBox();
++    const corners = [
++      [box.x, box.y],
++      [box.x + box.width, box.y],
++      [box.x + box.width, box.y + box.height],
++      [box.x, box.y + box.height],
++    ];
++    const N = 240;
++    const pts = Array.from({ length: N + 1 }, (_, i) =>
++      el.getPointAtLength((len * i) / N),
++    );
++    const at = corners.map(([cx, cy]) => {
++      let best = 0;
++      let bestD = Infinity;
++      pts.forEach((p, i) => {
++        const d = (p.x - cx) ** 2 + (p.y - cy) ** 2;
++        if (d < bestD) [best, bestD] = [i, d];
++      });
++      return best / N;
++    });
++    const cuts = [...new Set([0, ...at.filter((f) => f > 0.02 && f < 0.98), 1])];
++    return cuts.sort((a, b) => a - b);
++  }
++
++  /** Progress along a jointed line: one hand-stroke bell per side, each side taking its own
++   *  share of the line's time. */
++  function jointed(local: number, cuts: number[]): number {
++    if (local >= 1) return 1;
++    for (let k = 1; k < cuts.length; k++) {
++      if (local <= cuts[k]) {
++        const a = cuts[k - 1];
++        return a + (cuts[k] - a) * handStroke((local - a) / (cuts[k] - a));
++      }
++    }
++    return 1;
++  }
++
++  /** T9-B25's two orders on one clock and one curve. THE ONE HAND (serial) lands each line at
++   *  the last one's lift, and never before the line before it has lifted (a long line handing
++   *  to short ones would otherwise put three fronts on the page). THE RULING FRONT keeps the
++   *  tiers' own onsets (baseDelay + stagger + seeded jitter). */
++  function schedule(pathEls: SVGPathElement[], lengths: Map<SVGPathElement, number>) {
++    const serial = HAND_ORDER === "serial";
++    const jitterRng = mulberry32(77);
++    const tiers = [
++      { key: "frame", preset: DRAW_IN_PRESETS.gridFrame, cls: "frame-line" },
++      { key: "subgrid", preset: DRAW_IN_PRESETS.gridSubgrid, cls: "subgrid-line" },
++      { key: "cell", preset: DRAW_IN_PRESETS.gridCell, cls: "cell-line" },
++    ] as const;
++    const lines: HandLine[] = [];
++    let at = 0;
++    let lastEnd = 0;
++    for (const { key, preset, cls } of tiers) {
++      pathEls
++        .filter((el) => el.classList.contains(cls))
++        .forEach((el, i) => {
++          const len = lengths.get(el)!;
++          const dur = serial ? MOTION.rungs[MOTION.hand.serial[key]] : preset.duration;
++          let delay: number;
++          if (serial) {
++            delay = at;
++            at = Math.max(delay + MOTION.hand.lift * dur, lastEnd);
++            lastEnd = delay + dur;
++          } else {
++            const jitter = Math.round((jitterRng() - 0.5) * preset.jitter * 2);
++            delay = Math.max(0, preset.baseDelay + i * preset.stagger + jitter);
++          }
++          const cuts = key === "frame" ? frameJoints(el, len) : null;
++          lines.push({ el, len, delay, dur, cuts, p: -1 });
++        });
++    }
++    return lines;
++  }
++
++  /** Resolves once the last line has landed. Every line reads the hand clock (capped per
++   *  frame), so a stall pauses the ruling where it stands. */
++  function runHand(lines: HandLine[]): Promise<void> {
++    const end = Math.max(...lines.map((l) => l.delay + l.dur));
++    return new Promise<void>((resolve) => {
++      let t0 = -1;
++      handStops.push(
++        enrollStroke((clock) => {
++          if (t0 < 0) t0 = clock;
++          const t = clock - t0;
++          for (const l of lines) {
++            const local = Math.min(1, Math.max(0, (t - l.delay) / l.dur));
++            const p = l.cuts ? jointed(local, l.cuts) : handStroke(local);
++            if (p === l.p) continue;
++            l.p = p;
++            l.el.style.strokeDashoffset = String(l.len * (1 - p));
++          }
++          if (t < end) return false;
++          resolve();
++          return true;
++        }),
++      );
++    });
++  }
++
+   async function animateDrawIn() {
+     cleanup();
+     const pathEls = getPathElements();
+@@ -92,42 +215,7 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+     }
+ 
+     const lengths = setupPathLengths(pathEls);
+-
+-    const framePaths = pathEls.filter((el) => el.classList.contains("frame-line"));
+-    const subgridPaths = pathEls.filter((el) => el.classList.contains("subgrid-line"));
+-    const cellPaths = pathEls.filter((el) => el.classList.contains("cell-line"));
+-
+-    const jitterRng = mulberry32(77);
+-    const groups = [
+-      { paths: framePaths, preset: DRAW_IN_PRESETS.gridFrame },
+-      { paths: subgridPaths, preset: DRAW_IN_PRESETS.gridSubgrid },
+-      { paths: cellPaths, preset: DRAW_IN_PRESETS.gridCell },
+-    ];
+-
+-    const specs: {
+-      el: SVGPathElement;
+-      from: number;
+-      to: number;
+-      duration: number;
+-      delay: number;
+-      easing: string;
+-    }[] = [];
+-    for (const { paths: groupPaths, preset } of groups) {
+-      groupPaths.forEach((el, i) => {
+-        const len = lengths.get(el)!;
+-        const jitter = Math.round((jitterRng() - 0.5) * preset.jitter * 2);
+-        specs.push({
+-          el,
+-          from: len, // offset len → 0 (draw on)
+-          to: 0,
+-          duration: preset.duration,
+-          delay: Math.max(0, preset.baseDelay + i * preset.stagger + jitter),
+-          easing: preset.timing,
+-        });
+-      });
+-    }
+-
+-    await runBatch(specs);
++    await runHand(schedule(pathEls, lengths));
+     pathEls.forEach((el) => {
+       el.style.strokeDasharray = "none";
+       el.style.strokeDashoffset = "0";
+@@ -183,5 +271,19 @@ export function usePathAnimation(svgRef: import("vue").Ref<SVGSVGElement | null>
+     pathsVisible.value = true;
+   }
+ 
+-  return { pathsVisible, animateDrawIn, animateErase, showInstant, cleanup };
++  /** Take every line off the page before the hand waits for its poses (T9-M20 D1): the ruling
++   *  starts from a blank board, never from a board drawn whole and then re-ruled. */
++  function hideLines() {
++    setupPathLengths(getPathElements());
++  }
++
++  return {
++    pathsVisible,
++    animateDrawIn,
++    animateErase,
++    showInstant,
++    hideLines,
++    reducedMotion,
++    cleanup,
++  };
+ }

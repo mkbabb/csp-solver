@@ -1,0 +1,99 @@
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 6e8d50a..a51af02 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -357,7 +357,9 @@ const leaveName = (): string =>
+          reader can still reach in browse mode and still copy is the whole point of keeping
+          it. Keyed on the write counter: a third record is a NEW node, so the old one leaves
+          through the eraser instead of having its text swapped under it. -->
+-    <Transition name="note-previous">
++    <!-- Line two rubs out on the same verb as line one, so it carries the same clock fence
++         (`stopTheClock`: transition none, the rung's duration, no delay, all inline !important). -->
++    <Transition name="note-previous" @before-leave="stopTheClock">
+       <p
+         v-if="previous"
+         :key="previousSeq"
+@@ -666,6 +668,7 @@ const leaveName = (): string =>
+     height: 1px;
+     overflow: hidden;
+     clip-path: inset(50%);
++    white-space: nowrap;
+   }
+ }
+ 
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 869650c..5a30445 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -240,16 +240,26 @@ const BOUND_TAPES = [
+     where: "src/games/shared/GameBoard.vue",
+     tag: "MarginNote",
+     attr: "text",
+-    expr: "marginText",
++    expr: "marginLive.text",
+     why: "the margin VOICE — the games' own verdict strings, authored in useGameState/the game modules and swept by check 3's `marginVoice` group",
+   },
+   {
+     where: "src/games/shared/GameBoard.vue",
+     tag: "CompletionVignette",
+     attr: "text",
+-    expr: "marginText",
++    expr: "marginLive.text",
+     why: "the same voice, re-seated in the vignette at the crest (one string, two carriers)",
+   },
++  // §13+§7+§3 fold: the note's records (NOTE-LEDGER) renamed `marginText` to `marginLive.text` and
++  // seated line two; the two pins above were stale and line two was unpinned (check 4 red ×5 on
++  // the integrated tree, found by NOTE-ERASE's pass 7).
++  {
++    where: "src/games/shared/GameBoard.vue",
++    tag: "MarginNote",
++    attr: "previous",
++    expr: "marginPrevious?.text ?? ''",
++    why: "line two — the displaced record, the same vocabulary as line one (check 3's closed `.margin-note / .margin-note-previous` group)",
++  },
+   {
+     where: "src/games/shared/GameBoard.vue",
+     tag: "CompletionVignette",
+@@ -732,6 +742,22 @@ function declaredRange(css, family) {
+ 
+ const css = readFileSync(join(ROOT, INDEX_CSS), "utf8");
+ const problems = [];
++
++// THE FLAG IS PINNED (NOTE-LEDGER row 4, pass-6 critique §2.4). A group that derives the record's
++// vocabulary is CLOSED (declared == derived), and that is what reds a deleted call site; deleting
++// `closed: true` together with a call site exited 0. So the flag itself is a row.
++const MUST_CLOSE = ["marginRecordCopy"];
++const unclosed = (faces) =>
++  faces.flatMap((f) =>
++    f.corpus
++      .filter((g) => g.derive?.some((d) => MUST_CLOSE.includes(d)) && !g.closed)
++      .map(
++        (g) =>
++          `${f.family} · ${g.where}: derives ${MUST_CLOSE.join("/")} and is not \`closed\`, so a ` +
++          `deleted call site would pass as a departure. Restore \`closed: true\`.`,
++      ),
++  );
++problems.push(...unclosed(FACES));
+ const departures = [];
+ /** T9-W7 §7 — the ransom note's admission ledger, printed so the owner sees the eight. */
+ const admissions = [];
+@@ -1246,6 +1272,19 @@ if (process.argv.includes("--self-test")) {
+     ],
+     ["CONTROL — the tree as it stands", admittedCheck(BOUND_TAPES, TREE).length, 0],
+   ];
++  // The flag's own plants: the record's group with `closed` deleted must red; the tree must not.
++  const unflagged = FACES.map((f) => ({
++    ...f,
++    corpus: f.corpus.map((g) =>
++      g.closed && g.derive?.includes("marginRecordCopy")
++        ? { ...g, closed: undefined }
++        : g,
++    ),
++  }));
++  admPlants.push(
++    ["the record's group with `closed: true` deleted", unclosed(unflagged).length, 1],
++    ["CONTROL — the closed flags as they stand", unclosed(FACES).length, 0],
++  );
+   for (const [name, got, want] of admPlants) {
+     const ok = want ? got >= 1 : got === 0;
+     if (!ok) bad++;

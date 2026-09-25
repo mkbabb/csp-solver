@@ -1,0 +1,15 @@
+sha1 MarginNote 15a9c6a4e31c ink a92599d60129 fc f2daa32f5ddc reserve-law 57d4a9e0dfb9 census 1b43f7af8abc
+CLEAN :: scripts/check-ink-pressure.mjs --self-test -> exit 0 :: 
+CLEAN :: scripts/check-font-coverage.mjs --self-test -> exit 0 :: 
+E1 shadowed :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R1 the voice's min-height is set at 2 sites (want exactly 1):
+E2 second style :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R1 the voice's min-height is set at 2 sites (want exactly 1):
+E2b compound :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R1 the voice's min-height is set at 2 sites (want exactly 1):
+E3 1px :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R4 the block's top-level reserve is not one line: src/pencil/chrome/MarginNote.vue:237 [sfc-style-scoped] .margin-note-block: min-he
+E4 landscape !important :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R1 the voice's min-height is set at 2 sites (want exactly 1):
+seat deleted :: scripts/check-ink-pressure.mjs  -> exit 1 ::   ✗ note reserve: R1 the voice's min-height is set at 0 sites (want exactly 1):
+GATE SABOTAGED (gateReserve returns []) :: scripts/check-ink-pressure.mjs --self-test -> exit 1 ::   ✗ gate "note-reserve · seat deleted" did not fail on a known-bad input — it is vacuous
+callsites 2
+closed:true deleted + call site re-worded :: scripts/check-font-coverage.mjs  -> exit 1 ::   · Patrick Hand · .margin-note / .margin-note-previous (the record's vocabulary): derives marginRecordCopy and is not `closed`, so a deleted call sit
+closed:true deleted alone :: scripts/check-font-coverage.mjs  -> exit 1 ::   · Patrick Hand · .margin-note / .margin-note-previous (the record's vocabulary): derives marginRecordCopy and is not `closed`, so a deleted call sit
+MUST_CLOSE emptied (self-test must red) :: scripts/check-font-coverage.mjs --self-test -> exit 1 :: 
+sha1-after MarginNote 15a9c6a4e31c ink a92599d60129 fc f2daa32f5ddc

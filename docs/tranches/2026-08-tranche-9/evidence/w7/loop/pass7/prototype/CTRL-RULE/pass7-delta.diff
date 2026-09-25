@@ -1,0 +1,381 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 6ca8afd..37cf01f 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -876,12 +876,58 @@ test("the page's lines keep a name line apart — rules, the divider and the foo
+ });
+ 
+ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+-  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true });
+-  test("the source takes env(), and chromium's computed pad follows an emulated inset", async ({
++  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
++  /** The foot's LOWEST PAINTED INK, in css px: the foot photographed ON and with every child
++   *  hidden, the lowest device row where any pixel moved. A computed `34px` is not paint. */
++  const LOWEST_INK = async (page: Page) => {
++    const g = await page.evaluate(() => {
++      const b = document.getElementById("card-foot")!.getBoundingClientRect();
++      return { x: Math.max(0, Math.floor(b.left)), y: Math.floor(b.top), w: Math.floor(Math.min(b.width, innerWidth - b.left)), h: Math.ceil(Math.min(b.bottom, innerHeight) - Math.floor(b.top)) };
++    });
++    const clip = { x: g.x, y: g.y, width: g.w, height: g.h };
++    // TWO ON photographs: a pixel counts only where both agree, so a boil tick between shots (the
++    // case frame's pose swap — CTRL-TAPE's 4-of-7 red on the correct tree) is not read as ink.
++    const on = (await page.screenshot({ clip })).toString("base64");
++    const on2 = (await page.screenshot({ clip })).toString("base64");
++    const hide = await page.addStyleTag({ content: "#card-foot * { visibility: hidden !important; }" });
++    const off = (await page.screenshot({ clip })).toString("base64");
++    await hide.evaluate((n) => (n as Element).remove());
++    const lowestRow = await page.evaluate(
++      async ({ on, on2, off, ch }) => {
++        const px = async (b64: string) => {
++          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++          const c = new OffscreenCanvas(bmp.width, bmp.height);
++          const x = c.getContext("2d")!;
++          x.drawImage(bmp, 0, 0);
++          return x.getImageData(0, 0, bmp.width, bmp.height);
++        };
++        const [a, a2, b] = [await px(on), await px(on2), await px(off)];
++        const d = (p: ImageData, q: ImageData, o: number) =>
++          Math.max(Math.abs(p.data[o] - q.data[o]), Math.abs(p.data[o + 1] - q.data[o + 1]), Math.abs(p.data[o + 2] - q.data[o + 2]));
++        for (let y = a.height - 1; y >= 0; y--)
++          for (let x = 0; x < a.width; x++) {
++            const o = (y * a.width + x) * 4;
++            if (d(a, b, o) > 24 && d(a, a2, o) <= 8) return { y, dpr: a.height / ch };
++          }
++        return null;
++      },
++      { on, on2, off, ch: clip.height },
++    );
++    return lowestRow ? +(clip.y + (lowestRow.y + 1) / lowestRow.dpr).toFixed(2) : null;
++  };
++  const OPEN = async (page: Page) => {
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    await loadSudoku(page);
++    if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++      await page.locator(".drawer-tab").tap();
++    await SHEET_SETTLED(page);
++  };
++  test("the lowest painted ink clears the inset line by ≥ 2 css under a real inset, and max() reds it", async ({
+     page,
+     browserName,
+   }) => {
+-    // THE SOURCE ARM (both engines): the foot's pad is `max(<pad>, env(safe-area-inset-bottom))`.
++    // THE SOURCE ARM (both engines): the inset STACKS on the foot's own pad (pass 7, INTAKE-22
++    // row 28 — `max(<pad>, env())` gave the pad away exactly when an inset exists).
+     const root = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+     const css = readFileSync(join(root, "src/games/shared/scene.css"), "utf8").replace(
+       /\/\*[\s\S]*?\*\//g,
+@@ -889,22 +935,38 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     );
+     const foot = css.match(/\.card-foot\s*\{[^}]*\}/g) ?? [];
+     expect(
+-      foot.some((b) => /padding-bottom:\s*max\([^;]*env\(safe-area-inset-bottom\)/.test(b)),
+-      "a .card-foot block pads to max(<pad>, env(safe-area-inset-bottom))",
++      foot.some((b) => /padding-bottom:\s*calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\s*\)/.test(b)),
++      "a .card-foot block pads to calc(<pad> + env(safe-area-inset-bottom))",
+     ).toBe(true);
+     test.skip(browserName !== "chromium", "the inset override is a chromium CDP method");
+-    // THE COMPUTED ARM (chromium): an emulated 34px inset must reach the foot's own pad, and the
+-    // same page with the inset at 0 must NOT read 34 — the discriminator the pass-4 row lacked.
++    // THE PAINTED ARM (chromium, DPR 2): under a 34px inset the foot's lowest ink sits ≥ 2 css
++    // above the inset line (innerHeight − 34); with no inset the pad is the foot's own 2.4px.
+     const cdp = await page.context().newCDPSession(page);
+-    const padAt = async (bottom: number) => {
++    const at = async (bottom: number) => {
+       await cdp.send("Emulation.setSafeAreaInsetsOverride" as never, {
+         insets: { top: 0, left: 0, right: 0, bottom },
+       } as never);
+-      await loadSudoku(page);
+-      return page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
++      await OPEN(page);
++      const padB = await page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
++      const ink = await LOWEST_INK(page);
++      return { padB, ink, clears: ink === null ? null : +(844 - bottom - ink).toFixed(2) };
+     };
+-    expect(await padAt(34)).toBe("34px");
+-    expect(await padAt(0), "negative control: no inset, the foot's own pad").not.toBe("34px");
++    const i34 = await at(34);
++    console.log(`[RULE row 28] inset 34 ${JSON.stringify(i34)}`);
++    expect(i34.padB, "the inset reaches the foot's pad, stacked").toBe("36.4px");
++    expect(i34.clears, `the lowest ink against the inset line ${JSON.stringify(i34)}`).toBeGreaterThanOrEqual(2);
++    // NEGATIVE CONTROL, same page and inset: the pass-6 shape (the inset REPLACES the pad).
++    const tag = await page.addStyleTag({ content: "#card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; }" });
++    await SHEET_SETTLED(page);
++    const ink = await LOWEST_INK(page);
++    const red = ink === null ? null : +(844 - 34 - ink).toFixed(2);
++    console.log(`[RULE row 28] inset 34, max() planted: clears ${red}`);
++    expect(red, "negative control: max() gives the band away").toBeLessThan(2);
++    await tag.evaluate((n) => (n as Element).remove());
++    const i0 = await at(0);
++    console.log(`[RULE row 28] inset 0 ${JSON.stringify(i0)}`);
++    expect(i0.padB, "no inset: the foot's own pad").toBe("2.4px");
++    expect(i0.clears).toBeGreaterThanOrEqual(2);
+   });
+ });
+ 
+@@ -1099,10 +1161,106 @@ const FOOT_RULE = async (page: Page) => {
+   });
+   const clip = { x: box.x, y: box.y - 3, width: box.width, height: box.height + 6 };
+   const paint = await PAINT_DIFF(page, clip, "#card-foot svg.ruled-line { visibility: hidden !important; }");
+-  return { chain: +chain.toFixed(3), ...paint };
++  const ink = await RULE_INK(page, clip);
++  return { chain: +chain.toFixed(3), ...paint, ...ink };
++};
++
++/** PASS 7 (the pass-6 critic's gaps 3/4; LAWS P6 §E). Two holes the median above leaves:
++ *  · THE INK THIS PASS CHOSE. A core median ≥ 3.0 passed the pass-5 ink (`--ink-press-rule`, 55 %)
++ *    at 11 of 12 cells, WebKit 6/6 at 3.530 — that is 55 %'s own full-coverage ceiling, so no
++ *    contrast floor between 3.0 and 3.53 can tell 55 % from 68 %. What CAN is the ink's painted
++ *    ALPHA: a third photograph with the stroke forced to its base graphite at full strength, and
++ *    per core pixel (on − off) / (full − off) on the channel that moved most. Antialiasing scales
++ *    both photographs by the same coverage, so the ratio IS the painted alpha whatever the DPR or
++ *    engine: 0.68 for the quiet rung, 0.55 for the rule rung. The floor is 0.62. It is RELATIVE
++ *    (the reference is photographed on the subject's own element, so an opacity plant on the svg
++ *    carries into it) — which is why it is never the only clause: the absolute median above stays.
++ *  · FOUR BANDS. A drawn edge is read in four bands (the chair's four-band probe); a rule has one
++ *    drawn side, so its four bands are its four QUARTERS along the stroke. A STATION is one device
++ *    column, its value the best contrast over the strip's depth (ON vs OFF, the probe's
++ *    statistic); a dropped station reads 1.00 and COUNTS. Each quarter needs ≥ 8 stations and a
++ *    station median ≥ 3.0, and the fraction of ALL stations under 3:1 is bounded at 0.05. The
++ *    per-pixel core fraction is printed beside it and not claimed (it is the statistic the pass-6
++ *    README mis-named). */
++const RULE_INK = async (page: Page, clip: { x: number; y: number; width: number; height: number }) => {
++  const shot = async (css: string | null) => {
++    const tag = css ? await page.addStyleTag({ content: css }) : null;
++    const b64 = (await page.screenshot({ clip })).toString("base64");
++    if (tag) await tag.evaluate((n) => (n as Element).remove());
++    return b64;
++  };
++  const on = await shot(null);
++  const off = await shot("#card-foot svg.ruled-line { visibility: hidden !important; }");
++  const full = await shot(
++    "#card-foot svg.ruled-line path { stroke: var(--color-pencil-graphite, var(--grid-line-color)) !important; }",
++  );
++  return page.evaluate(
++    async ({ on, off, full }) => {
++      const px = async (b64: string) => {
++        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++        const c = new OffscreenCanvas(bmp.width, bmp.height);
++        const g = c.getContext("2d")!;
++        g.drawImage(bmp, 0, 0);
++        return g.getImageData(0, 0, bmp.width, bmp.height);
++      };
++      const [a, b, f] = [await px(on), await px(off), await px(full)];
++      const { width: w, height: h } = a;
++      const lin = (c: number) => ((c /= 255) <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4);
++      const L = (d: Uint8ClampedArray, o: number) =>
++        0.2126 * lin(d[o]) + 0.7152 * lin(d[o + 1]) + 0.0722 * lin(d[o + 2]);
++      const cr = (o: number) => {
++        const [la, lb] = [L(a.data, o), L(b.data, o)];
++        return (Math.max(la, lb) + 0.05) / (Math.min(la, lb) + 0.05);
++      };
++      const med = (v: number[]) => (v.length ? [...v].sort((m, n) => m - n)[v.length >> 1] : 1);
++      const x0 = Math.floor(w * 0.05);
++      const x1 = Math.ceil(w * 0.95);
++      const stations: number[] = [];
++      const fullMoves: { d: number; o: number; k: number }[] = [];
++      for (let x = x0; x < x1; x++) {
++        let best = 1;
++        for (let y = 0; y < h; y++) {
++          const o = (y * w + x) * 4;
++          best = Math.max(best, cr(o));
++          let k = 0;
++          for (let c = 1; c < 3; c++) if (Math.abs(f.data[o + c] - b.data[o + c]) > Math.abs(f.data[o + k] - b.data[o + k])) k = c;
++          const d = Math.abs(f.data[o + k] - b.data[o + k]);
++          if (d > 24) fullMoves.push({ d, o, k });
++        }
++        stations.push(best);
++      }
++      const q = stations.length / 4;
++      const quarters = [0, 1, 2, 3].map((i) => {
++        const s = stations.slice(Math.round(i * q), Math.round((i + 1) * q));
++        return { n: s.length, median: +med(s).toFixed(3) };
++      });
++      // the CORE, as PAINT_DIFF cuts it: pixels whose full-ink move is ≥ half the p98 move
++      const ds = fullMoves.map((m) => m.d).sort((m, n) => m - n);
++      const ref = ds.length ? ds[Math.floor(0.98 * (ds.length - 1))] : 0;
++      const alphas = fullMoves
++        .filter((m) => m.d >= 0.5 * ref)
++        .map((m) => (a.data[m.o + m.k] - b.data[m.o + m.k]) / (f.data[m.o + m.k] - b.data[m.o + m.k]));
++      const coreR = fullMoves.filter((m) => m.d >= 0.5 * ref).map((m) => cr(m.o));
++      return {
++        quarters,
++        stationsUnder3: +(stations.filter((v) => v < 3).length / Math.max(1, stations.length)).toFixed(3),
++        alpha: alphas.length ? +med(alphas).toFixed(3) : 0,
++        alphaN: alphas.length,
++        pixelCoreUnder3: +(coreR.filter((v) => v < 3).length / Math.max(1, coreR.length)).toFixed(3),
++      };
++    },
++    { on, off, full },
++  );
+ };
+ const FOOT_RULE_HOLDS = (d: Awaited<ReturnType<typeof FOOT_RULE>>) =>
+-  !!d && d.chain > 0.9 && d.coverage >= 0.9 && d.coreMedian >= 3.0;
++  !!d &&
++  d.chain > 0.9 &&
++  d.coverage >= 0.9 &&
++  d.coreMedian >= 3.0 &&
++  d.quarters.every((q) => q.n >= 8 && q.median >= 3.0) &&
++  d.stationsUnder3 <= 0.05 &&
++  d.alphaN >= 40 &&
++  d.alpha >= 0.62;
+ 
+ for (const cell of [
+   { name: "1280×800 fine", use: { viewport: { width: 1280, height: 800 } } },
+@@ -1141,6 +1299,13 @@ for (const cell of [
+             "#card-foot svg.ruled-line path { stroke: color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 25%, transparent) !important; }",
+           ],
+           ["ancestor opacity 0", "#card-foot .action-bar { opacity: 0 !important; }"],
++          // pass 7: the pass-6 critic's plant (the previous pass's ink), the faint ink, one quarter erased
++          ["R55 the pass-5 ink (--ink-press-rule)", "#card-foot svg.ruled-line path { stroke: var(--ink-press-rule) !important; }"],
++          [
++            "FAINT30 ink",
++            "#card-foot svg.ruled-line path { stroke: color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 30%, transparent) !important; }",
++          ],
++          ["X6q the last quarter erased", "#card-foot svg.ruled-line { clip-path: inset(0 26% 0 0) !important; }"],
+         ] as const) {
+           const tag = await page.addStyleTag({ content: css });
+           const red = await FOOT_RULE(page);
+@@ -1157,9 +1322,36 @@ for (const cell of [
+ 
+ test.describe("the coarse rail keeps the control's width (1280×800 hasTouch, chair §6.4)", () => {
+   test.use({ viewport: { width: 1280, height: 800 }, isMobile: true, hasTouch: true });
++  /** THE CONTROL'S NUMBERS, STAMPED WITH ITS COMMIT (pass 7, the pass-6 critic's gap 2). A ruler
++   *  assembled from this tree's own button and foot padding moves with them: `.icon-btn`
++   *  padding-inline .9rem took the case to 275.13 and five surfaces −25.56 with that ruler GREEN.
++   *  So the row reads π against `74a2b5d9` itself: `[left, top, width]` of the case, the masthead,
++   *  the drawer tab and the board host at 1280×800 hasTouch, read on the control's
++   *  dist (`index-CubiZsMVSwTc.js`) in chromium AND webkit (equal on x and width to the hundredth;
++   *  `pass7/prototype/CTRL-RULE/instruments/p7-rail-stamp.mjs`). Only x and width are stamped:
++   *  the tops differ 0.29 css by engine and no row here moves a top. A cell is not stamped: the
++   *  deal's `cell-reveal` scales it from 0, so its box is a pose, not a place (the host is). */
++  const RAIL_74A2B5D9 = { case: [876, 224], masthead: [180, 920], tab: [812, 48], host: [180, 640] };
++  const PI = () => {
++    const at = (s: string) => {
++      const b = document.querySelector(s)!.getBoundingClientRect();
++      return [+b.left.toFixed(2), +b.width.toFixed(2)];
++    };
++    return {
++      case: at(".drawer-case"),
++      masthead: at(".masthead"),
++      tab: at(".drawer-tab"),
++      host: at(".board-peek-host"),
++    };
++  };
++  const PI_DRIFT = (now: Record<string, number[]>) =>
++    Math.max(
++      ...Object.entries(RAIL_74A2B5D9).flatMap(([k, [x, w]]) => [Math.abs(now[k][0] - x), Math.abs(now[k][1] - w)]),
++    );
+   /** The case against the ruler `74a2b5d9` used at this cell: four verbs at the tap gutter
+    *  (each its glyph plus the button's own inline padding, nothing of the face's), plus the
+-   *  foot's inline padding. The verbs are read as drawn; nothing here is a literal. */
++   *  foot's inline padding. Kept as a DIAGNOSTIC beside the stamp (it names which box grew);
++   *  it is not the π clause. */
+   const RAIL = () => {
+     const cas = document.querySelector(".drawer-case")!.getBoundingClientRect();
+     const foot = getComputedStyle(document.getElementById("card-foot")!);
+@@ -1190,11 +1382,23 @@ test.describe("the coarse rail keeps the control's width (1280×800 hasTouch, ch
+     expect(at.faceAdds, `a face adds width inside the gutter ${JSON.stringify(at)}`).toBeLessThanOrEqual(0.5);
+     expect(Math.abs(at.caseW - at.ruler), `case vs the control's ruler ${JSON.stringify(at)}`).toBeLessThan(0.5);
+     expect(at.overflow).toBe(0);
+-    // NEGATIVE CONTROL — the pass-5 face (its own 0.55rem inside the gutter): the case +70.38.
+-    await page.addStyleTag({ content: ".action-verbs .act-face { padding-inline: 0.55rem !important; }" });
+-    const red = await page.evaluate(RAIL);
+-    console.log(`[RULE row 1] plant ${JSON.stringify(red)}`);
+-    expect(Math.abs(red.caseW - red.ruler), `negative control ${JSON.stringify(red)}`).toBeGreaterThan(0.5);
++    const pi = await page.evaluate(PI);
++    console.log(`[RULE row 1] π vs 74a2b5d9 ${JSON.stringify(pi)} drift ${PI_DRIFT(pi)}`);
++    expect(PI_DRIFT(pi), `π against the control's stamp ${JSON.stringify(pi)}`).toBeLessThan(0.5);
++    // NEGATIVE CONTROLS, same run, each alone: the pass-5 face (0.55rem inside the gutter, case
++    // +70.38), and the critic's two widths the old ruler could not see — P1a the button's own
++    // padding, P1b the foot's.
++    for (const [plant, css] of [
++      ["pass-5 face", ".action-verbs .act-face { padding-inline: 0.55rem !important; }"],
++      ["P1a .icon-btn padding-inline .9rem", ".action-verbs > .icon-btn { padding-inline: 0.9rem !important; }"],
++      ["P1b #card-foot padding-inline 1.4rem", "#card-foot { padding-inline: 1.4rem !important; }"],
++    ] as const) {
++      const tag = await page.addStyleTag({ content: css });
++      await expect.poll(async () => PI_DRIFT(await page.evaluate(PI)), { message: `negative control ${plant}` }).toBeGreaterThan(0.5);
++      console.log(`[RULE row 1] plant ${plant} ${JSON.stringify(await page.evaluate(PI))}`);
++      await tag.evaluate((n) => (n as Element).remove());
++      await expect.poll(async () => PI_DRIFT(await page.evaluate(PI))).toBeLessThan(0.5);
++    }
+   });
+ });
+ 
+@@ -1240,22 +1444,36 @@ test.describe("mid-scroll, the fold's fade covers an in-card rule at the foot's
+       const card = document.querySelector(".controls-card") as HTMLElement;
+       const clipB = card.getBoundingClientRect().top + card.clientTop + card.clientHeight;
+       const max = card.scrollHeight - card.clientHeight;
+-      // the first rule the scroll can actually put at the pose (the last ones cannot: the card
+-      // runs out of scroll before they reach its bottom edge)
+-      const svg = [...card.querySelectorAll<SVGSVGElement>("svg.ruled-line")].find((s) => {
+-        const want = card.scrollTop + s.querySelector("path")!.getBoundingClientRect().bottom - (clipB - k);
+-        return want >= 1 && want <= max - 8;
+-      });
+-      if (!svg) return null;
++      // PASS 7 (the pass-6 critic's gap 6): WebKit's scrollTop is an integer, so "scroll the first
++      // reachable rule to k" landed k 2.5 at 1.53 and never visited the band's worst pose. The pose
++      // is now CHOSEN from what the engine can reach: every rule the scroll can bring to the clip
++      // line, at the floor and the ceiling of its exact offset, and the (rule, scrollTop) pair whose
++      // READ k is nearest the target wins. The last rules cannot reach it (the card runs out of
++      // scroll first), and are skipped by the same test the pass-6 row used.
++      const top0 = card.scrollTop;
++      let pick: { svg: SVGSVGElement; st: number; dk: number } | null = null;
++      for (const s of card.querySelectorAll<SVGSVGElement>("svg.ruled-line")) {
++        card.scrollTop = top0;
++        const want = top0 + s.querySelector("path")!.getBoundingClientRect().bottom - (clipB - k);
++        if (want < 1 || want > max - 8) continue;
++        for (const st of [Math.floor(want), Math.ceil(want), want]) {
++          card.scrollTop = st;
++          const dk = Math.abs(clipB - s.querySelector("path")!.getBoundingClientRect().bottom - k);
++          if (!pick || dk < pick.dk) pick = { svg: s, st, dk };
++        }
++      }
++      card.scrollTop = top0;
++      if (!pick) return null;
++      const svg = pick.svg;
+       document.querySelectorAll("[data-residue]").forEach((e) => e.removeAttribute("data-residue"));
+       svg.setAttribute("data-residue", "");
+-      card.scrollTop += svg.querySelector("path")!.getBoundingClientRect().bottom - (clipB - k);
++      card.scrollTop = pick.st;
+       const r2 = svg.querySelector("path")!.getBoundingClientRect();
+       return { k: +(clipB - r2.bottom).toFixed(2), x: r2.left, w: r2.width, clipB, below: card.hasAttribute("data-fold-below") };
+     }, k);
+     expect(pose, `a rule the scroll can bring to k=${k}`).not.toBeNull();
+-    // ≤ 1 css: WebKit's scrollTop snaps to whole pixels (k 0.5 lands at −0.47), Chromium's does not
+-    expect(Math.abs(pose!.k - k), `the pose reached ${JSON.stringify(pose)}`).toBeLessThanOrEqual(1.0);
++    // ≤ 0.1 css, in both engines: the pose is chosen from the reachable set, so it is VISITED
++    expect(Math.abs(pose!.k - k), `the pose reached ${JSON.stringify(pose)}`).toBeLessThanOrEqual(0.1);
+     // the fold's rAF publish, then the fade's own 150ms: poll the painted state it names
+     await expect
+       .poll(() =>
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 0c952f7..8db4359 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -354,14 +354,19 @@
+ 
+    THE FOOT ON THE INSET (chair §6.3(c), pass-4 §3). The foot is the case's bottom edge, and on
+    the dock the case's bottom edge is the SCREEN's: a flush foot puts `clear` under the home
+-   indicator. Its own pad is the bar's old 0.15rem bottom band, moved here so the inset REPLACES
+-   it rather than stacking on it; with no inset (a desktop, Playwright) it computes to 2.4px,
+-   which is how the read tells "landed" from "absent". The panel publishes `--card-foot-h` from
+-   THIS box, so the card's cap gives the inset back instead of pushing the case off the sheet.
+-   `env()` with a UA value is not a `var()` fallback (pass-4 §3) and stays. */
++   indicator. Its own pad is the bar's old 0.15rem bottom band, moved here; with no inset (a
++   desktop, Playwright) it computes to 2.4px, which is how the read tells "landed" from "absent".
++   The panel publishes `--card-foot-h` from THIS box, so the card's cap gives the inset back
++   instead of pushing the case off the sheet. `env()` with a UA value is not a `var()` fallback
++   (pass-4 §3) and stays.
++   THE INSET STACKS ON THE PAD (pass 7, INTAKE-22 row 28). Pass 4–6 wrote `max(0.15rem, env())`
++   so the inset REPLACED the band, and read it only as a computed `34px`. On paint, under
++   chromium's CDP inset of 34 at 390×844 DPR 2, the verbs' lowest ink then sat 0.5–1.0 css above
++   the inset line: the band the row asks for (≥ 2) was the one the `max()` gave away. Stacked, the
++   same read clears by 3.5; with no inset nothing moves (2.4px either way). */
+ .card-foot {
+   padding-inline: var(--card-pad-x);
+-  padding-bottom: max(0.15rem, env(safe-area-inset-bottom));
++  padding-bottom: calc(0.15rem + env(safe-area-inset-bottom));
+ }
+ 
+ /* THE FOOT TAKES THE CASE'S WIDTH AT THE DESK AND NEVER GIVES IT ONE (chair §6.4). Uncontained

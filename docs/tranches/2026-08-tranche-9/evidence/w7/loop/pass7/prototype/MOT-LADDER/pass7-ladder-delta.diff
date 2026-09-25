@@ -1,0 +1,2681 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 34635948..2df5a89b 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1072,6 +1072,13 @@ jobs:
+             # until its five bare keywords were cured at their sites (T9-W7 §13 pass 5, the
+             # curves written out as named tokens with the same control points), and the
+             # demotion is deleted with the cure, so both gates read one law from one tree.
++            # T9-W7 §13 pass 7 — THE RATCHET'S FLOOR IS RE-DERIVED, never read off a file the same
++            # commit can re-stamp. The checkout is depth 1, so the wave's base is not in the clone
++            # and `lint:bands` reds rather than trust `motion-bank.json` alone (a 3-line commit
++            # lowering the bank and re-stamping its digest exited 0 at depth 1). One commit, no
++            # history: the gate reads `git show <base>:…`, which needs that tree and nothing else.
++            - name: fetch the motion ratchet's base (74a2b5d9, one commit)
++              run: git fetch --no-tags --depth=1 origin 74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+             - name: motion bands (the duration ladder, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:bands
+diff --git a/web/frontend/knip.json b/web/frontend/knip.json
+index ef9f47e5..0d898f25 100644
+--- a/web/frontend/knip.json
++++ b/web/frontend/knip.json
+@@ -84,7 +84,17 @@
+   // itself — and it carries a `NOT-A-LANE:` header that check-lane-membership.mjs polices.
+   // NOT a place to park an unwired gate: a `check-*.mjs` belongs to a lane or declares
+   // NOT-A-LANE in its own header, and check-lane-membership.mjs reds if it does neither.
+-  "entry": ["scripts/dist-identity.mjs", "../relay/relay.ts", "../relay/relay.test.ts"],
++  // `scripts/shape-census.mjs` (T9-W7 pass 7) is REACHED by the graph (check-motion-bands.mjs
++  // imports it), and sits here for its EXPORTS alone: it is the estate's ONE shape-census
++  // library (LAWS P6 §I), landed whole so the W7 fold wires its other readers (the reserve
++  // law, the colour censuses) against one copy rather than trimming it to its first importer.
++  // The entry dies when each export has a scripts consumer — the chair's row, not a lane's.
++  "entry": [
++    "scripts/dist-identity.mjs",
++    "../relay/relay.ts",
++    "../relay/relay.test.ts",
++    "scripts/shape-census.mjs"
++  ],
+ 
+   "ignore": ["src/games/shared/scene.css", "src/games/shared/gameCell.css"],
+ 
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 942e2fee..00e80b1c 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -64,6 +64,18 @@ import { createHash } from "node:crypto";
+ import { join, resolve, relative, dirname } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import process from "node:process";
++// THE PARSER IS THE CHAIR'S (pass 7, charter row 1; LAWS P6 §I): every stylesheet, SFC <style>
++// block, public/ sheet and index.html is read through the ONE shape-census library.
++import {
++  compoundClasses,
++  cssRules,
++  scriptWrites,
++  sfc,
++  sources,
++  stripHtml,
++  stripJs,
++  subjectCompound,
++} from "./shape-census.mjs";
+ 
+ const HERE = dirname(fileURLToPath(import.meta.url));
+ const ROOT = resolve(process.env.ROOT ?? join(HERE, ".."));
+@@ -99,7 +111,22 @@ const EXEMPT_KEYS = {
+     ms: 90,
+     why: "the deal's outward step — a DELAY between cards (B9's axis), never a travel (P5-M19-3)",
+   },
++  // PASS 7 · B2 READS EVERY LEAF (INTAKE-23 row 17, "every clock's ONE home"): a nested number
++  // (`hand: { stepMs: 17 }`) escaped a top-level-only scan. These two are not lengths at all.
++  "bands.sun": {
++    ms: 2,
++    why: "NOT A LENGTH — the sun's speed band, a multiplier on the beat (T6 mark 11)",
++  },
++  "bands.moon": {
++    ms: 1.5,
++    why: "NOT A LENGTH — the moon's speed band, a multiplier on the beat (T6 mark 11)",
++  },
+ };
++/** A TS CLOCK the ratchet banks (pass 7, charter row 5 / INTAKE-23 row 18): a duration-shaped
++ *  leaf of MOTION (outside `rungs`, banked on their own) or of an admitted TS set. Offsets and
++ *  steps (a `…StartMs`, a `…CrestMs`, a delay, a stagger) are B9's axis and never banked. */
++const TS_CLOCK_KEY = /^duration$|Duration$|Ms$/;
++const TS_OFFSET_KEY = /(Start|Crest|Delay|Stagger)Ms$|^stagger|^baseDelay$/;
+ /** Numeric TS members outside MOTION that are an admitted GRADED SET, not stray lengths. */
+ const ADMITTED_TS = {
+   DRAW_IN_PRESETS:
+@@ -308,10 +335,35 @@ const ADMITTED = [
+     cls: "RETUNE",
+     why: "600 → 520: pass4/CHAIR-RULINGS §1.3 — ruling 1's 520 STANDS; `rise` reverts to the ratified default and 600 is the ballot, one line away",
+   },
++  // ── MOVED (TS) — three MOTION members the base shipped were re-homed onto rungs (pass 3/4):
++  // the TS ratchet (pass 7) banks the base's clocks, so each names its rung WITH its value.
++  {
++    ts: "MOTION.cardStepMs",
++    newKey: "MOTION.rungs.step",
++    ms: 440,
++    cls: "MOVED",
++    why: "the carousel's card step became the `step` rung (pass 3), 440 = 440",
++  },
++  {
++    ts: "MOTION.boardFoldMs",
++    newKey: "MOTION.rungs.throw",
++    ms: 520,
++    cls: "MOVED",
++    why: "the board fold became the `throw` rung (pass 3), 520 = 520",
++  },
++  {
++    ts: "MOTION.chromeLeaveMs",
++    newKey: "MOTION.rungs.leave",
++    ms: 200,
++    cls: "MOVED",
++    why: "the chrome's leave became the `leave` rung (pass 3), 200 = 200",
++  },
+ ];
+ 
+ /** `--empty-ledger` reads the tree as if nothing were admitted: the HEAD-truth count. */
+ const LEDGER = process.argv.includes("--empty-ledger") ? [] : ADMITTED;
++/** The classes that name ONE banked value (B6's evidence), never a list of admitted literals. */
++const ESCAPE_CLS = new Set(["MOVED", "RETUNE", "DELETED"]);
+ 
+ const NO_DEV = process.argv.includes("--no-dev");
+ const LIST = process.argv.includes("--list");
+@@ -335,7 +387,8 @@ const DECL = /(?<![\w-])(transition|animation)([a-z-]*):\s*([^;{}]+);/g;
+ const RUNG_VAR = /var\(\s*--motion-([A-Za-z]+)\s*(?:,\s*(\d+(?:\.\d+)?m?s)\s*)?\)/g;
+ const OTHER_VAR = /var\(\s*(--[A-Za-z-]+)\s*(?:,\s*(\d+(?:\.\d+)?m?s)\s*)?\)/g;
+ const MOTION_TS = /\bMOTION\.rungs\.[A-Za-z]+|v-bind\([^)]*MOTION[^)]*\)/;
+-const BARE_EASE = /(^|[\s)])(ease-in-out|ease-out|ease-in|ease|linear)(\s|$|!)/;
++const BARE_EASE =
++  /(^|[\s)])(ease-in-out|ease-out|ease-in|ease|linear|step-start|step-end|steps)(\s|$|!|\()/i;
+ 
+ const toMs = (n, unit) => (unit === "s" ? Number(n) * 1000 : Number(n));
+ 
+@@ -547,21 +600,64 @@ function ladder() {
+           new RegExp(`${m[1]}\\b[^]{0,400}?travel:`).test(block),
+       });
+   }
+-  const motionStart = src.indexOf("export const MOTION");
+-  const motionBlock = src.slice(motionStart, src.indexOf("\n} as const;", motionStart));
+   const strays = [];
+   const exempt = {};
+-  for (const m of motionBlock.matchAll(
+-    /^\s{2}([A-Za-z][A-Za-z0-9]*)\s*:\s*(\d+)\s*,/gm,
+-  ))
+-    if (m[1] in EXEMPT_KEYS) exempt[m[1]] = Number(m[2]);
+-    else strays.push({ key: m[1], value: Number(m[2]) });
++  const motion = tsLeaves(src, "MOTION");
++  for (const [key, value] of Object.entries(motion)) {
++    if (key.startsWith("rungs.") || key.startsWith("characters.")) continue;
++    // a count of BEATS is a cadence, never a length: its length is `× MOTION.beatMs` at the
++    // consumer, which B13 reads at its value (§7's `note.settleAfterBeats`, `refusalHoldBeats`)
++    if (/Beats$/.test(key.split(".").pop())) continue;
++    if (key in EXEMPT_KEYS) exempt[key] = value;
++    else strays.push({ key, value });
++  }
+   // TS sets outside MOTION that spend a duration: admitted GRADED classes, or strays.
+   const tsSets = [];
+   for (const m of src.matchAll(/export const ([A-Z_]+) = \{/g))
+     if (/duration:\s*\d+/.test(src.slice(m.index, src.indexOf("} as const;", m.index))))
+       tsSets.push(m[1]);
+-  return { rungs, strays, tsSets, src, rungDoc, exempt };
++  return { rungs, strays, tsSets, src, rungDoc, exempt, ts: tsClocks(src) };
++}
++
++/** The numeric-literal leaves of `export const NAME = { … }`, keyed by dotted path. Strings are
++ *  masked first (a curve's `0.32, 0.72` is not a leaf); a leaf is `key: <number>` closing on
++ *  `,` or `}`. */
++function tsLeaves(src, name) {
++  const at = src.search(new RegExp(`export const ${name}\\b[^=]*=\\s*\\{`));
++  if (at < 0) return {};
++  const code = stripJs(src.slice(at)).replace(
++    /"(?:[^"\\\n]|\\.)*"|'(?:[^'\\\n]|\\.)*'|`(?:[^`\\]|\\.)*`/g,
++    (m) => m[0] + " ".repeat(m.length - 2) + m[0],
++  );
++  const out = {};
++  const path = [];
++  let depth = 0;
++  const re =
++    /([A-Za-z_$][\w$]*)\s*:\s*(?:(\{)|(-?\d+(?:\.\d+)?)(?=\s*[,}]))|(\{)|(\})/g;
++  re.lastIndex = code.indexOf("{");
++  for (let m; (m = re.exec(code));) {
++    if (m[2] || m[4]) {
++      if (depth++ > 0) path.push(m[2] ? m[1] : "·");
++    } else if (m[5]) {
++      if (--depth === 0) break;
++      path.pop();
++    } else if (m[3] !== undefined) out[[...path, m[1]].join(".")] = Number(m[3]);
++  }
++  return out;
++}
++
++/** The TS clocks the ratchet banks: `MOTION.<path>` and `<SET>.<path>` → ms. */
++function tsClocks(src) {
++  const out = {};
++  for (const name of ["MOTION", ...Object.keys(ADMITTED_TS)])
++    for (const [k, v] of Object.entries(tsLeaves(src, name))) {
++      const leaf = k.split(".").pop();
++      if (name === "MOTION" && k.startsWith("rungs.")) continue;
++      const character = name === "MOTION" && k.startsWith("characters.");
++      if (character || (TS_CLOCK_KEY.test(leaf) && !TS_OFFSET_KEY.test(leaf)))
++        out[`${name}.${k}`] = v;
++    }
++  return out;
+ }
+ 
+ /** Where a rung reaches CSS from. */
+@@ -634,14 +730,25 @@ function liveFitLaw(theme, files = null) {
+         "`--live-fit`'s initial is not 0 — any other initial paints a board where no fit was measured.",
+       );
+   }
+-  const sources =
++  const texts =
+     files ??
+-    [...walk(SRC)]
+-      .map((f) => [relative(ROOT, f), f])
+-      .filter(([rel]) => /\.(css|vue|ts)$/.test(rel))
+-      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
+-  for (const [rel, text] of sources) {
++    sources(ROOT)
++      .filter((f) => /\.(css|vue|ts|tsx|js|html)$/.test(f))
++      .map((f) => [relative(ROOT, f), readFileSync(f, "utf8")]);
++  for (const [rel, text] of texts) {
+     const t = text.replace(/\/\*[^]*?\*\/|^\s*\/\/.*$/gm, "");
++    // THE CONSUMER'S SHAPE (pass 7, charter row 6): the fit is read as the WHOLE argument of
++    // `scale()`. `scale(max(var(--live-fit), 0.99))` has no fallback to find and paints a 665px
++    // board where no fit was measured (GC1 red both engines; this law read 0) — so any
++    // `var(--live-fit)` not standing alone inside `scale( … )` reds, whatever wraps it.
++    for (const m of t.matchAll(/var\(\s*--live-fit\b/g)) {
++      const pre = t.slice(Math.max(0, m.index - 40), m.index);
++      const post = t.slice(m.index);
++      if (!/scale\(\s*$/.test(pre) || !/^var\(\s*--live-fit\s*\)\s*\)/.test(post))
++        bad.push(
++          `${rel}  …${pre.slice(-18)}${post.slice(0, 32)}… — \`--live-fit\` read inside something other than a bare \`scale(var(--live-fit))\`; a wrapper is a fallback by another name.`,
++        );
++    }
+     for (const m of t.matchAll(/var\(\s*--live-fit\s*,[^)]*\)/g))
+       bad.push(
+         `${rel}  ${m[0]} — a fallback on a measured, registered token (the @property law).`,
+@@ -658,13 +765,15 @@ function liveFitLaw(theme, files = null) {
+ 
+ function published(cfg) {
+   const theme = readFileSync(THEME, "utf8");
+-  const second = [...theme.matchAll(/^\s*--motion-([A-Za-z-]+)\s*:\s*([^;]+);/gm)].map(
+-    (m) => ({
+-      token: `--motion-${m[1]}`,
+-      value: m[2].trim(),
+-      where: "index.css @theme (a SECOND home)",
+-    }),
+-  );
++  // INTAKE-23 row 19 (one home, one publisher): the toggle's `--storybook-*` clocks are the
++  // ladder's family too — a literal mirrored from TS into index.css is a second home.
++  const second = [
++    ...theme.matchAll(/^\s*--((?:motion|storybook)-[A-Za-z-]+)\s*:\s*([^;]+);/gm),
++  ].map((m) => ({
++    token: `--${m[1]}`,
++    value: m[2].trim(),
++    where: "index.css (a SECOND home)",
++  }));
+   // the seven registrations, read off the static sheet — the set B3 closes both ways. ONE
+   // block AT FILE SCOPE (registry-v4 §2.7): `@property` inside a rule is illegal CSS that the
+   // bundler hoists silently, so pass 4 shipped `rise` registered only by that rescue. A
+@@ -678,9 +787,10 @@ function published(cfg) {
+   );
+   const nested = regs.filter((r) => r.depth > 0);
+   const elsewhere = [];
+-  for (const file of walk(SRC)) {
++  // EVERY STYLESHEET (pass 7, charter row 8; LAWS P6 §F): public/** and index.html ship too.
++  for (const file of sources(ROOT)) {
+     const rel = relative(ROOT, file);
+-    if (file === THEME || !/\.(css|vue|ts)$/.test(rel)) continue;
++    if (file === THEME || !/\.(css|vue|ts|tsx|js|html)$/.test(rel)) continue;
+     const text = readFileSync(file, "utf8");
+     for (const r of registrations(text))
+       if (/^motion-|^live-fit$/.test(r.name))
+@@ -688,7 +798,7 @@ function published(cfg) {
+     // A PUBLISHER THAT EMITS A REGISTRATION (NOTE-ERASE's critic, rows I/E): a registration
+     // written into script dies with its node, so an absent publisher reads `all` again. Any
+     // `@property` in CODE (comments masked) of a .ts/.vue script is that shape, templated or not.
+-    if (/\.(ts|vue)$/.test(rel)) {
++    if (/\.(ts|tsx|js|vue)$/.test(rel)) {
+       const code = text.replace(/\/\*[^]*?\*\/|^\s*\/\/.*$/gm, (m) =>
+         m.replace(/[^\n]/g, " "),
+       );
+@@ -745,7 +855,7 @@ function published(cfg) {
+     if (rel.endsWith("pencil/config/pencilConfig.ts")) continue;
+     const text = readFileSync(file, "utf8");
+     for (const m of text.matchAll(
+-      /["'](--(?:motion|card|dock)-[a-z-]+)["']\s*:\s*([^,\n]+)/g,
++      /["'](--(?:motion|card|dock|storybook)-[a-z-]+)["']\s*:\s*([^,\n]+)/g,
+     ))
+       componentPublishers.push({ token: m[1], value: m[2].trim(), where: rel });
+   }
+@@ -754,9 +864,19 @@ function published(cfg) {
+ 
+ /* ── the checks ────────────────────────────────────────────────────────────── */
+ 
+-function b1Named(decls, rungKeys) {
++function b1Named(decls, rungKeys, ledger = LEDGER) {
+   const bad = [];
+   const seen = new Set();
++  // A ROW IS READ BY ITS SHAPE (pass 7, charter row 2): an ADMISSION names a LIST of literals;
++  // an ESCAPE (MOVED / RETUNE / DELETED) names ONE banked number and is B6's evidence. Only a
++  // list is closed here — the first live DELETED row threw `row.ms.join` below (pass-6 critique
++  // §2.3) — and a row whose class and shape disagree reds by name instead of by crash.
++  for (const r of ledger)
++    if (ESCAPE_CLS.has(r.cls) === Array.isArray(r.ms))
++      bad.push(
++        `ADMITTED ${r.key ?? r.file} (${r.cls}) carries ${Array.isArray(r.ms) ? "a LIST" : `ms: ${r.ms}`} — an escape row names ONE banked value, an admission a LIST of literals.`,
++      );
++  const LEDGER = ledger.filter((r) => Array.isArray(r.ms));
+   for (const d of decls) {
+     if (d.dev) continue; // the debug rig is not shipped (i2's scope)
+     for (const p of d.pos) {
+@@ -766,7 +886,7 @@ function b1Named(decls, rungKeys) {
+           bad.push(`${d.rel}  var(--motion-${p.rung}) is not a rung on the ladder`);
+         continue;
+       }
+-      const row = admits(d, p.ms);
++      const row = admits(d, p.ms, LEDGER);
+       if (row) {
+         seen.add(row);
+         continue;
+@@ -1026,6 +1146,10 @@ function consumesCharacter(
+   return false;
+ }
+ 
++/** The document shapes a RETUNE's `why` may cite. */
++const RETUNE_CITE =
++  /CHAIR-RULINGS|INTAKE-?\d*|census\/|critique|registry-v\d|DISPOSITIONS|T9-B\d+/;
++
+ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   const bad = [];
+   if (!bank)
+@@ -1042,11 +1166,18 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   // site exemption on the file, so the first RETUNE row naming a real file would have exempted
+   // every length in it.
+   const retunes = ledger.filter((r) => r.cls === "RETUNE");
+-  for (const r of retunes)
+-    if (typeof r.to !== "number" || !(r.rung || r.key))
++  for (const r of retunes) {
++    if (typeof r.to !== "number" || !(r.rung || r.key || r.ts))
++      bad.push(
++        `RETUNE row ${r.rung ?? r.key ?? r.ts ?? r.file} carries no \`to: <ms>\` or no subject — a retune without its value disarms the ratchet for that subject permanently.`,
++      );
++    // A DELIBERATE shortening names the document that decided it (INTAKE-23 row 18: "with the
++    // census cite in the key"); a retune whose why cites nothing is an undocumented one.
++    if (!RETUNE_CITE.test(r.why ?? ""))
+       bad.push(
+-        `RETUNE row ${r.rung ?? r.key ?? r.file} carries no \`to: <ms>\` or no subject — a retune without its value disarms the ratchet for that subject permanently.`,
++        `RETUNE row ${r.rung ?? r.key ?? r.ts ?? r.file} cites no ruling, census or critique in its \`why\` — a shortening is a DECISION with its document.`,
+       );
++  }
+   const rungTo = new Map(retunes.filter((r) => r.rung).map((r) => [r.rung, r.to]));
+   const siteTo = new Map(retunes.filter((r) => r.key).map((r) => [r.key, r.to]));
+   // 1 · THE RUNG ITSELF. `throw` had ZERO CSS consumers at HEAD (520 × 0 in the histogram),
+@@ -1109,9 +1240,11 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   //       `CaretOverlay.vue`'s only length leave the file for `index.css` at a lower rung with
+   //       zero ledger rows, because a file that no longer carried lengths was skipped. A
+   //       DELETED row whose `selector :: term` is still live in another file is a MOVE, and reds.
+-  const moved = new Map(ledger.filter((r) => r.cls === "MOVED").map((r) => [r.key, r]));
++  const moved = new Map(
++    ledger.filter((r) => r.cls === "MOVED" && r.key).map((r) => [r.key, r]),
++  );
+   const deleted = new Map(
+-    ledger.filter((r) => r.cls === "DELETED").map((r) => [r.key, r]),
++    ledger.filter((r) => r.cls === "DELETED" && r.key).map((r) => [r.key, r]),
+   );
+   const tail = (k) => k.split(" :: ").slice(1).join(" :: ");
+   const claims = new Map();
+@@ -1171,6 +1304,7 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+             bad.push(
+               `MOVED row for ${key} names ${mv.newKey}, which shares neither its selector nor its term — that is another site, not this one renamed.`,
+             );
++          bad.push(...subjectBinding(key, mv.newKey, was, rows, sites, ctx));
+         }
+         if (now < was)
+           bad.push(
+@@ -1191,6 +1325,7 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+       continue;
+     }
+     if (del) {
++      bad.push(...subjectBinding(key, null, was, rows, sites, ctx));
+       if (del.ms !== was)
+         bad.push(
+           `DELETED row for ${key} carries ${del.ms === undefined ? "no `ms`" : `ms: ${del.ms}`}; the bank holds ${was}ms — an escape row names its subject WITH its value.`,
+@@ -1206,6 +1341,42 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+       `${key}  banked at ${was}ms and GONE — the KEY moved or the file left, which is how a shortening hides from a content-anchored ratchet. Needs a MOVED row (\`newKey\`, \`ms: ${was}\`) or a DELETED row (\`ms: ${was}\`) with a cite.`,
+     );
+   }
++  // 4 · THE TS CLOCKS (pass 7, charter row 5 / INTAKE-23 row 18). The code roster counted
++  //     22 clocks and ratcheted none: `gridSubgrid.duration` 280 → 250 was a silent edit. A
++  //     banked TS clock may rise, never fall, except by a RETUNE keyed `ts:` with its value
++  //     and its cite; a banked clock that leaves the source needs a DELETED row `{ ts, ms }`.
++  const tsTo = new Map(retunes.filter((r) => r.ts).map((r) => [r.ts, r.to]));
++  const tsNow = lad.ts ?? {};
++  for (const [path, was] of Object.entries(bank.ts ?? {})) {
++    const now = tsNow[path];
++    const to = tsTo.get(path);
++    if (now === undefined) {
++      const esc = ledger.find(
++        (r) => (r.cls === "DELETED" || r.cls === "MOVED") && r.ts === path,
++      );
++      const dest = esc?.newKey?.startsWith("MOTION.rungs.")
++        ? lad.rungs.find((r) => `MOTION.rungs.${r.key}` === esc.newKey)?.value
++        : tsNow[esc?.newKey];
++      if (!esc || esc.ms !== was)
++        bad.push(
++          `${path}  banked at ${was}ms and GONE from the source — a TS clock that leaves needs a MOVED row \`{ ts, newKey, ms: ${was} }\` or a DELETED row \`{ ts, ms: ${was} }\` with a cite.`,
++        );
++      else if (esc.cls === "MOVED" && !(dest >= was))
++        bad.push(
++          `${path}  banked at ${was}ms, MOVED to ${esc.newKey} at ${dest ?? "nothing"} — the move SHORTENED it or names no live clock.`,
++        );
++      continue;
++    }
++    if (now < was && to === undefined)
++      bad.push(
++        `${path}  ${was}ms → ${now}ms — a TS clock SHORTENED (W8 QUALITY LAW). A deliberate shortening is a RETUNE \`{ ts: "${path}", to: ${now} }\` citing its census.`,
++      );
++    else if (to !== undefined && now !== to)
++      bad.push(`${path}  ships ${now}ms; its RETUNE row says to: ${to}ms.`);
++  }
++  for (const [path] of tsTo)
++    if (!(path in tsNow))
++      bad.push(`RETUNE row for ${path}, which is not a TS clock — STALE.`);
+   for (const [key] of moved)
+     if (!(key in sites))
+       bad.push(`MOVED row for ${key}, which the bank never held — STALE.`);
+@@ -1215,12 +1386,184 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   return bad;
+ }
+ 
++/**
++ * PASS 7 · THE ESCAPE ROW IS BOUND TO ITS SUBJECT'S ELEMENT (charter row 3; pass-6 critique
++ * §2.2 X7). A MOVED row pointed at a DEAD decoy (`.cell-reveal-animated-hold`, no element
++ * carries it) that kept the old term at 300, while the real reveal was renamed whole to
++ * `.cell-pop` / `@keyframes cell-pop` at whisper — every gate printed "nothing shortened".
++ * A selector is a name; its SUBJECT is the element code puts the class on. So:
++ *  (a) a MOVED destination's subject class must be CARRIED by some element (template class,
++ *      `:class`, a TS string, a `<Transition name>` for its enter/leave classes);
++ *  (b) when the old subject's class has left the code (its element was renamed), the files
++ *      that carried it at BASE_REF are where its new name lives: a destination no such file
++ *      carries is bound to another element, and ANY site on a class those files carry now and
++ *      did not then, shipping below the banked length, is the move (a DELETED row included —
++ *      the pass-6 critic's X1). A destination's own `<Transition>` siblings are one element.
++ * What a source gate cannot see (declared): a class string kept alive as dead code.
++ */
++const TRANSITION_CLASS = /^(.+?)-(?:enter|leave|appear)(?:-from|-to|-active)?$/;
++const reEsc = (s) => s.replace(/[-/\\^$*+?.()|[\]{}]/g, "\\$&");
++function consumedIn(cls, code) {
++  if (new RegExp(`(?<![\\w-])${reEsc(cls)}(?![\\w-])`).test(code)) return true;
++  const tr = TRANSITION_CLASS.exec(cls);
++  if (!tr) return false;
++  const g = reEsc(tr[1]);
++  // `<Transition name="note">`, or a COMPUTED `:name` whose file spells the group as a string
++  // (`:name="leaveName()"` returning "note-swap" : "note" — §7's merged note)
++  return (
++    new RegExp(`\\bname\\s*[=:]\\s*["'\`]'?${g}'?["'\`]`).test(code) ||
++    (/<transition(?:-group)?\b[^>]*(?::|v-bind:)name\s*=/i.test(code) &&
++      new RegExp(`["'\`]${g}["'\`]`).test(code))
++  );
++}
++/** The code of a source — template and script, never a stylesheet. */
++function codeOf(f, text) {
++  if (f.endsWith(".vue")) {
++    const b = sfc(text);
++    return [
++      b.template ? stripHtml(b.template.text) : "",
++      ...b.scripts.map((s) => stripJs(s.text)),
++    ].join("\n");
++  }
++  if (/\.(ts|tsx|js|mjs)$/.test(f)) return stripJs(text);
++  if (f.endsWith(".html"))
++    return stripHtml(text.replace(/<style[^>]*>[\s\S]*?<\/style>/g, ""));
++  return "";
++}
++let TREE_CODE = null;
++function treeConsumers(cls) {
++  TREE_CODE ??= sources(ROOT)
++    .filter((f) => /\.(vue|ts|tsx|js|html)$/.test(f))
++    .map((f) => [relative(ROOT, f), codeOf(f, readFileSync(f, "utf8"))]);
++  return new Set(TREE_CODE.filter(([, c]) => consumedIn(cls, c)).map(([rel]) => rel));
++}
++const BASE_CODE = new Map();
++function baseConsumers(cls) {
++  const tr = TRANSITION_CLASS.exec(cls);
++  let hits;
++  try {
++    hits = execFileSync(
++      "git",
++      [
++        "grep",
++        "-l",
++        "--full-name",
++        "-F",
++        "-e",
++        tr ? tr[1] : cls,
++        BASE_REF,
++        "--",
++        ":(top)web/frontend/src",
++        ":(top)web/frontend/index.html",
++      ],
++      { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "ignore"] },
++    )
++      .split("\n")
++      .filter(Boolean)
++      .map((l) => l.slice(l.indexOf(":") + 1).replace(/^web\/frontend\//, ""));
++  } catch {
++    return new Set();
++  }
++  const out = new Set();
++  for (const rel of hits) {
++    if (!BASE_CODE.has(rel))
++      BASE_CODE.set(
++        rel,
++        codeOf(
++          rel,
++          execFileSync("git", ["show", `${BASE_REF}:web/frontend/${rel}`], {
++            cwd: ROOT,
++            encoding: "utf8",
++            maxBuffer: 32e6,
++            stdio: ["ignore", "pipe", "ignore"],
++          }),
++        ),
++      );
++    if (consumedIn(cls, BASE_CODE.get(rel))) out.add(rel);
++  }
++  return out;
++}
++/** The positive classes of every subject compound in a key's selector list. */
++function subjectClasses(selector = "") {
++  const out = new Set();
++  for (const sel of selector.split(","))
++    for (const c of compoundClasses(subjectCompound(sel.trim())).pos) out.add(c);
++  return out;
++}
++const groupOf = (c) => TRANSITION_CLASS.exec(c)?.[1] ?? c;
++function subjectBinding(oldKey, newKey, was, rows, sites, ctx = {}) {
++  const tree = ctx.tree ?? treeConsumers;
++  const base = ctx.base ?? baseConsumers;
++  const bad = [];
++  const nCls = newKey ? [...subjectClasses(newKey.split(" :: ")[1])] : [];
++  if (nCls.length && !nCls.some((c) => tree(c).size))
++    bad.push(
++      `MOVED row for ${oldKey} names ${newKey}, and no element carries ${nCls.map((c) => `.${c}`).join(" / ")} — a destination with no subject (the dead decoy).`,
++    );
++  const oCls = [...subjectClasses(oldKey.split(" :: ")[1])];
++  if (!oCls.length || oCls.some((c) => tree(c).size)) return bad; // its element still lives
++  const files = new Set(oCls.flatMap((c) => [...base(c)]));
++  if (!files.size) return bad;
++  if (nCls.length && !nCls.some((c) => [...tree(c)].some((f) => files.has(f))))
++    bad.push(
++      `MOVED row for ${oldKey} names ${newKey}, which nothing that carried the old subject (${[...files].join(", ")}) carries — a destination on another element.`,
++    );
++  const own = new Set(nCls.map(groupOf));
++  for (const r of rows) {
++    if (r.key in sites || r.key === newKey || r.ms >= was) continue;
++    for (const c of subjectClasses(r.key.split(" :: ")[1])) {
++      if (own.has(groupOf(c))) continue;
++      const now = [...tree(c)].filter((f) => files.has(f) && !base(c).has(f));
++      if (!now.length) continue;
++      bad.push(
++        `${r.key} ships ${r.ms}ms on .${c}, newly carried where ${oldKey}'s subject was (${now.join(", ")}) — the subject MOVED below its banked ${was}ms ${newKey ? `while its row points at ${newKey}` : "behind a DELETED row"}.`,
++      );
++      break;
++    }
++  }
++  return bad;
++}
++
+ /**
+  * The site floor, read off BASE_REF — never off this tree. A bank written from the tree it
+  * guards is a ratchet that cannot catch its own author (it banks the shortened value as the
+  * floor); the floor has to be the CONTROL's. Rungs are the exception and are banked from the
+  * ladder, because the ladder does not exist at BASE_REF at all.
+  */
++/** Is BASE_REF in this clone? CI's checkout is depth 1; ci.yml fetches the one commit. */
++function baseReachable() {
++  try {
++    execFileSync("git", ["rev-parse", "--verify", "--quiet", `${BASE_REF}^{commit}`], {
++      cwd: ROOT,
++      stdio: "ignore",
++    });
++    return true;
++  } catch {
++    return false;
++  }
++}
++
++/** The floor re-derived off BASE_REF — `{ sites, ts }` — or null where it cannot be reached. */
++function deriveBase(decls, lad) {
++  if (!baseReachable()) return null;
++  let src = "";
++  try {
++    src = execFileSync(
++      "git",
++      ["show", `${BASE_REF}:web/frontend/src/pencil/config/pencilConfig.ts`],
++      {
++        cwd: ROOT,
++        encoding: "utf8",
++        maxBuffer: 32e6,
++        stdio: ["ignore", "pipe", "ignore"],
++      },
++    );
++  } catch {
++    /* the file is new since the base: no TS floor */
++  }
++  return { sites: baseSites(decls, lad), ts: tsClocks(src) };
++}
++
+ function baseSites(decls, lad) {
+   const sites = {};
+   for (const f of new Set(decls.filter((d) => !d.dev).map((d) => d.file))) {
+@@ -1268,7 +1611,7 @@ function readBank(decls, lad) {
+  * that digests otherwise reds; re-banking is a change to THIS file, in review. Where BASE_REF is
+  * reachable the floor is also RE-DERIVED, and any bank site below (or missing from) the base reds.
+  */
+-const BANK_SHA256 = "78fd5fa5ccd1694ed63fe34d23785e2a09c45831bac1c50665bb570a5c77ccab";
++const BANK_SHA256 = "f6de1ab4092694dc65ae048b158cfb8375767e8e16b33102c61cde017fa1363f";
+ 
+ function bankDigest(j) {
+   const sorted = (o = {}) =>
+@@ -1277,7 +1620,12 @@ function bankDigest(j) {
+     );
+   return createHash("sha256")
+     .update(
+-      JSON.stringify({ base: j.base, rungs: sorted(j.rungs), sites: sorted(j.sites) }),
++      JSON.stringify({
++        base: j.base,
++        rungs: sorted(j.rungs),
++        sites: sorted(j.sites),
++        ts: sorted(j.ts),
++      }),
+     )
+     .digest("hex");
+ }
+@@ -1296,7 +1644,25 @@ function b6Floor(bank, derive, digest = BANK_SHA256) {
+   } catch {
+     base = null;
+   }
+-  for (const [k, v] of Object.entries(base ?? {})) {
++  // NO BASE_REF FALLBACK (pass 7, charter row 4). At CI's depth 1 the re-derivation never ran,
++  // so the floor was the stamp alone — and the stamp lives in the file the same commit edits
++  // (the critic's 3-line A2c: bank 200 → 150 + CSS + a re-stamped BANK_SHA256 exited 0 printing
++  // "nothing shortened"). An unreachable base is RED; ci.yml fetches the one commit.
++  if (!base)
++    return [
++      ...bad,
++      `${BASE_REF} is not in this clone — the floor cannot be re-derived, and a stamp its author can re-write is no floor. Fetch it (ci.yml: \`git fetch --depth=1 origin ${BASE_REF}\`).`,
++    ];
++  for (const [k, v] of Object.entries(base.ts ?? {})) {
++    const b = bank.ts?.[k];
++    if (b === undefined)
++      bad.push(`${k} is ${v}ms at ${BASE_REF} and ABSENT from the bank's TS clocks.`);
++    else if (b < v)
++      bad.push(
++        `${k}: the bank holds ${b}ms, BELOW ${BASE_REF}'s ${v}ms — the TS floor was lowered.`,
++      );
++  }
++  for (const [k, v] of Object.entries(base.sites ?? {})) {
+     const b = bank.sites?.[k];
+     if (b === undefined)
+       bad.push(
+@@ -1380,59 +1746,128 @@ const UA_KEYWORD =
+  * points UNLESS the token is a row here, bound to its POINTS (a row whose token now resolves
+  * to other points, or that no shipped transition reads, is STALE). Each row is a keyword the
+  * house has not yet re-decided; the cure seam is to re-curve the gesture and delete the row.
++ * PASS 7 (charter row 7): each row names WHO admitted it. `chair: null` is a lane's own
++ * admission awaiting the chair's row or its strike; the verdict line counts them aloud, so a
++ * self-admitted alias can never read as a ruled one.
+  */
+ const KEYWORD_TWINS = [
+   {
+     token: "--ease-starTuck",
+     points: UA_POINTS["ease-in"],
+     since: "T3-W13 (the Bloom's star tuck, kept verbatim under T9-M15)",
++    chair: null,
+   },
+   {
+     token: "--ease-starFade",
+     points: UA_POINTS["ease-out"],
+     since: "T3-W13 (the star's crest fade)",
++    chair: null,
+   },
+   {
+     token: "--ease-prmFade",
+     points: UA_POINTS.ease,
+     since: "pass-6 chair §1.4 — ADMITTED as a PRM-fallback carve-out; VERB's cure seam",
++    chair: "pass6/CHAIR-RULINGS §1.4",
+   },
+   {
+     token: "--ease-prmLinear",
+     points: UA_POINTS.linear,
+     since: "the laminate's PRM fade (a same-frame fallback)",
++    chair: null,
+   },
+   {
+     token: "--verb-dusk-ease",
+     points: UA_POINTS.ease,
+     since: "T3-W10 — the dusk's `ease`, published as a verb",
++    chair: null,
+   },
+ ];
+ 
+-/** Every `--ease-*` / `--verb-*-ease` declaration in src, comments masked: name → [values]. */
+-function curveTokens() {
++/** The CSS text of a source: every SFC `<style>` block, a stylesheet whole, index.html's
++ *  `<style>` — the SHAPE law's "every stylesheet" (LAWS P6 §F), read through the one library. */
++function cssBlocks(f, text) {
++  if (f.endsWith(".vue")) return sfc(text).styles.map((b) => b.css);
++  if (f.endsWith(".css")) return [text];
++  if (f.endsWith(".html"))
++    return [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => m[1]);
++  return [];
++}
++
++/** Every `--ease-*` / `--verb-*-ease` declaration in every stylesheet (src, public/, index.html,
++ *  `@theme` included): name → [values]. Pass 6 read src .css/.vue by regex; the library reads the
++ *  declarations whole, `!important` and all. */
++function curveTokens(files = sources(ROOT)) {
+   const map = new Map();
+-  for (const f of walk(SRC)) {
+-    if (!/\.(css|vue)$/.test(f)) continue;
+-    const t = readFileSync(f, "utf8").replace(/\/\*[^]*?\*\//g, " ");
+-    for (const m of t.matchAll(
+-      /(?<![\w-])(--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease))\s*:\s*([^;{}]+);/g,
+-    ))
+-      map.set(m[1], [...(map.get(m[1]) ?? []), m[2].trim()]);
++  for (const f of files) {
++    const text = readFileSync(f, "utf8");
++    for (const css of cssBlocks(f, text))
++      for (const r of cssRules(css))
++        for (const d of r.decls)
++          if (/^--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)$/.test(d.prop))
++            map.set(d.prop, [...(map.get(d.prop) ?? []), d.value]);
+   }
+   return map;
+ }
+ 
+-/** A token's values, followed through `var()` — each a keyword, a cubic-bezier, or unresolved. */
++/** THE CURVE AS THE ENGINE COMPUTES IT (pass 7, charter row 1). The pass-6 critic's five
++ *  spellings (`EASE-IN`, `linear(0, 1)`, `var(--ease-nope, ease-in)`, `CUBIC-BEZIER(0.42,0,1,1)`,
++ *  an `!important` longhand) each computed to a UA keyword in both engines while B8 read 0. So
++ *  the value is case-folded, `!important` dropped, a cubic-bezier read as its four numbers, and
++ *  a `linear()` whose stops all sit on the diagonal read as `linear`. */
++function normCurve(v) {
++  const s = v
++    .replace(/!\s*important\s*$/i, "")
++    .trim()
++    .toLowerCase()
++    .replace(/\s+/g, " ");
++  const cb = /^cubic-bezier\(([^()]*)\)$/.exec(s);
++  if (cb)
++    return `cubic-bezier(${cb[1]
++      .split(",")
++      .map((n) => String(Number(n)))
++      .join(",")})`;
++  const lin = /^linear\(([^()]*)\)$/.exec(s);
++  if (lin && linearIsIdentity(lin[1])) return "linear";
++  return s;
++}
++
++/** `linear(<stops>)` is the identity when every stop, placed by the CSS rules (first 0 %, last
++ *  100 %, a missing position spread evenly between its neighbours), sits on y = x. */
++function linearIsIdentity(body) {
++  const pts = [];
++  for (const stop of body.split(",")) {
++    const [y, ...xs] = stop.trim().split(/\s+/);
++    if (!xs.length) pts.push({ y: Number(y), x: null });
++    for (const x of xs)
++      pts.push({ y: Number(y), x: /%$/.test(x) ? Number(x.slice(0, -1)) / 100 : NaN });
++  }
++  if (pts.length < 2) return false;
++  if (pts[0].x === null) pts[0].x = 0;
++  if (pts[pts.length - 1].x === null) pts[pts.length - 1].x = 1;
++  for (let i = 1; i < pts.length; i++) {
++    if (pts[i].x !== null) continue;
++    let j = i;
++    while (pts[j].x === null) j++;
++    const x0 = pts[i - 1].x;
++    for (let k = i; k < j; k++)
++      pts[k].x = x0 + ((pts[j].x - x0) * (k - i + 1)) / (j - i + 1);
++  }
++  return pts.every((p) => Number.isFinite(p.y) && Math.abs(p.y - p.x) < 1e-9);
++}
++
++/** A token's values, followed through `var()` — each normalised. A `var()` FALLBACK is a value
++ *  too: it is what ships wherever the referent is undeclared (`var(--ease-nope, ease-in)` shipped
++ *  ease-in past bands, verbs and the census), so it is evaluated, never passed through. */
+ function resolveCurve(name, toks, seen = new Set()) {
+   if (seen.has(name)) return [];
+   seen.add(name);
+-  const out = [];
+-  for (const v of toks.get(name) ?? []) {
+-    const ref = /^var\(\s*(--[A-Za-z-]+)\s*\)$/.exec(v);
+-    if (ref) out.push(...resolveCurve(ref[1], toks, seen));
+-    else out.push(v);
+-  }
++  return (toks.get(name) ?? []).flatMap((v) => curveValue(v, toks, seen));
++}
++function curveValue(v, toks, seen = new Set()) {
++  const ref = /^var\(\s*(--[\w-]+)\s*(?:,\s*([^]*))?\)$/.exec(v.trim());
++  if (!ref) return [normCurve(v)];
++  const out = toks.has(ref[1]) ? resolveCurve(ref[1], toks, seen) : [];
++  if (ref[2] !== undefined) out.push(...curveValue(ref[2], toks, seen));
+   return out;
+ }
+ 
+@@ -1443,7 +1878,39 @@ const pointsOf = (v) =>
+     .map((n) => String(Number(n)))
+     .join(",");
+ 
+-function b8Curve(decls, toks = curveTokens(), twins = KEYWORD_TWINS) {
++/** Every `transition-timing-function` longhand a shipped source sets: [where, value]. CSS
++ *  through the library (source order, `!important` read and dropped from the value), script
++ *  writes through its `scriptWrites` (`.style.transitionTimingFunction =`, `setProperty`). */
++function timingLonghands(files = sources(ROOT)) {
++  const out = [];
++  for (const f of files) {
++    const rel = relative(ROOT, f);
++    if (rel.includes("/pencil/dev/")) continue;
++    const text = readFileSync(f, "utf8");
++    for (const css of cssBlocks(f, text))
++      for (const r of cssRules(css))
++        for (const d of r.decls)
++          if (d.prop === "transition-timing-function")
++            out.push([`${rel} ${r.prelude}`, d.value]);
++    const code = f.endsWith(".vue")
++      ? sfc(text)
++          .scripts.map((s) => s.text)
++          .join("\n")
++      : /\.(ts|tsx|js|mjs)$/.test(f)
++        ? text
++        : "";
++    for (const w of scriptWrites(code, "transition-timing-function"))
++      out.push([`${rel}:<script>`, w.value.replace(/^["'`]|["'`]$/g, "")]);
++  }
++  return out;
++}
++
++function b8Curve(
++  decls,
++  toks = curveTokens(),
++  twins = KEYWORD_TWINS,
++  longhands = timingLonghands(),
++) {
+   const bad = [];
+   const twinUsed = new Set();
+   for (const d of decls) {
+@@ -1492,6 +1959,25 @@ function b8Curve(decls, toks = curveTokens(), twins = KEYWORD_TWINS) {
+       );
+     }
+   }
++  // THE LONGHAND IS READ BESIDE THE SHORTHAND (pass 7). `transition-timing-function: ease-in
++  // !important` after a house shorthand wins the cascade and ships ease-in; pass 6 read the
++  // shorthand alone. Every longhand in every stylesheet, and every script write of it, is read
++  // by VALUE through the same resolver — a keyword there is a keyword on a transition.
++  for (const [where, value] of longhands)
++    for (const v of curveValue(value, toks)) {
++      if (UA_KEYWORD.test(v)) {
++        bad.push(
++          `${where}  transition-timing-function: ${value} — computes to \`${v}\`, a UA keyword (the longhand beside the shorthand).`,
++        );
++        continue;
++      }
++      const pts = pointsOf(v);
++      const kw = Object.keys(UA_POINTS).find((k) => UA_POINTS[k] === pts);
++      if (kw)
++        bad.push(
++          `${where}  transition-timing-function: ${value} — \`${kw}\`'s own points; a longhand is never a KEYWORD_TWINS row.`,
++        );
++    }
+   // CLOSED THE OTHER WAY: a twin row no shipped transition reads at its stated points is STALE
+   // (the token was re-curved, renamed or orphaned — delete the row with it).
+   for (const r of twins)
+@@ -1669,6 +2155,246 @@ function b11KindFence() {
+   return { bad, rows };
+ }
+ 
++/**
++ * B13 — ARITHMETIC ON A CLOCK (pass 7, charter row 5; pass-6 critique §2.2 X4/X5). B11 reads
++ * any line touching `MOTION.*` as TRAVEL, so `duration: MOTION.rungs.whisper / 3` (a 50ms WAAPI
++ * clock) and `MOTION.dealStaggerMs / 9` (a 10ms deal step, its EXEMPT row still reading 90)
++ * passed every gate. Now a MOTION read — or a name bound from one — that meets `*`, `/`, `%` or
++ * `-` makes its LINE the gate's subject, read at the CONSUMER's computed value: the whole
++ * expression (the line less its `const x =` / `key:` / `return` head and its `;`/`,` tail)
++ * must EQUAL an ADMITTED_ARITH row's `expr`, and the value the gate computes for it (MOTION's
++ * own numbers, the file's own literal consts) must equal the row's `ms` (`null` where it reads
++ * a runtime value). A sum only ever lengthens and is not read. Closed both ways.
++ */
++const ADMITTED_ARITH = [
++  {
++    file: "src/pencil/chrome/GameGallery/GameGallery.vue",
++    expr: "Math.round(MOTION.rungs.throw * (DEAL_AFTER_SETTLE ? 1 : 0.42))",
++    ms: 218,
++    why: "the deal's base: 0.42 × throw while DEAL_AFTER_SETTLE is off — the pass-6 critic's one lawful row",
++  },
++  {
++    file: "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue",
++    expr: "() => beatsFor(logoPreset.wobble?.intervalMs ?? MOTION.beatMs * 4)",
++    ms: null,
++    why: "CADENCE — four beats as the wordmark's wobble fallback, quantised to a beat COUNT",
++  },
++  {
++    file: "src/pencil/config/pencilConfig.ts",
++    expr: "Math.max(1, Math.round(intervalMs / MOTION.beatMs))",
++    ms: null,
++    why: "NOT A LENGTH — `beatsFor`, an interval as a whole count of beats",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    expr: "360 / ((240 * 1000) / MOTION.beatMs)",
++    ms: 0.1875,
++    why: "NOT A LENGTH — the ray comb's degrees per pose (one turn per 240s)",
++  },
++  {
++    file: "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts",
++    expr: "Math.round((jitterRng() - 0.5) * preset.jitter * 2)",
++    ms: null,
++    why: "GRADED — the draw-in's seeded jitter, ± a tier's `jitter` (DRAW_IN_PRESETS, B9's axis)",
++  },
++  {
++    file: "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts",
++    expr: "Math.max(0, preset.baseDelay + i * preset.stagger + jitter)",
++    ms: null,
++    why: "GRADED — the draw-in's onset: a tier's baseDelay + i × stagger (DRAW_IN_PRESETS, B9's axis)",
++  },
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    expr: "(i * RAY_DEG_PER_POSE).toFixed(4)",
++    ms: null,
++    why: "NOT A LENGTH — one ray's angle off the comb's degrees per pose",
++  },
++  {
++    file: "src/pencil/chrome/GameGallery/GameGallery.vue",
++    expr: "base + (dist - 1) * stagger",
++    ms: null,
++    why: "B9's axis — the deal's outward DELAY: base + (dist − 1) × dealStaggerMs, dist a card's distance at runtime",
++  },
++  {
++    file: "src/pencil/config/pencilConfig.ts",
++    expr: "Math.round(CELEBRATION.revealWindowMs / blankCount)",
++    ms: null,
++    why: "GRADED — the reveal's per-cell step: one window shared by the blank cells",
++  },
++  {
++    file: "src/pencil/config/pencilConfig.ts",
++    expr: "Math.round(CELEBRATION.wavefrontCrossMs / diag)",
++    ms: null,
++    why: "GRADED — the wavefront's per-diagonal step: one crossing shared by the diagonals",
++  },
++];
++
++/** The clock roots: MOTION and the admitted TS sets that live in pencilConfig (the bank's). */
++const CLOCK_ROOTS = ["MOTION", ...Object.keys(ADMITTED_TS)].filter((k) =>
++  new RegExp(`export const ${k}\\b`).test(readFileSync(CONFIG, "utf8")),
++);
++
++/** A line that closes a multi-line call (`}, MOTION.x * MOTION.beatMs)`) or continues a ternary
++ *  (`: f(…)`) is read without its leading punctuation and its unbalanced closing parens. */
++function unwrapLine(s) {
++  let e = s.replace(/^(?:[})\],:?]\s*)+/, "").replace(/[;,]\s*$/, "");
++  const bal = (x) => (x.match(/\(/g) ?? []).length - (x.match(/\)/g) ?? []).length;
++  while (bal(e) < 0 && e.endsWith(")")) e = e.slice(0, -1).trimEnd();
++  return e;
++}
++
++/** Every numeric leaf of the clock roots, as `ROOT.path` — a path that is NOT one is a group. */
++const CLOCK_LEAVES = new Set(
++  CLOCK_ROOTS.flatMap((r) =>
++    Object.keys(tsLeaves(readFileSync(CONFIG, "utf8"), r)).map((k) => `${r}.${k}`),
++  ),
++);
++
++function arithSites(files = null) {
++  const out = [];
++  const texts =
++    files ??
++    sources(ROOT)
++      .map((f) => [relative(ROOT, f), f])
++      .filter(
++        ([rel]) =>
++          /\.(ts|tsx|js|vue)$/.test(rel) &&
++          !/\.(test|spec)\.[jt]sx?$/.test(rel) &&
++          !rel.includes("/pencil/dev/"),
++      )
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  for (const [rel, text] of texts) {
++    const code = rel.endsWith(".vue")
++      ? sfc(text)
++          .scripts.map((s) => stripJs(s.text))
++          .join("\n")
++      : stripJs(text);
++    // the clock ROOTS (MOTION and the admitted TS sets), names bound from them (`const W =
++    // MOTION.rungs.whisper`, `const { rungs } = MOTION`) and names DERIVED from them (`const
++    // base = Math.round(MOTION.rungs.throw * 0.42)` — `base / 4` two lines on is the same clock)
++    const alias = new Map();
++    const roots = CLOCK_ROOTS;
++    const rootRe = roots.map(reEsc).join("|");
++    for (const m of code.matchAll(
++      new RegExp(
++        `\\bconst\\s+(\\w+)\\s*=\\s*((?:${rootRe})(?:\\.\\w+)*)\\s*[;\\n]`,
++        "g",
++      ),
++    ))
++      alias.set(m[1], m[2]);
++    for (const m of code.matchAll(
++      new RegExp(`\\bconst\\s*\\{([^}]*)\\}\\s*=\\s*((?:${rootRe})(?:\\.\\w+)*)`, "g"),
++    ))
++      for (const part of m[1].split(",")) {
++        const [from, to] = part.split(":").map((s) => s.trim().split("=")[0].trim());
++        if (from) alias.set(to || from, `${m[2]}.${from}`);
++      }
++    // a GROUP handed on in an object literal (`{ paths, preset: DRAW_IN_PRESETS.gridFrame }`,
++    // destructured in a loop) is an alias too — the draw-in's tiers reach their consumer that way
++    for (const m of code.matchAll(
++      new RegExp(`\\b(\\w+)\\s*:\\s*((?:${rootRe})(?:\\.\\w+)+)\\s*[,}]`, "g"),
++    ))
++      if (!CLOCK_LEAVES.has(m[2]) && !alias.has(m[1])) alias.set(m[1], m[2]);
++    const derived = new Map();
++    const known = [...roots, ...alias.keys()].map(reEsc).join("|");
++    for (const m of code.matchAll(/\bconst\s+(\w+)\s*=\s*([^;\n]+);/g))
++      if (
++        !alias.has(m[1]) &&
++        !roots.includes(m[1]) &&
++        new RegExp(`(?<![\\w.$])(?:${known})\\b`).test(m[2])
++      )
++        derived.set(m[1], m[2].trim());
++    const names = [...roots, ...alias.keys(), ...derived.keys()].map(reEsc).join("|");
++    const read = new RegExp(`(?<![\\w.$])(?:${names})(?:\\.\\w+)*`, "g");
++    const consts = new Map();
++    for (const m of code.matchAll(
++      /\bconst\s+(\w+)\s*=\s*(-?\d+(?:\.\d+)?|true|false)(?:\s+as\s+\w+)?\s*;/g,
++    ))
++      consts.set(m[1], m[2]);
++    code.split("\n").forEach((line, i) => {
++      for (const m of line.matchAll(read)) {
++        if (roots.includes(m[0])) continue; // a bare root object, no member read
++        const before = line.slice(0, m.index);
++        const after = line.slice(m.index + m[0].length);
++        if (!/^\s*\)*\s*[-*/%](?![=>])/.test(after) && !/[-*/%]\s*\(*\s*$/.test(before))
++          continue;
++        const expr = unwrapLine(
++          line
++            .trim()
++            .replace(
++              /^(?:(?:export\s+)?(?:const|let)\s+\w+\s*=|return\b|[\w$]+\s*:)\s*/,
++              "",
++            )
++            .replace(/[;,]\s*$/, "")
++            .trim(),
++        );
++        out.push({ rel, line: i + 1, expr, alias, derived, consts });
++        break;
++      }
++    });
++  }
++  return out;
++}
++
++/** The consumer's value: MOTION's numbers and the file's literal consts substituted, then
++ *  evaluated when nothing else is left; `null` when the expression reads a runtime value. */
++function arithValue({ expr, alias, derived = new Map(), consts }, lad) {
++  const leaves = {};
++  for (const root of CLOCK_ROOTS)
++    for (const [k, v] of Object.entries(tsLeaves(lad.src ?? "", root)))
++      leaves[`${root}.${k}`] = v;
++  for (const r of lad.rungs) leaves[`MOTION.rungs.${r.key}`] = r.value;
++  let s = expr;
++  for (let pass = 0; pass < 4; pass++)
++    for (const [d, rhs] of derived)
++      s = s.replace(new RegExp(`(?<![\\w.$])${reEsc(d)}\\b`, "g"), `(${rhs})`);
++  for (const [a, path] of alias)
++    s = s.replace(
++      new RegExp(`(?<![\\w.$])${reEsc(a)}((?:\\.\\w+)*)`, "g"),
++      `${path}$1`,
++    );
++  s = s.replace(/(?<![\w.$])([A-Z][A-Z_]*(?:\.\w+)+)/g, (m) =>
++    leaves[m] === undefined ? m : String(leaves[m]),
++  );
++  for (const [k, v] of consts) s = s.replace(new RegExp(`\\b${reEsc(k)}\\b`, "g"), v);
++  const bare = s.replace(
++    /\bMath\.(?:round|min|max|floor|ceil|abs)\b|\btrue\b|\bfalse\b/g,
++    "",
++  );
++  if (!/^[\d\s.+\-*/%()?:<>=!&|,]*$/.test(bare)) return null;
++  try {
++    return Number(Function(`"use strict"; return (${s});`)());
++  } catch {
++    return null;
++  }
++}
++
++function b13Arith(lad, sites = arithSites(), admitted = ADMITTED_ARITH) {
++  const bad = [];
++  const used = new Set();
++  for (const s of sites) {
++    const v = arithValue(s, lad);
++    const row = admitted.find((r) => r.file === s.rel && r.expr === s.expr);
++    if (!row) {
++      bad.push(
++        `${s.rel}:${s.line}  ${s.expr} — arithmetic on a clock${v === null ? "" : ` computing ${v}ms`}; the consumer's value is the subject: an ADMITTED_ARITH row with its \`expr\` and \`ms\`, or read the rung bare.`,
++      );
++      continue;
++    }
++    used.add(row);
++    const same =
++      v === null || row.ms === null ? v === row.ms : Math.abs(v - row.ms) < 1e-9;
++    if (!same)
++      bad.push(
++        `${s.rel}:${s.line}  ${s.expr} computes ${v}; its ADMITTED_ARITH row says ms: ${row.ms} — the row licenses ONE value.`,
++      );
++  }
++  for (const r of admitted)
++    if (!used.has(r))
++      bad.push(`ADMITTED_ARITH ${r.file} :: ${r.expr} admits nothing — STALE.`);
++  return bad;
++}
++
+ /**
+  * B12 (static half) — THE ABSENCE ROW, chair §6.5's born-RED. The runtime half deletes the
+  * publisher call in a scratch build and reads `.icon-btn`: `transition-duration: 0s`,
+@@ -1941,19 +2667,27 @@ for (const p of durPos)
+ const rows = inventoryRows(decls, lad);
+ 
+ if (WRITE_BANK) {
+-  const sites = baseSites(decls, lad);
+-  const rungs = Object.fromEntries(lad.rungs.map((r) => [r.key, r.value]));
++  const base = deriveBase(decls, lad);
++  if (!base) {
++    console.error(`--bank needs ${BASE_REF} in the clone: the floor is the base's.`);
++    process.exit(1);
++  }
++  const sites = base.sites;
++  // the rungs as they are banked today (a RETUNE's `rise` 600 stays the floor it was)
++  const rungs = existsSync(BANK)
++    ? JSON.parse(readFileSync(BANK, "utf8")).rungs
++    : Object.fromEntries(lad.rungs.map((r) => [r.key, r.value]));
++  // TS clocks: the base's value, or the tree's where the tree is longer or the clock is new
++  const ts = { ...base.ts };
++  for (const [k, v] of Object.entries(lad.ts)) ts[k] = Math.max(ts[k] ?? 0, v);
++  const j = { base: BASE_REF, rungs, sites, ts };
+   writeFileSync(
+     BANK,
+-    JSON.stringify(
+-      { at: new Date().toISOString(), base: BASE_REF, rungs, sites },
+-      null,
+-      1,
+-    ) + "\n",
++    JSON.stringify({ at: new Date().toISOString(), ...j }, null, 1) + "\n",
+   );
+   console.log(
+-    `banked ${lad.rungs.length} rungs + ${Object.keys(sites).length} sites → ${relative(ROOT, BANK)}\n` +
+-      `re-stamp: const BANK_SHA256 = "${bankDigest({ base: BASE_REF, rungs, sites })}";`,
++    `banked ${Object.keys(rungs).length} rungs + ${Object.keys(sites).length} sites + ${Object.keys(ts).length} TS clocks → ${relative(ROOT, BANK)}\n` +
++      `re-stamp: const BANK_SHA256 = "${bankDigest(j)}";`,
+   );
+   process.exit(0);
+ }
+@@ -2012,17 +2746,19 @@ console.log(
+     `${kinds.rows.filter((r) => !r.kind).length} unkinded`,
+ );
+ 
+-const CHECKS = [
+-  ["B1 NAMED", () => b1Named(decls, rungKeys)],
++/** The whole list, as a function of the ledger: the self-test runs it under one row of EVERY
++ *  class (pass-6 critique §5.3 — a new ledger class needs every loop that walks it exercised). */
++const checks = (ledger = LEDGER) => [
++  ["B1 NAMED", () => b1Named(decls, rungKeys, ledger)],
+   ["B2 CLOSED", () => b2Closed(lad)],
+   ["B3 ONE HOME, NO FALLBACK", () => b3Mirror(lad, pub, decls)],
+   ["B4 NO-ALL", () => b4NoAll(decls)],
+-  ["B5 PRM", () => b5Prm(decls, pub)],
++  ["B5 PRM", () => b5Prm(decls, pub, ledger)],
+   [
+     "B6 RATCHET",
+     () => [
+-      ...b6Floor(bank, () => baseSites(decls, lad)),
+-      ...b6NoShorten(rows, bank, lad),
++      ...b6Floor(bank, () => deriveBase(decls, lad)),
++      ...b6NoShorten(rows, bank, lad, ledger),
+     ],
+   ],
+   ["B7 TAILWIND", () => b7Tailwind()],
+@@ -2034,11 +2770,30 @@ const CHECKS = [
+   ["G-DOCK-BAND", () => gDockBand(lad)],
+   ["G-GUARD", () => gGuard()],
+   ["G-REFUSE-ONE-HOME", () => gRefuseOneHome(lad.src)],
++  ["B13 ARITHMETIC", () => b13Arith(lad)],
+ ];
++const CHECKS = checks();
++/** A crash is not a red: it is a check that never read the tree. It is reported BY NAME. */
++const run = (fn) => {
++  try {
++    return fn();
++  } catch (e) {
++    return [
++      `CRASHED — ${e?.message ?? e} (a crash is not a red; this check read nothing)`,
++    ];
++  }
++};
++const crashes = (found) => found.filter((f) => f.startsWith("CRASHED"));
++
++const awaiting = KEYWORD_TWINS.filter((r) => !r.chair);
++if (awaiting.length)
++  console.log(
++    `  KEYWORD_TWINS awaiting the chair's row or their strike (a lane's own admission): ${awaiting.map((r) => r.token).join(", ")}`,
++  );
+ 
+ const failures = [];
+ for (const [name, fn] of CHECKS) {
+-  const found = fn();
++  const found = run(fn);
+   console.log(
+     `  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}`,
+   );
+@@ -2055,6 +2810,12 @@ if (SELF_TEST) {
+     dev: false,
+     ...extra,
+   });
++  /** An element model for B6's subject binding: class → files carrying it, on the tree and at
++   *  BASE_REF. The live readers go to the real source and git; a model never does. */
++  const elements = (tree = {}, base = {}) => ({
++    tree: (c) => new Set(tree[c] ?? []),
++    base: (c) => new Set(base[c] ?? []),
++  });
+   const okPub = {
+     pub: {
+       generated: true,
+@@ -2311,6 +3072,7 @@ if (SELF_TEST) {
+       const moved = (extra) => [
+         { file: f, key: oldKey, cls: "MOVED", ms: 300, why: "renamed", ...extra },
+       ];
++      const DIGIT = "src/games/shared/DigitCell.vue";
+       return [
+         [
+           "B6 RATCHET",
+@@ -2324,8 +3086,18 @@ if (SELF_TEST) {
+         ],
+         [
+           "B6 RATCHET",
+-          "NEGATIVE-NEGATIVE — the lawful rename: MOVED with newKey, the new key live at the banked 300",
+-          () => b6NoShorten(after("0.3s"), banked, { rungs: [] }, moved({ newKey })),
++          "NEGATIVE-NEGATIVE — the lawful rename: MOVED with newKey, the new key live at the banked 300 and carried where the old class was",
++          () =>
++            b6NoShorten(
++              after("0.3s"),
++              banked,
++              { rungs: [] },
++              moved({ newKey }),
++              elements(
++                { "cell-reveal-anim": [DIGIT] },
++                { "cell-reveal-animated": [DIGIT] },
++              ),
++            ),
+         ],
+         [
+           "B6 RATCHET",
+@@ -2418,26 +3190,47 @@ if (SELF_TEST) {
+         ],
+       ];
+     })(),
+-    // ── PASS 6 · A2, THE UNSTAMPED FLOOR — read off the REAL bank with one edit.
++    // ── PASS 7 · A2, THE FLOOR — on a SYNTHETIC bank. Pass 6 lowered the REAL bank's cell-reveal,
++    // so an author who lowered that same site and re-stamped made the control equal to the
++    // shipped bank and it went VACUOUS (the critic's depth-1 finding): a control must never be
++    // able to collide with the row it controls. No real bank holds `selftest/…`.
+     ...(() => {
+-      const real = JSON.parse(readFileSync(BANK, "utf8"));
+-      const k = "src/assets/index.css :: .cell-reveal-animated :: cell-reveal";
+-      const lowered = { ...real, sites: { ...real.sites, [k]: 150 } };
++      const k = "selftest/a2.css :: .a2-control :: opacity";
++      const tk = "SELFTEST.a2.duration";
++      const syn = { base: BASE_REF, rungs: {}, sites: { [k]: 300 }, ts: { [tk]: 280 } };
++      const low = { ...syn, sites: { [k]: 150 } };
++      const lowTs = { ...syn, ts: { [tk]: 250 } };
++      const floor = () => ({ sites: { [k]: 300 }, ts: { [tk]: 280 } });
+       return [
+         [
+           "B6 RATCHET",
+-          "A2 VERBATIM (CI's depth 1: BASE_REF unreachable) — `motion-bank.json`'s cell-reveal 300 → 150",
+-          () => b6Floor(lowered, () => ({})),
++          "A2c VERBATIM (CI's depth 1: BASE_REF not in the clone) — a bank lowered AND re-stamped by its author",
++          () => b6Floor(low, () => null, bankDigest(low)),
++        ],
++        [
++          "B6 RATCHET",
++          "A2 · the bank lowered and NOT re-stamped",
++          () => b6Floor(low, floor, bankDigest(syn)),
++        ],
++        [
++          "B6 RATCHET",
++          "A2c · BASE_REF reachable — the lowered bank re-stamped, the floor re-derived",
++          () => b6Floor(low, floor, bankDigest(low)),
++        ],
++        [
++          "B6 RATCHET",
++          "A2c · a TS clock lowered in the bank (280 → 250) and re-stamped",
++          () => b6Floor(lowTs, floor, bankDigest(lowTs)),
+         ],
+         [
+           "B6 RATCHET",
+-          "A2 · BASE_REF reachable — the lowered bank re-stamped by its author, the floor re-derived",
+-          () => b6Floor(lowered, () => ({ [k]: 300 }), bankDigest(lowered)),
++          "NEGATIVE-NEGATIVE — the synthetic bank against its own stamp, the base reachable and equal",
++          () => b6Floor(syn, floor, bankDigest(syn)),
+         ],
+         [
+           "B6 RATCHET",
+-          "NEGATIVE-NEGATIVE — the shipped bank against its stamp, no BASE_REF",
+-          () => b6Floor(real, () => ({})),
++          "NEGATIVE-NEGATIVE — the SHIPPED bank against the script's stamp, the floor re-derived off BASE_REF",
++          () => b6Floor(bank, () => deriveBase(decls, lad)),
+         ],
+       ];
+     })(),
+@@ -2522,21 +3315,13 @@ if (SELF_TEST) {
+     ],
+     [
+       "B6 RATCHET",
+-      "NEGATIVE-NEGATIVE — the valued RETUNE row holding the shipped rung (rise 600 → 520, to: 520)",
++      "NEGATIVE-NEGATIVE — the SHIPPED `rise` RETUNE row (valued AND cited) holding the shipped rung (rise 600 → 520, to: 520)",
+       () =>
+         b6NoShorten(
+           [],
+           { rungs: { rise: 600 }, sites: {} },
+           { rungs: [{ key: "rise", value: 520 }] },
+-          [
+-            {
+-              file: "MOTION.rungs",
+-              rung: "rise",
+-              to: 520,
+-              cls: "RETUNE",
+-              why: "ruling 1",
+-            },
+-          ],
++          LEDGER.filter((r) => r.cls === "RETUNE" && r.rung === "rise"),
+         ),
+     ],
+     // ── ONE BLOCK AT FILE SCOPE (registry-v4 §2.7), read off the REAL sheet with one edit.
+@@ -2745,6 +3530,52 @@ if (SELF_TEST) {
+           "an admitted twin changes its points and keeps its row (`--ease-prmFade` → `var(--ease-starTuck)`, ease-in by chain)",
+           () => b8Curve(decls, edit("--ease-prmFade", "var(--ease-starTuck)")),
+         ],
++        // PASS 7 · THE FIVE SPELLINGS (pass-6 critique §2.1): each computes to a UA keyword in
++        // both engines, and each read 0 on bands, verbs, contract, tokens and the census.
++        [
++          "B8 CURVE",
++          "X2a — `--ease-standard: EASE-IN` (the keyword, upper case)",
++          () => b8Curve(decls, edit("--ease-standard", "EASE-IN")),
++        ],
++        [
++          "B8 CURVE",
++          "X2b — `--ease-standard: linear(0, 1)` (the linear() function's identity)",
++          () => b8Curve(decls, edit("--ease-standard", "linear(0, 1)")),
++        ],
++        [
++          "B8 CURVE",
++          "X2b′ — `--ease-standard: linear(0 0%, 1 100%)` (the same identity, positions written)",
++          () => b8Curve(decls, edit("--ease-standard", "linear(0 0%, 1 100%)")),
++        ],
++        [
++          "B8 CURVE",
++          "X2c — `--ease-standard: var(--ease-nope, ease-in)` (a fallback on an undeclared token)",
++          () => b8Curve(decls, edit("--ease-standard", "var(--ease-nope, ease-in)")),
++        ],
++        [
++          "B8 CURVE",
++          "X2d — `--ease-standard: CUBIC-BEZIER(0.42, 0, 1, 1)` (ease-in's points, upper case)",
++          () => b8Curve(decls, edit("--ease-standard", "CUBIC-BEZIER(0.42, 0, 1, 1)")),
++        ],
++        [
++          "B8 CURVE",
++          "X2e — `transition-timing-function: ease-in !important` after a house shorthand",
++          () =>
++            b8Curve(decls, toks, KEYWORD_TWINS, [
++              ["src/assets/index.css html.theme-turning body", "ease-in !important"],
++            ]),
++        ],
++        [
++          "B8 CURVE",
++          "NEGATIVE-NEGATIVE — a house `linear()` that is NOT the identity (a value gate, not a spelling ban)",
++          () =>
++            b8Curve(
++              decls,
++              edit("--ease-standard", "linear(0, 0.25 40%, 1)"),
++              KEYWORD_TWINS,
++              [["x.css .a", "var(--ease-standard)"]],
++            ),
++        ],
+         [
+           "B8 CURVE",
+           "NEGATIVE-NEGATIVE — the shipped tree, its five twins admitted at their points",
+@@ -2918,10 +3749,348 @@ if (SELF_TEST) {
+         return bad;
+       },
+     ],
++    // ══ PASS 7 · the pass-6 critic's doors, each a model that reds and a lawful twin that holds.
++    // ── charter row 2 · B1 reads a row by its SHAPE (X8: a lawful DELETED row threw `row.ms.join`)
++    [
++      "B1 NAMED",
++      "NEGATIVE-NEGATIVE — a live DELETED row in the ledger (the gate's own advice, X8): B1's closure reads it by shape",
++      () =>
++        b1Named(decls, rungKeys, [
++          ...LEDGER,
++          {
++            key: "src/games/futoshiki/CaretOverlay.vue :: .board-leaving .caret-layer :: opacity",
++            ms: 200,
++            cls: "DELETED",
++            why: "the caret layer left the product",
++          },
++        ]),
++    ],
++    [
++      "B1 NAMED",
++      "a DELETED row written with a LIST — its class and its shape disagree",
++      () =>
++        b1Named(decls, rungKeys, [
++          ...LEDGER,
++          { key: "x.css :: .x :: opacity", ms: [200], cls: "DELETED", why: "unit" },
++        ]),
++    ],
++    [
++      "B1 NAMED",
++      "a crash is REPORTED by name, never counted as a red (the pass-6 TypeError, replayed)",
++      () =>
++        crashes(
++          run(() => {
++            throw new TypeError("row.ms.join is not a function");
++          }),
++        ),
++    ],
++    [
++      "B1 NAMED",
++      "NEGATIVE-NEGATIVE — THE WHOLE CHECK LIST under one row of EVERY class (a DELETED site, a DELETED TS clock, a MOVED TS clock): 0 crashes",
++      () =>
++        checks([
++          ...LEDGER,
++          { key: "selftest :: .x :: opacity", ms: 200, cls: "DELETED", why: "unit" },
++          { ts: "SELFTEST.gone", ms: 1, cls: "DELETED", why: "unit" },
++          {
++            ts: "SELFTEST.moved",
++            newKey: "MOTION.rungs.whisper",
++            ms: 1,
++            cls: "MOVED",
++            why: "unit",
++          },
++        ]).flatMap(([n, fn]) => crashes(run(fn)).map((c) => `${n}: ${c}`)),
++    ],
++    // ── charter row 3 · the escape row is bound to its subject's ELEMENT (X7, X1)
++    ...(() => {
++      const f = "src/assets/index.css";
++      const DIGIT = "src/games/shared/DigitCell.vue";
++      const oldKey = `${f} :: .cell-reveal-animated :: cell-reveal`;
++      const decoy = `${f} :: .cell-reveal-animated-hold :: cell-reveal`;
++      const pop = {
++        key: `${f} :: .cell-pop :: cell-pop`,
++        ms: 150,
++        clause: "cell-pop 150",
++      };
++      const banked = { rungs: {}, sites: { [oldKey]: 300 } };
++      const mv = [
++        { file: f, key: oldKey, newKey: decoy, cls: "MOVED", ms: 300, why: "renamed" },
++      ];
++      const del = [{ file: f, key: oldKey, cls: "DELETED", ms: 300, why: "retired" }];
++      const base = { "cell-reveal-animated": [DIGIT] };
++      const note = "src/pencil/chrome/MarginNote.vue";
++      const nKey = `${note} :: .margin-note-ink :: ink-write-in`;
++      const nNew = `${note} :: .note-enter-active, .note-swap-enter-active :: ink-write-in`;
++      return [
++        [
++          "B6 RATCHET",
++          "X7 VERBATIM — a DEAD decoy keeps the moved term at 300; the real reveal renamed whole to `.cell-pop` at whisper",
++          () =>
++            b6NoShorten(
++              [{ key: decoy, ms: 300, clause: "cell-reveal 300" }, pop],
++              banked,
++              { rungs: [] },
++              mv,
++              elements({ "cell-pop": [DIGIT] }, base),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "X7′ — the same, with the decoy's class planted as a string where the old class lived",
++          () =>
++            b6NoShorten(
++              [{ key: decoy, ms: 300, clause: "cell-reveal 300" }, pop],
++              banked,
++              { rungs: [] },
++              mv,
++              elements(
++                { "cell-pop": [DIGIT], "cell-reveal-animated-hold": [DIGIT] },
++                base,
++              ),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "X1 — the total rename behind a DELETED row carrying the bank's 300",
++          () =>
++            b6NoShorten(
++              [pop],
++              banked,
++              { rungs: [] },
++              del,
++              elements({ "cell-pop": [DIGIT] }, base),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a real deletion: the old class still carried, nothing new below it",
++          () =>
++            b6NoShorten(
++              [],
++              banked,
++              { rungs: [] },
++              del,
++              elements({ "cell-reveal-animated": [DIGIT] }, base),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the §7 move onto a <Transition>: its own leave class ships faster and is the same element",
++          () =>
++            b6NoShorten(
++              [
++                { key: nNew, ms: 250, clause: "ink-write-in 250" },
++                {
++                  key: `${note} :: .note-leave-active :: ink-rub-out`,
++                  ms: 150,
++                  clause: "rub 150",
++                },
++              ],
++              { rungs: {}, sites: { [nKey]: 250 } },
++              { rungs: [] },
++              [{ key: nKey, newKey: nNew, cls: "MOVED", ms: 250, why: "§7" }],
++              elements(
++                { "note-enter-active": [note], "note-leave-active": [note] },
++                { "margin-note-ink": [note] },
++              ),
++            ),
++        ],
++      ];
++    })(),
++    [
++      "B6 RATCHET",
++      "NEGATIVE-NEGATIVE — a <Transition> with a COMPUTED `:name` carries its group when the file spells it (§7's merged note)",
++      () =>
++        consumedIn(
++          "note-enter-active",
++          '<Transition :name="leaveName()">\nconst leaveName = () => (swap ? "note-swap" : "note");',
++        )
++          ? []
++          : ["the computed :name's group read as carried by nothing"],
++    ],
++    [
++      "B6 RATCHET",
++      "a computed `:name` whose file never spells the group carries nothing",
++      () =>
++        consumedIn("note-enter-active", '<Transition :name="leaveName()">')
++          ? []
++          : ["`.note-enter-active` carried by no element"],
++    ],
++    // ── charter row 5 / INTAKE-23 row 18 · the TS clocks, ratcheted; deliberate = cited
++    ...(() => {
++      const sub = "DRAW_IN_PRESETS.gridSubgrid.duration";
++      const cell = "DRAW_IN_PRESETS.gridCell.duration";
++      const bk = { rungs: {}, sites: {}, ts: { [sub]: 280, [cell]: 200 } };
++      const now = { rungs: [], ts: { [sub]: 250, [cell]: 150 } };
++      const retune = (why) => [
++        { ts: sub, to: 250, cls: "RETUNE", why },
++        { ts: cell, to: 150, cls: "RETUNE", why },
++      ];
++      return [
++        [
++          "B6 RATCHET",
++          "INTAKE-23 row 18 — gridSubgrid 280 → 250 and the cell tier 200 → 150, UNDOCUMENTED",
++          () => b6NoShorten([], bk, now, []),
++        ],
++        [
++          "B6 RATCHET",
++          "the same two behind RETUNE rows with their values and NO cite",
++          () => b6NoShorten([], bk, now, retune("the hand's tiers")),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the same two as DELIBERATE shortenings, each citing its census (INTAKE-23 §1 D9)",
++          () =>
++            b6NoShorten(
++              [],
++              bk,
++              now,
++              retune("the hand's tiers — INTAKE-23 §1 D9, census/drawin (arm Q)"),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "a banked TS clock leaves the source with no row (a rename is a move)",
++          () => b6NoShorten([], bk, { rungs: [], ts: { [cell]: 200 } }, []),
++        ],
++        [
++          "B6 RATCHET",
++          "a TS clock MOVED onto a rung that is SHORTER (cardStepMs 440 → whisper)",
++          () =>
++            b6NoShorten(
++              [],
++              { rungs: {}, sites: {}, ts: { "MOTION.cardStepMs": 440 } },
++              { rungs: [{ key: "whisper", value: 150 }], ts: {} },
++              [
++                {
++                  ts: "MOTION.cardStepMs",
++                  newKey: "MOTION.rungs.whisper",
++                  ms: 440,
++                  cls: "MOVED",
++                  why: "x",
++                },
++              ],
++            ),
++        ],
++      ];
++    })(),
++    // ── INTAKE-23 row 17 · every clock's ONE home: B2 reads a NESTED leaf of MOTION
++    [
++      "B2 CLOSED",
++      "a nested `hand: { stepMs: 17, serial: { frame: 520 } }` joins MOTION with no rung and no exemption",
++      () =>
++        b2Closed({
++          rungs: lad.rungs,
++          strays: Object.entries(
++            tsLeaves(
++              "export const MOTION = {\n  hand: { stepMs: 17, serial: { frame: 520 } },\n} as const;",
++              "MOTION",
++            ),
++          ).map(([key, value]) => ({ key, value })),
++          tsSets: [],
++          exempt: lad.exempt,
++        }),
++    ],
++    // ── charter row 5 · arithmetic on a clock (X4, X5), at the consumer's computed value
++    ...(() => {
++      const f = "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts";
++      const one = (code, admitted = []) =>
++        b13Arith(lad, arithSites([[f, code]]), admitted);
++      return [
++        [
++          "B13 ARITHMETIC",
++          "X4 VERBATIM — `duration: MOTION.rungs.whisper / 3,` (a 50ms WAAPI clock)",
++          () => one("x.animate(k, {\n  duration: MOTION.rungs.whisper / 3,\n});"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "X5 VERBATIM — `const stagger = MOTION.dealStaggerMs / 9;` (a 10ms deal step)",
++          () => one("const stagger = MOTION.dealStaggerMs / 9;"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "the same through an ALIAS — `const { rungs } = MOTION;` then `rungs.whisper / 3`",
++          () => one("const { rungs } = MOTION;\nconst d = rungs.whisper / 3;"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "the same through a DERIVED name — `const base = Math.round(MOTION.rungs.throw * 0.42);` then `base / 4`",
++          () =>
++            one(
++              "const base = Math.round(MOTION.rungs.throw * 0.42);\nconst d = base / 4;",
++              [
++                {
++                  file: f,
++                  expr: "Math.round(MOTION.rungs.throw * 0.42)",
++                  ms: 218,
++                  why: "x",
++                },
++              ],
++            ),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "the draw-in's tier handed on as a GROUP in an object literal, then `duration: preset.duration / 2`",
++          () =>
++            one(
++              "const groups = [{ paths, preset: DRAW_IN_PRESETS.gridSubgrid }];\nfor (const { preset } of groups) run({ duration: preset.duration / 2 });",
++            ),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "an admitted row whose value is not the consumer's (`whisper / 3` admitted at 150)",
++          () =>
++            one("const d = MOTION.rungs.whisper / 3;", [
++              { file: f, expr: "MOTION.rungs.whisper / 3", ms: 150, why: "x" },
++            ]),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "NEGATIVE-NEGATIVE — the same row at the consumer's 50, and a SUM (only ever longer) unread",
++          () =>
++            one(
++              "const d = MOTION.rungs.whisper / 3;\nconst g = MOTION.rungs.leave + MOTION.settleGuardMs;",
++              [{ file: f, expr: "MOTION.rungs.whisper / 3", ms: 50, why: "x" }],
++            ),
++        ],
++      ];
++    })(),
++    // ── charter row 6 · the fit's consumer SHAPE (X3)
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "X3 VERBATIM — `scale(max(var(--live-fit), 0.99))` (no fallback to find; a 665px board)",
++      () =>
++        liveFitLaw(readFileSync(THEME, "utf8"), [
++          ["GameCard.vue", "a { transform: scale(max(var(--live-fit), 0.99)); }"],
++        ]),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "the fit inside `calc()` — `scale(calc(var(--live-fit) + 0.01))`",
++      () =>
++        liveFitLaw(readFileSync(THEME, "utf8"), [
++          ["GameCard.vue", "a { transform: scale(calc(var(--live-fit) + 0.01)); }"],
++        ]),
++    ],
++    [
++      "B3 ONE HOME, NO FALLBACK",
++      "NEGATIVE-NEGATIVE — the consumer as shipped, `translate(-50%, -50%) scale(var(--live-fit))`",
++      () =>
++        liveFitLaw(readFileSync(THEME, "utf8"), [
++          [
++            "GameCard.vue",
++            "a { transform: translate(-50%, -50%) scale(var(--live-fit)); }",
++          ],
++        ]),
++    ],
+   ];
+   const vacuous = [];
+   for (const [target, desc, fn] of cases) {
+-    const found = fn();
++    const got = run(fn);
++    // a crash is not a red: the control CRASHED, and says so (pass-6 critique §2.3)
++    const crashed = crashes(got).length > 0 && !/crash is REPORTED/.test(desc);
++    const found = crashed ? [] : got;
++    if (crashed) vacuous.push(`the control CRASHED under: ${desc} — ${got[0]}`);
+     // The negative-negative is INVERTED — it returns a line when it HELDS, so it must not
+     // print "RED (as it must)" (pass-3 critique §2.10: it read wrong, and a self-test that
+     // reads wrong is one a reader stops reading).
+diff --git a/web/frontend/scripts/motion-bank.json b/web/frontend/scripts/motion-bank.json
+index ffecfc3c..35a7895b 100644
+--- a/web/frontend/scripts/motion-bank.json
++++ b/web/frontend/scripts/motion-bank.json
+@@ -1,5 +1,5 @@
+ {
+-  "at": "2026-09-19T12:00:41.300Z",
++  "at": "2026-09-24T05:04:54.497Z",
+   "base": "74a2b5d9",
+   "rungs": {
+     "whisper": 150,
+@@ -91,5 +91,29 @@
+     "src/pencil/sheet/AnswerKeyLaminate.vue :: .answer-key-laminate.is-shown :: transform": 280,
+     "src/pencil/sheet/AnswerKeyLaminate.vue :: .answer-key-laminate, .answer-key-laminate.is-shown :: opacity": 150,
+     "src/pencil/sheet/SheetWashiLabel.vue :: <style scoped> .washi-label :: opacity": 150
++  },
++  "ts": {
++    "MOTION.beatMs": 125,
++    "MOTION.cardStepMs": 440,
++    "MOTION.boardFoldMs": 520,
++    "MOTION.chromeLeaveMs": 200,
++    "DRAW_IN_PRESETS.gridFrame.duration": 350,
++    "DRAW_IN_PRESETS.gridSubgrid.duration": 280,
++    "DRAW_IN_PRESETS.gridCell.duration": 200,
++    "DRAW_IN_PRESETS.glyph.duration": 350,
++    "GLYPH_ANIM.autoWiggleDuration": 2500,
++    "GLYPH_ANIM.hoverWiggleDuration": 600,
++    "CELEBRATION.revealWindowMs": 1200,
++    "CELEBRATION.wavefrontCrossMs": 500,
++    "CELEBRATION.wiggleCycleMs": 600,
++    "CELEBRATION.murmurWindowMs": 2500,
++    "CELEBRATION.starBloomMs": 600,
++    "CELEBRATION.starFlashMs": 320,
++    "CELEBRATION.starFadeMs": 540,
++    "CELEBRATION.starLandMs": 260,
++    "CELEBRATION.heartBounceMs": 550,
++    "CELEBRATION.heartBlinkMs": 240,
++    "MOTION.settleGuardMs": 220,
++    "MOTION.characters.refuse": 600
+   }
+ }
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+new file mode 100644
+index 00000000..031eb421
+--- /dev/null
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -0,0 +1,891 @@
++// THE ESTATE'S ONE COPY of the chair's shape-census library (T9-W7 pass 7, LAWS P6 §I), landed by
++// MOT-LADDER as the parser `check-motion-bands.mjs` reads source with. Source: evidence/w7/loop/
++// pass7/instruments/shape-census.mjs, sha1 3ba7738ee8d4, formatted by the house prettier with two
++// value-preserving edits for `eslint .` (a needless `\[` in a class; 0.020507696433157868 written
++// as the double it already was). Extend THIS file, never a second one.
++// NOT-A-LANE: a library read by scripts/check-motion-bands.mjs (lint:bands, T9-W7), never run alone.
++// shape-census.mjs — THE shape-census library (T9-W7 pass 7, chair's instruments; registry-v6 §2.10;
++// LAWS P6 §F "THE SHAPE LAW"). Seeded from NOTE-LEDGER's critic's `reserve-law.PROPOSED.mjs` (pass6/
++// critique/NOTE-LEDGER/instruments/). A source gate reads the SHAPE, not the spelling. ONE copy: a lane
++// that hand-rolls a second is a row against LAWS P6 §I.
++//
++// What it reads (every site a declaration can reach a subject from):
++//   · EVERY <style> block of every SFC (scoped or not, a second block too), every stylesheet under src/,
++//     public/** and index.html's <style>; comments stripped by a STRING-AWARE stripper per language
++//     (a `/*` inside `accept="image/*"` or a CSS string never opens a comment)
++//   · nested rules at any depth with their at-rule context, every declaration in SOURCE ORDER with
++//     `!important` read; a SHORTHAND whose value is var()-led is a literal hit on every longhand
++//   · the SUBJECT COMPOUND of each selector (the last compound): positive classes (incl. :is()/:where()
++//     arms) vs negated ones (:not()) — `.x:not(.y)` is subject x under a condition, `.y:not(.x)` is NOT x
++//   · template `style="…"` attributes, `:style` objects (quoted and unquoted keys, camelCase), `:style`
++//     strings and template literals, and Tailwind candidates on elements whose class names the subject
++//   · script style writes anywhere (.vue/.ts/.tsx/.js): `.style.prop =`, `.style['prop'] =`,
++//     `.style[expr] =` (a COMPUTED key is reported unresolved — never dropped), `setProperty(…)` incl.
++//     concatenated names, `Object.assign(x.style, {…})`
++//   · tokens: `--x:` declarations everywhere; `resolve(value)` evaluates var() with fallbacks;
++//     `var(--stem-${x})` is read as EVERY token under the stem
++//   · colours: ONE parser for hex 3/4/6/8, rgb/rgba (comma or space, %), hsl/hsla (deg/turn/rad/grad),
++//     hwb, lab, lch, oklab, oklch, color(srgb|srgb-linear|display-p3 …), named colours, transparent,
++//     color-mix(in srgb|oklab …) → sRGB; `deltaE` in OKLab. A literal is scored by ΔE, never spelling.
++import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
++import { join, relative } from "node:path";
++
++// ---------------------------------------------------------------------------------------- files
++export function walk(dir, pred, out = []) {
++  if (!existsSync(dir)) return out;
++  for (const n of readdirSync(dir)) {
++    if (n === "node_modules" || n.startsWith(".")) continue;
++    const p = join(dir, n);
++    const s = statSync(p);
++    if (s.isDirectory()) walk(p, pred, out);
++    else if (pred(p)) out.push(p);
++  }
++  return out;
++}
++const isTest = (p) =>
++  /\.(test|spec)\.[cm]?[jt]sx?$/.test(p) || /[\\/]__tests__[\\/]/.test(p);
++/** Every source a declaration can come from, under the frontend root `fe`. */
++export function sources(fe, { tests = false } = {}) {
++  const src = walk(
++    join(fe, "src"),
++    (p) => /\.(vue|css|ts|tsx|js|mjs|json)$/.test(p) && (tests || !isTest(p)),
++  );
++  const pub = walk(join(fe, "public"), (p) => /\.css$/.test(p));
++  const html = existsSync(join(fe, "index.html")) ? [join(fe, "index.html")] : [];
++  return [...src, ...pub, ...html];
++}
++
++// ------------------------------------------------------------------------- string-aware strippers
++/** CSS: removes /* … *\/ outside strings; keeps line count (comments → spaces, newlines kept). */
++export function stripCss(s) {
++  let o = "",
++    q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (q) {
++      o += c;
++      if (c === "\\") {
++        o += s[++i] ?? "";
++        continue;
++      }
++      if (c === q) q = null;
++      continue;
++    }
++    if (c === '"' || c === "'") {
++      q = c;
++      o += c;
++      continue;
++    }
++    if (c === "/" && s[i + 1] === "*") {
++      const e = s.indexOf("*/", i + 2);
++      const end = e < 0 ? s.length : e + 2;
++      o += s.slice(i, end).replace(/[^\n]/g, " ");
++      i = end - 1;
++      continue;
++    }
++    o += c;
++  }
++  return o;
++}
++/** JS/TS: removes // and /* *\/ outside strings and template literals (with ${} nesting). */
++export function stripJs(s) {
++  let o = "",
++    i = 0;
++  const stack = [];
++  const blank = (t) => t.replace(/[^\n]/g, " ");
++  while (i < s.length) {
++    const c = s[i],
++      top = stack.at(-1);
++    if (top === "`") {
++      if (c === "\\") {
++        o += c + (s[i + 1] ?? "");
++        i += 2;
++        continue;
++      }
++      if (c === "`") {
++        stack.pop();
++        o += c;
++        i++;
++        continue;
++      }
++      if (c === "$" && s[i + 1] === "{") {
++        stack.push("{");
++        o += "${";
++        i += 2;
++        continue;
++      }
++      o += c;
++      i++;
++      continue;
++    }
++    if (top === '"' || top === "'") {
++      if (c === "\\") {
++        o += c + (s[i + 1] ?? "");
++        i += 2;
++        continue;
++      }
++      if (c === top || c === "\n") stack.pop();
++      o += c;
++      i++;
++      continue;
++    }
++    if (c === '"' || c === "'" || c === "`") {
++      stack.push(c);
++      o += c;
++      i++;
++      continue;
++    }
++    if (c === "{" && top === "{") {
++      stack.push("{");
++      o += c;
++      i++;
++      continue;
++    }
++    if (c === "}" && top === "{") {
++      stack.pop();
++      o += c;
++      i++;
++      continue;
++    }
++    if (c === "/" && s[i + 1] === "/") {
++      const e = s.indexOf("\n", i);
++      const end = e < 0 ? s.length : e;
++      o += blank(s.slice(i, end));
++      i = end;
++      continue;
++    }
++    if (c === "/" && s[i + 1] === "*") {
++      const e = s.indexOf("*/", i + 2);
++      const end = e < 0 ? s.length : e + 2;
++      o += blank(s.slice(i, end));
++      i = end;
++      continue;
++    }
++    o += c;
++    i++;
++  }
++  return o;
++}
++/** HTML/template: removes <!-- … --> (attribute values never open one: `<!--` only starts outside a tag). */
++export function stripHtml(s) {
++  let o = "",
++    inTag = false,
++    q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (inTag) {
++      if (q) {
++        if (c === q) q = null;
++      } else if (c === '"' || c === "'") q = c;
++      else if (c === ">") inTag = false;
++      o += c;
++      continue;
++    }
++    if (s.startsWith("<!--", i)) {
++      const e = s.indexOf("-->", i + 4);
++      const end = e < 0 ? s.length : e + 3;
++      o += s.slice(i, end).replace(/[^\n]/g, " ");
++      i = end - 1;
++      continue;
++    }
++    if (c === "<" && /[a-zA-Z/]/.test(s[i + 1] ?? "")) inTag = true;
++    o += c;
++  }
++  return o;
++}
++
++// ------------------------------------------------------------------------------------- SFC blocks
++const lineAt = (s, idx) => s.slice(0, idx).split("\n").length;
++/** { styles: [{attrs, css, line}], template: {text, line} | null, scripts: [{text, line}] } — EVERY block. */
++export function sfc(text) {
++  const styles = [...text.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)].map((m) => ({
++    attrs: m[1],
++    css: m[2],
++    line: lineAt(text, m.index + m[0].indexOf(">") + 1),
++  }));
++  const scripts = [...text.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map(
++    (m) => ({
++      attrs: m[1],
++      text: m[2],
++      line: lineAt(text, m.index + m[0].indexOf(">") + 1),
++    }),
++  );
++  const t0 = text.indexOf("<template");
++  const t1 = text.lastIndexOf("</template>");
++  const template =
++    t0 >= 0 && t1 > t0
++      ? {
++          text: text.slice(text.indexOf(">", t0) + 1, t1),
++          line: lineAt(text, text.indexOf(">", t0) + 1),
++        }
++      : null;
++  return { styles, scripts, template };
++}
++
++// --------------------------------------------------------------------------------------- CSS rules
++/** Nested rules: [{ctx: [at-preludes], prelude, decls: [{prop, value, important, line}], line}] in source order. */
++export function cssRules(css, baseLine = 1, ctx = [], out = []) {
++  const s = stripCss(css);
++  let depth = 0,
++    start = 0,
++    open = 0;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (c === '"' || c === "'") {
++      const q = c;
++      i++;
++      while (i < s.length && s[i] !== q) {
++        if (s[i] === "\\") i++;
++        i++;
++      }
++      continue;
++    }
++    if (c === "{") {
++      if (depth++ === 0) open = i;
++    } else if (c === "}") {
++      if (--depth === 0) {
++        const prelude = s
++          .slice(start, open)
++          .trim()
++          .replace(/^[;\s]+/, "")
++          .split(/;\s*/)
++          .pop()
++          .trim();
++        const body = s.slice(open + 1, i);
++        const line = baseLine + lineAt(s, open) - 1;
++        if (prelude.startsWith("@")) {
++          // EXTENDED by MOT-LADDER (pass 7): an at-rule's OWN declarations (`@theme { --x: … }`,
++          // a nested `@media { --y: … }` under nesting) were read by nobody — every Tailwind
++          // `@theme` token was invisible. They are the at-rule's rule, prelude = the at-rule.
++          const own = atRuleOwnDecls(body, line);
++          if (own.length)
++            out.push({ ctx, prelude: prelude.replace(/\s+/g, " "), decls: own, line });
++          cssRules(body, line, [...ctx, prelude.replace(/\s+/g, " ")], out);
++        } else {
++          // a nested rule inside a style rule (CSS nesting) — flatten with `&`
++          const nested = [];
++          const flat = body.replace(/([^{};]+)\{([^{}]*)\}/g, (m, pre, inner) => {
++            nested.push({ pre: pre.trim(), inner });
++            return "";
++          });
++          out.push({
++            ctx,
++            prelude: prelude.replace(/\s+/g, " "),
++            decls: decls(flat, line),
++            line,
++          });
++          for (const n of nested)
++            out.push({
++              ctx,
++              prelude: n.pre.includes("&")
++                ? n.pre.replace(/&/g, prelude)
++                : `${prelude} ${n.pre}`,
++              decls: decls(n.inner, line),
++              line,
++            });
++        }
++        start = i + 1;
++      }
++    } else if (c === ";" && depth === 0) start = i + 1;
++  }
++  return out;
++}
++/** The declarations at depth 0 of an at-rule body: every nested block is dropped WITH its
++ *  prelude (back to the last `;` or `}`), so `.x { … } --b: 2;` never eats `--b`. */
++function atRuleOwnDecls(body, line) {
++  let flat = "",
++    seg = 0,
++    depth = 0;
++  for (let i = 0; i < body.length; i++) {
++    const c = body[i];
++    if (c === "{") {
++      if (depth++ === 0) flat += body.slice(seg, body.lastIndexOf(";", i) + 1 || seg);
++    } else if (c === "}") {
++      if (--depth === 0) seg = i + 1;
++    }
++  }
++  if (depth === 0) flat += body.slice(seg);
++  return decls(flat, line);
++}
++/** Declarations of a block body in source order (strings respected). */
++export function decls(body, line = 0) {
++  const out = [];
++  let cur = "",
++    q = null,
++    par = 0;
++  const push = () => {
++    const m = /^\s*(--[\w-]+|-?[a-zA-Z][\w-]*)\s*:\s*([\s\S]*)$/.exec(cur);
++    if (m) {
++      let v = m[2].trim();
++      const imp = /!\s*important\s*$/i.test(v);
++      if (imp) v = v.replace(/!\s*important\s*$/i, "").trim();
++      out.push({
++        prop: m[1].startsWith("--") ? m[1] : m[1].toLowerCase(),
++        value: v,
++        important: imp,
++        line,
++      });
++    }
++    cur = "";
++  };
++  for (const c of body) {
++    if (q) {
++      cur += c;
++      if (c === q) q = null;
++      continue;
++    }
++    if (c === '"' || c === "'") {
++      q = c;
++      cur += c;
++      continue;
++    }
++    if (c === "(") par++;
++    if (c === ")") par--;
++    if (c === ";" && par === 0) {
++      push();
++      continue;
++    }
++    cur += c;
++  }
++  push();
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- selectors
++const splitTop = (s, sep) => {
++  const out = [];
++  let d = 0,
++    cur = "",
++    q = null;
++  for (const c of s) {
++    if (q) {
++      cur += c;
++      if (c === q) q = null;
++      continue;
++    }
++    if (c === '"' || c === "'") q = c;
++    if (c === "(" || c === "[") d++;
++    if (c === ")" || c === "]") d--;
++    if (d === 0 && sep.test(c)) {
++      out.push(cur);
++      cur = "";
++      continue;
++    }
++    cur += c;
++  }
++  out.push(cur);
++  return out.map((x) => x.trim()).filter(Boolean);
++};
++/** The subject compound of one complex selector (the last compound after a combinator). */
++export function subjectCompound(sel) {
++  const s = sel
++    .replace(/:deep\(([^)]*)\)/g, " $1")
++    .replace(/::v-deep/g, " ")
++    .replace(/::?[\w-]+$/, (m) => (/^::/.test(m) ? "" : m));
++  const parts = splitTop(s, /[\s>+~]/);
++  return parts.at(-1) ?? "";
++}
++/** { pos: Set<class>, neg: Set<class>, tags } of a compound: :not() args negate; :is()/:where() args are positive arms. */
++export function compoundClasses(compound) {
++  const pos = new Set(),
++    neg = new Set();
++  let rest = compound;
++  rest = rest.replace(/:not\(((?:[^()]|\([^()]*\))*)\)/g, (m, inner) => {
++    for (const c of inner.matchAll(/\.([\w-]+)/g)) neg.add(c[1]);
++    return "";
++  });
++  rest = rest.replace(
++    /:(?:is|where|matches)\(((?:[^()]|\([^()]*\))*)\)/g,
++    (m, inner) => {
++      for (const arm of splitTop(inner, /,/))
++        for (const c of subjectCompound(arm).matchAll(/\.([\w-]+)/g)) pos.add(c[1]);
++      return "";
++    },
++  );
++  for (const c of rest.matchAll(/\.([\w-]+)/g)) pos.add(c[1]);
++  return { pos, neg };
++}
++/** Does the prelude's selector list carry `cls` in some selector's SUBJECT compound (positively)? */
++export function subjectHas(prelude, cls) {
++  return splitTop(prelude, /,/).some((sel) =>
++    compoundClasses(subjectCompound(sel)).pos.has(cls),
++  );
++}
++
++// ---------------------------------------------------------------------------------- shorthands
++const SHORTHANDS = {
++  font: [
++    "font-family",
++    "font-size",
++    "font-weight",
++    "font-style",
++    "line-height",
++    "font-variant",
++    "font-stretch",
++  ],
++  margin: ["margin-top", "margin-right", "margin-bottom", "margin-left"],
++  padding: ["padding-top", "padding-right", "padding-bottom", "padding-left"],
++  inset: ["top", "right", "bottom", "left"],
++  transition: [
++    "transition-property",
++    "transition-duration",
++    "transition-timing-function",
++    "transition-delay",
++  ],
++  animation: [
++    "animation-name",
++    "animation-duration",
++    "animation-timing-function",
++    "animation-delay",
++    "animation-iteration-count",
++    "animation-direction",
++    "animation-fill-mode",
++  ],
++  overflow: ["overflow-x", "overflow-y"],
++  "contain-intrinsic-size": ["contain-intrinsic-width", "contain-intrinsic-height"],
++  border: ["border-width", "border-style", "border-color"],
++  outline: ["outline-width", "outline-style", "outline-color"],
++  background: ["background-color", "background-image"],
++};
++/** Does declaration `d` set `prop` (directly, via its shorthand, or as a var()-led shorthand — a literal hit)? */
++export function sets(d, prop) {
++  if (d.prop === prop) return true;
++  const lh = SHORTHANDS[d.prop];
++  if (lh && lh.includes(prop)) return true;
++  if (d.prop === "min-block-size" && prop === "min-height") return true;
++  return false;
++}
++const kebab = (k) =>
++  k.replace(/^['"]|['"]$/g, "").replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
++
++// ------------------------------------------------------------------------- template + script sites
++/** Elements in a template whose static class or :class names `cls`: their style=, :style, Tailwind candidates. */
++export function templateSites(tpl, cls, baseLine = 1) {
++  const t = stripHtml(tpl);
++  const out = [];
++  for (const m of t.matchAll(
++    /<([a-zA-Z][\w-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*\/?>/g,
++  )) {
++    const attrs = m[2] ?? "";
++    const line = baseLine + lineAt(t, m.index) - 1;
++    const classes = [
++      ...attrs.matchAll(
++        /(?:^|\s)(?::class|v-bind:class|class)\s*=\s*("([^"]*)"|'([^']*)')/g,
++      ),
++    ]
++      .map((a) => a[2] ?? a[3])
++      .join(" ");
++    if (!new RegExp(`(^|[^\\w-])${cls.replace(/[-]/g, "\\-")}(?![\\w-])`).test(classes))
++      continue;
++    for (const a of attrs.matchAll(
++      /(?:^|\s)(:style|v-bind:style|style)\s*=\s*("([^"]*)"|'([^']*)')/g,
++    )) {
++      const raw = a[3] ?? a[4];
++      if (a[1] === "style")
++        for (const d of decls(raw, line))
++          out.push({ kind: "style-attr", ...d, file: null });
++      else {
++        for (const kv of raw.matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g))
++          out.push({
++            kind: "style-object",
++            prop: kebab(kv[2]),
++            value: kv[3].trim(),
++            important: /!important/.test(kv[3]),
++            line,
++          });
++        for (const str of raw.matchAll(/(`|')([^`']*?:[^`']*)\1/g))
++          for (const d of decls(str[2], line)) out.push({ kind: "style-string", ...d });
++      }
++    }
++    for (const tw of classes.split(/[\s'"{},:[\]]+/)) {
++      const map = TAILWIND(tw);
++      if (map)
++        out.push({
++          kind: "tailwind",
++          prop: map[0],
++          value: map[1],
++          important: tw.startsWith("!"),
++          line,
++          token: tw,
++        });
++    }
++  }
++  return out;
++}
++/** A small Tailwind candidate table (the utilities the estate's gates key on); unknown utilities are ignored. */
++export function TAILWIND(tw) {
++  const t = tw.replace(/^!/, "").replace(/^[\w-]+:/, "");
++  let m;
++  if ((m = /^min-h-(.+)$/.exec(t)))
++    return ["min-height", m[1] === "0" ? "0px" : m[1].replace(/^\[|\]$/g, "")];
++  if ((m = /^font-(sans|serif|mono|hand|display)$/.exec(t)))
++    return ["font-family", m[1]];
++  if ((m = /^font-\[(.+)\]$/.exec(t))) return ["font-family", m[1]];
++  if ((m = /^overflow-(hidden|clip|visible|auto|scroll)$/.exec(t)))
++    return ["overflow", m[1]];
++  if (
++    (m =
++      /^(?:text|bg|border|stroke|fill)-\[(#[0-9a-fA-F]{3,8}|(?:rgb|hsl|oklch|oklab|lab|lch|hwb)\([^\]]+\))\]$/.exec(
++        t,
++      ))
++  )
++    return ["color-literal", m[1]];
++  return null;
++}
++/** Script style writes of `prop` (kebab) anywhere in `text`; computed keys are reported as unresolved sites. */
++export function scriptWrites(text, prop, baseLine = 1) {
++  const s = stripJs(text);
++  const out = [];
++  const camel = prop.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
++  const L = (i) => baseLine + lineAt(s, i) - 1;
++  for (const m of s.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)\s*([^;\n]+)/g))
++    if (m[1] === camel)
++      out.push({ kind: "script-write", prop, value: m[2].trim(), line: L(m.index) });
++  for (const m of s.matchAll(
++    /\.style\[\s*(['"`])([^'"`]+)\1\s*\]\s*=(?!=)\s*([^;\n]+)/g,
++  ))
++    if (kebab(m[2]) === prop)
++      out.push({ kind: "script-write", prop, value: m[3].trim(), line: L(m.index) });
++  for (const m of s.matchAll(/\.style\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g))
++    out.push({
++      kind: "script-write-computed",
++      prop: `?${m[1].trim()}`,
++      value: m[2].trim(),
++      line: L(m.index),
++      unresolved: true,
++    });
++  for (const m of s.matchAll(/setProperty\(\s*([^,]+),\s*([^)]+)\)/g)) {
++    const k = m[1].trim();
++    const lit = /^(['"`])([^'"`$]*)\1$/.exec(k);
++    if (lit) {
++      if (kebab(lit[2]) === prop)
++        out.push({
++          kind: "script-setProperty",
++          prop,
++          value: m[2].trim(),
++          line: L(m.index),
++        });
++    } else
++      out.push({
++        kind: "script-setProperty-computed",
++        prop: `?${k}`,
++        value: m[2].trim(),
++        line: L(m.index),
++        unresolved: true,
++      });
++  }
++  for (const m of s.matchAll(/Object\.assign\(\s*[\w.$?]+\.style\s*,\s*\{([^}]*)\}/g))
++    for (const kv of m[1].matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g))
++      if (kebab(kv[2]) === prop)
++        out.push({
++          kind: "script-assign",
++          prop,
++          value: kv[3].trim(),
++          line: L(m.index),
++        });
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- the census
++/** Every site that sets `prop` on subject class `cls`, tree-wide, in source order per file.
++ *  Returns [{file, kind, ctx, prelude, prop, value, important, line, unresolved?}]. */
++export function census(fe, cls, prop, { files, read, extra = [] } = {}) {
++  const out = [];
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const rel = relative(fe, f);
++    const text = rd(f);
++    const cssBlocks = f.endsWith(".vue")
++      ? sfc(text).styles.map((b) => ({
++          css: b.css,
++          line: b.line,
++          kind: /scoped/.test(b.attrs) ? "sfc-style-scoped" : "sfc-style",
++        }))
++      : f.endsWith(".css")
++        ? [
++            {
++              css: text,
++              line: 1,
++              kind: rel.startsWith("public") ? "public-css" : "stylesheet",
++            },
++          ]
++        : f.endsWith(".html")
++          ? [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => ({
++              css: m[1],
++              line: lineAt(text, m.index),
++              kind: "index-html",
++            }))
++          : [];
++    for (const b of cssBlocks)
++      for (const r of cssRules(b.css, b.line))
++        if (subjectHas(r.prelude, cls))
++          for (const d of r.decls)
++            if (sets(d, prop))
++              out.push({
++                file: rel,
++                kind: b.kind,
++                ctx: r.ctx.join(" "),
++                prelude: r.prelude,
++                prop: d.prop,
++                value: d.value,
++                important: d.important,
++                line: d.line,
++                varLed: d.prop !== prop && /^\s*var\(/.test(d.value),
++              });
++    if (f.endsWith(".vue")) {
++      const b = sfc(text);
++      if (b.template)
++        for (const s of templateSites(b.template.text, cls, b.template.line))
++          if (s.prop === prop)
++            out.push({ file: rel, ctx: "", prelude: `<template .${cls}>`, ...s });
++      for (const sc of b.scripts)
++        for (const w of scriptWrites(sc.text, prop, sc.line))
++          out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++    } else if (/\.(ts|tsx|js|mjs)$/.test(f))
++      for (const w of scriptWrites(text, prop))
++        out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++  }
++  return out;
++}
++/** Tokens: every `--x: v` declaration tree-wide (last wins per name; all kept in `all`). */
++export function tokens(fe, { files, read, extra = [] } = {}) {
++  const map = new Map(),
++    all = [];
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const text = rd(f);
++    const blocks = f.endsWith(".vue")
++      ? sfc(text).styles.map((b) => b.css)
++      : f.endsWith(".css")
++        ? [text]
++        : [];
++    for (const css of blocks)
++      for (const r of cssRules(css))
++        for (const d of r.decls)
++          if (d.prop.startsWith("--")) {
++            map.set(d.prop, d.value);
++            all.push({
++              file: relative(fe, f),
++              prelude: r.prelude,
++              ctx: r.ctx.join(" "),
++              ...d,
++            });
++          }
++  }
++  return { map, all };
++}
++/** Resolve var() with fallbacks against a token map; `var(--stem-${x})` → every token under the stem. */
++export function resolve(value, map, depth = 0) {
++  if (depth > 8) return value;
++  return value.replace(
++    /var\(\s*(--[\w-]*(?:\$\{[^}]*\}[\w-]*)?)\s*(?:,\s*((?:[^()]|\([^()]*\))*))?\)/g,
++    (m, name, fb) => {
++      if (name.includes("${")) {
++        const stem = name.slice(0, name.indexOf("${"));
++        const hits = [...map.keys()].filter((k) => k.startsWith(stem));
++        return hits.length
++          ? `{${hits.map((k) => resolve(map.get(k), map, depth + 1)).join("|")}}`
++          : fb != null
++            ? resolve(fb, map, depth + 1)
++            : m;
++      }
++      if (map.has(name)) return resolve(map.get(name), map, depth + 1);
++      return fb != null ? resolve(fb.trim(), map, depth + 1) : m;
++    },
++  );
++}
++
++// ------------------------------------------------------------------------------------------ colour
++const NAMED =
++  "aliceblue f0f8ff antiquewhite faebd7 aqua 00ffff aquamarine 7fffd4 azure f0ffff beige f5f5dc bisque ffe4c4 black 000000 blanchedalmond ffebcd blue 0000ff blueviolet 8a2be2 brown a52a2a burlywood deb887 cadetblue 5f9ea0 chartreuse 7fff00 chocolate d2691e coral ff7f50 cornflowerblue 6495ed cornsilk fff8dc crimson dc143c cyan 00ffff darkblue 00008b darkcyan 008b8b darkgoldenrod b8860b darkgray a9a9a9 darkgreen 006400 darkgrey a9a9a9 darkkhaki bdb76b darkmagenta 8b008b darkolivegreen 556b2f darkorange ff8c00 darkorchid 9932cc darkred 8b0000 darksalmon e9967a darkseagreen 8fbc8f darkslateblue 483d8b darkslategray 2f4f4f darkslategrey 2f4f4f darkturquoise 00ced1 darkviolet 9400d3 deeppink ff1493 deepskyblue 00bfff dimgray 696969 dimgrey 696969 dodgerblue 1e90ff firebrick b22222 floralwhite fffaf0 forestgreen 228b22 fuchsia ff00ff gainsboro dcdcdc ghostwhite f8f8ff gold ffd700 goldenrod daa520 gray 808080 green 008000 greenyellow adff2f grey 808080 honeydew f0fff0 hotpink ff69b4 indianred cd5c5c indigo 4b0082 ivory fffff0 khaki f0e68c lavender e6e6fa lavenderblush fff0f5 lawngreen 7cfc00 lemonchiffon fffacd lightblue add8e6 lightcoral f08080 lightcyan e0ffff lightgoldenrodyellow fafad2 lightgray d3d3d3 lightgreen 90ee90 lightgrey d3d3d3 lightpink ffb6c1 lightsalmon ffa07a lightseagreen 20b2aa lightskyblue 87cefa lightslategray 778899 lightslategrey 778899 lightsteelblue b0c4de lightyellow ffffe0 lime 00ff00 limegreen 32cd32 linen faf0e6 magenta ff00ff maroon 800000 mediumaquamarine 66cdaa mediumblue 0000cd mediumorchid ba55d3 mediumpurple 9370db mediumseagreen 3cb371 mediumslateblue 7b68ee mediumspringgreen 00fa9a mediumturquoise 48d1cc mediumvioletred c71585 midnightblue 191970 mintcream f5fffa mistyrose ffe4e1 moccasin ffe4b5 navajowhite ffdead navy 000080 oldlace fdf5e6 olive 808000 olivedrab 6b8e23 orange ffa500 orangered ff4500 orchid da70d6 palegoldenrod eee8aa palegreen 98fb98 paleturquoise afeeee palevioletred db7093 papayawhip ffefd5 peachpuff ffdab9 peru cd853f pink ffc0cb plum dda0dd powderblue b0e0e6 purple 800080 rebeccapurple 663399 red ff0000 rosybrown bc8f8f royalblue 4169e1 saddlebrown 8b4513 salmon fa8072 sandybrown f4a460 seagreen 2e8b57 seashell fff5ee sienna a0522d silver c0c0c0 skyblue 87ceeb slateblue 6a5acd slategray 708090 slategrey 708090 snow fffafa springgreen 00ff7f steelblue 4682b4 tan d2b48c teal 008080 thistle d8bfd8 tomato ff6347 turquoise 40e0d0 violet ee82ee wheat f5deb3 white ffffff whitesmoke f5f5f5 yellow ffff00 yellowgreen 9acd32".split(
++    " ",
++  );
++const NAMED_MAP = new Map();
++for (let i = 0; i < NAMED.length; i += 2) NAMED_MAP.set(NAMED[i], NAMED[i + 1]);
++const toLin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4),
++  toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
++const clamp01 = (x) => Math.min(1, Math.max(0, x));
++function oklabToSrgb(L, a, b) {
++  const l_ = L + 0.3963377774 * a + 0.2158037573 * b,
++    m_ = L - 0.1055613458 * a - 0.0638541728 * b,
++    s_ = L - 0.0894841775 * a - 1.291485548 * b;
++  const l = l_ ** 3,
++    m = m_ ** 3,
++    s = s_ ** 3;
++  return [
++    4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s,
++    -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s,
++    -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s,
++  ].map((v) => clamp01(toGam(v)));
++}
++export function srgbToOklab([r, g, b]) {
++  const R = toLin(r),
++    G = toLin(g),
++    B = toLin(b);
++  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B),
++    m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B),
++    s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++  return [
++    0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s,
++    1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s,
++    0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s,
++  ];
++}
++function labToSrgb(L, a, b) {
++  // CIE Lab (D50) → sRGB
++  const fy = (L + 16) / 116,
++    fx = fy + a / 500,
++    fz = fy - b / 200,
++    e = 216 / 24389,
++    k = 24389 / 27;
++  const X = 0.96422 * (fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k),
++    Y = L > k * e ? fy ** 3 : L / k,
++    Z = 0.82521 * (fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k);
++  const Xd = 0.9554734527042182 * X - 0.023098536874261423 * Y + 0.0632593086610217 * Z,
++    Yd = -0.028369706963208136 * X + 1.0099954580058226 * Y + 0.021041398966943008 * Z,
++    Zd = 0.012314001688319899 * X - 0.02050769643315787 * Y + 1.3303659366080753 * Z;
++  return [
++    3.2404542 * Xd - 1.5371385 * Yd - 0.4985314 * Zd,
++    -0.969266 * Xd + 1.8760108 * Yd + 0.041556 * Zd,
++    0.0556434 * Xd - 0.2040259 * Yd + 1.0572252 * Zd,
++  ].map((v) => clamp01(toGam(v)));
++}
++const num = (t, pct = 1) =>
++  t.endsWith("%") ? (parseFloat(t) / 100) * pct : parseFloat(t);
++const hue = (t) =>
++  t.endsWith("turn")
++    ? parseFloat(t) * 360
++    : t.endsWith("grad")
++      ? parseFloat(t) * 0.9
++      : t.endsWith("rad")
++        ? (parseFloat(t) * 180) / Math.PI
++        : parseFloat(t);
++function hslToRgb(h, s, l) {
++  h = ((h % 360) + 360) % 360;
++  const f = (n) => {
++    const k = (n + h / 30) % 12,
++      a = s * Math.min(l, 1 - l);
++    return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1));
++  };
++  return [f(0), f(8), f(4)];
++}
++/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated. */
++export function parseColor(str) {
++  const s = String(str).trim().toLowerCase();
++  if (s === "transparent") return { rgb: [0, 0, 0], a: 0 };
++  if (NAMED_MAP.has(s)) return parseColor("#" + NAMED_MAP.get(s));
++  let m;
++  if ((m = /^#([0-9a-f]{3,8})$/.exec(s))) {
++    let h = m[1];
++    if (h.length <= 4) h = [...h].map((c) => c + c).join("");
++    if (h.length !== 6 && h.length !== 8) return null;
++    const v = [0, 2, 4, 6].map((i) => parseInt(h.slice(i, i + 2) || "ff", 16) / 255);
++    return { rgb: v.slice(0, 3), a: v[3] };
++  }
++  if ((m = /^([a-z-]+)\((.*)\)$/.exec(s))) {
++    const fn = m[1];
++    const inner = m[2];
++    if (fn === "color-mix") {
++      const parts = splitTop(inner, /,/);
++      const space = /in\s+([\w-]+)/.exec(parts[0])?.[1] ?? "srgb";
++      const arm = (p) => {
++        const pm = /\s(\d*\.?\d+)%\s*$/.exec(p) ?? /^(\d*\.?\d+)%\s/.exec(p);
++        return {
++          c: parseColor(p.replace(/\s*\d*\.?\d+%\s*/, " ").trim()),
++          p: pm ? parseFloat(pm[1]) / 100 : null,
++        };
++      };
++      const A = arm(parts[1]),
++        B = arm(parts[2]);
++      if (!A.c || !B.c) return null;
++      let pa = A.p ?? (B.p != null ? 1 - B.p : 0.5),
++        pb = B.p ?? 1 - pa;
++      const sum = pa + pb;
++      const alphaMul = sum < 1 ? sum : 1;
++      pa /= sum;
++      pb /= sum;
++      const a = A.c.a * pa + B.c.a * pb;
++      const pre = (c) =>
++        (space === "oklab" || space === "oklch" ? srgbToOklab(c.rgb) : c.rgb).map(
++          (v) => v * c.a,
++        );
++      const mix = pre(A.c).map((v, i) => (v * pa + pre(B.c)[i] * pb) / (a || 1));
++      return {
++        rgb: space === "oklab" || space === "oklch" ? oklabToSrgb(...mix) : mix,
++        a: a * alphaMul,
++      };
++    }
++    const [body, alpha] = inner.split("/").map((x) => x?.trim());
++    const t = body.split(/[\s,]+/).filter(Boolean);
++    const a = alpha != null ? num(alpha) : t.length === 4 ? num(t[3]) : 1;
++    if (fn === "rgb" || fn === "rgba")
++      return { rgb: t.slice(0, 3).map((x) => num(x, 255) / 255), a };
++    if (fn === "hsl" || fn === "hsla")
++      return {
++        rgb: hslToRgb(
++          hue(t[0]),
++          num(t[1].endsWith("%") ? t[1] : t[1] + "%"),
++          num(t[2].endsWith("%") ? t[2] : t[2] + "%"),
++        ),
++        a,
++      };
++    if (fn === "hwb") {
++      const w = num(t[1]),
++        b = num(t[2]);
++      const base = hslToRgb(hue(t[0]), 1, 0.5);
++      const k = w + b > 1 ? 1 / (w + b) : 1;
++      return { rgb: base.map((v) => v * (1 - w * k - b * k) + w * k), a };
++    }
++    if (fn === "oklab")
++      return { rgb: oklabToSrgb(num(t[0]), num(t[1], 0.4), num(t[2], 0.4)), a };
++    if (fn === "oklch") {
++      const L = num(t[0]),
++        C = num(t[1], 0.4),
++        H = (hue(t[2]) * Math.PI) / 180;
++      return { rgb: oklabToSrgb(L, C * Math.cos(H), C * Math.sin(H)), a };
++    }
++    if (fn === "lab")
++      return { rgb: labToSrgb(num(t[0], 100), num(t[1], 125), num(t[2], 125)), a };
++    if (fn === "lch") {
++      const C = num(t[1], 150),
++        H = (hue(t[2]) * Math.PI) / 180;
++      return { rgb: labToSrgb(num(t[0], 100), C * Math.cos(H), C * Math.sin(H)), a };
++    }
++    if (fn === "color") {
++      const sp = t[0];
++      const v = t.slice(1, 4).map((x) => num(x));
++      if (sp === "srgb") return { rgb: v, a };
++      if (sp === "srgb-linear") return { rgb: v.map(toGam), a };
++      if (sp === "display-p3") {
++        const L = v.map(toLin);
++        return {
++          rgb: [
++            1.2249 * L[0] - 0.2247 * L[1],
++            -0.042 * L[0] + 1.0419 * L[1],
++            -0.0197 * L[0] - 0.0786 * L[1] + 1.0979 * L[2],
++          ].map((x) => clamp01(toGam(x))),
++          a,
++        };
++      }
++    }
++  }
++  return null;
++}
++/** ΔE in OKLab (×100, the usual scale: 2 ≈ just noticeable). */
++export function deltaE(c1, c2) {
++  const A = srgbToOklab(c1.rgb),
++    B = srgbToOklab(c2.rgb);
++  return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
++}
++/** Every colour literal in a value, in any syntax. */
++export function colorLiterals(value) {
++  const out = [];
++  const re =
++    /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)|\b[a-zA-Z]+\b/g;
++  for (const m of value.matchAll(re)) {
++    if (/^[a-zA-Z]+$/.test(m[0]) && !NAMED_MAP.has(m[0].toLowerCase())) continue;
++    const c = parseColor(m[0]);
++    if (c) out.push({ text: m[0], ...c });
++  }
++  return out;
++}

@@ -1,0 +1,32 @@
+rep check-copy-register 0
+rep check-peer-arcs 1
+rep check-peer-arcs --self-test 1
+rep undefined-token-census 1
+rep check-property-block 0
+rep lint:theme-tokens 0
+rep lint:sleep 0
+ctl check-copy-register 0
+ctl check-peer-arcs 1
+ctl check-peer-arcs --self-test 1
+ctl undefined-token-census 1
+ctl check-property-block 0
+ctl lint:theme-tokens 0
+ctl lint:sleep 0
+atk undefined-token-census 1
+atk(clean copy) check-peer-arcs 0
+atk(clean copy) --self-test 0 ✓=65
+ctl undefined-token-census 1
+ctl(clean copy) check-peer-arcs 1
+ctl(clean copy) --self-test 1 ✓=0
+atk census+PROPOSED row 1
+ctl census+PROPOSED row 1
+LOAD { 18.73 22.55 26.13 }
+tree dark chromium exit 1 ·  2 failed  4 passed (15.2s) 
+tree dark webkit exit 1 ·  2 failed  4 passed (16.6s) 
+control dark chromium exit 1 ·  2 failed  4 passed (14.8s) 
+control dark webkit exit 1 ·  2 failed  4 passed (17.8s) 
+tree light chromium exit 0 ·  6 passed (14.7s) 
+tree light webkit exit 0 ·  6 passed (16.0s) 
+control light chromium exit 0 ·  6 passed (14.9s) 
+control light webkit exit 0 ·  6 passed (16.4s) 
+FILTER_DONE

@@ -1,0 +1,15 @@
+20c20
+< export async function fourBands(page, { subject, edge, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0 }) {
+---
+> export async function fourBands(page, { subject, edge, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, off = null, window: win = 1 }) {
+33c33,38
+<   const offCss = `${edge} { visibility: hidden !important; }`;
+---
+>   // CTRL-FACE pass 7 (PROPOSED to the chair's copy): `off` overrides the edge-OFF sheet for an edge that is
+>   // not an element (an outline ring: `<subject> { outline-color: transparent !important }`), and `window`
+>   // (default 1 = the chair's contract, one column per station) takes a station's value as the MAX over a
+>   // run of `window` columns, for a DASHED edge whose gaps are part of its drawing (a 2px dashed ring's
+>   // period is ~12 device px at DPR 2; a gap is not a dropped station when its dash is in the same window).
+>   const offCss = off ?? `${edge} { visibility: hidden !important; }`;
+67a73
+>     if (win > 1) { const raw = st.slice(); for (let k = 0; k < raw.length; k++) { let m = 1; for (let j = Math.max(0, k - (win >> 1)); j <= Math.min(raw.length - 1, k + (win >> 1)); j++) m = Math.max(m, raw[j]); st[k] = m; } }

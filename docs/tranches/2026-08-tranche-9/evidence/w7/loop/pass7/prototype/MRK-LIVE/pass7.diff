@@ -1,0 +1,3414 @@
+diff --git a/web/frontend/e2e/focus-ring.spec.ts b/web/frontend/e2e/focus-ring.spec.ts
+new file mode 100644
+index 00000000..fe34e873
+--- /dev/null
++++ b/web/frontend/e2e/focus-ring.spec.ts
+@@ -0,0 +1,1709 @@
++import { test, expect, type Page } from "@playwright/test";
++import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
++import { join } from "node:path";
++import { fileURLToPath, pathToFileURL } from "node:url";
++import { wobbleRect } from "@mkbabb/pencil-boil";
++import { RING_GEOMETRY } from "../src/pencil/config/pencilConfig";
++
++// PRM: live, because the ring's whole claim is that it follows a box the dock GLIDES under a
++// WAAPI transform; freezing motion deletes the subject of gates 4 and 15.
++//
++/**
++ * T9-W7 §5/§6 — THE DRAWN FOCUS RING, as estate gates.
++ *
++ * The design (`FocusRing.vue`) suppresses the UA outline globally and draws ONE ring in the
++ * house hand on whatever has focus. Four claims carry it, and until this file they lived in a
++ * lane's probe directory, where nothing in CI could read them:
++ *
++ *   G-LIVE-4   the ring travels with what it rings — pressing a control the ring is already on
++ *              glides that control 520 ms under a transform that fires no scroll, resize or
++ *              transitionend on its path, and the ring's framing error stays 0.
++ *   G-LIVE-14  the rank is an ORDER, and it holds in EVERY media arm. At HEAD the
++ *              `prefers-contrast: more` arm ranked tier 2 = tier 1 = 0.9; a ladder that
++ *              collapses in one arm is not a ladder.
++ *   G-LIVE-15  no focus stop rests on a running animation: at rest the ring's target path reads
++ *              0 FINITE animations. (`document.getAnimations()` reads 1 at rest — the board's
++ *              perpetual boil — so a document-wide read is not a test for "in motion".)
++ *   G-LIVE-16  every focusable stop keeps an indicator. Suppressing the UA outline is the most
++ *              dangerous thing this design does, so the walk is the tripwire: each stop carries
++ *              a drawn ring ON IT, the board's own tier-2 ink, or an outline whose STYLE is not
++ *              `none` — and a stranded focusable injected into the same walk must be caught.
++ *   G-LIVE-19  the seams the ring reads are registered ONCE each, no `var(x, fallback)` stands
++ *              behind any registered name, and each registration's value is what paints.
++ *   G-LIVE-17  in a room, the coarse tape names the author's cell, takes no tap, and never
++ *              shares a pixel with your ring (its covering of OTHER cells is the chair's row).
++ *   G-LIVE-20  on a phone, the ring leaves with what it rang: an activation of the dock's tab
++ *              drops focus to `body` in WebKit with no `focusout` on the ring's path, and no
++ *              ring may survive that at any framed instant.
++ *   G-LIVE-21  under forced colours the drawn ring is gone and the deck's active card, a
++ *              staging face and the armed guard's verb each carry an outline in the engine's
++ *              own Highlight, and the guard's paints.
++ *   G-LIVE-22  MA-N from the DOM (MRK-ABS's G-ABS-7/8): no board ring's ink enters its
++ *              neighbour at 16×16, 9×9 or 4×4, proven on the recipe the shipped arm of
++ *              `RING_GEOMETRY` names, and the comment's figure table held to the DOM.
++ *   G-LIVE-23  the ring is VISIBLE, not merely present: all four sides of the chrome ring at every
++ *              stop key and of the board's tier-2 ring read a painted core median of 3:1 or
++ *              better against the same pixels with the ring hidden; a faint ring, a faded ink and
++ *              a clipped side red it in the same run.
++ *
++ * NO CLOCK STANDS IN FOR A SETTLE. Every settle waits on the ANIMATION SET of the target's own
++ * ancestor path (the bound the component uses) or on a polled pose (`poseSettled`: the dock
++ * sheet, the tape). A `waitForTimeout(520)` would re-introduce exactly the duration guess the
++ * design deleted, and W8's next retune of the 520 would silently un-gate the row. The waits that
++ * remain are GESTURES, not settles, each tagged where it stands: the boot pause, the keyboard
++ * modality pause, the 140 ms mid-glide reversal and G-LIVE-20's framed instants.
++ */
++
++const FE_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
++/** THE CHAIR'S INSTRUMENTS, imported, never hand-rolled (T9-W7 pass 7, LAWS P6 §I: ONE copy of the
++ *  four-band edge probe and the shape-census library). They live in the loop's record until the W7
++ *  fold vendors them beside `e2e/`; a worktree reaches the main tree's copy. A missing copy is a
++ *  thrown error, never a skip. */
++const INSTRUMENTS =
++  process.env.PASS7_INSTRUMENTS ??
++  [FE_ROOT + "/../..", FE_ROOT + "/../../../../.."]
++    .map((root) => join(root, "docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments"))
++    .find((d) => existsSync(d));
++// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped .mjs instruments
++const instrument = async (name: string): Promise<any> => {
++  if (!INSTRUMENTS) throw new Error("the pass-7 instruments are not reachable (set PASS7_INSTRUMENTS)");
++  return import(pathToFileURL(join(INSTRUMENTS, name)).href);
++};
++
++const BOARD = "?game=sudoku";
++
++async function boardReady(page: Page, query = BOARD) {
++  await page.goto("./" + query);
++  await page.waitForSelector('[role="grid"] [role="gridcell"]', { timeout: 60000 });
++  await page.waitForSelector("path.cell-line", { state: "attached", timeout: 60000 });
++  await page.waitForTimeout(1200);
++}
++
++/** Keyboard modality first, so `:focus-visible` is true whichever way focus then lands. */
++async function focusByKeyboard(page: Page, sel: string) {
++  await page.keyboard.press("Tab");
++  await page.evaluate(
++    (s) => document.querySelector<HTMLElement>(s)?.focus({ preventScroll: true }),
++    sel,
++  );
++  await page.waitForTimeout(400);
++}
++
++/** Nothing FINITE left running on the ring's target's own ancestor path. The target is the
++ *  `aria-activedescendant` when one is declared: a listbox keeps DOM focus while its option is
++ *  what travels. */
++async function settled(page: Page, after = 120) {
++  await page.waitForFunction(
++    () => {
++      const a = document.activeElement as HTMLElement | null;
++      if (!a) return true;
++      const owned = a.getAttribute?.("aria-activedescendant");
++      const box = (owned && document.getElementById(owned)) || a;
++      const set: Animation[] = [];
++      for (let e: Element | null = box; e; e = e.parentElement)
++        set.push(...e.getAnimations());
++      return (
++        set.filter((x) =>
++          Number.isFinite(x.effect?.getComputedTiming().endTime ?? Infinity),
++        ).length === 0
++      );
++    },
++    undefined,
++    { timeout: 20000 },
++  );
++  await page.waitForTimeout(after);
++}
++
++const framing = (page: Page) =>
++  page.evaluate(() => {
++    const a = document.activeElement as HTMLElement | null;
++    const ring = document.querySelector<SVGElement>(".focus-ring");
++    const owned = a?.getAttribute?.("aria-activedescendant");
++    const box = ((owned && document.getElementById(owned)) || a) as HTMLElement | null;
++    if (!ring || !box) return { ring: !!ring, box: !!box, err: null as number | null };
++    const rb = ring.getBoundingClientRect();
++    const bb = box.getBoundingClientRect();
++    const o = parseFloat(getComputedStyle(box).getPropertyValue("--focus-ring-outset"));
++    return {
++      ring: true,
++      box: true,
++      outset: o,
++      rings: document.querySelectorAll(".focus-ring").length,
++      err: +Math.max(
++        Math.abs(rb.left - Math.max(0, bb.left - o)),
++        Math.abs(rb.top - (bb.top - o)),
++      ).toFixed(2),
++    };
++  });
++
++// ── G-LIVE-4 ────────────────────────────────────────────────────────────────────────────
++test("G-LIVE-4 · the ring travels with the control it rings", async ({ page }) => {
++  await boardReady(page);
++  if (!(await page.locator(".drawer-tab").count()))
++    test.skip(true, "no .drawer-tab at this viewport");
++
++  await focusByKeyboard(page, ".drawer-tab");
++  const before = await framing(page);
++  expect(before.ring, "the ring lands on the tab before the press").toBe(true);
++  expect(before.err).toBeLessThanOrEqual(0.5);
++
++  // THE DEFECT'S OWN GESTURE — press the control focus is already on. Nothing moves focus, so
++  // no focus event arrives, and the box glides out from under the ring unless the ring follows
++  // the animation set.
++  await page.evaluate(() => document.querySelector<HTMLElement>(".drawer-tab")?.click());
++  await settled(page);
++  const afterPress = await framing(page);
++  expect(afterPress.ring, "the ring is still on the tab after the glide").toBe(true);
++  expect(
++    afterPress.err,
++    "framing error after the dock's 520 ms glide",
++  ).toBeLessThanOrEqual(0.5);
++  expect(afterPress.rings, "exactly one ring exists").toBe(1);
++
++  // A REVERSAL, DEALT IN THE PAGE AND WITNESSED. The dock retargets a mid-glide press by
++  // `anim.reverse()` (`useControlsDrawer.ts`): the SAME animation stays on the path with its rate
++  // flipped. A Playwright-timed second press lands after the glide in WebKit often enough to
++  // green a broken tree (pass 6: a ring that stops following a reversed glide was caught in
++  // chromium only), so the press, the 140 ms and the second press all run in-page, the row
++  // ASSERTS the glide it reverses was running and now runs backwards, and the ring's framing is
++  // sampled at EVERY frame of the reversed glide (read after each frame's paint), not only at rest.
++  // The tab is RE-QUERIED at every read, as the FOCUSED tab: the dock re-berths it on the state
++  // flip, so a node held from before the press, or the first `.drawer-tab` in the document, is
++  // not the one the ring is on (WebKit read an empty path that way). The
++  // reversed rate is PENDING for a frame or two after `reverse()`, so it is watched for, not read
++  // once.
++  const rev = await page.evaluate(async () => {
++    const q = () =>
++      ((document.activeElement as HTMLElement | null)?.closest<HTMLElement>(".drawer-tab") ??
++        document.querySelector<HTMLElement>(".drawer-tab"))!;
++    const path = () => {
++      const set: Animation[] = [];
++      for (let e: Element | null = q(); e; e = e.parentElement) set.push(...e.getAnimations());
++      return set.filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity));
++    };
++    const err = () => {
++      const ring = document.querySelector(".focus-ring");
++      if (!ring) return null;
++      const rb = ring.getBoundingClientRect();
++      const bb = q().getBoundingClientRect();
++      const o = parseFloat(getComputedStyle(q()).getPropertyValue("--focus-ring-outset"));
++      return Math.max(Math.abs(rb.left - Math.max(0, bb.left - o)), Math.abs(rb.top - (bb.top - o)));
++    };
++    const series: (number | null)[] = [];
++    let stop = false;
++    const sample = () =>
++      requestAnimationFrame(() =>
++        setTimeout(() => {
++          series.push(err());
++          if (!stop) sample();
++        }, 0),
++      );
++    q().click();
++    await new Promise((r) => setTimeout(r, 140)); // the gesture: the second press lands mid-glide
++    const midway = path().length;
++    q().click();
++    sample();
++    let reversed = false;
++    for (let f = 0; f < 4 && !reversed; f++) {
++      await new Promise((r) => requestAnimationFrame(r));
++      reversed = path().some((a) => a.playbackRate < 0);
++    }
++    // Sampled until the path is empty AND the focused tab holds its pose for five frames: the
++    // dock re-flips its layout after the last animation ends, and a ring left behind shows there.
++    const t0 = performance.now();
++    await new Promise<void>((done) => {
++      let still = 0;
++      let last = "";
++      const check = () => {
++        const b = q().getBoundingClientRect();
++        const pose = `${b.left},${b.top}`;
++        still = path().length === 0 && pose === last ? still + 1 : 0;
++        last = pose;
++        if (still >= 5 || performance.now() - t0 > 3000) done();
++        else requestAnimationFrame(check);
++      };
++      check();
++    });
++    await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++    stop = true;
++    return {
++      midway,
++      reversed,
++      frames: series.length,
++      missing: series.filter((v) => v === null).length,
++      max: +Math.max(...series.map((v) => v ?? Infinity)).toFixed(2),
++    };
++  });
++  console.log(`[G-LIVE-4 reversal] ${JSON.stringify(rev)}`);
++  expect(rev.midway, "the second press lands while the glide is running").toBeGreaterThan(0);
++  // THE INTERLEAVE EACH ENGINE DEALT, printed and never pinned (chair A.5.6): whether the dock
++  // reverses a mid-glide press in place or cuts it is §13's mechanics, and a ring row may not red
++  // when §13 changes it. The ring's claim is the per-frame framing bound below, through whatever
++  // was dealt. The reversal clause still needs a subject, so each engine records its deal beside
++  // the run's output and asserts that at least one engine of THIS run reversed; a lone engine run
++  // (no sibling record within the window) prints that it could not check, and says so.
++  const project = test.info().project.name;
++  const deals = join(test.info().project.outputDir, "g-live-4-deals");
++  mkdirSync(deals, { recursive: true });
++  writeFileSync(join(deals, `${project}.json`), JSON.stringify({ reversed: rev.reversed, at: Date.now() }));
++  const siblings = readdirSync(deals)
++    .filter((f) => f !== `${project}.json`)
++    .map((f) => JSON.parse(readFileSync(join(deals, f), "utf8")) as { reversed: boolean; at: number })
++    .filter((d) => Date.now() - d.at < 20 * 60_000);
++  console.log(
++    `[G-LIVE-4 dealt] ${project}: ${rev.reversed ? "reversed in place" : "cut"} · siblings this run: ${siblings.length ? siblings.map((d) => (d.reversed ? "reversed" : "cut")).join(", ") : "none recorded (the at-least-one clause is unchecked)"}`,
++  );
++  expect(
++    rev.reversed || siblings.length === 0 || siblings.some((d) => d.reversed),
++    "at least one engine deals a reversal, or the reversal clause has no subject",
++  ).toBe(true);
++  expect(rev.frames, "the reversed glide was sampled frame by frame").toBeGreaterThan(5);
++  expect(rev.missing, "a ring at every sampled frame of the reversed glide").toBe(0);
++  expect(rev.max, "worst per-frame framing error through the reversed glide (px)").toBeLessThanOrEqual(1);
++  await settled(page);
++  // STRICT, no `if`: a reversal that loses its ring is a red, never a skip (the silent
++  // `if (afterReversal.ring)` stood three passes). Polled, because the reads after a fixed
++  // in-page window inherit its clock: the invariant is read until it holds or the row reds.
++  await expect
++    .poll(async () => {
++      const f = await framing(page);
++      return { ring: f.ring, rings: f.rings, framed: f.err !== null && f.err <= 0.5 };
++    }, { message: "after the reversal: one ring, on the tab, framed within 0.5 px" })
++    .toEqual({ ring: true, rings: 1, framed: true });
++
++  // NEGATIVE CONTROL, same run, for the reversal read alone: move the tab under a transform that
++  // fires no event the ring listens to (no scroll, no resize, no ResizeObserver entry, no
++  // animation), and the same read must see the ring left behind.
++  await page.evaluate(() => {
++    const t = document.querySelector<HTMLElement>(".drawer-tab")!;
++    t.style.translate = "0 24px";
++  });
++  await page.evaluate(
++    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
++  );
++  await expect
++    .poll(async () => (await framing(page)).err ?? 0, {
++      message: "the reversal's read sees a ring its box left behind",
++    })
++    .toBeGreaterThan(0.5);
++  await page.evaluate(() => {
++    document.querySelector<HTMLElement>(".drawer-tab")!.style.translate = "";
++  });
++});
++
++// ── G-LIVE-14 ───────────────────────────────────────────────────────────────────────────
++//
++// The order, not the values: `1 > tier2 > tier1 > peer` must hold in the normal arm AND under
++// `prefers-contrast: more`. PW-WebKit DOES emulate `prefers-contrast` (measured; the spec's
++// "chromium-only" caveat was wrong), so the arm is asserted in both engines and the row says
++// so by reading `matchMedia` rather than trusting the emulation.
++test("G-LIVE-14 · the opacity rank is an order in every media arm", async ({ page }) => {
++  for (const contrast of ["no-preference", "more"] as const) {
++    await page.emulateMedia({ contrast });
++    await boardReady(page);
++    const arm = await page.evaluate(() => {
++      const probe = document.createElement("div");
++      document.body.appendChild(probe);
++      const read = (cls: string) => {
++        probe.className = cls;
++        return parseFloat(getComputedStyle(probe).opacity);
++      };
++      const matched = window.matchMedia("(prefers-contrast: more)").matches;
++      probe.remove();
++      return { matched, read: read.name };
++    });
++    expect(
++      arm.matched,
++      `the ${contrast} arm is the arm the engine actually applied`,
++    ).toBe(contrast === "more");
++
++    // READ THE PAINT, NOT THE STYLESHEET TEXT. A `cssText` scrape greens on a null read the
++    // moment a selector is renamed or the compiler re-scopes it — measured: this row passed
++    // vacuously until the not-null clause below was added. Focus one cell, leave another
++    // alone, and ask the two live paths what they actually compute.
++    // THE WHOLE LADDER, ONE PLACE (registry v4 §5): invalid > tier 2 > tier 1 > peer. The two
++    // states a solo board never shows are put on REAL cells by their own class names, so the
++    // numbers are the scoped rules' computed values, not a copy of them in this file.
++    const rank = await page.evaluate(() => {
++      const cells = Array.from(document.querySelectorAll<HTMLElement>(".game-cell"));
++      const n = cells.length;
++      const input = cells[0]?.querySelector<HTMLInputElement>("input");
++      input?.focus();
++      const read = (c: HTMLElement | undefined) => {
++        const p = c?.querySelector<SVGPathElement>(".cell-ghost-path");
++        if (!p) return null;
++        const v = parseFloat(getComputedStyle(p).strokeOpacity);
++        return Number.isFinite(v) ? v : null;
++      };
++      const as = (c: HTMLElement | undefined, cls: string) => {
++        c?.classList.add(cls);
++        const v = read(c);
++        c?.classList.remove(cls);
++        return v;
++      };
++      return {
++        invalid: as(cells[n >> 1], "is-invalid"),
++        tier2: read(cells[0]),
++        tier1: read(cells[n - 1]),
++        peer: as(cells[(n >> 1) + 1], "is-peer-cursor"),
++      };
++    });
++    await page.waitForTimeout(250);
++    // A row that reads nothing must RED, not pass: the rank is only a rank if both rungs were
++    // found. This is the clause that keeps the gate from greening on a renamed selector.
++    expect(rank.tier1, `tier 1's stroke-opacity was read in the ${contrast} arm`).not.toBeNull();
++    expect(rank.tier2, `tier 2's stroke-opacity was read in the ${contrast} arm`).not.toBeNull();
++    expect(rank.invalid, `the invalid rung was read in the ${contrast} arm`).not.toBeNull();
++    expect(rank.peer, `the peer rung was read in the ${contrast} arm`).not.toBeNull();
++    // A ladder that ties is not a ladder: every rung strictly above the next, in every arm.
++    expect(
++      rank.invalid,
++      `invalid outranks tier 2 in the ${contrast} arm`,
++    ).toBeGreaterThan(rank.tier2!);
++    expect(
++      rank.tier2,
++      `tier 2 outranks tier 1 in the ${contrast} arm`,
++    ).toBeGreaterThan(rank.tier1!);
++    expect(
++      rank.tier1,
++      `tier 1 outranks a peer's ring in the ${contrast} arm`,
++    ).toBeGreaterThan(rank.peer!);
++  }
++  await page.emulateMedia({ contrast: "no-preference" });
++});
++
++// ── G-LIVE-15 ───────────────────────────────────────────────────────────────────────────
++test("G-LIVE-15 · no focus stop rests on a running animation", async ({ page }) => {
++  await boardReady(page);
++  for (const sel of ["button.logo-trigger", ".sun-moon-toggle", ".drawer-tab"]) {
++    if (!(await page.locator(sel).count())) continue;
++    await focusByKeyboard(page, sel);
++    await settled(page);
++    const counts = await page.evaluate((s) => {
++      const el = document.querySelector<HTMLElement>(s);
++      if (!el) return null;
++      const set: Animation[] = [];
++      for (let e: Element | null = el; e; e = e.parentElement)
++        set.push(...e.getAnimations());
++      return {
++        all: set.length,
++        finite: set.filter((x) =>
++          Number.isFinite(x.effect?.getComputedTiming().endTime ?? Infinity),
++        ).length,
++      };
++    }, sel);
++    expect(counts, `${sel} exists`).not.toBeNull();
++    expect(counts!.finite, `${sel} rests with nothing finite on its path`).toBe(0);
++  }
++  // THE FIFTH STOP, THE ARMED GUARD (charter row 13): a dirty board, the deck, a step, `d` for
++  // deal — the ribbon arms and its verbs take focus. They rest on nothing running, and the ring
++  // lands on the verb it names.
++  const blank = await page.evaluate(() => {
++    const cells = document.querySelectorAll(".sudoku-cell");
++    for (let i = 0; i < cells.length; i++) if (!cells[i].querySelector(".glyph-svg")) return i;
++    return -1;
++  });
++  expect(blank, "an empty cell to dirty").toBeGreaterThanOrEqual(0);
++  await page.evaluate((idx) => {
++    const input = document.querySelectorAll<HTMLInputElement>(".sudoku-cell input")[idx];
++    input.focus();
++    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "1");
++    input.dispatchEvent(new Event("input", { bubbles: true }));
++  }, blank);
++  await page.evaluate(() => document.querySelector<HTMLElement>("button.logo-trigger")?.click());
++  const viewport = page.locator(".gallery-viewport");
++  await expect(viewport).toBeVisible({ timeout: 15000 });
++  await viewport.press("ArrowRight");
++  await viewport.press("d");
++  await expect(page.locator(".gallery-guard")).toBeVisible();
++  await focusByKeyboard(page, ".guard-btn");
++  await settled(page);
++  const guard = await page.evaluate(() => {
++    const el = document.activeElement as HTMLElement;
++    const set: Animation[] = [];
++    for (let e: Element | null = el; e; e = e.parentElement) set.push(...e.getAnimations());
++    const rb = document.querySelector(".focus-ring")?.getBoundingClientRect();
++    const bb = el.getBoundingClientRect();
++    const cx = bb.left + bb.width / 2;
++    const cy = bb.top + bb.height / 2;
++    return {
++      on: el.classList.contains("guard-btn"),
++      finite: set.filter((x) =>
++        Number.isFinite(x.effect?.getComputedTiming().endTime ?? Infinity),
++      ).length,
++      ringed: !!rb && rb.left <= cx && cx <= rb.right && rb.top <= cy && cy <= rb.bottom,
++    };
++  });
++  expect(guard.on, "focus is on a guard verb").toBe(true);
++  expect(guard.finite, ".guard-btn rests with nothing finite on its path").toBe(0);
++  expect(guard.ringed, "the ring lands on the guard verb").toBe(true);
++
++  // NEGATIVE CONTROL, same run: an INFINITE animation on the path enters the raw set and must
++  // NOT enter the filtered one — otherwise the row above is green because the filter is broken.
++  const ctl = await page.evaluate(() => {
++    const el = document.querySelector<HTMLElement>(".drawer-tab") ?? document.body;
++    const a = document.body.animate([{ opacity: 1 }, { opacity: 1 }], {
++      duration: 1000,
++      iterations: Infinity,
++    });
++    const set: Animation[] = [];
++    for (let e: Element | null = el; e; e = e.parentElement) set.push(...e.getAnimations());
++    const out = {
++      all: set.length,
++      finite: set.filter((x) =>
++        Number.isFinite(x.effect?.getComputedTiming().endTime ?? Infinity),
++      ).length,
++    };
++    a.cancel();
++    return out;
++  });
++  expect(ctl.all, "the injected infinite animation is on the path").toBeGreaterThan(0);
++  expect(ctl.finite, "and the FINITE filter refuses it").toBe(0);
++});
++
++// ── G-LIVE-16 ───────────────────────────────────────────────────────────────────────────
++//
++// EVERY focusable stop keeps an indicator, and an indicator is PAINT. Suppressing the UA outline
++// is the most dangerous thing this design does, so this walk is its tripwire, and a tripwire that
++// reads a rect or a declared style cannot see the danger: with `--ring-ink` deleted the ring's
++// path computes `stroke: none` and paints 0 px, and with the living cell's ghost at opacity 0 the
++// board paints 0 px on focus, yet a rect-and-style form of this row stayed green in both engines
++// (pass-5 critic, X1/X2). Three forms count, and each is judged on the pixels it changes:
++//   · a DRAWN ring that rings the element focus is ON (its `aria-activedescendant` first): the
++//     ring's path computes a stroke that is not `none`, no ancestor zeroes its opacity, and the
++//     ring's own box, photographed ON and then with `.focus-ring { visibility: hidden }`, differs
++//     by more than FLOOR pixels beyond the noise of a second ON photograph;
++//   · the BOARD's own tier-2 ink on a cell input: the ghost computes a stroke at ≥ 0.9, its
++//     opacity chain is non-zero, and the cell photographed focused and then blurred differs by
++//     more than FLOOR pixels beyond the noise;
++//   · an OUTLINE whose style is not `none`, photographed ON and then with its style struck.
++//
++// WHY ONE STOP PER ROUND TRIP. The ring is a Vue render: it exists only after the focus event's
++// flush, so each stop is focused, two frames are awaited, and only then read. The walk runs with
++// the boil PARKED (`reducedMotion: reduce`): the living mark is born at pose 0 and the grid holds
++// still, so a pixel that changes between two photographs is the indicator, not the beat.
++//
++// THE NEGATIVE CONTROLS, SAME RUN. The stranded control (an `<input class="cell-native-input">`
++// outside any cell: the ring refuses it, no board ink is behind it, index.css strips its outline)
++// must be CAUGHT. Then five plants are laid one at a time over a stop the walk judged good, and
++// each must turn that stop's verdict false: X1 the ink deleted (`--ring-ink: initial`), X1b the
++// ink made transparent, X1c the ring at opacity 0, X2 the living cell's ghost at opacity 0, X2b
++// the ghost's stroke made transparent. A plant that leaves its stop green means this row cannot
++// see paint, and the row reds.
++const FOCUSABLE =
++  'a[href], button:not([disabled]), input:not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
++/** Changed pixels (any channel moved ≥ 16/255) a real indicator must paint beyond the noise. */
++const FLOOR = 30;
++
++const frames2 = (page: Page) =>
++  page.evaluate(
++    () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
++  );
++
++/** Pixels that changed between ON and OFF but NOT between ON and a second ON, decoded in the
++ *  page: the indicator's own pixels, with anything that moves on its own (a caret, a sparkle)
++ *  subtracted pixel by pixel rather than by count. */
++const indicatorPixels = (page: Page, on: Buffer, off: Buffer, again: Buffer) =>
++  page.evaluate(
++    async (shots) => {
++      const load = async (s: string) => {
++        const blob = await (await fetch("data:image/png;base64," + s)).blob();
++        const bmp = await createImageBitmap(blob);
++        const c = new OffscreenCanvas(bmp.width, bmp.height);
++        const x = c.getContext("2d")!;
++        x.drawImage(bmp, 0, 0);
++        return x.getImageData(0, 0, bmp.width, bmp.height).data;
++      };
++      const [p, q, r] = await Promise.all(shots.map(load));
++      if (p.length !== q.length || p.length !== r.length) return { paint: -1, noise: -1 };
++      const moved = (u: Uint8ClampedArray, v: Uint8ClampedArray, i: number) =>
++        Math.max(Math.abs(u[i] - v[i]), Math.abs(u[i + 1] - v[i + 1]), Math.abs(u[i + 2] - v[i + 2])) >= 16;
++      let paint = 0;
++      let noise = 0;
++      for (let i = 0; i < p.length; i += 4) {
++        const n = moved(p, r, i);
++        if (n) noise++;
++        else if (moved(p, q, i)) paint++;
++      }
++      return { paint, noise };
++    },
++    [on, off, again].map((b) => b.toString("base64")),
++  );
++
++type Kind = "drawn" | "board" | "outline";
++interface Verdict {
++  who: string;
++  judged: boolean;
++  ok: boolean;
++  stranded: boolean;
++  by: Kind | null;
++  paint: Partial<Record<Kind, number>>;
++  noise?: number;
++}
++
++/** Judge the stop tagged `data-gl16=i` (focus is already on it): which indicator it CLAIMS, then
++ *  whether that indicator paints. */
++async function judgeStop(page: Page, i: number): Promise<Verdict> {
++  const claim = await page.evaluate((i) => {
++    const e = document.querySelector<HTMLElement>(`[data-gl16="${i}"]`)!;
++    const who = e.tagName.toLowerCase() + "." + (String(e.className).split(" ")[0] || "");
++    const stranded = "gl16Stranded" in e.dataset;
++    if (document.activeElement !== e || !e.matches(":focus-visible"))
++      return { who, judged: false, stranded, drawn: null, board: null, outline: null };
++    const chainOpaque = (n: Element | null) => {
++      for (; n; n = n.parentElement) {
++        const s = getComputedStyle(n);
++        if (parseFloat(s.opacity) === 0 || s.visibility === "hidden" || s.display === "none")
++          return false;
++      }
++      return true;
++    };
++    const pad = (r: DOMRect, p: number) => {
++      const x = Math.max(0, Math.floor(r.left - p));
++      const y = Math.max(0, Math.floor(r.top - p));
++      return {
++        x,
++        y,
++        width: Math.min(innerWidth, Math.ceil(r.right + p)) - x,
++        height: Math.min(innerHeight, Math.ceil(r.bottom + p)) - y,
++      };
++    };
++    const owned = e.getAttribute("aria-activedescendant");
++    const target = (owned && document.getElementById(owned)) || e;
++    const cb = target.getBoundingClientRect();
++    const cx = cb.left + cb.width / 2;
++    const cy = cb.top + cb.height / 2;
++    const ring = Array.from(document.querySelectorAll<SVGElement>(".focus-ring")).find((r) => {
++      const rb = r.getBoundingClientRect();
++      return rb.left <= cx && cx <= rb.right && rb.top <= cy && cy <= rb.bottom;
++    });
++    const rp = ring?.querySelector("path");
++    const drawn =
++      ring && rp && getComputedStyle(rp).stroke !== "none" && chainOpaque(rp)
++        ? pad(ring.getBoundingClientRect(), 2)
++        : null;
++    const cell = e.closest(".game-cell");
++    const ghost = cell?.querySelector<SVGPathElement>(".cell-ghost-path");
++    const gs = ghost ? getComputedStyle(ghost) : null;
++    const board =
++      cell && ghost && gs!.stroke !== "none" && parseFloat(gs!.strokeOpacity) >= 0.9 && chainOpaque(ghost)
++        ? pad(cell.getBoundingClientRect(), 4)
++        : null;
++    const cs = getComputedStyle(e);
++    const outline =
++      cs.outlineStyle !== "none" && parseFloat(cs.outlineWidth) > 0
++        ? pad(e.getBoundingClientRect(), parseFloat(cs.outlineWidth) + Math.abs(parseFloat(cs.outlineOffset) || 0) + 2)
++        : null;
++    return { who, judged: true, stranded, drawn, board, outline };
++  }, i);
++  const v: Verdict = { who: claim.who, judged: claim.judged, ok: false, stranded: claim.stranded, by: null, paint: {} };
++  if (!claim.judged) return v;
++  // ON, then the indicator removed, then ON again: a pixel counts when it moved ON → OFF and
++  // held still ON → ON. A clip outside the viewport cannot be photographed and reads −1.
++  const read = async (clip: { x: number; y: number; width: number; height: number }, off: () => Promise<void>, on: () => Promise<void>) => {
++    if (clip.width < 1 || clip.height < 1) return -1;
++    const a = await page.screenshot({ clip, caret: "hide" });
++    await off();
++    await frames2(page);
++    const b = await page.screenshot({ clip, caret: "hide" });
++    await on();
++    await frames2(page);
++    const c = await page.screenshot({ clip, caret: "hide" });
++    const { paint, noise } = await indicatorPixels(page, a, b, c);
++    v.noise = Math.max(v.noise ?? 0, noise);
++    return paint;
++  };
++  const style = (css: string) =>
++    page.evaluate((css) => {
++      const s = document.createElement("style");
++      s.dataset.gl16Off = "";
++      s.textContent = css;
++      document.head.appendChild(s);
++    }, css);
++  const unstyle = () => page.evaluate(() => document.querySelectorAll("style[data-gl16-off]").forEach((s) => s.remove()));
++  if (claim.drawn)
++    v.paint.drawn = await read(claim.drawn, () => style(".focus-ring { visibility: hidden !important; }"), unstyle);
++  if (claim.board)
++    v.paint.board = await read(
++      claim.board,
++      () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur()),
++      () => page.evaluate((i) => document.querySelector<HTMLElement>(`[data-gl16="${i}"]`)?.focus({ preventScroll: true }), i),
++    );
++  if (claim.outline)
++    v.paint.outline = await read(claim.outline, () => style(`[data-gl16="${i}"] { outline-style: none !important; }`), unstyle);
++  for (const k of ["drawn", "board", "outline"] as const)
++    if ((v.paint[k] ?? 0) > FLOOR) {
++      v.ok = true;
++      v.by = k;
++      break;
++    }
++  return v;
++}
++
++test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on paint)", async ({ page }) => {
++  test.setTimeout(180000);
++  await page.emulateMedia({ reducedMotion: "reduce" });
++  await boardReady(page);
++  const sampled = await page.evaluate((FOCUSABLE) => {
++    const s = document.createElement("input");
++    s.className = "cell-native-input";
++    s.setAttribute("aria-label", "stranded control");
++    s.dataset.gl16Stranded = "";
++    s.style.cssText = "position:fixed;left:8px;bottom:8px;width:48px;height:24px";
++    document.body.appendChild(s);
++    const stops = Array.from(document.querySelectorAll<HTMLElement>(FOCUSABLE)).filter((e) => {
++      const b = e.getBoundingClientRect();
++      return b.width > 0 && b.height > 0 && !e.closest("[inert]");
++    });
++    // Two per tag.class signature — the whole estate at one route is thousands of cells. The
++    // stranded control is walked LAST and always.
++    const seen = new Map<string, number>();
++    let i = 0;
++    for (const e of stops) {
++      if (e === s) continue;
++      const k = e.tagName + "." + (String(e.className).split(" ")[0] || "");
++      const n = seen.get(k) ?? 0;
++      if (n >= 2) continue;
++      seen.set(k, n + 1);
++      e.dataset.gl16 = String(i++);
++      if (i >= 24) break;
++    }
++    s.dataset.gl16 = String(i++);
++    return i;
++  }, FOCUSABLE);
++  expect(sampled, "the walk reached some stops").toBeGreaterThan(4);
++
++  // A stop is photographed where a reader would see it: scrolled to the viewport's middle first
++  // (a ring below the fold paints nothing a screenshot can hold).
++  const focusStop = async (i: number) => {
++    await page.evaluate((i) => {
++      const e = document.querySelector<HTMLElement>(`[data-gl16="${i}"]`);
++      e?.scrollIntoView({ block: "center", inline: "nearest" });
++      e?.focus({ preventScroll: true });
++    }, i);
++    await frames2(page);
++    await frames2(page);
++  };
++  await page.keyboard.press("Tab");
++  const verdicts: (Verdict & { i: number })[] = [];
++  for (let i = 0; i < sampled; i++) {
++    await focusStop(i);
++    verdicts.push({ i, ...(await judgeStop(page, i)) });
++  }
++
++  console.log(
++    "[G-LIVE-16] " +
++      verdicts.map((v) => `${v.who}:${v.judged ? (v.ok ? v.by : "NONE") : "-"}${JSON.stringify(v.paint)}~${v.noise ?? 0}`).join(" | "),
++  );
++  const judged = verdicts.filter((v) => v.judged);
++  // A stop that refused focus, or took it without `:focus-visible`, is not judged — so an engine
++  // where nothing is judged would green this row on an empty list.
++  expect(judged.length, "stops actually focused and matching :focus-visible").toBeGreaterThan(4);
++  expect(
++    judged.filter((v) => !v.stranded && !v.ok).map((v) => `${v.who} ${JSON.stringify(v.paint)}`),
++    "every judged estate stop PAINTS an indicator",
++  ).toEqual([]);
++
++  // THE PLANTS, one at a time over a stop the walk judged good by the form the plant attacks.
++  const drawnStop = verdicts.find((v) => v.ok && v.by === "drawn" && !v.stranded);
++  const boardStop = verdicts.find((v) => v.ok && v.by === "board" && !v.stranded);
++  expect(drawnStop, "the walk judged a stop good by its drawn ring").toBeDefined();
++  expect(boardStop, "the walk judged a cell good by the board's ink").toBeDefined();
++  const plants: [string, string, number][] = [
++    ["X1 the ring's ink deleted", ":root { --ring-ink: initial !important; }", drawnStop!.i],
++    ["X1b the ring's ink transparent", ".focus-ring, .focus-ring * { stroke: rgba(0,0,0,0) !important; color: transparent !important; }", drawnStop!.i],
++    ["X1c the ring at opacity 0", ".focus-ring { opacity: 0 !important; }", drawnStop!.i],
++    ["X2 the living cell's ghost at opacity 0", ".cell-ghost.is-active { opacity: 0 !important; }", boardStop!.i],
++    ["X2b the ghost's stroke transparent", ".cell-ghost-path { stroke: rgba(0,0,0,0) !important; fill: none !important; }", boardStop!.i],
++  ];
++  const planted: { plant: string; who: string; ok: boolean; paint: Verdict["paint"] }[] = [];
++  for (const [name, css, i] of plants) {
++    await page.evaluate((css) => {
++      const s = document.createElement("style");
++      s.dataset.gl16Plant = "";
++      s.textContent = css;
++      document.head.appendChild(s);
++    }, css);
++    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
++    await focusStop(i);
++    const v = await judgeStop(page, i);
++    planted.push({ plant: name, who: v.who, ok: v.ok, paint: v.paint });
++    await page.evaluate(() => document.querySelectorAll("style[data-gl16-plant]").forEach((s) => s.remove()));
++  }
++  await page.evaluate(() => {
++    document.querySelector("[data-gl16-stranded]")?.remove();
++    for (const e of document.querySelectorAll<HTMLElement>("[data-gl16]")) delete e.dataset.gl16;
++  });
++  console.log("[G-LIVE-16 plants] " + planted.map((p) => `${p.plant} on ${p.who}: ok=${p.ok} ${JSON.stringify(p.paint)}`).join(" | "));
++
++  const control = verdicts.find((v) => v.stranded);
++  expect(control?.judged, "the stranded control took focus and matched :focus-visible").toBe(true);
++  expect(control?.ok, "the stranded control is CAUGHT (else this row cannot fail)").toBe(false);
++  for (const p of planted) expect(p.ok, `${p.plant} turns ${p.who} RED (else this row cannot see paint)`).toBe(false);
++});
++
++// ── G-LIVE-19 ───────────────────────────────────────────────────────────────────────────
++//
++// The seams the ring reads from its host are REGISTERED, once each, with no `var(…, fallback)`
++// behind any of them anywhere, and each registration's value is the one that paints:
++//   · ONE HOME is counted in SOURCE, not assumed: every `@property` at every CSS site, comments
++//     stripped, tallied per name, and its brace depth read — a second registration of any name is
++//     RED, and so is one nested inside a rule (the bundler hoists it silently). The CSSOM cannot
++//     make this count: the compiler dedupes `@property`, so a duplicate in source reaches the page
++//     as one rule (measured: a second `--motion-note` block greened the CSSOM tally). The CSSOM
++//     walk (recursive; a style rule read BEFORE its nested rules) still proves each one SHIPPED.
++//   · NO MASKED DEFAULT is scanned for — in every site a value can be written from, read through
++//     the chair's shape-census library (LAWS P6 §F, the SHAPE law; one copy, imported): every SFC
++//     `<style>` block, every stylesheet under `src/` and `public/`, `index.html`, AND every
++//     template (`style="…"`, `:style` objects and strings) and every script (`setProperty`, style
++//     writes, string literals). Pass 6's scan read `<style>` alone and a masked default written as
++//     a template `style=` attribute of the lazy laminate stayed green (X5, chair A.5.5).
++//   · `--toggle-bleed`'s initial is a SENTINEL (9999px) no rung ever publishes, so the host
++//     must read its publisher's value (< 0); an absent publisher reds here, not silently.
++//   · `--motion-note`'s 250ms is read where it PAINTS: the marks' own scoped rule, on a probe
++//     that carries that rule's scope hash, computes `animation-duration: 0.25s`.
++// Nothing is wrapped in an `if`: a surface this route should carry and does not is a RED.
++
++/** Every `@property` in one style text, with its brace depth. */
++function registrationsIn(file: string, text: string) {
++  const out: { name: string; file: string; depth: number }[] = [];
++  let depth = 0;
++  for (let i = 0; i < text.length; i++) {
++    const c = text[i];
++    if (c === "{") depth++;
++    else if (c === "}") depth--;
++    else if (c === "@" && text.startsWith("@property", i)) {
++      const m = /^@property\s+(--[\w-]+)/.exec(text.slice(i));
++      if (m) out.push({ name: m[1], file, depth });
++    }
++  }
++  return out;
++}
++
++/** Every `var(--registered, …)` in one site's text: a second argument behind a registered name. */
++const maskedIn = (file: string, text: string, registered: Set<string>) =>
++  [...text.matchAll(/var\(\s*(--[\w-]+)\s*,/g)].filter((m) => registered.has(m[1])).map((m) => `${m[1]} in ${file}`);
++
++/** Every site a value can be written from, per file, comments stripped by the library's string-
++ *  aware strippers: `css` (style blocks, stylesheets, `index.html`'s `<style>`) and `code`
++ *  (templates and scripts). `plant` overlays one file's raw text in memory. */
++// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the library is untyped .mjs
++function sites(shape: any, plant?: { file: string; text: string }) {
++  const out: { file: string; css: string; code: string }[] = [];
++  for (const f of shape.sources(FE_ROOT) as string[]) {
++    const file = f.slice(FE_ROOT.length + 1).replace(/^src\//, "");
++    const text = plant && plant.file === file ? plant.text : readFileSync(f, "utf8");
++    if (f.endsWith(".vue")) {
++      const b = shape.sfc(text);
++      out.push({
++        file,
++        // eslint-disable-next-line @typescript-eslint/no-explicit-any
++        css: b.styles.map((x: any) => shape.stripCss(x.css)).join("\n"),
++        // eslint-disable-next-line @typescript-eslint/no-explicit-any
++        code: [b.template ? shape.stripHtml(b.template.text) : "", ...b.scripts.map((x: any) => shape.stripJs(x.text))].join("\n"),
++      });
++    } else if (f.endsWith(".css")) out.push({ file, css: shape.stripCss(text), code: "" });
++    else if (f.endsWith(".html"))
++      out.push({
++        file,
++        css: [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => shape.stripCss(m[1])).join("\n"),
++        code: shape.stripHtml(text.replace(/<style[^>]*>[\s\S]*?<\/style>/g, "")),
++      });
++    else out.push({ file, css: "", code: f.endsWith(".json") ? text : shape.stripJs(text) });
++  }
++  return out;
++}
++
++test("G-LIVE-19 · the ring's seams have one home and no masked default", async ({ page }) => {
++  const shape = await instrument("shape-census.mjs");
++  const all = sites(shape);
++  const source = all.flatMap(({ file, css }) => registrationsIn(file, css));
++  const per = new Map<string, string[]>();
++  for (const r of source) per.set(r.name, [...(per.get(r.name) ?? []), r.file]);
++  expect(
++    [...per].filter(([, v]) => v.length > 1).map(([k, v]) => `${k}: ${v.join(", ")}`),
++    "no custom property is registered twice in source",
++  ).toEqual([]);
++  expect(
++    source.filter((r) => r.depth !== 0).map((r) => `${r.name} in ${r.file} at depth ${r.depth}`),
++    "no @property is nested inside a rule",
++  ).toEqual([]);
++  for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
++    expect(per.get(n), `${n} has one home in source`).toEqual(["assets/index.css"]);
++
++  // NO MASKED DEFAULT, READ IN SOURCE, AT EVERY SITE. The CSSOM below sees only the sheets THIS
++  // route loaded; a lazy SFC never reaches it (pass-5 X3), and a template attribute never reaches
++  // a `<style>`-only scan (pass-6 X5). The walk must have reached the lazy SFCs, the public/
++  // sheets and index.html.
++  const registered = new Set(per.keys());
++  const files = all.map((x) => x.file);
++  for (const lazy of ["pencil/sheet/AnswerKeyLaminate.vue", "games/sudoku/SudokuPoster.vue", "index.html"])
++    expect(files, `the source walk reads ${lazy}`).toContain(lazy);
++  const masked = (xs: { file: string; css: string; code: string }[]) =>
++    xs.flatMap(({ file, css, code }) => [...maskedIn(file, css, registered), ...maskedIn(file, code, registered)]);
++  expect(masked(all), "no var(…, fallback) stands behind a registered name, at any source site").toEqual([]);
++  // THE PLANTS, in-run, each an in-memory overlay of the lazy laminate's raw file through the same
++  // walk: X3 in a `<style>`, X5 as a template `style=` attribute, X5b a `:style` string, X5c a
++  // script `setProperty`. Each must be caught; the unplanted file must not be.
++  const lamFile = "pencil/sheet/AnswerKeyLaminate.vue";
++  const lam = readFileSync(join(FE_ROOT, "src", lamFile), "utf8");
++  const tpl = lam.indexOf("<template>") + "<template>".length;
++  const scr = lam.indexOf("<script setup lang=\"ts\">") + "<script setup lang=\"ts\">".length;
++  for (const [name, text] of [
++    ["X3 <style>", lam + "\n<style>.x{animation-duration:var(--motion-note, 280ms)}</style>\n"],
++    ["X5 template style=", lam.slice(0, tpl) + '\n<i style="animation-duration: var(--motion-note, 280ms)"></i>' + lam.slice(tpl)],
++    ["X5b :style string", lam.slice(0, tpl) + "\n<i :style=\"'animation-duration: var(--motion-note, 280ms)'\"></i>" + lam.slice(tpl)],
++    ["X5c script setProperty", lam.slice(0, scr) + "\ndocument.body.style.setProperty('animation-duration', 'var(--motion-note, 280ms)');" + lam.slice(scr)],
++  ] as [string, string][])
++    expect(masked(sites(shape, { file: lamFile, text })), `${name}: a masked default planted in the lazy laminate is caught`).toEqual([
++      `--motion-note in ${lamFile}`,
++    ]);
++
++  await boardReady(page);
++  const reg = await page.evaluate(() => {
++    const regs: Record<string, string[]> = {};
++    const masked: string[] = [];
++    const texts: string[] = [];
++    const walk = (list: CSSRuleList) => {
++      for (const r of Array.from(list)) {
++        if (r instanceof CSSPropertyRule) {
++          (regs[r.name] ??= []).push(r.initialValue ?? "");
++          continue;
++        }
++        if (r instanceof CSSStyleRule) texts.push(r.selectorText + "{" + r.style.cssText + "}");
++        const nested = (r as CSSGroupingRule).cssRules;
++        if (nested && nested.length) walk(nested);
++      }
++    };
++    for (const sheet of Array.from(document.styleSheets)) {
++      try {
++        walk(sheet.cssRules);
++      } catch {
++        /* a cross-origin sheet (the font CSS) carries no rules of ours */
++      }
++    }
++    // The estate's registrations, not the compiler's: Tailwind v4 emits its own `--tw-*`
++    // `@property` rules AND the `var(--tw-x, …)` that read them, in one generated block no
++    // author writes (the same line L17's amendment draws for Vue's `data-v-*`).
++    const estate = Object.keys(regs).filter((n) => !n.startsWith("--tw-"));
++    for (const t of texts)
++      for (const m of t.matchAll(/var\(\s*(--[\w-]+)\s*,/g))
++        if (estate.includes(m[1])) masked.push(`${m[1]} in ${t.slice(0, t.indexOf("{"))}`);
++
++    const toggle = document.querySelector<HTMLElement>(".sun-moon-toggle");
++    const tcs = toggle ? getComputedStyle(toggle) : null;
++
++    // The marks' rule, found by what it says rather than by a hash this file would hard-code.
++    const marks = texts.find((t) => /\.pencil-marks\[data-v-[\w-]+\]\{/.test(t) && /--motion-note/.test(t));
++    const hash = marks?.match(/\[(data-v-[\w-]+)\]/)?.[1] ?? null;
++    let noteDuration: string | null = null;
++    if (hash) {
++      const probe = document.createElement("div");
++      probe.className = "pencil-marks";
++      probe.setAttribute(hash, "");
++      document.body.appendChild(probe);
++      noteDuration = getComputedStyle(probe).animationDuration;
++      probe.remove();
++    }
++    return {
++      regs,
++      estate,
++      masked,
++      toggle: !!toggle,
++      toggleOutset: tcs?.getPropertyValue("--focus-ring-outset").trim() ?? null,
++      toggleBleed: tcs?.getPropertyValue("--toggle-bleed").trim() ?? null,
++      marksRule: !!marks,
++      noteDuration,
++    };
++  });
++
++  const twice = Object.entries(reg.regs).filter(([, v]) => v.length > 1).map(([k]) => k);
++  expect(twice, "no custom property is registered twice, anywhere").toEqual([]);
++  for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
++    expect(reg.regs[n]?.length, `${n} is registered exactly once`).toBe(1);
++  expect(reg.estate.length, "the scan reads the estate's own registrations").toBeGreaterThanOrEqual(3);
++  expect(reg.masked, "no var(…, fallback) stands behind a registered name").toEqual([]);
++
++  expect(reg.toggle, "the toggle is on this route").toBe(true);
++  // The registration types the value: a host declaring a calc() reaches JS as px, not as a
++  // token stream. This is the half of the row that a plain-length host cannot prove.
++  expect(reg.toggleOutset, "the toggle's calc() outset computes to px").toMatch(/^-?[0-9.]+px$/);
++  expect(reg.regs["--toggle-bleed"]?.[0], "the bleed's initial is the sentinel").toBe("9999px");
++  expect(
++    parseFloat(reg.toggleBleed ?? "NaN"),
++    "the toggle reads its PUBLISHER's bleed (< 0), never the sentinel",
++  ).toBeLessThan(0);
++
++  expect(reg.regs["--motion-note"]?.[0], "the note's rung is registered at 250ms").toBe("250ms");
++  expect(reg.marksRule, "the marks' scoped rule consumes var(--motion-note)").toBe(true);
++  expect(reg.noteDuration, "and paints the rung: marks-fade-in runs 250ms").toBe("0.25s");
++});
++
++// ── G-LIVE-20 ───────────────────────────────────────────────────────────────────────────
++//
++// THE DEPARTURE, ON A PHONE (the 9-line check in `FocusRing.vue`'s `measure()`). At 393×699 in a
++// WITNESSED coarse regime an activation of the dock's tab opens the sheet over it, and WebKit
++// drops focus to `document.body` with no `focusout` on the ring's path; without the check a ring
++// stays drawn round the tab at every instant through settle. The invariant, at every framed
++// instant: focus on `body` means NO ring; focus anywhere else means at most one ring, framing the
++// element it CLAIMS (`aria-activedescendant` first) within half a pixel.
++//
++// Its bound, stated: the check runs only when something calls `measure()` — an event, the
++// ResizeObserver, or a settle frame. A departure with no animation on the target's path and no
++// event at all is still unread.
++test.describe("G-LIVE-20 · coarse", () => {
++  test.use({ viewport: { width: 393, height: 699 }, hasTouch: true, deviceScaleFactor: 2 });
++
++  test("G-LIVE-20 · the ring leaves with what it rang (393×699, coarse)", async ({ page }) => {
++    await boardReady(page);
++    const regime = await page.evaluate(() => ({
++      coarse: matchMedia("(pointer: coarse)").matches,
++      noHover: matchMedia("(hover: none)").matches,
++    }));
++    expect(regime, "the regime is witnessed coarse, not assumed").toEqual({
++      coarse: true,
++      noHover: true,
++    });
++    if (!(await page.locator(".drawer-tab").count()))
++      test.skip(true, "no .drawer-tab at this viewport");
++
++    // Each read waits ONE frame first: the settle loop runs `measure()` in a rAF callback, before
++    // that frame paints. A DOM read taken between a click and the next frame is a state no frame
++    // ever showed (measured: chromium read 1 ring on `body` there, and 0 one frame later).
++    const snap = () =>
++      page.evaluate(async () => {
++        await new Promise<void>((r) => requestAnimationFrame(() => r()));
++        const a = document.activeElement as HTMLElement | null;
++        const rings = Array.from(document.querySelectorAll<SVGElement>(".focus-ring"));
++        const onBody = !a || a === document.body;
++        const owned = a?.getAttribute?.("aria-activedescendant");
++        const claim = ((owned && document.getElementById(owned)) || a) as HTMLElement | null;
++        let err: number | null = null;
++        if (!onBody && claim && rings[0]) {
++          const o = parseFloat(getComputedStyle(claim).getPropertyValue("--focus-ring-outset"));
++          const rb = rings[0].getBoundingClientRect();
++          const bb = claim.getBoundingClientRect();
++          err = +Math.max(
++            Math.abs(rb.left - Math.max(0, bb.left - o)),
++            Math.abs(rb.top - (bb.top - o)),
++          ).toFixed(2);
++        }
++        return {
++          on: onBody ? "body" : claim!.tagName.toLowerCase() + "." + String(claim!.className).split(" ")[0],
++          rings: rings.length,
++          err,
++        };
++      });
++    const judge = (s: Awaited<ReturnType<typeof snap>>, at: string) => {
++      if (s.on === "body") expect(s.rings, `${at}: focus is on body, so no ring`).toBe(0);
++      else {
++        expect(s.rings, `${at}: at most one ring`).toBeLessThanOrEqual(1);
++        if (s.rings) expect(s.err, `${at}: the ring frames ${s.on}`).toBeLessThanOrEqual(0.5);
++      }
++    };
++
++    await focusByKeyboard(page, ".drawer-tab");
++    const before = await snap();
++    expect(before.rings, "the ring lands on the tab before the press").toBe(1);
++    judge(before, "before");
++
++    // THE GESTURE IS AN ACTIVATION, NOT A TAP. A real `tap()` drops focus WITH events in both
++    // engines, so it shows 0 rings with or without the check (measured) and cannot gate it. The
++    // defect lives on the synthetic `click()` that Enter/Space and an assistive technology's
++    // "press" dispatch: WebKit then moves focus to `body` with no `focusout` on the ring's path,
++    // and without the check a ring stays on the tab through settle (0 px from it, focus on body).
++    await page.evaluate(() => document.querySelector<HTMLElement>(".drawer-tab")?.click());
++    await page.waitForTimeout(120);
++    judge(await snap(), "t+120");
++    await page.waitForTimeout(160);
++    judge(await snap(), "t+280");
++    await settled(page, 300);
++    judge(await snap(), "settle");
++
++    // A REVERSAL mid-glide, then settle.
++    await page.evaluate(() => document.querySelector<HTMLElement>(".drawer-tab")?.click());
++    await page.waitForTimeout(140);
++    await page.evaluate(() => document.querySelector<HTMLElement>(".drawer-tab")?.click());
++    judge(await snap(), "at the reversal");
++    await settled(page, 300);
++    judge(await snap(), "after the reversal");
++  });
++});
++
++// ── G-LIVE-21 ───────────────────────────────────────────────────────────────────────────
++//
++// FORCED COLOURS, THE DECK. There the drawn ring is `display: none` and the UA outline is the
++// indicator; the deck keeps DOM focus on its scrollport (an `aria-activedescendant` listbox), and
++// the scrollport draws no ring of its own on purpose. So the ACTIVE CARD must carry the outline,
++// or a High Contrast reader has nothing at all on the deck (measured on this tree before the cure:
++// card `none`, scrollport `none`, ring hidden — both engines). Chromium applies the emulation;
++// the row reads `matchMedia` rather than trusting it.
++test("G-LIVE-21 · forced colours: the deck's active card carries the outline", async ({
++  page,
++}) => {
++  await page.emulateMedia({ forcedColors: "active" });
++  await boardReady(page);
++  const forced = await page.evaluate(() => matchMedia("(forced-colors: active)").matches);
++  test.skip(!forced, "this engine does not apply forced-colors emulation");
++  await page.evaluate(() => document.querySelector<HTMLElement>("button.logo-trigger")?.click());
++  await expect(page.locator(".gallery-viewport")).toBeVisible({ timeout: 15000 });
++  await focusByKeyboard(page, ".gallery-viewport");
++  const deck = await page.evaluate(() => {
++    const v = document.querySelector<HTMLElement>(".gallery-viewport")!;
++    const id = v.getAttribute("aria-activedescendant");
++    const card = id ? document.getElementById(id) : null;
++    const cs = card ? getComputedStyle(card) : null;
++    return {
++      fv: v.matches(":focus-visible"),
++      card: !!card,
++      style: cs?.outlineStyle ?? null,
++      width: cs ? parseFloat(cs.outlineWidth) : 0,
++    };
++  });
++  expect(deck.fv, "the deck took keyboard focus").toBe(true);
++  expect(deck.card, "the deck names its active card").toBe(true);
++  expect(deck.style, "the active card's outline is drawn").not.toBe("none");
++  expect(deck.width, "with width").toBeGreaterThan(0);
++  // THE SYSTEM INK, not merely an outline (MRK-ABS G-ABS-4f, grafted: registry-v6 §3.1). Each
++  // host's outline resolves to the engine's own `Highlight`, read from a probe in the same regime;
++  // an outline in `CanvasText` or a hard-coded ink is a RED.
++  const highlight = await page.evaluate(() => {
++    const p = document.body.appendChild(document.createElement("i"));
++    p.style.color = "Highlight";
++    const c = getComputedStyle(p).color;
++    p.remove();
++    return c;
++  });
++  const deckInk = await page.evaluate(() => {
++    const id = document.querySelector(".gallery-viewport")!.getAttribute("aria-activedescendant")!;
++    return getComputedStyle(document.getElementById(id)!).outlineColor;
++  });
++  expect(deckInk, "the active card's outline is the system Highlight").toBe(highlight);
++
++  // THE STAGING FACE, same regime (G-ABS-4f's third host): the deck's verbs take keyboard focus
++  // off the scrollport, and each must carry its own outline in the system ink.
++  await focusByKeyboard(page, ".staging-btn:not([disabled])");
++  const staging = await page.evaluate(() => {
++    const el = document.activeElement as HTMLElement;
++    const cs = getComputedStyle(el);
++    return {
++      on: el.classList.contains("staging-btn"),
++      fv: el.matches(":focus-visible"),
++      style: cs.outlineStyle,
++      width: parseFloat(cs.outlineWidth),
++      ink: cs.outlineColor,
++    };
++  });
++  console.log(`[G-LIVE-21] Highlight ${highlight} · deck card ${deckInk} · staging ${staging.style} ${staging.width}px ${staging.ink}`);
++  expect(staging.on && staging.fv, "a staging face took keyboard focus").toBe(true);
++  expect(staging.style, "the staging face's outline is drawn").not.toBe("none");
++  expect(staging.width, "with width").toBeGreaterThan(0);
++  expect(staging.ink, "in the system Highlight").toBe(highlight);
++  // ITS NEGATIVE, same run: the staging face's outline forced to CanvasText must read as not-Highlight.
++  const canvasText = await page.addStyleTag({
++    content: ".staging-btn:focus-visible { outline-color: CanvasText !important; }",
++  });
++  const planted = await page.evaluate(() => getComputedStyle(document.activeElement as HTMLElement).outlineColor);
++  await canvasText.evaluate((e) => e.remove());
++  expect(planted, "plant: a CanvasText outline is caught by the Highlight clause").not.toBe(highlight);
++
++  // THE ARMED GUARD, same forced regime (the pass-5 walk read seven stops and never this one): a
++  // dirty board, the deck, a step, `d` — the ribbon arms and its verb takes keyboard focus. Its
++  // indicator is judged on PAINT: the verb's box photographed focused, blurred, focused again,
++  // and the pixels that moved with focus and held still between the two focused shots counted.
++  await page.keyboard.press("Escape");
++  await boardReady(page);
++  const blank = await page.evaluate(() => {
++    const cells = document.querySelectorAll(".sudoku-cell");
++    for (let i = 0; i < cells.length; i++) if (!cells[i].querySelector(".glyph-svg")) return i;
++    return -1;
++  });
++  expect(blank, "an empty cell to dirty").toBeGreaterThanOrEqual(0);
++  await page.evaluate((idx) => {
++    const input = document.querySelectorAll<HTMLInputElement>(".sudoku-cell input")[idx];
++    input.focus();
++    Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value")!.set!.call(input, "1");
++    input.dispatchEvent(new Event("input", { bubbles: true }));
++  }, blank);
++  await page.evaluate(() => document.querySelector<HTMLElement>("button.logo-trigger")?.click());
++  const viewport = page.locator(".gallery-viewport");
++  await expect(viewport).toBeVisible({ timeout: 15000 });
++  await viewport.press("ArrowRight");
++  await viewport.press("d");
++  await expect(page.locator(".gallery-guard")).toBeVisible();
++  await focusByKeyboard(page, ".guard-btn");
++  await settled(page);
++  const guard = await page.evaluate(() => {
++    const el = document.activeElement as HTMLElement;
++    const face = el.querySelector<HTMLElement>(".guard-face");
++    const r = el.getBoundingClientRect();
++    const read = (e: HTMLElement | null) => (e ? getComputedStyle(e).outlineStyle : null);
++    return {
++      on: el.classList.contains("guard-btn"),
++      fv: el.matches(":focus-visible"),
++      btn: read(el),
++      face: read(face),
++      btnInk: getComputedStyle(el).outlineColor,
++      faceInk: face ? getComputedStyle(face).outlineColor : null,
++      clip: {
++        x: Math.max(0, Math.floor(r.left - 8)),
++        y: Math.max(0, Math.floor(r.top - 8)),
++        width: Math.ceil(r.width + 16),
++        height: Math.ceil(r.height + 16),
++      },
++    };
++  });
++  expect(guard.on && guard.fv, "focus is on an armed guard verb, keyboard-visible").toBe(true);
++  const on = await page.screenshot({ clip: guard.clip, caret: "hide" });
++  await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
++  await frames2(page);
++  const off = await page.screenshot({ clip: guard.clip, caret: "hide" });
++  await page.evaluate(() => document.querySelector<HTMLElement>(".guard-btn")?.focus());
++  await frames2(page);
++  const again = await page.screenshot({ clip: guard.clip, caret: "hide" });
++  const px = await indicatorPixels(page, on, off, again);
++  console.log(`[G-LIVE-21 guard] btn ${guard.btn} · face ${guard.face} · painted ${px.paint} px (noise ${px.noise})`);
++  expect(
++    [guard.btn, guard.face].some((st) => st && st !== "none"),
++    "the armed guard verb (or its face) carries an outline under forced colours",
++  ).toBe(true);
++  expect(
++    [guard.btnInk, guard.faceInk].filter((_, i) => [guard.btn, guard.face][i] !== "none"),
++    "every outline the armed guard draws is the system Highlight",
++  ).toEqual([guard.btn, guard.face].filter((st) => st !== "none").map(() => highlight));
++  expect(px.paint, "and focus PAINTS on the guard verb's box").toBeGreaterThan(FLOOR);
++});
++
++/** A SETTLED POSE, polled: nothing finite running anywhere in the document and the subject's box
++ *  unmoved across three frames. The dock sheet and the tape both travel; this is how a row waits
++ *  for either without guessing a duration. */
++const poseSettled = (p: Page, sel: string) =>
++  p.waitForFunction(
++    (sel) =>
++      new Promise<boolean>((done) => {
++        const t = document.querySelector(sel);
++        if (!t) return done(false);
++        const running = document
++          .getAnimations()
++          .filter(
++            (a) =>
++              a.playState === "running" &&
++              Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity),
++          );
++        if (running.length) return done(false);
++        const at = () => {
++          const r = t.getBoundingClientRect();
++          return r.top + r.left * 1e-3;
++        };
++        const y0 = at();
++        requestAnimationFrame(() =>
++          requestAnimationFrame(() => requestAnimationFrame(() => done(Math.abs(at() - y0) < 0.01))),
++        );
++      }),
++    sel,
++    { timeout: 10000 },
++  );
++
++// ── G-LIVE-17 ───────────────────────────────────────────────────────────────────────────
++//
++// A NON-REGRESSION GUARD, NOT A BORN-RED: it reads green on the dev-mode control `74a2b5d9` in
++// both engines too (pass-5 critic), so it proves the drawn ring did not bring the tape into the
++// tap or onto the ring, and nothing more.
++//
++// THE COARSE TAPE AND THE RING, IN A ROOM (dev `?wire=local`, one context, the product's own
++// invite path — a dist never forms a room). A peer writes; the phone TAPS that cell; the tape
++// rises naming the author. Two invariants, each with its reading and its negative control:
++//   · the tape TAKES NO TAP — `elementFromPoint` at the label's own centre is not the tape, and a
++//     negative control in the same run (the tape made hit-testable) proves the read can see it;
++//   · the tape and YOUR ring never share a pixel on your own cell (air ≥ 0 px).
++// What it does NOT bound, and says so: how many OTHER cells the tape lies over. That count is
++// the slug's length (6 cells at 85.63 px, 10 at 131.63 px, pass 3/4) and W2 §2.5's covering law
++// reads it RED at `74a2b5d9` too — the chair's booked row, ledger T9-R7 (the loop's pass-5 label,
++// re-pointed by pass6/RE-POINT.md), and a bounded tape is the owner's Arm B. The count rides as
++// an annotation.
++test("G-LIVE-17 · the coarse tape names a cell and takes no tap (room, 390×844 coarse)", async ({
++  browser,
++}) => {
++  test.slow();
++  const baseURL = test.info().project.use.baseURL;
++  const ctx = await browser.newContext({
++    baseURL,
++    viewport: { width: 390, height: 844 },
++    hasTouch: true,
++    deviceScaleFactor: 2,
++  });
++  const boot = async (p: Page, url: string) => {
++    await p.goto(url);
++    await p.waitForSelector("svg.handwritten-logo", { timeout: 60000 });
++    await expect
++      .poll(() => p.locator(".sudoku-cell .glyph-svg").count(), { timeout: 60000 })
++      .toBeGreaterThan(0);
++  };
++  const a = await ctx.newPage();
++  await a.setViewportSize({ width: 1280, height: 800 });
++  // THE DEAL IS PINNED (pass-6 critic gap 11: the covering figure moved run to run with a random
++  // EASY deal). The author's slug is still minted per room — the tape's length follows it — so the
++  // covering is printed as this run's reading, never quoted as a statistic.
++  const room = mintSudoku(3);
++  await boot(a, `./?size=3&board=${room}&wire=local`);
++  await expect.poll(() => a.evaluate(() => new URLSearchParams(location.search).get("board"))).toBe(room);
++  const verb = a.locator('.controls-card button[aria-label="Play together on this board"]');
++  await expect(verb).toBeEnabled({ timeout: 30000 });
++  await verb.click();
++  await expect.poll(() => new URL(a.url()).searchParams.get("s")).not.toBeNull();
++  const b = await ctx.newPage();
++  await boot(b, a.url());
++  expect(
++    await b.evaluate(() => matchMedia("(pointer: coarse)").matches),
++    "the phone is witnessed coarse",
++  ).toBe(true);
++
++  // A writes an INTERIOR cell (row ≥ 3): row 0 flips the tape below the cell.
++  const peer = await a.evaluate(() =>
++    [...document.querySelectorAll<HTMLInputElement>(".sudoku-cell input")].findIndex(
++      (i, k) => k >= 27 && !i.value,
++    ),
++  );
++  expect(peer, "an empty interior cell for the peer").toBeGreaterThanOrEqual(0);
++  await a.locator(".sudoku-cell input").nth(peer).click();
++  await a.locator(".sudoku-cell input").nth(peer).fill("5");
++  await expect.poll(() => b.locator(".sudoku-cell input").nth(peer).inputValue()).toBe("5");
++
++  const tab = b.locator(".drawer-tab");
++  if ((await tab.count()) && (await tab.getAttribute("aria-expanded")) === "true") {
++    await tab.tap();
++    await expect(tab).toHaveAttribute("aria-expanded", "false");
++    // The dock sheet SLIDES (~700 ms): poll its settled POSE, never a clock.
++    await poseSettled(b, ".drawer-tab");
++  }
++  await b.locator(".sudoku-cell input").nth(peer).tap();
++  await expect(b.locator(".attribution-tape .washi-label")).toHaveCount(1, { timeout: 10000 });
++  await poseSettled(b, ".attribution-tape .washi-label");
++
++  const read = () =>
++    b.evaluate(() => {
++      const label = document.querySelector(".attribution-tape .washi-label")!;
++      const lb = (label.querySelector("path") ?? label).getBoundingClientRect();
++      const own = document.activeElement?.closest?.("[role='gridcell']") ?? null;
++      const ghost = document.activeElement
++        ?.closest?.(".game-cell")
++        ?.querySelector(".cell-ghost-path")
++        ?.getBoundingClientRect();
++      const area = (p: DOMRect, q: DOMRect) =>
++        Math.max(0, Math.min(p.right, q.right) - Math.max(p.left, q.left)) *
++        Math.max(0, Math.min(p.bottom, q.bottom) - Math.max(p.top, q.top));
++      const covered = [...document.querySelectorAll("[role='gridcell']")]
++        .filter((c) => c !== own)
++        .map((c) => area(lb, c.getBoundingClientRect()))
++        .filter((x) => x > 0);
++      const hit = document.elementFromPoint(lb.left + lb.width / 2, lb.top + lb.height / 2);
++      const below = !!document.querySelector(".attribution-tape.is-below");
++      return {
++        hitIsTape: !!hit?.closest(".attribution-tape"),
++        air: ghost ? +(below ? lb.top - ghost.bottom : ghost.top - lb.bottom).toFixed(2) : null,
++        cells: covered.length,
++        px2: +covered.reduce((s, x) => s + x, 0).toFixed(2),
++        labelW: +lb.width.toFixed(2),
++      };
++    });
++  const r = await read();
++  test.info().annotations.push({
++    type: "covering (booked, not bounded)",
++    description: `${r.cells} other cells, ${r.px2} px², label ${r.labelW} px wide`,
++  });
++  expect(r.hitIsTape, "a tap at the label's centre reaches the cell, not the tape").toBe(false);
++  expect(r.air, "the tape and your ring share no pixel").not.toBeNull();
++  expect(r.air!, "the tape and your ring share no pixel").toBeGreaterThanOrEqual(0);
++
++  // NEGATIVE CONTROL for the air clause, same run: lay the tape 6 px INTO your ring and the same
++  // read must go below zero.
++  const into = (r.air! + 6) * ((await b.locator(".attribution-tape.is-below").count()) ? -1 : 1);
++  await b.addStyleTag({ content: `.attribution-tape { translate: 0 ${into}px !important; }` });
++  const lapped = await read();
++  console.log(`[G-LIVE-17] payload ${room} · hitIsTape ${r.hitIsTape} · air ${r.air} px · lapped air ${lapped.air} px · covers ${r.cells} cells / ${r.px2} px² (label ${r.labelW} px; the slug is unpinned)`);
++  expect(lapped.air!, "the probe can see a tape laid over your ring").toBeLessThan(0);
++  await b.evaluate(() => document.querySelector("style:last-of-type")?.remove());
++
++  // NEGATIVE CONTROL, same run: make the tape hit-testable and the same read must see it.
++  await b.addStyleTag({
++    content: ".attribution-tape, .attribution-tape * { pointer-events: auto !important; }",
++  });
++  expect((await read()).hitIsTape, "the probe can see a tape that takes the tap").toBe(true);
++  await ctx.close();
++});
++
++// ── G-LIVE-22 ───────────────────────────────────────────────────────────────────────────
++//
++// MA-N FROM THE DOM, at the arm `RING_GEOMETRY` ships (MRK-ABS's G-ABS-7/8; T9-B29). Every cell of
++// 16×16, 9×9 and 4×4: the ring's painted outer ink — each vertex of its `d` through the path's own
++// screen CTM, plus half the stroke — stays inside the cell's DOM box. Before the property may
++// speak, the identity clause proves the recipe the row evaluates IS the product: every resident
++// `d` equals the shipped arm's recipe, spelled HERE from `74a2b5d9`'s `generateCellRects` (HEAD)
++// and MRK-ABS's recipe (the graft), never imported from the product.
++//
++// THE WITNESS IS A READING, NOT A CLAUSE (registry-v6 §2.8, chair A.5.1). Pass 6 asserted that the
++// graft's own 5.4 u wander at inset 1.00 must enter the neighbour, and called that HEAD's
++// geometry; HEAD's wander is 0.375 u at 16×16 and it clears. A return to HEAD may not red a landed
++// gate, so the witness is printed beside both arms' clearances and asserts nothing.
++//
++// THE FIGURE CLAUSE (MRK-ABS G-ABS-5's parser, fixed; its critic's gap 3): every numeral in the
++// `RING_GEOMETRY` comment is either a table figure held to this row's DOM reading within 0.01 px,
++// or sits inside a phrase the identity clause itself verifies. Plants in the same run: each
++// numeral shape planted into the comment, and every table figure falsified, must red it.
++function mintSudoku(sub: number): string {
++  const n = sub * sub;
++  let cells = "";
++  for (let r = 0; r < n; r++)
++    for (let c = 0; c < n; c++) {
++      const i = r * n + c;
++      const v = ((r * sub + Math.floor(r / sub) + c) % n) + 1;
++      const keep = i > 1 && (r * 7 + c * 3) % 5 < 2;
++      cells += (keep ? v : 0).toString(36);
++    }
++  return Buffer.from(String.fromCharCode(1) + `${sub}.${cells}`, "latin1").toString("base64url");
++}
++
++/** The `RING_GEOMETRY` comment, and its figure table `N×N  head +a  graft +b`. */
++function ringFigures(src: string) {
++  const at = src.indexOf("/** THE RING'S GEOMETRY");
++  const text = src.slice(at, src.indexOf("*/", at));
++  const rows = [...text.matchAll(/(\d+×\d+)\s+head \+(\d+\.\d+)\s+graft \+(\d+\.\d+)/g)].map((m) => ({
++    board: m[1],
++    head: +m[2],
++    graft: +m[3],
++  }));
++  let prose = text;
++  for (const m of text.matchAll(/(\d+×\d+)\s+head \+(\d+\.\d+)\s+graft \+(\d+\.\d+)/g)) prose = prose.replace(m[0], " ");
++  for (const a of [/T9-B29/g, /U-10/g, /74a2b5d9/g, /\b\d+×\d+\b/g, /roughness 0\.4/g, /\b2 segments\b/g, /\b4 below\b/g, /pinned at 4\b/g, /stroke 10\b/g, /G-LIVE-22/g, /T9-W7/g])
++    prose = prose.replace(a, " ");
++  return { rows, unguarded: [...prose.matchAll(/\d+(?:[.,]\d+)*/g)].map((m) => m[0]) };
++}
++
++test("G-LIVE-22 · MA-N from the DOM at the shipped arm; the comment's figures are the DOM's", async ({
++  page,
++}) => {
++  test.setTimeout(300000);
++  const { arm, graft, sizedFrom } = RING_GEOMETRY;
++  const recipe = (kind: "head" | "graft", n: number, pos: number, inset = kind === "head" ? 1 : graft.inset) => {
++    const cs = 1000 / n;
++    const size = inset * cs;
++    const pad = ((1 - inset) / 2) * cs;
++    return wobbleRect((pos % n) * cs + pad, Math.floor(pos / n) * cs + pad, size, size, {
++      roughness: kind === "head" ? 0.4 : graft.wanderUnits / (0.015 * size),
++      segments: kind === "graft" || n < 16 ? 4 : 2,
++      seed: 42 + 500 + pos * 7,
++      jagged: true,
++    });
++  };
++  const clearance = (d: string, m: number[], box: number[], stroke: number) => {
++    let worst = Infinity;
++    for (const g of d.matchAll(/[ML]\s*(-?[\d.eE+]+),(-?[\d.eE+]+)/g)) {
++      const x = m[2] + m[0] * +g[1];
++      const y = m[3] + m[1] * +g[2];
++      const hs = (stroke / 2) * m[0];
++      worst = Math.min(worst, x - hs - box[0], box[0] + box[2] - (x + hs), y - hs - box[1], box[1] + box[3] - (y + hs));
++    }
++    return worst;
++  };
++  const px = (x: number) => Math.round(x * 1000) / 1000;
++  const dom: Record<string, { head: number; graft: number }> = {};
++  for (const sub of [4, 3, 2]) {
++    const N = sub * sub;
++    const board = `${N}×${N}`;
++    const payload = mintSudoku(sub);
++    await page.goto(`./?size=${sub}&board=${payload}`);
++    await expect
++      .poll(() => page.locator(".board-shell .game-cell").count(), { timeout: 120000 })
++      .toBe(N * N);
++    await expect
++      .poll(() => page.evaluate(() => new URLSearchParams(location.search).get("board")))
++      .toBe(payload);
++    const cells = await page.evaluate(() =>
++      [...document.querySelectorAll(".board-shell .game-cell")].map((cell) => {
++        const p = cell.querySelector(".cell-ghost-path") as SVGPathElement;
++        const m = p.getScreenCTM()!;
++        const r = cell.getBoundingClientRect();
++        return { d: p.getAttribute("d")!, m: [m.a, m.d, m.e, m.f], box: [r.x, r.y, r.width, r.height] };
++      }),
++    );
++    const shipped = arm === "graft" || (arm === "sized" && N < sizedFrom) ? "graft" : "head";
++    const identical = cells.filter((c, pos) => c.d === recipe(shipped, N, pos)).length;
++    expect(identical, `${board}: every resident \`d\` is the ${shipped} recipe (arm ${arm})`).toBe(N * N);
++    const at = (kind: "head" | "graft", stroke: number, inset?: number) =>
++      Math.min(...cells.map((c, pos) => clearance(recipe(kind, N, pos, inset), c.m, c.box, stroke)));
++    for (const stroke of [7, 10]) {
++      const product = Math.min(...cells.map((c) => clearance(c.d, c.m, c.box, stroke)));
++      const head = at("head", stroke);
++      const g = at("graft", stroke);
++      if (stroke === 10) dom[board] = { head: px(head), graft: px(g) };
++      console.log(
++        `[G-LIVE-22] ${board} stroke ${stroke}: product (${shipped}) ${px(product)} px · head, f = 1.00 at its own wander, ${px(head)} · graft ${px(g)} · witness, the graft's wander at f = 1.00 (a reading), ${px(at("graft", stroke, 1))} px · identical ${identical}/${N * N} · ghost ${px(cells[0].m[0])} px/u · cell ${px(cells[0].box[2])} px`,
++      );
++      expect(product, `${board} stroke ${stroke}: the shipped ring's outer ink stays inside its own cell (px)`).toBeGreaterThanOrEqual(0);
++    }
++  }
++  // THE FIGURE CLAUSE, on the product's own comment.
++  const src = readFileSync(join(FE_ROOT, "src/pencil/config/pencilConfig.ts"), "utf8");
++  const F = ringFigures(src);
++  const holds = (rows: { board: string; head: number; graft: number }[]) =>
++    rows.length === 3 &&
++    rows.every((r) => dom[r.board] && Math.abs(r.head - dom[r.board].head) <= 0.01 && Math.abs(r.graft - dom[r.board].graft) <= 0.01);
++  console.log(`[G-LIVE-22 figures] comment ${JSON.stringify(F.rows)} · DOM ${JSON.stringify(dom)} · unguarded ${JSON.stringify(F.unguarded)}`);
++  expect(F.unguarded, "every numeral in the RING_GEOMETRY comment is a table figure or a verified phrase").toEqual([]);
++  expect(holds(F.rows), "every table figure is the DOM's reading within 0.01 px").toBe(true);
++  // ITS PLANTS, same run.
++  const at = "The painted counts";
++  for (const [plant, want] of [
++    ["The deck card reads 4.15.", ["4.15"]],
++    ["The corner reads 1.8 dark.", ["1.8"]],
++    ["It is 2.4:1 there.", ["2.4", "1"]],
++    ["About 35 % of it.", ["35"]],
++    ["It sits 4 px out.", ["4"]],
++    ["It reads 2,40 there.", ["2,40"]],
++  ] as [string, string[]][])
++    expect(ringFigures(src.replace(at, `${plant} ${at}`)).unguarded, `plant "${plant}" reds the figure clause`).toEqual(want);
++  const falsified = ringFigures(src.replace(/(head \+)\d+\.\d+/g, "$19.999"));
++  expect(falsified.rows.length, "the falsified table still parses").toBe(3);
++  expect(holds(falsified.rows), "plant: every head figure falsified reds the DOM clause").toBe(false);
++  expect(holds(F.rows.slice(1)), "plant: a table row deleted reds the DOM clause").toBe(false);
++});
++
++// ── G-LIVE-23 ───────────────────────────────────────────────────────────────────────────
++//
++// EXISTENCE IS NOT VISIBILITY (chair A.5.3, LAWS P6 §E). G-LIVE-16 proves a stop paints SOMETHING
++// (≥ 30 px moved); a ring drawn at opacity 0.15 (1.20:1) left this file 18/18 green in pass 6
++// (X4), and tier 2 at opacity 0.2 did too (X4b). This row reads the ring the way a reader does:
++// the chair's four-band probe (`pass7/instruments/edge-bands.mjs`, imported) photographs EACH SIDE
++// of the ring against the same pixels with the ring hidden, counts a station that paints nothing
++// as 1.00 (never skipped), and holds every side's core median at 3:1 or better.
++//   · the chrome ring at every stop key the ring visits: the board route's home stops (one per
++//     tag.firstClass), the deck's centre card and a staging face, the armed guard's face — at
++//     least ten keys reached, both themes (MRK-ABS's chrome floor, grafted: registry-v6 §3.1);
++//   · tier 2 on 9×9 cell 40, over paper.
++// ADMITTED, with its reason and a floor, and STALE when the side clears (strike the row):
++//   · the deck's centre card: its ring lies under the card's own drawn sketch on two sides — MRK-ABS
++//     arm D0 (the ring at offset 0) is the deck owners' PROPOSED cure, not this lane's edit;
++// THE STRIP REACHES THE RING. Tier 2 is drawn by the cell's own ghost svg INSIDE the cell's box
++// (on the graft's inset about ten px in at 9×9), so its bands read 16 px inside the box: at the
++// probe's default depth of 8 every station of a correctly painted inset ring reads dropped (a RED,
++// the safe direction, but a false one), and a HEAD ring read that shallow loses its inner flank.
++// PLANTS, same run: X4 (the ring at 0.15), FADE15 (its ink at 15 %), X6 (the bottom side clipped
++// away) and CLIP0 (the ring painted to zero) on a clean chrome stop; X4b (tier 2 at 0.2) and X6 on
++// tier 2. Each must red; a plant that leaves its stop green means this row cannot see a ring.
++const G23_WALK =
++  'a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
++const G23_ADMITTED: Record<string, { why: string; sides: string[]; floor: number }> = {
++  "deck div.gallery-viewport": {
++    why: "the card's own drawn sketch covers two sides; MRK-ABS arm D0 (offset 0), the deck owners' row",
++    sides: ["right", "bottom"],
++    floor: 1.5,
++  },
++};
++const docSettled = (page: Page) =>
++  expect
++    .poll(
++      () =>
++        page.evaluate(
++          () =>
++            document
++              .getAnimations()
++              .filter((a) => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity))
++              .length,
++        ),
++      { timeout: 15000 },
++    )
++    .toBe(0);
++
++test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key and tier 2 over paper", async ({ page }) => {
++  test.setTimeout(900000);
++  await page.emulateMedia({ reducedMotion: "reduce" });
++  const { fourBands, EDGE_PLANTS } = await instrument("edge-bands.mjs");
++  const payload = mintSudoku(3);
++  type Row = { key: string; red: boolean; why: string[]; bands: Record<string, { coreMedian: number; stations: number; dropped: number }> | null };
++  const brief = (r: Row) =>
++    r.bands
++      ? Object.entries(r.bands).map(([s, b]) => `${s} ${b.coreMedian}/${b.stations}${b.dropped ? ` drop ${b.dropped}` : ""}`).join(" · ")
++      : r.why.join("; ");
++  const setTheme = async (theme: "light" | "dark") => {
++    const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
++    if ((await isDark()) !== (theme === "dark")) {
++      await page.locator("button.sun-moon-toggle").first().focus();
++      await page.keyboard.press("Enter");
++      await expect.poll(isDark, { timeout: 10000 }).toBe(theme === "dark");
++    }
++    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
++    await docSettled(page);
++  };
++  const board = async (theme: "light" | "dark") => {
++    await page.goto(`./?size=3&board=${payload}`);
++    await expect.poll(() => page.locator(".board-shell .game-cell").count(), { timeout: 120000 }).toBe(81);
++    await expect.poll(() => page.evaluate(() => new URLSearchParams(location.search).get("board"))).toBe(payload);
++    await setTheme(theme);
++  };
++  const keys = () =>
++    page.evaluate((sel) => {
++      const out: string[] = [];
++      for (const n of document.querySelectorAll<HTMLElement>(sel)) {
++        const r = n.getBoundingClientRect();
++        const cs = getComputedStyle(n);
++        if (!r.width || !r.height || cs.visibility === "hidden" || cs.display === "none" || n.closest("[inert]")) continue;
++        const key = `${n.tagName.toLowerCase()}.${(n.getAttribute("class") || "").trim().split(/\s+/)[0]}`;
++        if (!out.includes(key) && key !== "input.cell-native-input") out.push(key);
++      }
++      return out;
++    }, G23_WALK);
++  /** Focus a stop by key with keyboard modality; the subject is what the RING frames (the declared
++   *  owner first), addressed by id where it has one (the deck re-renders its card's attributes). */
++  const chrome = async (key: string, label = key): Promise<Row | null> => {
++    await page.keyboard.press("Shift");
++    const f = await page.evaluate(async (key) => {
++      document.querySelectorAll("[data-gl23]").forEach((e) => e.removeAttribute("data-gl23"));
++      const [tag, cls] = key.split(".");
++      const el = [...document.querySelectorAll<HTMLElement>(tag)].find((n) => (n.getAttribute("class") || "").trim().split(/\s+/)[0] === cls);
++      if (!el) return null;
++      (document.activeElement as HTMLElement | null)?.blur();
++      await new Promise((r) => requestAnimationFrame(r));
++      el.scrollIntoView({ block: "center", inline: "nearest" });
++      el.focus();
++      await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++      const owned = el.getAttribute("aria-activedescendant");
++      const t = (owned && document.getElementById(owned)) || el;
++      t.setAttribute("data-gl23", "");
++      return {
++        took: document.activeElement === el && el.matches(":focus-visible"),
++        subject: owned ? `#${CSS.escape(owned)}` : "[data-gl23]",
++        outset: parseFloat(getComputedStyle(t).getPropertyValue("--focus-ring-outset")) || 0,
++      };
++    }, key);
++    if (!f?.took) return null;
++    await docSettled(page);
++    const o = f.outset;
++    try {
++      const r = await fourBands(page, { subject: f.subject, edge: ".focus-ring", out: Math.max(6, Math.ceil(o) + 6), inn: Math.max(4, Math.ceil(-o) + 6) });
++      return { key: label, red: r.red, why: r.why, bands: r.bands };
++    } catch (e) {
++      return { key: label, red: true, why: [`B0 the subject was lost mid-read: ${String(e).split("\n")[0]}`], bands: null };
++    }
++  };
++  const tier2 = async (label = "tier 2 on 9×9 cell 40"): Promise<Row> => {
++    await page.locator(".board-shell .game-cell .cell-native-input").nth(40).focus();
++    await page.keyboard.press("Shift");
++    await expect.poll(() => page.evaluate(() => document.querySelectorAll(".game-cell:has(input:focus-visible)").length)).toBe(1);
++    await docSettled(page);
++    await page.evaluate(() => {
++      document.querySelectorAll("[data-gl23]").forEach((e) => e.removeAttribute("data-gl23"));
++      document.querySelectorAll(".board-shell .game-cell")[40].setAttribute("data-gl23", "");
++    });
++    const r = await fourBands(page, { subject: "[data-gl23]", edge: ".game-cell:has(input:focus-visible) .cell-ghost", out: 8, inn: 16 });
++    return { key: label, red: r.red, why: r.why, bands: r.bands };
++  };
++  /** The row's verdict on one read: every side ≥ 3, or an admitted side within its floor. */
++  const verdict = (r: Row, admittedAs = r.key) => {
++    const adm = G23_ADMITTED[admittedAs];
++    const live = adm ?? null;
++    if (!r.bands) return { ok: false, stale: false, say: `${r.key}: ${r.why.join("; ")}` };
++    const bad = Object.entries(r.bands).filter(([, b]) => !(b.stations >= 8 && b.coreMedian >= 3));
++    const ok = bad.every(([s, b]) => live && live.sides.includes(s) && b.stations >= 8 && b.coreMedian >= live.floor);
++    return { ok, stale: !!live && bad.length === 0, say: `${r.key}: ${brief(r)}${live ? ` [admitted ${live.sides.join("/")} ≥ ${live.floor}: ${live.why}]` : ""}` };
++  };
++  const plant = async <T,>(css: string, read: () => Promise<T>) => {
++    const t = await page.addStyleTag({ content: css });
++    await docSettled(page);
++    const out = await read();
++    await t.evaluate((e) => e.remove());
++    await docSettled(page);
++    return out;
++  };
++  const armGuard = async () => {
++    const blank = await page.evaluate(() => [...document.querySelectorAll(".board-shell .game-cell")].findIndex((c) => !c.querySelector(".glyph-svg")));
++    expect(blank, "an empty cell to write in").toBeGreaterThanOrEqual(0);
++    await page.locator(".board-shell .game-cell .cell-native-input").nth(blank).focus();
++    await page.keyboard.press("1");
++    await expect.poll(() => page.evaluate((i) => !!document.querySelectorAll(".board-shell .game-cell")[i].querySelector(".glyph-svg"), blank)).toBe(true);
++    await page.locator("button.logo-trigger").focus();
++    await page.keyboard.press("Enter");
++    await expect(page.locator(".staging-band")).toBeVisible({ timeout: 20000 });
++    await docSettled(page);
++    await page.locator(".gallery-viewport").focus();
++    for (let i = 0; i < 4; i++) {
++      await page.keyboard.press("ArrowRight");
++      await docSettled(page);
++    }
++    await page.locator(".staging-deal").focus();
++    await page.keyboard.press("Enter");
++    await expect(page.locator(".gallery-guard")).toBeVisible({ timeout: 10000 });
++    await docSettled(page);
++  };
++
++  const lines: string[] = [];
++  const fails: string[] = [];
++  const stale: string[] = [];
++  const judge = (r: Row | null, admittedAs?: string) => {
++    if (!r) return;
++    const v = verdict(r, admittedAs);
++    lines.push(`${v.ok ? "ok " : "RED"} ${v.say}`);
++    if (!v.ok) fails.push(v.say);
++    if (v.stale) stale.push(v.say);
++  };
++  for (const theme of ["light", "dark"] as const) {
++    await board(theme);
++    const reached: string[] = [];
++    let clean: string | null = null;
++    for (const key of await keys()) {
++      const r = await chrome(key);
++      if (!r) continue;
++      reached.push(key);
++      judge(r);
++      if (!clean && !r.red) clean = key;
++    }
++    judge(await tier2());
++    if (theme === "light") {
++      // THE PLANTS: each must red the stop it is laid on.
++      expect(fails, `every side of every ring on the light walk reads 3:1 or better\n${lines.join("\n")}`).toEqual([]);
++      expect(clean, "a chrome stop the walk read clean, to lay the plants on").not.toBeNull();
++      const P = EDGE_PLANTS(".focus-ring") as Record<string, string>;
++      for (const [name, css] of [
++        ["X4 the ring at 0.15", P.X4_opacity_015],
++        ["FADE15 the ink at 15 %", P.FADE15_ink],
++        ["X6 the bottom side clipped away", P.X6_bottom_erased],
++        ["CLIP0 the ring painted to zero", ".focus-ring { clip-path: inset(50%) !important; }"],
++      ] as [string, string][]) {
++        const r = await plant(css, () => chrome(clean!));
++        lines.push(`PLANT ${name} on ${clean}: ${r ? brief(r) : "not reached"}`);
++        expect(r && verdict(r).ok, `${name} reds ${clean} (else this row cannot see a ring)`).toBe(false);
++      }
++      for (const [name, css] of [
++        ["X4b tier 2 at 0.2", ".cell-ghost.is-active { opacity: 0.2 !important; }"],
++        ["X6 tier 2's bottom clipped away", (EDGE_PLANTS(".game-cell:has(input:focus-visible) .cell-ghost") as Record<string, string>).X6_bottom_erased],
++      ] as [string, string][]) {
++        const r = await plant(css, () => tier2());
++        lines.push(`PLANT ${name}: ${brief(r)}`);
++        expect(verdict(r, "tier 2 on 9×9 cell 40").ok, `${name} reds tier 2 (else this row cannot see it)`).toBe(false);
++      }
++    }
++    await page.goto(`./?view=gallery&size=3&board=${payload}`);
++    await expect(page.locator(".staging-band")).toBeVisible({ timeout: 30000 });
++    await setTheme(theme);
++    for (const key of await keys())
++      if (/gallery-viewport|staging-btn/.test(key)) {
++        const r = await chrome(key, `deck ${key}`);
++        if (r) reached.push(`deck ${key}`);
++        judge(r);
++      }
++    await board(theme);
++    await armGuard();
++    for (const key of await keys())
++      if (/guard-btn/.test(key)) {
++        const r = await chrome(key, `guard ${key}`);
++        if (r) reached.push(`guard ${key}`);
++        judge(r);
++      }
++    lines.push(`${theme}: ${reached.length} stop keys reached: ${reached.join(", ")}`);
++    expect(reached.length, `${theme}: the walk reaches the chrome floor's ten stop keys\n${lines.join("\n")}`).toBeGreaterThanOrEqual(10);
++    for (const must of ["deck div.gallery-viewport", "deck button.staging-btn", "guard button.guard-btn"])
++      expect(reached, `${theme}: the walk reaches ${must}`).toContain(must);
++  }
++  console.log(`[G-LIVE-23 ${test.info().project.name}]\n${lines.join("\n")}`);
++  expect(fails, "every side of every ring reads a core median of 3:1 or better (or its admitted floor)").toEqual([]);
++  expect(stale, "STALE: an admitted side now clears 3:1; strike its admission").toEqual([]);
++});
+diff --git a/web/frontend/e2e/spoken-gallery.spec.ts b/web/frontend/e2e/spoken-gallery.spec.ts
+index 885ea691..7d0af7e7 100644
+--- a/web/frontend/e2e/spoken-gallery.spec.ts
++++ b/web/frontend/e2e/spoken-gallery.spec.ts
+@@ -198,15 +198,28 @@ test('an Escape taken with focus OUTSIDE the deck does not steal focus back', as
+ // ── §3.7 · the ring rides the active option ──────────────────────────────────────────────
+ 
+ /** Every element currently drawing a focus ring, named. `nothing` and `the scrollport` are both
+- *  reds with their own sentence. */
++ *  reds with their own sentence.
++ *
++ *  T9-W7 §6 — the ring is DRAWN now (`FocusRing.vue`), not a UA outline, so the owner is the
++ *  box the one `.focus-ring` sits on rather than whatever computes an `outline-style`. Both
++ *  forms are read: a bespoke outline anywhere is still an owner, and still a red when it is the
++ *  scrollport's. */
+ async function ringOwner(page: Page): Promise<string> {
+   return page.evaluate(() => {
+     const vp = document.querySelector<HTMLElement>('.gallery-viewport');
+     if (!vp) return 'no deck';
+     const owners: string[] = [];
+-    if (getComputedStyle(vp).outlineStyle !== 'none') owners.push('the scrollport');
++    const ring = document.querySelector<HTMLElement>('.focus-ring');
++    const on = (el: HTMLElement) => {
++      if (!ring) return false;
++      const a = ring.getBoundingClientRect();
++      const b = el.getBoundingClientRect();
++      const o = parseFloat(getComputedStyle(el).getPropertyValue('--focus-ring-outset')) || 3;
++      return Math.abs(a.left - (b.left - o)) <= 1 && Math.abs(a.top - (b.top - o)) <= 1;
++    };
++    if (getComputedStyle(vp).outlineStyle !== 'none' || on(vp)) owners.push('the scrollport');
+     for (const card of Array.from(document.querySelectorAll<HTMLElement>('.game-card'))) {
+-      if (getComputedStyle(card).outlineStyle !== 'none') owners.push(card.id);
++      if (getComputedStyle(card).outlineStyle !== 'none' || on(card)) owners.push(card.id);
+     }
+     return owners.length ? owners.join(',') : 'nothing';
+   });
+@@ -222,8 +235,13 @@ async function ringWhole(page: Page): Promise<string> {
+     const card = document.getElementById(vp?.getAttribute('aria-activedescendant') ?? '');
+     if (!vp || !card) return 'no deck';
+     const cs = getComputedStyle(card);
+-    if (cs.outlineStyle === 'none') return 'the active option carries no ring';
+-    const out = parseFloat(cs.outlineOffset) + parseFloat(cs.outlineWidth);
++    const ring = document.querySelector<HTMLElement>('.focus-ring');
++    // The drawn ring's reach is its outset plus its stroke; a UA outline's is offset + width.
++    const drawn = !!ring && ring.getBoundingClientRect().width > 0;
++    if (cs.outlineStyle === 'none' && !drawn) return 'the active option carries no ring';
++    const out = drawn
++      ? (parseFloat(getComputedStyle(card).getPropertyValue('--focus-ring-outset')) || 3) + 2.5
++      : parseFloat(cs.outlineOffset) + parseFloat(cs.outlineWidth);
+     const c = card.getBoundingClientRect();
+     const v = vp.getBoundingClientRect();
+     const air = [c.left - v.left, v.right - c.right, c.top - v.top, v.bottom - c.bottom];
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index 18a8d380..7d229961 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -234,6 +234,7 @@ const SPEC_MANIFEST = [
+   "board-covisibility.spec.ts",
+   "drawer.spec.ts",
+   "filter-census.spec.ts",
++  "focus-ring.spec.ts",
+   "follow-still-authorship.spec.ts",
+   "font-census.spec.ts",
+   "futoshiki.spec.ts",
+diff --git a/web/frontend/src/App.vue b/web/frontend/src/App.vue
+index 7dc84610..4c3b1ab6 100644
+--- a/web/frontend/src/App.vue
++++ b/web/frontend/src/App.vue
+@@ -12,7 +12,7 @@ import {
+   type FunctionalComponent,
+ } from "vue";
+ import { usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { MOTION, RING_ARM } from "@pencil/config/pencilConfig";
+ import {
+   flipTransform,
+   useFlipGlide,
+@@ -21,6 +21,7 @@ import {
+ import GameShell from "@games/shared/GameShell.vue";
+ import DarkModeToggle from "@pencil/celestial/DarkModeToggle.vue";
+ import SvgFilters from "@pencil/chrome/SvgFilters.vue";
++import FocusRing from "@pencil/chrome/FocusRing.vue";
+ import ScribbleLoader from "@pencil/chrome/ScribbleLoader.vue";
+ import HandwrittenLogo from "@pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue";
+ import AttributionCard from "@pencil/chrome/AttributionCard/AttributionCard.vue";
+@@ -82,6 +83,9 @@ useShortcutPolicy();
+ // normally cached. A genuinely cold select (throttled — G10's `first-select-void-400ms.png`)
+ // shows blank paper ≤300ms then the thinking-scribble (delay:300 + loadingComponent) — never a
+ // spinner (design §5.1).
++// The section fork's ring arm, published once where every board and the chrome ring can read it.
++document.documentElement.dataset.ringArm = RING_ARM;
++
+ const sceneCache = new Map<string, Component>();
+ /** A migrated row's mount: `GameShell` bound to that game's spec, wearing the scene's
+  *  `leaving`/`erased` seam so the page-turn orchestrator below is untouched. */
+@@ -795,6 +799,9 @@ onBeforeUnmount(() => window.removeEventListener("keydown", onGlobalKeydown));
+     <!-- Shared SVG filter definitions -->
+     <SvgFilters />
+ 
++    <!-- The one drawn focus ring off the board (T9-W7 §6) — one instance for the estate. -->
++    <FocusRing />
++
+     <!-- Filter tuner — dev tool, env-gated (import.meta.env.DEV), absent from prod builds -->
+     <component :is="FilterTuner" v-if="FilterTuner" />
+ 
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..5e34579d 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -216,10 +216,20 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+-     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+-     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++  --color-focus-sketch: #3a7bc4; /* THE focus ink, on the board and off it (T9-W7 §5/§6) —
++     crayon-blue darkened one step, ONE value in both regimes on purpose so the mark weighs the
++     same at night. Its floor is read from PAINTED BYTES and never restated here:
++     `focus-ring.spec.ts` G-LIVE-23 photographs every side of the chrome ring and of the board's
++     tier-2 ring against the same pixels with the ring hidden, and holds each side's core median
++     at 3:1 or better. NOT EVERY STATION CLEARS 3:1: where the board ring's side lies on the
++     frame rule (the edge cells), some read under it, and how many moves with the ring's
++     geometry (`RING_GEOMETRY`). That trade is the owner's ballot (T9-B29), counted in its
++     record, not settled by a sentence here. */
++  --ring-ink: var(
++    --color-focus-sketch
++  ); /* the NAME the chrome consumes; the value is the focus ink's. Retire one, the other
++     follows. Under the section fork's graphite arm (`RING_ARM`) the ink is the pencil's
++     (below), and this token is read by nothing. */
+   --color-pencil-graphite: var(
+     --grid-line-color
+   ); /* the pencil: grid, ghost ring, hover sketch */
+@@ -440,13 +450,86 @@
+   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+ }
+ 
++/* The seam a host uses to tell the drawn ring where its own edge is (the toggle's ornament
++   sits 54px outside its button box). REGISTERED, because that is what makes the value a
++   LENGTH: an unregistered custom property computes to its own token stream, so a `calc()` in
++   it reaches JavaScript unresolved and parses as NaN. Registered, `getComputedStyle` hands
++   back px, and every element that declares nothing reports the house default. */
++@property --focus-ring-outset {
++  syntax: "<length>";
++  inherits: false;
++  initial-value: 3px;
++}
++
++/* The seam a host uses to tell the drawn ring it sits outside its own button box (the toggle's
++   ornament, −52px at the widest rung). Registered for the same reason as the outset above, so
++   the three consumers in `DarkModeToggle.vue` read it bare. Its ONE publisher is `App.vue`
++   (`.page-root`), and it publishes a value < 0 at every rung it declares (−52 / −18 / −10: each
++   ornament is wider than its hit box). The initial is therefore a SENTINEL outside that domain,
++   never a working value: `0px` here would be the three `, 0px` this seam struck, moved one level
++   down — delete the publisher and the ornament would quietly shrink to its hit box with nothing
++   failing. At 9999px an absent publisher collapses the ornament to nothing and drives the ring's
++   outset negative, so the toggle loses its sun AND its ring on screen, and `focus-ring.spec.ts`
++   (G-LIVE-19) reds on the host reading this value. */
++@property --toggle-bleed {
++  syntax: "<length>";
++  inherits: true;
++  initial-value: 9999px;
++}
++
++/* MOT-LADDER's rung, landed here as a STAND-IN so this tree's `var(--motion-note)` call sites
++   compute: that family publishes all seven rungs from one node and owns the reduce arm. One
++   publisher at the fold, never two.
++
++   The rung's value is the REGISTRATION's, and there is no `:root` copy beside it. A first cut
++   registered `0ms` and declared `250ms` at `:root`: delete the declaration without MOT-LADDER's
++   node arriving and `marks-fade-in` runs for 0ms — the marks appear with no draw-in and nothing
++   fails, which is the masked default this wave strikes three of in `DarkModeToggle.vue`. One
++   home now holds the shipped 250ms; delete THIS block and every `var(--motion-note)` is invalid
++   at computed-value time, the animation shorthand falls to 0s, and `marks-fade-in`'s computed
++   duration reads 0s where the gate reads 250ms. */
++@property --motion-note {
++  syntax: "<time>";
++  inherits: true;
++  initial-value: 250ms;
++}
++
++/* The section fork's graphite arm (`RING_ARM`, pencilConfig.ts): the chrome ring takes the
++   pencil's ink. Dead while the arm reads "blue". */
++:root[data-ring-arm="graphite"] {
++  --ring-ink: var(--color-pencil-graphite);
++}
++
+ @layer base {
+   * {
+-    @apply border-border outline-ring/50;
++    @apply border-border;
+   }
+   body {
+     @apply bg-background text-foreground;
+   }
++
++  /* ONE MARK FOR FOCUS (T9-W7 §6). The UA outline is suppressed because `FocusRing.vue` draws
++     the ring in the house hand, and the board draws its own (gameCell.css tier 2). Both halves
++     live in this one block at EQUAL specificity with the restoration AFTER, and nothing
++     anywhere carries `!important`: a (0,2,0) `outline: none !important` measured beating a
++     (0,1,0) restoration left High Contrast computing `3px none` — no indicator at all. The
++     `outline-ring/50` sweep that used to ride `*` dies here: it painted a ring on every
++     element that took focus, in a colour nobody chose, under the six bespoke rules. */
++  :focus-visible {
++    outline: none;
++  }
++  .cell-native-input:focus-visible {
++    outline: none;
++  }
++  @media (forced-colors: active) {
++    :focus-visible {
++      outline: 2px solid Highlight;
++      outline-offset: 2px;
++    }
++    .focus-ring {
++      display: none;
++    }
++  }
+ }
+ 
+ /* Crayon color utilities — the difficulty semantic, in ink. The three difficulty tints read
+@@ -723,13 +806,11 @@ html {
+     animation-fill-mode: backwards;
+   }
+ 
+-  /* Sudoku cell focus styling */
+-  .sudoku-cell:focus-within {
+-    background: color-mix(in srgb, var(--color-accent) 50%, transparent);
+-    outline: 1px solid color-mix(in srgb, var(--color-ring) 30%, transparent);
+-    outline-offset: -1px;
+-    border-radius: 2px;
+-  }
++  /* THE SEVENTH FOCUS RULE IS GONE (T9-W7 §6). A global focus-within rule on the sudoku cell
++     declared a 1px ring and a 50% accent wash on the very node `gameCell.css` tier 2 draws the
++     board's own ring on — the cell's two class names are one element. It painted nothing only
++     because that sheet is `<style scoped>` and unlayered, so it outranked this one by accident:
++     layer `gameCell.css` for any reason and a wash nobody chose returns on every focused cell. */
+ 
+   /* Handwritten font utility — the annotation register (--font-hand ← Patrick
+      Hand); 0.02em ≈ --type-tracking-wide, kept bespoke for the hand voice. */
+diff --git a/web/frontend/src/games/shared/BoardHost.vue b/web/frontend/src/games/shared/BoardHost.vue
+index eb7eeb52..4b9ac576 100644
+--- a/web/frontend/src/games/shared/BoardHost.vue
++++ b/web/frontend/src/games/shared/BoardHost.vue
+@@ -315,6 +315,7 @@ defineExpose({ hintFocusedCell: () => boardRef.value?.hintFocusedCell() });
+           :is-peer-cursor="String(pos) in peerCursorInk"
+           :author-name="authorNameAt(pos)"
+           :ghost-path="s.cellRects[pos] ?? ''"
++          :cell-frames="pos === s.focusedPos ? s.cellFrames : undefined"
+           :marks="s.marksFor(pos)"
+           :corner-marks="model.cornerMarks.value[String(pos)]"
+           :center-marks="model.centerMarks.value[String(pos)]"
+diff --git a/web/frontend/src/games/shared/DigitCell.test.ts b/web/frontend/src/games/shared/DigitCell.test.ts
+index fc634eaa..93eab8f4 100644
+--- a/web/frontend/src/games/shared/DigitCell.test.ts
++++ b/web/frontend/src/games/shared/DigitCell.test.ts
+@@ -269,6 +269,24 @@ describe("DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4)", () => {
+       true,
+     );
+   });
++
++  // ONE GROUND PER CELL (T9-W7 chair §6.11). The wash is the LAST of four ranks — selection >
++  // peer cursor > hint laminate > unit — and grounds do not stack. Composed, they inverted the
++  // decided ranking (T8-W3 M1): a peer's cursor inside your own unit wore your wash as well and
++  // out-read your own hand (1.34 against 1.16 light), and the answer key's laminate over your
++  // own selected cell read 13.10 L* against 5.90 clean. The CSS half of the rank (the laminate's
++  // body yielding under selection) is proven on the real surface; this is the binding's half.
++  it("yields to the peer CURSOR — someone else's pencil is a ground of its own", () => {
++    expect(
++      mountCell({ isPeer: true, isPeerCursor: true }).find(".cell-peer").exists(),
++    ).toBe(false);
++  });
++
++  it("yields to the hint laminate — the answer key's ground outranks the unit's", () => {
++    expect(
++      mountCell({ isPeer: true, isBecause: true }).find(".cell-peer").exists(),
++    ).toBe(false);
++  });
+ });
+ 
+ // The cell speaks ONCE (T5-W3 3.5). Everything the cell draws — glyph, ghost ring, both mark
+diff --git a/web/frontend/src/games/shared/DigitCell.vue b/web/frontend/src/games/shared/DigitCell.vue
+index a67ef078..0d5a106b 100644
+--- a/web/frontend/src/games/shared/DigitCell.vue
++++ b/web/frontend/src/games/shared/DigitCell.vue
+@@ -31,11 +31,16 @@ const props = withDefaults(
+     boardSize: number;
+     /** The grid family, off `BoardGrammar` — the ONE axis the cell diverges on. It picks the
+      *  family class (`.sudoku-cell` / `.futoshiki-cell`), which is a frozen DOM contract:
+-     *  `index.css`'s `:focus-within` ring and `useKeyboardViewport`'s CELL_SELECTOR key on
+-     *  it, and the e2e estate counts cells through it. */
++     *  `useKeyboardViewport`'s CELL_SELECTOR keys on it and the e2e estate counts cells
++     *  through it. The `index.css` `:focus-within` ring that used to key on it too is gone
++     *  (T9-W7 §6) — the board's focus voice is `gameCell.css` tier 2, alone. */
+     geometry: "boxed" | "latin";
+     /** Pre-computed ghost rect path in 1000×1000 board viewBox coords */
+     ghostPath: string;
++    /** T9-W7 §5 — THE LIVING MARK. The four poses of THIS cell's ring, present only on the
++     *  one cell the board is holding (the host binds `undefined` everywhere else), so the
++     *  population grows by three paths and never by N². Pose 0 is `ghostPath` byte for byte. */
++    cellFrames?: string[];
+     /** 1-based grid coordinates (ARIA grid + aria-label derivation, §4.1) */
+     rowIndex: number;
+     colIndex: number;
+@@ -93,6 +98,12 @@ const familyClass = computed(() =>
+   props.geometry === "boxed" ? "sudoku-cell" : "futoshiki-cell",
+ );
+ 
++// THE LIVING MARK (T9-W7 §5) — the poses past the resident one. Empty for every cell but the
++// one under the hand, and for every cell when the board holds no focus at all. WHICH pose is
++// opaque is not decided here: the board writes one `data-mark-pose` on the grid and the
++// cascade answers, so a beat costs one attribute write instead of N² component renders.
++const livingPoses = computed(() => props.cellFrames?.slice(1) ?? []);
++
+ // The engine-marks mini-grid: the tightest ceil-√ rectangle over the board's digits. On a
+ // BOXED board `boardSize` is a perfect square (`size**2`), so this reduces EXACTLY to the
+ // sub-grid an n×n Snyder grid borrowed (9 → 3×3, 16 → 4×4); on a LATIN board (4..7) it is
+@@ -258,9 +269,15 @@ defineExpose({ focus: focusInput, position: props.position });
+     <!-- Peer-unit wash (T4-W8 ROW 4): a faint crayon-blue fill over every cell sharing the
+          focused cell's row / column (and, on a boxed board, its box), so the active unit reads
+          at a glance on selection. Its own layer, behind the glyph + marks + ghost; decorative
+-         (the value carries the name). -->
++         (the value carries the name).
++
++         ONE GROUND PER CELL (T9-W7 chair §6.11) — the unit wash is the LAST rank of four
++         (selection > peer cursor > hint laminate > unit) and does not paint under any of them.
++         Stacked, it inverted the decided ranking: a peer's cursor inside your own unit carried
++         your wash as well and read 1.34 against your own 1.16 (light). The gate is here at the
++         binding rather than in CSS so the sheet never has to fight itself. -->
+     <div
+-      v-if="isPeer"
++      v-if="isPeer && !isPeerCursor && !isBecause"
+       class="cell-peer pointer-events-none absolute inset-0"
+       aria-hidden="true"
+     />
+@@ -419,7 +436,18 @@ defineExpose({ focus: focusInput, position: props.position });
+         preserveAspectRatio="xMidYMid meet"
+         xmlns="http://www.w3.org/2000/svg"
+       >
++        <!-- THE LIVING MARK (T9-W7 §5) — pose 0 is the resident path, unchanged; poses 1..3
++             mount as siblings of the SAME v-for grammar only while this cell is the one the
++             board holds, and the beat swaps which is opaque. Three nodes on one cell, zero
++             filters, and the resting ring is the ring that shipped. -->
+         <path :d="ghostPath" pathLength="1" class="cell-ghost-path" />
++        <path
++          v-for="(d, f) in livingPoses"
++          :key="f"
++          :d="d"
++          pathLength="1"
++          class="cell-ghost-path"
++        />
+       </svg>
+     </div>
+   </div>
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index b961a8c8..ae2fb1bf 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -74,6 +74,9 @@ defineExpose({
+ /* ≥1024 only — the regime rule. Below, the stacked panel is the controls' home and
+    the drawer (tab included) is a defined no-op. */
+ .drawer-tab {
++  /* The tongue's frame is the heaviest in the estate (outset 3, stroke 2.5), so its ring sits
++     further out than the two verbs': 3 + 1.25 + 1.25 + 1px of air = 6.5 (T9-W7 §6). */
++  --focus-ring-outset: 6.5px;
+   display: none;
+   position: absolute;
+   /* The tongue pokes out from UNDER the sheet: its left ~8px tuck beneath the
+@@ -148,11 +151,6 @@ defineExpose({
+   transform: rotate(0deg);
+ }
+ 
+-.drawer-tab:focus-visible {
+-  outline: 2px dashed currentColor;
+-  outline-offset: 3px;
+-}
+-
+ /* ── THE PORTRAIT DOCK'S SHUT TONGUE — THE BOARD'S BOTTOM-RIGHT CORNER (T9-W2 §2.7) ────────
+    The desk's declarations, quarter-turned: `left: calc(100% - 0.5rem)` becomes
+    `top: calc(100% - 0.5rem)`, and the 48×92 box becomes 92×48. The berth is `#board-edge`
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..c784d740 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -34,8 +34,9 @@ import {
+   traceProgress,
+ } from "@games/shared/useJoinWash";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+-import { generateCellRects } from "@pencil/grid/gridPaths";
+-import { revealStaggerMs } from "@pencil/config/pencilConfig";
++import { generateCellRects, generateCellFrames } from "@pencil/grid/gridPaths";
++import { revealStaggerMs, BOIL_CONFIG } from "@pencil/config/pencilConfig";
++import { useMarkPose } from "@pencil/composables/boilBeat";
+ import {
+   setMurmurSeed,
+   notifyUserEdit,
+@@ -493,6 +494,33 @@ const peerCells = computed(() =>
+     : new Set<string>(),
+ );
+ 
++// ── THE LIVING MARK (T9-W7 §5) ────────────────────────────────────────
++// A mark under the reader's hand lives: the selected cell's ghost steps four poses on the
++// shared beat for one revolution and then rests on pose 0, which is the ring that ships today.
++// Every other mark on the board is still.
++//
++// The pose is owned HERE, once, and travels down as a `:pose` — `HandDrawnOutline`'s discipline
++// (T4-W12): one consumer enrols the shared beat and the marks it drives bind a number. A
++// per-cell enrolment would put 256 watchers on the counter at 16×16 to move one ring. Same gate
++// as the peer wash: the board must actually HOLD focus, so a fresh load with `focusedPos` 0 and
++// nothing selected breathes nothing.
++const livePose = useMarkPose(() => (unitFocused.value ? focusedPos.value : null));
++// The poses of the ONE cell that is living — never N² stacks. `generateCellFrames`' pose 0 is
++// `generateCellRects`' own output for this cell, so the resting board cannot move.
++const cellFrames = computed(() =>
++  unitFocused.value
++    ? generateCellFrames(
++        props.boardSize,
++        props.subgridSize,
++        VIEWBOX_SIZE,
++        42,
++        focusedPos.value,
++        BOIL_CONFIG.cellBoil,
++        BOIL_CONFIG.frameCount,
++      )
++    : [],
++);
++
+ // ── T8-W3 M1 · THE ATTRIBUTION TAPE ───────────────────────────────────────────────────────
+ // ONE washi label, board-level, over the hovered cell — not eighty-one instances waiting their
+ // turn. The cell publishes its hover position (DigitCell's `cellHover`) and the board holds the
+@@ -1044,6 +1072,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+       <div
+         class="grid"
+         :class="BOARD_CELLS_CLASS"
++        :data-mark-pose="livePose"
+         :inert="boardCovered || undefined"
+         role="grid"
+         :aria-label="gridLabel"
+@@ -1067,6 +1096,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+           :noise-delays="noiseDelays"
+           :focused-pos="focusedPos"
+           :cell-rects="cellRects"
++          :cell-frames="cellFrames"
+           :marks-for="marksFor"
+           :on-cell-update="onCellUpdate"
+           :on-mark="onMark"
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..ec062212 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -3,12 +3,21 @@
+  * FutoshikiCell) ran byte-identical (T4-W11 Row 3; verified identical modulo the root class).
+  * Consumed via `<style scoped src="@/games/shared/gameCell.css">` in each cell, so every rule
+  * (and the `marks-fade-in` / `ghost-draw-on` keyframes) is re-scoped to the importing
+- * component's own data-v hash — the scoped specificity that wins over index.css's global
+- * `.sudoku-cell:focus-within` ring is preserved exactly, per cell.
++ * component's own data-v hash. The global focus-within ring this sheet used to out-rank by
++ * accident is DELETED (T9-W7 §6, index.css); the board's focus voice is tier 2 below, alone.
++ *
++ * NO FALLBACK BEHIND A DECLARED TOKEN (chair §6.5). `--color-focus-sketch`, `--color-teacher-red`
++ * and `--color-pencil-graphite` are all declared at `:root` (index.css), so a second argument to
++ * `var()` can never be reached and only hides the case where the declaration is gone. Struck at
++ * every site. `--color-peer-cursor-ink` has no fallback either, for the same reason by a
++ * different road: it is declared per cell, inline, by `BoardHost.vue:78`, and the class its one
++ * rule hangs on (`is-peer-cursor`, `BoardHost.vue:315`) is bound by the SAME predicate on the
++ * same key. The rule matches only where the declaration exists, so a second argument could
++ * never be reached. The predicate is the proof, not the declaration site.
+  *
+  * CLASS-NAME CONTRACT — each cell's template MUST carry `game-cell` on its root node (alongside
+  * its own `sudoku-cell` / `futoshiki-cell` class, which stays for useKeyboardViewport's cell
+- * selector, the unit tests, and the index.css focus rule) plus these descendant classes on the
++ * selector and the unit tests) plus these descendant classes on the
+  * matching nodes (there is no build-time link between this file and the templates):
+  *   .game-cell             the cell root (+ .is-active / .is-invalid / .is-peer-cursor states)
+  *   .cell-native-input     the opacity-0 WM-frozen native entry surface
+@@ -28,11 +37,11 @@
+    boil, no fade, the marks are simply there while the peek is held. */
+ .pencil-marks {
+   inset: 12%;
+-  color: var(--color-pencil-graphite, var(--grid-line-color));
++  color: var(--color-pencil-graphite);
+   opacity: 0.5;
+   /* `backwards`, not `both` (P1-W3): `marks-fade-in` is a FROM-ONLY keyframe, so its 100%
+      value IS the cascade value and the forwards half retains an effect for nothing. */
+-  animation: marks-fade-in 250ms ease-out backwards;
++  animation: marks-fade-in var(--motion-note) ease-out backwards;
+ }
+ 
+ .mark-slot {
+@@ -139,19 +148,11 @@
+ .cell-because {
+   inset: 9%;
+   border-radius: 12%;
+-  background: color-mix(
+-    in srgb,
+-    var(--color-teacher-red, var(--color-crayon-rose)) 15%,
+-    transparent
+-  );
++  background: color-mix(in srgb, var(--color-teacher-red) 15%, transparent);
+   box-shadow: inset 0 0 0 2px
+-    color-mix(
+-      in srgb,
+-      var(--color-teacher-red, var(--color-crayon-rose)) 50%,
+-      transparent
+-    );
++    color-mix(in srgb, var(--color-teacher-red) 50%, transparent);
+   /* `backwards`, not `both` — same from-only keyframe as `.pencil-marks` above. */
+-  animation: marks-fade-in 250ms ease-out backwards;
++  animation: marks-fade-in var(--motion-note) ease-out backwards;
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+@@ -160,14 +161,40 @@
+   }
+ }
+ 
++/* ONE GROUND PER CELL (T9-W7 chair §6.11). This node does two jobs: a 15% BODY, which is a
++   ground — geometrically the selection body's twin — and a 2px inset RIM, which is a mark. The
++   rank is selection > peer cursor > hint laminate > unit, and a ground yields to the grounds
++   above it: composed on your own selected cell the two bodies measured 13.10 L* against 5.90
++   clean, so the answer key out-read your own hand on your own board. The BODY yields; the RIM
++   stays, because the rim is what keeps the T4-W7 intent (the key still points at the very cell
++   you focused to ask). The node is never removed — a `v-if` would take the rim with the body.
++
++   The rim rises to 70% under selection rather than widening: over the 0.08 blue wash the 50%
++   rim reads 2.20 light / 2.50 dark, under the 3:1 floor, and 70% is the one value that clears
++   it in both themes (dark clears at 0.60; light is the binding arm). Opacity, never width —
++   the same lever the selection rim uses under `prefers-contrast`. NOT cured here and named so
++   nobody reads "the rim stays" as "the rim is fine": on an UNSELECTED because-cell the 50% rim
++   over its own 15% body reads 2.04 / 2.44. That is a pre-existing row, older than this wave. */
++.game-cell:has(input:focus-visible) .cell-because,
++.game-cell.is-peer-cursor .cell-because {
++  background: transparent;
++}
++
++.game-cell:has(input:focus-visible) .cell-because {
++  box-shadow: inset 0 0 0 2px
++    color-mix(in srgb, var(--color-teacher-red) 70%, transparent);
++}
++
+ @media (prefers-contrast: more) {
+   .cell-because {
+-    background: color-mix(
+-      in srgb,
+-      var(--color-teacher-red, var(--color-crayon-rose)) 24%,
+-      transparent
+-    );
+-    box-shadow: inset 0 0 0 2px var(--color-teacher-red, var(--color-crayon-rose));
++    background: color-mix(in srgb, var(--color-teacher-red) 24%, transparent);
++    box-shadow: inset 0 0 0 2px var(--color-teacher-red);
++  }
++  /* The rim presses all the way back up under selection too — the 70% above is a trade made
++     for the wash it composes over, and that trade is not the contrast arm's to inherit. It
++     sits AFTER the yield at equal specificity, which is the whole mechanism. */
++  .game-cell:has(input:focus-visible) .cell-because {
++    box-shadow: inset 0 0 0 2px var(--color-teacher-red);
+   }
+ }
+ 
+@@ -187,15 +214,58 @@
+ 
+ /* Tier 1 — hover / base: graphite pencil border + faint tinted fill (§4.2). */
+ .cell-ghost-path {
+-  fill: var(--color-pencil-graphite, var(--grid-line-color));
++  fill: var(--color-pencil-graphite);
+   fill-opacity: 0.06;
+-  stroke: var(--color-pencil-graphite, var(--grid-line-color));
++  stroke: var(--color-pencil-graphite);
+   stroke-width: 5;
+   stroke-opacity: 0.65;
+   stroke-linecap: round;
+   stroke-linejoin: round;
+ }
+ 
++/* THE LIVING CELL IS THE FOCUSED CELL (T9-W7 §5) — the law is written INTO the selector, so
++   the swap cannot reach a still mark. The selected cell carries its resting ring plus three
++   sibling poses; the board writes ONE `data-mark-pose` on the grid per beat and these rules
++   decide which of ITS paths is opaque — the same shape as the grid's own
++   `.boil-frame-layer.is-active` swap. Threading the index down as a prop instead re-rendered
++   every cell in the v-for at 8Hz, which the 16×16 phone traversal felt in WebKit (2 frames over
++   33ms; 0 with the cascade).
++
++   The gate is tier 2's own anchor (`:has(input:focus-visible)`), already evaluated on every
++   focus change, so it costs no new invalidation source. Ungated, these rules turned OFF the
++   first path of EVERY cell on three beats in four: a conflict, a peer's cursor and a hover ring
++   all blinked with someone else's selection (pass 1, measured 0/1/0/0 at poses 0–3).
++
++   The hide rule below stays ungated on purpose: `:nth-of-type(n + 2)` can only ever match a
++   sibling pose, which only the living cell is given, and leaving it unconditional means the
++   poses stay hidden through any tick where the focus and the prop disagree. Pose 0 is the
++   default, so a cell with one path needs no rule at all. */
++.cell-ghost-path:nth-of-type(n + 2) {
++  opacity: 0;
++}
++[data-mark-pose="1"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(1),
++[data-mark-pose="2"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(1),
++[data-mark-pose="3"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(1) {
++  opacity: 0;
++}
++[data-mark-pose="1"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(2),
++[data-mark-pose="2"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(3),
++[data-mark-pose="3"]
++  .game-cell:has(input:focus-visible)
++  .cell-ghost-path:nth-of-type(4) {
++  opacity: 1;
++}
++
+ /* Tier 4 — A PEER'S PENCIL IS ON THIS SQUARE (T8-W3 M1). The estate has answered "what does a
+    selection look like here" three times and the fourth answer is the same answer: a wobbled
+    ring that sketches itself on over the same 180ms.
+@@ -227,9 +297,9 @@
+ }
+ 
+ .game-cell.is-peer-cursor .cell-ghost-path {
+-  fill: var(--color-peer-cursor-ink, var(--color-user-ink));
++  fill: var(--color-peer-cursor-ink);
+   fill-opacity: 0.04;
+-  stroke: var(--color-peer-cursor-ink, var(--color-user-ink));
++  stroke: var(--color-peer-cursor-ink);
+   stroke-width: 4;
+   stroke-opacity: 0.55;
+   stroke-dasharray: 1;
+@@ -239,15 +309,24 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
+-/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+-   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+-   gets the drawn-on ring. */
++/* Tier 2 — selection: crayon-blue, heavier, sketched on over 180ms, then ONE revolution of
++   the living mark (T9-W7 §5) before it rests on the ring below. The modality clause this
++   comment used to carry was never true: an <input> always matches :focus-visible, so a click,
++   a tap and an arrow key all paint tier 2 — one mark for every pointer. Tier 1's graphite is
++   what a hover WITHOUT focus paints, and that is the only thing it means. */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
++  fill: var(--color-focus-sketch);
+   fill-opacity: 0.08;
+-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
++  stroke: var(--color-focus-sketch);
+   stroke-width: 7;
+-  stroke-opacity: 0.9;
++  /* 0.95, not 0.9 (T9-W7 §5, MRK-WASH's graft): the ring's binding reading is against its OWN
++     0.08 fill, and at 0.9 that read 3.34 light / 3.48 dark. At 0.95 the PAINTED median over the
++     fill reads 3.619 / 3.691 (chromium; webkit 3.615 / 3.695) — index.css `--color-focus-sketch`
++     carries the table, the frame row it fails, and the threshold row. It is the RANK's second
++     rung, §6's leader's number, and the value MRK-ABS's comments read at: invalid 1 > tier 2
++     0.95 > tier 1 0.65 > a peer's 0.55, strictly, in both media arms (`focus-ring.spec.ts`
++     G-LIVE-14). 1.0 would tie the invalid rung. */
++  stroke-opacity: 0.95;
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+      value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an
+@@ -271,9 +350,9 @@
+    tier-2's (0,3,1); the focused-and-conflicting case is owned by the tier-2×3 compound
+    rule below. */
+ .game-cell.is-invalid .cell-ghost-path {
+-  fill: var(--color-teacher-red, var(--color-crayon-rose));
++  fill: var(--color-teacher-red);
+   fill-opacity: 0.1;
+-  stroke: var(--color-teacher-red, var(--color-crayon-rose));
++  stroke: var(--color-teacher-red);
+   stroke-width: 9;
+   stroke-opacity: 1;
+ }
+@@ -284,23 +363,17 @@
+    ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
+    focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
+ .game-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-teacher-red, var(--color-crayon-rose));
++  fill: var(--color-teacher-red);
+   fill-opacity: 0.16;
+-  stroke: var(--color-teacher-red, var(--color-crayon-rose));
++  stroke: var(--color-teacher-red);
+   stroke-width: 10;
+   stroke-opacity: 1;
+ }
+ 
+-/* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+-   affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+-   Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+-   outline this comment once assumed), so it paints NOTHING under forced-colors — and
+-   forced-color-adjust strips the SVG ghost to a corner fragment. The HC-restorable ring is the
+-   explicit `forced-colors` block at the foot of this sheet. */
+-.game-cell:focus-within {
+-  background: transparent;
+-  outline: none;
+-}
++/* The neutraliser that used to stand here is GONE with the rule it neutralised (T9-W7 §6):
++   index.css's global `:focus-within` ring and wash are deleted, so a rule whose whole job was
++   to undo them undoes nothing. Under forced-colors the restorable ring is the explicit
++   `forced-colors` block at the foot of this sheet, as it already was. */
+ 
+ /* iOS zoom de-risk (T4-WM §1): mobile Safari zooms a focused input whose computed font-size
+    is <16px. The input is opacity-0 (the SVG glyph is the visible value), so this 16px is a
+@@ -311,8 +384,9 @@
+   /* T4-WM §2 — component-level entry look: the input is the cell's tap target (absolute
+      inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+      pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+-     owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+-     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
++     owns; additive to lane C's global interactive sweep (identical value, no conflict). Tier 2
++     paints on every modality, tap included — an <input> always matches :focus-visible — so
++     suppressing the flash removes a second mark, never the only one. */
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
+@@ -341,6 +415,26 @@
+   }
+ }
+ 
++/* THE GRAPHITE ARM of the section fork (`RING_ARM`, pencilConfig.ts; ACC-GRAPHITE's hunks, carried
++   by §6). Dead code while the arm reads "blue": nothing sets `data-ring-arm="graphite"`. Tier 2 is
++   the pencil pressed hard, and a pencil pressed hard draws a RING; it does not tint the paper
++   inside. Tier 2×3 keeps the teacher's red at the same weight: the band may not become a chip
++   because the digit in it is wrong. Both sit AFTER the blue tiers at one more attribute of
++   specificity, which is the whole mechanism. */
++[data-ring-arm="graphite"] .game-cell:has(input:focus-visible) .cell-ghost-path {
++  fill: none;
++  stroke: var(--color-pencil-graphite);
++  stroke-width: 12;
++  stroke-opacity: 1;
++}
++[data-ring-arm="graphite"]
++  .game-cell.is-invalid:has(input:focus-visible)
++  .cell-ghost-path {
++  fill: none;
++  stroke: var(--color-teacher-red);
++  stroke-width: 12;
++}
++
+ /* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+    Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
+    SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 7d2b7bc1..1c8c9dec 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -718,28 +718,28 @@ onUnmounted(() => {
+ }
+ 
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+-   it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px. */
++   it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px.
++   The `outline: none` this rule and its `:focus` sibling carried are GONE (T9-W7 §6): they
++   were written against the `outline-ring/50` sweep that used to ride `*`, and once that died
++   they had nothing left to suppress but the forced-colors restoration — measured, the scoped
++   `:focus` pair beat it and High Contrast computed `3px none` on this one control. */
+ .sun-moon-toggle:hover {
+-  outline: none;
+   transform: scale(1.08);
+ }
+ 
+-.sun-moon-toggle:focus {
+-  outline: none;
+-}
+-
+ /* ── THE RING TRACES THE ORNAMENT (T9-W2 §2.4), and it is not a taste — it is measured.
+-   The keep shrank the button to the sun's disc, and a ring at `outline-offset: 2px` then lands
+-   INSIDE the art, where the ink covers it: the rest stack is an absolutely-positioned descendant
+-   and it paints over the button's outline, so a crop of a focused toggle came back byte-identical
+-   to an unfocused one in chromium. A focus affordance nobody can see is worse than the one it
+-   replaced. The offset gives the bleed back, so the ring sits where it has always sat — one
+-   ornament-edge out — and the crop is byte-identical to HEAD's at every rung: 2 − (−52) = 54 and
+-   104 + 2×54 = 212, which is 208 + 2×2; likewise 44 + 2×20 = 84 = 80 + 4, and 44 + 2×12 = 68 =
+-   64 + 4. The border-radius rides out with it, so the ring is still a circle around the sun. */
+-.sun-moon-toggle:focus-visible {
+-  outline: 2px solid var(--color-ring);
+-  outline-offset: calc(2px - var(--toggle-bleed, 0px));
++   The keep shrank the button to the sun's disc, and a ring at 2px out then lands INSIDE the art,
++   where the ink covers it: the rest stack is an absolutely-positioned descendant and it paints
++   over the button's own ring, so a crop of a focused toggle came back byte-identical to an
++   unfocused one in chromium. A focus affordance nobody can see is worse than the one it
++   replaced. The bleed is given back, so the ring sits where it has always sat — one ornament
++   edge out — at every rung: 2 − (−52) = 54, and 104 + 2×54 = 212 = 208 + 2×2; likewise
++   44 + 2×20 = 84 = 80 + 4 and 44 + 2×12 = 68 = 64 + 4.
++   The declaration is all that is left of the rule: the ring itself is the house's one drawn
++   ring (`FocusRing.vue`, W7 §6), and `--focus-ring-outset` is the seam a host uses to say
++   where its own edge really is. */
++.sun-moon-toggle {
++  --focus-ring-outset: calc(2px - var(--toggle-bleed));
+ }
+ 
+ /* ── THE BLOOM (T3-W13 §2) — live instances, gesture only ─────────────────
+@@ -757,7 +757,7 @@ onUnmounted(() => {
+      control. The four-sided inset FULLY determines the box, so the `width/height: 100%` that
+      used to size it is deleted rather than kept: left+width wins over right and would pull the
+      ink back down to the keep. `overflow: visible` still gives the ~1.09 crest its headroom. */
+-  inset: var(--toggle-bleed, 0px);
++  inset: var(--toggle-bleed);
+   display: block;
+   pointer-events: none;
+   overflow: visible;
+@@ -915,7 +915,7 @@ onUnmounted(() => {
+   /* The twin of the icons' bleed (T9-W2 §2.4): this box IS the ornament, and it's what
+      `celestialRef` measures for the bake. `.rest-pose` below is untouched — `inset: 0` of a
+      parent that's `--toggle-size` again. */
+-  inset: var(--toggle-bleed, 0px);
++  inset: var(--toggle-bleed);
+   pointer-events: none;
+   visibility: hidden;
+ }
+diff --git a/web/frontend/src/pencil/chrome/FocusRing.vue b/web/frontend/src/pencil/chrome/FocusRing.vue
+new file mode 100644
+index 00000000..0c8db84a
+--- /dev/null
++++ b/web/frontend/src/pencil/chrome/FocusRing.vue
+@@ -0,0 +1,328 @@
++<script setup lang="ts">
++/**
++ * ONE DRAWN RING OFF THE BOARD (T9-W7 §6).
++ *
++ * The board draws focus in its own hand (`gameCell.css` tier 2); everywhere else the estate
++ * drew it six different ways — a 2px solid here, a dashed one there, a `color-mix` 40% on the
++ * logo and 45% on the guard face — and three of those read under 3:1 on their ground. This is
++ * the one mark: the house hand as a px-native SVG rect on whatever has focus, four baked
++ * poses, ink `--color-focus-sketch`, `outlineBoilPx` 0.45. It is findable because it MOVES —
++ * one revolution on the shared beat when it lands, then rest — not because of its colour.
++ *
++ * It TAKES ITS TARGET rather than merely listening for one, in two ranks:
++ *   1. the owner the focused control DECLARES — `aria-activedescendant`. The deck is such a
++ *      listbox: DOM focus never leaves its 1056px scrollport, so a focusin-only ring frames
++ *      the scrollport and never moves on ArrowRight. The card is the owner, and the
++ *      accessibility tree already says so.
++ *   2. `document.activeElement` when it matches `:focus-visible`, read on capture
++ *      focusin/focusout.
++ *
++ * Position is EVENT-DRIVEN — capture-phase scroll, resize, and a ResizeObserver on the target.
++ * A rAF follower measured 255 repositions per 900ms of idle: a permanent subscriber, which is
++ * the exact shape `boilBeat.ts` exists to eliminate. The event form measured 4.
++ *
++ * IT TRAVELS WITH WHAT IT RINGS. None of those events fires for a WAAPI transform, so while an
++ * animation is running on the target's own ancestor path the ring follows per frame and stops
++ * the frame the last one ends (`settle()`). That is the whole clock: no duration constant.
++ */
++import { computed, onBeforeUnmount, onMounted, ref } from "vue";
++import { generateRectBoilFrames } from "@pencil/grid/gridPaths";
++import { BOIL_CONFIG, FILTER_PRESETS } from "@pencil/config/pencilConfig";
++import { useMarkPose } from "@pencil/composables/boilBeat";
++
++/** The board has its own hand; the deck's scrollport is never the owner (its card is). */
++const EXEMPT = ".cell-native-input, .gallery-viewport";
++/** What a scrollport hands the ring instead of nothing: the option a reader can act on. */
++const FIRST_OPTION = '[role="option"], .game-card.is-center';
++const STROKE = 2.5;
++
++const target = ref<Element | null>(null);
++const rect = ref<DOMRect | null>(null);
++/** THE GEOMETRY, NOT THE BOX. The four poses depend on the SHAPE — width, height, and the
++ *  host's declared outset — and on nothing else, so a box that merely travels re-positions one
++ *  `<svg>` instead of re-baking four identical `d` strings (a deck landing did that 23–36
++ *  times, every one of them discarded). */
++const geom = ref({ w: 0, h: 0, outset: 0, cl: 0, cr: 0 });
++
++// One revolution when it lands, then rest — the board's breath, off the board.
++const pose = useMarkPose(() => target.value);
++
++/** The ring's own box: the target's plus the outset, less what the page's edges clip. */
++const ringW = computed(
++  () => geom.value.w + geom.value.outset * 2 - geom.value.cl - geom.value.cr,
++);
++const ringH = computed(() => geom.value.h + geom.value.outset * 2);
++const viewBox = computed(() => `0 0 ${ringW.value} ${ringH.value}`);
++
++// Same bake the board's outline uses (T3-W13 §1-P2): the grain is folded into the geometry,
++// so the poses render as filterless siblings and the census does not move.
++const frames = computed(() => {
++  const { w: rw, h: rh, outset: o, cl, cr } = geom.value;
++  // A geometry that is not a geometry bakes nothing. `--focus-ring-outset` has ONE home, its
++  // registration's `initial-value` (index.css), and no JS fallback stands behind it: delete the
++  // registration and an undeclared host hands back an empty string, `o` is NaN, and the ring
++  // vanishes instead of quietly drawing a house default nobody published. The OUTSET box is the
++  // geometry, not the element's: an outset that swallows the box (the toggle's bleed sentinel,
++  // index.css) must bake nothing too — an `<svg>` given a negative width falls back to 300×150 in
++  // WebKit and paints a ring the size of nothing on the page.
++  const w = rw + o * 2 - cl - cr;
++  const h = rh + o * 2;
++  if (!(rw > 0 && rh > 0 && Number.isFinite(o) && w > STROKE && h > STROKE)) return [];
++  return generateRectBoilFrames(
++    STROKE / 2,
++    STROKE / 2,
++    w - STROKE,
++    h - STROKE,
++    { roughness: 0.5, segments: 6, seed: 77, jagged: true },
++    BOIL_CONFIG.outlineBoilPx,
++    BOIL_CONFIG.frameCount,
++    0,
++    FILTER_PRESETS["grain-outline"]?.grain,
++  );
++});
++
++function measure() {
++  const el = target.value;
++  // THE RING NEVER OUTLIVES ITS REASON, AND NOT EVERY DEPARTURE SENDS AN EVENT. On a phone
++  // WebKit opens the dock sheet over the tab and focus falls to `document.body` with NO
++  // `focusout` on the path we listen to; nothing then re-reads the document, and the ring sat
++  // 341.5px from its box mid-glide and 504.92px away at settle (measured, 393x699 hasTouch,
++  // both this and the reversal). Chromium blanks correctly there, which is exactly why the
++  // check cannot live in a listener. Every path into the ring — event, observer, settle frame
++  // — runs through this function, so the departure is read here instead.
++  const live = document.activeElement;
++  if (el && (!el.isConnected || !live || live === document.body)) {
++    target.value = null;
++    ro?.disconnect();
++    rect.value = null;
++    return;
++  }
++  if (!el) {
++    rect.value = null;
++    return;
++  }
++  // `--focus-ring-outset` is registered as a <length> in index.css, so this reads px even
++  // when the host declares a calc() — and reads the registration's own initial value when the
++  // host declares nothing. No fallback lives here: one publisher, one home.
++  const o = parseFloat(getComputedStyle(el).getPropertyValue("--focus-ring-outset"));
++  const r = el.getBoundingClientRect();
++  if (!r.width && !r.height) {
++    rect.value = null;
++    return;
++  }
++  // A SIDE OFF THE PAGE IS NO SIDE (`focus-ring.spec.ts` G-LIVE-23). A stop flush with the
++  // viewport's edge puts a whole side of its ring past it, unpainted: the attribution tab sits at
++  // x 0 (its ring's left side drew at −3px) and the toggle's 54px ornament ends 2px past the right.
++  // The page never scrolls sideways, so the ring's box is clipped to the layout viewport's width
++  // and every side is drawn where a reader can see it.
++  const vw = document.documentElement.clientWidth;
++  const cl = Math.max(0, o - r.left);
++  const cr = Math.max(0, r.right + o - vw);
++  const g = geom.value;
++  if (
++    g.w !== r.width ||
++    g.h !== r.height ||
++    g.outset !== o ||
++    g.cl !== cl ||
++    g.cr !== cr
++  )
++    geom.value = { w: r.width, h: r.height, outset: o, cl, cr };
++  // Write only a box that actually moved: a fresh DOMRect every scroll frame is a new object
++  // and would wake every consumer of this ref for a rect that says the same thing.
++  const p = rect.value;
++  if (
++    p &&
++    p.left === r.left &&
++    p.top === r.top &&
++    p.width === r.width &&
++    p.height === r.height
++  )
++    return;
++  rect.value = r;
++}
++
++let ro: ResizeObserver | null = null;
++let owner: MutationObserver | null = null;
++let settling = 0;
++/** Which settle owns `settling`: an older chain reads a stale generation and returns. */
++let settleGen = 0;
++
++/** The target and every ancestor it hangs from: what moves the box is rarely the box. */
++function chain(el: Element): Element[] {
++  const out: Element[] = [];
++  for (let e: Element | null = el; e; e = e.parentElement) out.push(e);
++  return out;
++}
++
++/** The animations that can still move this target, read one level at a time (`getAnimations()`
++ *  without `subtree`), and only the ones that END: a perpetual boil on an ancestor would keep
++ *  the loop hunting forever. `document.getAnimations()` reads 1 at rest, so a document-wide
++ *  read is not a test for "in motion"; this path reads 0 at rest and 2 while the tab glides. */
++function running(el: Element): Animation[] {
++  return chain(el)
++    .flatMap((e) => e.getAnimations())
++    .filter((a) => Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity));
++}
++
++/** A RING IS BOUNDED BY THE MOTION IT CHASES, NEVER BY A CLOCK. The box can travel without
++ *  firing `scroll`, `resize` or a ResizeObserver — pressing the dock's tab glides the tab and
++ *  its host 520ms under a WAAPI transform, and fires ZERO `transitionend`/`animationend` on
++ *  that path (measured, both engines). A duration bound guessed at that motion and missed it
++ *  by ~45ms; this one asks the target's own path what is running and stops the frame the last
++ *  one ends.
++ *
++ *  ONE CHAIN, ONE HANDLE. A first cut also awaited `Promise.allSettled(a.finished)` beside the
++ *  rAF; every frame of the glide armed another chain, 33 of them resolved in the frame the
++ *  animations ended, and one press cost 191 sweeps of this path in chromium (594 `getAnimations`
++ *  calls in a single frame) with `cancelAnimationFrame` provably unable to reach chains it never
++ *  created. The promise bought nothing the per-frame read does not already have, so it is gone
++ *  and a generation token retires an older loop when a newer `settle()` starts.
++ *
++ *  Two rules keep their reasons: the FIRST read is one frame late on purpose (the glide starts
++ *  in the button's own handler, after our capture listener — first animation visible at
++ *  t = 7ms chromium / 3ms webkit); three still frames after the set empties, because the drawer
++ *  re-flips its layout in `onSettle` after the last animation ends. Then this loop does not
++ *  exist. A reversal needs no special case: the dock retargets a mid-glide press by
++ *  `anim.reverse()`, so the SAME animation stays in the set with its rate flipped and the loop
++ *  keeps following it (`focus-ring.spec.ts` G-LIVE-4 samples every frame of that glide). */
++function settle() {
++  cancelAnimationFrame(settling);
++  const gen = ++settleGen;
++  let still = 0;
++  const step = () => {
++    const el = target.value;
++    if (!el || gen !== settleGen) return;
++    measure();
++    if (running(el).length) still = 0;
++    else if (++still >= 3) return;
++    settling = requestAnimationFrame(step);
++  };
++  settling = requestAnimationFrame(step);
++}
++
++function take(el: Element | null) {
++  if (el && (el.matches(EXEMPT) || !el.isConnected)) el = null;
++  // The revolution answers the LANDING (`useMarkPose` watches this ref), so the ref is written
++  // only for a NEW target and a re-measure of the same one never restarts it. The settle runs
++  // either way: a RESIDENT target is exactly the thing that moves when you press it.
++  if (el !== target.value) {
++    target.value = el;
++    ro?.disconnect();
++    if (el) ro?.observe(el);
++  }
++  measure();
++  if (el) settle();
++}
++
++function fromDocument() {
++  const a = document.activeElement;
++  if (!a || a === document.body || !a.matches(":focus-visible")) {
++    owner?.disconnect();
++    return take(null);
++  }
++  // Rank 1, THE OWNER IT DECLARES: an `aria-activedescendant` control keeps DOM focus on
++  // itself and names the option that is actually active (the deck's card, never its 1056px
++  // scrollport). The accessibility tree already carries that truth, so the ring reads it there
++  // instead of asking every such surface to hand over a ref — and it follows that truth when
++  // it changes, because an arrow key moves the active option without moving focus at all.
++  const owned = a.getAttribute("aria-activedescendant");
++  owner?.disconnect();
++  if (owned)
++    owner?.observe(a, {
++      attributes: true,
++      attributeFilter: ["aria-activedescendant"],
++    });
++  const el = (owned && document.getElementById(owned)) || a;
++  // A scrollport hands the ring its first option; an empty scrollport has nothing to act on
++  // and shows no ring. An exempt container that names no active descendant would otherwise
++  // take the ring to `null` and leave a focused reader with nothing at all — measured on the
++  // deck with the attribute removed, both engines, zero rings.
++  take(el.matches(EXEMPT) ? el.querySelector(FIRST_OPTION) : el);
++}
++
++const onFocusChange = () => fromDocument();
++/** The next focusin lands in the same task; read after it so a tab step never blanks. */
++const onFocusOut = () => requestAnimationFrame(fromDocument);
++const reposition = () => measure();
++/** ACTIVATION OF A RESIDENT TARGET. Focus does not move when you press the control it is
++ *  already on, so no focus event arrives and the box glides out from under the ring. `click`
++ *  fires for Enter and Space on a button as well as for a pointer, so this one capture-phase
++ *  listener covers every activation; the `aria-activedescendant` path already lands a new
++ *  target of its own. */
++const onActivate = (e: Event) => {
++  const el = target.value;
++  if (el && e.target instanceof Node && el.contains(e.target)) settle();
++};
++
++onMounted(() => {
++  ro = new ResizeObserver(reposition);
++  owner = new MutationObserver(fromDocument);
++  document.addEventListener("focusin", onFocusChange, true);
++  document.addEventListener("focusout", onFocusOut, true);
++  document.addEventListener("click", onActivate, true);
++  window.addEventListener("scroll", reposition, { capture: true, passive: true });
++  window.addEventListener("resize", reposition, { passive: true });
++});
++
++onBeforeUnmount(() => {
++  cancelAnimationFrame(settling);
++  ro?.disconnect();
++  owner?.disconnect();
++  document.removeEventListener("focusin", onFocusChange, true);
++  document.removeEventListener("focusout", onFocusOut, true);
++  document.removeEventListener("click", onActivate, true);
++  window.removeEventListener("scroll", reposition, true);
++  window.removeEventListener("resize", reposition);
++});
++</script>
++
++<template>
++  <svg
++    v-if="rect && frames.length"
++    class="focus-ring"
++    aria-hidden="true"
++    :viewBox="viewBox"
++    :width="ringW"
++    :height="ringH"
++    :style="{
++      left: `${rect.left - geom.outset + geom.cl}px`,
++      top: `${rect.top - geom.outset}px`,
++    }"
++    xmlns="http://www.w3.org/2000/svg"
++  >
++    <path
++      v-for="(d, f) in frames"
++      :key="f"
++      :d="d"
++      fill="none"
++      :stroke-width="STROKE"
++      stroke-linecap="round"
++      stroke-linejoin="round"
++      :style="pose === f ? undefined : { opacity: 0 }"
++    />
++  </svg>
++</template>
++
++<style scoped>
++/* Above the floating action bar (60) and the sheet, under nothing that takes focus. */
++.focus-ring {
++  position: fixed;
++  z-index: 70;
++  pointer-events: none;
++  overflow: visible;
++  /* THE ONE LINE EVERY §10/§11 CONSUMER COPIES (registry v3 §2.9). The ring drinks from the
++     NAME, not the value: `--ring-ink` is what the chrome consumes and `--color-focus-sketch` is
++     what it resolves to (index.css:233). BARE — a static design token declared at `:root` is
++     always present, so `, currentColor` could only fire where the declaration is gone, and then
++     the ring should be missing rather than painted in a colour nobody named. */
++  stroke: var(--ring-ink);
++}
++
++/* Forced colors: the UA outline restored in `index.css` is the ring here, and a drawn one
++   would print as a second, unrelated frame. */
++@media (forced-colors: active) {
++  .focus-ring {
++    display: none;
++  }
++}
++</style>
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+index 2dd31e44..b1cc94f5 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameCard.vue
+@@ -415,28 +415,26 @@ const dealStyle = computed(() => {
+ 
+ /* THE FOCUS RING RIDES THIS CARD (T9-W3 §3.7 — the correctness half; the look is W7 §6).
+    The deck is an aria-activedescendant listbox: DOM focus stays on `.gallery-viewport` for the
+-   whole session, so the ring it used to draw on itself sat in the same place for all five cards
++   whole session, so a ring the deck drew on itself sat in the same place for all five cards
+    (measured at HEAD, both engines: an identical `112.0,125.4 1056.0x456.0` box at every
+-   `aria-activedescendant` value, every card's own `outline-style` `none`). A visible indicator
+-   that cannot name the option it indicates is not a focus indicator. It hangs off the deck's
+-   `:focus-visible` — the state stays the scrollport's, the paint becomes the option's — and it
+-   lands on the `role="option"` element itself, which is the node `aria-activedescendant` points
+-   at, so the ring and the AX truth are the same object.
+-
+-   `.is-center` IS the active option: the class and `aria-selected` are set from one prop
+-   (`isActive`), and the deck's `aria-activedescendant` names that card's id in the same render.
+-
+-   THE OFFSET IS BOUNDED BY THE SCROLLPORT, not chosen. An outline on a descendant is clipped by
+-   the scroll container that holds it, and the END cards rest with only 9.6px of air at 1280×800
+-   (index 0 at left, index 4 at right — `useCarouselGlide`'s clamp cannot travel them to true
+-   centre). 4px offset + 2px stroke reaches 6px out, so the ring stays whole with 3.6px to
+-   spare at the tightest rung and ~42px at 390×844. `spoken-gallery.spec.ts` pins WHOLE rather
+-   than merely PRESENT, at both end cards, so a future offset that overruns the scrollport reds
+-   instead of quietly painting a ring nobody can see. */
+-.gallery-viewport:focus-visible .game-card.is-center {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
+-  outline-offset: 4px;
+-  border-radius: 0.5rem;
++   `aria-activedescendant` value). A visible indicator that cannot name the option it indicates
++   is not one. The card's own outline is gone with the other five bespoke rings: `FocusRing.vue`
++   reads `aria-activedescendant` and draws the house ring on THIS card, which is the node that
++   attribute points at — so the ring and the AX truth are still the same object, and the ring is
++   `position: fixed`, so the scrollport can no longer clip it at the end cards.
++
++   EXCEPT UNDER FORCED COLOURS, where the drawn ring is `display: none` and the UA outline is the
++   indicator. The deck's DOM focus sits on its scrollport, which draws nothing on purpose (and its
++   unlayered `outline: none` out-ranks the layered restoration in index.css), so without this rule
++   a High Contrast reader had no indicator on the deck at all (`focus-ring.spec.ts` G-LIVE-21,
++   born RED on both engines). The card's own outline returns there, in the system colour, at the
++   geometry `74a2b5d9` shipped: 4px offset + 2px stroke stays whole with 3.6px of air at the end
++   cards (1280×800). */
++@media (forced-colors: active) {
++  .gallery-viewport:focus-visible .game-card.is-center {
++    outline: 2px solid Highlight;
++    outline-offset: 4px;
++  }
+ }
+ 
+ /* The deal wrapper (Wave C2 §BEAT 2) — its OWN compositor channel (opacity + a small lift),
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts
+index 15c138d9..bb6effbe 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.a11y.test.ts
+@@ -171,6 +171,11 @@ describe("the destructive-work guard speaks — 3.2", () => {
+       g.element.contains(document.activeElement),
+       `focus stayed outside the armed dialog (on ${document.activeElement?.className})`,
+     ).toBe(true);
++    // T9-W7 §6 — AND IT LANDS ON A VERB. The container is `tabindex="-1"` and matches
++    // `:focus-visible` in both engines, so focusing IT put the estate's one drawn focus ring
++    // around 35,130px² of ribbon instead of around anything a reader could press. The landing
++    // is the non-destructive answer: `keep`.
++    expect(document.activeElement).toBe(w.get(".guard-keep").element);
+     w.unmount();
+   });
+ 
+@@ -180,8 +185,7 @@ describe("the destructive-work guard speaks — 3.2", () => {
+     const keep = w.get(".guard-keep").element as HTMLElement;
+     const leave = w.get(".guard-leave").element as HTMLElement;
+ 
+-    await guard(w).trigger("keydown", { key: "Tab" });
+-    expect(document.activeElement).toBe(keep);
++    // Arming already put focus on `keep` (the row above), so the first Tab steps OFF it.
+     await guard(w).trigger("keydown", { key: "Tab" });
+     expect(document.activeElement).toBe(leave);
+     // Off the end, back to the top — never out into the listbox behind the modal.
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+index 71da58c4..6de3f254 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/GameGallery.vue
+@@ -64,7 +64,7 @@ import {
+   beatsFor,
+ } from "@pencil/config/pencilConfig";
+ import { heldFrameCount } from "@mkbabb/pencil-boil";
+-import { useBeatFrame } from "@pencil/composables/boilBeat";
++import { useBeatFrame, useMarkPose } from "@pencil/composables/boilBeat";
+ import { useLiveRegion } from "@/composables/useLiveRegion";
+ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+ import GameCard from "./GameCard.vue";
+@@ -287,6 +287,12 @@ function poseFor(i: number): number {
+   return i === activeIndex.value ? centerPose.value : 0;
+ }
+ 
++/** THE ARMED VERB BREATHES ONCE (T9-W7 §5). The ribbon's destructive face takes the living
++ *  mark's one revolution when it arms — the same breath the selection answers with, on the one
++ *  control in the estate that cannot be undone. Zero filters by the outline's own contract: the
++ *  poses are baked geometry, opacity-swapped. */
++const armedPose = useMarkPose(() => guardIndex.value);
++
+ /** DEPTH GRADES BY DISTANCE (T8-W3, M11) — the third of the spread's three moves.
+  *
+  *  Every flank rested at one scale and one opacity, which was legible while the frame held a
+@@ -815,7 +821,14 @@ watch(guardIndex, (i, prev) => {
+     sayGuard(`Choose keep, or ${guardVerb.value}.`);
+     nextTick(() => {
+       anchorGuard(); // before the focus, so the note is already over its card when it takes it
+-      guardEl.value?.focus({ preventScroll: true });
++      // THE RING RINGS A VERB (T9-W7 §6). The focus used to land on this container, which is
++      // `tabindex="-1"` and 35,130px² — and it matches `:focus-visible` in both engines, so the
++      // one drawn ring framed the whole ribbon instead of anything a reader could press (22.5×
++      // the keep verb's own box). It lands on the non-destructive verb now: the default answer,
++      // inside the dialog, so `aria-modal` containment is unchanged and Tab still cycles from
++      // wherever focus already is.
++      const keep = guardEl.value?.querySelector<HTMLElement>(".guard-keep");
++      (keep ?? guardEl.value)?.focus({ preventScroll: true });
+     });
+     return;
+   }
+@@ -1050,7 +1063,7 @@ onMounted(async () => {
+                 @click.stop="guardLeave"
+               >
+                 <HandDrawnOutline
+-                  :pose="0"
++                  :pose="armedPose"
+                   :stroke-width="2.5"
+                   :outset="2"
+                   class="guard-face"
+@@ -1351,15 +1364,6 @@ onMounted(async () => {
+   }
+ }
+ 
+-/* The dialog container takes focus on arm (`tabindex="-1"`, never in the tab order). It is not
+-   an operable control and the ribbon IS its own visual announcement, so the UA ring is dropped:
+-   the two verbs inside keep their `:focus-visible` outlines, which is where a keyboard user's
+-   focus actually lands and where the ring has something to say. Also holds the pixels still —
+-   the ribbon's paint is asserted unchanged by W3's golden run. */
+-.gallery-guard:focus {
+-  outline: none;
+-}
+-
+ .guard-note-frame {
+   display: block;
+   width: 100%;
+@@ -1397,6 +1401,13 @@ onMounted(async () => {
+    reads is the FACE inside it, and the box around the face is drawn (`.staging-btn`'s idiom
+    verbatim — one grammar, two files). */
+ .guard-btn {
++  /* THE RING CLEARS THE FRAME IT RINGS (T9-W7 §6). The verb wears a drawn box at outset 2,
++     stroke ≤2.5, which paints out to 3.25px; the house default 3 put the ring's band on top of
++     it (1.5px of overlap, measured both engines). frameOutset + frameStroke/2 + the ring's own
++     half-stroke + 1px of air = 5.5. Declared here, per host, because only three controls in the
++     estate wear a frame — moving the house default would restage every unframed chip's golden
++     for a collision they do not have. */
++  --focus-ring-outset: 5.5px;
+   display: inline-flex;
+   padding: 0;
+   border: none;
+@@ -1443,15 +1454,6 @@ onMounted(async () => {
+ 
+ /* The focus ring rides the FACE, so it traces the drawn box rather than a zero-padding button
+    that is now smaller than the frame around it (`.staging-btn`'s own ruling). */
+-.guard-btn:focus-visible {
+-  outline: none;
+-}
+-
+-.guard-btn:focus-visible .guard-face {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+-  outline-offset: 4px;
+-}
+-
+ /* The destructive verb takes the heavier ink — the outline's own `stroke-width` above, which is
+    the hand's way of saying weight — plus the 8% ground, exactly as `deal` wears it in the band.
+    A reader who can see neither stroke weight nor colour still sees one verb marked and one
+diff --git a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+index da66f430..ed694ca6 100644
+--- a/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
++++ b/web/frontend/src/pencil/chrome/GameGallery/StagingBand.vue
+@@ -374,6 +374,9 @@ function onKeydown(e: KeyboardEvent) {
+    the ribbon and this band shared is what the owner marked as out of family; the ribbon's own
+    copy is agent B's fence and rides a wiring request. */
+ .staging-btn {
++  /* Clears its own drawn frame by 1px of air (T9-W7 §6): outset 2 + stroke 2/2 + the ring's
++     2.5/2 + 1 = 5.25, declared at 5.5. The house default 3 overlapped it by 1.5px. */
++  --focus-ring-outset: 5.5px;
+   display: inline-flex;
+   padding: 0;
+   border: none;
+@@ -424,15 +427,6 @@ function onKeydown(e: KeyboardEvent) {
+ 
+ /* The focus ring rides the FACE, so it traces the drawn box rather than a zero-padding
+    button that is now smaller than the frame around it. */
+-.staging-btn:focus-visible {
+-  outline: none;
+-}
+-
+-.staging-btn:focus-visible .staging-face {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 45%, transparent);
+-  outline-offset: 4px;
+-}
+-
+ .staging-btn:disabled {
+   opacity: 0.45;
+   cursor: default;
+diff --git a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+index 1f4a357c..5b92b019 100644
+--- a/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
++++ b/web/frontend/src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue
+@@ -541,12 +541,6 @@ span.logo-trigger {
+   cursor: default;
+ }
+ 
+-.logo-trigger:focus-visible {
+-  outline: 2px solid color-mix(in srgb, var(--color-foreground) 40%, transparent);
+-  outline-offset: 4px;
+-  border-radius: 0.35rem;
+-}
+-
+ .handwritten-logo {
+   /* --logo-scale (default 1) is the drawer's grow hook (T3-W12 §6): the closed
+        regime pins 1.05 from App.vue and the wordmark takes it as a LAYOUT size at
+diff --git a/web/frontend/src/pencil/composables/boilBeat.ts b/web/frontend/src/pencil/composables/boilBeat.ts
+index 2ca75e00..62302e2e 100644
+--- a/web/frontend/src/pencil/composables/boilBeat.ts
++++ b/web/frontend/src/pencil/composables/boilBeat.ts
+@@ -15,12 +15,15 @@
+  *   disengage re-arms the driver here (imperative handles never auto-resume; that's
+  *   the library's own resume discipline).
+  * - Tab visibility: the one chain parks on hidden; the beat simply stops arriving.
+- * - Subscriber floor: the driver runs only while a consumer is enrolled
+- *   (ref-counted), so an empty page returns to the zero-subscriber ambient floor.
++ * - Subscriber floor: the driver runs only while a consumer is enrolled (ref-counted). On a
++ *   RENDERED page that floor is unreachable and always has been: the wordmark and the toggle
++ *   enrol for the app's life (`HandwrittenLogo.vue:127`, `DarkModeToggle.vue:378`, both mounted
++ *   by `App.vue`'s masthead), so the driver runs before any other consumer asks. It buys the
++ *   marginal subscriber, not an idle page: N consumers cost one driver and N watches.
+  */
+-import { onUnmounted, ref, watch, type Ref } from "vue";
++import { computed, onUnmounted, ref, watch, type Ref } from "vue";
+ import { createBoilTicker, usePrefersReducedMotion } from "@mkbabb/pencil-boil";
+-import { MOTION } from "@pencil/config/pencilConfig";
++import { BOIL_CONFIG, MOTION } from "@pencil/config/pencilConfig";
+ 
+ const beat = ref(0);
+ let consumers = 0;
+@@ -75,3 +78,33 @@ export function useBeatFrame(
+   });
+   return frame;
+ }
++
++/**
++ * THE LIVING MARK'S POSE (T9-W7 §5) — a mark under the reader's hand breathes ONCE.
++ *
++ * `useBeatFrame` is the perpetual form: enrol and the poses cycle for as long as the surface
++ * lives. This is the one-shot form. When `landed` names something new the pose steps the
++ * shared beat for `markSettleBeats` beats and then rests on pose 0 — and since that count
++ * equals `frameCount`, the revolution's last step IS pose 0, so the mark settles on the pose
++ * it started from and nothing moves while nobody's hand is on it.
++ *
++ * `landed` returns the IDENTITY of whatever holds the hand (a cell index, an element, an armed
++ * ribbon's card) or null for nothing. A re-measure of the same target is not a landing and
++ * never restarts the breath.
++ *
++ * PRM is inherited whole: the library force-clears the beat driver, so the counter never
++ * advances, `elapsed` stays 0, and the mark is born at pose 0 with zero swaps.
++ */
++export function useMarkPose(landed: () => unknown): Readonly<Ref<number>> {
++  const sharedBeat = useBoilBeat();
++  const start = ref(-1);
++  watch(landed, (v) => {
++    start.value = v == null ? -1 : sharedBeat.value;
++  });
++  return computed(() => {
++    if (start.value < 0) return 0;
++    const elapsed = sharedBeat.value - start.value;
++    if (elapsed <= 0 || elapsed >= BOIL_CONFIG.markSettleBeats) return 0;
++    return elapsed % Math.max(1, BOIL_CONFIG.frameCount);
++  });
++}
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..62fda8f2 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -263,14 +263,26 @@ export interface BoilConfig {
+   subgridBoil: number;
+   cellBoil: number;
+   outlineBoilPx: number;
++  /** How long a mark under the reader's hand LIVES, in beats (T9-W7 §5). The focused
++   *  cell's ghost and the chrome focus ring step the shared beat for this many beats
++   *  after they land and then rest on pose 0 — one revolution, since it equals
++   *  `frameCount`. 4 × `MOTION.beatMs` = 500ms, the estate's one-shot band beside
++   *  `cardStepMs` 440 and `boardFoldMs` 520. Under PRM the beat never arrives, so the
++   *  mark is born at pose 0 and never swaps. */
++  markSettleBeats: number;
+ }
+ 
+ const DEFAULT_BOIL_CONFIG: BoilConfig = {
+   frameCount: 4,
+-  intervalMs: 150, // ~6.7fps — "shooting on fours"
++  // Quantizes to ONE 125ms beat (`beatsFor(150)` = 1), so the grid swaps at 8Hz on the
++  // shared beat. The "shooting on fours" frame rate this line used to claim was the
++  // pre-W12 free-running interval and has been untrue since every boil surface moved
++  // onto `MOTION.beatMs`.
++  intervalMs: 150,
+   frameBoil: 1.2, // frame lines perturbation (viewBox units)
+   subgridBoil: 0.6, // subgrid lines
+   cellBoil: 0.3, // cell lines — subtle so glyphs feel stable
++  markSettleBeats: 4, // the living mark's one revolution (T9-W7 §5)
+   // HandDrawnOutline perturbation, in CSS PX (the outline is px-native, T3-W10 F1).
+   // Its own constant because frameBoil is 1000-unit viewBox units — passing it verbatim
+   // was a unit bug once the outline went px-native (1.2px flat ≈ 4× the BEFORE screen
+@@ -285,6 +297,40 @@ export function resetBoilConfig() {
+   Object.assign(BOIL_CONFIG, { ...DEFAULT_BOIL_CONFIG });
+ }
+ 
++/** THE SECTION FORK'S RING ARM (T9-W7 §3/§6, U-10 — the owner disposes; nothing fires before the
++ *  eye). `"blue"` ships: tier 2 in the focus ink at 0.95 over an 0.08 fill, the chrome ring in the
++ *  same ink. `"graphite"` is ACC-GRAPHITE's arm, and only PART of it is carried here: tier 2 and
++ *  tier 2×3 draw no fill, tier 2 in the pencil pressed hard (stroke 12, opacity 1), and the chrome
++ *  ring takes the pencil's ink. Flipping this const deletes nothing — `--color-focus-sketch` stays
++ *  declared and simply goes unread — and it does NOT land GRAPHITE's arm: the arm's second pass
++ *  (`.cell-ghost-retrace`, a reversed path in `gridPaths.ts` + `DigitCell.vue`) is GRAPHITE's hunk
++ *  and is absent, and tier 2 at opacity 1 ties the invalid rung, so `focus-ring.spec.ts` G-LIVE-14
++ *  reds under it. Not framable as the owner's arm until the retrace is carried. Published once on
++ *  `<html>` (App.vue) so a teleported board keeps its arm. */
++export const RING_ARM: "blue" | "graphite" = "blue";
++
++/** THE RING'S GEOMETRY — the owner's ballot T9-B29 (U-10), HEAD's recipe the default.
++ *  - `"head"` ships: `74a2b5d9`'s recipe, the ring on its cell's own square (roughness 0.4 of the
++ *    side, 2 segments at 16×16 and 4 below).
++ *  - `"graft"` is MRK-ABS's recipe, built so the owner can see it: drawn INSIDE the square at
++ *    `graft.inset` with an absolute wander of `graft.wanderUnits` ghost units, segments pinned at 4.
++ *  - `"sized"` keys the recipe on the board: the graft below `sizedFrom`, HEAD's at and above it.
++ *  The painted counts behind each arm live in the ballot's record, not here. MA-N — no ring's
++ *  painted outer ink enters its neighbour at stroke 10, read from the DOM at 1280×800 by
++ *  `focus-ring.spec.ts` G-LIVE-22, which holds every figure below to the DOM:
++ *     16×16  head +1.958  graft +1.639
++ *     9×9  head +5.382  graft +6.880
++ *     4×4  head +9.826  graft +14.141 */
++export const RING_GEOMETRY: Readonly<{
++  arm: "head" | "graft" | "sized";
++  graft: Readonly<{ inset: number; wanderUnits: number }>;
++  sizedFrom: number;
++}> = Object.freeze({
++  arm: "head",
++  graft: Object.freeze({ inset: 0.86, wanderUnits: 5.4 }),
++  sizedFrom: 16,
++});
++
+ /** Frozen defaults for reset.
+  *  Wobble filters use single-layer feTurbulence+feDisplacementMap (small elements only).
+  *  Grid boil is path-based (see BOIL_CONFIG). */
+diff --git a/web/frontend/src/pencil/grid/gridPaths.test.ts b/web/frontend/src/pencil/grid/gridPaths.test.ts
+new file mode 100644
+index 00000000..e1ae3955
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.test.ts
+@@ -0,0 +1,74 @@
++import { describe, it, expect } from "vitest";
++import { wobbleRect } from "@mkbabb/pencil-boil";
++import { RING_GEOMETRY } from "../config/pencilConfig";
++import { generateCellRects, generateCellFrames } from "./gridPaths";
++
++// THE WALK EVICTS NOTHING (T9-W7 §5, G-LIVE-13).
++//
++// `useBoilCache` is ONE module-global Map with a cap of 24, and its `maxEntries` is a per-CALL
++// argument — so the smallest cap any caller passes governs the whole estate's window. Every
++// other caller keys on the BOARD (size, seed, viewBox): a handful of entries that live for the
++// session. `generateCellFrames` keys on the CELL, and the reader mints a fresh key on every
++// keystroke, so a 24-step keyboard walk inside the shared cache flushes the board's own
++// `cellRects` and the grid's frame tuples, and the next beat regenerates the whole board's
++// geometry to move one ring.
++//
++// The cure is that the living mark's poses never enter the shared cache at all: a module-local
++// two-entry window (the cell under the hand and the one it just left). The claim is referential
++// — the LRU hands back the SAME object on a hit and a fresh one on a miss — so identity is the
++// measurement, and the test reds by construction against the shared-LRU form.
++describe("gridPaths — the living mark's memo does not share the board's cache", () => {
++  it("30 cell-frame bakes later, the board's cellRects entry is still the same object", () => {
++    const board = () => generateCellRects(9, 3, 1000, 4242);
++    const first = board();
++    expect(board()).toBe(first); // the control: a hit is the same object
++
++    for (let pos = 0; pos < 30; pos++)
++      generateCellFrames(9, 3, 1000, 4242, pos, 0.3, 4);
++
++    expect(board()).toBe(first);
++  });
++
++  it("keeps a two-entry window: the cell under the hand and the one it just left", () => {
++    const at = (pos: number) => generateCellFrames(16, 4, 1000, 7, pos, 0.3, 4);
++    const a = at(0);
++    const b = at(1);
++    expect(at(1)).toBe(b); // the hand's own cell
++    expect(at(0)).toBe(a); // the cell it just left
++    at(2); // a third landing retires the oldest
++    expect(at(0)).not.toBe(a);
++  });
++
++  it("pose 0 is the resting ring byte for byte — the board cannot move when nothing is focused", () => {
++    const rects = generateCellRects(9, 3, 1000, 42);
++    expect(generateCellFrames(9, 3, 1000, 42, 40, 0.3, 4)[0]).toBe(rects[40]);
++    // …and at 16×16, where HEAD's recipe drops to 2 segments
++    const r16 = generateCellRects(16, 4, 1000, 42);
++    expect(generateCellFrames(16, 4, 1000, 42, 0, 0.3, 4)[0]).toBe(r16[0]);
++    expect(generateCellFrames(16, 4, 1000, 42, 255, 0.3, 4)[0]).toBe(r16[255]);
++  });
++});
++
++// THE DEFAULT IS HEAD'S RING (T9-B29, registry-v6 §2.8). Spelled here from `74a2b5d9`'s own
++// `generateCellRects`, not from the product's recipe, so the pass-6 graft (inset 0.86, 5.4 u)
++// shipped as the default reds it at every board.
++describe("gridPaths — the shipped ring is 74a2b5d9's", () => {
++  it("every resident ring at 4×4, 9×9 and 16×16 is HEAD's recipe byte for byte", () => {
++    expect(RING_GEOMETRY.arm).toBe("head");
++    for (const n of [4, 9, 16]) {
++      const cs = 1000 / n;
++      const rects = generateCellRects(n, Math.sqrt(n), 1000, 42);
++      let same = 0;
++      for (let pos = 0; pos < n * n; pos++) {
++        const head = wobbleRect((pos % n) * cs, Math.floor(pos / n) * cs, cs, cs, {
++          roughness: 0.4,
++          segments: n >= 16 ? 2 : 4,
++          seed: 42 + 500 + pos * 7,
++          jagged: true,
++        });
++        if (rects[pos] === head) same++;
++      }
++      expect(same, `${n}×${n}`).toBe(n * n);
++    }
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..064e1694 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -12,7 +12,7 @@ import {
+   boilLineFrames,
+   useBoilCache,
+ } from "@mkbabb/pencil-boil";
+-import type { GrainConfig } from "../config/pencilConfig";
++import { RING_GEOMETRY, type GrainConfig } from "../config/pencilConfig";
+ 
+ interface BoilFrames {
+   /** frame[frameIdx] — closed rect path for the outer frame */
+@@ -48,27 +48,91 @@ export function generateCellRects(
+   return useBoilCache<Record<number, string>>(
+     ["cellRects", boardSize, subgridSize, viewBoxSize, seed],
+     () => {
+-      const cellSize = viewBoxSize / boardSize;
+-      const cellSegments = boardSize >= 16 ? 2 : 4;
+       const cellRects: Record<number, string> = {};
+-      for (let r = 0; r < boardSize; r++) {
+-        for (let c = 0; c < boardSize; c++) {
+-          const pos = r * boardSize + c;
+-          const x = c * cellSize;
+-          const y = r * cellSize;
+-          cellRects[pos] = wobbleRect(x, y, cellSize, cellSize, {
+-            roughness: 0.4,
+-            segments: cellSegments,
+-            seed: seed + 500 + pos * 7,
+-            jagged: true,
+-          });
+-        }
++      for (let pos = 0; pos < boardSize * boardSize; pos++) {
++        const { x, y, size, opts } = ringRecipe(boardSize, viewBoxSize, seed, pos);
++        cellRects[pos] = wobbleRect(x, y, size, size, opts);
+       }
+       return cellRects;
+     },
+   );
+ }
+ 
++/**
++ * ONE RING RECIPE for the resting ring and the living mark's skeleton, at the arm
++ * `RING_GEOMETRY` names (T9-B29). HEAD's recipe draws the ring on its cell's own square with a
++ * wander that is a fraction of the side (roughness 0.4; 2 segments at 16×16). The graft draws it
++ * INSIDE the square at `inset`, centred, and inverts `maxDisplace = roughness × side × 0.015` so
++ * its wander is one absolute length on every board, with segments pinned at 4.
++ */
++function ringRecipe(boardSize: number, viewBoxSize: number, seed: number, pos: number) {
++  const cellSize = viewBoxSize / boardSize;
++  const { arm, graft, sizedFrom } = RING_GEOMETRY;
++  const grafted = arm === "graft" || (arm === "sized" && boardSize < sizedFrom);
++  const inset = grafted ? graft.inset : 1;
++  const size = inset * cellSize;
++  const pad = ((1 - inset) / 2) * cellSize;
++  return {
++    x: (pos % boardSize) * cellSize + pad,
++    y: Math.floor(pos / boardSize) * cellSize + pad,
++    size,
++    opts: {
++      roughness: grafted ? graft.wanderUnits / (0.015 * size) : 0.4,
++      segments: grafted || boardSize < 16 ? 4 : 2,
++      seed: seed + 500 + pos * 7,
++      jagged: true,
++    },
++  };
++}
++
++/**
++ * THE LIVING MARK (T9-W7 §5) — the four poses of ONE cell's ghost ring.
++ *
++ * `generateCellRects` gives every cell its resting ring; this gives the ONE cell under the
++ * reader's hand the same ring in four poses, so the mark can breathe once on the shared beat
++ * and then rest. Frame 0 is `wobbleRect`'s own composition of the same four wobbled sides
++ * under the same seed — byte-identical to `generateCellRects(…)[pos]` — so the resting board
++ * cannot move; frames 1..n-1 perturb that skeleton by `cellBoil` under per-frame seeds (the
++ * board frame's grammar: corners anchored, sin^0.9 taper), which is the same hand the grid
++ * lines already boil with, one rank quieter.
++ *
++ * MEMOISED IN ITS OWN TWO-ENTRY WINDOW, deliberately outside the shared boil LRU. The LRU is
++ * one module-global Map with a cap of 24 whose `maxEntries` is per-CALL, and this is the only
++ * caller in the estate that mints a fresh key on every keystroke: a 24-step keyboard walk
++ * evicts the board's own `cellRects` and the grid's frame tuples, and the next beat regenerates
++ * the whole board's geometry to move one ring. Two entries is the whole need — the cell under
++ * the hand and the one it just left — and the grid's entries survive any walk.
++ */
++const cellFramesMemo = new Map<string, string[]>();
++
++export function generateCellFrames(
++  boardSize: number,
++  subgridSize: number,
++  viewBoxSize: number,
++  seed: number,
++  pos: number,
++  boilAmount: number,
++  frameCount: number,
++): string[] {
++  const key = [
++    boardSize,
++    subgridSize,
++    viewBoxSize,
++    seed,
++    pos,
++    boilAmount,
++    frameCount,
++  ].join("|");
++  const hit = cellFramesMemo.get(key);
++  if (hit) return hit;
++  const { x, y, size, opts } = ringRecipe(boardSize, viewBoxSize, seed, pos);
++  const frames = generateRectBoilFrames(x, y, size, size, opts, boilAmount, frameCount);
++  cellFramesMemo.set(key, frames);
++  if (cellFramesMemo.size > 2)
++    cellFramesMemo.delete(cellFramesMemo.keys().next().value as string);
++  return frames;
++}
++
+ // ── Grain bake (T3-W13 §1-P2) ─────────────────────────────────────
+ //
+ // The booked geometric bake (pencilConfig.ts, grain-static disposition) EXECUTED for

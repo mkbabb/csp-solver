@@ -1,0 +1,17 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/glyph-pop.mjs	2026-09-23 18:13:42
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/paltin7-instr/glyph-pop.mjs	2026-09-24 11:42:03
+@@ -73,8 +73,12 @@
+ export async function applyTail(page, subject, tail) {
+   return page.evaluate(({ subject, tail }) => {
+     const el = document.querySelector(subject); if (!el) return { ok: false };
+-    const r = document.createRange(); r.selectNodeContents(el);
+-    const rects = [...r.getClientRects()].filter((q) => q.width > 0);
++    // THE TEXT RUN, not the element's contents: a Range over `el` counts a non-text child (an inline
++    // svg — the attribution tape's tally) as run, and the last 12 % then lands on the child and fades
++    // no glyph (PAL-TIN pass 7: TAIL12 slices identical to clean on the tape). Text nodes only.
++    const rects = [];
++    const tw = document.createTreeWalker(el, NodeFilter.SHOW_TEXT);
++    for (let n = tw.nextNode(); n; n = tw.nextNode()) { if (!n.textContent.trim()) continue; const r = document.createRange(); r.selectNodeContents(n); rects.push(...[...r.getClientRects()].filter((q) => q.width > 0)); }
+     const eb = el.getBoundingClientRect();
+     const left = Math.min(...rects.map((q) => q.left)), right = Math.max(...rects.map((q) => q.right));
+     const cut = left + (1 - tail) * (right - left) - eb.left;

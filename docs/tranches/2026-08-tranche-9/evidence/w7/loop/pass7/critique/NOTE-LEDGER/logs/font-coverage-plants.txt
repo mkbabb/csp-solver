@@ -1,0 +1,18 @@
+[clean] test:font-coverage (--self-test) exit 0 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+[F0 closed deleted + solved-it call site deleted (pass-6 plant)] test:font-coverage (--self-test) exit 1 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   BAD self-test · CONTROL — the closed flags as they stand: 1 finding(s) 
+[F1 derive narrowed to marginVerdictCopy + closed deleted + call site deleted] test:font-coverage (--self-test) exit 1 ::   BAD self-test · the record's group with `closed: true` deleted: 0 finding(s)   ok  self-test · CONTROL — the closed flags as they stand:
+[F1b derive narrowed + closed deleted + call site re-worded] test:font-coverage (--self-test) exit 1 ::   BAD self-test · the record's group with `closed: true` deleted: 0 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+[F2 verdicts split into an OPEN twin group + call site deleted] test:font-coverage (--self-test) exit 1 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+fc f2daa32f5ddc gb a9e8142f460f
+[F2' split: verdicts moved to an OPEN twin, the record group stays closed; NO call site touched] exit 1
+[F2' split + the solved-it call site DELETED] exit 1 :: font coverage FAILED: 
+[F2' split + the solved-it call site RE-WORDED 'solved it !'] exit 1 :: font coverage FAILED:   · Patrick Hand · the verdicts (an open twin): src/games/shared/GameBoard.vue renders "solved it !" and the corpus does not hold it. THIS IS THE RANSOM NOTE: the sub
+restored fc f2daa32f5ddc gb a9e8142f460f
+[F3 split (verdicts + row/column/box to an OPEN twin), no call site touched] exit 1 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+[F3 split + the solved-it call site DELETED] exit 1 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+[F3 split + call site RE-WORDED 'solve it!' (codepoints in the cut)] exit 1 ::   ok  self-test · the record's group with `closed: true` deleted: 1 finding(s)   ok  self-test · CONTROL — the closed flags as they stand: 0 finding(s) 
+restored fc f2daa32f5ddc gb a9e8142f460f
+[F4 split + the twin admits x, no call site touched] exit 0 :: font coverage OK — 2 subset faces, each covered as authored AND as transformed, each corpus a superset of what 151 src files actually render:   Fraunces: 30 codepoints, 14636 B, 8 declared strings 
+[F4 + the solved-it call site DELETED] exit 0 :: font coverage OK — 2 subset faces, each covered as authored AND as transformed, each corpus a superset of what 151 src files actually render:   Fraunces: 30 codepoints, 14636 B, 8 declared strings over 2 group(s
+[F4 + call site RE-WORDED 'solve it!'] exit 1 :: font coverage FAILED:   · Patrick Hand · the verdicts (an open twin): src/games/shared/GameBoard.vue renders "solve it!" and the corpus does not hold it. THIS IS THE RANSOM NOTE: the subset was cut from the list
+restored fc f2daa32f5ddc gb a9e8142f460f

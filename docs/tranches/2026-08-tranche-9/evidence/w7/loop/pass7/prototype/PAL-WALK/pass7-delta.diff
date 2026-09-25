@@ -1,0 +1,1152 @@
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/laneB-rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/laneB-rig/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass2/rig/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/measure/rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/measure/rig/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rig/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigA/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigA/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigB/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigB/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigF3/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass3/rigF3/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/rigA/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/rigA/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/rigF3/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass4/rigF3/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/A/rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass5/A/rig/node_modules is a unknown type
+File base6-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass6/A/rig/node_modules is a unknown type while file base-210914/docs/tranches/2026-08-tranche-5/evidence/design-loop/pass6/A/rig/node_modules is a unknown type
+diff -ruN --exclude=.git base6-210914/web/frontend/e2e/peer-walk.spec.ts base-210914/web/frontend/e2e/peer-walk.spec.ts
+--- base6-210914/web/frontend/e2e/peer-walk.spec.ts	2026-09-23 21:09:16
++++ base-210914/web/frontend/e2e/peer-walk.spec.ts	2026-09-23 21:09:16
+@@ -843,45 +843,33 @@
+ 
+ /**
+  * THE NAME ON THE TAPE, PAINTED (the pass-4 critic's instrument, landed): the label photographed
+- * as drawn and TWICE with its colour set transparent, so every pixel the TEXT changed is found and
+- * read against the ground actually painted under it — grid line, digit, tape paper and all.
++ * as drawn and TWICE with its text made transparent (`color` AND the fill, so a fill fade cannot
++ * survive into the bare shot), so every pixel the TEXT changed is found and read against the
++ * ground actually painted under it — grid line, digit, tape paper and all.
+  *
+- * TWO BARE PHOTOGRAPHS (the pass-5 critic's C1). A minimum over pixels reds on ONE transient ground
+- * pixel, and a single bare shot cannot tell a ground that is dark from a ground that was dark for
+- * one frame: the ink/ink-again pair only names a pixel that moved in the INK shots. So a pixel whose
+- * two bare shots disagree is noise, dropped and counted.
++ * TWO BARE PHOTOGRAPHS (the pass-5 critic's C1). A pixel whose two bare shots disagree is noise,
++ * dropped and counted; so is a pixel off the segment from its ground to the name's colour (a
++ * stroke that boiled between photographs, not the name).
+  *
+- * THE POPULATION IS KEYED ON GLYPH COVERAGE (registry-v5 §2.11), never on the crop's own maximum:
+- * a pixel's coverage is how far the ink shot moved it from its bare ground TOWARD the name's spec
+- * colour (a projection, 0 = untouched, 1 = solid ink). Two statistics ride on it:
+- *   - the CURE's claim: the spec colour against the painted ground, minimum over every pixel the
+- *     glyph covers ≥ 20 % (no ground under the name drops it below 4.5);
+- *   - the GLYPH-TEXT statistic: the painted pixel against its own ground, median over the core
+- *     (coverage ≥ 50 %) ≥ 4.5, with the share of core pixels under 4.5 printed beside it.
+- * A label that paints nothing has no population, and an empty population is RED, never a pass.
++ * THE WHOLE GLYPH POPULATION (LAWS P6 §E): every pixel the text moved by ≥ 6 a channel, each read
++ * as the painted pixel against its own ground. A statistic of the spec colour only asks the name
++ * to EXIST (pass 6: a fill faded to 65 % stayed green at a painted 3.358), so every clause below
++ * reads paint, and every one is absolute (a number stamped from a read, never a photograph of the
++ * subject taken in the same run, which would inherit the plant):
++ *   G1  the population is ≥ 40 px and the core (coverage ≥ 50 %) covers > 4 % of the line box —
++ *       an empty or thin name is RED, never `min(4.5, 0)`;
++ *   G2  the glyph-text core median (registry-v5 §2.11: coverage ≥ 50 %) and the WHOLE
++ *       population's median each clear the cell's floor (`floorsFor`, 4.5 wherever it is met);
++ *   G3  the fraction of the population under 4.5 is bounded (the shipped reading + 0.05);
++ *   G4  the TAIL: 16 columns over the population's own x-extent, each with ≥ 8 px keeps its p95 ≥
++ *       max(3.0, 0.4 × the whole p95) — a median and a fraction cannot see a fade on the last
++ *       12 % of a word (the chair's `glyph-pop.mjs` clause, its parameters unchanged);
++ *   and the CURE's claim: the spec colour against the painted ground, minimum over every pixel the
++ *   glyph covers ≥ 20 %, is ≥ 4.5 (no ground under the name drops it — the paper's row).
+  */
+-async function paintedName(
+-  page: Page,
+-  label: ReturnType<Page["locator"]>,
+-): Promise<{
+-  spec: string;
+-  textPx: number;
+-  worst: number;
+-  under45: number;
+-  corePx: number;
+-  coreMedian: number;
+-  coreUnder: number;
+-  boxPx: number;
+-  noise: number;
+-  camo: number;
+-  offLine: number;
+-  sensitivity: string;
+-  under: string[];
+-  worstAt: string;
+-}> {
++async function paintedName(page: Page, label: ReturnType<Page["locator"]>) {
+   // THE TEXT'S OWN BOX, not the label's: the label's box also holds the board beyond the paper's
+-  // torn ends, where the grid's boil cycles its variants between photographs. A Range over the
+-  // name bounds exactly the glyphs.
++  // torn ends. A Range over the name bounds exactly the glyphs.
+   const box = await label.evaluate((l) => {
+     const r = document.createRange();
+     r.selectNodeContents(l);
+@@ -890,14 +878,25 @@
+   });
+   const clip = { x: box.x - 1, y: box.y - 1, width: box.width + 2, height: box.height + 2 };
+   const shot = async () => rawOf(page, await page.screenshot({ clip }));
++  const text = async (on: boolean) => {
++    await label.evaluate((l, on) => {
++      const st = (l as HTMLElement).style;
++      if (on) {
++        st.removeProperty("color");
++        st.removeProperty("-webkit-text-fill-color");
++      } else {
++        st.setProperty("color", "transparent", "important");
++        st.setProperty("-webkit-text-fill-color", "transparent", "important");
++      }
++    }, on);
++    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++  };
+   const ink = await shot();
+   const spec = await label.evaluate((l) => getComputedStyle(l).color);
+-  await label.evaluate((l) => ((l as HTMLElement).style.color = "transparent"));
+-  await expect.poll(() => label.evaluate((l) => getComputedStyle(l).color)).toBe("rgba(0, 0, 0, 0)");
++  await text(false);
+   const bare = await shot();
+   const bare2 = await shot();
+-  await label.evaluate((l) => ((l as HTMLElement).style.color = ""));
+-  await expect.poll(() => label.evaluate((l) => getComputedStyle(l).color)).toBe(spec);
++  await text(true);
+   const again = await shot();
+   const specRgb = await page.evaluate((css) => {
+     const c = document.createElement("canvas");
+@@ -913,10 +912,11 @@
+   const ratio = (x: number, y: number): number => (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
+   const diff = (u: number[], v: number[], k: number): number =>
+     Math.abs(u[k] - v[k]) + Math.abs(u[k + 1] - v[k + 1]) + Math.abs(u[k + 2] - v[k + 2]);
++  const moved = (u: number[], v: number[], k: number): number =>
++    Math.max(Math.abs(u[k] - v[k]), Math.abs(u[k + 1] - v[k + 1]), Math.abs(u[k + 2] - v[k + 2]));
+   const specL = lum(specRgb, 0);
+-  const text: number[] = [];
+-  const cov: { c: number; r: number }[] = [];
+-  const under: string[] = [];
++  const spec20: number[] = [];
++  const pop: { c: number; r: number; x: number }[] = [];
+   let worstAt = "";
+   let worstR = Infinity;
+   let noise = 0;
+@@ -927,109 +927,204 @@
+       noise++;
+       continue;
+     }
++    if (moved(ink.data, bare.data, k) < 6) continue;
+     const g = [bare.data[k], bare.data[k + 1], bare.data[k + 2]];
+     const sg = specRgb.map((v, j) => v - g[j]);
+     const den = sg.reduce((a, v) => a + v * v, 0);
+-    const moved = diff(ink.data, bare.data, k);
+-    // A ground within 16 a channel of the spec colour: coverage cannot be read there, and a
+-    // glyph drawn on it would be invisible. Counted and printed; the tape's paper has none.
++    // A ground within 16 a channel of the spec colour: coverage cannot be read there, and a glyph
++    // drawn on it would be invisible. Counted and printed; the tape's paper has none.
+     if (den < 3 * 16 * 16) {
+-      if (moved > 8) camo++;
++      camo++;
+       continue;
+     }
+     const c = sg.reduce((a, v, j) => a + v * (ink.data[k + j] - g[j]), 0) / den;
+-    if (c < 0.2) continue;
+-    // ON THE LINE, OR NOT THE NAME. A pixel the name painted is its ground moved TOWARD the name's
+-    // colour — the ink shot lies on the segment from the bare ground to the spec colour. A stroke
+-    // that boils between the photographs (the board's frame, in the clip's corner where the tilted
+-    // tape's bounding box overhangs its paper: pass 6, WebKit's top-row flip) moves a pixel
+-    // somewhere else, and a projection onto the name's colour would call it text over a dark
+-    // ground. It is counted, and dropped.
++    if (c <= 0) continue;
++    // ON THE LINE, OR NOT THE NAME: a pixel the name painted lies on the segment from its bare
++    // ground toward the name's colour; a boiling stroke moves it somewhere else (pass 6, WebKit's
++    // top-row flip).
+     const off = [0, 1, 2].reduce((a, j) => a + Math.abs(ink.data[k + j] - (g[j] + c * sg[j])), 0);
+     if (off > 24) {
+       offLine++;
+       continue;
+     }
+     const gl = lum(bare.data, k);
++    pop.push({ c, r: ratio(lum(ink.data, k), gl), x: (k / 4) % ink.w });
++    if (c < 0.2) continue;
+     const r = ratio(specL, gl);
+-    text.push(r);
+-    cov.push({ c, r: ratio(lum(ink.data, k), gl) });
+-    // Every pixel under 4.5 is NAMED (position in CSS px, both bare grounds, the ink), and so is the
+-    // worst one whatever it reads, so a minimum is a place on the page and never only a number.
+-    const at = (): string => {
+-      const n = k / 4;
+-      return (
+-        `(${(clip.x + (n % ink.w) * (clip.width / ink.w)).toFixed(1)},${(clip.y + Math.floor(n / ink.w) * (clip.height / ink.h)).toFixed(1)}) ` +
+-        `ground rgb(${g.join(",")}) bare2 rgb(${[0, 1, 2].map((j) => bare2.data[k + j]).join(",")}) ink rgb(${[0, 1, 2].map((j) => ink.data[k + j]).join(",")}) coverage ${c.toFixed(2)} → ${r.toFixed(3)}`
+-      );
+-    };
++    spec20.push(r);
+     if (r < worstR) {
+       worstR = r;
+-      worstAt = at();
++      const n = k / 4;
++      worstAt =
++        `(${(clip.x + (n % ink.w) * (clip.width / ink.w)).toFixed(1)},${(clip.y + Math.floor(n / ink.w) * (clip.height / ink.h)).toFixed(1)}) ` +
++        `ground rgb(${g.join(",")}) coverage ${c.toFixed(2)} → ${r.toFixed(3)}`;
+     }
+-    if (r < 4.5 && under.length < 8) under.push(at());
+   }
+-  const core = cov.filter((q) => q.c >= 0.5).map((q) => q.r).sort((u, v) => u - v);
++  const sorted = (a: number[]) => [...a].sort((u, v) => u - v);
++  const q = (a: number[], f: number) => (a.length ? a[Math.min(a.length - 1, Math.floor(a.length * f))] : 0);
++  const core = sorted(pop.filter((p) => p.c >= 0.5).map((p) => p.r));
++  const all = sorted(pop.map((p) => p.r));
++  const p95 = q(all, 0.95);
++  const x0 = pop.length ? Math.min(...pop.map((p) => p.x)) : 0;
++  const x1 = pop.length ? Math.max(...pop.map((p) => p.x)) + 1 : 0;
++  const slices = Array.from({ length: 16 }, (_, s) => {
++    const v = sorted(
++      pop.filter((p) => p.x >= x0 + (s * (x1 - x0)) / 16 && p.x < x0 + ((s + 1) * (x1 - x0)) / 16).map((p) => p.r),
++    );
++    return v.length >= 8 ? q(v, 0.95) : null;
++  });
+   return {
+     spec,
+-    textPx: text.length,
+-    worst: text.length ? Math.min(...text) : 0,
+-    under45: text.filter((r) => r < 4.5).length,
+-    corePx: core.length,
+-    coreMedian: core.length ? core[core.length >> 1] : 0,
+-    coreUnder: core.filter((r) => r < 4.5).length,
+     boxPx: ink.w * ink.h,
++    popPx: all.length,
++    popMedian: q(all, 0.5),
++    popUnder: all.length ? all.filter((r) => r < 4.5).length / all.length : 1,
++    corePx: core.length,
++    coreMedian: q(core, 0.5),
++    coreUnder: core.length ? core.filter((r) => r < 4.5).length / core.length : 1,
++    p95,
++    slices,
++    worst: spec20.length ? Math.min(...spec20) : 0,
++    worstAt,
+     noise,
+     camo,
+     offLine,
+-    // THE SENSITIVITY ROW: the painted glyph pixel against its own ground, keyed at 20/50/70/90 %
+-    // coverage — the median and the share under 4.5 at each.
+-    sensitivity: [0.2, 0.5, 0.7, 0.9]
+-      .map((f) => {
+-        const r = cov
+-          .filter((q) => q.c >= f)
+-          .map((q) => q.r)
+-          .sort((u, v) => u - v);
+-        return `${f * 100}%: median ${r[r.length >> 1]?.toFixed(3)} · ${r.filter((v) => v < 4.5).length}/${r.length} under 4.5`;
+-      })
+-      .join(" | "),
+-    under,
+-    worstAt,
+   };
+ }
++type NameRead = Awaited<ReturnType<typeof paintedName>>;
+ 
+-/** THE NAME IS PART OF THE PAYLOAD. The tape prints B's slug, and a slug is derived from a random
+- *  peer id, so an unpinned run reads a different word at a different width over a different
+- *  stretch of paper every time — the pass-5 critic's "5.604 chromium / 5.691 webkit" was two
+- *  slugs, not two engines. B's id is PINNED the way the product itself re-seats a tab (the
+- *  per-tab identity map, keyed by the room the link names), so both engines print one word per
+- *  payload; two ids are two payloads (LAWS P5: a painted number is quoted on ≥ 2) — a 15-letter
+- *  name and a 25-letter one, the tape's short and long reach. A seeded
+- *  `Math.random` pinned it in chromium only — WebKit's boot draws a varying count first. */
++/** THE SHIPPED READINGS (LAWS P6 §E: "the shipped reading + 0.05 until the estate stamps it"),
++ *  per engine · DPR · theme · cell kind (the top row, where the tape flips below, or a cell with a
++ *  given above), over both pinned payloads: [the clean core median (min), the population median
++ *  (min), the fraction under 4.5 (max), whether the `74a2b5d9` control's own name clears 4.5 there
++ *  (its core, same payloads and cells)]. Stamped from a read of this tree (pass 7), never by hand. */
++const SHIPPED: Record<string, [number, number, number, 0 | 1]> = {
++  "chromium/1/dark/given": [5.875, 3.583, 0.578, 1],
++  "chromium/1/dark/top": [4.891, 3.080, 0.691, 0],
++  "chromium/1/light/given": [6.154, 2.068, 0.718, 0],
++  "chromium/1/light/top": [4.124, 2.019, 0.849, 0],
++  "chromium/2/dark/given": [7.082, 6.252, 0.376, 1],
++  "chromium/2/dark/top": [7.082, 6.259, 0.376, 1],
++  "chromium/2/light/given": [11.891, 5.106, 0.478, 1],
++  "chromium/2/light/top": [11.891, 5.194, 0.478, 1],
++  "chromium/3/dark/given": [7.113, 7.082, 0.283, 1],
++  "chromium/3/dark/top": [7.113, 7.082, 0.283, 1],
++  "chromium/3/light/given": [11.891, 11.891, 0.348, 1],
++  "chromium/3/light/top": [11.891, 11.891, 0.347, 1],
++  "webkit/1/dark/given": [7.121, 6.871, 0.302, 1],
++  "webkit/1/dark/top": [7.121, 6.871, 0.297, 1],
++  "webkit/1/light/given": [11.891, 10.001, 0.325, 1],
++  "webkit/1/light/top": [11.891, 10.001, 0.314, 1],
++  "webkit/2/dark/given": [7.192, 7.192, 0.229, 1],
++  "webkit/2/dark/top": [7.192, 7.192, 0.229, 1],
++  "webkit/2/light/given": [11.891, 11.891, 0.242, 1],
++  "webkit/2/light/top": [11.891, 11.891, 0.242, 1],
++  "webkit/3/dark/given": [7.192, 7.192, 0.171, 1],
++  "webkit/3/dark/top": [7.192, 7.192, 0.171, 1],
++  "webkit/3/light/given": [11.891, 11.891, 0.166, 1],
++  "webkit/3/light/top": [11.891, 11.891, 0.166, 1],
++};
++
++/** The floors a stamp implies, every one absolute:
++ *   core ≥ 4.5 wherever the name or the control clears it (the ABSOLUTE floor), and ≥ 0.9 × its own
++ *          stamp everywhere (a 20 % fill fade costs the core 21–43 % at every density measured);
++ *   pop  ≥ 4.5 wherever the name clears it, and ≥ 0.9 × its stamp;
++ *   frac ≤ its stamp + 0.05.
++ *  The one cell under 4.5 with no 4.5 floor is chromium DPR 1's top row by day (4.124, the control
++ *  2.718): the palette's open row (registry-v6 §2.13), stated, not hidden. */
++function floorsFor(key: string): Floors {
++  const st = SHIPPED[key];
++  if (!st) throw new Error(`no shipped reading stamped for ${key}`);
++  const [core, pop, frac, clears] = st;
++  return {
++    core: Math.max(core >= 4.5 || clears ? 4.5 : 0, 0.9 * core),
++    pop: Math.max(pop >= 4.5 ? 4.5 : 0, 0.9 * pop),
++    frac: frac + 0.05,
++  };
++}
++
++/** Every clause a painted name breaks, or none. `cure` is the paper's own claim (the spec colour on
++ *  its painted ground), asserted where the paper is the variable. */
++type Floors = { core: number; pop: number; frac: number };
++/** The tail's own reading, printed beside every row: the least slice p95 over the whole p95 (G4 reds
++ *  under 0.4 of it, floored at 3.0 — the chair's `sliceRatio`, unmoved). */
++const tailOf = (t: NameRead): number =>
++  Math.min(...t.slices.filter((v): v is number => v !== null)) / Math.max(t.p95, 1e-9);
++
++function nameGate(t: NameRead, f: Floors): string[] {
++  const why: string[] = [];
++  if (t.popPx < 40 || t.corePx <= 0.04 * t.boxPx)
++    return [`G1 the name paints: population ${t.popPx} px, core ${t.corePx} of ${t.boxPx}`];
++  if (t.worst < 4.5) why.push(`CURE the name's colour over its painted ground ${t.worst.toFixed(3)} < 4.5`);
++  if (t.coreMedian < f.core) why.push(`G2 glyph-text core median ${t.coreMedian.toFixed(3)} < ${f.core}`);
++  if (t.popMedian < f.pop) why.push(`G2 population median ${t.popMedian.toFixed(3)} < ${f.pop}`);
++  if (t.popUnder > f.frac) why.push(`G3 fraction under 4.5 ${t.popUnder.toFixed(3)} > ${f.frac}`);
++  const lim = Math.max(3, 0.4 * t.p95);
++  const low = t.slices.flatMap((v, s) => (v !== null && v < lim ? [`${s}:${v.toFixed(2)}`] : []));
++  if (low.length) why.push(`G4 tail slices under ${lim.toFixed(2)} at ${low.join(", ")}`);
++  return why;
++}
++
++const fmt = (t: NameRead): string =>
++  `pop ${t.popPx} median ${t.popMedian.toFixed(3)} <4.5 ${t.popUnder.toFixed(3)} · core ${t.corePx} median ${t.coreMedian.toFixed(3)} <4.5 ${t.coreUnder.toFixed(3)} · ` +
++  `spec-vs-ground worst ${t.worst.toFixed(3)} · p95 ${t.p95.toFixed(3)} tail ${tailOf(t).toFixed(3)} · slices [${t.slices.map((v) => (v === null ? "·" : v.toFixed(1))).join(" ")}] · noise ${t.noise} camo ${t.camo} off ${t.offLine}`;
++
++/** THE NAME IS PART OF THE PAYLOAD. The tape prints B's slug, a function of B's peer id, so B's id
++ *  is PINNED the way the product re-seats a tab (the per-tab identity map, keyed by the room the
++ *  link names): one word per payload in both engines. Two ids are two payloads — a 15-letter name
++ *  and a 25-letter one. */
+ const NAME_IDS = ["p-0000000b0b0b", "p-00000000002e"];
+ 
+-test("§C the name on the tape is written in the ring's string, and reads 4.5 on the ground it is painted on", async ({
++/** HEAD's ink for B (index 1 of `74a2b5d9`'s `inkFor`: hue 137.5°, chroma 0.11, the band 0.5 / 0.8)
++ *  — the IN-RUN CONTROL for the ink (registry-v6 §2.13), painted on the same label, paper and cell,
++ *  so the one variable between it and the name is the ink. */
++const HEAD_NAME = { light: "oklch(0.5 0.11 137.5deg)", dark: "oklch(0.8 0.11 137.5deg)" };
++
++/** THE PLANTS, in-run and each required RED: a fill faded three ways (it keeps `color`, so a gate
++ *  on the spec colour stays green), the last 12 % / 35 % of the run at 25 % alpha, and the text
++ *  made transparent. PAPER (the washi back to translucent) is PRINTED, not required: at L 0.86 the
++ *  name clears 4.5 over the grid line without the card under it (pass 7: 5.509 at dpr 2), so the
++ *  card-laid paper is no longer what holds the minimum — it is the occlusion arm of B-TAPE. */
++const TAPE = ".attribution-tape .washi-label";
++const FILL = (ink: string, p: number) =>
++  `${TAPE} { -webkit-text-fill-color: color-mix(in srgb, ${ink} ${p}%, transparent) !important; }`;
++/** WEBKIT DOES NOT PAINT A FILL FADE AS A FADE on this label: its text alpha is not linear, so an
++ *  80 % fill paints the core at 0.97–1.00 of the clean one and a 65 % fill at 0.92–0.98 (DPR 1–3; the
++ *  chair's `glyph-pop.mjs` reads the same hole on the 74a2b5d9 control) — the name is not faint in
++ *  WebKit's pixels, so there is nothing for a paint gate to red. Those two are PRINTED in WebKit with
++ *  their core ratio and required in chromium; FAINT30 (either spelling) is required in both, and in
++ *  WebKit it paints the core at 0.50–0.67. The `v` twins key the mix on the name's own var (which keeps
++ *  `color` exactly as green) rather than `currentColor`. */
++const PLANTS: { name: string; css?: string; tail?: number; info?: true; webkitVoid?: true }[] = [
++  { name: "FAINT30", css: FILL("currentColor", 30) },
++  { name: "FADE65", css: FILL("currentColor", 65), webkitVoid: true },
++  { name: "FADE80", css: FILL("currentColor", 80), webkitVoid: true },
++  { name: "FAINT30v", css: FILL("var(--color-peer-name-ink)", 30) },
++  { name: "FADE65v", css: FILL("var(--color-peer-name-ink)", 65), webkitVoid: true },
++  { name: "FADE80v", css: FILL("var(--color-peer-name-ink)", 80), webkitVoid: true },
++  { name: "TAIL12", tail: 0.12 },
++  { name: "TAIL35", tail: 0.35 },
++  { name: "EMPTY", css: `${TAPE} { color: transparent !important; -webkit-text-fill-color: transparent !important; }` },
++  { name: "PAPER", css: `${TAPE} { background: var(--sheet-washi-neutral) !important; }`, info: true },
++];
++
++test("§C the name on the tape is written in its own string, and reads 4.5 on the ground it is painted on", async ({
+   browser,
+ }, info) => {
+-  for (const id of NAME_IDS) await nameOnTape(browser, id, info.project.name);
++  for (const [n, id] of NAME_IDS.entries()) await nameOnTape(browser, id, info.project.name, n === 0);
+ });
+ 
+ async function nameOnTape(
+   browser: import("@playwright/test").Browser,
+   bId: string,
+   project: string,
++  planted: boolean,
+ ): Promise<void> {
+-  // Two pages in ONE context, so `?wire=local`'s BroadcastChannel is the room — the product's
+-  // own invite flow (the well's verb writes `?s=`), digits written by B, the tape hovered on A.
+-  // The cells are the ones where the tape crosses a GRID LINE with a digit under it (an empty cell
+-  // with a given above) and the top row, where it flips below.
+-  // FROZEN AT THE TEST. The four photographs of one name are a comparison, and a boil between
+-  // them is a second variable: at WebKit's top-row flip the tilted tape's box overhangs its paper
+-  // onto the board frame's stroke, and a frame variant that swaps ink→bare and back bare2→again
+-  // (ABBA) survives both noise pairs and reads as text over a dark ground (pass 6: 1.121 at
+-  // (764.3,206.2), one pixel at coverage 0.22, inside the ink line's tolerance because the name's
+-  // colour and the stroke are both dark). Parking the boil takes the frame out of the photograph;
+-  // the tape, its paper and the name are not motion-gated, so the thing measured is unchanged.
++  // Two pages in ONE context, so `?wire=local`'s BroadcastChannel is the room — the product's own
++  // invite flow, digits written by B, the tape hovered on A. The cells are the ones where the tape
++  // crosses a GRID LINE with a digit under it and the top row, where it flips below.
++  // FROZEN AT THE TEST (emulateMedia before goto): a boil between the photographs is a second
++  // variable; the tape, its paper and the name are not motion-gated.
+   const context = await browser.newContext();
+   const a = await context.newPage();
+   await a.emulateMedia({ reducedMotion: "reduce" });
+@@ -1066,42 +1161,84 @@
+   }
+   await inputs(b).nth(givens.indexOf("3")).click({ force: true }); // B's cursor off the four
+   await a.waitForTimeout(2500); // sleep-ok: the boil parks before a byte is read
++  const dpr = String(await a.evaluate(() => devicePixelRatio));
++  const label = a.locator(TAPE);
++  const hover = async (x: number) => {
++    // Re-made until the tape mounts: under load WebKit can drop the first pointer move.
++    await expect(async () => {
++      await a.mouse.move(2, 2);
++      await a.locator(".game-cell").nth(x).hover();
++      await expect(label).toBeVisible({ timeout: 3000 });
++    }).toPass({ timeout: 30000 });
++  };
++  const withCss = async (css: string, read: () => Promise<NameRead>) => {
++    const tag = await a.addStyleTag({ content: css });
++    await a.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++    const t = await read();
++    await tag.evaluate((e) => (e as Element).remove());
++    await a.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++    return t;
++  };
+   for (const arm of ["light", "dark"] as const) {
+     await theme(a, arm);
+     for (const x of cells) {
+-      const label = a.locator(".attribution-tape .washi-label");
+-      // The hover is re-made until the tape mounts: under load WebKit can drop the first
+-      // pointer move onto a cell (measured once in the pass-5 battery, never twice running).
+-      await expect(async () => {
+-        await a.mouse.move(2, 2);
+-        await a.locator(".game-cell").nth(x).hover();
+-        await expect(label).toBeVisible({ timeout: 3000 });
+-      }).toPass({ timeout: 30000 });
+-      const ring = await label.evaluate((l) => {
++      await hover(x);
++      const own = await label.evaluate((l) => {
+         const probe = document.createElement("span");
+         l.parentElement!.appendChild(probe);
+-        probe.style.color = "var(--color-peer-cursor-ink)";
++        probe.style.color = "var(--color-peer-name-ink)";
+         const c = getComputedStyle(probe).color;
+         probe.remove();
+         return c;
+       });
++      const at = `[${project}/${arm}/dpr${dpr}] B ${bId} cell ${x}${x < 9 ? " (top row, below)" : " (given above)"} "${await label.textContent()}"`;
++      const floor = floorsFor(`${project}/${dpr}/${arm}/${x < 9 ? "top" : "given"}`);
+       const t = await paintedName(a, label);
++      // THE IN-RUN CONTROL FOR THE INK: HEAD's own name ink, on this label, paper and cell.
++      const head = await withCss(`${TAPE} { color: ${HEAD_NAME[arm]} !important; }`, () => paintedName(a, label));
++      const ring = await withCss(`${TAPE} { color: var(--color-peer-cursor-ink) !important; }`, () => paintedName(a, label));
++      const why = nameGate(t, floor);
+       console.log(
+-        `[${project}/${arm}] B ${bId} cell ${x}${x < 9 ? " (top row, below)" : " (given above)"} "${await label.textContent()}" in ${t.spec} · ` +
+-          `spec vs painted ground worst ${t.worst.toFixed(3)} (${t.under45}/${t.textPx} px < 4.5) · ` +
+-          `glyph-text core median ${t.coreMedian.toFixed(3)} (${t.coreUnder}/${t.corePx} core px < 4.5) · ` +
+-          `sensitivity ${t.sensitivity} · noise ${t.noise} px · camo ${t.camo} px · off the ink line ${t.offLine} px · box ${t.boxPx} px · worst at ${t.worstAt}` +
+-          (t.under.length ? ` · UNDER ${t.under.join(" ; ")}` : ""),
++        `${at} in ${t.spec} · ${fmt(t)} · worst at ${t.worstAt} → ${why.length ? "RED " + why.join("; ") : "GREEN"}\n` +
++          `${at} HEAD ink ${HEAD_NAME[arm]} · ${fmt(head)}\n` +
++          `${at} ring ink (pass 6) ${ring.spec} · ${fmt(ring)}`,
+       );
+-      expect(t.spec).toBe(ring);
+-      // A MISSING SUBJECT IS RED: a label at opacity 0 moves no pixel, and a minimum over nothing
+-      // is not a pass. The name's core covers well over 4 % of its own line box at any density.
+-      expect(t.corePx, `the name paints, ${arm} cell ${x}`).toBeGreaterThan(0.04 * t.boxPx);
+-      expect(t.worst, `the name over the ground it is painted on, ${arm} cell ${x}`).toBeGreaterThanOrEqual(4.5);
+-      // THE GLYPH-TEXT STATISTIC is printed, never asserted here: it is the estate's row (the
+-      // hand's tag rung, pass6/CHAIR-RULINGS §1.4 and A.4 — no lane owns a floor on it), and at
+-      // DPR 1 in chromium it moves with the slug's letters (dark 4.01–4.82 over two slugs) where
+-      // the control's own name reads 4.275.
++      expect(t.spec, "the tape writes the name string").toBe(own);
++      expect.soft(why, `the name, ${arm} cell ${x}`).toEqual([]);
++      // B-TAPE's clause: the name does not lose to HEAD's ink on the painted glyph statistic.
++      expect.soft(t.coreMedian, `the name against HEAD's ink, ${arm} cell ${x}`).toBeGreaterThanOrEqual(head.coreMedian);
++      // THE PLANTS, in the same run: every one must RED the gate (a clean read above is the
++      // negative's negative). On the first payload, at the top-row cell and the first given.
++      if (planted && (x === cells[0] || x === cells[3]))
++        for (const p of PLANTS) {
++          let r: NameRead;
++          if (p.css) r = await withCss(p.css, () => paintedName(a, label));
++          else {
++            await label.evaluate((l, tail) => {
++              const rg = document.createRange();
++              rg.selectNodeContents(l);
++              const rs = [...rg.getClientRects()].filter((q) => q.width > 0);
++              const eb = l.getBoundingClientRect();
++              const lo = Math.min(...rs.map((q) => q.left));
++              const hi = Math.max(...rs.map((q) => q.right));
++              const cut = (lo + (1 - tail) * (hi - lo) - eb.left).toFixed(1);
++              const g = `linear-gradient(to right, #000 ${cut}px, rgba(0,0,0,.25) ${cut}px)`;
++              (l as HTMLElement).style.setProperty("-webkit-mask-image", g, "important");
++              (l as HTMLElement).style.setProperty("mask-image", g, "important");
++            }, p.tail!);
++            r = await paintedName(a, label);
++            await label.evaluate((l) => {
++              (l as HTMLElement).style.removeProperty("-webkit-mask-image");
++              (l as HTMLElement).style.removeProperty("mask-image");
++            });
++          }
++          const pw = nameGate(r, floor);
++          const required = !p.info && !(p.webkitVoid && project === "webkit");
++          console.log(
++            `${at} ${required ? "PLANT" : "READING"} ${p.name} · ${fmt(r)} · core ×${(r.coreMedian / t.coreMedian).toFixed(3)} → ${pw.length ? "RED " + pw.join("; ") : required ? "GREEN (a hole)" : "GREEN"}`,
++          );
++          if (required) expect.soft(pw.length, `plant ${p.name} reds the gate, ${arm} cell ${x}`).toBeGreaterThan(0);
++        }
+       await a.mouse.move(2, 2);
+       await expect(label).toHaveCount(0);
+     }
+diff -ruN --exclude=.git base6-210914/web/frontend/scripts/check-peer-arcs.mjs base-210914/web/frontend/scripts/check-peer-arcs.mjs
+--- base6-210914/web/frontend/scripts/check-peer-arcs.mjs	2026-09-23 21:09:16
++++ base-210914/web/frontend/scripts/check-peer-arcs.mjs	2026-09-23 21:09:16
+@@ -28,8 +28,8 @@
+  *
+  *   1  ARCS AGREE     the arcs derived from index.css == RESERVED_ARCS
+  *   3  BANDS AGREE    the lightness bands `playerIdentity.ts` bisects its chroma against
+- *                     (`DIGIT_BANDS`, `RING_BANDS`) == the `--peer-ink-l` / `--peer-ring-l` the
+- *                     sheet publishes, per arm. ONE PUBLISHER (index.css) and this comparer, not
++ *                     (`DIGIT_BANDS`, `RING_BANDS`, `NAME_BANDS`) == the `--peer-ink-l` /
++ *                     `--peer-ring-l` / `--peer-name-l` the sheet publishes, per arm. ONE PUBLISHER (index.css) and this comparer, not
+  *                     two publishers: the module has to know the band to find the chroma sRGB
+  *                     holds there, and a browser cannot read a stylesheet's source, so the TS
+  *                     pair is a copy and the copy is held here. A band moved on one side alone
+@@ -38,19 +38,23 @@
+  *                     0.32 → 0.20 turned the painted ring 18.258° off the hue it was asked for
+  *                     (1.712° at the shipped band), which walks a hand into a reserved arc.
+  *   4  ONE PUBLISHER  check 3 holds the TWO copies it knows about, and a copy it does not know
+- *                     about is exactly how a band drifts. So every source file under `src/` and
+- *                     `e2e/`, and `index.html`, is read (comments stripped first) and a SECOND
++ *                     about is exactly how a band drifts. So every source file under `src/`,
++ *                     `e2e/` and `public/`, and `index.html`, is read (comments stripped first;
++ *                     `.tsx` and `.json` too) and a SECOND
+  *                     PUBLISHER reds, agree or disagree: a declaration of `--peer-ink-l` /
+  *                     `--peer-ring-l` anywhere but index.css's two arms (a rule in `gameCell.css`,
+  *                     a style block in a `.vue` or in `index.html`, a `setProperty` in a script);
+  *                     a lightness written under a ring/band/peer/lightness name, one number or a
+  *                     table, as a binding or as an object key, other than the module's two held
+  *                     tables; a hex table under a peer/ring/hand/player name; and ANY declaration
+- *                     of a `--color-peer-*` / `--color-player-*` token — a CSS rule, an object
+- *                     key, a `setProperty`, a templated name — at any SITE but the three the ink
+- *                     travels through, each bound to its own value: the formula's return
+- *                     (`playerIdentity.ts`), the cell's inline publisher (`BoardHost.vue`) and the
+- *                     tier-3 seat that binds the formula's own string (`e2e/peer-walk.spec.ts`).
++ *                     of a `--color-peer-*` / `--color-player-*` token, or of the digit's house
++ *                     name `--color-user-ink` — a CSS rule, an object key, a `setProperty`, a
++ *                     templated name — at any SITE but the ones the ink travels through, each
++ *                     bound to its own value: the formula's return (`playerIdentity.ts`, three
++ *                     strings), the cell's inline publisher (`BoardHost.vue`), the tier-3 seat
++ *                     that binds the formula's own string (`e2e/peer-walk.spec.ts`) and the house
++ *                     blue's three literal arms in index.css; a COMPUTED property name
++ *                     (`setProperty(expr, …)`, `style[expr] =`) reds wherever it is.
+  *                     The token's VALUE is never read to decide: an alias to a house token, a
+  *                     `color-mix()` of it and a literal are one disease (the pass-5 critic's X1,
+  *                     X6). A colour LITERAL that copies a walked ink under any name is tier 2's
+@@ -342,6 +346,7 @@
+   for (const [table, token] of [
+     ["DIGIT_BANDS", "--peer-ink-l"],
+     ["RING_BANDS", "--peer-ring-l"],
++    ["NAME_BANDS", "--peer-name-l"],
+   ]) {
+     const pair = declaredBands(ts, table);
+     if (!pair) {
+@@ -374,9 +379,15 @@
+   // nothing else. A band or a table in some OTHER file is check 4's (ONE PUBLISHER), which
+   // reads every source file rather than these two.
+   const calls = [
+-    ...ts.matchAll(/\(\s*"(--peer-(?:ink|ring)-l)"\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g),
++    ...ts.matchAll(
++      /\(\s*"(--peer-(?:ink|ring|name)-l)"\s*,\s*([A-Za-z_$][\w$]*)\s*\)/g,
++    ),
+   ];
+-  const want = { "--peer-ink-l": "DIGIT_BANDS", "--peer-ring-l": "RING_BANDS" };
++  const want = {
++    "--peer-ink-l": "DIGIT_BANDS",
++    "--peer-ring-l": "RING_BANDS",
++    "--peer-name-l": "NAME_BANDS",
++  };
+   for (const token of Object.keys(want)) {
+     const at = calls.filter((c) => c[1] === token).map((c) => c[2]);
+     if (!at.length)
+@@ -390,21 +401,23 @@
+   return { failures: out };
+ }
+ 
+-/** Every source file check 4 reads: `src/` and `e2e/` in every extension a band or an ink can be
+- *  written in, and `index.html`, the one cascade source outside them (a `<style>` there beats
+- *  nothing in `src/` and is read by nothing in `src/`). A test fixture is a publisher too — a band
+- *  pinned in a spec is a second copy. */
++/** Every source file check 4 reads: `src/`, `e2e/` and `public/` in every extension a band or an
++ *  ink can be written in (a `.tsx`, a `.json` table and a `public/` stylesheet `index.html` links
++ *  are cascade or script sources as surely as a `.vue` — the pass-6 critic's K1 linked
++ *  `public/peer.css` and exited 0), and `index.html` itself. A test fixture is a publisher too — a
++ *  band pinned in a spec is a second copy. */
++const SOURCE = /\.(css|vue|ts|tsx|mts|cts|js|jsx|mjs|cjs|json|html|svg)$/;
+ function sourceFiles() {
+   const out = [];
+   const walkDir = (dir) => {
+     for (const name of readdirSync(dir)) {
+       const at = join(dir, name);
+       if (statSync(at).isDirectory()) walkDir(at);
+-      else if (/\.(css|vue|ts|mts|js|mjs|html)$/.test(name))
++      else if (SOURCE.test(name))
+         out.push({ rel: relative(ROOT, at), text: readFileSync(at, "utf8") });
+     }
+   };
+-  for (const d of ["src", "e2e"]) walkDir(join(ROOT, d));
++  for (const d of ["src", "e2e", "public"]) walkDir(join(ROOT, d));
+   out.push({ rel: "index.html", text: readFileSync(join(ROOT, "index.html"), "utf8") });
+   return out;
+ }
+@@ -416,18 +429,52 @@
+ const INK_SITES = [
+   {
+     rel: "src/games/shared/playerIdentity.ts",
++    token: "--color-user-ink",
++    value: "pair[0]",
++    n: 1,
++  },
++  {
++    rel: "src/games/shared/playerIdentity.ts",
+     token: "--color-peer-cursor-ink",
+     value: "pair[1]",
++    n: 1,
+   },
+   {
++    rel: "src/games/shared/playerIdentity.ts",
++    token: "--color-peer-name-ink",
++    value: "pair[2]",
++    n: 1,
++  },
++  {
+     rel: "src/games/shared/BoardHost.vue",
+     token: "--color-peer-cursor-ink",
+     value: "ink",
++    n: 1,
+   },
+-  { rel: "e2e/peer-walk.spec.ts", token: "--color-peer-cursor-ink", value: "ink" },
++  {
++    rel: "e2e/peer-walk.spec.ts",
++    token: "--color-peer-cursor-ink",
++    value: "ink",
++    n: 1,
++  },
++  // THE DIGIT HALF (the pass-6 critic's K12). A player's digit travels under the HOUSE name,
++  // `--color-user-ink`, so an alias of it on a descendant repaints half of every hand. It is keyed
++  // by site like the rest: the house blue in index.css's light and dark arms and the print arm's
++  // black — three literal colours, nothing else — and the formula's return above.
++  {
++    rel: "src/assets/index.css",
++    token: "--color-user-ink",
++    value: /^#[0-9a-fA-F]{3,8}$/,
++    n: 3,
++  },
+ ];
+-/** A peer-ink token, templated names included (`--color-peer-${i}-ring` mints one per player). */
+-const INK_TOKEN = String.raw`--color-(?:peer|player)-(?:[\w-]|\$\{[^}]*\})+`;
++/** A unit test handing a component a MOCK ink (`{ "--color-user-ink": "oklch(0.6 0.11 …)" }`) or
++ *  asserting the style string a still carries declares nothing a shipped cascade reads: admitted
++ *  for the digit's house name only, and only in a `*.test.ts` (vitest never ships). */
++const FIXTURE = (rel, token) => token === "--color-user-ink" && /\.test\.ts$/.test(rel);
++/** A peer-ink token, templated names included (`--color-peer-${i}-ring` mints one per player),
++ *  and the digit's house name. */
++const INK_TOKEN = String.raw`--color-(?:(?:peer|player)-(?:[\w-]|\$\{[^}]*\})+|user-ink)`;
+ /** A DECLARATION of one, in any of the shapes a cascade or a script writes: `TOKEN:` (a CSS rule,
+  *  an inline `style=""`, a Tailwind `[TOKEN:…]` class, a quoted or computed object key) and
+  *  `setProperty(TOKEN, …)`. The value is captured only to bind the three sites. */
+@@ -459,21 +506,24 @@
+  *  self-test is a declaration the build publishes — pass 6 minted exactly that from a self-test
+  *  string (`index.css` +62 B). Read wherever Tailwind reads. */
+ const TW_MINT = new RegExp(
+-  String.raw`\[(--peer-(?:ink|ring)-l|--color-(?:peer|player)-[\w-]+)\s*:`,
++  String.raw`\[(--peer-(?:ink|ring|name)-l|--color-(?:(?:peer|player)-[\w-]+|user-ink))\s*:`,
+   "g",
+ );
+ /** The self-test's own candidate, joined at run time so this file never carries one. */
+ const TW_PLANT = ["[--color-peer-cursor-ink", "red]"].join(":");
++// `public/` IS scanned: a candidate in `public/404.html` compiled into the shipped CSS (the pass-6
++// critic, `index-D7qQiJYmxakR.css`), so it is read wherever Tailwind reads.
++const MINT_SKIP = /^(node_modules|dist|coverage|test-results|playwright-report)$|^\./;
+ function tailwindMints() {
+   const out = [];
+-  const skip =
+-    /^(node_modules|dist|coverage|test-results|playwright-report|public)$|^\./;
+   const walkDir = (dir) => {
+     for (const name of readdirSync(dir)) {
+-      if (skip.test(name)) continue;
++      if (MINT_SKIP.test(name)) continue;
+       const at = join(dir, name);
+       if (statSync(at).isDirectory()) walkDir(at);
+-      else if (/\.(css|vue|ts|mts|js|mjs|cjs|html|md|json)$/.test(name))
++      else if (
++        /\.(css|vue|ts|tsx|mts|cts|js|jsx|mjs|cjs|html|svg|md|json|txt)$/.test(name)
++      )
+         for (const m of readFileSync(at, "utf8").matchAll(TW_MINT))
+           out.push(
+             `${relative(ROOT, at)} carries the class candidate [${m[1]}:…] — Tailwind compiles it into the shipped CSS, a publisher nobody wrote`,
+@@ -518,6 +568,7 @@
+   for (const [key, token] of [
+     ["--color-user-ink", "--peer-ink-l"],
+     ["--color-peer-cursor-ink", "--peer-ring-l"],
++    ["--color-peer-name-ink", "--peer-name-l"],
+   ])
+     for (const arm of [light, dark])
+       for (let i = 0; i < 144; i++) {
+@@ -598,8 +649,11 @@
+     "--peer-ring-l": [light.get("--peer-ring-l"), dark.get("--peer-ring-l")].map(
+       Number,
+     ),
++    "--peer-name-l": [light.get("--peer-name-l"), dark.get("--peer-name-l")].map(
++      Number,
++    ),
+   };
+-  const BAND_DECL = /(--peer-(?:ink|ring)-l)\s*:/g;
++  const BAND_DECL = /(--peer-(?:ink|ring|name)-l)\s*:/g;
+   // (i) index.css: exactly one declaration per arm — a third arm (`prefers-contrast`, a second
+   // `:root`) is a second publisher inside the right file.
+   const home = uncomment(css);
+@@ -624,8 +678,8 @@
+       // style object key, or a runtime `setProperty`.
+       for (const re of [
+         BAND_DECL,
+-        /["'`](--peer-(?:ink|ring)-l)["'`]\s*:/g,
+-        /setProperty\(\s*["'`](--peer-(?:ink|ring)-l)["'`]/g,
++        /["'`](--peer-(?:ink|ring|name)-l)["'`]\s*:/g,
++        /setProperty\(\s*["'`](--peer-(?:ink|ring|name)-l)["'`]/g,
+       ])
+         for (const m of text.matchAll(re))
+           out.push(
+@@ -653,7 +707,7 @@
+         if (!bandName(name) && !/ring|band|peer|hand|lightness/i.test(m[1])) continue;
+         if (
+           f.rel === "src/games/shared/playerIdentity.ts" &&
+-          /^(DIGIT|RING)_BANDS$/.test(name)
++          /^(DIGIT|RING|NAME)_BANDS$/.test(name)
+         )
+           continue;
+         // Numbers written AS numbers: a string fixture (`"oklch(0.6 0.11 137.5deg)"`, a mock ink a
+@@ -691,23 +745,41 @@
+       for (const d of text.matchAll(re)) {
+         const token = d[1];
+         const value = d[2].trim();
++        if (FIXTURE(f.rel, token)) continue;
+         const site = INK_SITES.find((q) => q.rel === f.rel && q.token === token);
++        const fits = (q) =>
++          q.value instanceof RegExp ? q.value.test(value) : value === q.value;
+         if (!site)
+           out.push(
+-            `${f.rel} declares ${token}: ${value} — a player's colour is published at three sites and this is not one`,
++            `${f.rel} declares ${token}: ${value} — a player's colour is published at its admitted sites and this is not one`,
+           );
+-        else if (value !== site.value)
++        else if (!fits(site))
+           out.push(
+             `${f.rel} declares ${token} with \`${value}\`, not \`${site.value}\` — the site publishes the formula's own string or nothing`,
+           );
+-        else seen.set(f.rel, (seen.get(f.rel) ?? 0) + 1);
++        else seen.set(`${f.rel}|${token}`, (seen.get(`${f.rel}|${token}`) ?? 0) + 1);
+       }
++    // A COMPUTED NAME IS A PUBLISHER NOBODY CAN READ (the pass-5 X3, declared then; red now):
++    // `setProperty(<not a string>, …)` and `el.style[<expr>] = …` write a property the census
++    // cannot name, so they red wherever they are — the estate carries none today.
++    for (const m of text.matchAll(/setProperty\(\s*([^,)]+),/g))
++      if (!/^(["'`])[^"'`$]*\1$/.test(m[1].trim()) && !/^`[^`]*`$/.test(m[1].trim()))
++        out.push(
++          `${f.rel} writes a COMPUTED property name, setProperty(${m[1].trim()}, …) — unreadable, so red`,
++        );
++    for (const m of text.matchAll(
++      /\.style(?:\s+as\s+[\w<>, ]+\))?\s*\[\s*([^\]]+?)\s*\]\s*=(?!=)/g,
++    ))
++      if (!/^(["'`])[^"'`$]*\1$/.test(m[1]))
++        out.push(
++          `${f.rel} writes a COMPUTED style key, style[${m[1]}] = … — unreadable, so red`,
++        );
+   }
+   for (const q of INK_SITES) {
+-    const n = seen.get(q.rel) ?? 0;
+-    if (files.some((f) => f.rel === q.rel) && n !== 1)
++    const n = seen.get(`${q.rel}|${q.token}`) ?? 0;
++    if (files.some((f) => f.rel === q.rel) && n !== q.n)
+       out.push(
+-        `${q.rel} declares ${q.token} ${n} time(s) as \`${q.value}\`; the site is one declaration`,
++        `${q.rel} declares ${q.token} ${n} time(s) as \`${q.value}\`; the site is ${q.n} declaration(s)`,
+       );
+   }
+   return { failures: out, files: files.length };
+@@ -730,16 +802,16 @@
+ 
+ const c3 = check3BandsAgree(css, ts);
+ console.log(
+-  `  ${c3.failures.length ? "✗" : "✓"} 3 BANDS AGREE — DIGIT_BANDS and RING_BANDS are the ` +
+-    `--peer-ink-l / --peer-ring-l index.css publishes, both arms`,
++  `  ${c3.failures.length ? "✗" : "✓"} 3 BANDS AGREE — DIGIT_BANDS, RING_BANDS and NAME_BANDS are the ` +
++    `--peer-ink-l / --peer-ring-l / --peer-name-l index.css publishes, both arms`,
+ );
+ failures.push(...c3.failures.map((f) => `[3 BANDS AGREE] ${f}`));
+ 
+ const files = sourceFiles();
+ const c4 = check4OnePublisher(css, files);
+ console.log(
+-  `  ${c4.failures.length ? "✗" : "✓"} 4 ONE PUBLISHER — ${c4.files} source files under src/ and ` +
+-    `e2e/ read; the bands are declared in index.css's two arms and nowhere else, and no player ` +
++  `  ${c4.failures.length ? "✗" : "✓"} 4 ONE PUBLISHER — ${c4.files} source files under src/, e2e/ and ` +
++    `public/ read; the bands are declared in index.css's two arms and nowhere else, and no player ` +
+     `ink is written down as a table or a literal token`,
+ );
+ failures.push(...c4.failures.map((f) => `[4 ONE PUBLISHER] ${f}`));
+@@ -878,6 +950,23 @@
+       .replace('at("--peer-ring-l", RING_BANDS)', 'at("--peer-ring-l", RING)'),
+   );
+ 
++  // (k) THE NAME'S BAND (pass 7), the three shapes the ring's rows above hold, on the third pair.
++  bandReds(
++    "N1 · when --peer-name-l moves on the sheet alone (0.86 → 0.79)",
++    css.replace("--peer-name-l: 0.86;", "--peer-name-l: 0.79;"),
++    ts,
++  );
++  bandReds(
++    "N2 · when NAME_BANDS moves in the module alone",
++    css,
++    ts.replace(/NAME_BANDS = \[0\.295, 0\.86\]/, "NAME_BANDS = [0.295, 0.79]"),
++  );
++  bandReds(
++    "N3 · when the name is bisected against the ring's table",
++    css,
++    ts.replace('at("--peer-name-l", NAME_BANDS)', 'at("--peer-name-l", RING_BANDS)'),
++  );
++
+   // CHECK 4 — the second publishers the pass-4 critics planted, each in the file it was planted
+   // in, and each must red. Then two things that must NOT red: a consumer, and a comment.
+   const plant = (rel, edit) =>
+@@ -1039,6 +1128,127 @@
+       t.replace('"--color-peer-cursor-ink": pair[1]', '"--color-ring-ink": pair[1]'),
+     ),
+   );
++  // PASS 7 — the pass-6 critic's K rows and the SHAPE law's sites (LAWS P6 §F): a linked
++  // `public/` stylesheet, the digit's house name aliased on a descendant, the name's own site,
++  // a `.json` table, a `.tsx` write and a computed name.
++  pubReds(
++    "K1 · a band in a public/ stylesheet index.html links",
++    add("public/peer.css", ":root{--peer-ring-l:.2}\n").map((f) =>
++      f.rel === "index.html"
++        ? {
++            ...f,
++            text: f.text.replace(
++              "</head>",
++              '<link rel="stylesheet" href="/peer.css"></head>',
++            ),
++          }
++        : f,
++    ),
++  );
++  pubReds(
++    "K1b · the ring ink aliased in a public/ stylesheet",
++    add(
++      "public/peer.css",
++      ".game-cell{--color-peer-cursor-ink:var(--color-foreground)}\n",
++    ),
++  );
++  pubReds(
++    "K12 · the DIGIT half aliased on a descendant (--color-user-ink in gameCell.css)",
++    plant(
++      "src/games/shared/gameCell.css",
++      (t) =>
++        `${t}\n.game-cell .glyph-svg { --color-user-ink: var(--color-foreground); }\n`,
++    ),
++  );
++  pubReds(
++    "K12b · a fourth --color-user-ink in index.css, a literal like the house's own",
++    plant(
++      "src/assets/index.css",
++      (t) => `${t}\n.board-cells { --color-user-ink: #2563eb; }\n`,
++    ),
++  );
++  pubReds(
++    "K12c · the digit ink in a template's :style object",
++    plant("src/games/shared/GameBoard.vue", (t) =>
++      t.replace(
++        'class="attribution-tape"',
++        `class="attribution-tape" :style="{ '--color-user-ink': 'red' }"`,
++      ),
++    ),
++  );
++  pubReds(
++    "N4 · the name's site bound to the ring's string (pair[1])",
++    plant("src/games/shared/playerIdentity.ts", (t) =>
++      t.replace('"--color-peer-name-ink": pair[2]', '"--color-peer-name-ink": pair[1]'),
++    ),
++  );
++  pubReds(
++    "N5 · a name ink declared on the tape rule",
++    plant("src/games/shared/GameBoard.vue", (t) =>
++      t.replace(
++        ".attribution-tape {\n",
++        ".attribution-tape {\n  --color-peer-name-ink: var(--color-foreground);\n",
++      ),
++    ),
++  );
++  pubReds(
++    "N6 · a third --peer-name-l arm in index.css",
++    files,
++    `${css}\n@media (prefers-contrast: more) { .dark { --peer-name-l: 0.95; } }\n`,
++  );
++  pubReds(
++    "S1 · a .json table of peer inks",
++    add("src/games/shared/inks.json", '{ "--color-peer-cursor-ink": "#2a3900" }\n'),
++  );
++  pubReds(
++    "S2 · a .tsx write",
++    add(
++      "src/games/shared/Planted.tsx",
++      'export const f = (el: HTMLElement) => el.style.setProperty("--color-peer-name-ink", "#fff");\n',
++    ),
++  );
++  pubReds(
++    "S3 · a computed property name (setProperty of a joined name)",
++    add(
++      "src/games/shared/planted.ts",
++      'export const f = (el: HTMLElement, v: string) => el.style.setProperty(["--color-peer", "cursor-ink"].join("-"), v);\n',
++    ),
++  );
++  pubReds(
++    "S3b · a computed style key",
++    add(
++      "src/games/shared/planted.ts",
++      "export const f = (el: HTMLElement, k: string, v: string) => { (el.style as any)[k] = v; };\n",
++    ),
++  );
++  {
++    const quietK =
++      check4OnePublisher(
++        css,
++        add(
++          "src/games/shared/planted.test.ts",
++          'const PEER = { "--color-user-ink": "oklch(0.6 0.11 137.5deg)" };\nexpect(s).toContain("--color-user-ink: oklch(0.6 0.11 137.5deg)");\n',
++        ).concat([
++          { rel: "public/quiet.css", text: ".x { color: var(--color-user-ink); }\n" },
++          {
++            rel: "src/games/shared/quiet.ts",
++            text: 'document.body.style.setProperty("--wobble", "1");\n',
++          },
++        ]),
++      ).failures.length === c4.failures.length;
++    console.log(
++      `  ${quietK ? "✓" : "✗"} 4 is GREEN on a unit fixture's mock ink, a public/ consumer and a literal setProperty`,
++    );
++    if (!quietK)
++      failures.push(
++        "[SELF-TEST] the site census read a fixture, a consumer or a literal write",
++      );
++    const pub = !MINT_SKIP.test("public");
++    console.log(
++      `  ${pub ? "✓" : "✗"} 4 reads public/ for Tailwind candidates (a 404.html candidate SHIPS)`,
++    );
++    if (!pub) failures.push("[SELF-TEST] the mint census skips public/");
++  }
+   {
+     const hit = [...`<div class="${TW_PLANT}">`.matchAll(TW_MINT)].length > 0;
+     console.log(
+diff -ruN --exclude=.git base6-210914/web/frontend/src/assets/index.css base-210914/web/frontend/src/assets/index.css
+--- base6-210914/web/frontend/src/assets/index.css	2026-09-23 21:09:16
++++ base-210914/web/frontend/src/assets/index.css	2026-09-23 21:09:16
+@@ -214,6 +214,11 @@
+      (worst of 144, light / dark). Numbers: `evidence/w7/loop/pass5/prototype/PAL-WALK/`. */
+   --peer-ring-l: 0.295;
+ 
++  /* THE NAME'S LIGHTNESS — the attribution tape's slug, the third string off the same hue
++     (registry-v6 §2.13: the name's ink is PAL-TIN's L 0.86 arm, bound here). By day it is the
++     ring's own band: 0.295 on the washi reads 11.9:1, and nothing is gained by moving it. */
++  --peer-name-l: 0.295;
++
+   /* Crayon palette — the wax. MEASURED dark-mode saturation rule (design-refinement.md §3.2):
+      dark variants PRESERVE hue (±3°), RAISE lightness +7…+13 (OKLCH L +0.06…0.10), and let
+      saturation RISE as needed to hold perceived chroma on the dark ground. Crayons don't
+@@ -434,6 +439,11 @@
+      from is its own dark fill. Same pin rule as the light arm above, same refusal to move the
+      floor. */
+   --peer-ring-l: 0.79;
++
++  /* At night the name steps PAST the ring: at 0.79 its glyph median lost to HEAD's own name on
++     the tape in 16 of 16 cells (5.63–5.69 against 5.90–5.99, dpr 3). 0.86 is the arm PAL-TIN
++     proved; the chroma is bisected at this pair (`NAME_BANDS`), so the hue does not turn. */
++  --peer-name-l: 0.86;
+ 
+   /* Crayon palette (dark) — hue-locked, lightness raised, chroma held per the §3.2 rule above. */
+   --color-crayon-green: #3dd968;
+diff -ruN --exclude=.git base6-210914/web/frontend/src/games/shared/GameBoard.vue base-210914/web/frontend/src/games/shared/GameBoard.vue
+--- base6-210914/web/frontend/src/games/shared/GameBoard.vue	2026-09-23 21:09:16
++++ base-210914/web/frontend/src/games/shared/GameBoard.vue	2026-09-23 21:09:16
+@@ -1239,11 +1239,10 @@
+    sits over the cells that own the pointer). Mounted means shown. */
+ .attribution-tape :deep(.washi-label) {
+   opacity: 1;
+-  /* Their ink, on their name — the hand PRESSED HARDER (T9-W7 §11c). The anchor carries the
+-     cell's whole author entry, both strings `inkFor` mints off one hue, and the name takes the
+-     ring's: at night the digit's band reads 2.993:1 on the tape, worst of 144, where the
+-     ring's reads 5.216 (10.790 by day). Same hue, the other lightness. */
+-  color: var(--color-peer-cursor-ink);
++  /* Their ink, on their name (T9-W7 §11c). The anchor carries the cell's whole author entry,
++     the three strings `inkFor` mints off one hue, and the name takes its own: the ring's band by
++     day, 0.86 at night, where the ring's 0.79 read the name's glyph median under HEAD's. */
++  color: var(--color-peer-name-ink);
+   /* THE PAPER IS LAID ON THE CARD, not on whatever the board has under it. The washi is
+      translucent, and this tape always straddles a grid line with a digit near it: at night the
+      line showed through under the name and read 4.374:1 (93–477 px under 4.5 per hover, both
+diff -ruN --exclude=.git base6-210914/web/frontend/src/games/shared/playerIdentity.ts base-210914/web/frontend/src/games/shared/playerIdentity.ts
+--- base6-210914/web/frontend/src/games/shared/playerIdentity.ts	2026-09-23 21:09:16
++++ base-210914/web/frontend/src/games/shared/playerIdentity.ts	2026-09-23 21:09:16
+@@ -222,19 +222,23 @@
+  *  EXPORTED so the unit layer paints at exactly these. */
+ export const DIGIT_BANDS = [0.44, 0.65] as const;
+ export const RING_BANDS = [0.295, 0.79] as const;
++/** The NAME's pair: the ring's by day, PAL-TIN's L 0.86 at night (registry-v6 §2.13). */
++export const NAME_BANDS = [0.295, 0.86] as const;
+ 
+ /** Bisection is 20 gamut tests per band pair; a roster of sixteen re-reads its own ink on every
+- *  frame, and now reads two strings rather than one. */
+-const inkCache = new Map<number, readonly [string, string]>();
++ *  frame, and now reads three strings rather than one. */
++const inkCache = new Map<number, readonly [string, string, string]>();
+ 
+ /**
+- * The player's ink — TWO strings off ONE hue, and they are two surfaces of one hand.
++ * The player's ink — THREE strings off ONE hue, and they are three surfaces of one hand.
+  *
+  * `--color-user-ink` is the digit, and rebinding it is the whole of the mechanism because
+  * `HandwrittenGlyph` already strokes with that var (`HandwrittenGlyph.vue:85`).
+  * `--color-peer-cursor-ink` is the RING drawn around the cell that hand is pointing at
+  * (`gameCell.css` tier 4) — the same pencil pressed harder: same hue, its own lightness
+  * (`--peer-ring-l`, 0.295 on paper and 0.79 at night), and the chroma sRGB holds at THAT pair.
++ * `--color-peer-name-ink` is the attribution tape's NAME (`GameBoard.vue`): the ring's band by
++ * day, 0.86 at night (`--peer-name-l`), where the ring's 0.79 read the name under HEAD's own.
+  *
+  * WHY LIGHTNESS AND NOT OPACITY. The ring is a non-text control and owes 3:1 against what it is
+  * seen against (1.4.11), which inside the cell is its own 4% fill of the same ink. T8-W3's
+@@ -253,10 +257,18 @@
+     const h = hueAt(index);
+     const at = (v: string, bands: readonly number[]): string =>
+       `oklch(var(${v}) ${chromaAt(h, bands).toFixed(4)} ${h.toFixed(2)}deg)`;
+-    pair = [at("--peer-ink-l", DIGIT_BANDS), at("--peer-ring-l", RING_BANDS)];
++    pair = [
++      at("--peer-ink-l", DIGIT_BANDS),
++      at("--peer-ring-l", RING_BANDS),
++      at("--peer-name-l", NAME_BANDS),
++    ];
+     inkCache.set(index, pair);
+   }
+-  return { "--color-user-ink": pair[0], "--color-peer-cursor-ink": pair[1] };
++  return {
++    "--color-user-ink": pair[0],
++    "--color-peer-cursor-ink": pair[1],
++    "--color-peer-name-ink": pair[2],
++  };
+ };
+ 
+ // ── THE BINDING (T8-W3 §2.9) — who you are in a room, kept ──────────────────────────────
+diff -ruN --exclude=.git base6-210914/web/frontend/src/games/shared/useSession.test.ts base-210914/web/frontend/src/games/shared/useSession.test.ts
+--- base6-210914/web/frontend/src/games/shared/useSession.test.ts	2026-09-23 21:09:16
++++ base-210914/web/frontend/src/games/shared/useSession.test.ts	2026-09-23 21:09:16
+@@ -12,6 +12,7 @@
+   RESERVED_ARCS,
+   DIGIT_BANDS,
+   RING_BANDS,
++  NAME_BANDS,
+ } from "./playerIdentity";
+ 
+ // ── OKLab, the currency the walk's claims are priced in ────────────────────────────────────
+@@ -39,23 +40,20 @@
+   const [x, y] = [toOklab(a), toOklab(b)];
+   return Math.hypot(x[0] - y[0], x[1] - y[1], x[2] - y[2]);
+ };
++type InkKey = "--color-user-ink" | "--color-peer-cursor-ink" | "--color-peer-name-ink";
+ /** the module's own emitted string, parsed — never a second copy of the walk. */
+ const inkParts = (
+   i: number,
+-  key: "--color-user-ink" | "--color-peer-cursor-ink" = "--color-user-ink",
++  key: InkKey = "--color-user-ink",
+ ): { C: number; h: number } => {
+-  const m = /oklch\(var\(--peer-(?:ink|ring)-l\)\s+([\d.]+)\s+([\d.]+)deg\)/.exec(
++  const m = /oklch\(var\(--peer-(?:ink|ring|name)-l\)\s+([\d.]+)\s+([\d.]+)deg\)/.exec(
+     inkFor(i)[key],
+   )!;
+   return { C: Number(m[1]), h: Number(m[2]) };
+ };
+ const hueOfInk = (i: number): number => inkParts(i).h;
+ /** what the engine paints for index `i` at a band: gamut-clipped, byte-quantised. */
+-const painted = (
+-  i: number,
+-  L: number,
+-  key: "--color-user-ink" | "--color-peer-cursor-ink" = "--color-user-ink",
+-): number[] => {
++const painted = (i: number, L: number, key: InkKey = "--color-user-ink"): number[] => {
+   const { C, h } = inkParts(i, key);
+   return oklchBytes(L, C, h);
+ };
+@@ -243,7 +241,7 @@
+   // and agrees with: 12.906° / 13.048° worst on both engines) for BOTH strings at BOTH bands,
+   // and asks that every rounded hue sit outside each reserved arc shrunk by the margin — i.e.
+   // at least the family law's 12° from every chromatic house token.
+-  it("the ROUNDED bytes of both strings keep the law's 12°, and the ring is the tighter one", () => {
++  it("the ROUNDED bytes of all three strings keep the law's 12°, and the ring is the tighter one", () => {
+     const MARGIN = 1; // GUARD − MIN_SEP (`scripts/check-peer-arcs.mjs`)
+     const edges = RESERVED_ARCS.map(([a, b]) => [
+       a === 0 ? -Infinity : a + MARGIN, // 0 and 360 are the wrap, not a token's edge
+@@ -258,6 +256,7 @@
+     for (const [key, bands] of [
+       ["--color-user-ink", DIGIT_BANDS],
+       ["--color-peer-cursor-ink", RING_BANDS],
++      ["--color-peer-name-ink", NAME_BANDS],
+     ] as const)
+       for (const L of bands)
+         for (let i = 0; i < 144; i++) {
+@@ -320,6 +319,42 @@
+       // one hue, two bands: the hand is the same pencil and only the pressure differs.
+       expect(ring.split(" ").pop()).toBe(digit.split(" ").pop());
+     }
++  });
++
++  // ── THE NAME IS THE THIRD STRING (pass 7, registry-v6 §2.13): the tape's slug at
++  // `--peer-name-l`, the ring's band by day and PAL-TIN's 0.86 at night, its chroma bisected at
++  // THAT pair — so it can never ask the engine for more than 0.86 holds, and never turns the hue.
++  // Born RED against the two-key module (the tape wrote the ring's string).
++  it("every hand carries a name string at its own band, bisected at the name's pair", () => {
++    for (let i = 0; i < 144; i++) {
++      const ink = inkFor(i);
++      const name = ink["--color-peer-name-ink"];
++      expect(name).toMatch(/^oklch\(var\(--peer-name-l\) [\d.]+ [\d.]+deg\)$/);
++      expect(name.split(" ").pop()).toBe(ink["--color-user-ink"].split(" ").pop());
++      const { C, h } = inkParts(i, "--color-peer-name-ink");
++      // in gamut at both of the name's bands, read UNCLAMPED: the engine paints the asked-for
++      // colour, so no clip turns it (the 0.79 ring's chroma at 0.86 leaves gamut for 53 of 144).
++      for (const L of NAME_BANDS) {
++        const rad = (h * Math.PI) / 180;
++        const [a, b] = [C * Math.cos(rad), C * Math.sin(rad)];
++        const [x, y, z] = [
++          (L + 0.3963377774 * a + 0.2158037573 * b) ** 3,
++          (L - 0.1055613458 * a - 0.0638541728 * b) ** 3,
++          (L - 0.0894841775 * a - 1.291485548 * b) ** 3,
++        ];
++        const rgb = [
++          4.0767416621 * x - 3.3077115913 * y + 0.2309699292 * z,
++          -1.2684380046 * x + 2.6097574011 * y - 0.3413193965 * z,
++          -0.0041960863 * x - 0.7034186147 * y + 1.707614701 * z,
++        ];
++        for (const v of rgb) expect(v, `i=${i} L ${L}`).toBeGreaterThanOrEqual(-1e-3); // 4-decimal chroma
++        for (const v of rgb) expect(v, `i=${i} L ${L}`).toBeLessThanOrEqual(1.001);
++      }
++      // the name's chroma never exceeds the ring's: 0.86 holds less than 0.79 at every hue.
++      expect(C).toBeLessThanOrEqual(inkParts(i, "--color-peer-cursor-ink").C + 1e-9);
++    }
++    expect(NAME_BANDS[0]).toBe(RING_BANDS[0]);
++    expect(NAME_BANDS[1]).toBeGreaterThan(RING_BANDS[1]);
+   });
+ 
+   // THE LAW IN ΔE — no hand closer to a house ink than the house's own two nearest crayons

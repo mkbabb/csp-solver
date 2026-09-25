@@ -1,0 +1,86 @@
+--- a/shape-census.mjs (the chair's copy, sha1 3ba7738ee8d4)
++++ b/shape-census.mjs (ACC-GRAPHITE pass 7: @theme's own declarations read; tokenSites)
+@@ -111,7 +111,13 @@
+         const prelude = s.slice(start, open).trim().replace(/^[;\s]+/, "").split(/;\s*/).pop().trim();
+         const body = s.slice(open + 1, i);
+         const line = baseLine + lineAt(s, open) - 1;
+-        if (prelude.startsWith("@")) cssRules(body, line, [...ctx, prelude.replace(/\s+/g, " ")], out);
++        if (prelude.startsWith("@")) {
++          const at = prelude.replace(/\s+/g, " ");
++          // an at-rule's OWN declarations (`@theme { --x: … }`, `@font-face`, `@property`) — `@theme` emits on :root
++          const own = decls(body.replace(/[^{};]*\{(?:[^{}]|\{[^{}]*\})*\}/g, ""), line);
++          if (own.length) out.push({ ctx: [...ctx, at], prelude: /^@theme\b/.test(at) ? ":root" : "", decls: own, line });
++          cssRules(body, line, [...ctx, at], out);
++        }
+         else {
+           // a nested rule inside a style rule (CSS nesting) — flatten with `&`
+           const nested = [];
+@@ -325,3 +331,68 @@
+   for (const m of value.matchAll(re)) { if (/^[a-zA-Z]+$/.test(m[0]) && !NAMED_MAP.has(m[0].toLowerCase())) continue; const c = parseColor(m[0]); if (c) out.push({ text: m[0], ...c }); }
+   return out;
+ }
++
++// ------------------------------------------------------------------------------------ token sites
++// ACC-GRAPHITE pass 7 (PROPOSED into the chair's copy; registry-v6 §2.10): `census` keys on a SUBJECT
++// class and `tokens` reads stylesheets only, so a custom property PUBLISHED from script, from a
++// `:style` object, a TS style object, a `.json` table or index.html was invisible to every token gate
++// (the retired-token rule, the wash step, R1). This reads where a NAME is declared, whatever carries it.
++const keyRe = (esc) => new RegExp(`(?<=[{,(]\\s*)\\[?\\s*(['"\`])${esc}\\1\\s*\\]?\\s*:(?!:)\\s*`, "g");
++/** The value expression that starts at `i`: up to the first `,` / `}` / `)` at depth 0, strings and `${}` whole. */
++const valueAt = (js, i) => {
++  let d = 0, q = null, o = "";
++  for (; i < js.length; i++) {
++    const c = js[i];
++    if (q) { o += c; if (c === "\\") { o += js[++i] ?? ""; continue; } if (q === "`" && c === "$" && js[i + 1] === "{") { d++; o += js[++i]; continue; } if (c === q && d === 0) q = null; else if (q === "`" && c === "}" && d > 0) d--; continue; }
++    if (c === '"' || c === "'" || c === "`") { q = c; o += c; continue; }
++    if ("([{".includes(c)) d++;
++    else if (")]}".includes(c)) { if (d === 0) break; d--; }
++    else if ((c === "," || c === "\n") && d === 0) break;
++    o += c;
++  }
++  return o.trim();
++};
++/** Every site that DECLARES the custom property `token`: CSS declarations in every block (stylesheets, public/,
++ *  every SFC <style>, index.html <style>, `style="…"` attributes), quoted keys of any object literal (a `:style`
++ *  object, a TS style object, `Object.assign(el.style, …)`, a `.json` table), `.style['--x'] =`, `setProperty`
++ *  with a literal or a concatenation of literals, CSS text inside a string (`'--x: v'`), and a template literal
++ *  whose static head is a stem of the token (`--color-crayon-${x}`: `stem: true`, never dropped). A key that is
++ *  an expression is reported `unresolved: true`, never dropped. [{file, kind, ctx, prelude, value, important, line}] */
++export function tokenSites(fe, token, { files, read, extra = [] } = {}) {
++  const out = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  const esc = token.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
++  const push = (s) => out.push({ ctx: "", prelude: "", important: false, ...s });
++  const cssSites = (css, line, kind, file) => { for (const r of cssRules(css, line)) for (const d of r.decls) if (d.prop === token) push({ file, kind, ctx: r.ctx.join(" "), prelude: r.prelude, value: d.value, important: d.important, line: d.line }); };
++  const attrSites = (html, line, kind, file) => { for (const m of html.matchAll(/(?:^|\s)style\s*=\s*("([^"]*)"|'([^']*)')/g)) for (const d of decls(m[2] ?? m[3])) if (d.prop === token) push({ file, kind, prelude: "style=", value: d.value, important: d.important, line: line + lineAt(html, m.index) - 1 }); };
++  const stemOf = (tpl) => { const head = tpl.slice(0, tpl.indexOf("${")); return head.length > 2 && token.startsWith(head); };
++  const jsSites = (js, line, kind, file) => {
++    const L = (i) => line + lineAt(js, i) - 1;
++    for (const m of js.matchAll(keyRe(esc))) push({ file, kind: `${kind}-key`, prelude: "{ key }", value: valueAt(js, m.index + m[0].length), line: L(m.index + m[0].indexOf(m[1])) });
++    for (const m of js.matchAll(/(?<=[{,(]\s*)\[\s*`([^`]*\$\{[^`]*)`\s*\]\s*:\s*([^,}\n]+)/g)) if (stemOf(m[1])) push({ file, kind: `${kind}-key-stem`, prelude: `[\`${m[1]}\`]`, value: m[2].trim(), line: L(m.index), stem: true });
++    for (const m of js.matchAll(new RegExp(`\\.style\\[\\s*(['"\`])${esc}\\1\\s*\\]\\s*=(?!=)\\s*([^;\\n]+)`, "g"))) push({ file, kind: `${kind}-style-index`, prelude: ".style[]", value: m[2].trim(), line: L(m.index) });
++    for (const m of js.matchAll(/setProperty\(\s*((?:[^,()]|\([^()]*\))+?)\s*,\s*([^;\n]*)/g)) {
++      const k = m[1].trim(); m[2] = m[2].replace(/\)\s*$/, ""); const parts = k.split(/\s*\+\s*/); const lits = parts.map((p) => /^(['"`])((?:\\.|(?!\1)[^$])*)\1$/.exec(p)?.[2]);
++      if (lits.every((x) => x != null)) { if (lits.join("") === token) push({ file, kind: `${kind}-setProperty`, prelude: "setProperty", value: m[2].trim(), line: L(m.index) }); }
++      else if (/^`[^`]*\$\{/.test(k)) { if (stemOf(k.slice(1))) push({ file, kind: `${kind}-setProperty-stem`, prelude: k, value: m[2].trim(), line: L(m.index), stem: true }); }
++      else if (!/^(['"`])--/.test(parts[0]) || parts.length > 1) push({ file, kind: `${kind}-setProperty-computed`, prelude: k, value: m[2].trim(), line: L(m.index), unresolved: true });
++    }
++    for (const m of js.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g)) if (new RegExp(`${esc}\\s*:`).test(m[2]) && !new RegExp(`^${esc}$`).test(m[2])) for (const d of decls(m[2])) if (d.prop === token) push({ file, kind: `${kind}-css-string`, prelude: "'…'", value: d.value, important: d.important, line: L(m.index) });
++  };
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const file = relative(fe, f); const text = rd(f);
++    if (f.endsWith(".css")) cssSites(text, 1, file.startsWith("public") ? "public-css" : "stylesheet", file);
++    else if (f.endsWith(".vue")) {
++      const b = sfc(text);
++      for (const s of b.styles) cssSites(s.css, s.line, /scoped/.test(s.attrs) ? "sfc-style-scoped" : "sfc-style", file);
++      if (b.template) { const t = stripHtml(b.template.text); attrSites(t, b.template.line, "template-style", file); jsSites(t, b.template.line, "template", file); }
++      for (const sc of b.scripts) jsSites(stripJs(sc.text), sc.line, "script", file);
++    } else if (f.endsWith(".html")) {
++      for (const m of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) cssSites(m[1], lineAt(text, m.index), "index-html-style", file);
++      const t = stripHtml(text.replace(/<style[^>]*>[\s\S]*?<\/style>/g, (m) => m.replace(/[^\n]/g, " ")));
++      attrSites(t, 1, "index-html-attr", file);
++      for (const m of t.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) jsSites(stripJs(m[1]), lineAt(t, m.index), "index-html-script", file);
++    } else if (f.endsWith(".json")) jsSites(text, 1, "json", file);
++    else if (/\.(ts|tsx|js|mjs)$/.test(f)) jsSites(stripJs(text), 1, "script", file);
++  }
++  return out;
++}

@@ -1,0 +1,66 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts	2026-09-24 12:59:32
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/.plrc7crit/crit7.spec.ts	2026-09-24 13:39:31
+@@ -750,7 +750,7 @@
+   " { color: transparent !important; -webkit-text-fill-color: transparent !important; }";
+ /** The TAIL plant on every quiet line: the last `tail` of the TEXT RUN (a Range, never the box)
+  *  at 25 % alpha — `glyph-pop.mjs`'s `applyTail`, per line. Returns the undo. */
+-async function tailPlant(page: Page, tail: number) {
++async function tailPlant(page: Page, tail: number | [number, number]) {
+   await page.evaluate(
+     ({ qs, tail }) => {
+       for (const q of qs) {
+@@ -762,14 +762,16 @@
+         const eb = el.getBoundingClientRect();
+         const left = Math.min(...rects.map((c) => c.left));
+         const right = Math.max(...rects.map((c) => c.right));
+-        const cut = (left + (1 - tail) * (right - left) - eb.left).toFixed(1);
+-        const g = `linear-gradient(to right, #000 ${cut}px, rgba(0,0,0,.25) ${cut}px)`;
++        const [fa, fb] = Array.isArray(tail) ? tail : [1 - tail, 1];
++        const ca = (left + fa * (right - left) - eb.left).toFixed(1);
++        const cb = (left + fb * (right - left) - eb.left).toFixed(1);
++        const g = `linear-gradient(to right, #000 ${ca}px, rgba(0,0,0,.25) ${ca}px, rgba(0,0,0,.25) ${cb}px, #000 ${cb}px)`;
+         el.dataset.tailPrev = el.getAttribute("style") ?? "";
+         el.style.setProperty("-webkit-mask-image", g, "important");
+         el.style.setProperty("mask-image", g, "important");
+       }
+     },
+-    { qs: [...QUIET], tail },
++    { qs: [...QUIET], tail: tail as any },
+   );
+   return () =>
+     page.evaluate((qs) => {
+@@ -827,7 +829,14 @@
+           return out;
+         };
+         const shippedRead = await read("ship");
+-        const PLANTS: [string, string | number, readonly Quiet[]][] = [
++        const FADE = (k: number) => lines(QUIET) + ` { -webkit-text-fill-color: color-mix(in srgb, currentColor ${k}%, transparent) !important; }`;
++        const PLANTS: [string, any, readonly Quiet[]][] = [
++          ["FADE80", FADE(80), QUIET],
++          ["FADE65", FADE(65), QUIET],
++          ["OPA70", lines(QUIET) + " { opacity: 0.7 !important; }", QUIET],
++          ["MID20", [0.4, 0.6], QUIET],
++          ["HEAD12", [0, 0.12], QUIET],
++          ["TAIL08", 0.08, QUIET],
+           ["FAINT30", FAINT30, QUIET],
+           ["TAIL12", 0.12, QUIET],
+           ["TAIL35", 0.35, QUIET],
+@@ -838,7 +847,7 @@
+         const plants: Record<string, Record<Quiet, GlyphText>> = {};
+         for (const [name, how] of PLANTS) {
+           let undo: () => Promise<unknown>;
+-          if (typeof how === "number") undo = await tailPlant(page, how);
++          if (typeof how !== "string") undo = await tailPlant(page, how);
+           else {
+             const t = await page.addStyleTag({ content: how });
+             undo = () => t.evaluate((e) => (e as HTMLElement).remove());
+@@ -894,7 +903,8 @@
+         // every plant is SEEN, line by line, by a clause THIS cell gates
+         for (const [name, , subjects] of PLANTS)
+           for (const q of subjects)
+-            expect(seen(plants[name][q], q), `${name} on ${q} is seen (${cell})`).not.toEqual([]);
++            console.log("CRIT", test.info().project.name, cell, name, q, "SHIPPED-AS-REGRESSION", JSON.stringify(verdict(plants[name][q], q)), "SEEN", JSON.stringify(seen(plants[name][q], q)), "median", plants[name][q].median, "under", plants[name][q].under, "slices", JSON.stringify(plants[name][q].slices));
++        for (const q of QUIET) console.log("CRIT", test.info().project.name, cell, "SHIP", q, JSON.stringify(verdict(shippedRead[q], q)), "median", shippedRead[q].median, "under", shippedRead[q].under, "slices", JSON.stringify(shippedRead[q].slices));
+         if (!floorGated)
+           test.info().annotations.push({
+             type: "T9-R8",

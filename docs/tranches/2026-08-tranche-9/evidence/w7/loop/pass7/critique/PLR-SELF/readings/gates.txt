@@ -1,0 +1,38 @@
+LOAD { 73.89 62.26 88.74 }
+tree  scripts/check-copy-register.mjs  exit 0 :: check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+tree  scripts/check-copy-register.mjs --self-test  exit 0 :: check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+tree  scripts/check-lane-membership.mjs --self-test  exit 0 :: OK — every .mjs in web/frontend/scripts and ./scripts is named by a CI lane, declares itself NOT-A-LANE with a cite, or is explicitly exempt with one; every lan
+tree  scripts/check-theme-tokens.mjs --self-test  exit 0 :: check-theme-tokens: 0 unreferenced @theme tokens
+tree  scripts/check-sleep-lint.mjs --self-test  exit 0 :: OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 35 specs.
+tree  scripts/check-pw-projects.mjs --self-test  exit 1 :: 
+tree  scripts/check-pw-projects.mjs  exit 1 :: 
+tree  scripts/check-motion-contract.mjs --self-test  exit 0 :: OK — 35 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+tree  scripts/check-theme-selectors.mjs --self-test  exit 0 :: OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+tree  scripts/check-live-regions.mjs --self-test  exit 0 :: check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+tree  census A3  exit 1 :: 
+tree  census pass6  exit 1 :: 
+tree  check-property-block  exit 1 :: Node.js v26.0.0
+control  scripts/check-copy-register.mjs  exit 0 :: check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+control  scripts/check-copy-register.mjs --self-test  exit 0 :: check-copy-register: 0 em/en dashes and 0 unadmitted jargon in product copy (0 admitted, each with its cure's seam)
+control  scripts/check-lane-membership.mjs --self-test  exit 0 :: OK — every .mjs in web/frontend/scripts and ./scripts is named by a CI lane, declares itself NOT-A-LANE with a cite, or is explicitly exempt with one; every lan
+control  scripts/check-theme-tokens.mjs --self-test  exit 0 :: check-theme-tokens: 0 unreferenced @theme tokens
+control  scripts/check-sleep-lint.mjs --self-test  exit 0 :: OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 34 specs.
+control  scripts/check-pw-projects.mjs --self-test  exit 0 :: OK — 34 specs, 547 resolved tests, every spec in both engines except the 6 recorded holdouts, and every row live in both except the 2 engine-skipped and 1 env-g
+control  scripts/check-pw-projects.mjs  exit 0 :: OK — 34 specs, 547 resolved tests, every spec in both engines except the 6 recorded holdouts, and every row live in both except the 2 engine-skipped and 1 env-g
+control  scripts/check-motion-contract.mjs --self-test  exit 0 :: OK — 34 specs, every one declaring its motion state, every `frozen` backed by the route that lands.
+control  scripts/check-theme-selectors.mjs --self-test  exit 0 :: OK — every data-attribute selector has a runtime writer, every prefers-color-scheme block is allowlisted with a reason, and the table is closed.
+control  scripts/check-live-regions.mjs --self-test  exit 0 :: check-live-regions: 0 regions born speaking — every declared region takes its content as a mutation
+control  census A3  exit 1 :: 
+control  census pass6  exit 1 :: 
+control  check-property-block  exit 1 :: Node.js v26.0.0
+tree  eslint .  exit 0
+tree  npm run lint  exit 0
+GATES-DONE
+# re-run bare (the script's census rows mis-captured):
+tree     census A3 (lane's copy, A.3 row admitted)  exit 1 :: STALE --refuse-dur · bare TIMING 0 · bare other 0
+tree     census pass6 (chair's copy, no A.3 row)    exit 1 :: STALE --refuse-dur · bare TIMING 0 · bare other 2
+tree     check-property-block (source)              exit 0 :: GREEN (1 registration, 1 name; served UNREAD here)
+control  census A3                                  exit 1 :: STALE --refuse-dur, STALE --tap-floor · bare 0
+control  census pass6                               exit 1 :: STALE --refuse-dur · bare 0
+control  check-property-block (source)              exit 0 :: GREEN
+tree     check-pw-projects                          exit 1 :: [8 FLOOR BAND] chromium floor 214 vs live 252 (owes 215); webkit 212 vs 250 (owes 213)

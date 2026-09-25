@@ -1,0 +1,38 @@
+# G10 (front-rate-p7.spec.ts), tree dev :4237 · ablated FRONT_MIN_MS 0 :4238 · pass-6 frontGate :4239. load = 1/5/15-min + sibling node procs
+gated1	chromium	driven	0	{ 29.47 51.30 59.45 } sib 134
+gated2	chromium	driven	0	{ 34.01 51.55 59.45 } sib 169
+gated3	chromium	driven	0	{ 37.84 51.84 59.46 } sib 134
+gated4	chromium	driven	0	{ 38.20 51.45 59.23 } sib 139
+gated5	chromium	driven	0	{ 40.86 51.58 59.19 } sib 148
+gated6	chromium	driven	0	{ 58.23 54.78 60.19 } sib 169
+ablated	chromium	driven	1	{ 61.87 55.66 60.44 } sib 179
+pass6cmp	chromium	driven	0	{ 61.63 55.98 60.44 } sib 167
+clock60	chromium	60	1	{ 61.12 56.15 60.42 } sib 147
+gated1	webkit	driven	0	{ 55.50 55.10 60.00 } sib 142
+gated2	webkit	driven	0	{ 54.86 54.98 59.90 } sib 129
+gated3	webkit	driven	0	{ 56.85 55.46 59.98 } sib 125
+gated4	webkit	driven	0	{ 53.99 54.88 59.72 } sib 165
+gated5	webkit	driven	0	{ 59.40 55.96 60.05 } sib 154
+gated6	webkit	driven	0	{ 59.88 56.25 60.08 } sib 147
+ablated	webkit	driven	1	{ 56.40 55.67 59.80 } sib 149
+pass6cmp	webkit	driven	1	{ 55.14 55.39 59.63 } sib 140
+clock60	webkit	60	1	{ 57.88 55.96 59.78 } sib 170
+ALLDONE
+g10-ablated-chromium: join: 260 d records, 65 frames, 1 bursts, worst 124.9/s, min gap by burst 6.5 ms (DOM 6.0), 0 of 65 outside a frame Error: join re-cuts 124.9/s against the budget
+g10-ablated-webkit: join: 256 d records, 64 frames, 1 bursts, worst 122.3/s, min gap by burst 5.0 ms (DOM 3.0), 0 of 64 outside a frame Error: join re-cuts 122.3/s against the budget
+g10-clock60-chromium: join: 112 d records, 28 frames, 1 bursts, worst 53.0/s, min gap by burst 16.6 ms (DOM 16.2), 1 of 28 outside a frame Error: the animation clock ran at 59.9 Hz; a rate row needs ≥ 93.75 Hz to see its budget
+g10-clock60-webkit: join: 80 d records, 20 frames, 1 bursts, worst 39.5/s, min gap by burst 17.0 ms (DOM 16.0), 0 of 20 outside a frame Error: the animation clock ran at 58.8 Hz; a rate row needs ≥ 93.75 Hz to see its budget
+g10-gated1-chromium: join: 104 d records, 26 frames, 1 bursts, worst 48.6/s, min gap by burst 16.0 ms (DOM 16.0), 1 of 26 outside a frame 
+g10-gated1-webkit: join: 100 d records, 25 frames, 1 bursts, worst 47.0/s, min gap by burst 17.0 ms (DOM 16.0), 1 of 25 outside a frame 
+g10-gated2-chromium: join: 100 d records, 25 frames, 1 bursts, worst 47.8/s, min gap by burst 16.1 ms (DOM 16.2), 0 of 25 outside a frame 
+g10-gated2-webkit: join: 96 d records, 24 frames, 1 bursts, worst 45.2/s, min gap by burst 17.0 ms (DOM 16.0), 1 of 24 outside a frame 
+g10-gated3-chromium: join: 96 d records, 24 frames, 1 bursts, worst 46.7/s, min gap by burst 16.1 ms (DOM 16.0), 0 of 24 outside a frame 
+g10-gated3-webkit: join: 92 d records, 23 frames, 1 bursts, worst 43.5/s, min gap by burst 17.0 ms (DOM 16.0), 1 of 23 outside a frame 
+g10-gated4-chromium: join: 108 d records, 27 frames, 1 bursts, worst 51.4/s, min gap by burst 16.0 ms (DOM 15.7), 0 of 27 outside a frame 
+g10-gated4-webkit: join: 100 d records, 25 frames, 1 bursts, worst 47.6/s, min gap by burst 17.0 ms (DOM 16.0), 1 of 25 outside a frame 
+g10-gated5-chromium: join: 100 d records, 25 frames, 1 bursts, worst 47.3/s, min gap by burst 16.0 ms (DOM 16.1), 1 of 25 outside a frame 
+g10-gated5-webkit: join: 92 d records, 23 frames, 1 bursts, worst 44.0/s, min gap by burst 18.0 ms (DOM 17.0), 1 of 23 outside a frame 
+g10-gated6-chromium: join: 104 d records, 26 frames, 1 bursts, worst 49.3/s, min gap by burst 16.0 ms (DOM 16.0), 1 of 26 outside a frame 
+g10-gated6-webkit: join: 96 d records, 24 frames, 1 bursts, worst 45.6/s, min gap by burst 17.0 ms (DOM 11.0), 1 of 24 outside a frame 
+g10-pass6cmp-chromium: join: 104 d records, 26 frames, 1 bursts, worst 49.5/s, min gap by burst 16.0 ms (DOM 15.9), 0 of 26 outside a frame 
+g10-pass6cmp-webkit: join: 116 d records, 29 frames, 1 bursts, worst 56.9/s, min gap by burst 9.0 ms (DOM 8.0), 0 of 29 outside a frame Error: join's shortest gap between re-cut frames 9.0 ms is inside the budget's window

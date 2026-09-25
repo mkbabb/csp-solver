@@ -1,0 +1,35 @@
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -2248,7 +2248,32 @@
+     expr: "Math.round(CELEBRATION.wavefrontCrossMs / diag)",
+     ms: null,
+     why: "GRADED — the wavefront's per-diagonal step: one crossing shared by the diagonals",
++  },
++  // ── the W7 fold (§13+§7+§3): four clocks the union spends through arithmetic, each named.
++  {
++    file: "src/games/shared/DifficultyTally.vue",
++    expr: "easeOutCubic(Math.max(0, Math.min(1, (ms - i * DRAW_STAGGER_MS) / dur)))",
++    ms: null,
++    why: "GRADED — the tally's per-stroke progress: DRAW_IN_PRESETS.glyph.duration over its own ticks (§3)",
+   },
++  {
++    file: "src/games/shared/DifficultyTally.vue",
++    expr: "(t) => gate.write(t * span)",
++    ms: null,
++    why: "GRADED — the tally's front: the whole span (glyph.duration + the ticks) written through frontGate (§3)",
++  },
++  {
++    file: "src/games/shared/GameBoard.vue",
++    expr: "MOTION.note.refusalHoldBeats * MOTION.beatMs",
++    ms: 3000,
++    why: "CADENCE — the refusal's hold, 24 beats (§7 NOTE-ERASE, registry-v6 §2.3c)",
++  },
++  {
++    file: "src/pencil/chrome/MarginNote.vue",
++    expr: "MOTION.note.settleAfterBeats * MOTION.beatMs",
++    ms: 1000,
++    why: "CADENCE — the note's settle, 8 beats (§7 NOTE-LEDGER, registry-v6 §2.3c)",
++  },
+ ];
+ 
+ /** The clock roots: MOTION and the admitted TS sets that live in pencilConfig (the bank's). */

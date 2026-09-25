@@ -1,0 +1,55 @@
+# shape-plants.mjs on the LEDGER scratch tree (74a2b5d9 + NOTE-LEDGER pass6.diff) — FINAL
+CLEAN library GREEN · seed GREEN
+E1_shadowed: library RED · seed RED  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+E2_second_style_block: library RED · seed RED  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+E2b_compound_override: library RED · seed RED  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+E3_block_1px: library RED · seed RED  ← R4 the block's top-level reserve is not one line: src/pencil/chrome/MarginNote.vue:237 [sfc-style-scoped] .margin-note-block: min-height 1px
+E4_landscape_important: library RED · seed RED  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S6_var_led_token: library RED · seed RED  ← R2 src/pencil/chrome/MarginNote.vue:429 [sfc-style-scoped] @media (max-width: 1023.98px) .margin-note: min-height var(--note-reserve) resolves to '0px
+S7_template_style_attr: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S8_style_object: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S8b_style_object_quoted_key: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S9_style_string: library RED · seed GREEN  ← R1 the voice's min-height is set at 3 sites (want exactly 1):
+S10_script_write: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S10b_setProperty_concatenated: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S10c_computed_key: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+S11_not_tail: library RED · seed RED  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+X_public_css: library RED · seed cannot see (not the SFC)  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+X_index_html_style: library RED · seed cannot see (not the SFC)  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+X_tailwind_candidate: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+X_string_comment_opener: library RED · seed GREEN  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+X_tsx_write: library RED · seed cannot see (not the SFC)  ← R1 the voice's min-height is set at 2 sites (want exactly 1):
+NN_not_decoy: library GREEN (correct: .margin-note negated is not the subject) · seed RED
+SELF ok   colour #3a7bc4 ≈ rgb(58 123 196): ΔE 0.000
+SELF ok   colour #3a7bc4 ≈ rgba(58,123,196,1): ΔE 0.000
+SELF ok   colour #3a7bc4 ≈ hsl(212.2 54.5% 49.8%): ΔE 0.316
+SELF ok   colour #3a7bc4 ≈ hsl(0.5895turn 54.5% 49.8%): ΔE 0.329
+SELF ok   colour #3a7bc4 ≈ oklch(0.5703 0.1285 253.6): ΔE 0.610
+SELF ok   colour #3a7bc4 ≈ oklab(0.5703 -0.0363 -0.1233): ΔE 0.608
+SELF ok   colour #3a7bc4 ≈ color(srgb 0.2275 0.4824 0.7686): ΔE 0.004
+SELF ok   colour #3a7bc4 ≈ lab(50.08 -2.44 -44.99): ΔE 0.004
+SELF ok   colour #3a7bc4 ≈ lch(50.08 45.06 266.9): ΔE 0.005
+SELF ok   colour #3a7bc4 ≈ hwb(212.2 22.7% 23.1%): ΔE 0.308
+SELF ok   colour rebeccapurple ≈ #663399: ΔE 0.000
+SELF ok   colour #abc ≈ #aabbcc: ΔE 0.000
+SELF ok   colour #aabbccff ≈ #abc: ΔE 0.000
+SELF ok   colour color-mix(in srgb, #ff0000 50%, #0000ff) ≈ rgb(127.5 0 127.5): ΔE 0.000
+SELF ok   var-led shorthand sets font-family: true
+SELF ok   subject compound: .a .b:not(.c) → b: ["b"]
+SELF ok   .b:not(.a) is not subject a: false
+SELF ok   :is(.a,.x) arm is subject a: true
+SELF ok   descendant .a .b is not subject a: false
+SELF ok   stem var(--stem-${x}) → every stem token: "{1ms|2ms}"
+SELF ok   var() fallback evaluated: "3px"
+SELF ok   CSS stripper keeps a string with /*: [".a::before",".b",".c::after"]
+SELF ok   JS stripper keeps accept="image/*" in a string: true
+SELF ok   colour literals in any syntax: ["oklch(0.6 0.1 250)","hsl(10turn 50% 50%)","red"]
+RESULT PASS (plants 19, negative-negatives 1, self-test 24/24)
+
+# reserve-law.mjs on the control 74a2b5d9
+RED
+  R1 the voice's min-height is set at 0 sites (want exactly 1):
+      none
+
+# reserve-law.mjs on the LEDGER tree
+GREEN · voice src/pencil/chrome/MarginNote.vue:429 [sfc-style-scoped] @media (max-width: 1023.98px) .margin-note: min-height inherit · block src/pencil/chrome/MarginNote.vue:237 [sfc-style-scoped] .margin-note-block: min-height 1.3em

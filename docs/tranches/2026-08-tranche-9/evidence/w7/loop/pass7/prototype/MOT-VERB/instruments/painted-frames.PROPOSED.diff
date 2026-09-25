@@ -1,0 +1,47 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/painted-frames.mjs	2026-09-23 18:07:22
++++ painted-frames.mjs	2026-09-24 10:36:31
+@@ -1,5 +1,8 @@
+ // painted-frames.mjs — THE painted-frame recorder, both engines (T9-W7 pass 7, chair's instruments;
+ // INTAKE-23 row 7 / M20 D7; registry-v6 §2.5; LAWS P6 §D). ONE copy: every motion row reads this.
++// PROPOSED (MOT-VERB pass 7): `--eps <grey levels>` — the photograph change threshold (mean |Δ| over the
++// ROI; default 0.35 unchanged). At 0.35 a thin line advancing a few px per frame over a 640 px grid ROI
++// never counts as a change (≈0.02), so a slow, continuous stroke reads as a HELD interval.
+ //
+ // Three tracks, all timestamped on ONE epoch clock (ms since 1970, performance.timeOrigin-aligned):
+ //   T  the painted TIMELINE (both engines): a rAF loop records each rendering update's timestamp and
+@@ -41,6 +44,17 @@
+   const w = window;
+   const read = () => {
+     if (!sel) return null;
++    // PROPOSED (MOT-VERB pass 7): `ruled:<selector>` — the RULED SUM over every match: each line's drawn
++    // fraction from its inline dash (`1 − offset/dasharray`; `none` = drawn, unset = not yet ruled), summed
++    // to 4 dp. A motion spread over many elements (the serial ruling: 21 lines, one after another) is one
++    // subject, monotone, whose window runs from the first stroke's first move to the last line's landing.
++    if (sel.startsWith("ruled:")) {
++      const els = [...document.querySelectorAll(sel.slice(6))];
++      if (!els.length) return null;
++      let s = 0;
++      for (const e of els) { const d = e.style.strokeDasharray, o = parseFloat(e.style.strokeDashoffset); if (d === "none") s += 1; else if (d) s += Math.max(0, Math.min(1, 1 - (isNaN(o) ? 0 : o) / parseFloat(d))); }
++      return { x: +s.toFixed(4), y: 0, w: 0, h: 0, ct: null };
++    }
+     if (sel.startsWith("css:")) { // css:<selector>:<property> — a computed paint property, read post-paint
+       const i = sel.lastIndexOf(":"); const el = document.querySelector(sel.slice(4, i));
+       return el ? { x: getComputedStyle(el).getPropertyValue(sel.slice(i + 1)), y: 0, w: 0, h: 0, ct: null } : null;
+@@ -185,7 +199,7 @@
+   const subjIv = mv.slice(1).map((t, i) => [mv[i], t]);
+   const subjMax = subjIv.reduce((m, [a, b]) => Math.max(m, b - a), 0);
+   // chromium CDP photographs arrive at the viewport's CSS size (maxWidth = viewport) → scale 1.
+-  const ph = await analysePhotos(frames, roi, 1, 0.35, tStart, tEnd);
++  const ph = await analysePhotos(frames, roi, 1, o.eps ?? 0.35, tStart, tEnd);
+   const tl = analyseTimeline(pf, tStart, tEnd);
+   const heldList = (iv, floor) => iv.filter(([a, b]) => b - a >= floor).map(([a, b]) => [+(a - tTrig).toFixed(1), +(b - a).toFixed(1)]);
+   const plantAt = pf.plantRan ? pf.plantRan - tTrig : null;
+@@ -242,7 +256,7 @@
+   let exit = clock >= 55 ? 0 : 2;
+   if (!A["selftest-only"]) {
+     const plant = A.plant ? (([b, d]) => ({ busyMs: +b, delayMs: +d }))(A.plant.replace(/^busy:/, "").split("@")) : null;
+-    const o = { heldMs: +(A.held ?? 50), url: A.url, viewport: { width: vw, height: vh }, dpr: +(A.dpr ?? 1), scheme: A.scheme, trigger: A.trigger, roi: A.roi, subject: A.subject, windowMs: +(A.window ?? 1200), plant, ready: A.ready, touch: A.touch === "1" };
++    const o = { heldMs: +(A.held ?? 50), url: A.url, viewport: { width: vw, height: vh }, dpr: +(A.dpr ?? 1), scheme: A.scheme, trigger: A.trigger, roi: A.roi, subject: A.subject, windowMs: +(A.window ?? 1200), eps: A.eps ? +A.eps : undefined, plant, ready: A.ready, touch: A.touch === "1" };
+     const runs = +(A.runs ?? 1); const held = +(A.held ?? 50); const res = [];
+     for (let i = 0; i < runs; i++) {
+       const r = await record(browser, engine, o); res.push(r);

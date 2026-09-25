@@ -1,0 +1,195 @@
+sha1 rest-probes 9872e879374b edge-bands 9b808b5383c3 glyph-pop 965cc7d4c01e paint-lib cf8577bfd020 paint-probes 667fc9ae12dd
+tree sha1 PlayerMark 25b082fd57e1 HeadSheet f778030625c4
+REST chromium self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":1,"lapped":0},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":167,"residual":0},"verdict":"GREEN"}
+LOAD 154.07 249.42 196.74
+EXIT rest chromium self-resize 0
+REST chromium self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:touch"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST chromium self-touch {"row":"a row tap inside the open sheet","focus":"INPUT[cell].cell-native-input","verdict":"GREEN"}
+LOAD 143.17 245.58 195.70
+EXIT rest chromium self-touch 0
+REST chromium self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+LOAD 134.91 242.16 194.78
+EXIT rest chromium self-touch+relabel 0
+REST webkit self-resize {"from":"390x844","to":"390x800","before":{"open":true,"rows":4,"lapped":0},"afterResizeAtRest":{"open":true,"rows":1,"lapped":0},"reopened":{"open":true,"rows":1,"lapped":0},"rest":{"ms":163,"residual":0},"verdict":"GREEN"}
+LOAD 128.91 239.14 193.99
+EXIT rest webkit self-resize 0
+REST webkit self-touch {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+REST webkit self-touch {"row":"a row tap inside the open sheet","focus":"INPUT[cell].cell-native-input","verdict":"GREEN"}
+LOAD 119.31 235.32 192.91
+EXIT rest webkit self-touch 0
+REST webkit self-touch plant=relabel {"row":"one tap on the mark","seq":["pointerdown:touch","pointerup:touch","touchend:-","click:mouse(synthetic)"],"states":["false","true"],"toggles":1,"verdict":"GREEN"}
+LOAD 112.24 231.93 191.96
+EXIT rest webkit self-touch+relabel 0
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: Failed to execute 'querySelector' on 'Document': '[data-lobby]:visible' is not a valid selector.
+    at eval (eval at evaluate (:303:30), <anonymous>:5:29)
+    at UtilityScript.evaluate (<anonymous>:305:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at readBand (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:43:33)
+    at async fourBands (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:74:19)
+    at async file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:32:15 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT edge lobby tree chromium light 1
+PROBE edge chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card [edge elements: 1] CLEAN top 14.663 (n206 <3:0.024 drop0) · right 14.463 (n121 <3:0 drop0 occ input.cell-native-input.absolute) · bottom 17.645 (n206 <3:0 drop0 occ main.main-content.flex) · left 17.645 (n121 <3:0 drop0) | topOnly GREEN → GREEN
+PROBE edge chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X6_bottom_erased top 14.663 (n206 <3:0.024 drop0) · right 14.388 (n121 <3:0.008 drop1 occ input.cell-native-input.absolute) · bottom 1 (n206 <3:1 drop206 occ main.main-content.flex [first end 1 occ main.main-content.flex | center 1 occ main.main-content.flex | start 1 occ main.main-content.flex]) · left 17.645 (n121 <3:0.008 drop1) | topOnly GREEN → RED B2 bottom core median 1 < 3 (occluder main.main-content.flex)
+PROBE edge chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X4_opacity_015 top 1.352 (n206 <3:1 drop0 [first start 1.352 | center 1.352 | end 1.352]) · right 1.349 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.349 occ input.cell-native-input.absolute | center 1.349 occ input.cell-native-input.absolute]) · bottom 1.374 (n206 <3:1 drop0 occ main.main-content.flex [first end 1.374 occ main.main-content.flex | center 1.374 occ main.main-content.flex | start 1.374 occ main.main-content.flex]) · left 1.377 (n121 <3:1 drop0 [first nearest 1.377 | center 1.377]) | topOnly RED → RED B2 top core median 1.352 < 3; B2 right core median 1.349 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.374 < 3 (occluder main.main-content.flex); B2 left core median 1.377 < 3
+PROBE edge chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT FADE15_ink top 1.352 (n206 <3:1 drop0 [first start 1.352 | center 1.352 | end 1.352]) · right 1.339 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.339 occ input.cell-native-input.absolute | center 1.339 occ input.cell-native-input.absolute]) · bottom 1.374 (n206 <3:1 drop0 occ main.main-content.flex [first end 1.374 occ main.main-content.flex | center 1.374 occ main.main-content.flex | start 1.374 occ main.main-content.flex]) · left 1.377 (n121 <3:1 drop0 [first nearest 1.377 | center 1.377]) | topOnly RED → RED B2 top core median 1.352 < 3; B2 right core median 1.339 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.374 < 3 (occluder main.main-content.flex); B2 left core median 1.377 < 3
+PROBE edge chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT INFO_X5_opacity_04 top 2.407 (n206 <3:1 drop0 [first start 2.407 | center 2.407 | end 2.407]) · right 2.37 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 2.37 occ input.cell-native-input.absolute | center 2.37 occ input.cell-native-input.absolute]) · bottom 2.571 (n206 <3:1 drop0 occ main.main-content.flex [first end 2.571 occ main.main-content.flex | center 2.571 occ main.main-content.flex | start 2.571 occ main.main-content.flex]) · left 2.58 (n121 <3:1 drop0 [first nearest 2.58 | center 2.58]) | topOnly RED → RED B2 top core median 2.407 < 3; B2 right core median 2.37 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 2.571 < 3 (occluder main.main-content.flex); B2 left core median 2.58 < 3 [sensitivity row, not a required plant]
+LOAD 98.39 225.02 189.97
+EXIT edge card tree chromium light 0
+PROBE glyph chromium light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state CLEAN pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED) (bound 1.050)
+PROBE glyph chromium light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FAINT30_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph chromium light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE65_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph chromium light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE80_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: Failed to execute 'querySelector' on 'Document': '[data-lobby]:visible .pl-state' is not a valid selector.
+    at eval (eval at evaluate (:303:30), <anonymous>:2:25)
+    at UtilityScript.evaluate (<anonymous>:305:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at applyTail (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/glyph-pop.mjs:74:15)
+    at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:43:98 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT glyph state tree chromium light 1
+PROBE glyph chromium light 1280x800 dpr1 fine PRM .corner-left .hover-card p.italic CLEAN pop 946 median 2.27 <4.5 0.921 slices [4.59 4.46 4.59 4.59 4.59 4.59 4.59 4.59 4.46 4.59 4.46 4.59 4.34 4.59 4.59 4.59] transient 0 → RED G2 core median 2.270 < 4.5 (bound 0.971)
+LOAD 91.02 219.26 188.34
+EXIT glyph caption control chromium light 1
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: Failed to execute 'querySelector' on 'Document': '[data-lobby]:visible' is not a valid selector.
+    at eval (eval at evaluate (:303:30), <anonymous>:5:29)
+    at UtilityScript.evaluate (<anonymous>:305:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at readBand (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:43:33)
+    at async fourBands (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:74:19)
+    at async file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:32:15 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT edge lobby tree chromium dark 1
+PROBE edge chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card [edge elements: 1] CLEAN top 12.67 (n206 <3:0.034 drop0) · right 12.166 (n121 <3:0 drop0 occ input.cell-native-input.absolute) · bottom 14.295 (n206 <3:0 drop0 occ main.main-content.flex) · left 14.398 (n121 <3:0 drop0) | topOnly GREEN → GREEN
+PROBE edge chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X6_bottom_erased top 12.67 (n206 <3:0.034 drop0) · right 12.072 (n121 <3:0.008 drop1 occ input.cell-native-input.absolute) · bottom 1 (n206 <3:1 drop206 occ main.main-content.flex [first end 1 occ main.main-content.flex | center 1 occ main.main-content.flex | start 1 occ main.main-content.flex]) · left 14.398 (n121 <3:0.008 drop1) | topOnly GREEN → RED B2 bottom core median 1 < 3 (occluder main.main-content.flex)
+PROBE edge chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X4_opacity_015 top 1.44 (n206 <3:1 drop0 [first start 1.44 | center 1.44 | end 1.44]) · right 1.382 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.382 occ input.cell-native-input.absolute | center 1.382 occ input.cell-native-input.absolute]) · bottom 1.431 (n206 <3:1 drop0 occ main.main-content.flex [first end 1.431 occ main.main-content.flex | center 1.431 occ main.main-content.flex | start 1.431 occ main.main-content.flex]) · left 1.44 (n121 <3:1 drop0 [first nearest 1.44 | center 1.44]) | topOnly RED → RED B2 top core median 1.44 < 3; B2 right core median 1.382 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.431 < 3 (occluder main.main-content.flex); B2 left core median 1.44 < 3
+PROBE edge chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT FADE15_ink top 1.421 (n206 <3:1 drop0 [first start 1.421 | center 1.421 | end 1.421]) · right 1.362 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.362 occ input.cell-native-input.absolute | center 1.362 occ input.cell-native-input.absolute]) · bottom 1.412 (n206 <3:1 drop0 occ main.main-content.flex [first end 1.412 occ main.main-content.flex | center 1.412 occ main.main-content.flex | start 1.412 occ main.main-content.flex]) · left 1.421 (n121 <3:1 drop0 [first nearest 1.421 | center 1.421]) | topOnly RED → RED B2 top core median 1.421 < 3; B2 right core median 1.362 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.412 < 3 (occluder main.main-content.flex); B2 left core median 1.421 < 3
+PROBE edge chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT INFO_X5_opacity_04 top 2.938 (n206 <3:0.524 drop0 [first start 2.938 | center 2.938 | end 2.938]) · right 2.89 (n121 <3:0.603 drop0 occ input.cell-native-input.absolute [first nearest 2.89 occ input.cell-native-input.absolute | center 2.89 occ input.cell-native-input.absolute]) · bottom 3.192 (n206 <3:0.282 drop0 occ main.main-content.flex) · left 3.215 (n121 <3:0.306 drop0) | topOnly RED → RED B2 top core median 2.938 < 3; B2 right core median 2.89 < 3 (occluder input.cell-native-input.absolute) [sensitivity row, not a required plant]
+LOAD 82.49 213.22 186.56
+EXIT edge card tree chromium dark 0
+PROBE glyph chromium dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state CLEAN pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED) (bound 1.050)
+PROBE glyph chromium dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FAINT30_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph chromium dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE65_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph chromium dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE80_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: Failed to execute 'querySelector' on 'Document': '[data-lobby]:visible .pl-state' is not a valid selector.
+    at eval (eval at evaluate (:303:30), <anonymous>:2:25)
+    at UtilityScript.evaluate (<anonymous>:305:16)
+    at UtilityScript.<anonymous> (<anonymous>:1:44)
+    at applyTail (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/glyph-pop.mjs:74:15)
+    at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:43:98 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT glyph state tree chromium dark 1
+PROBE glyph chromium dark 1280x800 dpr1 fine PRM .corner-left .hover-card p.italic CLEAN pop 958 median 4.245 <4.5 0.534 slices [7.8 7.62 7.8 7.8 7.8 7.8 7.8 7.8 7.62 7.8 7.62 7.8 7.53 7.8 7.8 7.8] transient 0 → RED G2 core median 4.245 < 4.5 (bound 0.584)
+LOAD 77.41 209.99 185.58
+EXIT glyph caption control chromium dark 1
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: '[data-lobby]:visible' is not a valid selector.
+    at readBand (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:43:33)
+    at async fourBands (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:74:19)
+    at async file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:32:15 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT edge lobby tree webkit light 1
+PROBE edge webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card [edge elements: 1] CLEAN top 13.703 (n206 <3:0.049 drop0) · right 14.362 (n121 <3:0 drop0 occ input.cell-native-input.absolute) · bottom 16.239 (n206 <3:0 drop0) · left 17.325 (n121 <3:0 drop0) | topOnly GREEN → GREEN
+PROBE edge webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X6_bottom_erased top 13.703 (n206 <3:0.049 drop0) · right 14.362 (n121 <3:0.008 drop1 occ input.cell-native-input.absolute) · bottom 1 (n206 <3:1 drop206 [first end 1 | center 1 | start 1]) · left 17.325 (n121 <3:0.008 drop1) | topOnly GREEN → RED B2 bottom core median 1 < 3
+PROBE edge webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X4_opacity_015 top 1.338 (n206 <3:1 drop0 [first start 1.338 | center 1.338 | end 1.338]) · right 1.338 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.338 occ input.cell-native-input.absolute | center 1.338 occ input.cell-native-input.absolute]) · bottom 1.355 (n206 <3:1 drop0 [first end 1.355 | center 1.355 | start 1.355]) · left 1.364 (n121 <3:1 drop0 [first nearest 1.364 | center 1.364]) | topOnly RED → RED B2 top core median 1.338 < 3; B2 right core median 1.338 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.355 < 3; B2 left core median 1.364 < 3
+PROBE edge webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT FADE15_ink top 1.338 (n206 <3:1 drop0 [first start 1.338 | center 1.338 | end 1.338]) · right 1.336 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.336 occ input.cell-native-input.absolute | center 1.336 occ input.cell-native-input.absolute]) · bottom 1.355 (n206 <3:1 drop0 [first end 1.355 | center 1.355 | start 1.355]) · left 1.364 (n121 <3:1 drop0 [first nearest 1.364 | center 1.364]) | topOnly RED → RED B2 top core median 1.338 < 3; B2 right core median 1.336 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.355 < 3; B2 left core median 1.364 < 3
+PROBE edge webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT INFO_X5_opacity_04 top 2.361 (n206 <3:1 drop0 [first start 2.361 | center 2.361 | end 2.361]) · right 2.352 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 2.352 occ input.cell-native-input.absolute | center 2.352 occ input.cell-native-input.absolute]) · bottom 2.463 (n206 <3:1 drop0 [first end 2.463 | center 2.463 | start 2.463]) · left 2.527 (n121 <3:1 drop0 [first nearest 2.527 | center 2.527]) | topOnly RED → RED B2 top core median 2.361 < 3; B2 right core median 2.352 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 2.463 < 3; B2 left core median 2.527 < 3 [sensitivity row, not a required plant]
+LOAD 66.77 199.02 182.21
+EXIT edge card tree webkit light 0
+PROBE glyph webkit light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state CLEAN pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED) (bound 1.050)
+PROBE glyph webkit light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FAINT30_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph webkit light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE65_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph webkit light 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE80_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: '[data-lobby]:visible .pl-state' is not a valid selector.
+    at applyTail (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/glyph-pop.mjs:74:15)
+    at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:43:98 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT glyph state tree webkit light 1
+PROBE glyph webkit light 1280x800 dpr1 fine PRM .corner-left .hover-card p.italic CLEAN pop 971 median 2.148 <4.5 0.931 slices [4.59 4.53 4.46 4.59 4.27 4.53 4.59 4.59 4.27 4.59 4.46 4.59 4.16 4.46 4.59 4.59] transient 0 → RED G2 core median 2.148 < 4.5 (bound 0.981)
+LOAD 58.31 192.85 180.21
+EXIT glyph caption control webkit light 1
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: '[data-lobby]:visible' is not a valid selector.
+    at readBand (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:43:33)
+    at async fourBands (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/edge-bands.mjs:74:19)
+    at async file:///Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:32:15 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT edge lobby tree webkit dark 1
+PROBE edge webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card [edge elements: 1] CLEAN top 11.956 (n206 <3:0.039 drop0) · right 12.456 (n121 <3:0 drop0 occ input.cell-native-input.absolute) · bottom 13.761 (n206 <3:0 drop0) · left 14.535 (n121 <3:0 drop0) | topOnly GREEN → GREEN
+PROBE edge webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X6_bottom_erased top 11.956 (n206 <3:0.039 drop0) · right 12.456 (n121 <3:0.008 drop1 occ input.cell-native-input.absolute) · bottom 1 (n206 <3:1 drop206 [first end 1 | center 1 | start 1]) · left 14.535 (n121 <3:0.008 drop1) | topOnly GREEN → RED B2 bottom core median 1 < 3
+PROBE edge webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT X4_opacity_015 top 1.419 (n206 <3:1 drop0 [first start 1.419 | center 1.419 | end 1.419]) · right 1.39 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.39 occ input.cell-native-input.absolute | center 1.39 occ input.cell-native-input.absolute]) · bottom 1.419 (n206 <3:1 drop0 [first end 1.419 | center 1.419 | start 1.419]) · left 1.427 (n121 <3:1 drop0 [first nearest 1.427 | center 1.427]) | topOnly RED → RED B2 top core median 1.419 < 3; B2 right core median 1.39 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.419 < 3; B2 left core median 1.427 < 3
+PROBE edge webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT FADE15_ink top 1.424 (n206 <3:1 drop0 [first start 1.424 | center 1.424 | end 1.424]) · right 1.401 (n121 <3:1 drop0 occ input.cell-native-input.absolute [first nearest 1.401 occ input.cell-native-input.absolute | center 1.401 occ input.cell-native-input.absolute]) · bottom 1.43 (n206 <3:1 drop0 [first end 1.43 | center 1.43 | start 1.43]) · left 1.442 (n121 <3:1 drop0 [first nearest 1.442 | center 1.442]) | topOnly RED → RED B2 top core median 1.424 < 3; B2 right core median 1.401 < 3 (occluder input.cell-native-input.absolute); B2 bottom core median 1.43 < 3; B2 left core median 1.442 < 3
+PROBE edge webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card PLANT INFO_X5_opacity_04 top 2.861 (n206 <3:0.563 drop0 [first start 2.861 | center 2.861 | end 2.861]) · right 2.914 (n121 <3:0.562 drop0 occ input.cell-native-input.absolute [first nearest 2.914 occ input.cell-native-input.absolute | center 2.914 occ input.cell-native-input.absolute]) · bottom 3.1 (n206 <3:0.437 drop0) · left 3.212 (n121 <3:0.306 drop0) | topOnly RED → RED B2 top core median 2.861 < 3; B2 right core median 2.914 < 3 (occluder input.cell-native-input.absolute) [sensitivity row, not a required plant]
+LOAD 49.33 184.27 177.37
+EXIT edge card tree webkit dark 0
+PROBE glyph webkit dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state CLEAN pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED) (bound 1.050)
+PROBE glyph webkit dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FAINT30_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph webkit dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE65_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+PROBE glyph webkit dark 1280x800 dpr1 fine PRM [data-lobby]:visible .pl-state PLANT FADE80_fill pop 0 median 0 <4.5 1 slices [] transient 0 → RED G1 population 0 px < 40 (EMPTY/thin is RED)
+node:internal/modules/run_main:107
+    triggerUncaughtException(
+    ^
+
+page.evaluate: SyntaxError: '[data-lobby]:visible .pl-state' is not a valid selector.
+    at applyTail (/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/glyph-pop.mjs:74:15)
+    at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/paint-probes.mjs:43:98 {
+  log: []
+}
+
+Node.js v26.0.0
+EXIT glyph state tree webkit dark 1
+PROBE glyph webkit dark 1280x800 dpr1 fine PRM .corner-left .hover-card p.italic CLEAN pop 989 median 3.404 <4.5 0.612 slices [7.8 7.8 7.71 7.8 7.53 7.8 7.8 7.8 7.53 7.8 7.71 7.8 7.53 7.62 7.8 7.8] transient 0 → RED G2 core median 3.404 < 4.5 (bound 0.662)
+LOAD 45.24 178.95 175.57
+EXIT glyph caption control webkit dark 1
+RADIUS chromium r16 ground 16px d sha e5926b5d7f10 len 14754 | r18 ground 18px d sha df1b0dd90c9e len 16057
+RADIUS webkit r16 ground 16px d sha e5926b5d7f10 len 14754 | r18 ground 18px d sha 5eb75a31d13e len 16053
+LOAD 47.94 177.29 175.00
+EXIT radius tree 0
+INSTR-DONE

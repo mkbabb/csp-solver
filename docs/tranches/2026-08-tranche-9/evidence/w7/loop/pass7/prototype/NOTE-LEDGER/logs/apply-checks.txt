@@ -1,0 +1,13 @@
+full diff (15 files) on fresh 74a2b5d9 :: exit 0
+pass-7 delta -U3 on 74a2b5d9+pass6.diff :: exit 0
+pass-7 delta -U1 on 74a2b5d9+pass6.diff :: exit 0
+pass-7 delta -U3 on the union (74a2b5d9+s13-s7-s3.diff) :: exit 1
+  same, minus package.json :: exit 0
+  package.json hunk REVERSE on the union (0 = already carried) :: exit 129
+pass-7 delta -U1 minus package.json on the union :: exit 0
+pass-7 delta -U3 minus package.json on union+ERASE7 (U1+carry) :: exit 1
+  scripts/check-font-coverage.mjs on union+ERASE7 :: exit 1
+  src/pencil/chrome/MarginNote.vue on union+ERASE7 :: exit 1
+on-erase.diff (the union form) on union+ERASE7 :: exit 0
+swap-fence.PROPOSED on union+ERASE7 :: exit 0
+  package.json hunk REVERSE on the union, re-run with split args (0 = already carried): exit 0 (the 129 above was my wrapper passing two flags as one argument)

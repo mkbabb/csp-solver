@@ -1,0 +1,48 @@
+# ROW 15 (e2e/player-place.spec.ts, the lane's landed row) on the critic's copy, plants by plant.py
+# run2 'row15 clean' = chart arm ed75fd82e2fc; run2 'refit-chart' was UNPLANTED (K1) = a second clean run; run2 'refit-yield' was YIELD ONLY (a9c8.. not printed; 6b40b7510558) = yield-arm clean
+== row15 clean 15:48:11 load 45.76 48.95 43.58 sha ed75fd82e2fc
+row15 clean exit=0
+  ✓  1 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) 
+  ✓  2 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table)
+  ✓  3 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) (5
+  ✓  4 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table) (
+== row15 refit-chart 15:48:37 load 41.32 47.69 43.29 sha ed75fd82e2fc
+row15 refit-chart exit=0
+  ✓  1 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) 
+  ✓  2 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table)
+  ✓  3 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) (5
+  ✓  4 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table) (
+YIELD apply 6b40b7510558
+== row15 refit-yield 15:49:04 load 40.63 46.89 43.15 sha 6b40b7510558
+row15 refit-yield exit=0
+  ✓  1 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) 
+  ✓  2 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table)
+  ✓  3 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (2 at the table) (6
+  ✓  4 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (3 at the table) (
+YIELD restore ed75fd82e2fc
+DONE3
+# run3 (valid)
+REFIT apply 41366c1b9b83
+== row15 REFIT-chart 15:49:40 load 57.10 50.38 44.57 sha 41366c1b9b83
+row15 REFIT-chart exit=1
+  ✓  1 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open
+  ✘  2 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh ope
+  ✓  3 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open t
+  ✘  4 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open 
+YIELD apply a9c8003a425d
+== row15 YIELD+REFIT 15:50:05 load 48.21 48.84 44.18 sha a9c8003a425d
+row15 YIELD+REFIT exit=1
+  ✘  1 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open
+  ✘  2 [chromium] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh ope
+  ✘  3 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×860, resize to 390×664 at rest: the open sheet reads what a fresh open t
+  ✘  4 [webkit] › e2e/player-place.spec.ts:961:3 › 15 · open at 390×1000, resize to 390×664 at rest: the open sheet reads what a fresh open 
+REFIT restore 6b40b7510558
+== kill16 yield 15:50:30 sha 6b40b7510558
+kill16 yield exit=0
+YIELD restore ed75fd82e2fc
+== kill16 chart(2) 15:51:00 sha ed75fd82e2fc
+kill16 chart2 exit=0
+NO_ARM apply 76142b788bc8
+kill16 list exit=0
+NO_ARM restore 8d11da55e25c
+DONE

@@ -1,0 +1,87 @@
+--- reserve-law.fmt.mjs	2026-09-23 20:30:26
++++ scripts/shape/reserve-law.mjs	2026-09-23 20:33:23
+@@ -10,9 +10,71 @@
+ //   R2  that site's value, RESOLVED (var() with fallbacks at the consumer), is `inherit`
+ //   R3  it sits under a max-width media condition (< 1024) and carries no `!important`
+ //   R4  the block (`.margin-note-block`) reserves ≥ 1 line at top level (em/lh/rem ≥ 1) — exactly one site
++//       R4 reads the value as a LOWER BOUND in line units: `calc()` products and quotients by a
++//       number, `clamp()` at its floor, `min()`/`max()`; anything it cannot bound is 0, never a
++//       pass (the merged note derives the reserve as `calc(var(--type-body) *
++//       var(--type-leading-caption))`, which is one line at the clamp's floor)
+ // Usage: node reserve-law.mjs <web/frontend>   Exit 0 GREEN · 1 RED (every breach printed with file:line).
++//
++// LANDED (NOTE-LEDGER, pass 7) from the chair's `pass7/instruments/reserve-law.mjs` (sha1 2498f42e)
++// with the R4 bound above, and shipped as `check-ink-pressure.mjs`'s note-reserve row, whose
++// `--self-test` carries the E1/E2/E2b/E3/E4 plants.
++import process from "node:process";
+ import { census, tokens, resolve } from "./shape-census.mjs";
+ 
++/** A top-level comma split (brackets respected). */
++const args = (s) => {
++  const out = [];
++  let depth = 0,
++    cur = "";
++  for (const c of s) {
++    if (c === "(") depth++;
++    if (c === ")") depth--;
++    if (c === "," && depth === 0) {
++      out.push(cur.trim());
++      cur = "";
++    } else cur += c;
++  }
++  return [...out, cur.trim()];
++};
++/** A lower bound of `v` in LINES (em/lh/rem), or 0 where it cannot be bounded. */
++/** @public — the library's API (LAWS P6 §I: one copy every gate imports) */
++export function lines(v) {
++  const s = v.trim();
++  const b = bound(s);
++  return b && b.line ? b.n : 0;
++}
++function bound(s) {
++  let m = /^([\d.]+)(em|lh|rem)?$/.exec(s);
++  if (m) return { n: +m[1], line: Boolean(m[2]) };
++  m = /^(calc|clamp|min|max)\(([\s\S]*)\)$/.exec(s);
++  if (!m) return null;
++  if (m[1] === "clamp") return bound(args(m[2])[0]);
++  if (m[1] === "min" || m[1] === "max") {
++    const all = args(m[2]).map(bound);
++    const ok = all.filter((b) => b && b.line);
++    if (m[1] === "min")
++      return ok.length === all.length
++        ? { n: Math.min(...ok.map((b) => b.n)), line: true }
++        : null;
++    return ok.length ? { n: Math.max(...ok.map((b) => b.n)), line: true } : null;
++  }
++  // calc: a product of factors, each optionally divided by a number; one factor carries the unit
++  const [head, ...divs] = m[2].split(/\s\/\s/);
++  let out = { n: 1, line: false };
++  for (const f of head.split(/\s\*\s/)) {
++    const b = bound(f.trim());
++    if (!b || (b.line && out.line)) return null;
++    out = { n: out.n * b.n, line: out.line || b.line };
++  }
++  for (const d of divs) {
++    const b = bound(d.trim());
++    if (!b || b.line || !b.n) return null;
++    out.n /= b.n;
++  }
++  return out;
++}
++
+ export function reserveLaw(fe, opts = {}) {
+   const fails = [];
+   const voice = census(fe, "margin-note", "min-height", opts); // subject-compound keyed: .margin-note-block is another class
+@@ -32,11 +94,7 @@
+   }
+   const block = census(fe, "margin-note-block", "min-height", opts);
+   const top = block.filter((s) => !s.ctx);
+-  const em = (v) => {
+-    const m = /^([\d.]+)(em|lh|rem)$/.exec(resolve(v, map).trim());
+-    return m ? +m[1] : 0;
+-  };
+-  if (top.length !== 1 || em(top[0].value) < 1)
++  if (top.length !== 1 || lines(resolve(top[0].value, map)) < 1)
+     fails.push(
+       `R4 the block's top-level reserve is not one line: ${top.map(where).join(" | ") || "none"}`,
+     );

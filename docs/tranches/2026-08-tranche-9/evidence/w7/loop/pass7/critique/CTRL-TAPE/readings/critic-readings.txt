@@ -1,0 +1,107 @@
+# CTRL-TAPE pass-7 critic readings, 2026-09-24 (box load 1-min 20-64 over the session; 33.99 at start, 64.06 peak, 47.42 at the ring read)
+identities: control :4233 index-CubiZsMVSwTc.js (w7-control dist) · tree :4232 index-C0UL6nygNq7X.js (my build) · merged :4243 index-C3xGb3Gj9lX8.js (my archive 74a2b5d9 + s10.diff + pass7-on-s10.diff) · pass-6 :4244 index-BBBYNWxB0Bv8.js
+
+## apply
+archive m2 0
+archive s2 0
+archive c2 0
+s10 apply 0
+merged s10 apply 0
+pass7-on-s10 check on s10: 0
+merged apply 0
+pass6 check on 74: 0
+pass6 apply 0
+cumulative (pass6+pass7-delta) on 74: 0
+error: patch failed: web/frontend/src/assets/index.css:166
+error: web/frontend/src/assets/index.css: patch does not apply
+error: patch failed: web/frontend/src/games/shared/GameControlPanel.vue:783
+error: web/frontend/src/games/shared/GameControlPanel.vue: patch does not apply
+pass7-delta alone on s10: 1
+MKDONE
+
+## keys-crib G3 (merged, whole file, both engines, 2 runs)
+  8 passed (21.7s)
+G3 run 1 EXIT 0
+  8 passed (21.5s)
+G3 run 2 EXIT 0
+chromium passed G3 drift (post-paint) open 0px/89f, close 0px/91f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 50.89px
+chromium passed G3 drift (post-paint) open 0px/89f, close 0px/91f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 50.89px
+chromium passed G3 drift (post-paint) open 0px/92f, close 0px/89f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 49.42px
+chromium passed G3 drift (post-paint) open 0px/91f, close 0px/90f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 49.42px
+webkit passed G3 drift (post-paint) open 0px/67f, close 0px/70f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 50.89px
+webkit passed G3 drift (post-paint) open 0px/66f, close 0px/68f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 50.89px
+webkit passed G3 drift (post-paint) open 0px/67f, close 0px/70f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 49.36px
+webkit passed G3 drift (post-paint) open 0px/70f, close 0px/70f [in-rAF, not gated: 0 / 0] · plant (the crib grows the case) 49.36px
+
+## inset row (tree, --repeat-each 6, both engines)
+  12 passed (10.5s)
+INSET EXIT 0
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+chromium passed real lowestInk 805 barBottom 798.00 pad 46px ; NEG lowestInk 817 barBottom 810.00 pad 34px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+webkit passed real lowestInk 839 barBottom 832.47 pad 12px ; NEG lowestInk 843 barBottom 836.47 pad 8px
+
+## lapse row (tree ×5 per engine; pass-6 dist ×2 per engine)
+<scratch>/lapse.log:  10 passed (45.8s)
+<scratch>/lapse.log:LAPSE EXIT 0
+<scratch>/lapse-p6.log:  4 failed
+<scratch>/lapse-p6.log:LAPSE-P6 EXIT 1
+    Expected: "Normal"
+    Received: "Deal a new board"
+
+## zone-grammar whole file (tree)
+  36 passed (28.0s)
+ZG TREE EXIT 0
+
+## vitest src/games/shared (archive = 74a2b5d9 + pass6.diff + pass7-delta.diff, byte-equal to the work tree's product files)
+ Test Files  34 passed (34)
+      Tests  429 passed (429)
+VITEST EXIT 0
+
+## filter-census.spec.ts (both engines)
+<scratch>/fc2-tree.log:  12 passed (17.5s)
+<scratch>/fc2-tree.log:FC TREE EXIT 0
+<scratch>/fc2-ctl.log:  12 passed (16.8s)
+<scratch>/fc2-ctl.log:FC CTL EXIT 0
+
+## check-property-block (pass6 copy)
+cpb-tree: check-property-block: GREEN — names unique, one block per home, none nested, none from script, every ladder inherits
+cpb-m2: check-property-block: GREEN — names unique, one block per home, none nested, none from script, every ladder inherits
+cpb-ctl: check-property-block: GREEN — names unique, one block per home, none nested, none from script, every ladder inherits
+served: 55 registrations in 7 css (AnswerKeyLaminate-DQ8Zd4NTTWD3.css:0 CageOverlay-CxJWuhZARm9B.css:0 FutoshikiPoster-DZUvzwTKUpND.css:0 PosterBoard-C25fZcEKH9UF.css:0 ThermoTube-D-JcHJtczqX1.css:0 index-DeBuUZWrs5qX.css:55 spec-CAxGeu14Qq5g.css:0) · stamp index-C0UL6nygNq7X.js
+
+## undefined-token census (pass6 copy)
+utc-tree: check-theme-tokens: 3 bare var() naming no declaration in scope, 1 stale inheritance rows
+utc-m2: check-theme-tokens: 3 bare var() naming no declaration in scope, 1 stale inheritance rows
+utc-ctl: check-theme-tokens: 0 bare var() naming no declaration in scope, 1 stale inheritance rows
+  STALE  --refuse-dur :: games/shared/GameBoard.vue -> assets/index.css
+  src/games/shared/ConfirmRibbon.vue:140  --tap-floor
+  src/games/shared/ConfirmRibbon.vue:141  --tap-floor
+  src/games/shared/GameControlPanel.vue:1849  --washi-tag-h
+
+## static battery, bare (tree | control)
+lint:tape-foot 0|lint:tape-foot 1
+lint:lanes 0|lint:lanes 0
+lint:theme-tokens 0|lint:theme-tokens 0
+lint:sleep 0|lint:sleep 0
+test:e2e:projects 0|test:e2e:projects 0
+lint:copy 0|lint:copy 0
+lint:motion 0|lint:motion 0
+lint:ink 0|lint:ink 0
+lint:theme-selectors 0|lint:theme-selectors 0
+lint:live-regions 0|lint:live-regions 0
+lint:catch 0|lint:catch 0
+lint:boundary 0|lint:boundary 0
+lint 0|lint 0
+check-pw-projects 0|check-pw-projects 0
+check-copy-register 0|check-copy-register 0
+eslint . 0|eslint . 0
+DONE|DONE

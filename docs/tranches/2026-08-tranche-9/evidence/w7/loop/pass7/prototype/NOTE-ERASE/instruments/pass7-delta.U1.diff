@@ -1,0 +1,561 @@
+diff --git a/web/frontend/e2e/affordances.spec.ts b/web/frontend/e2e/affordances.spec.ts
+index b3a05a18..902b9d29 100644
+--- a/web/frontend/e2e/affordances.spec.ts
++++ b/web/frontend/e2e/affordances.spec.ts
+@@ -253,71 +253,143 @@ type LeaveRecord = {
+   animationDuration?: string;
++  animationDelay?: string;
+ };
+ 
+-test('drop clock: a note leaves on the rub-out, whatever transition the ink carries', async ({
+-  page,
+-}) => {
+-  await loadSudoku(page, '?board=' + CONFLICT_BOARD);
+-  await expect
+-    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
+-    .toBe(72);
+-  await page.addStyleTag({
+-    content: '#app .margin-note-ink { transition: color 1000ms linear !important; }',
+-  });
+-
+-  // A red verdict: row 0 is blank on the pinned board, so two nines in it are a conflict.
+-  await setCellValue(page, 0, '9');
+-  await setCellValue(page, 1, '9');
+-  await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
+-  await expect(page.locator('.margin-note')).toHaveClass(/teacher-red/, { timeout: 15000 });
+-  const ink = page.locator('.margin-note-ink');
+-  await expect(ink).toHaveCount(1);
+-  // The adversary is in force on the resting line, so a green below is the hook's, not a dud.
+-  expect(await ink.evaluate((el) => getComputedStyle(el).transitionDuration)).toBe('1s');
+-
+-  await page.evaluate(() => {
+-    const host = document.querySelector('.margin-note')!;
+-    const rec: LeaveRecord = {};
+-    (window as unknown as { __leave: LeaveRecord }).__leave = rec;
+-    new MutationObserver(() => {
+-      const el = rec.el ?? host.querySelector('.margin-note-ink.note-leave-active');
+-      if (el && !rec.el) {
+-        const cs = getComputedStyle(el);
+-        Object.assign(rec, {
+-          el,
+-          t0: performance.now(),
+-          transitionDuration: cs.transitionDuration,
+-          animationName: cs.animationName,
+-          animationDuration: cs.animationDuration,
+-        });
+-      }
+-      if (rec.el && rec.t1 === undefined && !rec.el.isConnected) rec.t1 = performance.now();
+-    }).observe(host, { subtree: true, childList: true, attributes: true, attributeFilter: ['class'] });
+-  });
++// Pass 7, BOTH AXES. The transition fence alone left the rub-out's own length open: the rung is
++// read through `var(--motion-whisper)`, registered `inherits: true`, so an ancestor re-declaring
++// it at (0,1,0) with no `!important`, or an author `animation-duration: … !important` on the
++// leave class, held the node for 904 ms with every CI gate at 0. Each adversary proves it is in
++// force before the leave, on its own axis, and the leaving node is read on BOTH longhands.
++const DROP_CLOCK_ADVERSARIES: {
++  name: string;
++  css: string;
++  inForce: (page: Page) => Promise<string>;
++  want: string;
++}[] = [
++  {
++    name: 'a transition at (1,1,0) !important',
++    css: '#app .margin-note-ink { transition: color 1000ms linear !important; }',
++    inForce: (page) =>
++      page.locator('.margin-note-ink').evaluate((el) => getComputedStyle(el).transitionDuration),
++    want: '1s',
++  },
++  {
++    name: 'the rung re-declared on an ancestor at (0,1,0)',
++    css: '.margin-note { --motion-whisper: 900ms; }',
++    inForce: (page) =>
++      page
++        .locator('.margin-note-ink')
++        .evaluate((el) => getComputedStyle(el).getPropertyValue('--motion-whisper').trim()),
++    // The rung is registered `<time>`, so it computes to its canonical unit.
++    want: '0.9s',
++  },
++  {
++    name: 'animation-duration !important on the leave class',
++    css: '.margin-note-ink.note-leave-active { animation-duration: 900ms !important; }',
++    inForce: (page) =>
++      page.locator('.margin-note').evaluate((host) => {
++        const probe = document.createElement('span');
++        probe.className = 'margin-note-ink note-leave-active';
++        host.appendChild(probe);
++        const d = getComputedStyle(probe).animationDuration;
++        probe.remove();
++        return d;
++      }),
++    want: '0.9s',
++  },
++  {
++    // Vue's fallback clock is the longest delay + duration, so the delay is the same attack.
++    name: 'animation-delay !important on the leave class',
++    css: '.margin-note-ink.note-leave-active { animation-delay: 750ms !important; }',
++    inForce: (page) =>
++      page.locator('.margin-note').evaluate((host) => {
++        const probe = document.createElement('span');
++        probe.className = 'margin-note-ink note-leave-active';
++        host.appendChild(probe);
++        const d = getComputedStyle(probe).animationDelay;
++        probe.remove();
++        return d;
++      }),
++    want: '0.75s',
++  },
++];
+ 
+-  // The next edit reverts the grade, and the red line is rubbed out.
+-  await setCellValue(page, 1, '');
+-  const read = () =>
+-    page.evaluate(() => {
+-      const r = (window as unknown as { __leave: LeaveRecord }).__leave;
+-      return r.t1 === undefined || r.t0 === undefined
+-        ? null
+-        : {
+-            ms: r.t1 - r.t0,
+-            transitionDuration: r.transitionDuration,
+-            animationName: r.animationName,
+-            animationDuration: r.animationDuration,
+-          };
++for (const adversary of DROP_CLOCK_ADVERSARIES) {
++  test(`drop clock: a note leaves on the rub-out's own rung — ${adversary.name}`, async ({
++    page,
++  }) => {
++    await loadSudoku(page, '?board=' + CONFLICT_BOARD);
++    await expect
++      .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
++      .toBe(72);
++    await page.addStyleTag({ content: adversary.css });
++
++    // A red verdict: row 0 is blank on the pinned board, so two nines in it are a conflict.
++    await setCellValue(page, 0, '9');
++    await setCellValue(page, 1, '9');
++    await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
++    await expect(page.locator('.margin-note')).toHaveClass(/teacher-red/, { timeout: 15000 });
++    const ink = page.locator('.margin-note-ink');
++    await expect(ink).toHaveCount(1);
++    // The adversary is in force before the leave, so a green below is the hook's, not a dud.
++    expect(await adversary.inForce(page)).toBe(adversary.want);
++
++    await page.evaluate(() => {
++      const host = document.querySelector('.margin-note')!;
++      const rec: LeaveRecord = {};
++      (window as unknown as { __leave: LeaveRecord }).__leave = rec;
++      new MutationObserver(() => {
++        const el = rec.el ?? host.querySelector('.margin-note-ink.note-leave-active');
++        if (el && !rec.el) {
++          const cs = getComputedStyle(el);
++          Object.assign(rec, {
++            el,
++            t0: performance.now(),
++            transitionDuration: cs.transitionDuration,
++            animationName: cs.animationName,
++            animationDuration: cs.animationDuration,
++            animationDelay: cs.animationDelay,
++          });
++        }
++        if (rec.el && rec.t1 === undefined && !rec.el.isConnected) rec.t1 = performance.now();
++      }).observe(host, {
++        subtree: true,
++        childList: true,
++        attributes: true,
++        attributeFilter: ['class'],
++      });
+     });
+-  await expect.poll(read, { timeout: 5000 }).not.toBeNull();
+-  const leave = (await read())!;
+-
+-  expect(leave.transitionDuration).toBe('0s');
+-  expect(leave.animationName).toContain('ink-rub-out');
+-  // The rung resolved: a published ladder, never the registered 0ms of an absent publisher.
+-  for (const d of leave.animationDuration!.split(',')) expect(parseFloat(d)).toBeGreaterThan(0);
+-  // The whisper rung plus a frame or two; the planted second would read ~1000. The bound is the
+-  // ARRIVAL's rung, because the erase is shorter than the write-in by design: a whisper/dusk
+-  // swap (the rub-out on 350 ms, node gone at ~360) reds here, where the pass-5 '< 500' let it by.
+-  expect(leave.ms).toBeLessThan(MOTION.rungs.note);
+-});
++
++    // The next edit reverts the grade, and the red line is rubbed out.
++    await setCellValue(page, 1, '');
++    const read = () =>
++      page.evaluate(() => {
++        const r = (window as unknown as { __leave: LeaveRecord }).__leave;
++        return r.t1 === undefined || r.t0 === undefined
++          ? null
++          : {
++              ms: r.t1 - r.t0,
++              transitionDuration: r.transitionDuration,
++              animationName: r.animationName,
++              animationDuration: r.animationDuration,
++              animationDelay: r.animationDelay,
++            };
++      });
++    await expect.poll(read, { timeout: 5000 }).not.toBeNull();
++    const leave = (await read())!;
++
++    // The transition axis: fenced.
++    expect(leave.transitionDuration).toBe('0s');
++    expect(leave.animationName).toContain('ink-rub-out');
++    // The animation axis: every listed duration IS the whisper rung, from its one home — never
++    // the adversary's 900 ms, never the registered 0ms of an absent publisher.
++    for (const d of leave.animationDuration!.split(','))
++      expect(Math.round(parseFloat(d) * 1000)).toBe(MOTION.rungs.whisper);
++    // ...and no delay in front of it: Vue's fallback clock is delay + duration.
++    for (const d of leave.animationDelay!.split(',')) expect(parseFloat(d)).toBe(0);
++    // The whisper rung plus a frame or two. The bound is the ARRIVAL's rung, because the erase is
++    // shorter than the write-in by design: a whisper/dusk swap (the rub-out on 350 ms, node gone
++    // at ~360) reds here, where the pass-5 '< 500' let it by.
++    expect(leave.ms).toBeLessThan(MOTION.rungs.note);
++  });
++}
+ 
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 15968b6f..135293e0 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -73,3 +73,34 @@ const UTILITY_NAMESPACES = {
+ 
+-const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
++/**
++ * Comments out, strings kept. A `/*` inside a quoted string never opens a comment (a CSS
++ * `content: "/*"` before a real rule ate the rule under the old regex); in script, `//` opens one
++ * too and backticks quote. The SHAPE law's string-aware stripper (the chair's
++ * `pass7/instruments/shape-census.mjs` `stripCss`/`stripJs`), inlined because a product gate does
++ * not import from the evidence tree; the self-test below plants the string case.
++ */
++function stripComments(text, script = false) {
++  let out = "";
++  let q = null;
++  for (let i = 0; i < text.length; i++) {
++    const c = text[i];
++    if (q) {
++      out += c;
++      if (c === "\\") out += text[++i] ?? "";
++      else if (c === q) q = null;
++      continue;
++    }
++    if (c === '"' || c === "'" || (script && c === "`")) q = c;
++    else if (c === "/" && text[i + 1] === "*") {
++      const e = text.indexOf("*/", i + 2);
++      i = e < 0 ? text.length : e + 1;
++      continue;
++    } else if (script && c === "/" && text[i + 1] === "/") {
++      const e = text.indexOf("\n", i);
++      i = e < 0 ? text.length : e - 1;
++      continue;
++    }
++    out += c;
++  }
++  return out;
++}
+ 
+@@ -202,3 +233,3 @@ export function rungKeys(tsText) {
+ /** Every `@property --motion-*` in `cssText`, with its brace depth and descriptors. */
+-function motionRegistrations(cssText) {
++function motionRegistrations(cssText, file = "src/assets/index.css") {
+   const css = stripComments(cssText);
+@@ -216,3 +247,3 @@ function motionRegistrations(cssText) {
+       );
+-      out.push({ name: m[1], depth, desc });
++      out.push({ name: m[1], depth, desc, file });
+       i += m[0].length - 1;
+@@ -223,5 +254,68 @@ function motionRegistrations(cssText) {
+ 
+-export function registrationRow(cssText, rungs) {
+-  const regs = motionRegistrations(cssText);
+-  const red = [];
++/**
++ * EVERY OTHER STYLESHEET, AND EVERY SCRIPT THAT COULD EMIT ONE (T9-W7 §7, pass 7). The row read
++ * `index.css` alone, so a second `@property --motion-whisper { inherits: false }` in
++ * `typography.css` passed it (pass-6 critique §1A). A registration can reach the page from any
++ * of: a `.css` under `src/` or `public/`, EVERY `<style>` block of an SFC (a second block too),
++ * `index.html`, or a script (`CSS.registerProperty`, or `@property` text a script appends). Each
++ * is returned as a sheet `{ file, css }`; a script's text counts when it names both the at-rule
++ * or the API and a `--motion-` name (comments stripped; test files are not the product).
++ */
++export function otherSheets(root = ROOT) {
++  const out = [];
++  const walk = (dir, keep) => {
++    if (!fs.existsSync(dir)) return;
++    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
++      const p = path.join(dir, e.name);
++      if (e.isDirectory()) walk(p, keep);
++      else if (keep(e.name)) out.push(p);
++    }
++  };
++  walk(path.join(root, "src"), (n) => /\.(css|vue|ts|tsx|js|mjs)$/.test(n));
++  walk(path.join(root, "public"), (n) => /\.(css|html)$/.test(n));
++  out.push(path.join(root, "index.html"));
++  return out
++    .filter(
++      (p) => p !== INDEX_CSS && !/\.(test|spec)\.[jt]sx?$/.test(p) && fs.existsSync(p),
++    )
++    .flatMap((p) => sheetsOf(path.relative(root, p), fs.readFileSync(p, "utf8")));
++}
++
++/** The sheets ONE file contributes (the reader the walk and every plant share, so a plant proves
++ *  the extraction, not only the rule): a `.css` whole, each `<style>` block of an SFC or an HTML
++ *  file, and a script that names the at-rule or the API beside a `--motion-` name. */
++export function sheetsOf(file, text) {
++  const sheets = [];
++  if (file.endsWith(".css")) sheets.push({ file, css: text });
++  else if (/\.(vue|html)$/.test(file))
++    for (const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g))
++      sheets.push({ file, css: m[1] });
++  if (/\.(vue|ts|tsx|js|mjs)$/.test(file)) {
++    const src = file.endsWith(".vue")
++      ? [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
++          .map((m) => m[1])
++          .join("\n")
++      : text;
++    const code = stripComments(src, true);
++    if (
++      /(@property|registerProperty)[\s\S]{0,240}--motion-|--motion-[\s\S]{0,240}registerProperty/.test(
++        code,
++      )
++    )
++      sheets.push({ file, css: "", script: true });
++  }
++  return sheets;
++}
++
++export function registrationRow(cssText, rungs, others = otherSheets()) {
++  const regs = [
++    ...motionRegistrations(cssText),
++    ...others.flatMap((o) => motionRegistrations(o.css, o.file)),
++  ];
++  const red = others
++    .filter((o) => o.script)
++    .map(
++      (o) =>
++        `${o.file} registers a --motion-* rung from script (the ladder has one static home)`,
++    );
+   for (const rung of rungs) {
+@@ -230,6 +324,13 @@ export function registrationRow(cssText, rungs) {
+     if (mine.length !== 1) {
+-      red.push(`${name} registered ${mine.length}× (want exactly 1)`);
++      red.push(
++        `${name} registered ${mine.length}× (want exactly 1)` +
++          (mine.length ? ` in ${mine.map((r) => r.file).join(", ")}` : ""),
++      );
+       continue;
+     }
+-    const { depth, desc } = mine[0];
++    const { depth, desc, file } = mine[0];
++    if (file !== "src/assets/index.css")
++      red.push(
++        `${name} registered in ${file}, not the ladder's home src/assets/index.css`,
++      );
+     if (depth !== 0)
+@@ -243,3 +344,3 @@ export function registrationRow(cssText, rungs) {
+     if (!rungs.includes(r.name.slice("--motion-".length)))
+-      red.push(`${r.name} registered but no rung of MOTION.rungs`);
++      red.push(`${r.name} registered in ${r.file} but no rung of MOTION.rungs`);
+   return red;
+@@ -279,2 +380,17 @@ function main() {
+     const nested = cssText.replace(REG, (m) => `:root {\n${m}\n}`);
++    // Pass 7: a registration at every OTHER site a sheet reaches the page from. Each is the
++    // live sheet set plus ONE planted sheet, so the tree's own sheets stay in every plant.
++    // Each plant is the REAL file's text with the plant appended, read through `sheetsOf` (the
++    // walk's own reader), so a plant that the extraction cannot see stays green here too.
++    const others = otherSheets();
++    const dup =
++      '@property --motion-whisper { syntax: "<time>"; inherits: false; initial-value: 0ms; }';
++    const real = (f) =>
++      fs.existsSync(path.join(ROOT, f))
++        ? fs.readFileSync(path.join(ROOT, f), "utf8")
++        : "";
++    const plus = (file, tail) => [
++      ...others.filter((o) => o.file !== file),
++      ...sheetsOf(file, real(file) + "\n" + tail),
++    ];
+     const plants = [
+@@ -282,5 +398,44 @@ function main() {
+       [`nest every rung in :root {} (${(cssText.match(REG) ?? []).length})`, nested],
++      [
++        "a second registration in typography.css",
++        cssText,
++        plus("src/assets/typography.css", dup),
++      ],
++      [
++        "one in a SECOND <style> block of an SFC",
++        cssText,
++        plus("src/pencil/chrome/MarginNote.vue", `<style>\n${dup}\n</style>`),
++      ],
++      ["one in index.html", cssText, plus("index.html", `<style>${dup}</style>`)],
++      ["one in public/", cssText, plus("public/x.css", dup)],
++      [
++        "a script emitter",
++        cssText,
++        plus(
++          "src/main.ts",
++          'CSS.registerProperty({ name: "--motion-whisper", syntax: "<time>", inherits: false, initialValue: "0ms" });',
++        ),
++      ],
++      [
++        "a stray rung in another sheet",
++        cssText,
++        plus("src/games/shared/scene.css", dup.replace("whisper", "erase")),
++      ],
++      [
++        "one after a CSS string holding /*",
++        cssText,
++        plus(
++          "src/assets/typography.css",
++          `.x::before { content: "/*"; }\n${dup}\n/* */`,
++        ),
++      ],
++      [
++        "the home's own copy after a CSS string holding /*",
++        `${cssText}\n.x::before { content: "/*"; }\n${dup}\n/* */`,
++      ],
+     ];
+-    for (const [label, text] of plants) {
+-      const caught = text !== cssText && registrationRow(text, rungs).length > 0;
++    for (const [label, text, sheets] of plants) {
++      const caught =
++        (text !== cssText || !!sheets) &&
++        registrationRow(text, rungs, sheets).length > 0;
+       console.log(
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index f073e466..dcf7aa83 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -126,4 +126,22 @@ onUnmounted(() => {
+ // rubbed out lands on its end colour on the rub-out's first frame.
++//
++// BOTH AXES (pass 7). The rub-out's own length is a rung read through `var(--motion-whisper)`,
++// and the @property law registers every rung `inherits: true`, so an ancestor that re-declares
++// the rung (`.margin-note { --motion-whisper: 900ms }`) or an author `animation-duration:
++// … !important` held the node for 904 ms with the transition fenced (pass-6 critique §1B). The
++// hook writes the rung's VALUE, from its one home, on the animation axis too: the stylesheet
++// names the verb and the curve, the hook names the length. Vue's fallback clock is the longest
++// `delay + duration` (`runtime-dom` `getTimeout`), so the delay is written too: an author
++// `animation-delay: 750ms !important` is the same 900 ms by the other longhand. Under PRM the
++// verb is deleted at the site, and the length it writes is 0s.
+ function stopTheClock(el: Element): void {
+-  (el as HTMLElement).style.setProperty("transition", "none", "important");
++  const style = (el as HTMLElement).style;
++  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
++  style.setProperty(
++    "animation-duration",
++    reduced ? "0s" : `${MOTION.rungs.whisper}ms`,
++    "important",
++  );
++  style.setProperty("animation-delay", "0s", "important");
++  style.setProperty("transition", "none", "important");
+ }
+@@ -206,4 +224,14 @@ function stopTheClock(el: Element): void {
+      every width above the clamp's floor. Same two tokens the voice reads, multiplied: the
+-     reserve is the line, at any width, and it stops being a number that happens to match one. */
+-  min-height: calc(var(--type-body) * var(--type-leading-caption));
++     reserve is the line, at any width, and it stops being a number that happens to match one.
++
++     THE SEATING, IN `lh` (T9-W7 §7, pass 7). The block carries the voice's line box as its own
++     `line-height`, so `1lh` here IS the voice's line and a seat of n lines is `n lh` of the
++     voice. Left to inherit, `lh` read `body`'s 24px (16 × 1.5) against the voice's 20.8 at 390,
++     and a `2lh` seat came out 6.4px taller than two lines of the voice (2 × (24 − 20.8)). No
++     child reads the block's line-height (the voice, the tally and line two each set their own),
++     so nothing paints differently. The seat is ONE line: a second line in flow costs +18/+19px
++     of document at the desk and +22/+23px in landscape, so the merged note's line two (the
++     ledger's) sits out of flow. */
++  line-height: calc(var(--type-body) * var(--type-leading-caption));
++  min-height: 1lh;
+ }
+@@ -286,5 +314,12 @@ function stopTheClock(el: Element): void {
+    Colour only, on the dusk rung: no opacity, no geometry, nothing that could promote a layer.
+-   The quiet rung reads 5.19:1 light / 6.12:1 dark by `check-ink-pressure`'s derivation and
+-   PAINTS 5.17 light / 6.07-6.13 dark at the core median (1280, DPR 1, both engines, pass 5). Only those two kinds arrive here (the age timer is gated on the KIND, not the
+-   colour): teacher-red at this rung is 3.03:1 and gold 2.70:1, and a grade never settles. */
++   The quiet rung reads 5.19:1 light / 6.12:1 dark by `check-ink-pressure`'s derivation. PAINTED
++   (1280 fine, pass 7), under the glyph-text statistic (the core median over coverage >= 0.5) it
++   reads 5.17 light at DPR 2 in both engines and at DPR 1 in chromium, but 4.36 light in webkit at
++   DPR 1, under 4.5; dark reads 5.86 / 5.69 at DPR 1 and 6.07 / 6.13 at DPR 2 (chromium / webkit).
++   Over the WHOLE glyph population DPR 1 reads 2.56 light in chromium, 2.87 light and 4.10 dark in
++   webkit, each under 4.5 where the fresh line clears it; DPR 2 clears in every cell. Those cells
++   are LEDGER row T9-R8 (the hand's tag rung, cured once by the estate), not numbers this rule
++   can claim.
++   Only those two kinds arrive here (the age timer is gated on the KIND, not the colour):
++   teacher-red at this rung is 3.03:1 and gold 2.70:1, and a grade never settles. */
+ .margin-note-ink[data-note-age="settled"] {
+diff --git a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+index 7be57f74..3e642f95 100644
+--- a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
++++ b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+@@ -77,2 +77,6 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     );
++    expect(MARGIN_NOTE_SRC).toMatch(/style\.setProperty\(\s*"animation-duration",/);
++    expect(MARGIN_NOTE_SRC).toMatch(
++      /style\.setProperty\(\s*"animation-delay",\s*"0s",\s*"important"\)/,
++    );
+     // No selector-side fence left to lose a specificity fight, and none on the leave class.
+@@ -100,2 +104,3 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     expect(leaving!.style.getPropertyValue("transition")).toBe("");
++    expect(leaving!.style.getPropertyValue("animation-duration")).toBe("");
+     await w.setProps({ text: "two", seq: 2 });
+@@ -106,2 +111,12 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     ).toBe("none|important");
++    // BOTH AXES (pass 7): the rub-out's own length, written from the rung's one home. An ancestor
++    // `--motion-whisper: 900ms` or an author `animation-duration: … !important` held the node for
++    // 904 ms while the transition fence above stood green (pass-6 critique §1B).
++    expect(
++      `${clock.getPropertyValue("animation-duration")}|${clock.getPropertyPriority("animation-duration")}`,
++    ).toBe(`${MOTION.rungs.whisper}ms|important`);
++    // Vue's fallback clock is delay + duration: the delay is the third longhand of the same fence.
++    expect(
++      `${clock.getPropertyValue("animation-delay")}|${clock.getPropertyPriority("animation-delay")}`,
++    ).toBe("0s|important");
+     w.unmount();
+@@ -109,2 +124,31 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+ 
++  it("G16 (CI half, PRM): the hook writes 0s on the animation axis under reduced motion", async () => {
++    const real = window.matchMedia;
++    window.matchMedia = ((q: string) =>
++      ({
++        matches: q.includes("reduce"),
++        media: q,
++      }) as MediaQueryList) as typeof window.matchMedia;
++    try {
++      const w = mount(MarginNote, {
++        props: { text: "one", seq: 1 },
++        global: { stubs: { transition: false } },
++        attachTo: document.body,
++      });
++      await nextTick();
++      const leaving = (w.element as HTMLElement).querySelector(
++        ".margin-note-ink",
++      ) as HTMLElement | null;
++      await w.setProps({ text: "two", seq: 2 });
++      await nextTick();
++      const clock = leaving!.style;
++      expect(
++        `${clock.getPropertyValue("animation-duration")}|${clock.getPropertyPriority("animation-duration")}`,
++      ).toBe("0s|important");
++      w.unmount();
++    } finally {
++      window.matchMedia = real;
++    }
++  });
++
+   it("G4 (static half): PRM is answered at the site, both verbs and the settle", () => {
+@@ -182,6 +226,16 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     // first time the voice spoke. The floor is the two tokens the voice itself reads.
++    //
++    // Pass 7, THE SEATING IN `lh`: the block carries the voice's line box as its own line-height
++    // and reserves `1lh`, so a seat of n lines is n of the voice's lines (a `2lh` read off
++    // `body`'s 24px came out 6.4px over two voice lines at 390). The voice's own line-height must
++    // be the same two tokens, or `1lh` stops being its line.
+     const block = /\.margin-note-block\s*\{([^}]*)\}/.exec(STYLE)?.[1] ?? "";
+-    expect(block.replace(/\s+/g, " ")).toContain(
+-      "min-height: calc(var(--type-body) * var(--type-leading-caption))",
++    const flat = block.replace(/\/\*[\s\S]*?\*\//g, "").replace(/\s+/g, " ");
++    expect(flat).toContain(
++      "line-height: calc(var(--type-body) * var(--type-leading-caption))",
+     );
++    expect(flat).toContain("min-height: 1lh");
++    const voice = /\n\.margin-note\s*\{([^}]*)\}/.exec(STYLE)?.[1] ?? "";
++    expect(voice).toContain("font-size: var(--type-body)");
++    expect(voice).toContain("line-height: var(--type-leading-caption)");
+   });

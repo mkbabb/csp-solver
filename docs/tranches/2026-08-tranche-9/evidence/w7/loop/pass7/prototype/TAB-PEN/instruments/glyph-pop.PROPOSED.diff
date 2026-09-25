@@ -1,0 +1,27 @@
+19c19
+< export async function glyphPopulation(page, { subject, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = 16, slicePop = 8, sliceRatio = 0.4, sliceQ = 0.95 }) {
+---
+> export async function glyphPopulation(page, { subject, off: offOverride = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = 16, slicePop = 8, sliceRatio = 0.4, sliceQ = 0.95 }) {
+27c27,29
+<   const off = `${subject}, ${subject} * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; }`;
+---
+>   // EXTENDED (TAB-PEN pass 7, PROPOSED): `off` overrides the OFF photograph's CSS for a subject whose ink is not text:
+>   // a favicon <img> is photographed OFF as its paper-only twin (`content: url(<arm>-ng.svg)`), the ground under its ink.
+>   const off = offOverride ?? `${subject}, ${subject} * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; }`;
+89a92,107
+> 
+> /** EXTENDED (TAB-PEN pass 7, PROPOSED): the text plants' twins for an IMAGE subject (a favicon <img>). FAINT/FADE by
+>  *  opacity (the paper under it is the same paper, so only the ink fades); TAIL by a mask over the last `tail` of the
+>  *  INK's x-extent (`ink` = [x0, x1] as fractions of the box: the pen spans 6/32..26/32, never the whole tile); EMPTY by
+>  *  the paper-only twin. Each must RED. */
+> export const IMG_PLANTS = (s, ng, ink = [6 / 32, 26 / 32]) => {
+>   const tail = (t) => { const cut = ((ink[0] + (1 - t) * (ink[1] - ink[0])) * 100).toFixed(2); return `${s} { -webkit-mask-image: linear-gradient(to right, #000 ${cut}%, rgba(0,0,0,.25) ${cut}%) !important; mask-image: linear-gradient(to right, #000 ${cut}%, rgba(0,0,0,.25) ${cut}%) !important; }`; };
+>   return {
+>     FAINT30_opacity: `${s} { opacity: 0.3 !important; }`,
+>     FADE65_opacity: `${s} { opacity: 0.65 !important; }`,
+>     FADE80_opacity: `${s} { opacity: 0.8 !important; }`,
+>     TAIL12_a25: tail(0.12),
+>     TAIL35_a25: tail(0.35),
+>     EMPTY_paper: `${s} { content: url("${ng}") !important; }`,
+>   };
+> };

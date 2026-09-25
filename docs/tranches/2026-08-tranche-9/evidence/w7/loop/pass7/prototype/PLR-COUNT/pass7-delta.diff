@@ -1,0 +1,1398 @@
+diff --git a/web/frontend/e2e/player-mark.spec.ts b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-mark.spec.ts
+index 2f4ae49..5e040e9 100644
+--- a/web/frontend/e2e/player-mark.spec.ts
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-mark.spec.ts
+@@ -18,9 +18,12 @@
+  *   4  the sheet never scrolls, and the sentence, the rows and `and N more` count one population
+  *   5  the head rule is registered and its absence is visible
+  *   6  Escape has one owner while the sheet is open
+- *   7  the row budget is keyed on the MEASURED space: the tall sheet laps a board under its rows
+- *   8  a tap opens the mark on a coarse phone in both engines, and is a look, not a look-away
+- *   9  both head disclosures PAINT a drawn edge and no CSS border
++ *   7  the row budget is keyed on the MEASURED space, on both axes, and read again at rest
++ *      when the space changes under an open sheet
++ *   8  a tap opens the mark on a coarse phone in both engines, and is a look, not a look-away:
++ *      one toggle per tap however the tap's click is labelled, and a tap on the sheet keeps the cell
++ *   9  both head disclosures PAINT a drawn edge on all four sides and no CSS border; shut, they
++ *      paint nothing at all
+  *  10  the deck's swatch for you is the colour the room paints you (F1's fourth surface)
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+@@ -306,9 +309,16 @@ test('the sheet never scrolls, and it compresses rather than outgrow its budget'
+     width: +el.getBoundingClientRect().width.toFixed(1),
+   }));
+   // ONE POPULATION (registry-v4 §2.5): the state line, the mark's name, the rows and `and N more`
+-  // count the same nine people, you first. 4 drawn + 5 more = 9.
++  // count the same nine people, you first. 4 drawn + 5 more = 9. ONE REFERENT PER LINE (LAWS P6
++  // §E, PLR-COUNT): the name IS the state line; under the tally's arm (c) it goes on to read the
++  // mark as painted (`9 players, 5 plus 4`) and never borrows the sheet's `and N more`.
+   expect(sheet.state).toBe('9 players');
+-  expect(await mark(page).getAttribute('aria-label')).toBe(sheet.state);
++  const rest = await mark(page).evaluate(
++    (el) => el.querySelector('.pt-count.is-rest')?.textContent?.trim() ?? null,
++  );
++  expect(await mark(page).getAttribute('aria-label')).toBe(
++    rest ? `${sheet.state}, 5 plus ${rest}` : sheet.state,
++  );
+   expect(sheet.rows).toBe(4);
+   expect(sheet.more).toBe('and 5 more');
+   expect(sheet.scrolls).toBe(false);
+@@ -550,11 +560,53 @@ test('a portrait phone compresses exactly where four rows would lap the board',
+   expect(await cell(390, 844, true)).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
+   // A short phone laps whatever it does with one row: the least the sheet can hold.
+   expect(await cell(390, 664)).toMatchObject({ rows: 1, more: 'and 6 more' });
+-  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board is BESIDE the rows' start, so four rows,
+-  // and the price is stated, not denied: six cells lapped where one row would lap four.
++  // A PORTRAIT TABLET (pass-6 critic gap 1). Its board starts at x 50, right of the rows' start
++  // at 18, so a key that read only that axis kept four rows over three cells here. The lap is
++  // read on both axes, and one row clears the board: one row, nothing lapped.
++  expect(await cell(768, 1024)).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 0 });
++  // THE LANDSCAPE CELL (W2 §2.2's 844×390): the board is BESIDE the rows' start and one row
++  // still laps it, so four rows, and the price is stated, not denied: six cells lapped where
++  // one row would lap four.
+   expect(await cell(844, 390)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 6 });
+ });
+ 
++/**
++ * THE SPACE IS READ AGAIN WHEN IT CHANGES UNDER AN OPEN SHEET (pass-6 critic gap 2; LAWS P6
++ * §D). Pass 6 read the board at the open and on a room change only, so a phone that lost 44px
++ * of height with the sheet open kept four rows over seven cells until the sheet was reopened.
++ * The row opens at 390×844 (four rows, nothing lapped), resizes to 390×800 with the sheet open,
++ * and reads the pose AT REST against a fresh open at 390×800. They must agree, and lap nothing.
++ */
++test('an open sheet reads the space again when the window changes under it', async ({
++  browser,
++}) => {
++  const { ctx, page } = await coarsePage(browser, 390, 844);
++  await invite(page);
++  await crowd(page, 6, 'refit');
++  const read = () =>
++    lobby(page).evaluate((el) => {
++      const s = el.getBoundingClientRect();
++      const lapped = [...document.querySelectorAll('.sudoku-cell')]
++        .map((c) => c.getBoundingClientRect())
++        .filter(
++          (c) =>
++            c.width > 0 && c.left < s.right && c.right > s.left && c.top < s.bottom && c.bottom > s.top,
++        ).length;
++      return { open: el.classList.contains('is-open'), rows: el.querySelectorAll('.pl-row').length, lapped };
++    });
++  expect(await drawSheet(page)).toMatchObject({ rows: 4, lapped: 0 });
++  await page.setViewportSize({ width: 390, height: 800 });
++  await expect.poll(() => page.evaluate(() => innerHeight)).toBe(800);
++  await stable(read);
++  const atRest = await read();
++  await mark(page).tap();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++  const fresh = await drawSheet(page);
++  expect(atRest).toEqual({ open: true, rows: fresh.rows, lapped: fresh.lapped });
++  expect(atRest).toMatchObject({ rows: 1, lapped: 0 });
++  await ctx.close();
++});
++
+ /**
+  * A TAP OPENS THE MARK, AND A TAP IS A LOOK (PLR-PLACE's seam; `TAP_IS_A_LOOK`, arm (b)).
+  * `@pointerdown.prevent` for every pointer cancelled a WebKit tap's click (pass 4), so the sheet
+@@ -584,20 +636,29 @@ test('a tap opens the mark on a coarse phone, keeps the cell, and tells the room
+   await expect.poll(curs).toBeGreaterThan(0);
+   await expect.poll(() => inCell(page)).toBe(true);
+ 
+-  // THE NEGATIVE CONTROL: the release swallowed, the mark stays shut in both engines.
++  // THE NEGATIVE CONTROL: a tap that looks away (the cell let go at the press, as arm (a)
++  // does) is seen by both readings — the wire hears it and the cell no longer holds focus.
+   await page.evaluate(() => {
+     const m = [...document.querySelectorAll('[data-player-mark]')].find(
+       (e) => (e as HTMLElement).getBoundingClientRect().width > 0,
+     )!;
+-    const swallow = (e: Event) => e.stopImmediatePropagation();
+-    m.addEventListener('pointerup', swallow, { capture: true });
+-    (window as any).__unplant = () =>
+-      m.removeEventListener('pointerup', swallow, { capture: true });
++    const away = () => (document.activeElement as HTMLElement | null)?.blur();
++    m.addEventListener('pointerdown', away, { capture: true });
++    (window as any).__unplant = () => m.removeEventListener('pointerdown', away, { capture: true });
+   });
++  await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
+   await mark(page).tap();
+-  await stable(() => mark(page).getAttribute('aria-expanded'));
+-  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++  await expect.poll(curs).toBeGreaterThan(0);
++  expect(await inCell(page)).toBe(false);
+   await page.evaluate(() => (window as any).__unplant());
++  if ((await mark(page).getAttribute('aria-expanded')) === 'true') await mark(page).tap();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++  await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
++  await page.locator('.sudoku-cell input').first().tap();
++  await expect.poll(() => inCell(page)).toBe(true);
++  // the cell's own `cur` goes out CUR_MS after the focus; the row's window opens after it lands
++  await expect.poll(curs).toBeGreaterThan(0);
++  await stable(curs);
+ 
+   // THE ROW.
+   await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
+@@ -611,63 +672,156 @@ test('a tap opens the mark on a coarse phone, keeps the cell, and tells the room
+   // A second tap shuts it, once (Chromium's click for the touch is not a second toggle).
+   await mark(page).tap();
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++
++  // A TAP ON THE OPEN SHEET IS A LOOK TOO (pass-6 critic gap 5). It shut the sheet and sent
++  // focus to BODY in both engines, so the room heard `null` the moment the reader touched the
++  // list they had opened. It still shuts the sheet (one tap uncovers what it covered, CH-71),
++  // and now the cell keeps its focus and the wire stays quiet.
++  await mark(page).tap();
++  await openSheet(page);
++  await page.evaluate(() => ((window as any).__frames as unknown[]).splice(0));
++  await lobby(page).locator('.pl-row').first().tap();
++  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++  // sleep-ok: an ABSENCE has no event to poll (as above).
++  await page.waitForTimeout(500);
++  expect(await curs()).toBe(0);
++  expect(await inCell(page)).toBe(true);
++  await ctx.close();
++});
++
++/**
++ * ONE TAP, ONE TOGGLE, WHATEVER THE TAP'S CLICK SAYS IT IS (pass-6 critic gap 4; LAWS P6 §D).
++ * WebKit labels a touch's click `pointerType: "mouse"`, and its emulation sends no click at all
++ * after a prevented press, so a guard keyed on the label held in WebKit only because the click
++ * was absent. This context delivers what a real iOS tap may: after every touch release, exactly
++ * one click labelled `mouse` (a trusted touch click is swallowed and re-sent with that label; where
++ * the engine sends none, one is sent 60ms after the release — the chair's RELABEL plant). The
++ * guard keyed on the SEQUENCE toggles once per tap in both engines; a guard keyed on the label
++ * toggles twice and the sheet never stays open.
++ */
++test('one tap is one toggle when the tap\'s click is labelled as a mouse', async ({ browser }) => {
++  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
++  await ctx.addInitScript(() => {
++    let pending: ReturnType<typeof setTimeout> | null = null;
++    const fire = (t: EventTarget, x: number, y: number) =>
++      t.dispatchEvent(
++        new PointerEvent('click', { bubbles: true, cancelable: true, composed: true, pointerType: 'mouse', clientX: x, clientY: y, button: 0 }),
++      );
++    addEventListener('pointerup', (e) => {
++      if (!e.isTrusted || e.pointerType !== 'touch') return;
++      const t = e.target!, x = e.clientX, y = e.clientY;
++      pending = setTimeout(() => ((pending = null), fire(t, x, y)), 60);
++    }, { capture: true });
++    addEventListener('click', (e) => {
++      if (!e.isTrusted) return;
++      if (pending) {
++        clearTimeout(pending);
++        pending = null;
++      }
++      if ((e as PointerEvent).pointerType === 'mouse') return;
++      e.stopImmediatePropagation();
++      e.preventDefault();
++      const t = e.target!, x = e.clientX, y = e.clientY;
++      queueMicrotask(() => fire(t, x, y));
++    }, { capture: true });
++  });
++  const page = await ctx.newPage();
++  await page.goto(SOLO);
++  await settled(page);
++  await mark(page).evaluate((el) => {
++    const seen: string[] = [el.getAttribute('aria-expanded')!];
++    (window as any).__states = seen;
++    new MutationObserver(() => {
++      const v = el.getAttribute('aria-expanded')!;
++      if (v !== seen[seen.length - 1]) seen.push(v);
++    }).observe(el, { attributes: true });
++  });
++  await mark(page).evaluate((el) => {
++    const clicks: string[] = [];
++    (window as any).__clicks = clicks;
++    addEventListener('click', (e) => el.contains(e.target as Node) && clicks.push((e as PointerEvent).pointerType), { capture: true });
++  });
++  const read = () => page.evaluate(() => ({ states: (window as any).__states as string[], clicks: (window as any).__clicks as string[] }));
++  await mark(page).tap();
++  await stable(read);
++  // the plant is live in this engine: the tap's one click reached the mark labelled `mouse`...
++  // ...and it toggled nothing; the release did.
++  expect(await read()).toEqual({ states: ['false', 'true'], clicks: ['mouse'] });
++  await mark(page).tap();
++  await stable(read);
++  expect(await read()).toEqual({ states: ['false', 'true', 'false'], clicks: ['mouse', 'mouse'] });
+   await ctx.close();
+ });
+ 
+ /**
+- * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE AND NO CSS BORDER (R6 L5; CH-71; pass-5 critic
+- * gap 3). A rect and a computed stroke are not paint: an `opacity: 0` edge (X1) and an inkless
+- * one (X2) both passed the pass-5 row. The row now photographs the sheet's top band twice —
+- * edge ON, then edge OFF (`visibility: hidden` on the edge layer) — and counts the columns
+- * whose best contrast against the sheet's own ground rises by half again when the edge is on.
+- * That is an EXISTENCE reading, so it holds for either edge ink the owner is shown (full:
+- * ~16:1, quiet: ~4.7:1, off: 1.00); the edge's contrast is a number in the record, not this
+- * row's. X1 and X2 are planted in the same run and must drive the count to zero; the pass-4
+- * border, planted, must read on the computed box.
++ * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE ON ALL FOUR SIDES AND NO CSS BORDER (R6 L5; CH-71;
++ * pass-6 critic gap 3; LAWS P6 §E). The pass-6 row photographed the top band only, so a
++ * `clip-path` that erased the bottom edge — the side that meets the board — passed it ×2, and an
++ * edge at 40–50 % passed WebKit. The row is the chair's four-band probe (pass7/instruments/
++ * edge-bands.mjs), read in the page: each side is a strip 8px outside and 8px inside the sheet's
++ * box, photographed with the edge ON and OFF (`visibility: hidden` on the edge layer). A station
++ * is one column (top, bottom) or one row (left, right) of the middle 80 % of the side, and its
++ * value is the best contrast, over the strip's depth, of the ON pixel against the OFF pixel
++ * under it: the stroke against the ground it is painted on. A station that did not change reads
++ * 1.00 and counts. Every side must hold ≥ 8 stations and a core median ≥ 3.0 (§2.4's stroke
++ * floor). Both owner arms clear it: FULL 13–17, QUIET 4.3–5.6.
+  */
+-async function edgePaint(page: Page, sel: string) {
++const BANDS = ['top', 'right', 'bottom', 'left'] as const;
++async function fourBands(page: Page, sel: string) {
+   const sheet = page.locator(`${sel}:visible`).first();
+-  const box = (await sheet.boundingBox())!;
+-  const clip = { x: Math.round(box.x), y: Math.round(box.y), width: Math.round(box.width), height: 14 };
+-  const shoot = async () => (await page.screenshot({ clip })).toString('base64');
+-  const on = await shoot();
+-  const off = await page.addStyleTag({ content: '.head-sheet-edge { visibility: hidden !important; }' });
+-  const bare = await shoot();
+-  await off.evaluate((e) => (e as Element).remove());
+-  return page.evaluate(
+-    async ({ on, bare }) => {
+-      const read = async (b64: string) => {
+-        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+-        const c = document.createElement('canvas');
+-        c.width = bmp.width;
+-        c.height = bmp.height;
+-        const x = c.getContext('2d')!;
+-        x.drawImage(bmp, 0, 0);
+-        return x.getImageData(0, 0, c.width, c.height);
+-      };
+-      const lum = (d: Uint8ClampedArray, i: number) => {
+-        const f = (v: number) => ((v /= 255) <= 0.03928 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+-        return 0.2126 * f(d[i]) + 0.7152 * f(d[i + 1]) + 0.0722 * f(d[i + 2]);
+-      };
+-      const [a, b] = [await read(on), await read(bare)];
+-      const best = (img: ImageData, x: number) => {
+-        const g = lum(img.data, (10 * img.width + x) * 4);
+-        let r = 1;
+-        for (let y = 0; y < 5; y++) {
+-          const l = lum(img.data, (y * img.width + x) * 4);
+-          r = Math.max(r, (Math.max(l, g) + 0.05) / (Math.min(l, g) + 0.05));
++  const b = (await sheet.boundingBox())!;
++  const vw = page.viewportSize()!;
++  const read: Record<string, { stations: number; median: number }> = {};
++  for (const side of BANDS) {
++    const raw =
++      side === 'top' ? { x: b.x, y: b.y - 8, width: b.width, height: 16 }
++      : side === 'bottom' ? { x: b.x, y: b.y + b.height - 8, width: b.width, height: 16 }
++      : side === 'left' ? { x: b.x - 8, y: b.y, width: 16, height: b.height }
++      : { x: b.x + b.width - 8, y: b.y, width: 16, height: b.height };
++    const x = Math.max(0, Math.floor(raw.x)), y = Math.max(0, Math.floor(raw.y));
++    const clip = { x, y, width: Math.min(vw.width - x, Math.ceil(raw.width)), height: Math.min(vw.height - y, Math.ceil(raw.height)) };
++    const on = (await page.screenshot({ clip, animations: 'disabled' })).toString('base64');
++    const tag = await page.addStyleTag({ content: '.head-sheet-edge { visibility: hidden !important; }' });
++    const off = (await page.screenshot({ clip, animations: 'disabled' })).toString('base64');
++    await tag.evaluate((e) => (e as Element).remove());
++    read[side] = await page.evaluate(
++      async ({ on, off, horiz }) => {
++        const px = async (b64: string) => {
++          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++          const c = document.createElement('canvas');
++          c.width = bmp.width;
++          c.height = bmp.height;
++          const x = c.getContext('2d')!;
++          x.drawImage(bmp, 0, 0);
++          return x.getImageData(0, 0, c.width, c.height);
++        };
++        const lum = (d: Uint8ClampedArray, i: number) => {
++          const f = (v: number) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
++          return 0.2126 * f(d[i]) + 0.7152 * f(d[i + 1]) + 0.0722 * f(d[i + 2]);
++        };
++        const [A, B] = [await px(on), await px(off)];
++        const len = horiz ? A.width : A.height, depth = horiz ? A.height : A.width;
++        const st: number[] = [];
++        for (let s = Math.floor(len * 0.1); s < Math.ceil(len * 0.9); s++) {
++          let best = 1;
++          for (let d = 0; d < depth; d++) {
++            const i = ((horiz ? d : s) * A.width + (horiz ? s : d)) * 4;
++            const [p, q] = [lum(A.data, i), lum(B.data, i)];
++            best = Math.max(best, (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05));
++          }
++          st.push(best);
+         }
+-        return r;
+-      };
+-      const x0 = Math.floor(a.width * 0.2);
+-      const x1 = Math.floor(a.width * 0.8);
+-      let drawn = 0;
+-      for (let x = x0; x < x1; x++) if (best(a, x) >= 1.5 * best(b, x)) drawn++;
+-      return drawn / (x1 - x0);
+-    },
+-    { on, bare },
+-  );
++        st.sort((p, q) => p - q);
++        return { stations: st.length, median: st.length ? +st[st.length >> 1].toFixed(3) : 0 };
++      },
++      { on, off, horiz: side === 'top' || side === 'bottom' },
++    );
++  }
++  return read;
+ }
++/** Every side painted: ≥ 8 stations and a core median ≥ 3.0 on each of the four. */
++const painted = (r: Record<string, { stations: number; median: number }>) =>
++  BANDS.every((k) => r[k].stations >= 8 && r[k].median >= 3);
+ const border = (page: Page, sel: string) =>
+   page.locator(`${sel}:visible`).first().evaluate((el) => {
+     const cs = getComputedStyle(el);
+@@ -678,8 +832,9 @@ const border = (page: Page, sel: string) =>
+     );
+   });
+ 
+-test('both head disclosures paint a drawn edge and no CSS border', async ({ page }) => {
++test('both head disclosures paint a drawn edge on all four sides and no CSS border', async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 800 });
++  await page.emulateMedia({ colorScheme: 'light' });
+   await page.goto(SOLO);
+   await settled(page);
+ 
+@@ -687,7 +842,8 @@ test('both head disclosures paint a drawn edge and no CSS border', async ({ page
+   await mark(page).click();
+   await openSheet(page);
+   expect(await border(page, '[data-lobby]')).toBe(0);
+-  expect(await edgePaint(page, '[data-lobby]')).toBeGreaterThan(0.9);
++  const lob = await fourBands(page, '[data-lobby]');
++  expect(painted(lob), JSON.stringify(lob)).toBe(true);
+   await page.keyboard.press('Escape');
+   await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+ 
+@@ -697,18 +853,32 @@ test('both head disclosures paint a drawn edge and no CSS border', async ({ page
+   await expect(card).toHaveClass(/is-open/);
+   await stable(() => card.evaluate((e) => getComputedStyle(e).opacity + JSON.stringify(e.getBoundingClientRect())));
+   expect(await border(page, '.corner-left .hover-card')).toBe(0);
+-  expect(await edgePaint(page, '.corner-left .hover-card')).toBeGreaterThan(0.9);
++  const crd = await fourBands(page, '.corner-left .hover-card');
++  expect(painted(crd), JSON.stringify(crd)).toBe(true);
+ 
+-  // THE NEGATIVE CONTROLS, same run, same reading. X1: the edge at opacity 0. X2: the edge
+-  // inkless. Each paints nothing, and the count must say so.
++  // THE NEGATIVE CONTROLS, same run, same reading. Each must fail at least one side:
++  //   X1 no ink · X2 inkless · X6 the bottom edge clipped away (top and sides intact; pass 6's
++  //   plant, and the chair's) · X4 an edge at 15 % · FADE15 its ink mixed to 15 % · X5 an edge
++  //   at 40 % (in light about 2.6 : 1, under the floor).
+   for (const plant of [
+     '.head-sheet-edge { opacity: 0 !important; }',
+     '.head-sheet-edge { color: transparent !important; } .head-sheet-edge path { stroke: rgba(0, 0, 0, 0) !important; }',
++    '.head-sheet-edge { clip-path: inset(-4px -4px 16px -4px) !important; }',
++    '.head-sheet-edge { clip-path: inset(-8px -8px 16px -8px) !important; }',
++    '.head-sheet-edge { opacity: 0.15 !important; }',
++    '.head-sheet-edge { color: color-mix(in srgb, currentColor 15%, transparent) !important; stroke: color-mix(in srgb, currentColor 15%, transparent) !important; }',
++    '.head-sheet-edge { opacity: 0.4 !important; }',
+   ]) {
+     const tag = await page.addStyleTag({ content: plant });
+-    expect(await edgePaint(page, '.corner-left .hover-card'), plant).toBe(0);
++    const r = await fourBands(page, '.corner-left .hover-card');
++    expect(painted(r), `${plant} ${JSON.stringify(r)}`).toBe(false);
+     await tag.evaluate((e) => (e as Element).remove());
+   }
++  // X7, an edge at 50 %, is PRINTED, not required: it paints 3.0–3.5 : 1, which is over the
++  // stroke floor — a visible edge by §2.4's own measure (the chair's dark X5 is the same case).
++  const x7 = await page.addStyleTag({ content: '.head-sheet-edge { opacity: 0.5 !important; }' });
++  test.info().annotations.push({ type: 'X7 opacity 0.5 (printed)', description: JSON.stringify(await fourBands(page, '.corner-left .hover-card')) });
++  await x7.evaluate((e) => (e as Element).remove());
+   // And the pass-4 border, planted, reads on the computed box.
+   await page.addStyleTag({
+     content: `.hover-card, [data-lobby] { border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent) !important; }`,
+@@ -716,6 +886,84 @@ test('both head disclosures paint a drawn edge and no CSS border', async ({ page
+   expect(await border(page, '.corner-left .hover-card')).toBe(8);
+ });
+ 
++/**
++ * SHUT, THE HEAD PAINTS NOTHING (pass-6 critic gap 13). A sheet left half closed — faded but
++ * visible, or visible at no opacity with its edge still drawn — passed every row above, because
++ * every row reads a sheet that is OPEN. This one reads both sheets after a dismissal, at rest:
++ * the sheet's box is photographed as it is and with the sheet removed from the page
++ * (`display: none`), and no pixel may differ that a second bare photograph does not also move.
++ * The negative control is in the run: the shut pose planted at 35 % opacity, still visible.
++ */
++async function shutPaint(page: Page, sel: string) {
++  const s = page.locator(sel).first();
++  // the untransformed box, 10px wider on every side: the shut pose is scaled 0.9 and 8px lower
++  const b = await s.evaluate((e) => {
++    const el = e as HTMLElement;
++    const host = (el.offsetParent as HTMLElement).getBoundingClientRect();
++    const x = Math.max(0, Math.floor(host.left + el.offsetLeft - 10));
++    const y = Math.max(0, Math.floor(host.top + el.offsetTop - 10));
++    return { x, y, width: el.offsetWidth + 20, height: el.offsetHeight + 20 };
++  });
++  const shot = async () => (await page.screenshot({ clip: b, animations: 'disabled' })).toString('base64');
++  const on = await shot();
++  const again = await shot();
++  const tag = await page.addStyleTag({ content: `${sel} { display: none !important; }` });
++  const gone = await shot();
++  await tag.evaluate((e) => (e as Element).remove());
++  return page.evaluate(
++    async ({ on, again, gone }) => {
++      const px = async (b64: string) => {
++        const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++        const c = document.createElement('canvas');
++        c.width = bmp.width;
++        c.height = bmp.height;
++        const x = c.getContext('2d')!;
++        x.drawImage(bmp, 0, 0);
++        return x.getImageData(0, 0, c.width, c.height).data;
++      };
++      const [A, A2, G] = [await px(on), await px(again), await px(gone)];
++      const moved = (p: Uint8ClampedArray, q: Uint8ClampedArray, i: number) =>
++        Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2])) >= 6;
++      let n = 0;
++      for (let i = 0; i < A.length; i += 4) if (moved(A, G, i) && !moved(A, A2, i)) n++;
++      return n;
++    },
++    { on, again, gone },
++  );
++}
++
++test('shut, both head disclosures paint nothing', async ({ page }) => {
++  await page.setViewportSize({ width: 1280, height: 800 });
++  await page.emulateMedia({ colorScheme: 'light', reducedMotion: 'reduce' });
++  await page.goto(SOLO);
++  await settled(page);
++  const sheets = ['.corner-left [data-lobby]', '.corner-left .hover-card'];
++  const pose = (sel: string) =>
++    page.locator(sel).first().evaluate((e) => {
++      const c = getComputedStyle(e);
++      return `${c.opacity} ${c.visibility} ${c.pointerEvents}`;
++    });
++
++  await mark(page).click();
++  await openSheet(page);
++  await page.keyboard.press('Escape');
++  await page.locator('.corner-left .attribution-trigger').hover();
++  await expect(page.locator('.corner-left .hover-card')).toHaveClass(/is-open/);
++  await page.mouse.move(700, 700);
++  for (const sel of sheets) {
++    await expect(page.locator(sel).first()).not.toHaveClass(/is-open/);
++    await stable(() => pose(sel));
++    expect(await pose(sel), sel).toBe('0 hidden none');
++    expect(await shutPaint(page, sel), sel).toBe(0);
++  }
++  // THE NEGATIVE CONTROL: the shut pose half there.
++  const tag = await page.addStyleTag({
++    content: '.head-sheet:not(.is-open) { opacity: 0.35 !important; visibility: visible !important; }',
++  });
++  for (const sel of sheets) expect(await shutPaint(page, sel), `${sel} planted`).toBeGreaterThan(100);
++  await tag.evaluate((e) => (e as Element).remove());
++});
++
+ /**
+  * F1'S FOURTH SURFACE — THE DECK'S SWATCH (pass-3 G14, re-born; pass-5 row 6). Reached by the
+  * estate's own gallery control (the wordmark), never `?view=gallery`, which reloads the page and
+diff --git a/web/frontend/e2e/player-tally.spec.ts b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts
+index 2347132..f8c8dde 100644
+--- a/web/frontend/e2e/player-tally.spec.ts
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts
+@@ -39,16 +39,16 @@ const SIX_ARM = /const SIX_ARM = "(title|heading|remainder)"/.exec(
+ /** What the mark writes at N people under this arm (null: nothing written). */
+ const writtenAt = (N: number) =>
+   N <= 5 ? null : SIX_ARM === "remainder" ? String(N - 5) : String(N);
+-/** The mark's accessible name at N people under this arm. */
++/** The mark's accessible name at N people under this arm: the state line, and under arm (c)
++ *  the mark read as painted after it (one referent per line, LAWS P6 §E). */
+ const nameAt = (N: number) =>
+   N === 1
+     ? "1 player"
+     : N > 5 && SIX_ARM === "remainder"
+-      ? `5 players and ${N - 5} more`
++      ? `${N} players, 5 plus ${N - 5}`
+       : `${N} players`;
+-/** How many people a name counts: `6 players` is 6, arm (c)'s `5 players and 1 more` is 6. */
+-const countOf = (label: string | null) =>
+-  (label ?? "").match(/\d+/g)?.reduce((a, d) => a + Number(d), 0) ?? 0;
++/** How many people a name counts: its state line's number, the first in it, under every arm. */
++const countOf = (label: string | null) => Number((label ?? "").match(/\d+/)?.[0] ?? 0);
+ 
+ /** A pose is settled when two reads 150ms apart agree (the leader's `stable`, one rule). */
+ async function stable(read: () => Promise<unknown>) {
+@@ -202,7 +202,8 @@ const head = (page: Page) =>
+ // ── G7 · one base, and WCAG 2.5.3 under EVERY arm ──────────────────────────────────────────
+ // The written glyph must be a substring of the name (label-in-name), read per `SIX_ARM`: arm (a)
+ // and (b) write the count, arm (c) writes the remainder after five strokes and names itself
+-// `5 players and 1 more`. Pass 5 wrote "(c) would pass" and (c) failed at N = 6/9/14/15/16.
++// `6 players, 5 plus 1`. Pass 5 wrote "(c) would pass" and (c) failed at N = 6/9/14/15/16; pass 6
++// named it `5 players and 1 more`, which borrowed the sheet's `and N more` for a second referent.
+ // The widths are printed per N: arm (c)'s head grows with its digits (row 4 of the ballot).
+ test(`the name counts what the strokes count, and carries every digit it paints (${SIX_ARM})`, async ({
+   page,
+@@ -220,6 +221,8 @@ test(`the name counts what the strokes count, and carries every digit it paints
+     const h = await head(page);
+     widths[N] = h.width;
+     expect(h.label).toBe(nameAt(N));
++    // ONE REFERENT: `and N more` is the sheet's rows it could not draw, so no name borrows it
++    expect(h.label).not.toMatch(/\bmore\b/);
+     expect(h.strokes).toBe(N <= 5 ? N : SIX_ARM === "remainder" ? 5 : 0);
+     expect(h.written).toBe(writtenAt(N));
+     if (h.written !== null) {
+@@ -567,25 +570,48 @@ test.describe("the tall phone", () => {
+ });
+ 
+ // ── G14 · the sheet's quiet rungs, PAINTED, on a ground that is opaque in any serialisation ──
+-// RE-CUT TWICE. Pass 4 asserted `not /,\s*0?\.\d+\)/` on the ground (blind to `color(srgb … / a)`);
+-// pass 5 parsed the alpha in any form and planted the regression in-run — that half stands — but
+-// read the lines' contrast as a BEST PIXEL, which is the declared ink at full coverage and 5.159
+-// whatever the page painted (the critic's X1b ghosted two thirds of each line and it stayed green;
+-// X2 had no dark arm to fail). Now the contrast half is the GLYPH-TEXT statistic (LAWS P5,
+-// registry-v5 §2.11) on PAL-WALK's painted-text instrument, with the population keyed on the
+-// GLYPH'S OWN COVERAGE — never on the ink the page chose, so a fade cannot drop out of it:
+-//   A, A2  the line as painted, photographed twice (a one-shot minimum reds on a transient pixel)
+-//   B      the same box with the text transparent: the painted ground under every glyph pixel
+-//   R      the text re-inked at the theme's extreme (black / white) with every fade the author
+-//          could apply struck (opacity, mask, filter, shadow) — the glyph's coverage
+-// A pixel is in the core when its R coverage is ≥ 0.5; the row is the core's median contrast
+-// (A against B, pixel for pixel) ≥ 4.5 in both photographs, with the fraction under 4.5 STATED
+-// (bounded by the estate's T9-R6 row, not by this lane). An empty core is RED (a missing subject).
+-// Each cell plants its negative control IN THE RUN and the statistic must see it: X1b (the
+-// critic's: everything after the first 1.2em masked to 25 % alpha) in both themes, X2 (the quiet
+-// lines at rgb(70, 68, 66)) in dark. Light at DPR 1 is the hand's tag rung, the estate's T9-R6
+-// (pass6/CHAIR-RULINGS §1.4): read and printed, never gated here.
+-type GlyphText = { n: number; median: number | null; median2: number | null; under: number | null };
++// RE-CUT THREE TIMES. Pass 4 asserted `not /,\s*0?\.\d+\)/` on the ground (blind to `color(srgb … /
++// a)`); pass 5 parsed the alpha in any form and planted the regression in-run (that half stands);
++// pass 6 read the lines on the glyph's own coverage, and its median could not see a TAIL (the last
++// 12 % of a line at 25 % alpha stayed green in 5 of 6 cells, the last 35 % in dark 2 of 2).
++// Now the contrast half is the chair's glyph-population probe (`pass7/instruments/glyph-pop.mjs`),
++// PORTED clause for clause because a product spec cannot import from the evidence record:
++//   A, A2  the line as painted, photographed twice (a one-shot read is a transient's)
++//   B      the same box with its text transparent: the painted ground under every pixel
++//   the POPULATION is every pixel A moved from B by ≥ 6/255, the WHOLE glyph with its fringe;
++//   each pixel's value is its contrast against the ground it sits on (A against B)
++//   G1  a population under 40 px is RED (an empty or thin line, never `min(4.5, 0)`)
++//   G2  the population's median ≥ 4.5 in both photographs, ABSOLUTE, where the cell gates it
++//   G3  the fraction under 4.5 ≤ the cell's STAMPED bound (the shipped reading + 0.05, both
++//       engines, LAWS P6 §E, until the estate stamps the control's + slack)
++//   G4  16 columns over the glyph's own x-extent, read as 15 windows of two adjacent columns
++//       (a column between two letters holds only their fringe: `you` at DPR 2 read 1.59–2.35 on
++//       the clean line): every window with ≥ 8 px keeps its core (p95) ≥ max(3.0, 0.4 × the whole
++//       population's p95): the TAIL clause. At light DPR 1 the whole line is a hairline (median
++//       2.1–2.5, T9-R8) and a clean window reads 2.25, so there the floor is 0.4 × p95 alone
++//       (2.06), with G1 and G3's stamped bound beside it
++// R (the text re-inked at the theme's extreme, every fade struck) is kept as a printed column:
++// the pass-6 key, whose count (`core`) is the same under every plant, so a plant cannot shrink the
++// line out of its own reading.
++// Every cell plants its negatives IN THE RUN and every one must red on a clause the CELL GATES:
++// FAINT30 (the fill at 30 %, `color` left green), TAIL12 and TAIL35 (the last 12 % / 35 % of the
++// RUN, found by a Range, at 25 % alpha), EMPTY (the text transparent), X1b (the pass-5 critic's
++// head-kept fade; `you` sits inside its 1.2em and is not its subject) and X2w (dark: the witnessed
++// `.dark` form of the lines at rgb(70, 68, 66)). G2 is gated only where the control clears it
++// (dark DPR 2); the other three cells are the hand's tag rung, ledger row T9-R8 (both themes),
++// where G2 is printed and the plants must be seen by G1, G3 or G4, so no cell's "seen" clause can
++// be satisfied by a shipped red.
++type GlyphText = {
++  pop: number;
++  median: number | null;
++  median2: number | null;
++  under: number | null;
++  core: number;
++  coreMedian: number | null;
++  p95: number | null;
++  slices: (number | null)[];
++  sliceN: number[];
++};
+ async function glyphText(page: Page, sel: string, tag: string): Promise<GlyphText> {
+   const el = page.locator(sel).first();
+   await el.evaluate((e, t) => e.setAttribute("data-aa-probe", t), tag);
+@@ -604,7 +630,7 @@ async function glyphText(page: Page, sel: string, tag: string): Promise<GlyphTex
+   const A = await snap();
+   const A2 = await snap();
+   const off = await page.addStyleTag({
+-    content: `${probe} { color: transparent !important; -webkit-text-fill-color: transparent !important; }`,
++    content: `${probe}, ${probe} * { color: transparent !important; -webkit-text-fill-color: transparent !important; text-shadow: none !important; }`,
+   });
+   const B = await snap();
+   await off.evaluate((t) => (t as HTMLElement).remove());
+@@ -622,7 +648,7 @@ async function glyphText(page: Page, sel: string, tag: string): Promise<GlyphTex
+         );
+         const g = new OffscreenCanvas(bmp.width, bmp.height).getContext("2d")!;
+         g.drawImage(bmp, 0, 0);
+-        return g.getImageData(0, 0, bmp.width, bmp.height).data;
++        return { d: g.getImageData(0, 0, bmp.width, bmp.height).data, w: bmp.width };
+       };
+       const [a, a2, bg, r] = await Promise.all([A, A2, B, R].map(decode));
+       const lin = (c: number) =>
+@@ -630,36 +656,132 @@ async function glyphText(page: Page, sel: string, tag: string): Promise<GlyphTex
+       const L = (d: Uint8ClampedArray, i: number) =>
+         0.2126 * lin(d[i]) + 0.7152 * lin(d[i + 1]) + 0.0722 * lin(d[i + 2]);
+       const ratio = (x: number, y: number) => (Math.max(x, y) + 0.05) / (Math.min(x, y) + 0.05);
++      const moved = (p: Uint8ClampedArray, q: Uint8ClampedArray, i: number) =>
++        Math.max(Math.abs(p[i] - q[i]), Math.abs(p[i + 1] - q[i + 1]), Math.abs(p[i + 2] - q[i + 2]));
+       const li = dark ? 1 : 0;
+-      const one: number[] = [];
+-      const two: number[] = [];
+-      for (let i = 0; i < bg.length; i += 4) {
+-        const lg = L(bg, i);
+-        if (Math.abs(li - lg) < 1e-6) continue;
+-        if (Math.abs(L(r, i) - lg) / Math.abs(li - lg) < 0.5) continue;
+-        one.push(ratio(L(a, i), lg));
+-        two.push(ratio(L(a2, i), lg));
++      const pop: number[] = [];
++      const pop2: number[] = [];
++      const xs: number[] = [];
++      const core: number[] = [];
++      for (let i = 0; i < bg.d.length; i += 4) {
++        const lg = L(bg.d, i);
++        if (moved(a.d, bg.d, i) >= 6) {
++          pop.push(ratio(L(a.d, i), lg));
++          pop2.push(ratio(L(a2.d, i), lg));
++          xs.push((i / 4) % a.w);
++        }
++        if (Math.abs(li - lg) > 1e-6 && Math.abs(L(r.d, i) - lg) / Math.abs(li - lg) >= 0.5)
++          core.push(ratio(L(a.d, i), lg));
++      }
++      const q = (v: number[], f: number) =>
++        v.length ? [...v].sort((m, n) => m - n)[Math.min(v.length - 1, Math.floor(v.length * f))] : null;
++      const r3 = (v: number | null) => (v === null ? null : +v.toFixed(3));
++      const slices: (number | null)[] = [];
++      const sliceN: number[] = [];
++      if (pop.length) {
++        const x0 = Math.min(...xs);
++        const W = (Math.max(...xs) + 1 - x0) / 16;
++        // each reading is a WINDOW of two adjacent columns (15 windows): a column that falls in the
++        // gap between two letters holds only their fringe, and read alone its p95 is the fringe's
++        // (`you` at DPR 2: 2.35 on the clean line). The last window is still the last 1/8 of the
++        // run, so a 12 % tail fills it.
++        const inWin = (x: number, k: number) => x >= x0 + k * W && x < x0 + (k + 2) * W;
++        for (let k = 0; k < 15; k++) {
++          const v = pop.filter((_, j) => inWin(xs[j], k));
++          sliceN.push(v.length);
++          slices.push(v.length >= 8 ? +q(v, 0.95)!.toFixed(2) : null);
++        }
+       }
+-      const med = (xs: number[]) =>
+-        xs.length ? +[...xs].sort((m, n) => m - n)[Math.floor(xs.length / 2)].toFixed(3) : null;
+       return {
+-        n: one.length,
+-        median: med(one),
+-        median2: med(two),
+-        under: one.length ? +(one.filter((c) => c < 4.5).length / one.length).toFixed(3) : null,
++        pop: pop.length,
++        median: r3(q(pop, 0.5)),
++        median2: r3(q(pop2, 0.5)),
++        under: pop.length ? r3(pop.filter((c) => c < 4.5).length / pop.length) : null,
++        core: core.length,
++        coreMedian: r3(q(core, 0.5)),
++        p95: r3(q(pop, 0.95)),
++        slices,
++        sliceN,
+       };
+     },
+     { A, A2, B, R, dark },
+   );
+ }
+ const QUIET = [".pl-state", ".pl-qual", ".pl-more"] as const;
+-const X1B = QUIET.map((q) => `html body [data-lobby] ${q}`).join(", ") +
++type Quiet = (typeof QUIET)[number];
++/** G3's stamped bound, per cell and line: the shipped fraction under 4.5, the larger engine's
++ *  (pass 7, chromium / WebKit), + 0.05. The control's caption on the chair's probe reads 0.921 /
++ *  0.931 (light 1), 0.635 / 0.636 (light 2), 0.534 / 0.611 (dark 1), 0.378 / 0.414 (dark 2). */
++const FRAC_BOUND: Record<string, Record<Quiet, number>> = {
++  "light-1": { ".pl-state": 0.867, ".pl-qual": 0.866, ".pl-more": 0.853 },
++  "light-2": { ".pl-state": 0.538, ".pl-qual": 0.574, ".pl-more": 0.552 },
++  "dark-1": { ".pl-state": 0.667, ".pl-qual": 0.711, ".pl-more": 0.675 },
++  "dark-2": { ".pl-state": 0.466, ".pl-qual": 0.466, ".pl-more": 0.451 },
++};
++/** G2 is gated where the CONTROL clears 4.5 on the same probe: its caption (the hand's tag rung)
++ *  reads 6.589 / 6.031 at dark DPR 2 and 2.270 / 2.148 · 3.525 / 3.387 · 4.245 / 3.404 in the other
++ *  three cells. Those three are ledger row T9-R8 (both themes): printed, never gated here. */
++const FLOOR_GATED = new Set(["dark-2"]);
++/** The clauses a cell gates, as the reasons a reading is RED (empty = it holds). */
++function breaches(r: GlyphText, bound: number, floorGated: boolean, hairline = false): string[] {
++  const why: string[] = [];
++  if (r.pop < 40) return [`G1 population ${r.pop} < 40`];
++  if (floorGated && ((r.median ?? 0) < 4.5 || (r.median2 ?? 0) < 4.5))
++    why.push(`G2 median ${r.median} / ${r.median2} < 4.5`);
++  if ((r.under ?? 1) > bound) why.push(`G3 fraction ${r.under} > ${bound}`);
++  const lim = hairline ? 0.4 * (r.p95 ?? 0) : Math.max(3, 0.4 * (r.p95 ?? 0));
++  const low = r.slices.flatMap((v, k) => (v !== null && v < lim ? [`${k}:${v}`] : []));
++  if (low.length) why.push(`G4 windows under ${lim.toFixed(2)} at ${low.join(" ")}`);
++  return why;
++}
++const lines = (q: readonly Quiet[]) => q.map((s) => `html body [data-lobby] ${s}`).join(", ");
++const X1B =
++  lines([".pl-state", ".pl-qual", ".pl-more"]) +
+   " { -webkit-mask-image: linear-gradient(to right, #000 1.2em, rgba(0, 0, 0, 0.25) 1.2em) !important;" +
+   " mask-image: linear-gradient(to right, #000 1.2em, rgba(0, 0, 0, 0.25) 1.2em) !important; }";
+-const X2 = QUIET.map((q) => `html.dark body [data-lobby] ${q}`).join(", ") +
++const X2W =
++  QUIET.map((q) => `html.dark body [data-lobby] ${q}`).join(", ") +
+   " { color: rgb(70, 68, 66) !important; }";
+-const holds = (r: GlyphText) =>
+-  r.n > 0 && (r.median ?? 0) >= 4.5 && (r.median2 ?? 0) >= 4.5;
++const FAINT30 =
++  lines(QUIET) +
++  " { -webkit-text-fill-color: color-mix(in srgb, currentColor 30%, transparent) !important; }";
++const EMPTY =
++  lines(QUIET) +
++  " { color: transparent !important; -webkit-text-fill-color: transparent !important; }";
++/** The TAIL plant on every quiet line: the last `tail` of the TEXT RUN (a Range, never the box)
++ *  at 25 % alpha — `glyph-pop.mjs`'s `applyTail`, per line. Returns the undo. */
++async function tailPlant(page: Page, tail: number) {
++  await page.evaluate(
++    ({ qs, tail }) => {
++      for (const q of qs) {
++        const el = document.querySelector<HTMLElement>(`[data-lobby] ${q}`);
++        if (!el || !el.getClientRects().length) continue;
++        const r = document.createRange();
++        r.selectNodeContents(el);
++        const rects = [...r.getClientRects()].filter((c) => c.width > 0);
++        const eb = el.getBoundingClientRect();
++        const left = Math.min(...rects.map((c) => c.left));
++        const right = Math.max(...rects.map((c) => c.right));
++        const cut = (left + (1 - tail) * (right - left) - eb.left).toFixed(1);
++        const g = `linear-gradient(to right, #000 ${cut}px, rgba(0,0,0,.25) ${cut}px)`;
++        el.dataset.tailPrev = el.getAttribute("style") ?? "";
++        el.style.setProperty("-webkit-mask-image", g, "important");
++        el.style.setProperty("mask-image", g, "important");
++      }
++    },
++    { qs: [...QUIET], tail },
++  );
++  return () =>
++    page.evaluate((qs) => {
++      for (const q of qs) {
++        const el = document.querySelector<HTMLElement>(`[data-lobby] ${q}`);
++        if (!el || el.dataset.tailPrev === undefined) continue;
++        if (el.dataset.tailPrev) el.setAttribute("style", el.dataset.tailPrev);
++        else el.removeAttribute("style");
++        delete el.dataset.tailPrev;
++      }
++    }, [...QUIET]);
++}
+ 
+ for (const theme of ["light", "dark"] as const)
+   for (const dpr of [1, 2])
+@@ -670,10 +792,12 @@ for (const theme of ["light", "dark"] as const)
+         colorScheme: theme,
+         contextOptions: { reducedMotion: "reduce" },
+       });
+-      const gated = !(theme === "light" && dpr === 1);
++      const cell = `${theme}-${dpr}`;
++      const floorGated = FLOOR_GATED.has(cell);
+       test(`the register's ground is opaque and its quiet lines paint 4.5:1 on it (${theme}, dpr ${dpr})`, async ({
+         page,
+       }) => {
++        test.setTimeout(240_000);
+         const room = `tally-aa-${theme}-${dpr}-${Date.now()}`;
+         await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+         await settled(page);
+@@ -698,30 +822,68 @@ for (const theme of ["light", "dark"] as const)
+         const rows = await sheet.locator(".pl-row").count();
+         const foot = (await sheet.locator(".pl-more").textContent())?.trim();
+         const read = async (tag: string) => {
+-          const out: Record<string, GlyphText> = {};
++          const out = {} as Record<Quiet, GlyphText>;
+           for (const q of QUIET) out[q] = await glyphText(page, `[data-lobby]:visible ${q}`, `${tag}${q}`);
+           return out;
+         };
+         const shippedRead = await read("ship");
+-        const plants: Record<string, Record<string, GlyphText>> = {};
+-        for (const [name, css] of theme === "dark" ? [["X1b", X1B], ["X2", X2]] : [["X1b", X1B]]) {
+-          const t = await page.addStyleTag({ content: css });
++        const PLANTS: [string, string | number, readonly Quiet[]][] = [
++          ["FAINT30", FAINT30, QUIET],
++          ["TAIL12", 0.12, QUIET],
++          ["TAIL35", 0.35, QUIET],
++          ["EMPTY", EMPTY, QUIET],
++          ["X1b", X1B, [".pl-state", ".pl-more"]],
++          ...(theme === "dark" ? ([["X2w", X2W, QUIET]] as [string, string, readonly Quiet[]][]) : []),
++        ];
++        const plants: Record<string, Record<Quiet, GlyphText>> = {};
++        for (const [name, how] of PLANTS) {
++          let undo: () => Promise<unknown>;
++          if (typeof how === "number") undo = await tailPlant(page, how);
++          else {
++            const t = await page.addStyleTag({ content: how });
++            undo = () => t.evaluate((e) => (e as HTMLElement).remove());
++          }
++          await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+           plants[name] = await read(name);
+-          await t.evaluate((e) => (e as HTMLElement).remove());
++          await undo();
+         }
++        const verdict = (r: GlyphText, q: Quiet) =>
++          breaches(r, FRAC_BOUND[cell][q], floorGated, cell === "light-1");
++        // A PLANT IS SEEN by a clause the cell gates; in a T9-R8 cell (G2 ungated) also when it
++        // MOVES the line against its own shipped reading: a window's core falls under 0.6 of the
++        // same window's shipped core, or the median under 0.9 of the shipped median. The shipped
++        // read is un-planted, so this is never the plant compared with itself.
++        const seen = (r: GlyphText, q: Quiet) => {
++          const why = verdict(r, q);
++          if (why.length || floorGated) return why;
++          const ship = shippedRead[q];
++          const win = r.slices.flatMap((v, k) =>
++            v !== null && ship.slices[k] != null && v < 0.6 * ship.slices[k]! ? [`${k}:${v}/${ship.slices[k]}`] : [],
++          );
++          if (win.length) why.push(`moved: windows ${win.join(" ")}`);
++          if ((r.median ?? 0) < 0.9 * (ship.median ?? 0)) why.push(`moved: median ${r.median} / ${ship.median}`);
++          return why;
++        };
+         console.log(
+           "G14",
+           JSON.stringify({
+             engine: test.info().project.name,
+-            theme,
+-            dpr,
+-            gated,
++            cell,
++            floorGated,
+             shipped,
+             planted,
+             rows,
+             foot,
+             read: shippedRead,
+-            plants,
++            breaches: Object.fromEntries(QUIET.map((q) => [q, verdict(shippedRead[q], q)])),
++            plants: Object.fromEntries(
++              Object.entries(plants).map(([n, r]) => [
++                n,
++                Object.fromEntries(
++                  QUIET.map((q) => [q, { pop: r[q].pop, median: r[q].median, under: r[q].under, core: r[q].core, slices: r[q].slices, sliceN: r[q].sliceN, why: seen(r[q], q) }]),
++                ),
++              ]),
++            ),
+           }),
+         );
+         expect(alphaOf(planted), "the planted translucent ground is SEEN").toBeLessThan(1);
+@@ -729,21 +891,16 @@ for (const theme of ["light", "dark"] as const)
+         // a 1280×720 desk draws the TALL budget: its board sits beside the sheet, not under it
+         expect(rows).toBe(4);
+         expect(foot).toBe("and 12 more");
+-        for (const q of QUIET) expect(shippedRead[q].n, `${q} has a glyph core`).toBeGreaterThan(0);
+-        // every plant is SEEN: the row it gates would red under it
+-        for (const [name, r] of Object.entries(plants))
+-          expect(QUIET.every((q) => holds(r[q])), `${name} is seen by the statistic`).toBe(false);
+-        if (!gated) {
++        // every plant is SEEN, line by line, by a clause THIS cell gates
++        for (const [name, , subjects] of PLANTS)
++          for (const q of subjects)
++            expect(seen(plants[name][q], q), `${name} on ${q} is seen (${cell})`).not.toEqual([]);
++        if (!floorGated)
+           test.info().annotations.push({
+-            type: "T9-R6",
+-            description: "light DPR 1 is the hand's tag rung, the estate's row (pass6/CHAIR-RULINGS §1.4)",
++            type: "T9-R8",
++            description: `${cell}: G2 is the hand's tag rung, the estate's ledger row (both themes)`,
+           });
+-          return;
+-        }
+-        for (const q of QUIET) {
+-          expect(shippedRead[q].median!, `${q} core median`).toBeGreaterThanOrEqual(4.5);
+-          expect(shippedRead[q].median2!, `${q} core median, second photograph`).toBeGreaterThanOrEqual(4.5);
+-        }
++        for (const q of QUIET) expect(verdict(shippedRead[q], q), `${q} (${cell})`).toEqual([]);
+       });
+     });
+ 
+@@ -946,27 +1103,31 @@ test("a person who leaves mid-draw and comes back draws once, from nothing", asy
+   expect(tail[tail.length - 1], "and lands").toBe(0);
+ });
+ 
+-// ── G16 · the written count's weight, ON PAINTED BYTES, per arm and per theme ────────────────
+-// Ink weight, one normaliser for the crops compared, reduced motion so every stroke is inked.
+-// KEYED ON `SIX_ARM` (the pass-5 critic: the row was arm (a)'s, and its negative control was arm
+-// (c)'s shipped rung): each arm is held to its own promise, with the plant that breaks THAT
+-// promise read in the same run.
+-//   (a) title / (b) heading — the FLOOR: six out-weighs one graphite stroke. Plant: a rung the
+-//       floor must see as lighter than one. In light that is the rung below title (heading: why
+-//       the title rung ships). In DARK the heading rung CLEARS one stroke (79.52 against 59.48,
+-//       pass 6), so the dark plant is the body rung. Arm (b) is RED in light by design: that is
+-//       its ballot price.
+-//   (c) remainder — MONOTONE, PER PERSON: six paints at least 6/5 of five's ink (the ink per
+-//       person never falls; measured 1.44 light / 1.51 dark). Plant: the remainder and its plus
+-//       hidden, and it must read under that bar. A first cut at ≥ 1.05 could NOT see this plant:
+-//       the hidden arm still reads 1.09–1.10 of five in both engines (an unexplained residue of
+-//       the 24 px wider crop), so the bar is the count's own ratio.
++// ── G16 · the written count's weight, ON PAINTED BYTES, per arm and per theme, EVERY count ─────
++// Ink weight, one normaliser for every crop compared, reduced motion so every stroke is inked, and
++// THE POSE PARKED: the boil beat swaps four grain poses under reduced motion too, and `one` read
++// ±4.5 % with the pose index (pass-6 critic), so every crop shows pose 0 only and the spread over
++// the four poses is printed beside it. A ground arm (the mark's ink hidden) must read no ink, so
++// nothing but the mark is in the crop.
++// KEYED ON `SIX_ARM`, and read at EVERY count the design names, 6 to 16 (LAWS P6 §E: pass 6 read
++// six alone, and arm (c)'s clause was false at six of the ten later steps):
++//   (a) title / (b) heading — the FLOOR: every written count out-weighs one graphite stroke.
++//       Plant: a rung the floor must see as lighter than one, at six AND at seven (the thinnest
++//       numeral: ×1.19 of one against six's ×1.41). In light that is the rung below title
++//       (heading); in dark the heading rung clears one stroke, so the dark plant is the body rung.
++//       Arm (b) is RED in light by design: that is its ballot price.
++//   (c) remainder — every count from six paints at least 6/5 of five strokes' ink. It does NOT
++//       promise the ink grows with the room: a written number is not monotone in its value, and
++//       the table printed here is the ballot's (ink and ink per person at every count). Plant: the
++//       remainder and its plus hidden, read at every count, must fall under the bar.
+ const G16_PLANT = (theme: "light" | "dark"): string =>
+   SIX_ARM === "remainder"
+     ? ".pt-count.is-rest, .pt-plus { visibility: hidden !important; }"
+     : SIX_ARM === "title" && theme === "light"
+       ? ".pt-count { font-size: var(--type-heading) !important; }"
+       : ".pt-count { font-size: var(--type-body) !important; }";
++const parkPose = (k: number) =>
++  `.pt-marks > g.pt-pose { opacity: 0 !important; } .pt-marks > g.pt-pose:nth-of-type(${k}) { opacity: 1 !important; }`;
+ for (const theme of ["light", "dark"] as const)
+   test.describe(`the written count's weight · ${theme}`, () => {
+     test.use({
+@@ -975,9 +1136,10 @@ for (const theme of ["light", "dark"] as const)
+       colorScheme: theme,
+       contextOptions: { reducedMotion: "reduce" },
+     });
+-    test(`six people against one and five, and the plant that breaks the promise (${SIX_ARM}, ${theme})`, async ({
++    test(`every count from six against one and five, and the plant that breaks the promise (${SIX_ARM}, ${theme})`, async ({
+       page,
+     }) => {
++      test.setTimeout(240_000);
+       const room = `tally-ink-${theme}-${Date.now()}`;
+       await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
+       await settled(page);
+@@ -985,38 +1147,70 @@ for (const theme of ["light", "dark"] as const)
+         await page.evaluate(() => document.documentElement.classList.contains("dark")),
+       ).toBe(theme === "dark");
+       await page.mouse.move(640, 790);
+-      const crop = async () => {
++      const crop = async (css?: string) => {
++        const t = css ? await page.addStyleTag({ content: css }) : null;
+         await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
+-        return painted(page, await mark(page).screenshot({ animations: "disabled" }));
++        const p = await painted(page, await mark(page).screenshot({ animations: "disabled" }));
++        if (t) await t.evaluate((e) => (e as HTMLElement).remove());
++        return p;
+       };
+-      const one = await crop();
++      const oneAt: Painted[] = [];
++      for (const k of [1, 2, 3, 4]) oneAt.push(await crop(parkPose(k)));
++      const one = oneAt[0];
++      const park = await page.addStyleTag({ content: parkPose(1) });
++      const ground = await crop(".pt-marks, .pt-count { visibility: hidden !important; }");
+       await peers(page, room, 4);
+       const five = await crop();
+-      await peers(page, room, 1);
+-      const six = await crop();
+-      const plant = await page.addStyleTag({ content: G16_PLANT(theme) });
+-      const sixPlanted = await crop();
+-      await plant.evaluate((t) => (t as HTMLElement).remove());
+-      const D = Math.max(one.core, five.core, six.core, sixPlanted.core);
+-      const ink = {
+-        one: inkOf(one.hist, D, 2),
+-        five: inkOf(five.hist, D, 2),
+-        six: inkOf(six.hist, D, 2),
+-        sixPlanted: inkOf(sixPlanted.hist, D, 2),
++      const at: Record<number, Painted> = {};
++      const planted: Record<number, Painted> = {};
++      for (let N = 6; N <= 16; N++) {
++        await peers(page, room, 1);
++        at[N] = await crop();
++        planted[N] = await crop(G16_PLANT(theme));
++      }
++      await park.evaluate((t) => (t as HTMLElement).remove());
++      const all = [...oneAt, ground, five, ...Object.values(at), ...Object.values(planted)];
++      const D = Math.max(...all.map((p) => p.core));
++      const ink = (p: Painted) => inkOf(p.hist, D, 2);
++      const table = Object.fromEntries(
++        Object.keys(at).map((k) => {
++          const N = Number(k);
++          return [N, { ink: ink(at[N]), perPerson: +(ink(at[N]) / N).toFixed(2), planted: ink(planted[N]) }];
++        }),
++      ) as Record<number, { ink: number; perPerson: number; planted: number }>;
++      const falls = Object.keys(table)
++        .map(Number)
++        .filter((N) => N > 6 && table[N].ink < table[N - 1].ink)
++        .map((N) => `${N - 1}→${N}`);
++      const r = {
++        one: ink(one),
++        onePoses: oneAt.map(ink),
++        ground: ink(ground),
++        five: ink(five),
++        fivePerPerson: +(ink(five) / 5).toFixed(2),
+       };
+       console.log(
+         "G16",
+-        JSON.stringify({ engine: test.info().project.name, arm: SIX_ARM, theme, D, ink }),
++        JSON.stringify({ engine: test.info().project.name, arm: SIX_ARM, theme, D, ...r, table, falls }),
+       );
+-      if (SIX_ARM === "remainder") {
+-        expect(ink.six, "six paints 6/5 of five (monotone)").toBeGreaterThanOrEqual((6 / 5) * ink.five);
+-        expect(ink.sixPlanted, "the remainder hidden is SEEN as not monotone").toBeLessThan(
+-          (6 / 5) * ink.five,
+-        );
+-      } else {
+-        expect(ink.six, "six out-weighs one").toBeGreaterThanOrEqual(ink.one);
+-        expect(ink.sixPlanted, "the planted rung is SEEN as lighter than one").toBeLessThan(ink.one);
++      // THE CROP IS THE MARK: with its ink hidden it reads (nearly) nothing
++      expect(r.ground, "the ground arm reads no ink").toBeLessThan(0.02 * r.one);
++      for (let N = 6; N <= 16; N++) {
++        if (SIX_ARM === "remainder") {
++          const bar = (6 / 5) * r.five;
++          expect(table[N].ink, `${N} paints 6/5 of five`).toBeGreaterThanOrEqual(bar);
++          expect(table[N].planted, `${N} with the remainder hidden is SEEN under the bar`).toBeLessThan(bar);
++        } else {
++          // against one's HEAVIEST pose, so no pose of one is ever heavier than a written count
++          expect(table[N].ink, `${N} out-weighs one`).toBeGreaterThanOrEqual(Math.max(...r.onePoses));
++        }
+       }
++      if (SIX_ARM !== "remainder")
++        for (const N of [6, 7])
++          // against one's LIGHTEST pose: the plant is seen whatever pose one is drawn in
++          expect(table[N].planted, `the planted rung at ${N} is SEEN as lighter than one`).toBeLessThan(
++            Math.min(...r.onePoses),
++          );
+     });
+   });
+ 
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/scripts/check-font-coverage.mjs
+index 169c113..bfa6389 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/scripts/check-font-coverage.mjs
+@@ -276,15 +276,23 @@ const FACES = [
+           "something went wrong.",
+         ],
+       },
+-      // T9-W7 §11 — the head's lobby. Four lines, authored once in `LOBBY_COPY` precisely so
++      // T9-W7 §11 — the head's lobby. Its lines, authored once in `LOBBY_COPY` precisely so
+       // this derivation has something to read: they are computed strings, and a computed string
+       // is exactly the population the ransom-note trap hides in. `0` stands for the count that
+-      // lands in each hole.
++      // lands in each hole. `0 plus 0` is arm (c)'s name and is never painted; it is read because
++      // the derivation reads the object whole, and its letters are the others'.
+       {
+         where: "the head's player lobby (LOBBY_COPY)",
+         transform: "none",
+         derive: ["lobbyStrings"],
+-        strings: ["1 player", "0 players", "you", "0 seconds ago", "and 0 more"],
++        strings: [
++          "1 player",
++          "0 players",
++          "you",
++          "0 seconds ago",
++          "and 0 more",
++          "0 plus 0",
++        ],
+       },
+       // T8-W1 M3 \u2014 `.check-status`'s four states left the corpus with the line that painted
+       // them. The cut is NOT re-narrowed: `level` (the picker's difficulty caption, the string
+diff --git a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+index 1a137bc..71db527 100644
+--- a/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+@@ -1,4 +1,6 @@
+ <script setup lang="ts">
++import { ref } from "vue";
++import { useResizeObserver } from "@vueuse/core";
+ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+ 
+ /**
+@@ -14,9 +16,11 @@ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+  * The box does not move: the 2px band the border held is kept as padding, and the frame's
+  * centre line runs 1px inside the edge, in that band.
+  *
+- * THE FRAME'S CORNER IS THE GROUND'S. The ground is rounded at 1rem; the edge sits 1px inside
+- * it, so the frame's radius is 15. At the wells' radius 3 it drew square corners past the
+- * ground and moved 67–70 of the 106 px outside the card's rounded corners (pass-5 critic).
++ * THE FRAME'S CORNER IS THE GROUND'S, READ OFF THE GROUND. The frame's radius is the ground's
++ * computed radius less the edge's own inset, both read live whenever the sheet's box changes —
++ * never the literal 15 they make at a 16px root, which a larger root would have left behind. At
++ * the wells' radius 3 it drew square corners past the ground and moved 67–70 of the 106 px
++ * outside the card's rounded corners (pass-5 critic).
+  *
+  * THE EDGE'S INK IS THE OWNER'S (U-10), ONE CONST. `false`: the sheet's own inherited ink, the
+  * wells' weight. `true`: the house's quiet press ink, the rung the sheet's captions use.
+@@ -26,11 +30,22 @@ import HandDrawnOutline from "@pencil/grid/HandDrawnOutline.vue";
+  */
+ defineProps<{ open: boolean }>();
+ const EDGE_QUIET = false;
++
++const ground = ref<HTMLElement | null>(null);
++const edge = ref<HTMLElement | null>(null);
++const radius = ref(0);
++useResizeObserver(ground, () => {
++  if (!ground.value || !edge.value) return;
++  radius.value =
++    parseFloat(getComputedStyle(ground.value).borderTopLeftRadius) -
++    edge.value.offsetTop;
++});
+ </script>
+ 
+ <template>
+-  <div class="head-sheet" :class="{ 'is-open': open }">
++  <div ref="ground" class="head-sheet" :class="{ 'is-open': open }">
+     <span
++      ref="edge"
+       class="head-sheet-edge"
+       :class="{ 'is-quiet': EDGE_QUIET }"
+       aria-hidden="true"
+@@ -39,7 +54,7 @@ const EDGE_QUIET = false;
+         class="head-sheet-frame"
+         :stroke-width="1.5"
+         :outset="0"
+-        :radius="15"
++        :radius="radius"
+         :pose="0"
+       />
+     </span>
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 4735db1..cc6f96b 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -78,8 +78,8 @@ const people = computed<MarkRow[]>(() =>
+   props.rows.length ? props.rows : SOLO_ARM === "keep" ? SOLO : [],
+ );
+ const count = computed(() => people.value.length);
+-/** The sheet's first line, from the array the strokes count — and the mark's name, but for
+- *  arm (c) below, whose name has to carry the remainder it paints. */
++/** The sheet's first line, from the array the strokes count — and the mark's name, which under
++ *  arm (c) below goes on to carry the remainder it paints. */
+ const stateLine = computed(() => LOBBY_COPY.count(count.value));
+ 
+ const { isOpen, toggle, close } = useHoverCard();
+@@ -119,21 +119,24 @@ const ids = computed(() => tallied.value.map(keyOf));
+  * `title` (the default): the count, written, at the title rung. It out-weighs one graphite
+  * stroke and not five, so six people paint lighter than five (G16, below).
+  * `heading`: pass 3's rung, lighter than one stroke in light.
+- * `remainder`: no swap. The five strokes stay and the rest is written after a drawn plus, `+1`,
+- * so the ink never falls as the room grows. Its prices: the head keeps growing past five (97.06
+- * at six, 108.66 at fifteen, 106.45 at sixteen, pass 5's critic), and the name is no longer the
+- * sheet's first line. A written `1` is not in `6 players`, so the name is the mark's own reading
+- * out of the lobby's two lines, `5 players and 1 more` (WCAG 2.5.3: the painted digits are in
+- * it), while the sheet still says `6 players`.
++ * `remainder`: no swap. The five strokes stay and the rest is written after a drawn plus, `+1`.
++ * What it keeps: from six on, the head paints at least 6/5 of five strokes' ink at every count
++ * to sixteen (G16 reads each one). What it does NOT keep, measured: the ink does not
++ * grow with the room. The written rest is a number, and `11` is lighter than `10`, so the head's
++ * ink falls at six of the ten steps from six to sixteen and the ink per person at nine of them
++ * (46.0 at six, 20.1 at sixteen, light). Its other prices: the head keeps growing past five (97.06 at six, 108.66 at fifteen,
++ * 106.45 at sixteen), and a written `1` is not in `6 players`, so the name is the state line and
++ * then the mark read as painted, `6 players, 5 plus 1` (WCAG 2.5.3: the painted digits are in
++ * it, and it says nothing the sheet counts differently).
+  */
+ const SIX_ARM = "title" as "title" | "heading" | "remainder";
+ const remainder = computed(() =>
+   SIX_ARM === "remainder" && count.value > TALLY_MAX ? count.value - TALLY_MAX : 0,
+ );
+-/** The mark's accessible name: the state line, or under arm (c) the tally read as painted. */
++/** The mark's accessible name: the state line, and under arm (c) the tally read as painted. */
+ const markName = computed(() =>
+   remainder.value
+-    ? `${LOBBY_COPY.count(TALLY_MAX)} ${LOBBY_COPY.more(remainder.value)}`
++    ? `${stateLine.value}, ${LOBBY_COPY.plus(TALLY_MAX, remainder.value)}`
+     : stateLine.value,
+ );
+ const drawn = computed(
+@@ -197,21 +200,43 @@ const slotAt = (i: number) => `translate(${PITCH * i} 0)`;
+  *       ring leaves every other board while you read who is here.
+  *   (b) `true`: the tap is a look too. The touch is prevented like the mouse press, and because a
+  *       cancelled WebKit `pointerdown` cancels the tap's CLICK with it, the sheet toggles on the
+- *       touch's own `pointerup`; the click Chromium still sends for that touch is ignored.
++ *       touch's own `pointerup`. The same holds on the open sheet: a tap on it keeps the cell
++ *       and shuts the sheet on its release.
+  * A keyed open is neither: Tab leaves the cell before the mark is reached, in both arms.
++ *
++ * THE TAP'S OWN CLICK IS KNOWN BY ITS PLACE IN THE SEQUENCE, NEVER BY ITS LABEL. Chromium sends a
++ * touch's click as `pointerType: "touch"`, WebKit labels the same click `"mouse"`, and emulated
++ * WebKit sends none at all after a prevented press. So a release that toggled owes the NEXT click,
++ * whatever it says it is; a new press or a key starts a new sequence and forgives the debt.
+  */
+ const TAP_IS_A_LOOK = true;
++let clickOwed = false;
+ 
+ function onPress(e: PointerEvent): void {
++  clickOwed = false;
+   if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
+ }
+ function onRelease(e: PointerEvent): void {
+-  if (TAP_IS_A_LOOK && e.pointerType === "touch") toggle();
++  if (!TAP_IS_A_LOOK || e.pointerType !== "touch") return;
++  toggle();
++  clickOwed = true;
+ }
+-function onClick(e: MouseEvent): void {
+-  if (TAP_IS_A_LOOK && (e as PointerEvent).pointerType === "touch") return;
++function onClick(): void {
++  if (clickOwed) {
++    clickOwed = false;
++    return;
++  }
+   toggle();
+ }
++function onKey(): void {
++  clickOwed = false;
++}
++function onSheetPress(e: PointerEvent): void {
++  if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
++}
++function onSheetRelease(e: PointerEvent): void {
++  if (TAP_IS_A_LOOK && e.pointerType === "touch") close();
++}
+ 
+ // ── Escape, window-bound, one owner — AND THE PHASE IS THE WHOLE OF IT ──────────────────────
+ // GameGallery.vue:696-721's paragraph, applied: a key belongs to ONE surface at a time, so the
+@@ -248,11 +273,16 @@ function onDocFocusin(e: FocusEvent): void {
+ function unbind(): void {
+   window.removeEventListener("keydown", onWindowEscape, ESCAPE_CAPTURE);
+   document.removeEventListener("focusin", onDocFocusin);
++  window.removeEventListener("resize", refit);
++  document.removeEventListener("transitionend", onSettle);
++  cancelAnimationFrame(refitFrame);
+ }
+ watch(isOpen, (open) => {
+   if (!open) return unbind();
+   window.addEventListener("keydown", onWindowEscape, ESCAPE_CAPTURE);
+   document.addEventListener("focusin", onDocFocusin);
++  window.addEventListener("resize", refit);
++  document.addEventListener("transitionend", onSettle);
+ });
+ onBeforeUnmount(unbind);
+ 
+@@ -278,42 +308,89 @@ const quietAt = ref<Record<string, number | null>>({});
+  * THE SHEET NEVER SCROLLS, SO THE SPACE DECIDES HOW MANY ROWS IT HOLDS — AND THE SPACE IS READ.
+  *
+  * Two budgets: `tall` draws four rows and `and N more`, `short` draws your row and `and N more`.
+- * The sheet takes `short` when, drawn tall, it would lap a board that runs under its rows from
+- * where they start. Both facts are MEASURED at the open (and again when the room changes while it
+- * is open), never keyed on a media query: the pass-5 key `(orientation: portrait) and
+- * (max-height: 799px)` drew four rows at 390×800 and lapped seven cells where one row lapped none,
+- * because what decides the lap is where the board's top sits, and that moves with the width.
+- *   · the tall sheet's bottom is read off the sheet ITSELF, laid out and untransformed (the
+- *     offset box, so the 150ms scale-in is not in it) — a wrapped 29-character slug is in it too;
++ * Both facts are MEASURED, never keyed on a media query (the pass-5 key drew four rows at 390×800
++ * over seven cells where one row lapped none):
++ *   · each sheet's box is read off the sheet ITSELF, laid out and untransformed (the offset box,
++ *     so the 150ms scale-in is not in it) — a wrapped 29-character slug is in it too;
+  *   · the board's box comes from `App.vue`, because pencil may not import a board.
+- * The board BESIDE the sheet is not under its rows: the desk's corner lap is CH-71's ratified
+- * pose (1280×800: four rows over two or three cells, one row over one or two), and a coarse
+- * landscape phone keeps four rows AT A PRICE — at 844×390 six cells where one row laps four, at
+- * 812×375 five against three, and on the widest board (16×16) nine against six and eighteen
+- * against twelve. Stated, not denied; the landscape cell is ONE π row the fold reads.
+- * The re-read and the budget flip happen in one microtask pair, so no tall frame is painted.
++ * A lap is an overlap on BOTH axes. The sheet takes `short` when the tall one laps the board AND
++ * either one row clears it (768×1024 coarse: four rows over three cells, one row over none) or
++ * the board runs under the rows from where they start (a phone: whatever one row laps, four lap
++ * more). Otherwise the names are worth more than the cells one row would give back, and the
++ * sheet stays tall at a price, stated rather than denied: the desk's corner (CH-71, 1280×800:
++ * four rows over two or three cells, one row over one or two) and a coarse landscape phone (9×9:
++ * six cells against four at 844×390, five against three at 812×375; 16×16: nine against six,
++ * eighteen against twelve). Both reads and the flip happen in one microtask chain, so neither
++ * trial budget is ever painted.
++ *
++ * WHETHER NAMES ARE WORTH THOSE CELLS IS THE OWNER'S (U-10), ONE CONST. `true`: the above.
++ * `false`: any tall sheet that laps the board takes `short` — landscape pays one row's cells, and
++ * so does the desk, which moves CH-71's ratified corner (four rows to one) for this sheet alone.
++ *
++ * THE SPACE IS READ AGAIN WHEN IT CHANGES UNDER AN OPEN SHEET: on a resize, and when a
++ * transition outside the head comes to rest, one frame later, so a board still sliding is read
++ * where it stops. A read that finds the same board in the same window changes nothing.
+  */
+ const ROWS = { tall: 5, short: 2 } as const;
++const NAMES_OVER_CELLS = true;
+ const cramped = ref(false);
+ const budget = computed(() => (cramped.value ? ROWS.short : ROWS.tall));
+ 
+-async function fit(): Promise<void> {
+-  cramped.value = false;
++const laps = (a: DOMRect, b: DOMRect) =>
++  a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
++
++async function sheetAt(short: boolean) {
++  cramped.value = short;
+   await nextTick();
+   const sheet = document.getElementById(lobbyId);
+   const host = sheet?.offsetParent;
+-  const board = props.boardBox?.();
+-  if (!sheet || !(host instanceof HTMLElement) || !board) return;
++  if (!sheet || !(host instanceof HTMLElement)) return null;
+   const at = host.getBoundingClientRect();
+-  const rowsStart =
+-    at.left + sheet.offsetLeft + parseFloat(getComputedStyle(sheet).paddingLeft);
+-  const bottom = at.top + sheet.offsetTop + sheet.offsetHeight;
+-  cramped.value = board.left <= rowsStart && board.top < bottom;
++  const left = at.left + sheet.offsetLeft;
++  return {
++    box: new DOMRect(
++      left,
++      at.top + sheet.offsetTop,
++      sheet.offsetWidth,
++      sheet.offsetHeight,
++    ),
++    rowsStart: left + parseFloat(getComputedStyle(sheet).paddingLeft),
++  };
++}
++
++let fits = 0;
++let space = "";
++async function fit(again = false): Promise<void> {
++  const board = props.boardBox?.();
++  const seen = board
++    ? `${board.left} ${board.top} ${board.right} ${board.bottom} ${innerWidth} ${innerHeight}`
++    : "";
++  if (again && seen === space) return;
++  const run = ++fits;
++  space = seen;
++  const tall = await sheetAt(false);
++  if (run !== fits || !board || !tall || !laps(tall.box, board)) return;
++  const short = await sheetAt(true);
++  if (run !== fits) return;
++  cramped.value =
++    !NAMES_OVER_CELLS ||
++    board.left <= tall.rowsStart ||
++    (!!short && !laps(short.box, board));
+ }
+ watch([isOpen, () => people.value.length], ([open]) => {
+   if (open) void fit();
+ });
+ 
++let refitFrame = 0;
++function refit(): void {
++  cancelAnimationFrame(refitFrame);
++  refitFrame = requestAnimationFrame(() => void fit(true));
++}
++function onSettle(e: TransitionEvent): void {
++  const t = e.target as Node | null;
++  if (!el.value?.contains(t) && !document.getElementById(lobbyId)?.contains(t)) refit();
++}
++
+ const shown = computed(() =>
+   people.value.length <= budget.value
+     ? people.value
+@@ -360,6 +437,7 @@ const lines = computed<LobbyLine[]>(() =>
+     @click.stop="onClick"
+     @pointerdown="onPress"
+     @pointerup="onRelease"
++    @keydown="onKey"
+     @focusout="close"
+   >
+     <svg
+@@ -414,6 +492,8 @@ const lines = computed<LobbyLine[]>(() =>
+     :state-line="stateLine"
+     :lines="lines"
+     :overflow="overflow"
++    @pointerdown="onSheetPress"
++    @pointerup="onSheetRelease"
+   />
+ </template>
+ 
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+index d150e85..3fa26ca 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
++++ b/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/src/pencil/chrome/PlayerMark/copy.ts
+@@ -1,5 +1,5 @@
+ /**
+- * THE LOBBY'S FOUR LINES, IN ONE PLACE (T9-W7 §11 · M16).
++ * THE LOBBY'S LINES, IN ONE PLACE (T9-W7 §11 · M16).
+  *
+  * Two surfaces read this and one component computes both: the sheet draws it, and the mark's
+  * accessible name IS the state line — `PlayerMark` derives that line from the same rows it
+@@ -15,7 +15,9 @@
+  * rows counted everyone, three populations in one sheet; it is retired. The mark draws one stroke
+  * per person and writes the number from six, so its name carries every digit the glyph paints
+  * (WCAG 2.5.3): `6` is a substring of `6 players`. The owner's arm (c) writes the REMAINDER
+- * after five strokes instead, and its name is two of these lines joined, `5 players and 1 more`.
++ * after five strokes instead, so its name is the state line and then the mark read as painted,
++ * `6 players, 5 plus 1`. ONE REFERENT PER LINE: `more` is the sheet's rows it could not draw and
++ * nothing else, so a name never says `and 11 more` over a sheet that says `and 12 more`.
+  *
+  * M16: plain English, no em dash, no first person, no colon, no `j`, no `x` (the cut).
+  */
+@@ -28,4 +30,6 @@ export const LOBBY_COPY = {
+   quiet: (seconds: number) => `${seconds} seconds ago`,
+   /** the compression line: the rows the height budget could not draw */
+   more: (n: number) => `and ${n} more`,
++  /** arm (c)'s name only, after the state line: the strokes, then the written rest */
++  plus: (drawn: number, rest: number) => `${drawn} plus ${rest}`,
+ } as const;

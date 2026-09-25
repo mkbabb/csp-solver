@@ -1,0 +1,3502 @@
+diff --git a/web/frontend/.prettierignore b/web/frontend/.prettierignore
+index 196ad3ab..e8bfbd9b 100644
+--- a/web/frontend/.prettierignore
++++ b/web/frontend/.prettierignore
+@@ -14,3 +14,7 @@ src/games/thermo/data/templates.ts
+ # 2026-08-03 (close-record §9.1, second bite of the class). Configuration now refuses what
+ # memory once had to.
+ e2e/
++
++# The chair's shape-census library (T9-W7 pass 7): its lines are the chair's, and a format pass
++# would fork the one copy (LAWS P6 §I). eslint.config.js ignores it too.
++scripts/lib/shape-census.mjs
+diff --git a/web/frontend/e2e/multiplayer.spec.ts b/web/frontend/e2e/multiplayer.spec.ts
+index 8cb5d341..4a7680db 100644
+--- a/web/frontend/e2e/multiplayer.spec.ts
++++ b/web/frontend/e2e/multiplayer.spec.ts
+@@ -187,8 +187,8 @@ test("the invite carries the board, and both pages sit at one table", async ({
+   expect(new Set(names).size).toBe(2);
+   expect(names.every((n) => /^[a-ik-wyz]+-[a-ik-wyz]+$/.test(n))).toBe(true);
+ 
+-  // A's row and B's row are two colours on the same screen: you are the incumbent blue and
+-  // everyone else walks the golden angle.
++  // A's row and B's row are two colours on the same screen: every hand in the room walks the
++  // golden angle from its own index, yours included.
+   const swatches = await roster(a)
+     .locator(".player-swatch")
+     .evaluateAll((els) => els.map((e) => getComputedStyle(e).backgroundColor));
+@@ -214,9 +214,11 @@ test("a digit crosses both ways, and it arrives in its author's ink", async ({
+   await write(b, cellB, "4");
+   await expect.poll(() => digitAt(a, cellB)).toBe("4");
+ 
+-  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote carries the rebound
+-  // `--color-user-ink`; the cell B wrote itself does not, and reads the incumbent blue. Both
+-  // resolve to a colour — this is the one place the whole ink story is observable at once.
++  // THE COLOUR IS THE AUTHOR'S, not the reader's. On B, the cell A wrote and the cell B wrote
++  // carry two different `--color-user-ink` rebindings — in a room every hand has its own,
++  // yours included. The assertion is RELATIONAL (they differ, both resolve) rather than a
++  // named colour, so it survives whatever index the room deals: this is the one place the
++  // whole ink story is observable at once.
+   const inks = await b.evaluate(
+     ([mine, theirs]) => {
+       // The index is bound to a name rather than chained onto the line above it: a `[i]`
+diff --git a/web/frontend/eslint.config.js b/web/frontend/eslint.config.js
+index 2bbde768..dce82e91 100644
+--- a/web/frontend/eslint.config.js
++++ b/web/frontend/eslint.config.js
+@@ -101,7 +101,10 @@ export default tseslint.config(
+   // now separate and each says what it is: prettier stays out by the owner's ruling, eslint
+   // comes in. Born-RED banked at evidence/w6/gates-e2e/eslint-born-red.txt — one live
+   // `no-unexpected-multiline` in `multiplayer.spec.ts`, cured in the same commit as this line.
+-  { ignores: ['dist*/**', 'node_modules/**'] },
++  // `scripts/lib/shape-census.mjs` is the chair's ONE shape-census library (T9-W7 pass 7, LAWS P6
++  // §F/§I); its lines are the chair's, and a lint rewrite would fork the one copy. Out of eslint
++  // and prettier both, for that reason alone.
++  { ignores: ['dist*/**', 'node_modules/**', 'scripts/lib/shape-census.mjs'] },
+   js.configs.recommended,
+   ...tseslint.configs.recommended,
+   // 'essential' (correctness only), not 'recommended'/'strongly-recommended' — this repo's
+diff --git a/web/frontend/knip.json b/web/frontend/knip.json
+index ef9f47e5..9ca98f42 100644
+--- a/web/frontend/knip.json
++++ b/web/frontend/knip.json
+@@ -84,7 +84,15 @@
+   // itself — and it carries a `NOT-A-LANE:` header that check-lane-membership.mjs polices.
+   // NOT a place to park an unwired gate: a `check-*.mjs` belongs to a lane or declares
+   // NOT-A-LANE in its own header, and check-lane-membership.mjs reds if it does neither.
+-  "entry": ["scripts/dist-identity.mjs", "../relay/relay.ts", "../relay/relay.test.ts"],
++  // `scripts/lib/shape-census.mjs` is the chair's ONE shape-census library (T9-W7 pass 7) plus
++  // ACC-GRAPHITE's PROPOSED `tokenSites`: an entry, so the exports its consumers do not call yet
++  // are the library's surface, not dead code; editing them out would fork the one copy.
++  "entry": [
++    "scripts/dist-identity.mjs",
++    "scripts/lib/shape-census.mjs",
++    "../relay/relay.ts",
++    "../relay/relay.test.ts"
++  ],
+ 
+   "ignore": ["src/games/shared/scene.css", "src/games/shared/gameCell.css"],
+ 
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b6e2d9a0..77bd5c28 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -39,6 +39,11 @@ import { fileURLToPath } from "node:url";
+ // Explicit import, matching check-golden-bytes / check-prod-shake: eslint runs this file
+ // with browser globals, so the implicit `process` is a no-undef error here.
+ import process from "node:process";
++import {
++  sources as shapeSources,
++  tokenSites,
++  parseColor as anyColor,
++} from "./lib/shape-census.mjs";
+ 
+ const SRC = join(fileURLToPath(new URL("../src", import.meta.url)));
+ const INDEX_CSS = readFileSync(join(SRC, "assets/index.css"), "utf8");
+@@ -620,6 +625,396 @@ function gateRank({ light, dark }, ruling) {
+   return fails;
+ }
+ 
++/* ── the GROUNDS, ranked (T9-W7 ACC-GRAPHITE) ──────────────────────────────
++ *
++ * The LADDER above governs MARKS — a stop has a contrast floor and the rungs climb. A GROUND is
++ * what a mark sits on: tinted paper, whose only job is to stay under the thing it backs. A 6%
++ * wash has no 3:1 floor to clear and never will, so `gateFloors` and `gateMonotone` are the
++ * wrong instruments and the ground token lives outside `LADDER` for exactly that reason.
++ *
++ * What a ground CAN be gated on is its place in the order, which is the one thing the estate
++ * has a ruling about: four grounds compose on the board — your selection's own body, a peer's
++ * cursor, the hint laminate, and the unit wash that marks your selection's reach — and they are
++ * pitched against each other, not against a floor. The order is read off the live cascade on
++ * every run (the rungs' own discipline: nothing here restates a constant), so re-pitching any
++ * one of them re-prices the rank instead of leaving this gate printing yesterday's digits.
++ *
++ * CLOSED BOTH WAYS, `gateRank`'s form: the order moving reds; the admitted TIE breaking reds
++ * (the tie is a design sentence — the unit wash IS tier 1's own 6%, "one number, not a second
++ * value", gameCell.css `.cell-peer` — so if the two ever stop being one number the ruling has
++ * outlived its condition and the reader needs to know); a ground whose two themes disagree reds
++ * (a ground that is not one value across themes is a new fact, not a re-pitch).
++ */
++const GAME_CELL_CSS = readFileSync(join(SRC, "games/shared/gameCell.css"), "utf8");
++
++/** The alpha a ground paints at, resolved: a literal `fill-opacity`, or a `color-mix` percent,
++ *  or a `var()` chased into the theme scope it is declared in. Never a restated constant. */
++function groundAlpha(scope, css, g) {
++  const body = bodiesOf(css, g.selector)[0];
++  if (!body) return null;
++  const decl = body.match(new RegExp(`${g.decl}:\\s*([^;]+);`));
++  if (!decl) return null;
++  const raw = decl[1].trim();
++  if (/^[\d.]+$/.test(raw)) return Number(raw);
++  let chased = raw;
++  if (raw.startsWith("var(")) {
++    const token = raw.slice(4).split(/[,)]/)[0];
++    // The theme scope first, then the file: a ground token declared ONCE serves both themes
++    // (its pressure is one number; only the ink it mixes flips), and a per-scope redeclaration
++    // must win over it. Not finding it either way leaves the row `?`, which reds.
++    const re = new RegExp(`${token}:\\s*([^;]+);`);
++    chased = (scope.match(re) ?? INDEX_CSS.match(re) ?? [])[1];
++  }
++  const pct = String(chased ?? "").match(/([\d.]+)%/);
++  return pct ? Number(pct[1]) / 100 : null;
++}
++
++const GROUNDS = [
++  {
++    name: "peer-cursor",
++    selector: ".game-cell.is-peer-cursor .cell-ghost-path",
++    decl: "fill-opacity",
++    why: "a peer is present, never competing — the lightest ground on the board",
++  },
++  {
++    name: "selection",
++    selector: ".cell-ghost-path",
++    decl: "fill-opacity",
++    why: "your own selection's body (tier 1)",
++  },
++  {
++    name: "unit",
++    selector: ".cell-peer",
++    decl: "background",
++    why: "your selection's REACH — the same 6% as the body it belongs to, by design",
++  },
++  {
++    name: "laminate",
++    selector: ".cell-because",
++    decl: "background",
++    why: "the hint's teacher-red square, the one ground that is asked to be seen",
++  },
++];
++
++/**
++ * The admitted ground order, pinned to the strings this run produces. `=` is the admitted tie.
++ *
++ * REPORTED, not smoothed: the synthesis asked for `selection > peer cursor > hint laminate >
++ * unit`. That is not what the cascade ranks — the laminate is the LOUDEST ground at 15% and the
++ * unit wash ties the selection body at 6%. The ruling below is the measured order; the
++ * synthesis's string is a form claim about which ground OUTRANKS which in meaning, which is
++ * MRK-WASH's to land and is not an alpha.
++ */
++const GROUND_RULING = {
++  order: "peer-cursor 0.04 < selection 0.06 = unit 0.06 < laminate 0.15",
++  cite: "src/assets/index.css §INK PRESSURE 'THE GROUND WASH, AND IT IS NOT A RUNG'; src/games/shared/gameCell.css `.cell-peer`",
++  why:
++    "a ground is pitched against the other grounds, never against a floor; the unit wash is " +
++    "tier 1's own 6% rather than a second value, so the tie is the design and not a collision",
++};
++
++/** One theme's ground rank, equal neighbours joined by `=` so a tie is stated, never ordered. */
++function groundRank(scope, cellCss) {
++  const rows = GROUNDS.map((g) => ({
++    n: g.name,
++    a: groundAlpha(scope, cellCss, g),
++  })).sort((x, y) => (x.a ?? 0) - (y.a ?? 0));
++  return rows
++    .map(
++      (r, i) =>
++        (i === 0 ? "" : r.a === rows[i - 1].a ? " = " : " < ") +
++        `${r.n} ${r.a === null ? "?" : r.a.toFixed(2)}`,
++    )
++    .join("");
++}
++
++/** Both themes' ground-rank strings, from the two stylesheets that declare them. */
++const groundRanksOf = (cellCss) =>
++  Object.fromEntries(
++    Object.entries(SCOPES).map(([name, scope]) => [name, groundRank(scope, cellCss)]),
++  );
++
++function gateGroundRank(ranks, ruling) {
++  const fails = [];
++  const [light, dark] = [ranks.light, ranks.dark];
++  if (light !== dark)
++    fails.push(
++      `the grounds rank \`${light}\` light and \`${dark}\` dark. A ground is ONE value across ` +
++        `themes — the ink flips, the pressure does not — so a per-theme ground is a new fact ` +
++        `and wants a ruling of its own (${ruling.cite}).`,
++    );
++  if (!light.includes("=") && ruling.order.includes("="))
++    fails.push(
++      `the admitted TIE is gone — the grounds now rank \`${light}\`. The ruling this gate ` +
++        `admits (${ruling.cite}) says the unit wash IS the selection body's own 6%, "one ` +
++        `number, not a second value". Two numbers now. Either put them back on one, or strike ` +
++        `GROUND_RULING and the gameCell.css sentence it cites, in this commit.`,
++    );
++  for (const [theme, got] of Object.entries(ranks)) {
++    if (got === ruling.order) continue;
++    if (light !== dark && theme === "dark") continue;
++    fails.push(
++      `${theme} ranks the grounds \`${got}\`, and the admitted order is \`${ruling.order}\` ` +
++        `(${ruling.cite}). A ground was re-pitched and the reading order moved with it: a wash ` +
++        `that climbs over the mark it backs stops being paper. Re-derive the ruling against the ` +
++        `change and say why where it is declared, or put the pitch back.`,
++    );
++  }
++  return fails;
++}
++
++/* ── the unit wash's STEP, both arms (T9-W7 ACC-GRAPHITE) ─────────────────
++ *
++ * The rank above reads the base arm only, so the `prefers-contrast: more` arm was ungated: set
++ * to 3% — under the 6% base, the arm that exists to press HARDER — every gate stayed green.
++ * This gate reads both arms out of index.css, composites each over its theme's card, and holds
++ * two sentences: the contrast arm presses harder than the base, and neither arm paints a
++ * smaller step than HEAD's blue wash did (the declared floor of the graphite re-ink: "never a
++ * smaller painted step than HEAD's").
++ */
++const WASH = {
++  token: "--ground-wash-unit",
++  /** HEAD `74a2b5d9`'s crayon-blue unit wash, PAINTED (pass-4 critique §1, both engines;
++   *  dark `more` from the pass-4 prototype's reading). A floor, never a target. */
++  floor: {
++    base: { light: 1.078, dark: 1.104 },
++    more: { light: 1.143, dark: 1.22 },
++  },
++  cite: "T9-W7 pass4/critique/ACC-GRAPHITE.md §1 (G-WASH rows)",
++};
++
++/**
++ * Each arm's `--ground-wash-unit` PER THEME, as the cascade resolves it on <html>. Every
++ * declaration of the token is read with its at-rule context: the base arm is every declaration
++ * outside an `@media`; the `more` arm adds those inside `@media (prefers-contrast: more)`; any
++ * other media arm (print, forced colours) is neither. A root selector reaches BOTH themes
++ * (`:root`, `html`, `@theme`), one carrying `.dark` reaches dark only, and one carrying any other
++ * class (`html.theme-turning`) is conditional and reaches neither arm's resting value. The winner
++ * is the cascade's: unlayered over layered (`@theme` emits into a layer), then specificity, then
++ * source order (`.dark` alone is a root selector: `useTheme` toggles it on <html>). So a
++ * dark-scoped override inside the media arm is read as the dark `more` value
++ * wherever it sits in the file — the plant the pass-5 critic landed before the `:root` block.
++ * A theme × arm with no winner reds.
++ */
++function washDecls(css) {
++  const bare = css.replace(/\/\*[\s\S]*?\*\//g, "");
++  const out = [];
++  const stack = [];
++  let buf = "";
++  let order = 0;
++  const take = () => {
++    const m = buf.match(new RegExp(`^\\s*${WASH.token}\\s*:\\s*([\\s\\S]+?)\\s*$`));
++    if (m)
++      out.push({ ctx: [...stack], value: m[1].replace(/\s+/g, " "), order: order++ });
++    buf = "";
++  };
++  for (const c of bare) {
++    if (c === "{") {
++      stack.push(buf.trim());
++      buf = "";
++    } else if (c === "}") {
++      take();
++      stack.pop();
++    } else if (c === ";") take();
++    else buf += c;
++  }
++  return out;
++}
++
++const specificity = (sel) =>
++  (sel.match(/[.:][\w-]+/g) ?? []).length * 100 +
++  (sel.match(/(^|[\s>+~])[a-z][\w-]*/g) ?? []).length;
++
++function washArms(css) {
++  const cands = [];
++  for (const d of washDecls(css)) {
++    const media = d.ctx.filter((p) => p.startsWith("@media"));
++    if (media.some((p) => !/prefers-contrast:\s*more/.test(p))) continue;
++    const arm = media.length ? "more" : "base";
++    const layered = d.ctx.some((p) => p.startsWith("@layer") || p.startsWith("@theme"));
++    const rule =
++      [...d.ctx].reverse().find((p) => !p.startsWith("@")) ??
++      (d.ctx.some((p) => p.startsWith("@theme")) ? ":root" : null);
++    if (!rule) continue;
++    for (const sel of rule.split(",").map((x) => x.trim())) {
++      // A compound on <html> itself (no combinator): `:root`, `html`, `.dark`, `html.dark`.
++      if (!/^(:root|html|\.dark)([.:][\w-]+)*$/.test(sel)) continue;
++      const classes = (sel.match(/\.[\w-]+/g) ?? []).filter((c) => c !== ".dark");
++      if (classes.length) continue;
++      const themes = /\.dark\b/.test(sel) ? ["dark"] : ["light", "dark"];
++      for (const theme of themes)
++        cands.push({
++          arm,
++          theme,
++          value: d.value,
++          rank: [layered ? 0 : 1, specificity(sel), d.order],
++        });
++    }
++  }
++  const win = (arms, theme) =>
++    cands
++      .filter((c) => arms.includes(c.arm) && c.theme === theme)
++      .sort(
++        (x, y) =>
++          x.rank[0] - y.rank[0] || x.rank[1] - y.rank[1] || x.rank[2] - y.rank[2],
++      )
++      .pop()?.value ?? null;
++  return {
++    base: { light: win(["base"], "light"), dark: win(["base"], "dark") },
++    more: {
++      light: win(["base", "more"], "light"),
++      dark: win(["base", "more"], "dark"),
++    },
++  };
++}
++
++function washSteps(css) {
++  const arms = washArms(css);
++  const light = scopeOf(css, "@theme {");
++  const out = {};
++  for (const [arm, byTheme] of Object.entries(arms)) {
++    out[arm] = {};
++    for (const theme of ["light", "dark"]) {
++      const decl = byTheme[theme];
++      if (!decl) continue;
++      // The dark scope FIRST: its own declarations win the first match, and a token it does not
++      // redeclare (`--color-pencil-graphite`, an alias) falls through to the @theme line.
++      const scope =
++        theme === "light" ? light : `${scopeOf(css, "\n.dark {")}\n${light}`;
++      const card = colorOf(scope, "--color-card");
++      const mix = mixOf(scope, decl.replace(/\btransparent\b/, "hsl(0 0% 0% / 0)"));
++      out[arm][theme] = { pct: mix.a * 100, step: contrast(over(mix, card), card) };
++    }
++  }
++  return out;
++}
++
++function gateWashStep(css, wash = WASH) {
++  const fails = [];
++  const steps = washSteps(css);
++  for (const arm of ["base", "more"])
++    for (const theme of ["light", "dark"])
++      if (!steps[arm][theme])
++        fails.push(
++          `${wash.token} resolves no \`${arm}\` value for ${theme} in index.css — every arm is read per theme (${wash.cite}).`,
++        );
++  if (fails.length) return fails;
++  for (const theme of ["light", "dark"]) {
++    const [b, m] = [steps.base[theme], steps.more[theme]];
++    if (!(m.step > b.step))
++      fails.push(
++        `${theme}: the \`prefers-contrast: more\` wash paints ${m.step.toFixed(3)}:1 against the base's ` +
++          `${b.step.toFixed(3)}:1 — the arm that exists to press harder does not.`,
++      );
++    for (const arm of ["base", "more"]) {
++      const got = steps[arm][theme].step;
++      const floor = wash.floor[arm][theme];
++      if (got < floor)
++        fails.push(
++          `${theme} ${arm}: the unit wash steps ${got.toFixed(3)}:1 over the card, under HEAD's ` +
++            `painted ${floor} (${wash.cite}). The re-ink promised never a smaller step than HEAD's.`,
++        );
++    }
++  }
++  return fails;
++}
++
++/* ── the unit wash where it is READ (T9-W7 ACC-GRAPHITE pass 7) ────────────
++ *
++ * `washArms` above resolves the token on <html>, but the token is INHERITED and read at the
++ * consumer (`.cell-peer { background: var(--ground-wash-unit) }`): any declaration on an
++ * ancestor-or-self of a washed cell wins there, and `.dark .cell-peer { …3% }`, an `:is()` scope
++ * or `.dark body` inside the contrast arm each painted 3 % while the root read printed 6 % and
++ * 12 % (the pass-6 critic). So this gate reads EVERY declaration of the token the shape-census
++ * library can find (every stylesheet, every SFC `<style>`, index.html, `style=`, `:style` and TS
++ * objects, `setProperty`), whatever its selector, classes each by the theme it can reach
++ * (`.dark` anywhere in the selector, `:is()` included, reaches dark; `:not(.dark)` light; else
++ * both) and by its arm (inside `prefers-contrast: more` the `more` arm; `print` and
++ * `forced-colors` are not a painted ground; any other context the base arm), resolves its value
++ * per theme through the ONE colour parser, and reds any value under its arm's floor. A scope
++ * below <html> can outrank the root's `more` arm at the consumer, so a base-arm declaration that
++ * is not on <html> holds the `more` floor too unless the same scope is pressed in the `more` arm.
++ * A published value the parser cannot read reds: an unreadable wash is not a proven one.
++ */
++const FE_ROOT = join(SRC, "..");
++function washReach(css, { read, extra = [] } = {}) {
++  const light = scopeOf(css, "@theme {");
++  const scopes = { light, dark: `${scopeOf(css, "\n.dark {")}\n${light}` };
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  const files = shapeSources(FE_ROOT);
++  const readAt = (f) => (relative(FE_ROOT, f) === "src/assets/index.css" ? css : rd(f));
++  const sites = tokenSites(FE_ROOT, WASH.token, { files, read: readAt, extra });
++  const valueIn = (raw, theme) => {
++    let v = raw.trim();
++    const lit = /^(['"`])([^'"`$]*)\1$/.exec(v);
++    if (lit) v = lit[2];
++    if (/[`$]|^[\w.]+$/.test(v)) return null;
++    try {
++      v = v.replace(/var\(\s*(--[\w-]+)\s*(?:,[^()]*)?\)/g, (m, t) => {
++        const c = colorOf(scopes[theme], t);
++        return `rgb(${c.map((x) => x.toFixed(3)).join(" ")})`;
++      });
++    } catch {
++      return null;
++    }
++    return anyColor(v.replace(/\s+/g, " "));
++  };
++  const isRoot = (sel) =>
++    /^(?::root|html)?(?:\.dark)?$/.test(sel.replace(/\s+/g, "")) && sel.trim() !== "";
++  const pressed = new Set(
++    sites.filter((x) => /prefers-contrast:\s*more/.test(x.ctx)).map((x) => x.prelude),
++  );
++  const fails = [];
++  const rows = [];
++  for (const x of sites) {
++    if (/\b(print|forced-colors)\b/.test(x.ctx)) continue;
++    const arm = /prefers-contrast:\s*more/.test(x.ctx) ? "more" : "base";
++    const sels =
++      x.prelude && !/^[{.]|^style=|^setProperty|^'|^\[/.test(x.prelude)
++        ? x.prelude.split(",")
++        : [""];
++    const reach = new Set();
++    let onRoot = true;
++    for (const sel of sels) {
++      const bare = sel.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, (m) =>
++        /\.dark\b/.test(m) ? " :light-only " : " ",
++      );
++      if (/:light-only/.test(bare)) reach.add("light");
++      else if (/\.dark\b/.test(bare)) reach.add("dark");
++      else {
++        reach.add("light");
++        reach.add("dark");
++      }
++      if (!isRoot(sel)) onRoot = false;
++    }
++    const floors =
++      arm === "more" || onRoot || pressed.has(x.prelude) ? [arm] : ["base", "more"];
++    for (const theme of reach) {
++      const card = colorOf(scopes[theme], "--color-card");
++      const c = valueIn(x.value, theme);
++      const where = `${x.file}:${x.line} ${x.kind} ${x.ctx ? x.ctx + " " : ""}${x.prelude || "(no selector)"}`;
++      if (!c) {
++        fails.push(
++          `${where}: the unit wash is published as \`${x.value.replace(/\s+/g, " ")}\`, which the colour parser cannot read for ${theme} — an unreadable wash is not a proven one.`,
++        );
++        continue;
++      }
++      const step = contrast(
++        over({ rgb: c.rgb.map((v) => v * 255), a: c.a }, card),
++        card,
++      );
++      rows.push({ where, theme, arm, step });
++      for (const f of floors)
++        if (step < WASH.floor[f][theme])
++          fails.push(
++            `${where}: paints ${(c.a * 100).toFixed(0)}% = ${step.toFixed(3)}:1 over the ${theme} card where the consumer reads it, under the ${f} arm's floor ${WASH.floor[f][theme]} (${WASH.cite}).`,
++          );
++    }
++  }
++  return { sites, fails, rows };
++}
++const gateWashReach = (css, o) => washReach(css, o).fails;
++
+ /* ── self-test: every gate shown able to fail ───────────────────────────── */
+ 
+ /**
+@@ -714,6 +1109,181 @@ function selfTest() {
+           dark: "muted-foreground < rule < quiet",
+         }),
+     ],
++    // THE GROUND GATE, three modes, the same shape as closure 5's. `ground-planted`: the unit
++    // wash is pressed to 12% — a wash climbing over the selection body it is the reach of, the
++    // exact defect the token exists to make impossible. `ground-tie-broken`: the two 6%s become
++    // two numbers, so the admitted tie's own sentence is stale. `ground-per-theme`: a ground
++    // that reads differently in the two themes, which is a new fact and not a re-pitch.
++    [
++      "ground-planted",
++      () =>
++        gateGroundRank(
++          groundRanksOf(
++            GAME_CELL_CSS.replace(
++              /(\.cell-peer\s*\{[\s\S]*?background:\s*)var\(--ground-wash-unit\)/,
++              "$1color-mix(in srgb, var(--color-pencil-graphite) 12%, transparent)",
++            ),
++          ),
++          GROUND_RULING,
++        ),
++    ],
++    [
++      "ground-tie-broken",
++      () =>
++        gateGroundRank(
++          groundRanksOf(
++            GAME_CELL_CSS.replace(
++              /(\.cell-peer\s*\{[\s\S]*?background:\s*)var\(--ground-wash-unit\)/,
++              "$1color-mix(in srgb, var(--color-pencil-graphite) 9%, transparent)",
++            ),
++          ),
++          GROUND_RULING,
++        ),
++    ],
++    // THE WASH STEP, three modes: the contrast arm dropped UNDER the base (the pass-4 critic's
++    // 3%), the contrast arm EQUAL to the base, and the base under HEAD's painted floor.
++    [
++      "wash-more-under-base",
++      () =>
++        gateWashStep(
++          INDEX_CSS.replace(
++            /(@media \(prefers-contrast: more\) \{\s*:root \{\s*--ground-wash-unit: color-mix\(\s*in srgb,\s*var\(--color-pencil-graphite\)\s*)12%/,
++            "$13%",
++          ),
++        ),
++    ],
++    [
++      "wash-more-equal",
++      () =>
++        gateWashStep(
++          INDEX_CSS.replace(
++            /(@media \(prefers-contrast: more\) \{\s*:root \{\s*--ground-wash-unit: color-mix\(\s*in srgb,\s*var\(--color-pencil-graphite\)\s*)12%/,
++            "$16%",
++          ),
++        ),
++    ],
++    // The fourth mode, the pass-5 critic's plant: the dark theme's `more` arm dropped to 3% by a
++    // dark-scoped rule inside the media arm, placed BEFORE the `:root` block (a scope-blind read
++    // took the later `:root` 12% and printed it). The fifth is the same rule placed after.
++    [
++      "wash-more-dark-scoped-before",
++      () =>
++        gateWashStep(
++          INDEX_CSS.replace(
++            /(@media \(prefers-contrast: more\) \{\s*:root \{\s*--ground-wash-unit)/,
++            "@media (prefers-contrast: more) {\n  html.dark {\n    --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent);\n  }\n}\n\n$1",
++          ),
++        ),
++    ],
++    [
++      "wash-more-dark-scoped-after",
++      () =>
++        gateWashStep(
++          INDEX_CSS +
++            "\n@media (prefers-contrast: more) {\n  .dark {\n    --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent);\n  }\n}\n",
++        ),
++    ],
++    [
++      "wash-base-under-head",
++      () =>
++        gateWashStep(
++          INDEX_CSS.replace(
++            /(--ground-wash-unit: color-mix\(\s*in srgb,\s*var\(--color-pencil-graphite\)\s*)6%/,
++            "$14%",
++          ),
++        ),
++    ],
++    // PASS 7 — the pass-6 critic's three escapes, each a scope the root read cannot see, and the
++    // publisher shapes the library reads (each must red on its own).
++    [
++      "wash-reach-descendant-dark",
++      () =>
++        gateWashReach(
++          INDEX_CSS +
++            "\n.dark .cell-peer { --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent); }\n",
++        ),
++    ],
++    [
++      "wash-reach-is-scope-more",
++      () =>
++        gateWashReach(
++          INDEX_CSS +
++            "\n@media (prefers-contrast: more) {\n  html:is(.dark) { --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent); }\n}\n",
++        ),
++    ],
++    [
++      "wash-reach-dark-body-more",
++      () =>
++        gateWashReach(
++          INDEX_CSS +
++            "\n@media (prefers-contrast: more) {\n  .dark body { --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent); }\n}\n",
++        ),
++    ],
++    [
++      "wash-reach-consumer-base-6-under-more",
++      () =>
++        gateWashReach(
++          INDEX_CSS +
++            "\n.cell-peer { --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 6%, transparent); }\n",
++        ),
++    ],
++    [
++      "wash-reach-sfc-style",
++      () =>
++        gateWashReach(INDEX_CSS, {
++          read: (f) =>
++            readFileSync(f, "utf8") +
++            (f.endsWith("DigitCell.vue")
++              ? "\n<style>\n.game-cell { --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 3%, transparent); }\n</style>\n"
++              : ""),
++        }),
++    ],
++    [
++      "wash-reach-quoted-key-object",
++      () =>
++        gateWashReach(INDEX_CSS, {
++          read: (f) =>
++            readFileSync(f, "utf8") +
++            (f.endsWith("playerIdentity.ts")
++              ? '\nexport const w = { "--ground-wash-unit": "color-mix(in srgb, #57534e 3%, transparent)" };\n'
++              : ""),
++        }),
++    ],
++    [
++      "wash-reach-unreadable-publisher",
++      () =>
++        gateWashReach(INDEX_CSS, {
++          read: (f) =>
++            readFileSync(f, "utf8") +
++            (f.endsWith("playerIdentity.ts")
++              ? '\nexport const w2 = (p: string) => document.body.style.setProperty("--ground-wash-unit", p);\n'
++              : ""),
++        }),
++    ],
++    [
++      "wash-reach-index-html",
++      () =>
++        gateWashReach(INDEX_CSS, {
++          read: (f) =>
++            f.endsWith("index.html")
++              ? readFileSync(f, "utf8").replace(
++                  "</head>",
++                  "<style>.dark { --ground-wash-unit: color-mix(in srgb, #d6d3cd 2%, transparent) }</style></head>",
++                )
++              : readFileSync(f, "utf8"),
++        }),
++    ],
++    [
++      "ground-per-theme",
++      () =>
++        gateGroundRank(
++          {
++            light: GROUND_RULING.order,
++            dark: "selection 0.06 = unit 0.06 < laminate 0.15",
++          },
++          GROUND_RULING,
++        ),
++    ],
+   ];
+   const mute = [];
+   for (const [name, run] of cases) {
+@@ -747,6 +1317,9 @@ const fails = [
+   ...gateShip4(SHIP4),
+   ...gateTape(INDEX_CSS, TAPE),
+   ...gateRank(ranksOf(INDEX_CSS), RANK_RULING),
++  ...gateGroundRank(groundRanksOf(GAME_CELL_CSS), GROUND_RULING),
++  ...gateWashStep(INDEX_CSS),
++  ...gateWashReach(INDEX_CSS),
+ ];
+ const vacuous = process.argv.includes("--self-test") ? selfTest() : [];
+ 
+@@ -828,3 +1401,44 @@ console.log(
+     `one ruling is admitted (${RANK_RULING.cite}), pinned to both rank strings above, and it ` +
+     `reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.`,
+ );
++
++/* The GROUNDS, printed: four washes, one order, read off the cascade on every run. */
++const liveGrounds = groundRanksOf(GAME_CELL_CSS);
++console.log(
++  `\ngrounds — what a mark sits ON, ranked against each other rather than against a floor:` +
++    `\n  light  ${liveGrounds.light}\n  dark   ${liveGrounds.dark}` +
++    GROUNDS.map(
++      (g) => `\n  ${g.name.padEnd(12)} ${g.selector.padEnd(38)} ${g.why}`,
++    ).join("") +
++    `\n  the order is GATED: it reds on a re-pitch that moves it, on the admitted tie breaking ` +
++    `(${GROUND_RULING.why}), and on a ground that reads differently in the two themes.`,
++);
++
++/* The unit wash's two arms, printed with the floors they hold. */
++const liveWash = washSteps(INDEX_CSS);
++console.log(
++  `\nunit wash (${WASH.token}) — over the card, both arms, against HEAD's painted floor:` +
++    ["base", "more"]
++      .map(
++        (arm) =>
++          `\n  ${arm.padEnd(5)} ` +
++          ["light", "dark"]
++            .map(
++              (t) =>
++                `${liveWash[arm][t].pct.toFixed(0)}% ${liveWash[arm][t].step.toFixed(3)} ${t} (≥${WASH.floor[arm][t]})`,
++            )
++            .join(" / "),
++      )
++      .join(""),
++);
++
++/* The unit wash where it is read: every declaration the library finds, per theme and arm. */
++console.log(
++  `\nunit wash, every declaration (${WASH.token}), read at the consumer:` +
++    washReach(INDEX_CSS)
++      .rows.map(
++        (r) =>
++          `\n  ${r.arm.padEnd(5)} ${r.theme.padEnd(5)} ${r.step.toFixed(3)}  ${r.where.replace(/\s+/g, " ")}`,
++      )
++      .join(""),
++);
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index fe5fa7c5..45bb3fdd 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -25,6 +25,7 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
++import { sources, tokenSites } from "./lib/shape-census.mjs";
+ 
+ const ROOT = path.join(import.meta.dirname, "..");
+ const INDEX_CSS = path.join(ROOT, "src", "assets", "index.css");
+@@ -63,6 +64,46 @@ const UTILITY_NAMESPACES = {
+ 
+ const stripComments = (css) => css.replace(/\/\*[\s\S]*?\*\//g, "");
+ 
++/**
++ * RETIRED TOKENS — deleted on purpose, each with the change that deleted it. The quoted form
++ * below counts an e2e's `getPropertyValue("--tok")` as a reference, so a retired hex re-minted
++ * beside a spec that still reads it would census LIVE and exit 0. A retired name DECLARED
++ * anywhere a declaration can come from reds, whatever reads it: the shape-census library's
++ * `tokenSites` reads every stylesheet (public/ too), every SFC `<style>` block, index.html,
++ * `style="…"`, quoted-key `:style` and TS style objects, `.json` tables, `setProperty` (a
++ * concatenation of literals included) and CSS text inside a string, each through the library's
++ * string-aware stripper. A template-literal stem that can spell the name reds too; a key that
++ * is an expression is printed, never dropped. The rule is keyed on the declaration's SHAPE.
++ */
++const RETIRED = [
++  {
++    token: "--color-crayon-blue",
++    by: "T9-W7 ACC-GRAPHITE: the focus wax, the unit wash and your own marks went graphite",
++  },
++];
++
++/** Every site that declares a retired name. `overrides` replaces a file's text by its path
++ *  relative to the frontend root (the self-test's plants), or adds one. */
++function retiredScan(overrides = {}) {
++  const files = sources(ROOT);
++  const extra = Object.keys(overrides)
++    .map((rel) => path.join(ROOT, rel))
++    .filter((f) => !files.includes(f));
++  const read = (f) => overrides[path.relative(ROOT, f)] ?? fs.readFileSync(f, "utf8");
++  const hits = [];
++  for (const r of RETIRED)
++    for (const site of tokenSites(ROOT, r.token, { files, read, extra }))
++      hits.push({
++        ...r,
++        file: `${site.file}:${site.line} (${site.kind})`,
++        unresolved: site.unresolved,
++      });
++  return {
++    hits: hits.filter((h) => !h.unresolved),
++    unresolved: hits.filter((h) => h.unresolved),
++  };
++}
++
+ /** The `@theme` block's body, brace-balanced. */
+ function themeBody(css) {
+   const open = css.indexOf("@theme");
+@@ -182,6 +223,7 @@ function main() {
+   const selfTest = process.argv.includes("--self-test");
+   const cssText = fs.readFileSync(INDEX_CSS, "utf8");
+   const { declared, directDead, dead } = census(cssText);
++  const { hits: retired, unresolved } = retiredScan();
+ 
+   console.log(`@theme declared: ${declared.length}`);
+   console.log(`unreferenced (corpus only):     ${directDead.length}`);
+@@ -196,7 +238,195 @@ function main() {
+     for (const t of strays) console.log(`  ${t}`);
+   }
+ 
++  for (const r of retired)
++    console.log(`\nRETIRED TOKEN RE-DECLARED: ${r.token} in ${r.file} (${r.by})`);
++  for (const r of unresolved)
++    console.log(`(a computed setProperty key at ${r.file}: printed, not proven)`);
++
+   if (selfTest) {
++    // THE RETIRED RULE'S CONTROLS: a re-mint of a retired token that an e2e still quotes, planted
++    // in memory at every shape the rule claims. The dead-token rule reads the quoted reference as
++    // live, so only the retired rule can red these; a comment and a READ must stay green.
++    const rel = (p) => path.join("src", ...p.split("/"));
++    const read = (p) => fs.readFileSync(path.join(ROOT, rel(p)), "utf8");
++    const plants = [
++      [
++        "index.css @theme",
++        {
++          [rel("assets/index.css")]: cssText.replace(
++            /(@theme\s*\{)/,
++            "$1\n  --color-crayon-blue: #4a90d9;",
++          ),
++        },
++        true,
++      ],
++      [
++        "gameCell.css :root",
++        {
++          [rel("games/shared/gameCell.css")]:
++            read("games/shared/gameCell.css") +
++            "\n:root { --color-crayon-blue: #4a90d9; }\n",
++        },
++        true,
++      ],
++      [
++        "SFC <style scoped>",
++        {
++          [rel("games/shared/DigitCell.vue")]:
++            read("games/shared/DigitCell.vue") +
++            "\n<style scoped>\n.x { --color-crayon-blue:#4a90d9 }\n</style>\n",
++        },
++        true,
++      ],
++      [
++        "SFC inline style=",
++        {
++          [rel("games/shared/DigitCell.vue")]: read(
++            "games/shared/DigitCell.vue",
++          ).replace(
++            "<template>",
++            '<template>\n  <i style="--color-crayon-blue: #4a90d9" />',
++          ),
++        },
++        true,
++      ],
++      [
++        "script setProperty",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            '\ndocument.documentElement.style.setProperty("--color-crayon-blue", "#4a90d9");\n',
++        },
++        true,
++      ],
++      // PASS 7 (the pass-6 critic's three escapes, then every site the SHAPE law names).
++      [
++        "quoted-key :style object (the estate's own publisher shape)",
++        {
++          [rel("games/shared/DigitCell.vue")]: read(
++            "games/shared/DigitCell.vue",
++          ).replace(
++            "<template>",
++            "<template>\n  <i :style=\"{ '--color-crayon-blue': '#4a90d9' }\" />",
++          ),
++        },
++        true,
++      ],
++      [
++        "TS style object",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            '\nexport const plant = { "--color-crayon-blue": "#4a90d9" };\n',
++        },
++        true,
++      ],
++      [
++        "same-line url(//) then the declaration, in an SFC <style>",
++        {
++          [rel("games/shared/DigitCell.vue")]:
++            read("games/shared/DigitCell.vue") +
++            "\n<style>\n.x { background: url(//a.b/c.png); --color-crayon-blue: #4a90d9; }\n</style>\n",
++        },
++        true,
++      ],
++      [
++        "index.html <style>",
++        {
++          "index.html": fs
++            .readFileSync(path.join(ROOT, "index.html"), "utf8")
++            .replace(
++              "</head>",
++              "<style>:root { --color-crayon-blue: #4a90d9 }</style></head>",
++            ),
++        },
++        true,
++      ],
++      [
++        "public/ stylesheet",
++        {
++          [path.join("public", "plant.css")]:
++            ":root { --color-crayon-blue: #4a90d9 }\n",
++        },
++        true,
++      ],
++      [
++        "a .json table",
++        { [rel("plant.json")]: '{ "--color-crayon-blue": "#4a90d9" }\n' },
++        true,
++      ],
++      [
++        "concatenated setProperty",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            '\ndocument.body.style.setProperty("--color-crayon-" + "blue", "#4a90d9");\n',
++        },
++        true,
++      ],
++      [
++        "a template-literal stem that can spell it",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            "\nexport const stem = (c: string) => ({ [`--color-crayon-${c}`]: '#4a90d9' });\n",
++        },
++        true,
++      ],
++      [
++        "CSS text inside a string",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            '\ndocument.body.style.cssText = "--color-crayon-blue: #4a90d9";\n',
++        },
++        true,
++      ],
++      [
++        "a getPropertyValue READ in script (must stay green)",
++        {
++          [rel("games/shared/playerIdentity.ts")]:
++            read("games/shared/playerIdentity.ts") +
++            '\nexport const r = () => getComputedStyle(document.body).getPropertyValue("--color-crayon-blue");\n',
++        },
++        false,
++      ],
++      [
++        "a comment (must stay green)",
++        {
++          [rel("games/shared/gameCell.css")]:
++            read("games/shared/gameCell.css") +
++            "\n/* was --color-crayon-blue: #4a90d9 */\n",
++        },
++        false,
++      ],
++      [
++        "a read (must stay green)",
++        {
++          [rel("games/shared/gameCell.css")]:
++            read("games/shared/gameCell.css") +
++            "\n.x { color: var(--color-crayon-blue, #000); }\n",
++        },
++        false,
++      ],
++    ];
++    let bad = 0;
++    for (const [name, over, mustRed] of plants) {
++      const red = retiredScan(over).hits.some((h) => h.token === "--color-crayon-blue");
++      const ok = red === mustRed;
++      if (!ok) bad++;
++      console.log(
++        `retired control (${name}): ${red ? "RED" : "green"}${ok ? " as required" : " — FAILED"}`,
++      );
++    }
++    const reminted = census(
++      cssText.replace(/(@theme\s*\{)/, "$1\n  --color-crayon-blue: #4a90d9;"),
++    );
++    console.log(
++      `(dead-token rule alone on the index.css re-mint: ${reminted.dead.includes("--color-crayon-blue") ? "RED" : "live"})`,
++    );
++    if (bad) process.exit(2);
++
+     // NEGATIVE CONTROL: re-add a known shadcn default and the census must go RED.
+     const patched = cssText.replace(
+       /(@theme\s*\{)/,
+@@ -210,8 +440,10 @@ function main() {
+     if (!caught) process.exit(2);
+   }
+ 
+-  if (dead.length) {
+-    console.error(`\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens`);
++  if (dead.length || retired.length) {
++    console.error(
++      `\ncheck-theme-tokens: ${dead.length} unreferenced @theme tokens, ${retired.length} retired token(s) re-declared`,
++    );
+     process.exit(1);
+   }
+   console.log("\ncheck-theme-tokens: 0 unreferenced @theme tokens");
+diff --git a/web/frontend/scripts/lib/shape-census.mjs b/web/frontend/scripts/lib/shape-census.mjs
+new file mode 100644
+index 00000000..698b0b63
+--- /dev/null
++++ b/web/frontend/scripts/lib/shape-census.mjs
+@@ -0,0 +1,398 @@
++// shape-census.mjs — THE shape-census library (T9-W7 pass 7, chair's instruments; registry-v6 §2.10;
++// LAWS P6 §F "THE SHAPE LAW"). Seeded from NOTE-LEDGER's critic's `reserve-law.PROPOSED.mjs` (pass6/
++// critique/NOTE-LEDGER/instruments/). A source gate reads the SHAPE, not the spelling. ONE copy: a lane
++// that hand-rolls a second is a row against LAWS P6 §I.
++//
++// What it reads (every site a declaration can reach a subject from):
++//   · EVERY <style> block of every SFC (scoped or not, a second block too), every stylesheet under src/,
++//     public/** and index.html's <style>; comments stripped by a STRING-AWARE stripper per language
++//     (a `/*` inside `accept="image/*"` or a CSS string never opens a comment)
++//   · nested rules at any depth with their at-rule context, every declaration in SOURCE ORDER with
++//     `!important` read; a SHORTHAND whose value is var()-led is a literal hit on every longhand
++//   · the SUBJECT COMPOUND of each selector (the last compound): positive classes (incl. :is()/:where()
++//     arms) vs negated ones (:not()) — `.x:not(.y)` is subject x under a condition, `.y:not(.x)` is NOT x
++//   · template `style="…"` attributes, `:style` objects (quoted and unquoted keys, camelCase), `:style`
++//     strings and template literals, and Tailwind candidates on elements whose class names the subject
++//   · script style writes anywhere (.vue/.ts/.tsx/.js): `.style.prop =`, `.style['prop'] =`,
++//     `.style[expr] =` (a COMPUTED key is reported unresolved — never dropped), `setProperty(…)` incl.
++//     concatenated names, `Object.assign(x.style, {…})`
++//   · tokens: `--x:` declarations everywhere; `resolve(value)` evaluates var() with fallbacks;
++//     `var(--stem-${x})` is read as EVERY token under the stem
++//   · colours: ONE parser for hex 3/4/6/8, rgb/rgba (comma or space, %), hsl/hsla (deg/turn/rad/grad),
++//     hwb, lab, lch, oklab, oklch, color(srgb|srgb-linear|display-p3 …), named colours, transparent,
++//     color-mix(in srgb|oklab …) → sRGB; `deltaE` in OKLab. A literal is scored by ΔE, never spelling.
++import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
++import { join, relative } from "node:path";
++
++// ---------------------------------------------------------------------------------------- files
++export function walk(dir, pred, out = []) {
++  if (!existsSync(dir)) return out;
++  for (const n of readdirSync(dir)) {
++    if (n === "node_modules" || n.startsWith(".")) continue;
++    const p = join(dir, n); const s = statSync(p);
++    if (s.isDirectory()) walk(p, pred, out); else if (pred(p)) out.push(p);
++  }
++  return out;
++}
++const isTest = (p) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(p) || /[\\/]__tests__[\\/]/.test(p);
++/** Every source a declaration can come from, under the frontend root `fe`. */
++export function sources(fe, { tests = false } = {}) {
++  const src = walk(join(fe, "src"), (p) => /\.(vue|css|ts|tsx|js|mjs|json)$/.test(p) && (tests || !isTest(p)));
++  const pub = walk(join(fe, "public"), (p) => /\.css$/.test(p));
++  const html = existsSync(join(fe, "index.html")) ? [join(fe, "index.html")] : [];
++  return [...src, ...pub, ...html];
++}
++
++// ------------------------------------------------------------------------- string-aware strippers
++/** CSS: removes /* … *\/ outside strings; keeps line count (comments → spaces, newlines kept). */
++export function stripCss(s) {
++  let o = "", q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (q) { o += c; if (c === "\\") { o += s[++i] ?? ""; continue; } if (c === q) q = null; continue; }
++    if (c === '"' || c === "'") { q = c; o += c; continue; }
++    if (c === "/" && s[i + 1] === "*") { const e = s.indexOf("*/", i + 2); const end = e < 0 ? s.length : e + 2; o += s.slice(i, end).replace(/[^\n]/g, " "); i = end - 1; continue; }
++    o += c;
++  }
++  return o;
++}
++/** JS/TS: removes // and /* *\/ outside strings and template literals (with ${} nesting). */
++export function stripJs(s) {
++  let o = "", i = 0; const stack = [];
++  const blank = (t) => t.replace(/[^\n]/g, " ");
++  while (i < s.length) {
++    const c = s[i], top = stack.at(-1);
++    if (top === "`") { if (c === "\\") { o += c + (s[i + 1] ?? ""); i += 2; continue; } if (c === "`") { stack.pop(); o += c; i++; continue; } if (c === "$" && s[i + 1] === "{") { stack.push("{"); o += "${"; i += 2; continue; } o += c; i++; continue; }
++    if (top === '"' || top === "'") { if (c === "\\") { o += c + (s[i + 1] ?? ""); i += 2; continue; } if (c === top || c === "\n") stack.pop(); o += c; i++; continue; }
++    if (c === '"' || c === "'" || c === "`") { stack.push(c); o += c; i++; continue; }
++    if (c === "{" && top === "{") { stack.push("{"); o += c; i++; continue; }
++    if (c === "}" && top === "{") { stack.pop(); o += c; i++; continue; }
++    if (c === "/" && s[i + 1] === "/") { const e = s.indexOf("\n", i); const end = e < 0 ? s.length : e; o += blank(s.slice(i, end)); i = end; continue; }
++    if (c === "/" && s[i + 1] === "*") { const e = s.indexOf("*/", i + 2); const end = e < 0 ? s.length : e + 2; o += blank(s.slice(i, end)); i = end; continue; }
++    o += c; i++;
++  }
++  return o;
++}
++/** HTML/template: removes <!-- … --> (attribute values never open one: `<!--` only starts outside a tag). */
++export function stripHtml(s) {
++  let o = "", inTag = false, q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (inTag) { if (q) { if (c === q) q = null; } else if (c === '"' || c === "'") q = c; else if (c === ">") inTag = false; o += c; continue; }
++    if (s.startsWith("<!--", i)) { const e = s.indexOf("-->", i + 4); const end = e < 0 ? s.length : e + 3; o += s.slice(i, end).replace(/[^\n]/g, " "); i = end - 1; continue; }
++    if (c === "<" && /[a-zA-Z/]/.test(s[i + 1] ?? "")) inTag = true;
++    o += c;
++  }
++  return o;
++}
++
++// ------------------------------------------------------------------------------------- SFC blocks
++const lineAt = (s, idx) => s.slice(0, idx).split("\n").length;
++/** { styles: [{attrs, css, line}], template: {text, line} | null, scripts: [{text, line}] } — EVERY block. */
++export function sfc(text) {
++  const styles = [...text.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)].map((m) => ({ attrs: m[1], css: m[2], line: lineAt(text, m.index + m[0].indexOf(">") + 1) }));
++  const scripts = [...text.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map((m) => ({ attrs: m[1], text: m[2], line: lineAt(text, m.index + m[0].indexOf(">") + 1) }));
++  const t0 = text.indexOf("<template"); const t1 = text.lastIndexOf("</template>");
++  const template = t0 >= 0 && t1 > t0 ? { text: text.slice(text.indexOf(">", t0) + 1, t1), line: lineAt(text, text.indexOf(">", t0) + 1) } : null;
++  return { styles, scripts, template };
++}
++
++// --------------------------------------------------------------------------------------- CSS rules
++/** Nested rules: [{ctx: [at-preludes], prelude, decls: [{prop, value, important, line}], line}] in source order. */
++export function cssRules(css, baseLine = 1, ctx = [], out = []) {
++  const s = stripCss(css);
++  let depth = 0, start = 0, open = 0;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (c === '"' || c === "'") { const q = c; i++; while (i < s.length && s[i] !== q) { if (s[i] === "\\") i++; i++; } continue; }
++    if (c === "{") { if (depth++ === 0) open = i; }
++    else if (c === "}") {
++      if (--depth === 0) {
++        const prelude = s.slice(start, open).trim().replace(/^[;\s]+/, "").split(/;\s*/).pop().trim();
++        const body = s.slice(open + 1, i);
++        const line = baseLine + lineAt(s, open) - 1;
++        if (prelude.startsWith("@")) {
++          const at = prelude.replace(/\s+/g, " ");
++          // an at-rule's OWN declarations (`@theme { --x: … }`, `@font-face`, `@property`) — `@theme` emits on :root
++          const own = decls(body.replace(/[^{};]*\{(?:[^{}]|\{[^{}]*\})*\}/g, ""), line);
++          if (own.length) out.push({ ctx: [...ctx, at], prelude: /^@theme\b/.test(at) ? ":root" : "", decls: own, line });
++          cssRules(body, line, [...ctx, at], out);
++        }
++        else {
++          // a nested rule inside a style rule (CSS nesting) — flatten with `&`
++          const nested = [];
++          const flat = body.replace(/([^{};]+)\{([^{}]*)\}/g, (m, pre, inner) => { nested.push({ pre: pre.trim(), inner }); return ""; });
++          out.push({ ctx, prelude: prelude.replace(/\s+/g, " "), decls: decls(flat, line), line });
++          for (const n of nested) out.push({ ctx, prelude: n.pre.includes("&") ? n.pre.replace(/&/g, prelude) : `${prelude} ${n.pre}`, decls: decls(n.inner, line), line });
++        }
++        start = i + 1;
++      }
++    } else if (c === ";" && depth === 0) start = i + 1;
++  }
++  return out;
++}
++/** Declarations of a block body in source order (strings respected). */
++export function decls(body, line = 0) {
++  const out = []; let cur = "", q = null, par = 0;
++  const push = () => { const m = /^\s*(--[\w-]+|-?[a-zA-Z][\w-]*)\s*:\s*([\s\S]*)$/.exec(cur); if (m) { let v = m[2].trim(); const imp = /!\s*important\s*$/i.test(v); if (imp) v = v.replace(/!\s*important\s*$/i, "").trim(); out.push({ prop: m[1].startsWith("--") ? m[1] : m[1].toLowerCase(), value: v, important: imp, line }); } cur = ""; };
++  for (const c of body) { if (q) { cur += c; if (c === q) q = null; continue; } if (c === '"' || c === "'") { q = c; cur += c; continue; } if (c === "(") par++; if (c === ")") par--; if (c === ";" && par === 0) { push(); continue; } cur += c; }
++  push();
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- selectors
++const splitTop = (s, sep) => { const out = []; let d = 0, cur = "", q = null; for (const c of s) { if (q) { cur += c; if (c === q) q = null; continue; } if (c === '"' || c === "'") q = c; if (c === "(" || c === "[") d++; if (c === ")" || c === "]") d--; if (d === 0 && sep.test(c)) { out.push(cur); cur = ""; continue; } cur += c; } out.push(cur); return out.map((x) => x.trim()).filter(Boolean); };
++/** The subject compound of one complex selector (the last compound after a combinator). */
++export function subjectCompound(sel) {
++  const s = sel.replace(/:deep\(([^)]*)\)/g, " $1").replace(/::v-deep/g, " ").replace(/::?[\w-]+$/, (m) => (/^::/.test(m) ? "" : m));
++  const parts = splitTop(s, /[\s>+~]/);
++  return parts.at(-1) ?? "";
++}
++/** { pos: Set<class>, neg: Set<class>, tags } of a compound: :not() args negate; :is()/:where() args are positive arms. */
++export function compoundClasses(compound) {
++  const pos = new Set(), neg = new Set();
++  let rest = compound;
++  rest = rest.replace(/:not\(((?:[^()]|\([^()]*\))*)\)/g, (m, inner) => { for (const c of inner.matchAll(/\.([\w-]+)/g)) neg.add(c[1]); return ""; });
++  rest = rest.replace(/:(?:is|where|matches)\(((?:[^()]|\([^()]*\))*)\)/g, (m, inner) => { for (const arm of splitTop(inner, /,/)) for (const c of subjectCompound(arm).matchAll(/\.([\w-]+)/g)) pos.add(c[1]); return ""; });
++  for (const c of rest.matchAll(/\.([\w-]+)/g)) pos.add(c[1]);
++  return { pos, neg };
++}
++/** Does the prelude's selector list carry `cls` in some selector's SUBJECT compound (positively)? */
++export function subjectHas(prelude, cls) {
++  return splitTop(prelude, /,/).some((sel) => compoundClasses(subjectCompound(sel)).pos.has(cls));
++}
++
++// ---------------------------------------------------------------------------------- shorthands
++const SHORTHANDS = {
++  font: ["font-family", "font-size", "font-weight", "font-style", "line-height", "font-variant", "font-stretch"],
++  margin: ["margin-top", "margin-right", "margin-bottom", "margin-left"], padding: ["padding-top", "padding-right", "padding-bottom", "padding-left"],
++  inset: ["top", "right", "bottom", "left"], transition: ["transition-property", "transition-duration", "transition-timing-function", "transition-delay"],
++  animation: ["animation-name", "animation-duration", "animation-timing-function", "animation-delay", "animation-iteration-count", "animation-direction", "animation-fill-mode"],
++  overflow: ["overflow-x", "overflow-y"], "contain-intrinsic-size": ["contain-intrinsic-width", "contain-intrinsic-height"],
++  border: ["border-width", "border-style", "border-color"], outline: ["outline-width", "outline-style", "outline-color"], background: ["background-color", "background-image"],
++};
++/** Does declaration `d` set `prop` (directly, via its shorthand, or as a var()-led shorthand — a literal hit)? */
++export function sets(d, prop) {
++  if (d.prop === prop) return true;
++  const lh = SHORTHANDS[d.prop];
++  if (lh && lh.includes(prop)) return true;
++  if (d.prop === "min-block-size" && prop === "min-height") return true;
++  return false;
++}
++const kebab = (k) => k.replace(/^['"]|['"]$/g, "").replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
++
++// ------------------------------------------------------------------------- template + script sites
++/** Elements in a template whose static class or :class names `cls`: their style=, :style, Tailwind candidates. */
++export function templateSites(tpl, cls, baseLine = 1) {
++  const t = stripHtml(tpl); const out = [];
++  for (const m of t.matchAll(/<([a-zA-Z][\w-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*\/?>/g)) {
++    const attrs = m[2] ?? ""; const line = baseLine + lineAt(t, m.index) - 1;
++    const classes = [...attrs.matchAll(/(?:^|\s)(?::class|v-bind:class|class)\s*=\s*("([^"]*)"|'([^']*)')/g)].map((a) => a[2] ?? a[3]).join(" ");
++    if (!new RegExp(`(^|[^\\w-])${cls.replace(/[-]/g, "\\-")}(?![\\w-])`).test(classes)) continue;
++    for (const a of attrs.matchAll(/(?:^|\s)(:style|v-bind:style|style)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
++      const raw = a[3] ?? a[4];
++      if (a[1] === "style") for (const d of decls(raw, line)) out.push({ kind: "style-attr", ...d, file: null });
++      else {
++        for (const kv of raw.matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g)) out.push({ kind: "style-object", prop: kebab(kv[2]), value: kv[3].trim(), important: /!important/.test(kv[3]), line });
++        for (const str of raw.matchAll(/(`|')([^`']*?:[^`']*)\1/g)) for (const d of decls(str[2], line)) out.push({ kind: "style-string", ...d });
++      }
++    }
++    for (const tw of classes.split(/[\s'"{},:\[\]]+/)) { const map = TAILWIND(tw); if (map) out.push({ kind: "tailwind", prop: map[0], value: map[1], important: tw.startsWith("!"), line, token: tw }); }
++  }
++  return out;
++}
++/** A small Tailwind candidate table (the utilities the estate's gates key on); unknown utilities are ignored. */
++export function TAILWIND(tw) {
++  const t = tw.replace(/^!/, "").replace(/^[\w-]+:/, "");
++  let m;
++  if ((m = /^min-h-(.+)$/.exec(t))) return ["min-height", m[1] === "0" ? "0px" : m[1].replace(/^\[|\]$/g, "")];
++  if ((m = /^font-(sans|serif|mono|hand|display)$/.exec(t))) return ["font-family", m[1]];
++  if ((m = /^font-\[(.+)\]$/.exec(t))) return ["font-family", m[1]];
++  if ((m = /^overflow-(hidden|clip|visible|auto|scroll)$/.exec(t))) return ["overflow", m[1]];
++  if ((m = /^(?:text|bg|border|stroke|fill)-\[(#[0-9a-fA-F]{3,8}|(?:rgb|hsl|oklch|oklab|lab|lch|hwb)\([^\]]+\))\]$/.exec(t))) return ["color-literal", m[1]];
++  return null;
++}
++/** Script style writes of `prop` (kebab) anywhere in `text`; computed keys are reported as unresolved sites. */
++export function scriptWrites(text, prop, baseLine = 1) {
++  const s = stripJs(text); const out = []; const camel = prop.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
++  const L = (i) => baseLine + lineAt(s, i) - 1;
++  for (const m of s.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)\s*([^;\n]+)/g)) if (m[1] === camel) out.push({ kind: "script-write", prop, value: m[2].trim(), line: L(m.index) });
++  for (const m of s.matchAll(/\.style\[\s*(['"`])([^'"`]+)\1\s*\]\s*=(?!=)\s*([^;\n]+)/g)) if (kebab(m[2]) === prop) out.push({ kind: "script-write", prop, value: m[3].trim(), line: L(m.index) });
++  for (const m of s.matchAll(/\.style\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g)) out.push({ kind: "script-write-computed", prop: `?${m[1].trim()}`, value: m[2].trim(), line: L(m.index), unresolved: true });
++  for (const m of s.matchAll(/setProperty\(\s*([^,]+),\s*([^)]+)\)/g)) {
++    const k = m[1].trim(); const lit = /^(['"`])([^'"`$]*)\1$/.exec(k);
++    if (lit) { if (kebab(lit[2]) === prop) out.push({ kind: "script-setProperty", prop, value: m[2].trim(), line: L(m.index) }); }
++    else out.push({ kind: "script-setProperty-computed", prop: `?${k}`, value: m[2].trim(), line: L(m.index), unresolved: true });
++  }
++  for (const m of s.matchAll(/Object\.assign\(\s*[\w.$?]+\.style\s*,\s*\{([^}]*)\}/g)) for (const kv of m[1].matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g)) if (kebab(kv[2]) === prop) out.push({ kind: "script-assign", prop, value: kv[3].trim(), line: L(m.index) });
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- the census
++/** Every site that sets `prop` on subject class `cls`, tree-wide, in source order per file.
++ *  Returns [{file, kind, ctx, prelude, prop, value, important, line, unresolved?}]. */
++export function census(fe, cls, prop, { files, read, extra = [] } = {}) {
++  const out = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const rel = relative(fe, f); const text = rd(f);
++    const cssBlocks = f.endsWith(".vue") ? sfc(text).styles.map((b) => ({ css: b.css, line: b.line, kind: /scoped/.test(b.attrs) ? "sfc-style-scoped" : "sfc-style" }))
++      : f.endsWith(".css") ? [{ css: text, line: 1, kind: rel.startsWith("public") ? "public-css" : "stylesheet" }]
++      : f.endsWith(".html") ? [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => ({ css: m[1], line: lineAt(text, m.index), kind: "index-html" })) : [];
++    for (const b of cssBlocks) for (const r of cssRules(b.css, b.line)) if (subjectHas(r.prelude, cls)) for (const d of r.decls) if (sets(d, prop)) out.push({ file: rel, kind: b.kind, ctx: r.ctx.join(" "), prelude: r.prelude, prop: d.prop, value: d.value, important: d.important, line: d.line, varLed: d.prop !== prop && /^\s*var\(/.test(d.value) });
++    if (f.endsWith(".vue")) {
++      const b = sfc(text);
++      if (b.template) for (const s of templateSites(b.template.text, cls, b.template.line)) if (s.prop === prop) out.push({ file: rel, ctx: "", prelude: `<template .${cls}>`, ...s });
++      for (const sc of b.scripts) for (const w of scriptWrites(sc.text, prop, sc.line)) out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++    } else if (/\.(ts|tsx|js|mjs)$/.test(f)) for (const w of scriptWrites(text, prop)) out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++  }
++  return out;
++}
++/** Tokens: every `--x: v` declaration tree-wide (last wins per name; all kept in `all`). */
++export function tokens(fe, { files, read, extra = [] } = {}) {
++  const map = new Map(), all = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const text = rd(f);
++    const blocks = f.endsWith(".vue") ? sfc(text).styles.map((b) => b.css) : f.endsWith(".css") ? [text] : [];
++    for (const css of blocks) for (const r of cssRules(css)) for (const d of r.decls) if (d.prop.startsWith("--")) { map.set(d.prop, d.value); all.push({ file: relative(fe, f), prelude: r.prelude, ctx: r.ctx.join(" "), ...d }); }
++  }
++  return { map, all };
++}
++/** Resolve var() with fallbacks against a token map; `var(--stem-${x})` → every token under the stem. */
++export function resolve(value, map, depth = 0) {
++  if (depth > 8) return value;
++  return value.replace(/var\(\s*(--[\w-]*(?:\$\{[^}]*\}[\w-]*)?)\s*(?:,\s*((?:[^()]|\([^()]*\))*))?\)/g, (m, name, fb) => {
++    if (name.includes("${")) { const stem = name.slice(0, name.indexOf("${")); const hits = [...map.keys()].filter((k) => k.startsWith(stem)); return hits.length ? `{${hits.map((k) => resolve(map.get(k), map, depth + 1)).join("|")}}` : (fb != null ? resolve(fb, map, depth + 1) : m); }
++    if (map.has(name)) return resolve(map.get(name), map, depth + 1);
++    return fb != null ? resolve(fb.trim(), map, depth + 1) : m;
++  });
++}
++
++// ------------------------------------------------------------------------------------------ colour
++const NAMED = "aliceblue f0f8ff antiquewhite faebd7 aqua 00ffff aquamarine 7fffd4 azure f0ffff beige f5f5dc bisque ffe4c4 black 000000 blanchedalmond ffebcd blue 0000ff blueviolet 8a2be2 brown a52a2a burlywood deb887 cadetblue 5f9ea0 chartreuse 7fff00 chocolate d2691e coral ff7f50 cornflowerblue 6495ed cornsilk fff8dc crimson dc143c cyan 00ffff darkblue 00008b darkcyan 008b8b darkgoldenrod b8860b darkgray a9a9a9 darkgreen 006400 darkgrey a9a9a9 darkkhaki bdb76b darkmagenta 8b008b darkolivegreen 556b2f darkorange ff8c00 darkorchid 9932cc darkred 8b0000 darksalmon e9967a darkseagreen 8fbc8f darkslateblue 483d8b darkslategray 2f4f4f darkslategrey 2f4f4f darkturquoise 00ced1 darkviolet 9400d3 deeppink ff1493 deepskyblue 00bfff dimgray 696969 dimgrey 696969 dodgerblue 1e90ff firebrick b22222 floralwhite fffaf0 forestgreen 228b22 fuchsia ff00ff gainsboro dcdcdc ghostwhite f8f8ff gold ffd700 goldenrod daa520 gray 808080 green 008000 greenyellow adff2f grey 808080 honeydew f0fff0 hotpink ff69b4 indianred cd5c5c indigo 4b0082 ivory fffff0 khaki f0e68c lavender e6e6fa lavenderblush fff0f5 lawngreen 7cfc00 lemonchiffon fffacd lightblue add8e6 lightcoral f08080 lightcyan e0ffff lightgoldenrodyellow fafad2 lightgray d3d3d3 lightgreen 90ee90 lightgrey d3d3d3 lightpink ffb6c1 lightsalmon ffa07a lightseagreen 20b2aa lightskyblue 87cefa lightslategray 778899 lightslategrey 778899 lightsteelblue b0c4de lightyellow ffffe0 lime 00ff00 limegreen 32cd32 linen faf0e6 magenta ff00ff maroon 800000 mediumaquamarine 66cdaa mediumblue 0000cd mediumorchid ba55d3 mediumpurple 9370db mediumseagreen 3cb371 mediumslateblue 7b68ee mediumspringgreen 00fa9a mediumturquoise 48d1cc mediumvioletred c71585 midnightblue 191970 mintcream f5fffa mistyrose ffe4e1 moccasin ffe4b5 navajowhite ffdead navy 000080 oldlace fdf5e6 olive 808000 olivedrab 6b8e23 orange ffa500 orangered ff4500 orchid da70d6 palegoldenrod eee8aa palegreen 98fb98 paleturquoise afeeee palevioletred db7093 papayawhip ffefd5 peachpuff ffdab9 peru cd853f pink ffc0cb plum dda0dd powderblue b0e0e6 purple 800080 rebeccapurple 663399 red ff0000 rosybrown bc8f8f royalblue 4169e1 saddlebrown 8b4513 salmon fa8072 sandybrown f4a460 seagreen 2e8b57 seashell fff5ee sienna a0522d silver c0c0c0 skyblue 87ceeb slateblue 6a5acd slategray 708090 slategrey 708090 snow fffafa springgreen 00ff7f steelblue 4682b4 tan d2b48c teal 008080 thistle d8bfd8 tomato ff6347 turquoise 40e0d0 violet ee82ee wheat f5deb3 white ffffff whitesmoke f5f5f5 yellow ffff00 yellowgreen 9acd32".split(" ");
++const NAMED_MAP = new Map(); for (let i = 0; i < NAMED.length; i += 2) NAMED_MAP.set(NAMED[i], NAMED[i + 1]);
++const toLin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4), toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
++const clamp01 = (x) => Math.min(1, Math.max(0, x));
++function oklabToSrgb(L, a, b) {
++  const l_ = L + 0.3963377774 * a + 0.2158037573 * b, m_ = L - 0.1055613458 * a - 0.0638541728 * b, s_ = L - 0.0894841775 * a - 1.291485548 * b;
++  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
++  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map((v) => clamp01(toGam(v)));
++}
++export function srgbToOklab([r, g, b]) {
++  const R = toLin(r), G = toLin(g), B = toLin(b);
++  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B), m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B), s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
++}
++function labToSrgb(L, a, b) { // CIE Lab (D50) → sRGB
++  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200, e = 216 / 24389, k = 24389 / 27;
++  const X = 0.96422 * (fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k), Y = L > k * e ? fy ** 3 : L / k, Z = 0.82521 * (fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k);
++  const Xd = 0.9554734527042182 * X - 0.023098536874261423 * Y + 0.0632593086610217 * Z, Yd = -0.028369706963208136 * X + 1.0099954580058226 * Y + 0.021041398966943008 * Z, Zd = 0.012314001688319899 * X - 0.020507696433157868 * Y + 1.3303659366080753 * Z;
++  return [3.2404542 * Xd - 1.5371385 * Yd - 0.4985314 * Zd, -0.969266 * Xd + 1.8760108 * Yd + 0.041556 * Zd, 0.0556434 * Xd - 0.2040259 * Yd + 1.0572252 * Zd].map((v) => clamp01(toGam(v)));
++}
++const num = (t, pct = 1) => (t.endsWith("%") ? (parseFloat(t) / 100) * pct : parseFloat(t));
++const hue = (t) => (t.endsWith("turn") ? parseFloat(t) * 360 : t.endsWith("grad") ? parseFloat(t) * 0.9 : t.endsWith("rad") ? (parseFloat(t) * 180) / Math.PI : parseFloat(t));
++function hslToRgb(h, s, l) { h = ((h % 360) + 360) % 360; const f = (n) => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; }
++/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated. */
++export function parseColor(str) {
++  const s = String(str).trim().toLowerCase();
++  if (s === "transparent") return { rgb: [0, 0, 0], a: 0 };
++  if (NAMED_MAP.has(s)) return parseColor("#" + NAMED_MAP.get(s));
++  let m;
++  if ((m = /^#([0-9a-f]{3,8})$/.exec(s))) { let h = m[1]; if (h.length <= 4) h = [...h].map((c) => c + c).join(""); if (h.length !== 6 && h.length !== 8) return null; const v = [0, 2, 4, 6].map((i) => parseInt(h.slice(i, i + 2) || "ff", 16) / 255); return { rgb: v.slice(0, 3), a: v[3] }; }
++  if ((m = /^([a-z-]+)\((.*)\)$/.exec(s))) {
++    const fn = m[1]; const inner = m[2];
++    if (fn === "color-mix") {
++      const parts = splitTop(inner, /,/); const space = /in\s+([\w-]+)/.exec(parts[0])?.[1] ?? "srgb";
++      const arm = (p) => { const pm = /\s(\d*\.?\d+)%\s*$/.exec(p) ?? /^(\d*\.?\d+)%\s/.exec(p); return { c: parseColor(p.replace(/\s*\d*\.?\d+%\s*/, " ").trim()), p: pm ? parseFloat(pm[1]) / 100 : null }; };
++      const A = arm(parts[1]), B = arm(parts[2]); if (!A.c || !B.c) return null;
++      let pa = A.p ?? (B.p != null ? 1 - B.p : 0.5), pb = B.p ?? 1 - pa; const sum = pa + pb; const alphaMul = sum < 1 ? sum : 1; pa /= sum; pb /= sum;
++      const a = A.c.a * pa + B.c.a * pb;
++      const pre = (c) => (space === "oklab" || space === "oklch" ? srgbToOklab(c.rgb) : c.rgb).map((v) => v * c.a);
++      const mix = pre(A.c).map((v, i) => (v * pa + pre(B.c)[i] * pb) / (a || 1));
++      return { rgb: space === "oklab" || space === "oklch" ? oklabToSrgb(...mix) : mix, a: a * alphaMul };
++    }
++    const [body, alpha] = inner.split("/").map((x) => x?.trim());
++    const t = body.split(/[\s,]+/).filter(Boolean); const a = alpha != null ? num(alpha) : t.length === 4 ? num(t[3]) : 1;
++    if (fn === "rgb" || fn === "rgba") return { rgb: t.slice(0, 3).map((x) => num(x, 255) / 255), a };
++    if (fn === "hsl" || fn === "hsla") return { rgb: hslToRgb(hue(t[0]), num(t[1].endsWith("%") ? t[1] : t[1] + "%"), num(t[2].endsWith("%") ? t[2] : t[2] + "%")), a };
++    if (fn === "hwb") { const w = num(t[1]), b = num(t[2]); const base = hslToRgb(hue(t[0]), 1, 0.5); const k = w + b > 1 ? 1 / (w + b) : 1; return { rgb: base.map((v) => v * (1 - w * k - b * k) + w * k), a }; }
++    if (fn === "oklab") return { rgb: oklabToSrgb(num(t[0]), num(t[1], 0.4), num(t[2], 0.4)), a };
++    if (fn === "oklch") { const L = num(t[0]), C = num(t[1], 0.4), H = (hue(t[2]) * Math.PI) / 180; return { rgb: oklabToSrgb(L, C * Math.cos(H), C * Math.sin(H)), a }; }
++    if (fn === "lab") return { rgb: labToSrgb(num(t[0], 100), num(t[1], 125), num(t[2], 125)), a };
++    if (fn === "lch") { const C = num(t[1], 150), H = (hue(t[2]) * Math.PI) / 180; return { rgb: labToSrgb(num(t[0], 100), C * Math.cos(H), C * Math.sin(H)), a }; }
++    if (fn === "color") { const sp = t[0]; const v = t.slice(1, 4).map((x) => num(x)); if (sp === "srgb") return { rgb: v, a }; if (sp === "srgb-linear") return { rgb: v.map(toGam), a }; if (sp === "display-p3") { const L = v.map(toLin); return { rgb: [1.2249 * L[0] - 0.2247 * L[1], -0.0420 * L[0] + 1.0419 * L[1], -0.0197 * L[0] - 0.0786 * L[1] + 1.0979 * L[2]].map((x) => clamp01(toGam(x))), a }; } }
++  }
++  return null;
++}
++/** ΔE in OKLab (×100, the usual scale: 2 ≈ just noticeable). */
++export function deltaE(c1, c2) { const A = srgbToOklab(c1.rgb), B = srgbToOklab(c2.rgb); return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); }
++/** Every colour literal in a value, in any syntax. */
++export function colorLiterals(value) {
++  const out = []; const re = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)|\b[a-zA-Z]+\b/g;
++  for (const m of value.matchAll(re)) { if (/^[a-zA-Z]+$/.test(m[0]) && !NAMED_MAP.has(m[0].toLowerCase())) continue; const c = parseColor(m[0]); if (c) out.push({ text: m[0], ...c }); }
++  return out;
++}
++
++// ------------------------------------------------------------------------------------ token sites
++// ACC-GRAPHITE pass 7 (PROPOSED into the chair's copy; registry-v6 §2.10): `census` keys on a SUBJECT
++// class and `tokens` reads stylesheets only, so a custom property PUBLISHED from script, from a
++// `:style` object, a TS style object, a `.json` table or index.html was invisible to every token gate
++// (the retired-token rule, the wash step, R1). This reads where a NAME is declared, whatever carries it.
++const keyRe = (esc) => new RegExp(`(?<=[{,(]\\s*)\\[?\\s*(['"\`])${esc}\\1\\s*\\]?\\s*:(?!:)\\s*`, "g");
++/** The value expression that starts at `i`: up to the first `,` / `}` / `)` at depth 0, strings and `${}` whole. */
++const valueAt = (js, i) => {
++  let d = 0, q = null, o = "";
++  for (; i < js.length; i++) {
++    const c = js[i];
++    if (q) { o += c; if (c === "\\") { o += js[++i] ?? ""; continue; } if (q === "`" && c === "$" && js[i + 1] === "{") { d++; o += js[++i]; continue; } if (c === q && d === 0) q = null; else if (q === "`" && c === "}" && d > 0) d--; continue; }
++    if (c === '"' || c === "'" || c === "`") { q = c; o += c; continue; }
++    if ("([{".includes(c)) d++;
++    else if (")]}".includes(c)) { if (d === 0) break; d--; }
++    else if ((c === "," || c === "\n") && d === 0) break;
++    o += c;
++  }
++  return o.trim();
++};
++/** Every site that DECLARES the custom property `token`: CSS declarations in every block (stylesheets, public/,
++ *  every SFC <style>, index.html <style>, `style="…"` attributes), quoted keys of any object literal (a `:style`
++ *  object, a TS style object, `Object.assign(el.style, …)`, a `.json` table), `.style['--x'] =`, `setProperty`
++ *  with a literal or a concatenation of literals, CSS text inside a string (`'--x: v'`), and a template literal
++ *  whose static head is a stem of the token (`--color-crayon-${x}`: `stem: true`, never dropped). A key that is
++ *  an expression is reported `unresolved: true`, never dropped. [{file, kind, ctx, prelude, value, important, line}] */
++export function tokenSites(fe, token, { files, read, extra = [] } = {}) {
++  const out = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  const esc = token.replace(/[.*+?^${}()|[\]\\-]/g, "\\$&");
++  const push = (s) => out.push({ ctx: "", prelude: "", important: false, ...s });
++  const cssSites = (css, line, kind, file) => { for (const r of cssRules(css, line)) for (const d of r.decls) if (d.prop === token) push({ file, kind, ctx: r.ctx.join(" "), prelude: r.prelude, value: d.value, important: d.important, line: d.line }); };
++  const attrSites = (html, line, kind, file) => { for (const m of html.matchAll(/(?:^|\s)style\s*=\s*("([^"]*)"|'([^']*)')/g)) for (const d of decls(m[2] ?? m[3])) if (d.prop === token) push({ file, kind, prelude: "style=", value: d.value, important: d.important, line: line + lineAt(html, m.index) - 1 }); };
++  const stemOf = (tpl) => { const head = tpl.slice(0, tpl.indexOf("${")); return head.length > 2 && token.startsWith(head); };
++  const jsSites = (js, line, kind, file) => {
++    const L = (i) => line + lineAt(js, i) - 1;
++    for (const m of js.matchAll(keyRe(esc))) push({ file, kind: `${kind}-key`, prelude: "{ key }", value: valueAt(js, m.index + m[0].length), line: L(m.index + m[0].indexOf(m[1])) });
++    for (const m of js.matchAll(/(?<=[{,(]\s*)\[\s*`([^`]*\$\{[^`]*)`\s*\]\s*:\s*([^,}\n]+)/g)) if (stemOf(m[1])) push({ file, kind: `${kind}-key-stem`, prelude: `[\`${m[1]}\`]`, value: m[2].trim(), line: L(m.index), stem: true });
++    for (const m of js.matchAll(new RegExp(`\\.style\\[\\s*(['"\`])${esc}\\1\\s*\\]\\s*=(?!=)\\s*([^;\\n]+)`, "g"))) push({ file, kind: `${kind}-style-index`, prelude: ".style[]", value: m[2].trim(), line: L(m.index) });
++    for (const m of js.matchAll(/setProperty\(\s*((?:[^,()]|\([^()]*\))+?)\s*,\s*([^;\n]*)/g)) {
++      const k = m[1].trim(); m[2] = m[2].replace(/\)\s*$/, ""); const parts = k.split(/\s*\+\s*/); const lits = parts.map((p) => /^(['"`])((?:\\.|(?!\1)[^$])*)\1$/.exec(p)?.[2]);
++      if (lits.every((x) => x != null)) { if (lits.join("") === token) push({ file, kind: `${kind}-setProperty`, prelude: "setProperty", value: m[2].trim(), line: L(m.index) }); }
++      else if (/^`[^`]*\$\{/.test(k)) { if (stemOf(k.slice(1))) push({ file, kind: `${kind}-setProperty-stem`, prelude: k, value: m[2].trim(), line: L(m.index), stem: true }); }
++      else if (!/^(['"`])--/.test(parts[0]) || parts.length > 1) push({ file, kind: `${kind}-setProperty-computed`, prelude: k, value: m[2].trim(), line: L(m.index), unresolved: true });
++    }
++    for (const m of js.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g)) if (new RegExp(`${esc}\\s*:`).test(m[2]) && !new RegExp(`^${esc}$`).test(m[2])) for (const d of decls(m[2])) if (d.prop === token) push({ file, kind: `${kind}-css-string`, prelude: "'…'", value: d.value, important: d.important, line: L(m.index) });
++  };
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const file = relative(fe, f); const text = rd(f);
++    if (f.endsWith(".css")) cssSites(text, 1, file.startsWith("public") ? "public-css" : "stylesheet", file);
++    else if (f.endsWith(".vue")) {
++      const b = sfc(text);
++      for (const s of b.styles) cssSites(s.css, s.line, /scoped/.test(s.attrs) ? "sfc-style-scoped" : "sfc-style", file);
++      if (b.template) { const t = stripHtml(b.template.text); attrSites(t, b.template.line, "template-style", file); jsSites(t, b.template.line, "template", file); }
++      for (const sc of b.scripts) jsSites(stripJs(sc.text), sc.line, "script", file);
++    } else if (f.endsWith(".html")) {
++      for (const m of text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)) cssSites(m[1], lineAt(text, m.index), "index-html-style", file);
++      const t = stripHtml(text.replace(/<style[^>]*>[\s\S]*?<\/style>/g, (m) => m.replace(/[^\n]/g, " ")));
++      attrSites(t, 1, "index-html-attr", file);
++      for (const m of t.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g)) jsSites(stripJs(m[1]), lineAt(t, m.index), "index-html-script", file);
++    } else if (f.endsWith(".json")) jsSites(text, 1, "json", file);
++    else if (/\.(ts|tsx|js|mjs)$/.test(f)) jsSites(stripJs(text), 1, "script", file);
++  }
++  return out;
++}
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 9b5b405c..c84f7483 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -147,8 +147,11 @@
+      hue-locked INK tier below. T5-W2 2.3 killed the three: an alias with no consumer is a
+      third name for a colour that already has two. */
+ 
+-  /* Handwritten glyph colors */
+-  --color-user-ink: #2563eb;
++  /* Handwritten glyph colors. THE DEFAULT IS THE PENCIL (T9-W7 ACC-GRAPHITE): a digit you
++     wrote is graphite, because colour on this board means WHO made the mark and a solo board
++     has one hand on it. The 24 `var(--color-user-ink)` sites are untouched — a room still
++     rebinds this per cell and per roster row, and the print arm below still inks it #000. */
++  --color-user-ink: var(--color-pencil-graphite);
+ 
+   /* T6 mark 13 — the LIGHTNESS BAND a remote player's ink is written at, and the only new
+      scalar the feature spends. Their colour is one formula, `oklch(var(--peer-ink-l) 0.11
+@@ -170,7 +173,10 @@
+   --color-crayon-green: #2dc653;
+   --color-crayon-orange: #f4a236;
+   --color-crayon-rose: #e8315b;
+-  --color-crayon-blue: #4a90d9;
++  /* The fourth crayon RETIRED (T9-W7 ACC-GRAPHITE): blue was the focus wax, the unit wash and
++     your own pencil marks, and all three are states rather than authors — they are graphite
++     now. An alias with no consumer is a third name for a colour that already has two; a wax
++     with no job is the same thing one step earlier. */
+   --color-crayon-gold: #c99a2e; /* the fifth crayon (T3-W9, F8 §2) — warm ochre wax. Gold is
+      earned light: it lives in the sky and comes to the page only when the work is done. Wax
+      tier: strokes, washes, fills, the sticker — never light-mode body text (2.47:1). */
+@@ -216,13 +222,15 @@
+     --color-crayon-gold
+   ); /* gold-star sticker: solve success, celebration accents —
+      trued to the fifth crayon (T3-W9; the old alias onto green was the lie the audit found) */
+-  --color-focus-sketch: #3a7bc4; /* keyboard focus ring — crayon-blue darkened one step:
+-     the ring blends at stroke-opacity 0.9 over --color-card, and raw crayon-blue
+-     lands at 2.86:1 there (under the WCAG 1.4.11 3:1 non-text floor); #3A7BC4
+-     blends to 3.60:1. Dark mode keeps crayon-blue (5.3:1, comfortable). */
++  /* §6 hunk (MRK-LIVE's to dispose) — `--color-focus-sketch` (#3a7bc4) stood here as the
++     keyboard focus ring's ink, a crayon-blue darkened one step to clear 1.4.11 over the card.
++     The focus ring is one heavy graphite band now (T9-W7 ACC-GRAPHITE), so the token has no
++     `var()` and no class left; `check-theme-tokens` reds on a dead token, so this family
++     applies the deletion to keep the gate honest and hands §6 the ruling: retire it, or
++     re-point it at a consumer it earns. Nothing in this palette reads it either way. */
+   --color-pencil-graphite: var(
+     --grid-line-color
+-  ); /* the pencil: grid, ghost ring, hover sketch */
++  ); /* the pencil: grid, ghost ring, hover sketch, YOUR hand, the focus ring, the tally */
+ 
+   /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+@@ -264,18 +272,24 @@
+     var(--color-pencil-graphite, var(--grid-line-color)) 68%,
+     transparent
+   );
+-  /* Progress-ink — the SIXTH crayon (T4-W9 ROW 2): a violet coloured pencil that retraces
+-     the board frame arc-length-proportional to fill. NON-blue by construction (hue 258°,
+-     46° off --color-focus-sketch's 212° — the two never read as one when a focused board
+-     shows both). Distinct from every reserved crayon: green/orange/rose (difficulty), gold
+-     (success), rose (failure), blue (focus). Two-tier, but the direction INVERTS the crayon
+-     "glow brighter at night" doctrine on purpose: the trace sits over the FRAME LINE, which
+-     flips value between themes (dark graphite in light, light warm-grey in dark), so the ink
+-     goes LIGHTER over the dark frame (light theme) and DEEPER over the light frame (dark).
+-     Contrast ledger (WCAG 1.4.11 non-text ≥3:1, opaque / at stroke-opacity 0.95, merged HEAD
+-     over the live tokens): light #8B5CF6 vs --grid-line-color 3.57/3.35, vs --color-card
+-     4.16/3.85. */
+-  --color-progress-ink: #8b5cf6;
++
++  /* THE GROUND WASH, AND IT IS NOT A RUNG (T9-W7 ACC-GRAPHITE). The ladder above governs
++     MARKS — a stop has a contrast floor and the rungs climb. This governs what a mark sits
++     ON: tinted paper, whose only job is to stay under the digit it backs. It lives in this
++     file because `check-ink-pressure`'s ownership gate is right that an open-coded graphite
++     `color-mix` anywhere else is the ladder re-typed by hand; it lives OUTSIDE the LADDER
++     list because a floor of 3:1 on a 6% wash would be a category error.
++     One ground, one value. The rank the grounds MEASURE is `check-ink-pressure`'s ground gate:
++     peer cursor 0.04 < selection 0.06 = unit 0.06 < laminate 0.15, the tie admitted there (the
++     unit is tier 1's own 6%); which ground should outrank which in MEANING is MRK-WASH's call.
++     Painted over the card it is a 1.12:1 step light / 1.11:1 dark (HEAD's blue 7% painted
++     1.08 / 1.10), 12% and 1.26 / 1.29 under `prefers-contrast: more`. */
++  --ground-wash-unit: color-mix(in srgb, var(--color-pencil-graphite) 6%, transparent);
++  /* The SIXTH crayon is retired with the gauge it inked (T9-W7 ACC-GRAPHITE). Its ledger was
++     wrong besides — 3.57/3.35 was hex arithmetic against --grid-line-color, and the painted
++     bytes read 2.92:1 over the rule the trace actually covered, under the 1.4.11 floor. The
++     fill gauge is a graphite TALLY now: the board's own pencil, a tick per written cell,
++     offset one stroke width inside the frame so it never retraces the rule. */
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -369,7 +383,7 @@
+   --color-border: hsl(24 4% 16%);
+   --color-ring: hsl(48 8% 83%);
+ 
+-  --color-user-ink: #60a5fa;
++  --color-user-ink: var(--color-pencil-graphite);
+ 
+   /* The paper darkens and the ink lightens — same walk, same chroma, the other band. */
+   --peer-ink-l: 0.8;
+@@ -378,7 +392,6 @@
+   --color-crayon-green: #3dd968;
+   --color-crayon-orange: #f5b35c;
+   --color-crayon-rose: #ff5c7c;
+-  --color-crayon-blue: #6aabeb;
+   --color-crayon-gold: #e5c74d; /* the moon's own outline gold — 11.48:1 on dark paper */
+ 
+   /* Dark ink collapses into wax — the glowing crayon is already AA at night
+@@ -400,12 +413,6 @@
+ 
+   --grid-line-color: hsl(48 10% 80%);
+ 
+-  /* Progress-ink (dark) — the sixth crayon DEEPENS at night, the inversion the light-tier
+-     comment names: the dark frame line is a LIGHT warm-grey, so a deeper violet is what
+-     reads over it. Contrast ledger (opaque / at 0.95): dark #7C3AED vs --grid-line-color
+-     3.65/3.48, vs --color-card 3.28/3.07 — all ≥3:1, both backgrounds, both themes. */
+-  --color-progress-ink: #7c3aed;
+-
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+ 
+@@ -440,6 +447,18 @@
+   --paper-clean-texture: url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence baseFrequency='0.9' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.04'/%3E%3C/svg%3E");
+ }
+ 
++/* The ground wash presses with everything else that presses (T9-W7 ACC-GRAPHITE). One place,
++   both themes — the token resolves through --color-pencil-graphite, which already flips. */
++@media (prefers-contrast: more) {
++  :root {
++    --ground-wash-unit: color-mix(
++      in srgb,
++      var(--color-pencil-graphite) 12%,
++      transparent
++    );
++  }
++}
++
+ @layer base {
+   * {
+     @apply border-border outline-ring/50;
+@@ -453,13 +472,12 @@
+    the ink tier above rather than the raw wax, which fails AA as light-mode text (green 2.22 /
+    orange 2.05 / rose 4.11 on --color-card); the ink aliases the wax in dark, where the crayon
+    already glows AA. Gate 1, T4-W10; the hexes and their measurements are the ledger above.
+-   crayon-blue is the focus wax and takes no ink tier (no text use).
+ 
+    UNLAYERED, and that is the point of the T6 hoist. These lived in `GameControlPanel`'s
+    SCOPED block, where a selector could never reach a child component's internals: the
+    drawer's selected difficulty chip has rendered `crayon-orange` since T4-P1 and painted
+    nothing from it. Here the chip inks like the heading over it, and the picker's staging band
+-   reads the same four classes off the same page as the tokens they resolve through — a
++   reads the same three classes off the same page as the tokens they resolve through — a
+    layered home would lose to every unlayered author rule that sets `color`. */
+ .crayon-green {
+   color: var(--color-green-ink);
+@@ -470,9 +488,6 @@
+ .crayon-rose {
+   color: var(--color-red-ink);
+ }
+-.crayon-blue {
+-  color: var(--color-crayon-blue);
+-}
+ 
+ /* ── T4-WM (lane C) — iOS/mobile platform discipline ───────────────────────────
+  * Deliberate, single-home touch hygiene for the E8 recut — unlayered so it beats the
+diff --git a/web/frontend/src/games/shared/DigitCell.test.ts b/web/frontend/src/games/shared/DigitCell.test.ts
+index fc634eaa..cb13e00d 100644
+--- a/web/frontend/src/games/shared/DigitCell.test.ts
++++ b/web/frontend/src/games/shared/DigitCell.test.ts
+@@ -253,7 +253,7 @@ describe("DigitCell (boxed) — user marks render distinctly from the engine mar
+ });
+ 
+ // Peer-unit wash (T4-W8 ROW 4). The board derives the peer set over `focusedPos` and hands each
+-// cell an `isPeer` flag; the cell lights a faint crayon-blue wash on its OWN layer (never the
++// cell an `isPeer` flag; the cell lights a faint graphite wash on its OWN layer (never the
+ // conflict / hint tiers), whether the cell is filled or blank — the whole unit reads at a glance.
+ describe("DigitCell (boxed) — peer-unit wash (T4-W8 ROW 4)", () => {
+   it("renders the peer wash when isPeer, on its own `.cell-peer` layer", () => {
+diff --git a/web/frontend/src/games/shared/DigitCell.vue b/web/frontend/src/games/shared/DigitCell.vue
+index a67ef078..b902f3b5 100644
+--- a/web/frontend/src/games/shared/DigitCell.vue
++++ b/web/frontend/src/games/shared/DigitCell.vue
+@@ -49,7 +49,7 @@ const props = withDefaults(
+      *  answer key visibly points here before the digit inks. */
+     isBecause?: boolean;
+     /** T4-W8 ROW 4 — this cell shares a unit (row / column / box) with the focused cell: a faint
+-     *  crayon-blue wash lights on selection so the active unit reads at a glance. */
++     *  graphite wash lights on selection so the active unit reads at a glance. */
+     isPeer?: boolean;
+     /** The clue clauses touching this cell, folded into the accessible name (F6) — e.g.
+      *  "greater than the cell to the right". Empty for a game whose clues are off-cell (or
+@@ -58,7 +58,8 @@ const props = withDefaults(
+     /** Engine-domains pencil marks (W6 beat 9): surviving candidate values from the solver's own
+      *  propagation, present only while the peek gesture is held. Rendered only while empty. */
+     marks?: number[];
+-    /** T4-W8 ROW 1 — the player's OWN corner (Snyder) pencil marks (crayon-blue). Empty cells only. */
++    /** T4-W8 ROW 1 — the player's OWN corner (Snyder) pencil marks (graphite, full pressure).
++     *  Empty cells only. */
+     cornerMarks?: number[];
+     /** T4-W8 ROW 1 — the player's own center marks, a centred row in the same tone. Empty cells only. */
+     centerMarks?: number[];
+@@ -106,6 +107,7 @@ const {
+   isFocused,
+   isActive,
+   cellViewBox,
++  ghostRetracePath,
+   displayValue,
+   glyphChar,
+   ariaLabel,
+@@ -255,7 +257,7 @@ defineExpose({ focus: focusInput, position: props.position });
+       class="cell-native-input absolute inset-0 h-full w-full cursor-pointer bg-transparent text-center opacity-0 outline-none"
+     />
+ 
+-    <!-- Peer-unit wash (T4-W8 ROW 4): a faint crayon-blue fill over every cell sharing the
++    <!-- Peer-unit wash (T4-W8 ROW 4): a faint graphite fill over every cell sharing the
+          focused cell's row / column (and, on a boxed board, its box), so the active unit reads
+          at a glance on selection. Its own layer, behind the glyph + marks + ghost; decorative
+          (the value carries the name). -->
+@@ -320,7 +322,7 @@ defineExpose({ focus: focusInput, position: props.position });
+     </div>
+ 
+     <!-- User pencil marks — CORNER slot (T4-W8 ROW 1): the player's own notes in a 3×3 Snyder
+-         grid hugging the cell, crayon-blue so they never read as the engine's graphite peek
++         grid hugging the cell, at full pressure so they never read as the engine's half-pressure peek
+          marks. Its own layer + class (never `.pencil-marks`) — the two mark systems share the
+          cell but never the store or the render. Decorative (the value carries the a11y name). -->
+     <div
+@@ -403,7 +405,9 @@ defineExpose({ focus: focusInput, position: props.position });
+     />
+ 
+     <!-- Ghost cell highlight — the three-tier pencil-sketch focus/hover/invalid ring (§4.2).
+-         Hover = graphite (instant); :focus-visible = crayon-blue sketched-on; conflict = the
++         Hover = graphite (instant); :focus-visible = the same graphite pressed into one heavy
++         band (the retrace path below, a second path one stroke in, sketched on in the other
++         direction; the two paint as one); conflict = the
+          teacher's red circle (doubles as the aria-invalid indicator). Decorative (T5-W3 3.5):
+          one bare `<svg>` per cell mapped to an unnamed `image` — 81 of them on a 9×9 — and the
+          states it draws are all spoken elsewhere (focus by the input, the conflict by
+@@ -420,6 +424,7 @@ defineExpose({ focus: focusInput, position: props.position });
+         xmlns="http://www.w3.org/2000/svg"
+       >
+         <path :d="ghostPath" pathLength="1" class="cell-ghost-path" />
++        <path :d="ghostRetracePath" pathLength="1" class="cell-ghost-retrace" />
+       </svg>
+     </div>
+   </div>
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 8ef6912c..ab7b6ee0 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -351,13 +351,13 @@ const conflicts = computed<Conflicts>(() =>
+ // A pure derivation over `values`/`givenCells` (re-evaluated on a fill/clear, NEVER on
+ // the boil beat): filled non-given cells / fillable cells. FILL, not correctness — wrong
+ // digits count (the app grades correctness only on Solve). HandDrawnGrid owns the render.
++const fillable = computed(() => Math.max(1, props.totalCells - props.givenCells.size));
+ const fillProgress = computed(() => {
+   let filled = 0;
+   for (const [pos, v] of Object.entries(props.values)) {
+     if (v !== 0 && !props.givenCells.has(pos)) filled++;
+   }
+-  const fillable = Math.max(1, props.totalCells - props.givenCells.size);
+-  return Math.max(0, Math.min(1, filled / fillable));
++  return Math.max(0, Math.min(1, filled / fillable.value));
+ });
+ 
+ // Beat 1 — the reveal wave. Noise-order stagger (Fisher-Yates + mulberry32), but
+@@ -1028,6 +1028,7 @@ const boardCovered = computed(() => mobileDock.value && !drawerInert.value);
+         :subgrid-size="subgridSize"
+         :anim-state="gridAnimState"
+         :progress="fillProgress"
++        :writable="fillable"
+         :solve-success="solveState === 'solved'"
+         :join-progress="traceProgress"
+         :join-opacity="traceOpacity"
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 68797db4..06f62092 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1684,8 +1684,10 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+ }
+ 
+ /* The swatch is the digit's own ink, not a legend for it: `--color-user-ink` is what the
+-   handwritten glyph strokes with, so a row inherits the peer's inline rebinding and YOUR row
+-   — which rebinds nothing — draws the incumbent blue. One value, two places, no mapping. */
++   handwritten glyph strokes with, so a row inherits the player's inline rebinding and YOUR row
++   draws whatever your digits draw — the pencil's graphite while you are alone at the table,
++   your own room colour from the moment a second hand arrives (`selfInk`, T9-W7). One value,
++   two places, no mapping. */
+ .player-swatch {
+   flex: 0 0 auto;
+   width: 0.7rem;
+@@ -2084,16 +2086,12 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   fill: url(#sparkle-rainbow) !important;
+ }
+ 
+-.sparkle-icon {
+-  filter: drop-shadow(0 0 2px rgba(196, 181, 253, 0.3));
+-  transition: all 200ms;
+-}
+-
+-@media (hover: hover) {
+-  .icon-btn:hover .sparkle-icon {
+-    filter: drop-shadow(0 0 5px rgba(196, 181, 253, 0.6));
+-  }
+-}
++/* NO GLOW (T9-W7 ACC-GRAPHITE). The sparkle wore two violet drop-shadows reachable by no
++   token — a lilac nobody had declared, sitting beside a rainbow gradient that is the icon's
++   own statement — and a `transition: all` to swap between them on hover. The rainbow says
++   "the machine will write this" on its own; the halo said nothing and cost the filter census
++   a row. Deleted, with its allowlist row (`filterBudget.ts`) in the same commit: the census
++   goes 9 -> 8, which is the direction that law travels. */
+ 
+ /* ── T6 mark 5 · the sticky action bar ─────────────────────────────────────────
+    The card is 1039px of content in a 640px scrollport at the 1440 rail, and the four verbs
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..35aee870 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -17,6 +17,7 @@
+  *   .pencil-marks .mark-slot .mark-glyph        engine-domains peek marks
+  *   .user-marks .user-corner-marks .user-center-marks .user-mark-slot .user-mark-glyph
+  *   .cell-ghost .cell-ghost-path                the four-tier hover/focus/invalid/peer-cursor ring
++ *   .cell-ghost-retrace    the focus ring's second pass (hidden at every other tier)
+  */
+ 
+ /* ── Engine-domains pencil marks (W6 beat 9) ─────────────────────────
+@@ -68,13 +69,14 @@
+ }
+ 
+ /* ── User pencil marks (T4-W8 ROW 1) — the player's own notes ─────────
+-   Crayon-blue, the player's own hand — deliberately a DIFFERENT tone from the engine's
+-   graphite peek marks so the solver's domains and the player's notes never read as one, and
+-   a different placement (corners / centred row) besides. Their own layer; they compose over
+-   the engine grid without ever sharing its store. */
++   The same pencil as the grid, pressed all the way down (T9-W7 ACC-GRAPHITE). The seam
++   against the engine's peek marks is PRESSURE, not tone: yours at opacity 1, the solver's
++   thinking at 0.5 — and a different placement (corners / centred row) besides. A note you
++   made is your hand; the engine's is the engine's; neither is a colour. Their own layer;
++   they compose over the engine grid without ever sharing its store. */
+ .user-marks {
+-  color: var(--color-crayon-blue);
+-  opacity: 0.9;
++  color: var(--color-pencil-graphite);
++  opacity: 1;
+ }
+ 
+ /* Corner (Snyder) — a 3×3 grid hugging the cell; each note small in its slot. */
+@@ -110,30 +112,24 @@
+   overflow: visible;
+ }
+ 
+-@media (prefers-contrast: more) {
+-  .user-marks {
+-    opacity: 1;
+-  }
+-}
+-
+ /* ── Peer-unit wash (T4-W8 ROW 4) — the selected cell's reach ─────────
+-   A faint crayon-blue fill over the focused cell's row / column / box, tying the unit to the
+-   blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
++   The hover tint laid flat over the reach: the pencil's own 6% (tier 1's `fill-opacity`, one
++   number, not a second value), tying the unit to the graphite focus ring as one selection
++   system. A selection is not an author, so it takes no colour (T9-W7 ACC-GRAPHITE).
+    Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+ .cell-peer {
+-  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+-}
+-
+-@media (prefers-contrast: more) {
+-  .cell-peer {
+-    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
+-  }
++  /* The pencil laid flat at 6%, as ONE ground token (`--ground-wash-unit`, index.css). An
++     `opacity` here would be the same painted value and twenty new stacking contexts on a 9x9
++     selection — every washed cell promoted to its own layer for a tint. The token keeps the
++     mix in the one file `check-ink-pressure`'s ownership gate allows, and presses to 12% under
++     `prefers-contrast: more` where it is declared, so this rule has no second arm. */
++  background: var(--ground-wash-unit);
+ }
+ 
+ /* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────
+    A translucent teacher-red square with a soft inset border, faded in on the EXISTING marks
+    cadence (marks-fade-in, 250ms — no new timing constant). Its own layer, behind the glyph +
+-   focus ghost, so it composes with a filled cell's digit and the keyboard-focus blue ring
++   focus ghost, so it composes with a filled cell's digit and the keyboard-focus graphite ring
+    rather than colliding with the ghost's focus/invalid tiers — the tone shows even on the cell
+    you focused to ask. */
+ .cell-because {
+@@ -205,7 +201,7 @@
+    competing), fill 0.04 below tier 1's 0.06.
+ 
+    A RING, NOT A WASH. A filled peer cursor would collide with `.cell-peer` above — the
+-   crayon-blue 7% wash that marks YOUR selection's row/column/box reach. That wash belongs to
++   graphite 6% wash that marks YOUR selection's row/column/box reach. That wash belongs to
+    your own selection and must never be read as someone else's position.
+ 
+    IT DOES NOT TWEEN BETWEEN CELLS. It jumps and redraws its sketch, which is the existing
+@@ -239,15 +235,36 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
+-/* Tier 2 — keyboard focus: crayon-blue, heavier, sketched on over 180ms. Driven by real
+-   :focus-visible so a mouse click keeps the instant graphite tier and only keyboard focus
+-   gets the drawn-on ring. */
++/* THE SECOND PASS (T9-W7 ACC-GRAPHITE) — hidden everywhere but your own keyboard focus.
++   The ring's weight is bought in the estate's own retrace idiom (`scribbleUnderline`,
++   `.join-pose`) rather than a colour: a second path inset from the first, on its own seed. The
++   passes (12 and 15 units, 8 apart) overlap and PAINT AS ONE HEAVY BAND. So the claim is
++   weight, not a visible retrace. A ghost unit is the 144.444-unit cell box's, not the board's
++   1000, and the band is read against the frame's WHOLE stroke (its left and right lines; the
++   top and bottom are half strokes cut by the grid's bakes). It is a <path>, never an
++   `outline`, so the forced-colors
++   `Highlight` ring at the foot of this sheet still stands. */
++.cell-ghost-retrace {
++  display: none;
++  fill: none;
++  stroke-linecap: round;
++  stroke-linejoin: round;
++}
++
++/* Tier 2 — keyboard focus: the pencil, pressed hard into one heavy band, sketched on over
++   180ms. Driven by real :focus-visible so a mouse click keeps the instant graphite tier and
++   only keyboard focus gets the drawn-on ring.
++   NO FILL, and that is the mark's sentence rather than a taste: a pencil pressed hard draws
++   a RING; it does not tint the paper inside. A 20-unit band around an 8%-tinted square reads
++   as a filled chip at phone scale, which is the stock-UI mark this family exists to replace,
++   and it fuses the band and the tint into one run at the eye. The cell inside stays the
++   cleanest paper on the board. (§6 hunk — MRK-LIVE lands it. The 0.08 graphite fill stays
++   buildable as the U-10 fallback arm; it is one declaration.) */
+ .game-cell:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-focus-sketch, var(--color-crayon-blue));
+-  fill-opacity: 0.08;
+-  stroke: var(--color-focus-sketch, var(--color-crayon-blue));
+-  stroke-width: 7;
+-  stroke-opacity: 0.9;
++  fill: none;
++  stroke: var(--color-pencil-graphite);
++  stroke-width: 12;
++  stroke-opacity: 1;
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+      value MOVES INTO the rule and the fill drops to `backwards`. `stroke-dashoffset` is an
+@@ -257,6 +274,31 @@
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+ }
+ 
++/* The second pass, on the same beat. The path string itself is REVERSED (`gridPaths.ts`), so
++   the two strokes draw on in opposite directions round the cell — a hand coming back over its
++   own line — with no second keyframe and no second timing constant. */
++.game-cell:has(input:focus-visible) .cell-ghost-retrace {
++  display: block;
++  stroke: var(--color-pencil-graphite);
++  stroke-width: 15;
++  stroke-opacity: 1;
++  stroke-dasharray: 1;
++  stroke-dashoffset: 0;
++  animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
++}
++
++/* THE BAND, KEYED TO THE PIXEL (T9-W7 ACC-GRAPHITE pass 7). The band is read against the frame's
++   whole stroke, and that ratio moves with how many DEVICE pixels the board spans: a thin line
++   loses less to anti-aliasing than a thick one. At 15 units the second pass holds 1.38-1.43x on
++   every board of 600+ device pixels (desk at 1x and 2x, a phone at 2x and 3x, both engines) but
++   reads ~1.5x on a 1x phone's 350; at 12 units the 1x phone holds 1.36-1.40x and every other
++   board falls to 1.29-1.33x. So the 1x coarse board, the one small raster, takes 12. */
++@media (pointer: coarse) and (max-resolution: 1dppx) {
++  .game-cell:has(input:focus-visible) .cell-ghost-retrace {
++    stroke-width: 12;
++  }
++}
++
+ @keyframes ghost-draw-on {
+   from {
+     stroke-dashoffset: 1;
+@@ -280,17 +322,24 @@
+ 
+ /* Tier 2×3 — focused AND conflicting: the teacher's red pencil, pressed harder.
+    (0,4,1) beats tier-2's (0,3,1); every tier-2 paint property is re-asserted —
+-   partial overrides leak blue through the higher-specificity focus rule.
++   partial overrides leak graphite through the higher-specificity focus rule.
+    ghost-draw-on is deliberately NOT suppressed: it re-sketches in red as the
+-   focus cue (the ghost is this cell's only focus affordance; PRM block governs). */
++   focus cue (the ghost is this cell's only focus affordance; PRM block governs).
++   Fill `none` with its graphite sibling: the focus band may not become a chip because the
++   digit in it is wrong. (§6 hunk.) */
+ .game-cell.is-invalid:has(input:focus-visible) .cell-ghost-path {
+-  fill: var(--color-teacher-red, var(--color-crayon-rose));
+-  fill-opacity: 0.16;
++  fill: none;
+   stroke: var(--color-teacher-red, var(--color-crayon-rose));
+-  stroke-width: 10;
++  stroke-width: 12;
+   stroke-opacity: 1;
+ }
+ 
++/* …and the second pass goes round in red too: focused AND wrong is the teacher's pencil at
++   the same weight, which is the same sentence the graphite ring says. */
++.game-cell.is-invalid:has(input:focus-visible) .cell-ghost-retrace {
++  stroke: var(--color-teacher-red, var(--color-crayon-rose));
++}
++
+ /* Neutralize the generic global focus-within ring (index.css) — the SVG ghost is the focus
+    affordance now. Scoped selector ([data-v-*]) outweighs the global one. NOTE (T4-W10 gate 2):
+    Tailwind v4's `outline-none` compiles to `outline-style:none` (NOT v3's transparent 2px
+@@ -312,12 +361,14 @@
+      inset-0, opacity-0), so iOS paints its gray tap-flash on IT. Suppressed here so the
+      pencil ghost stays the sole focus voice on tap. Scoped to the entry surface this lane
+      owns; additive to lane C's global interactive sweep (identical value, no conflict). The
+-     focus RING stays lane A's crayon-blue :focus-visible ghost (tap = no ring, key = ring). */
++     focus RING stays lane A's graphite :focus-visible ghost (tap = no ring, key = ring). */
+   -webkit-tap-highlight-color: transparent;
+ }
+ 
+ @media (prefers-reduced-motion: reduce) {
+   .game-cell:has(input:focus-visible) .cell-ghost-path,
++  /* Both passes land drawn — the second is the same ring, not a second flourish. */
++  .game-cell:has(input:focus-visible) .cell-ghost-retrace,
+   /* T8-W3: the peer's ghost LANDS DRAWN. Same rule, same reason — the sketch is a flourish on
+      a ring whose job is to be there. */
+   .game-cell.is-peer-cursor .cell-ghost-path {
+@@ -342,12 +393,13 @@
+ }
+ 
+ /* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+-   Normal mode's crayon-blue ring is the SVG .cell-ghost-path, but forced-color-adjust strips
++   Normal mode's graphite ring is the SVG .cell-ghost-path + .cell-ghost-retrace, but
++   forced-color-adjust strips
+    SVG paint to a fragment and Tailwind v4's `outline-none` on the input paints nothing — so
+    HC keyboard focus had no ring. Draw a real system-color outline the UA keeps. It rides the
+    CELL, not the input: the input is opacity-0 and an opacity-0 element renders no outline. The
+    UA forces its own color under forced-colors (`Highlight`, the system focus color — never gold;
+-   crayon-blue is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
++   an author colour is unrenderable here). Inset (offset -2px) so the ring hugs the packed cell
+    without overlapping neighbours. Gated on :focus-visible → keyboard only, matching normal mode. */
+ @media (forced-colors: active) {
+   .game-cell:has(input:focus-visible) {
+diff --git a/web/frontend/src/games/shared/playerIdentity.ts b/web/frontend/src/games/shared/playerIdentity.ts
+index 4739417a..63e49fbc 100644
+--- a/web/frontend/src/games/shared/playerIdentity.ts
++++ b/web/frontend/src/games/shared/playerIdentity.ts
+@@ -60,10 +60,11 @@ export function slugFor(peerId: string, taken: ReadonlySet<string>): string {
+ }
+ 
+ /**
+- * The remote player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is
+- * the whole of the mechanism, because `HandwrittenGlyph` already strokes with that var
+- * (`HandwrittenGlyph.vue:85`). The local player keeps the incumbent blue — nothing is bound
+- * on their cells, so solo is byte-identical.
++ * A player's ink, as ONE formula and ONE binding: rebinding `--color-user-ink` is the whole of
++ * the mechanism, because `HandwrittenGlyph` already strokes with that var. Every id takes an
++ * index here, including your own; what your own index is SPENT on is `selfInk`'s condition —
++ * alone on the board you are the pencil's graphite and nothing is bound on your cells, so solo
++ * stays byte-identical, and the moment a second hand is live your digits take this colour too.
+  */
+ export const inkFor = (index: number): Record<string, string> => ({
+   "--color-user-ink": `oklch(var(--peer-ink-l) 0.11 ${((index * 137.5) % 360).toFixed(1)}deg)`,
+diff --git a/web/frontend/src/games/shared/useGameCell.ts b/web/frontend/src/games/shared/useGameCell.ts
+index a4754ead..bb19e1db 100644
+--- a/web/frontend/src/games/shared/useGameCell.ts
++++ b/web/frontend/src/games/shared/useGameCell.ts
+@@ -1,5 +1,6 @@
+ import { computed, onUnmounted, ref, useTemplateRef } from "vue";
+ import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
++import { generateCellRetraceRects } from "@pencil/grid/gridPaths";
+ import { useLongPress } from "@games/shared/useLongPress";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+ 
+@@ -96,6 +97,15 @@ export function useGameCell(
+     return `${x} ${y} ${w} ${h}`;
+   });
+ 
++  // THE SECOND PASS (T9-W7 ACC-GRAPHITE). Derived here rather than plumbed: the retrace is a
++  // pure function of (boardSize, position) on the board's own seed — the same two numbers the
++  // viewBox above is derived from — and `generateCellRetraceRects` memoizes the whole record
++  // through the shared boil LRU, so 81 cells cost one generation and 81 lookups, and no board
++  // has to carry a second prop for a mark only the focused cell ever shows.
++  const ghostRetracePath = computed(
++    () => generateCellRetraceRects(props.boardSize, 1000, 42)[props.position] ?? "",
++  );
++
+   // Hidden input keeps the raw numeric string; the glyph overlay renders the display CHARACTER
+   // (hex A–G for 16×16 via toDisplayChar). Wiring this is what lets values 10–16 render a glyph
+   // at all — String(10) has no key in glyphPaths, so those cells rendered blank AND registered
+@@ -337,7 +347,8 @@ export function useGameCell(
+   const marksGridStyle = computed(() => furniture.marksGridStyle());
+ 
+   // ── User pencil marks (T4-W8 ROW 1) — the player's own notes ──────────
+-  // Distinct from the engine peek marks above in tone (crayon-blue) AND placement, so the two
++  // Distinct from the engine peek marks above in PRESSURE (opacity 1 against 0.5) AND
++  // placement, so the two
+   // never read as one: CORNER marks hug the cell in a 3×3 Snyder grid (order below), CENTER marks
+   // sit in a centred row. Both reuse the hand-drawn glyph paths and, like the engine marks, show
+   // only on an empty cell (a filled cell hides its notes; erasing the digit brings them back).
+@@ -370,6 +381,7 @@ export function useGameCell(
+     isFocused,
+     isActive,
+     cellViewBox,
++    ghostRetracePath,
+     displayValue,
+     glyphChar,
+     ariaLabel,
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 52c0a3c1..4f1ccebd 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -324,6 +324,58 @@ describe("the epoch names its worksheet — `st` gains g, z and k", () => {
+   });
+ });
+ 
++describe("your own ink arrives with the second hand (T9-W7 ACC-GRAPHITE §5)", () => {
++  it("binds nothing while you are alone, your own ink once a peer is live, and lets go", async () => {
++    const p = await bootPage();
++    const me = () => p.session.session.players.value.find((r) => r.self);
++    // READ THE ROSTER BEFORE THE JOIN, deliberately: the ink computed is evaluated here, while
++    // the identity module is still unloaded, and a getter that tested that module before it
++    // read `present` would collect no dependency and stay frozen at {} for the life of the tab.
++    // This line is the regression, and it cost a live two-page probe to find.
++    expect(me()).toBeUndefined();
++    await p.session.joinSession("room-self", true);
++
++    // Alone at the table: your row binds NOTHING, so your digits stay the pencil's graphite
++    // and a solo board is byte-identical to the one that shipped.
++    expect(me()?.ink).toEqual({});
++    expect(p.session.authorInk.value).toEqual({});
++
++    // A second hand arrives: you take the colour the room already knows you by.
++    p.peer("peer-1", true);
++    expect(me()?.ink).toEqual(inkFor(0));
++
++    // …and the last one leaving gives the pencil back.
++    p.peer("peer-1", false);
++    expect(me()?.ink).toEqual({});
++  });
++});
++
++describe("your own ink is the ROOM's too — adoption after the join (T9-W7 ACC-GRAPHITE §6)", () => {
++  it("moves your own digits when the epoch holder says your index is another", async () => {
++    const p = await bootPage();
++    await p.session.joinSession("room-adopt", true);
++    p.peer("peer-1", true);
++    const me = () => p.session.session.players.value.find((r) => r.self);
++
++    // A second hand is here, so you have a colour: the index this page minted for itself.
++    expect(me()?.ink).toEqual(inkFor(0));
++
++    // The epoch holder's board says otherwise, and the room is right — every OTHER page has
++    // been drawing you at index 3 since it adopted the same frame. Against a plain `let` the
++    // index map is invisible to the computed and your own screen keeps inkFor(0) forever.
++    p.hear(
++      "st",
++      stFrame({ e: 3, ea: "peer-1", g: "sudoku", z: 3, k: { [p.selfId()]: 3 } }),
++      "peer-1",
++    );
++    expect(me()?.ink).toEqual(inkFor(3));
++
++    // …and your cells go with your row: one value, the roster chip and the digit both.
++    p.session.noteWrite(40, 7, false);
++    expect(p.session.authorInk.value["40"]).toEqual(inkFor(3));
++  });
++});
++
+ describe("ink is the room's, not the page's — `k` adoption", () => {
+   it("rebinds from the assignment, continues the cursor past it, and is idempotent", async () => {
+     const p = await bootPage();
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 13d2191f..a052f3ac 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -312,7 +312,8 @@ function asksLocalWire(): boolean {
+ interface Player {
+   id: string;
+   slug: string;
+-  /** the `--color-user-ink` rebinding; EMPTY for you, who keep the incumbent blue. */
++  /** the `--color-user-ink` rebinding; EMPTY for you while you are the only hand on the
++   *  board, where your digits are the pencil's own graphite (`selfInk`). */
+   ink: Record<string, string>;
+   self: boolean;
+ }
+@@ -365,8 +366,14 @@ let inkCursor = 0;
+  * nobody attached to it. The epoch holder's assignment ships with the board it names, an
+  * adopting page rebinds from it and extends from `max+1`, and the index is never reassigned —
+  * which is the whole of why a rejoiner cannot arrive to find somebody else in their colour.
++ *
++ * A REF since T9-W7, because `selfInk` reads it and a plain `let` is invisible to a computed:
++ * you join, a peer arrives, your digits ink `inkFor(0)`; the epoch holder's board then says
++ * your index is 3, `adoptInk` writes it here, every OTHER page repaints you — and your own
++ * screen keeps the colour nobody else can see you in. The map was only ever read by the wire
++ * before, which is why the `let` held.
+  */
+-let inkIndex: Record<string, number> = {};
++const inkIndex = ref<Record<string, number>>({});
+ /** One suppressed publish per adopted board — a flag rather than a timer, because the
+  *  generation watch that would echo it runs on Vue's own flush, not on ours. */
+ let adopted = 0;
+@@ -385,7 +392,7 @@ export const session = {
+   /** you first, then everyone else in the order this page met them. */
+   players: computed<Player[]>(() => {
+     const me = known.value[selfId.value];
+-    const rows: Player[] = me ? [{ ...me, self: true }] : [];
++    const rows: Player[] = me ? [{ ...me, self: true, ink: selfInk.value }] : [];
+     for (const id of present.value) {
+       const p = known.value[id];
+       if (p) rows.push({ ...p, self: false });
+@@ -395,15 +402,57 @@ export const session = {
+ };
+ 
+ /**
+- * Per-cell `--color-user-ink` rebindings for every cell a PEER authored. One `:style` at
+- * `BoardHost`'s single cell-mount site inks all five games; your own cells bind nothing, so
+- * a solo board is byte-identical to the one that shipped.
++ * YOUR OWN INK, AND WHEN YOU HAVE ONE (T9-W7 ACC-GRAPHITE §5).
++ *
++ * Your digits are the pencil's graphite while you are the only hand on the board, and they
++ * take the colour the room already knows you by the moment a second live player is in the
++ * roster. That is the family's whole sentence made mechanical: colour on the BOARD means more
++ * than one of us is here. The index is not minted here — `mint()` has always given every id an
++ * index INCLUDING your own, because the other pages ink you from `k` — so this is a condition
++ * on WHEN that index is spent on your own screen, and nothing on the wire changes.
++ *
++ * Empty while solo and empty in a room you are alone in: zero cells bound, zero rows bound,
++ * byte-identical to the board that shipped. Without it, re-pointing `--color-user-ink` to
++ * graphite would make you the one player in the room without a colour — the roster's swatch IS
++ * the digit's own ink, so your chip would go grey in a list of coloured ones.
++ */
++/** F1 — the owner's ruling, kept as ONE condition so both arms are a build away (chair §6.8).
++ *  ON: your digits take your room ink the moment a second live player is in the roster. OFF:
++ *  your hand stays the pencil in every room and only peers carry colour. The default leans YES
++ *  on the artifacts; U-10 disposes. Nothing downstream branches — every consumer reads the
++ *  empty map the OFF arm returns, which is the solo board's own state. */
++const F1_SELF_INK = true;
++
++const selfInk = computed<Record<string, string>>(() => {
++  if (!F1_SELF_INK) return {};
++  // THE REACTIVE READS COME FIRST, AND THAT ORDER IS THE WHOLE RULE. `ident` is a plain `let`
++  // (the identity module is `import()`ed at the join), so a getter that tests it before it
++  // touches `present` short-circuits on a SOLO page, collects no dependency at all, and is then
++  // frozen at `{}` for the life of the tab — the roster's own row stayed graphite in a live
++  // two-page room with `ident` set, `present` holding the peer and the index minted. Measured,
++  // not reasoned: `evidence/.../prototype/ACC-GRAPHITE/readings/room-*.json`.
++  const peers = present.value.length;
++  const me = selfId.value;
++  if (!ident || peers === 0) return {};
++  const index = inkIndex.value[me];
++  return index === undefined ? {} : ident.inkFor(index);
++});
++
++/**
++ * Per-cell `--color-user-ink` rebindings for every cell an author's colour is owed to. One
++ * `:style` at `BoardHost`'s single cell-mount site inks all five games; a solo board binds
++ * nothing at all, so it stays byte-identical to the one that shipped.
+  */
+ export const authorInk = computed(() => {
+   const out: Record<string, Record<string, string>> = {};
++  const mine = selfInk.value;
++  const haveMine = Object.keys(mine).length > 0;
+   for (const pos of Object.keys(ledger.clock)) {
+     const author = ledger.clock[pos][1];
+-    if (author === selfId.value) continue;
++    if (author === selfId.value) {
++      if (haveMine) out[pos] = mine;
++      continue;
++    }
+     const p = known.value[author];
+     if (p) out[pos] = p.ink;
+   }
+@@ -524,13 +573,13 @@ function writeSessionParam(id: string | null): void {
+ 
+ function mint(id: string): Omit<Player, "self"> {
+   const taken = new Set(Object.values(known.value).map((p) => p.slug));
+-  // EVERY id takes an index, including your own. You still keep `--color-user-ink` — nothing is
+-  // bound on your cells, so solo is byte-identical — but the OTHER pages ink you from `k`, and
+-  // a publisher with no index of its own would be the one player the room could not agree
+-  // about. Everyone else walks the golden angle from where the roster last stopped, so an early
+-  // peer never re-inks because a late one arrived.
+-  const index = inkIndex[id] ?? inkCursor++;
+-  inkIndex[id] = index;
++  // EVERY id takes an index, including your own. What that index is SPENT on is `selfInk`'s
++  // question, not this one — alone you keep the pencil and nothing binds — but the OTHER pages
++  // ink you from `k` from the first moment, and a publisher with no index of its own would be
++  // the one player the room could not agree about. Everyone else walks the golden angle from
++  // where the roster last stopped, so an early peer never re-inks because a late one arrived.
++  const index = inkIndex.value[id] ?? inkCursor++;
++  inkIndex.value[id] = index;
+   return {
+     id,
+     slug: ident!.slugFor(id, taken),
+@@ -551,7 +600,7 @@ function adoptInk(k: Record<string, number>): void {
+   for (const [id, raw] of Object.entries(k)) {
+     if (typeof raw !== "number" || !Number.isFinite(raw)) continue;
+     const index = Math.trunc(raw);
+-    inkIndex[id] = index;
++    inkIndex.value[id] = index;
+     if (index > top) top = index;
+     const ink = id === selfId.value ? {} : ident!.inkFor(index);
+     const held = next[id];
+@@ -709,7 +758,7 @@ function sendState(to?: string): void {
+       // cap (`relay.ts`), which is not a number this design has to think about twice.
+       g: mountedGameId() ?? "",
+       z: source.size(),
+-      k: { ...inkIndex },
++      k: { ...inkIndex.value },
+     }),
+     to,
+   );
+@@ -877,7 +926,7 @@ function teardown(): void {
+   live.value = false;
+   ownTable = false;
+   inkCursor = 0;
+-  inkIndex = {};
++  inkIndex.value = {};
+   clearCursors();
+   stopPresenceClocks(); // the beat and every peer's expiry belong to the room that just left
+   adopted = 0;
+diff --git a/web/frontend/src/pencil/config/filterBudget.ts b/web/frontend/src/pencil/config/filterBudget.ts
+index 6d5d0726..376e0918 100644
+--- a/web/frontend/src/pencil/config/filterBudget.ts
++++ b/web/frontend/src/pencil/config/filterBudget.ts
+@@ -153,13 +153,9 @@ const TRANSIENT: readonly FilterBudgetRow[] = [
+     reason:
+       "the toggle's two live bodies (sun + moon) — the Bloom's warped instances, one raster each",
+   },
+-  {
+-    selector: "button.icon-btn svg.sparkle-icon",
+-    count: 1,
+-    filter: "drop-shadow",
+-    reason:
+-      "the Solve button's sparkle, one per mounted panel (was 2 — the P1-W4 twin `v-if`); built-in interpolable drop-shadow, not a reference filter — GPU path, benign (r3 §3.2)",
+-  },
++  // The Solve sparkle's drop-shadow RETIRED (T9-W7 ACC-GRAPHITE): a violet halo reachable by
++  // no token, deleted rather than re-inked grey. The census travels 9 -> 8 and the union sheds
++  // the 30x30 box the shadow filtered.
+ ];
+ 
+ /**
+@@ -207,12 +203,19 @@ export const FILTER_BUDGET_CEILING = 14;
+  * the 2% tolerance had been carrying silently: a constant whose docstring calls it "the measured
+  * union" has to be the measured union, so it is re-derived here rather than left approximately
+  * right. Shipped: row 45572, coarse 6673 — chromium and webkit byte-identical.
++ *
++ * T9-W7 ACC-GRAPHITE RE-DERIVED BOTH DOWNWARD, which is the direction this law had never
++ * travelled: the Solve sparkle's drop-shadow is deleted, so its box leaves the union with it.
++ * Measured by the same instrument (`e2e/filter-census.spec.ts`'s own `unionArea`, read off a
++ * deliberately-failed budget) on the same scene, both engines identical: row 45572 -> 44642
++ * (-930), coarse 6673 -> 5743 (-930). The same 930 px^2 in both regimes, which is the 30x30
++ * icon box plus its shadow spread and nothing else.
+  */
+ export const FILTER_BUDGET_UNION_AREA = {
+   /** ≥1024, 1280×800 dpr1 — the row regime every config in this repo runs at. */
+-  row: 45572,
++  row: 44642,
+   /** <1024, 393×699 dpr3 coarse — the mobile arm of the same one card. */
+-  coarse: 6673,
++  coarse: 5743,
+ } as const;
+ 
+ /** Sub-pixel tolerance on the union, both directions. Not a growth allowance. */
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index e4edea4b..cfa1fac6 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -192,6 +192,11 @@ export const MOTION = {
+      *  re-eases under it. */
+     drawerGlide: "cubic-bezier(0.32, 0.72, 0, 1)",
+   },
++  /** T9-M20 D10 · the hand's displacement clause, one number for the boot hand and every
++   *  `poseFronts` consumer: a front's clock moves at most `stepMs` in one painted frame (one
++   *  60 Hz frame on a 1 ms clock), so a stalled frame pauses the front instead of teleporting
++   *  it. `frontGate`'s budget is derived from it (`FRONT_MIN_MS = stepMs − 1`, gridPaths). */
++  hand: { stepMs: 17 },
+ } as const;
+ 
+ /** Quantize an interval to whole beats (≥1). Wobble/boil configs keep their
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.test.ts b/web/frontend/src/pencil/glyph/HandwrittenGlyph.test.ts
+new file mode 100644
+index 00000000..290ba955
+--- /dev/null
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.test.ts
+@@ -0,0 +1,42 @@
++import { describe, it, expect } from "vitest";
++import { mount } from "@vue/test-utils";
++import HandwrittenGlyph from "./HandwrittenGlyph.vue";
++
++/**
++ * AUTHORSHIP IS WEIGHT, AND A CARET HAS NO AUTHOR (T9-W7 ACC-GRAPHITE). A printed digit draws
++ * heavier than one you wrote; a caret (the wordmark's `>`, futoshiki's `<`/`>`) keeps the weight
++ * it always had, because no caret has a written twin to be told from. The logo golden cannot see
++ * `span.logo-caret`, so this row is the one that holds the caret's weight.
++ */
++const weight = (value: string, isGiven: boolean, isSolved = false) =>
++  mount(HandwrittenGlyph, {
++    props: {
++      value,
++      isGiven,
++      isOverridden: false,
++      isSolved,
++      isRevealed: true,
++      noiseDelay: 0,
++      position: 0,
++      boardSize: 9,
++      isHovered: false,
++    },
++  })
++    .find("path")
++    .attributes("stroke-width");
++
++describe("HandwrittenGlyph — the stroke weight is authorship", () => {
++  it("draws a printed digit at 6 and a written one at 4.5", () => {
++    expect(weight("5", true)).toBe("6");
++    expect(weight("5", false)).toBe("4.5");
++  });
++
++  it("keeps a printed caret at 5, both directions", () => {
++    expect(weight(">", true)).toBe("5");
++    expect(weight("<", true)).toBe("5");
++  });
++
++  it("keeps the solver's answer at 5", () => {
++    expect(weight("5", false, true)).toBe("5");
++  });
++});
+diff --git a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+index 4c627b45..4fa81060 100644
+--- a/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
++++ b/web/frontend/src/pencil/glyph/HandwrittenGlyph.vue
+@@ -82,11 +82,24 @@ const isGivenOriginal = computed(() => props.isGiven && !props.isOverridden);
+ const strokeColor = computed(() => {
+   if (props.isSolved) return "url(#solver-ink)";
+   if (isGivenOriginal.value) return "var(--color-foreground)";
+-  return "var(--color-user-ink, #2563eb)";
++  // No fallback: `--color-user-ink` is declared in BOTH themes (index.css) and a room rebinds
++  // it per cell rather than unsetting it, so the second argument could only ever fire on a
++  // page with no stylesheet. A fallback that cannot be reached is a second value to keep in
++  // step with the first.
++  return "var(--color-user-ink)";
+ });
+ 
++// AUTHORSHIP IS WEIGHT (T9-W7 ACC-GRAPHITE). A clue came PRINTED on the sheet and a digit you
++// wrote is DRAWN, so the clue is the heavier of the two: 6 units against 4.5 = 1.33x, where 5
++// against 4.5 was 1.11x — a tenth of a stroke, which no reader can use. The clue moves, never
++// your hand: 4.5 units is the hand the owner has read for nine tranches, and on a 393 phone it
++// is already at the legibility floor. The solver's own answer keeps 5 and its rainbow ink.
++// A CARET keeps 5 (the wordmark's `>`, futoshiki's `<`/`>`): the step exists to tell a printed
++// digit from one you wrote, and no caret has a written twin to be told from.
+ const strokeWidth = computed(() => {
+-  return props.isGiven || props.isSolved ? 5 : 4.5;
++  if (props.isSolved) return 5;
++  if (!props.isGiven) return 4.5;
++  return props.value === "<" || props.value === ">" ? 5 : 6;
+ });
+ 
+ // Reactive display path — Vue restores this via :d on re-render; animations setAttribute over it
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 3716de8a..68944b97 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -1,7 +1,13 @@
+ <script setup lang="ts">
+ import { computed, onMounted, onUnmounted, watch, nextTick, ref } from "vue";
+ import { heldFrameCount, serializePoseSvg, useRasterStack } from "@mkbabb/pencil-boil";
+-import { generateGridBoilFrames, generateFrameTraceFrames } from "../gridPaths";
++import {
++  generateGridBoilFrames,
++  generateFrameTraceFrames,
++  tallyPaths,
++  poseFronts,
++  frontGate,
++} from "../gridPaths";
+ import { BOIL_CONFIG, FILTER_PRESETS, beatsFor } from "@pencil/config/pencilConfig";
+ import { useBeatFrame } from "@pencil/composables/boilBeat";
+ import {
+@@ -23,6 +29,12 @@ const props = defineProps<{
+    *  beat — and this frame owns the render. Both boards pass the identical prop, so the
+    *  twin is automatic: there is no second implementation to keep in sync. */
+   progress?: number;
++  /** How many cells the board is WRITABLE in (`totalCells - givens`). REQUIRED: the tally
++   *  needs the denominator, not just the fraction, and a default would be a lie about the
++   *  board it is drawn on — the measured spread is 10-12 cells at 4x4 against 161-165 at
++   *  16x16, so a 51 fallback would mis-count every board but one. One caller (`GameBoard`,
++   *  `fillable`), so requiring it costs nothing and cannot go quietly wrong. */
++  writable: number;
+   /** True at the win (`solveState === 'solved'`). P1-W3 / r3 §4.4: the trace is invisible then
+    *  (`.solve-success .progress-trace { opacity: 0 }`), so its pose stack must stop trading
+    *  opacity 8/s over the whole board box — but it must NOT be unmounted, or the 500 ms
+@@ -88,11 +100,48 @@ const activeFrame = computed(() => (pathsVisible.value ? boilFrame.value : 0));
+ const progress = computed(() => Math.max(0, Math.min(1, props.progress ?? 0)));
+ const progressPercent = computed(() => Math.round(progress.value * 100));
+ 
+-// pathLength=1000 (on each path, template) normalises arc length across all 4 poses AND
+-// every board size; the dash draws arc-length 0 → progress·perimeter clockwise from the
+-// top-left. A fill event mutates exactly this one custom value — a cheap paint, never the
+-// beat, never a filter re-raster.
+-const traceDashOffset = computed(() => 1000 * (1 - progress.value));
++// THE TALLY (T9-W7 ACC-GRAPHITE) — one tick per written cell, laid round the inside of the
++// frame. The gauge was a violet second pencil retracing the frame line in registration, which
++// measured 2.92:1 over the rule it covered (under the 1.4.11 floor) and read as a slightly
++// thicker frame edge; ink alone could never have fixed that, because a retrace of a rule IS a
++// rule. So the form changes and the ink goes home to graphite: the `dealt ⊪` tally the reader
++// already knows, wrapped round the board, offset one stroke width inward by `.progress-pose`.
++//
++// LAW A (one mark, every board; the ratio, not an integer) is `tallyPaths` in gridPaths, law
++// and cut in one export, and its unit rows test that export (`gridPaths.tally.test.ts`).
++//
++// A fill event re-cuts exactly these four path strings — a cheap paint, never the beat, never
++// a re-raster.
++//
++// NO DASHOFFSET AND NO TWEEN. A tick is one stroke of a pencil; you do not watch it grow, and
++// there is no interpolable value left in the layer to watch: the mechanism is PRM-identical by
++// construction rather than by a second no-preference arm.
++// THE FORM IS THE OWNER'S (U-10), both arms a build away. ALONG (shipped): 45-unit ticks laid
++// on the frame's own line. ACROSS: the `⊪` stroke the idiom names, `TICK_ACROSS` units into the
++// board from the same pitch — a tally rather than a second, dashed rule. The pitch law is one.
++const TALLY_ACROSS = false;
++const TICK_ACROSS = 18;
++// OUTSIDE (the 16x16 arm, U-10): at 16x16 no width or inset clears the glyph band inside the
++// frame (the right column's glyphs start 8.8-10.2 px from the svg edge), so the arm lays the
++// same ticks OUTSIDE the frame line there, on the card's margin, and every smaller board keeps
++// them inside. The price is that the ticks leave the paper for the card's edge and shadow.
++const TALLY_OUTSIDE = false;
++const tallyOutside = computed(() => TALLY_OUTSIDE && props.boardSize >= 16);
++const writable = computed(() => Math.max(1, Math.round(props.writable)));
++const written = computed(() =>
++  Math.min(writable.value, Math.round(progress.value * writable.value)),
++);
++
++// THE TICKS ARE CUT, NOT DASHED, AND SEGMENT COUNT IS WHY. WebKit restarts a polyline's dash
++// phase roughly every 128 segments where Chromium dashes the path whole, and a grain-baked
++// ring is 493 segments: the gauge that stood here, `stroke-dasharray="1000 1000"` at offset
++// 750 under `pathLength="1000"`, painted 0.228 of the ring in Chromium and 0.921 in WebKit off
++// the same markup. Decimating the pose to 123 segments walks it back in both engines; a
++// straight 599-segment rectangle breaks the same way, so it is not the wobble. Declaring the
++// same list in CSS rather than as an attribute agrees (0.249 / 0.251) — the syntax bounds the
++// fault, it does not cause it, which is why no dash survives in this layer at all:
++// `tallyPaths` (gridPaths) returns the marks as GEOMETRY, k subpaths cut out of the pose's
++// own points, with no dash, no offset and no `pathLength` for an engine to normalise.
+ 
+ // Grain-static baked in (the grid's own tooth, in the 1000-unit viewBox regime the trace
+ // lives in — the T3-W13 grain-in-geometry discipline reused verbatim). Reactive on
+@@ -107,6 +156,16 @@ const traceFrames = computed(() =>
+   ),
+ );
+ 
++// The drawn poses: the same four grain-baked rings, cut down to the ticks that are written.
++const tallyFrames = computed(() =>
++  tallyPaths(
++    traceFrames.value,
++    writable.value,
++    written.value,
++    TALLY_ACROSS ? TICK_ACROSS : 0,
++  ),
++);
++
+ // ── T8-W3 join trace: the SECOND hand on the same rectangle ──
+ //
+ // The estate's own retrace idiom, the one `scribbleUnderline`'s selected state uses: a second
+@@ -116,7 +175,6 @@ const traceFrames = computed(() =>
+ // pencil rather than a thicker first one. Filterless and grain-baked like its sibling: no
+ // `filter=` is minted, so the census is unmoved.
+ const joinProgress = computed(() => Math.max(0, Math.min(1, props.joinProgress ?? 0)));
+-const joinDashOffset = computed(() => 1000 * (1 - joinProgress.value));
+ 
+ const joinTraceFrames = computed(() =>
+   generateFrameTraceFrames(
+@@ -128,6 +186,24 @@ const joinTraceFrames = computed(() =>
+   ),
+ );
+ 
++// The join ring's front, CUT rather than dashed (`poseFronts`, the tally's own arc-length
++// walk). It was `pathLength="1000"` + `stroke-dasharray="1000 1000"` over a moving offset,
++// which is the 493-segment fault above: at a quarter of the way round, WebKit painted 92%.
++// The one-shot drives the fraction every frame, and a style write became a `d` re-parse, so
++// the cut commits through the section's one rate gate (`frontGate`, <=62.5 re-cuts a second
++// at any refresh rate). The ends are forced: 0 must unmount the stack, 1 must be the whole ring.
++// The value arrives in the render's flush, which has no frame of its own, so it is written on
++// the NEXT frame and timed on it (ACC-FIVE's A.6 cure, taken with the gate): timed on the wall
++// at the flush, the ring re-cut 15.0 ms of frames after its last in WebKit. The latest wins.
++const joinFraction = ref(joinProgress.value);
++const joinGate = frontGate((v) => (joinFraction.value = v));
++let joinFrame = 0;
++watch(joinProgress, (to) => {
++  cancelAnimationFrame(joinFrame);
++  joinFrame = requestAnimationFrame((at) => joinGate.write(to, to <= 0 || to >= 1, at));
++});
++const joinFront = computed(() => poseFronts(joinTraceFrames.value, joinFraction.value));
++
+ // Current frame's path data (transition layer — draw-in/erase only, see template)
+ const currentPaths = computed(() => {
+   const f = activeFrame.value;
+@@ -288,6 +364,8 @@ onMounted(() => {
+ 
+ onUnmounted(() => {
+   cleanup();
++  cancelAnimationFrame(joinFrame);
++  joinGate.rearm();
+ });
+ </script>
+ 
+@@ -446,36 +524,40 @@ onUnmounted(() => {
+       </g>
+     </template>
+ 
+-    <!-- Progress trace (T4-W9): the violet second-pencil FILL gauge. Its own filterless
+-             grain-baked sibling layer (never gated on animState — the fill is orthogonal to
+-             draw-in/erase), opacity-swapped on the SAME boilFrame beat as the frame it hugs
+-             and painted LAST so it sits over the graphite. The dash draws it to the current
+-             fill-front; .solve-success hides `.progress-trace` (index.css) so gold owns the
++    <!-- Progress tally (T4-W9, re-formed T9-W7): one graphite tick per written cell, laid
++             round the INSIDE of the frame. Its own filterless grain-baked sibling layer (never
++             gated on animState — the fill is orthogonal to draw-in/erase), opacity-swapped on
++             the SAME boilFrame beat as the frame it hugs and painted LAST so it sits over the
++             graphite. `.solve-success` hides `.progress-trace` (index.css) so gold owns the
+              win. Zero steady-state raster: filterless static geometry, compositor-only swap.
+              P1-W3 / r3 §4.4 — the stack used to render and flip 8/s UNCONDITIONALLY. At
+-             `progress === 0` the dash offset is 1000, so the path draws nothing and four
+-             invisible <g>s traded opacity over the whole board box forever; now they are not
+-             rendered at all. At the win the trace is opacity 0 but must still FADE, so the
+-             stack is PINNED to pose 0 rather than unmounted (the logo's during-bake idiom) —
+-             the trade stops and the 500 ms bow-out survives. -->
++             `progress === 0` there are no ticks, so the whole stack is not rendered at all —
++             a tally with no marks is nothing, honestly. At the win the trace is opacity 0 but
++             must still FADE, so the stack is PINNED to pose 0 rather than unmounted (the
++             logo's during-bake idiom) — the trade stops and the 500 ms bow-out survives.
++             `stroke-linecap` is BUTT and that is load-bearing: a round cap adds half a stroke
++             width at each end of every tick, which on a 16x16 (pitch 6.67) closes the gap and
++             fuses the tally back into one continuous run — the very thing this form exists to
++             stop being. The ticks are CUT (`tallyPaths`), never dashed: the dash is the one
++             mechanism here the two engines disagree about. -->
+     <g
+-      v-for="(d, f) in progress > 0 ? traceFrames : []"
++      v-for="(d, f) in progress > 0 ? tallyFrames : []"
+       :key="'trace-' + f"
+       class="progress-pose"
+-      :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
++      :class="{
++        'is-active': (solveSuccess ? 0 : boilFrame) === f,
++        'is-outside': tallyOutside,
++      }"
+     >
+       <path
+         :d="d"
+         class="progress-trace"
+         fill="none"
+-        stroke="var(--color-progress-ink)"
+-        stroke-width="8"
+-        stroke-opacity="0.95"
+-        stroke-linecap="round"
++        stroke="var(--color-pencil-graphite)"
++        stroke-width="10"
++        stroke-opacity="1"
++        stroke-linecap="butt"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: traceDashOffset }"
+       />
+     </g>
+ 
+@@ -483,7 +565,7 @@ onUnmounted(() => {
+              Everything the progress trace is — filterless grain-baked poses, opacity-swapped on
+              the SAME beat, unmounted whole at rest — with three differences that are the whole
+              feature: its own `baseSeed` (a second hand, in registration), its ink rebound to the
+-             peer's `--color-user-ink` off the group, and a dash driven by a finite one-shot
++             peer's `--color-user-ink` off the group, and a front CUT by a finite one-shot
+              instead of the fill fraction. Painted last, over the graphite AND over the fill
+              gauge, because for its 1180ms it is the thing being said.
+              At `joinProgress === 0` — at rest, and under PRM, where the wash never runs — the
+@@ -491,7 +573,7 @@ onUnmounted(() => {
+              its sibling's, verbatim: the win freezes the stack on pose 0 rather than trading
+              opacity 8/s under gold that owns the frame. -->
+     <g
+-      v-for="(d, f) in joinProgress > 0 ? joinTraceFrames : []"
++      v-for="(d, f) in joinFraction > 0 ? joinFront : []"
+       :key="'join-' + f"
+       class="join-pose"
+       :class="{ 'is-active': (solveSuccess ? 0 : boilFrame) === f }"
+@@ -506,9 +588,6 @@ onUnmounted(() => {
+         :stroke-opacity="joinOpacity ?? 0"
+         stroke-linecap="round"
+         stroke-linejoin="round"
+-        pathLength="1000"
+-        stroke-dasharray="1000 1000"
+-        :style="{ strokeDashoffset: joinDashOffset }"
+       />
+     </g>
+   </svg>
+@@ -571,23 +650,41 @@ onUnmounted(() => {
+ .progress-pose {
+   opacity: 0;
+   will-change: opacity;
++  /* OFF THE RULE, INWARD — the `.join-pose` ruling below, applied to the gauge that needed it
++     first. A trace in registration with the frame line is not a gauge: it measured 1.05–1.15:1
++     over the graphite it covered and read as a thicker frame edge.
++     TWO stroke widths in, not one, and that is measured rather than reasoned: at 0.984 the
++     ticks still sat 2-4 px INSIDE the painted rule across all 220 sampled columns, because the
++     rule is 7.6 px wide and the offset only buys 5.1. 0.968 — the constant `.join-pose` below
++     already carries — buys 16 units = 10.2 px and puts the whole tick on PAPER at 14.87:1
++     light / 11.99:1 dark. A static transform on a static group: composited, no re-raster, no
++     filter, no beat. */
++  transform: scale(0.968);
++  transform-origin: 50% 50%;
+ }
+ 
+ .progress-pose.is-active {
+   opacity: 1;
+ }
+ 
+-/* The fill-front advances on FILL events only (progress is a computed over the game's
+-   values, never the beat). No-preference-gated: under PRM there is NO transition — the
+-   offset snaps to its correct static value and the beat is already frozen (boilBeat.ts),
+-   so the layer freezes on pose 0 with the right offset (PRM-safe by construction). The
+-   opacity term is the .solve-success bow-out (index.css asserts the end state); it lives
+-   here, unlayered, so a CSS-layer `transition` can't win over it. */
++/* The OUTSIDE arm (`TALLY_OUTSIDE`, 16x16 only): 3% OUT from the centre puts the ticks' inner
++   edge past the frame's outer edge on all four sides (the frame's top and bottom sit on the svg's
++   own edge, so the ticks there stand above and below the board). Measured, not reasoned: 1.02
++   still lays 50 px on the frame, 1.03 lays 6 and 0 on any glyph, both engines. */
++.progress-pose.is-outside {
++  transform: scale(1.03);
++}
++
++/* The tally gains a tick per fill event and nothing tweens it — the dash LIST changes length,
++   which is not an interpolable value, and a tick is one stroke of a pencil besides. What is
++   left is the .solve-success bow-out (index.css asserts the end state), and it is no longer
++   gated on PRM because there is no motion left in this layer to gate: the tally is identical
++   under both preferences by construction. The bow-out keeps its no-preference gate verbatim —
++   under PRM the win still snaps. It lives here, unlayered, so a CSS-layer `transition` can't
++   win over it. */
+ @media (prefers-reduced-motion: no-preference) {
+   .progress-trace {
+-    transition:
+-      stroke-dashoffset 240ms ease,
+-      opacity 500ms ease;
++    transition: opacity 500ms ease;
+   }
+ }
+ 
+@@ -596,10 +693,10 @@ onUnmounted(() => {
+   opacity: 0;
+   will-change: opacity;
+   /* THE RETRACE IS OFFSET, AND THE AUDITION IS WHY (the MUST-LOOK gate, both engines, 2x).
+-     A second seed on the same rect is not a second ring: at a peer hue near the progress ink
+-     the two strokes fuse into one fringed band and the fill gauge is simply gone. That is not
+-     hypothetical — `inkFor` walks the golden angle and index 2 lands at 275deg, a hand's
+-     breadth from `--color-progress-ink`. Looked at, co-located, it read as ONE ring.
++     A second seed on the same rect is not a second ring: two strokes at one offset fuse into a
++     single fringed band and the fill gauge is simply gone. That was measured against a violet
++     gauge and holds harder now the gauge is graphite — a peer's ink over the board's own
++     pencil, in registration, would read as ONE ring.
+      So the second pass is offset, which is what the estate's own retrace idiom always was
+      (`scribbleUnderline`: "slightly offset retrace for pencil double-stroke", offset ~1x the
+      stroke width). 8 units of stroke in a 1000 box is `1 - 8/500` = 0.984 — the same ratio.
+@@ -607,6 +704,9 @@ onUnmounted(() => {
+      card's live face clips (`.live-face-slot { overflow: hidden }`) and a join landing while
+      the deck is open has to ring THAT face (M13 row 13). An outward ring reads beautifully on
+      the playing view and is cut off in the card; an inward one is whole in both.
++     UNMOVED by T9-W7: the join ring keeps the offset it shipped with, and the tally goes
++     further in (0.968) rather than pushing this ring off its measured seat. The two are told
++     apart by form (continuous against ticked), by offset and by ink.
+      A static transform on a static group: composited, no re-raster, no filter, no beat. */
+   transform: scale(0.984);
+   transform-origin: 50% 50%;
+@@ -616,12 +716,12 @@ onUnmounted(() => {
+   opacity: 1;
+ }
+ 
+-/* NO TRANSITION ON THE DASH, and that is the load-bearing difference from `.progress-trace`.
+-   The fill gauge's front moves on FILL EVENTS, so a 240ms tween is what carries it between two
+-   resting values. The join ring's front is driven every frame by a `sequence` handle that is
+-   already the easing — laying a second 240ms tween over it would smear the beat's own curve and
+-   leave the ring un-arrived ~240ms after J3's window has closed. The one-shot owns the motion;
+-   the paint just follows it. */
++/* NO TRANSITION ON THE FRONT, in either stack, and for the same reason at each. The join
++   ring's front is driven every frame by a `sequence` handle that is already the easing — a
++   tween laid over it would smear the beat's own curve and leave the ring un-arrived after J3's
++   window has closed. The tally's front is a tick appearing where a mark was placed, and there
++   is no interpolable value left in either layer to tween: both are geometry now. The one-shot
++   owns the motion; the paint follows it. */
+ 
+ /* FILL-gauge a11y mirror — visually hidden, still announced (the sr-only clip). */
+ .progress-trace-a11y {
+diff --git a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+new file mode 100644
+index 00000000..d5ab057c
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+@@ -0,0 +1,239 @@
++import { describe, it, expect, vi, afterEach } from "vitest";
++import { poseFronts, generateFrameTraceFrames, FRONT_MIN_MS } from "./gridPaths";
++import { MOTION } from "../config/pencilConfig";
++
++/**
++ * THE FRONT'S CONTRACT (T9-W7 §1/§4, the cross-family hand-off).
++ *
++ * `poseFronts` is exported to ACC-SIX, the §10 tally and PLR-COUNT, and it carries a
++ * precondition the pass-3 critique found unstated (§3.7): it parses a pose as ONE polyline.
++ * Handed a multi-subpath pose it would count the JUMPS between subpaths as drawn length and
++ * return a single connected path crossing the board — a wrong shape that looks plausible. The
++ * guard hands such a pose back uncut, and these rows are what make that a contract rather than
++ * a comment. Both arms of the guard are exercised against the estate's OWN generators, not a
++ * hand-written string: `generateGridBoilFrames` really does emit a four-subpath frame.
++ */
++const subpaths = (d: string) => (d.match(/[Mm]/g) ?? []).length;
++const points = (d: string) => (d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi) ?? []).length / 2;
++
++// the board gauge's own ring, grain-baked exactly as HandDrawnGrid bakes it (grain-static)
++const RING = generateFrameTraceFrames(1000, 42, 4, 1.5, {
++  baseFrequency: 0.04,
++  numOctaves: 2,
++  scale: 2.5,
++  seed: 7,
++});
++
++describe("poseFronts — the drawn front, as geometry", () => {
++  it("cuts a single-subpath ring at its own arc-length fraction", () => {
++    expect(subpaths(RING[0])).toBe(1);
++    const half = poseFronts(RING, 0.5);
++    expect(half).toHaveLength(RING.length);
++    // a cut pose is shorter than the whole one, and still one subpath
++    expect(points(half[0])).toBeLessThan(points(RING[0]));
++    expect(points(half[0])).toBeGreaterThan(2);
++    expect(subpaths(half[0])).toBe(1);
++    // and the cut is monotone in the fraction
++    expect(points(poseFronts(RING, 0.25)[0])).toBeLessThan(points(half[0]));
++  });
++
++  it("returns the poses UNCHANGED at f >= 1 and empty at f <= 0", () => {
++    expect(poseFronts(RING, 1)).toBe(RING);
++    expect(poseFronts(RING, 1.7)).toBe(RING);
++    expect(poseFronts(RING, 0)).toEqual(RING.map(() => ""));
++    expect(poseFronts(RING, -0.3)).toEqual(RING.map(() => ""));
++  });
++
++  it("hands a MULTI-SUBPATH pose back uncut rather than joining its subpaths", () => {
++    const multi = "M0,0 L100,0 L100,100 M300,300 L400,300 L400,400";
++    expect(subpaths(multi)).toBe(2);
++    expect(poseFronts([multi], 0.5)[0]).toBe(multi);
++  });
++
++  it("hands a CURVE pose back uncut — control points are not vertices", () => {
++    // the shape `catmullRomToBezier` emits: `wobbleLine`'s non-jagged branch, which every
++    // caller avoids today by passing `jagged: true`. Parsed as a polyline its control points
++    // would be counted as points on the line and both the length and the cut would be wrong.
++    const curved = "M0,0 C10,0 20,10 20,20 C20,30 30,40 40,40";
++    expect(subpaths(curved)).toBe(1);
++    expect(poseFronts([curved], 0.5)[0]).toBe(curved);
++  });
++
++  it("BORN-RED CONTROL: the guard discriminates, it does not refuse everything", () => {
++    // a single linear pose of the same family IS cut — so the two rows above fail the moment
++    // `poseIsLinearSinglePath` stops discriminating and starts returning false for everything.
++    const single = RING[0];
++    expect(subpaths(single)).toBe(1);
++    expect(poseFronts([single], 0.5)[0]).not.toBe(single);
++    expect(poseFronts(["M0,0 L100,0 L100,100"], 0.5)[0]).not.toBe(
++      "M0,0 L100,0 L100,100",
++    );
++  });
++
++  it("memoises on the frames array's identity without changing the answer", () => {
++    const a = poseFronts(RING, 0.37);
++    const b = poseFronts(RING, 0.37);
++    expect(b).toEqual(a);
++    // a fresh array of the same strings is a memo MISS and must still agree
++    expect(poseFronts([...RING], 0.37)).toEqual(a);
++  });
++});
++
++// The gate's clock state is the page's (one `performance.now()`), so every row loads a fresh
++// module and drives its own mocked clock.
++async function freshGate(times: { now: number }) {
++  vi.resetModules();
++  vi.spyOn(performance, "now").mockImplementation(() => times.now);
++  return (await import("./gridPaths")).frontGate;
++}
++afterEach(() => {
++  vi.restoreAllMocks();
++  vi.useRealTimers();
++});
++
++describe("frontGate — the front's rate budget (A.6: the end included, on the clock's own grain)", () => {
++  it("the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s", () => {
++    expect(FRONT_MIN_MS).toBe(MOTION.hand.stepMs - 1);
++    expect(1000 / FRONT_MIN_MS).toBe(62.5);
++  });
++
++  it("a fine clock: a 15 ms gap is swallowed and a 16 ms gap commits", async () => {
++    const t = { now: 0.25 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    for (const now of [0.25, 8.35, 15.25, 16.25, 24.35, 31.2, 32.3]) {
++      t.now = now;
++      gate.write(now);
++    }
++    // 15.25 is 15.0 after 0.25 (swallowed), 16.25 is 16.0 (commits); 31.2 is 14.95 after it
++    expect(seen).toEqual([0.25, 16.25, 32.3]);
++  });
++
++  it("a whole-millisecond clock: a reading of 16 is swallowed (it may be 15.01 ms), 17 commits", async () => {
++    const t = { now: 100 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    for (const now of [100, 108, 116, 117, 125, 133, 134]) {
++      t.now = now;
++      gate.write(now);
++    }
++    expect(seen).toEqual([100, 117, 134]);
++  });
++
++  it("a forced end inside the window is owed, and lands at the window's end, never inside it", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: [number, number][] = [];
++    const gate = frontGate((v) => seen.push([v, t.now]));
++    gate.write(0.1); // lands at once: 0.5
++    t.now = 8.6; // a fine clock (8.1 ms later)
++    gate.write(1, true); // the tween's exact end, 8.1 ms after the last commit
++    expect(seen).toEqual([[0.1, 0.5]]);
++    t.now = 16.4;
++    vi.advanceTimersByTime(7.8); // a timer that fires early re-checks the clock and waits
++    expect(seen.length).toBe(1);
++    t.now = 16.5;
++    vi.advanceTimersByTime(1);
++    expect(seen).toEqual([
++      [0.1, 0.5],
++      [1, 16.5],
++    ]);
++    const gaps = seen.slice(1).map(([, at], i) => at - seen[i][1]);
++    expect(Math.min(...gaps)).toBeGreaterThanOrEqual(FRONT_MIN_MS);
++  });
++
++  it("a write while an end is owed replaces it; a re-arm drops it and the window holds across runs", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.2);
++    t.now = 4.7;
++    gate.write(1, true); // owed
++    t.now = 6.9;
++    gate.write(0, true); // the ring unmounts: the latest value is the truth
++    t.now = 16.6;
++    vi.advanceTimersByTime(20);
++    expect(seen).toEqual([0.2, 0]);
++    t.now = 20.1;
++    gate.write(0.4, true); // owed again (3.5 ms after the last commit)
++    gate.rearm(); // a new run supersedes it
++    vi.advanceTimersByTime(40);
++    expect(seen).toEqual([0.2, 0]);
++    gate.write(0.05); // the new run's first frame, 3.5 ms after the last commit: folded
++    t.now = 24.3;
++    gate.write(0, true); // a restart's forced first write: owed to the window's end
++    expect(seen).toEqual([0.2, 0]);
++    t.now = 32.7;
++    vi.advanceTimersByTime(40);
++    expect(seen).toEqual([0.2, 0, 0]);
++    t.now = 49.8;
++    gate.write(0.3); // 17.1 ms later: the window is clear, it lands at once
++    expect(seen).toEqual([0.2, 0, 0, 0.3]);
++  });
++});
++
++describe("frontGate — a forced write is timed from the landing (pass 7)", () => {
++  it("an owed end waits for the last re-cut to LAND, not for its request", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 0.5 };
++    const frontGate = await freshGate(t);
++    const seen: [number, number][] = [];
++    // the render lands the commit 3.2 ms after the request (the rest of the frame + the flush)
++    const gate = frontGate((v) => {
++      seen.push([v, t.now]);
++      queueMicrotask(() => (t.now += 3.2));
++    });
++    gate.write(0.4); // requested at 0.5, lands at 3.7
++    await Promise.resolve();
++    await Promise.resolve();
++    t.now = 8.6;
++    gate.write(1, true); // the end, owed
++    t.now = 16.6; // 16.1 after the request, 12.9 after the landing: still owed
++    vi.advanceTimersByTime(8);
++    expect(seen.length).toBe(1);
++    t.now = 19.8; // 16.1 after the landing
++    vi.advanceTimersByTime(8);
++    expect(seen.map(([v]) => v)).toEqual([0.4, 1]);
++    // a frame's own write keeps the request's clock (a 60 Hz panel keeps every frame)
++    await Promise.resolve();
++    await Promise.resolve();
++    t.now = 36.0; // 16.2 after the end's request, 13.0 after its landing
++    gate.write(0.9);
++    expect(seen.map(([v]) => v)).toEqual([0.4, 1, 0.9]);
++  });
++});
++
++describe("frontGate — a frame's write is timed on its frame (pass 7)", () => {
++  it("two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran", async () => {
++    const t = { now: 100.2 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.1, false, 100.0); // frame 100.0, its callback at 100.2
++    t.now = 116.3; // the next callback 16.1 ms later (a fine clock) ...
++    gate.write(0.2, false, 115.6); // ... in a frame 15.6 ms after the last: swallowed
++    t.now = 117.0;
++    gate.write(0.3, false, 116.0); // a frame 16.0 ms after: commits
++    expect(seen).toEqual([0.1, 0.3]);
++  });
++
++  it("a tween's end written inside a frame is timed on that frame, and owed when it is early", async () => {
++    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout"] });
++    const t = { now: 100.2 };
++    const frontGate = await freshGate(t);
++    const seen: number[] = [];
++    const gate = frontGate((v) => seen.push(v));
++    gate.write(0.5, false, 100.0);
++    t.now = 117.1; // the end's callback runs 16.9 ms after the last one ...
++    gate.write(1, true, 115.5); // ... in a frame 15.5 ms after the last re-cut: owed, not landed
++    expect(seen).toEqual([0.5]);
++    t.now = 118.0;
++    vi.advanceTimersByTime(4);
++    expect(seen).toEqual([0.5, 1]);
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.tally.test.ts b/web/frontend/src/pencil/grid/gridPaths.tally.test.ts
+new file mode 100644
+index 00000000..81fa9702
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.tally.test.ts
+@@ -0,0 +1,84 @@
++import { describe, it, expect } from "vitest";
++import { generateFrameTraceFrames, tallyPaths } from "./gridPaths";
++import { BOIL_CONFIG, FILTER_PRESETS } from "@pencil/config/pencilConfig";
++
++/**
++ * LAW A, ON THE EXPORT THE BOARD RUNS (T9-W7 ACC-GRAPHITE). `HandDrawnGrid` renders
++ * `tallyPaths(traceFrames, writable, written)` and nothing else, so these rows hold the law
++ * where it lives: no constant or formula is restated here. The row that matters is the
++ * DISCONTINUITY — the integer form (`k = ceil(written / ceil(writable/slots))`) fills 56 ticks
++ * at writable 56 and 29 at writable 57 on a 9x9 frame of 56 slots.
++ */
++const RING = generateFrameTraceFrames(
++  1000,
++  42,
++  BOIL_CONFIG.frameCount,
++  BOIL_CONFIG.frameBoil,
++  FILTER_PRESETS["grain-static"]?.grain,
++);
++const ticks = (d: string) => (d.match(/M/g) ?? []).length;
++const counts = (writable: number, written: number) =>
++  tallyPaths(RING, writable, written).map(ticks);
++
++describe("tallyPaths — LAW A, one mark, every board", () => {
++  it("has NO discontinuity at the slot boundary — 56, 57 and 58 writable all fill 56 ticks", () => {
++    for (const writable of [56, 57, 58])
++      expect(counts(writable, writable)).toEqual([56, 56, 56, 56]);
++  });
++
++  it("counts one tick per cell while the frame can hold them, on every pose", () => {
++    for (const [writable, written] of [
++      [4, 1],
++      [4, 4],
++      [9, 9],
++      [20, 3],
++      [20, 20],
++      [46, 46],
++    ] as const)
++      expect(counts(writable, written)).toEqual([written, written, written, written]);
++  });
++
++  it("scales the count into the frame's slots on a board too big to hold one per cell", () => {
++    for (const writable of [64, 146, 172, 240]) {
++      expect(counts(writable, writable)).toEqual([56, 56, 56, 56]);
++      expect(counts(writable, Math.round(writable / 2))).toEqual([28, 28, 28, 28]);
++    }
++  });
++
++  it("rounds a fractional count to the NEAREST tick, never down or up (non-integer ratios)", () => {
++    // 57 writable cells on 56 slots: one written cell is 0.98 of a tick and draws ONE (floor
++    // draws none, so the first cell you write would leave no mark); 29 is 28.49 and draws 28
++    // (ceil draws 29). On 146 cells, 99 is 37.97 and draws 38 (floor draws 37).
++    for (const [writable, written, k] of [
++      [57, 1, 1],
++      [57, 29, 28],
++      [146, 99, 38],
++      [146, 3, 1],
++    ] as const)
++      expect(counts(writable, written)).toEqual([k, k, k, k]);
++  });
++
++  it("cuts every tick at LAW A's 45 units of ink, whatever the board", () => {
++    for (const [writable, written] of [
++      [4, 4],
++      [20, 20],
++      [57, 57],
++      [172, 172],
++    ] as const) {
++      for (const tick of tallyPaths(RING, writable, written)[0].split("M").slice(1)) {
++        const pts = (tick.match(/-?[\d.]+,-?[\d.]+/g) ?? []).map((s) =>
++          s.split(",").map(Number),
++        );
++        let len = 0;
++        for (let i = 1; i < pts.length; i++)
++          len += Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]);
++        expect(len).toBeGreaterThan(44.5);
++        expect(len).toBeLessThan(45.5);
++      }
++    }
++  });
++
++  it("draws nothing at all when nothing is written", () => {
++    expect(tallyPaths(RING, 51, 0)).toEqual(["", "", "", ""]);
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..7abdd96d 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -12,7 +12,7 @@ import {
+   boilLineFrames,
+   useBoilCache,
+ } from "@mkbabb/pencil-boil";
+-import type { GrainConfig } from "../config/pencilConfig";
++import { MOTION, type GrainConfig } from "../config/pencilConfig";
+ 
+ interface BoilFrames {
+   /** frame[frameIdx] — closed rect path for the outer frame */
+@@ -69,6 +69,167 @@ export function generateCellRects(
+   );
+ }
+ 
++/** Inset of the retrace rect from the cell rect, in the cell's ghost units. A 12-unit pass and a
++ *  15-unit pass 8 apart fuse into a 21.5-unit band (20 units on a 1x coarse board, where the second
++ *  pass is 12). Why the pixel decides is in gameCell.css's `.cell-ghost-retrace`. */
++const RETRACE_INSET = 8;
++
++/**
++ * THE SECOND PASS (T9-W7 ACC-GRAPHITE) — the same rect, one stroke width in, on its own seed.
++ *
++ * The inner pass of the focus ring, which is how the ring buys its WEIGHT: `generateCellRects`'
++ * geometry inset by `RETRACE_INSET`, seeded `+3` off the same lattice (the `scribbleUnderline` /
++ * `.join-pose` retrace idiom, in the cell's own viewBox), and REVERSED so the draw-on runs the
++ * other way round — no second keyframe, no second timing constant. The two passes overlap
++ * and paint as ONE band: their edges' own wander is sub-pixel (0.02-0.05 px measured),
++ * so this is a heavier stroke that happens to be drawn twice, not a retrace a reader can see.
++ *
++ * Subgrid-independent like its sibling and memoized through the same LRU under its own key.
++ */
++export function generateCellRetraceRects(
++  boardSize: number,
++  viewBoxSize: number,
++  seed: number = 42,
++): Record<number, string> {
++  return useBoilCache<Record<number, string>>(
++    ["cellRetraceRects", boardSize, viewBoxSize, seed],
++    () => {
++      const cellSize = viewBoxSize / boardSize;
++      const cellSegments = boardSize >= 16 ? 2 : 4;
++      const inset = Math.min(RETRACE_INSET, cellSize / 4);
++      const rects: Record<number, string> = {};
++      for (let r = 0; r < boardSize; r++) {
++        for (let c = 0; c < boardSize; c++) {
++          const pos = r * boardSize + c;
++          rects[pos] = reverseLinearPath(
++            wobbleRect(
++              c * cellSize + inset,
++              r * cellSize + inset,
++              cellSize - inset * 2,
++              cellSize - inset * 2,
++              {
++                roughness: 0.4,
++                segments: cellSegments,
++                seed: seed + 500 + pos * 7 + 3,
++                jagged: true,
++              },
++            ),
++          );
++        }
++      }
++      return rects;
++    },
++  );
++}
++
++/** Reverse a jagged (`M x,y L x,y … Z`) closed path so the pencil's second pass travels the
++ *  other way round. `wobbleRect({ jagged: true })` serializes through `pointsToLinear`, so the
++ *  path is exactly a move plus lines and the point list is the whole of it. */
++function reverseLinearPath(d: string): string {
++  const points = d.match(/-?\d[\d.e+-]*,-?\d[\d.e+-]*/g);
++  if (!points || points.length < 2) return d;
++  return `M${points.reverse().join(" L")} Z`;
++}
++
++/**
++ * THE TALLY'S TICKS, AS GEOMETRY (T9-W7 ACC-GRAPHITE).
++ *
++ * `k` marks laid along a baked polyline: the ring is divided into `slots` equal pitches and
++ * each of the first `k` carries an ink mark `duty` of the pitch long. The marks are cut out of
++ * the ring's own points, so every tick wanders exactly as the frame it sits inside does.
++ *
++ * `tallyPaths` below owns the law (LAW A: 45 units of ink and 25 of paper on every board, so
++ * `duty` is 45·slots/perimeter and `slots` is what the frame can hold). This function knows
++ * only how to cut; the default duty is the shape of the mark, not a policy.
++ *
++ * IT IS GEOMETRY AND NOT A DASH, and the reason is SEGMENT COUNT rather than syntax. WebKit
++ * restarts a dash phase every ~128 segments of a polyline where Chromium dashes the path
++ * whole; a grain-baked ring is 493 segments by construction, so the gauge this replaced
++ * painted 0.228 of the ring in Chromium and 0.921 in WebKit off identical markup, and
++ * decimating the same pose walks it back (123 segments agree). A cut path has no phase for an
++ * engine to restart, so both engines paint the same k, and no board size or grain setting can
++ * push the count past somebody's chunk boundary and regress it.
++ *
++ * It cuts over `poseGeometry` — the memoised, guarded arc-length walk `poseFronts` uses
++ * (ACC-FIVE's cured export) — rather than a scanner of its own: one grammar for every front
++ * this file cuts, and a pose that is not one linear polyline draws no ticks rather than wrong
++ * ones.
++ *
++ * Pure of its arguments and cheap (one pass over ~350 points per pose, on a FILL event only).
++ */
++function tickMarksAlong(
++  d: string,
++  k: number,
++  slots: number,
++  duty: number = 0.57,
++  across: number = 0,
++): string {
++  const { pts, cum, single } = poseGeometry([d])[0];
++  if (!single || k <= 0 || slots <= 0 || pts.length < 2) return "";
++  const total = cum[cum.length - 1];
++  if (total <= 0) return "";
++  const pitch = total / slots;
++  const ink = pitch * duty;
++  /** The point at arc length `s`, and the index of the vertex after it. */
++  const at = (s: number): { p: [number, number]; next: number } => {
++    let lo = 0;
++    let hi = cum.length - 1;
++    while (lo < hi) {
++      const mid = (lo + hi) >> 1;
++      if (cum[mid] < s) lo = mid + 1;
++      else hi = mid;
++    }
++    const i = Math.max(1, lo);
++    const seg = cum[i] - cum[i - 1] || 1;
++    const t = Math.min(1, Math.max(0, (s - cum[i - 1]) / seg));
++    return {
++      p: [
++        pts[i - 1][0] + (pts[i][0] - pts[i - 1][0]) * t,
++        pts[i - 1][1] + (pts[i][1] - pts[i - 1][1]) * t,
++      ],
++      next: i,
++    };
++  };
++  const out: string[] = [];
++  if (across > 0) {
++    // ACROSS (the U-10 arm): the tally's own stroke, perpendicular to the rule, `across` units
++    // long and pointing INTO the board from the pose (the ring's centroid decides which side).
++    // A mark laid ALONG a rule at a regular pitch is a dashed rule whatever its duty; a mark
++    // laid across it is a tally.
++    const cx = pts.reduce((a, p) => a + p[0], 0) / pts.length;
++    const cy = pts.reduce((a, p) => a + p[1], 0) / pts.length;
++    const r2 = (v: number) => +v.toFixed(2);
++    for (let m = 0; m < Math.min(k, slots); m++) {
++      const s0 = (m + 0.5) * pitch;
++      const p = at(s0).p;
++      const q = at(Math.min(total, s0 + 1)).p;
++      const tl = Math.hypot(q[0] - p[0], q[1] - p[1]) || 1;
++      let nx = -(q[1] - p[1]) / tl;
++      let ny = (q[0] - p[0]) / tl;
++      if (nx * (cx - p[0]) + ny * (cy - p[1]) < 0) {
++        nx = -nx;
++        ny = -ny;
++      }
++      out.push(
++        `M${r2(p[0])},${r2(p[1])} L${r2(p[0] + nx * across)},${r2(p[1] + ny * across)}`,
++      );
++    }
++    return out.join(" ");
++  }
++  for (let m = 0; m < Math.min(k, slots); m++) {
++    const a = m * pitch;
++    const b = Math.min(total, a + ink);
++    const start = at(a);
++    const end = at(b);
++    const mid = pts.slice(start.next, end.next);
++    const chain = [start.p, ...mid, end.p]
++      .map((p) => `${+p[0].toFixed(2)},${+p[1].toFixed(2)}`)
++      .join(" L");
++    out.push(`M${chain}`);
++  }
++  return out.join(" ");
++}
++
+ // ── Grain bake (T3-W13 §1-P2) ─────────────────────────────────────
+ //
+ // The booked geometric bake (pencilConfig.ts, grain-static disposition) EXECUTED for
+@@ -346,8 +507,8 @@ const FRAME_Y_PAD = 0;
+  * grammar, NOT the grid's live-filter grammar. The consumer renders these as filterless
+  * static siblings, opacity-swapped on the shared boil beat: steady-state raster zero.
+  *
+- * pathLength normalisation, dash draw, and the fill-front tween live at the consumer
+- * (HandDrawnGrid) — this function owns only the ring geometry.
++ * This function owns only the ring geometry; `poseLengths` below measures it and
++ * `poseFronts` / `tickMarksAlong` cut it. Nothing here declares a dash.
+  */
+ export function generateFrameTraceFrames(
+   viewBoxSize: number,
+@@ -369,6 +530,289 @@ export function generateFrameTraceFrames(
+   );
+ }
+ 
++/** A closed linear pose (`pointsToLinear` + ` Z`) back to its points, the close made explicit. */
++function posePoints(d: string): [number, number][] {
++  const nums = d.match(/-?\d*\.?\d+(?:e[-+]?\d+)?/gi);
++  if (!nums || nums.length < 4) return [];
++  const pts: [number, number][] = [];
++  for (let i = 0; i + 1 < nums.length; i += 2)
++    pts.push([Number(nums[i]), Number(nums[i + 1])]);
++  if (/z\s*$/i.test(d) && pts.length) pts.push(pts[0]);
++  return pts;
++}
++
++/** One pose, parsed once: its points, the arc length at each point, and whether it may be cut. */
++type PoseGeometry = {
++  pts: [number, number][];
++  /** cum[k] = arc length from pts[0] to pts[k]; cum[last] is the pose's own length. */
++  cum: number[];
++  /** ONE subpath — the precondition below. False poses are handed back uncut. */
++  single: boolean;
++};
++
++/**
++ * `poseFronts`' PRECONDITION, enforced rather than assumed (T9-W7 §1, the cross-family hand-off).
++ *
++ * This file parses a pose by pulling every number pair out of the `d` and treating them as ONE
++ * polyline. That is exactly true of `pointsToLinear`'s output — `M x,y L x,y … Z` — which is
++ * what every caller passes today. It is false of two other shapes this estate can emit, and in
++ * both the cut would come back as a wrong path that looks plausible:
++ *
++ *   - MORE THAN ONE SUBPATH. The jumps between subpaths would be counted as drawn length and
++ *     the cut would return one connected path crossing the gap.
++ *   - A CURVE. `wobbleLine`'s non-jagged branch serialises through `catmullRomToBezier`, and
++ *     `C`'s control points are not vertices: they would be counted as points on the line, so
++ *     both the length and the cut would be wrong. Every caller passes `jagged: true` today —
++ *     the ring's generator hardcodes it — which is precisely the kind of fact that stops being
++ *     true without anyone noticing.
++ *
++ * So a pose that is not a single linear polyline is handed back UNCUT: the function declines to
++ * cut geometry it cannot measure, rather than guessing. `poseFronts` is §1's hand-off to
++ * ACC-SIX, the §10 tally and PLR-COUNT, and this is the sentence that travels with it.
++ */
++function poseIsLinearSinglePath(d: string): boolean {
++  const cmds = d.match(/[A-DF-Za-df-z]/g) ?? [];
++  if (cmds.filter((c) => c === "M" || c === "m").length > 1) return false;
++  return cmds.every(
++    (c) => c === "M" || c === "m" || c === "L" || c === "l" || /^[Zz]$/.test(c),
++  );
++}
++
++/**
++ * Points + cumulative arc length per pose, in the poses' own user units. Pure, geometry-only.
++ *
++ * The poses differ from one another by 3.59 units in 3,965 (0.091%), so anything measured on
++ * one pose is within ~2.3 px of the others on a 2,513-px perimeter. Measured, not assumed.
++ *
++ * MEMOISED ON THE FRAMES ARRAY'S IDENTITY, and the memo is half the call (T9-W7 §5, pass-3
++ * critique §3.4). The geometry is INVARIANT for the whole tween — only the fraction moves — yet
++ * a naive cut re-parsed an 18.7 KB path string twice per pose per frame: 0.427 ms/call, of which
++ * 0.204 ms was arc length and 0.198 ms the second parse. The consumers hold their poses in a
++ * `computed`, so the array's identity is stable for exactly as long as the geometry is, and a
++ * `WeakMap` keyed on it expires with it — no cache size, no invalidation rule, nothing to get
++ * wrong. A caller that builds a fresh array per call simply misses the memo and pays what it
++ * always paid.
++ *
++ * Module-private: an export with no consumer is the decoy the theme-token census exists to kill,
++ * one namespace over (knip reds on it). ACC-SIX and the §10 tally take arc length THROUGH
++ * `poseFronts`; the day one of them wants the raw number, it exports here, with its consumer, in
++ * the same diff.
++ */
++const poseGeometryCache = new WeakMap<readonly string[], PoseGeometry[]>();
++
++function poseGeometry(frames: string[]): PoseGeometry[] {
++  const hit = poseGeometryCache.get(frames);
++  if (hit) return hit;
++  const built = frames.map((d) => {
++    const single = poseIsLinearSinglePath(d);
++    const pts = single ? posePoints(d) : [];
++    const cum: number[] = pts.length ? [0] : [];
++    for (let i = 1; i < pts.length; i++)
++      cum.push(
++        cum[i - 1] + Math.hypot(pts[i][0] - pts[i - 1][0], pts[i][1] - pts[i - 1][1]),
++      );
++    return { pts, cum, single };
++  });
++  if (import.meta.env.DEV && built.some((g) => !g.single))
++    console.warn(
++      "[gridPaths] poseFronts: a pose is not a single linear polyline and was handed back uncut " +
++        "(gridPaths §poseIsLinearSinglePath).",
++    );
++  poseGeometryCache.set(frames, built);
++  return built;
++}
++
++/**
++ * Each pose CUT at `fraction` of its own arc length — a front, as geometry.
++ *
++ * THE DASH IS GONE, AND THAT IS THE CURE (T9-W7 §4). A front drawn with `stroke-dasharray`
++ * over `pathLength` read 92% filled at a quarter in WebKit. `pathLength` is not the cause:
++ * every declaration arm (attribute dash, CSS dash, a period equal to the path, a zero offset)
++ * reads 4 runs at 0.215 share in WebKit for a requested 0.05, and decimating the pose walks it
++ * back (492 segments → 4 runs, 123 → 1; a straight 599-segment rectangle breaks the same way).
++ * WebKit restarts the dash phase every ~128 segments of a polyline; Chromium dashes the path
++ * whole. So the front is DRAWN: the pose is truncated at `fraction · length`, the final point
++ * interpolated, and there is no dash pattern for an engine to restart.
++ *
++ * ITS CONSUMER ON THIS TREE, AND ITS RATE. One: `HandDrawnGrid.joinFront` (the join ring,
++ * 740-1180 ms, driven once per animation frame by a `sequence` one-shot). It commits through
++ * `frontGate` below, so it re-cuts at most 62.5 times a second at any refresh rate. The board's
++ * fill tally takes no front at all (it is `tallyPaths`, re-cut on a FILL event), and
++ * DifficultyTally's draw-in keeps its `stroke-dashoffset`: twelve 4-point strokes, far inside the
++ * ~128 segments where WebKit restarts a dash phase, so there is no fault there to cure.
++ *
++ * PRECONDITION: one subpath per pose, enforced at the parse (`poseIsLinearSinglePath` above); a
++ * multi-subpath pose comes back uncut and unchanged.
++ */
++export function poseFronts(frames: string[], fraction: number): string[] {
++  const f = Math.max(0, Math.min(1, fraction));
++  if (f >= 1) return frames;
++  if (f <= 0) return frames.map(() => "");
++  const geom = poseGeometry(frames);
++  return frames.map((d, i) => {
++    const { pts, cum, single } = geom[i];
++    if (!single) return d;
++    const target = cum.length ? cum[cum.length - 1] * f : 0;
++    if (!pts.length || target <= 0) return "";
++    const out = [pts[0]];
++    for (let k = 1; k < pts.length; k++) {
++      if (cum[k] >= target) {
++        const seg = cum[k] - cum[k - 1];
++        const t = seg === 0 ? 0 : (target - cum[k - 1]) / seg;
++        out.push([
++          pts[k - 1][0] + (pts[k][0] - pts[k - 1][0]) * t,
++          pts[k - 1][1] + (pts[k][1] - pts[k - 1][1]) * t,
++        ]);
++        break;
++      }
++      out.push(pts[k]);
++    }
++    return pointsToLinear(out);
++  });
++}
++
++/**
++ * THE FRONT'S RATE BUDGET, and every `poseFronts` consumer rides it (T9-W7 §5).
++ *
++ * A `sequence` subscriber holds the continuous rAF chain while it runs, so "one re-cut per
++ * frame" is the panel's refresh rate wearing a budget's clothes: ungated, the tally re-cut at
++ * 134.2/s on a 128 Hz panel and 60.9/s on a 63 Hz one (pass-4 critique §3.1). The budget is a
++ * declared constant instead: no two commits closer than FRONT_MIN_MS, ≤62.5 re-cuts per
++ * second at any refresh rate, the forced end included. It is the hand's displacement clause
++ * less one millisecond (`MOTION.hand.stepMs`, the one home). `e2e/front-rate.spec.ts` counts
++ * it on every consumer and prints each burst's shortest gap.
++ */
++export const FRONT_MIN_MS = MOTION.hand.stepMs - 1;
++
++// A clock that has only ever read whole-millisecond gaps is 1 ms-quantised (WebKit's
++// `performance.now()` and its rAF timestamps both are): a reading of 16 there may be 15.01 ms,
++// so the gate asks such a clock for one more millisecond. The first fractional gap anywhere on
++// the page proves a finer clock (chromium's reads 0.1 ms), and the extra millisecond goes.
++let clockSeen = NaN;
++let wholeMsClock = true;
++function readClock(): number {
++  const now = performance.now();
++  const gap = now - clockSeen;
++  if (gap > 0 && Math.abs(gap - Math.round(gap)) > 1e-6) wholeMsClock = false;
++  clockSeen = now;
++  return now;
++}
++
++/**
++ * Leading-edge rate gate on a front's commit: a write lands now when the window is clear (the
++ * front never lags the act by more than the window), and no two commits land closer than
++ * FRONT_MIN_MS on the clock's own grain — across runs too, so a restart, a snap or a rest pose
++ * is inside the budget like any frame. A `force`d write (a tween's exact end, a snap) is never
++ * dropped and never lands inside the window: it is owed, and lands at `last + FRONT_MIN_MS`, so
++ * a gauge and its a11y mirror still agree to the digit and the end costs no budget. A write
++ * that arrives while one is owed replaces its value (the latest is the truth).
++ *
++ * Two clocks, one per kind of write. A frame's write passes its FRAME's time (`at`, the rAF
++ * timestamp `frontTween` hands its `onProgress`): read from the callback instead, the gap took
++ * the drift of the callback's place in its frame, and two frames 15.3 ms apart re-cut through a
++ * 16 ms window (pass 7, chromium, the gauge). A forced write (an end in a timer, a start in the
++ * worker's message) has no frame, and is timed from where the last re-cut LANDED: a frame's
++ * commit reaches the DOM after the rest of that frame's work (0–9 ms, pass 7), so timed from the
++ * request a forced end landed 14.0–15.4 ms after it. The frame's clock never runs ahead of the
++ * wall's, so mixing them only ever widens a gap.
++ */
++export function frontGate(commit: (v: number) => void) {
++  let last = -Infinity;
++  let landed = -Infinity; // when the last re-cut reached the DOM (read after the render's flush)
++  let owed: { v: number } | null = null;
++  let timer: ReturnType<typeof setTimeout> | null = null;
++  const floor = () => FRONT_MIN_MS + (wholeMsClock ? 1 : 0);
++  const cancel = () => {
++    owed = null;
++    if (timer !== null) clearTimeout(timer);
++    timer = null;
++  };
++  const land = (v: number, now: number) => {
++    cancel();
++    last = now;
++    commit(v);
++    // queued after the render's flush (the commit queued it), so this reads the landing
++    queueMicrotask(() => (landed = readClock()));
++  };
++  const from = (force: boolean) => (force ? Math.max(last, landed) : last);
++  const flush = () => {
++    timer = null;
++    if (!owed) return;
++    const now = readClock();
++    const wait = from(true) + floor() - now;
++    if (wait > 0) timer = setTimeout(flush, wait);
++    else land(owed.v, now);
++  };
++  return {
++    write(v: number, force = false, at?: number) {
++      const wall = readClock(); // read on every write: the grain detector sees each one
++      const now = at ?? wall;
++      if (now - from(force) >= floor()) return land(v, now);
++      if (owed) owed.v = v;
++      else if (force) {
++        owed = { v };
++        timer = setTimeout(flush, from(true) + floor() - now);
++      }
++    },
++    /** A new run drops an owed end it supersedes. The window stands: the run's first write
++     *  lands at once if the last commit is FRONT_MIN_MS old, and is owed (forced) or folded into
++     *  the next frame's write otherwise, never landed inside it. */
++    rearm: cancel,
++  };
++}
++
++/**
++ * Arc length of each pose, in the poses' own user units, off the SAME memoised parse
++ * `poseFronts` cuts from (ACC-FIVE's `poseGeometry`, grafted verbatim above). One caller:
++ * `tallyPaths` below, which reads its `slots` off each pose's own perimeter. The consumer passes
++ * the whole `traceFrames` array, so the identity is the computed's and the memo hits. A pose
++ * that fails the precondition reads 0 and the tally draws nothing for it, rather than counting
++ * a subpath jump as drawn length.
++ */
++function poseLengths(frames: string[]): number[] {
++  return poseGeometry(frames).map((g) => (g.cum.length ? g.cum[g.cum.length - 1] : 0));
++}
++
++/** LAW A's two constants, in the ring's 1000-unit viewBox: a tick is 45 units of graphite and
++ *  25 of paper on every board. Module-private; `tallyPaths` is their one reader. */
++const TICK_INK = 45;
++const TICK_GAP = 25;
++
++/**
++ * THE TALLY, WHOLE (T9-W7 ACC-GRAPHITE) — the law and the cut in one export, so the unit test
++ * that holds LAW A holds the code the board runs rather than a restated copy of it.
++ *
++ * LAW A — ONE MARK, EVERY BOARD. The INK is the constant and the COUNT is what gives: 45 units
++ * of graphite and 25 of paper at every board size; `slots` is as many 70-unit pitches as each
++ * pose's own perimeter holds, never more than there are cells to count; where the frame cannot
++ * hold one slot per writable cell a tick stands for `writable/slots` cells. The spoken layer
++ * carries the exact number regardless (`aria-valuetext`).
++ *
++ * THE RATIO, NOT AN INTEGER. `k = round(written · slots / writable)`. The integer form — a tick
++ * stands for `m = ceil(writable/slots)` whole cells — cliffs at the slot boundary: at 9x9 Hard
++ * (56 slots) writable 56 fills 56 ticks and writable 57 fills 29, a 1.93x jump in the mark for
++ * one cell of difference in the deal. The ratio form is continuous there by construction.
++ *
++ * `across` > 0 lays the U-10 ACROSS arm (`tickMarksAlong`). Pure of its arguments; the consumer
++ * re-calls it on a FILL event only.
++ */
++export function tallyPaths(
++  frames: string[],
++  writable: number,
++  written: number,
++  across: number = 0,
++): string[] {
++  const lengths = poseLengths(frames);
++  return frames.map((d, f) => {
++    const slots = Math.max(
++      1,
++      Math.min(writable, Math.floor(lengths[f] / (TICK_INK + TICK_GAP))),
++    );
++    const k = Math.min(slots, Math.round((written * slots) / writable));
++    return tickMarksAlong(d, k, slots, (TICK_INK * slots) / lengths[f], across);
++  });
++}
++
+ /**
+  * Generate boil frame variants for a standalone line segment.
+  * Frame 0 is the base path. Frames 1+ are small perpendicular perturbations.

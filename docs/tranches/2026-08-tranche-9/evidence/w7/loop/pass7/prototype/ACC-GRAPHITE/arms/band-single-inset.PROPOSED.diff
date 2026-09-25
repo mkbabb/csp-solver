@@ -1,0 +1,27 @@
+--- a/web/frontend/src/games/shared/gameCell.css	2026-09-24 16:32:27
++++ b/web/frontend/src/games/shared/gameCell.css	2026-09-24 16:32:27
+@@ -280,23 +280,11 @@
+ .game-cell:has(input:focus-visible) .cell-ghost-retrace {
+   display: block;
+   stroke: var(--color-pencil-graphite);
+-  stroke-width: 15;
++  stroke-width: 12;
+   stroke-opacity: 1;
+   stroke-dasharray: 1;
+   stroke-dashoffset: 0;
+   animation: ghost-draw-on 180ms var(--ease-ghostDraw) backwards;
+-}
+-
+-/* THE BAND, KEYED TO THE PIXEL (T9-W7 ACC-GRAPHITE pass 7). The band is read against the frame's
+-   whole stroke, and that ratio moves with how many DEVICE pixels the board spans: a thin line
+-   loses less to anti-aliasing than a thick one. At 15 units the second pass holds 1.38-1.43x on
+-   every board of 600+ device pixels (desk at 1x and 2x, a phone at 2x and 3x, both engines) but
+-   reads ~1.5x on a 1x phone's 350; at 12 units the 1x phone holds 1.36-1.40x and every other
+-   board falls to 1.29-1.33x. So the 1x coarse board, the one small raster, takes 12. */
+-@media (pointer: coarse) and (max-resolution: 1dppx) {
+-  .game-cell:has(input:focus-visible) .cell-ghost-retrace {
+-    stroke-width: 12;
+-  }
+ }
+ 
+ @keyframes ghost-draw-on {

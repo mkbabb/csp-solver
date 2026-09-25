@@ -1,0 +1,16 @@
+--- gridPaths.tree.ts	2026-09-23 21:58:55
++++ gridPaths.floor16.ts	2026-09-23 21:58:55
+@@ -547,11 +547,11 @@
+ // so the gate asks such a clock for one more millisecond. The first fractional gap anywhere on
+ // the page proves a finer clock (chromium's reads 0.1 ms), and the extra millisecond goes.
+ let clockSeen = NaN;
+-let wholeMsClock = true;
++let wholeMsClock = false; // CRITIC PLANT floor16
+ function readClock(): number {
+   const now = performance.now();
+   const gap = now - clockSeen;
+-  if (gap > 0 && Math.abs(gap - Math.round(gap)) > 1e-6) wholeMsClock = false;
++  void gap;
+   clockSeen = now;
+   return now;
+ }

@@ -1,0 +1,45 @@
+lint-lanes · tree=0 ctl=0
+lint-theme-tokens · tree=0 ctl=0
+lint-sleep · tree=0 ctl=0
+lint-bands · tree=1 ctl=1
+lint-verbs · tree=1 ctl=1
+test-e2e-projects · tree=0 ctl=0
+check-pw-projects · tree=0 ctl=0
+lint-arcs · tree=0 ctl=1
+check-peer-arcs-bare · tree=0 ctl=1
+lint-copy · tree=0 ctl=0
+check-copy-register · tree=0 ctl=0
+lint-theme-selectors · tree=0 ctl=0
+lint-ink · tree=0 ctl=0
+lint-motion · tree=0 ctl=0
+lint-live-regions · tree=0 ctl=0
+lint-boundary · tree=0 ctl=0
+check-property-block · tree=0 ctl=0
+undefined-token-census · tree=1 ctl=1
+eslint · tree=0 ctl=0
+npm-run-lint · tree=0 ctl=0
+BATTERY_DONE
+
+## vue-tsc on a copy of the final tree
+vue-tsc -b exit 0
+vue-tsc -p tsconfig.e2e.json exit 0
+## vitest by directory, final tree
+src/composables exit 0 ·  Test Files 3 passed (3)  Tests 16 passed (16) 
+src/games exit 0 ·  Test Files 57 passed (57)  Tests 760 passed (760) 
+src/pencil exit 0 ·  Test Files 8 passed (8)  Tests 73 passed (73) 
+
+untracked in the diff: web/frontend/e2e/peer-walk.spec.ts web/frontend/scripts/check-peer-arcs.mjs 
+full.diff     4219 lines 213484 B sha1 dae6094fd42c · files 18
+git apply --check full.diff on fresh 74a2b5d9: exit 0
+git apply full.diff: exit 0
+pass6.diff onto a fresh 74a2b5d9: exit 0
+pass7 delta (base+pass6 → tree): exit 1 · 6 files · +580/-188 · 64457 B
+web/frontend/e2e/peer-walk.spec.ts
+web/frontend/scripts/check-peer-arcs.mjs
+web/frontend/src/assets/index.css
+web/frontend/src/games/shared/GameBoard.vue
+web/frontend/src/games/shared/playerIdentity.ts
+web/frontend/src/games/shared/useSession.test.ts
+byte-identity archive+full.diff vs tree: EQUAL
+dirs base-210914 base6-210914
+APPLY_DONE

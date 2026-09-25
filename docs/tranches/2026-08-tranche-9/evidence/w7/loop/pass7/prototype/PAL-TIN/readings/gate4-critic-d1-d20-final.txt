@@ -1,0 +1,26 @@
+# the critic's pass-6 g4attack6.sh (rm-free copy), run FIRST again on the FINAL check-peer-tin.mjs sha1 ba09afb5 (rsync copy of the tree; D18's sed re-pointed at the pass-7 pink #ffb2f3)
+clean0 exit 0 · 0 findings · baseline
+D1-color-srgb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(srgb 1 0.706 0.953)";
+D2-oklab exit 1 · 1 findings · src/games/shared/p.ts: export const x = "oklab(0.86 0.1045 -0.0550)";
+D3-lch exit 0 · 0 findings · src/games/shared/p.ts: export const x = "lch(79.5% 36 350)";
+D4-hwb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hwb(310 71% 0%)";
+D5-rgb-percent exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(100% 71% 95%)";
+D6-hex-concat exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#ff" + "b4f3";
+D7-numeric-triples exit 1 · 2 findings · src/games/shared/p.ts: export const TAPE = [[255, 193, 161], [178, 231, 5]];
+D8-json-table exit 1 · 5 findings · src/games/shared/palette.json: {"a":"#ffc1a1","b":"#b2e705","c":"#00edf7","d":"#c4ceff","e":"#ffb4f3"}
+D9-public-css exit 1 · 2 findings · public/peers.css: :root{--x1:#ffc1a1;--x2:#b2e705}
+D10-tsx exit 1 · 1 findings · src/games/shared/P.tsx: export const x = "#ffb4f3";
+D11-minted-concat exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty("--color-peer-" + i + "-name", "#000");
+D12-minted-key-concat exit 1 · 1 findings · src/games/shared/p.ts: declare const i: number; export const s = { ["--color-peer-" + i + "-ring"]: "#000" };
+D13-colormix-derived-arm exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: color-mix(in oklch, var(--color-peer-5-ring) 60%, white); }
+D14-hsl-turn exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(0.86turn 100% 85%)";
+D15-oklch-percent-deg exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: oklch(86% 0.118 332.3deg); }
+D16-hex-upper exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#FFB4F3";
+D17-nameL-scalar exit 1 · 1 findings · src/games/shared/p.ts: export const nameL = 0.86;
+D18-index-name-drift exit 1 · 1 findings · index.css pink name -> #ffa6f2
+D19-light-name-to-stick exit 1 · 1 findings · index.css light pink name -> var(--color-peer-5)
+D20-name-pair-collide exit 1 · 1 findings · index.css dark violet name -> #e5c6ff (near pink)
+clean1 exit 0 · 0 findings · after
+restored byte-equal
+DONE
+D3 AS WRITTEN: lch(79.5% 36 350) is CIE LCH #ffacd2, ΔE_ok 0.0443 from the nearest arm (#ffb2f3) — outside COPY_DE 0.03, not a copy; the arm's own lch spelling lch(86.5% 50 345) (ΔE 0.014) is self-test control 'D3' and reds

@@ -1,0 +1,40 @@
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 6748710..b2fe9be 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -174,18 +174,24 @@ onUnmounted(() => {
+ // `delay + duration` (`runtime-dom` `getTimeout`), so the delay is written too: an author
+ // `animation-delay: 750ms !important` is the same 900 ms by the other longhand. Under PRM the
+ // verb is deleted at the site, and the length it writes is 0s.
+-function stopTheClock(el: Element): void {
++function stopTheClock(el: Element, still = false): void {
+   const style = (el as HTMLElement).style;
+   const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
+   style.setProperty(
+     "animation-duration",
+-    reduced ? "0s" : `${MOTION.rungs.whisper}ms`,
++    reduced || still ? "0s" : `${MOTION.rungs.whisper}ms`,
+     "important",
+   );
+   style.setProperty("animation-delay", "0s", "important");
+   style.setProperty("transition", "none", "important");
+ }
+ 
++// THE SWAP HAS NO CLOCK (NOTE-LEDGER pass 7, on NOTE-ERASE's pass-7 critique §1B). `note-swap`
++// leaves with `animation: none`, and Vue's fallback timer reads `animation-duration`, never the
++// name: a written rung held a one-frame swap for ~160 ms with the sentence on both lines. Line
++// one's hook writes 0s on the swap; line two's (a real rub-out) keeps the rung.
++const stopLineOne = (el: Element): void => stopTheClock(el, leaveName() === "note-swap");
++
+ const liveEl = ref<HTMLElement | null>(null);
+ const previousEl = ref<HTMLElement | null>(null);
+ 
+@@ -298,7 +304,7 @@ const leaveName = (): string =>
+       <Transition
+         :name="leaveName()"
+         mode="out-in"
+-        @before-leave="stopTheClock"
++        @before-leave="stopLineOne"
+         @after-leave="$emit('left')"
+       >
+         <span

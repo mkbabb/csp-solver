@@ -1,0 +1,33 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/e2e/player-tally.spec.ts	2026-09-24 12:59:32
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-52/web/frontend/.plrc7crit/crit7b.spec.ts	2026-09-24 13:46:52
+@@ -1372,3 +1372,30 @@
+   expect(early).toEqual([]);
+   expect(late).toEqual(["26 seconds ago"]);
+ });
++
++// ── CRITIC (pass 7): is `one`'s run-to-run spread the peer id's seed? (LAWS P6 §C) ──
++for (const theme of ["light", "dark"] as const)
++  test.describe(`SEEDCRIT ${theme}`, () => {
++    test.use({ viewport: { width: 1280, height: 800 }, deviceScaleFactor: 2, colorScheme: theme, contextOptions: { reducedMotion: "reduce" } });
++    for (const [n, id] of ["p-0000000b0b0b", "p-0000000b0b0b", "p-000000000001", "p-00000000abcd", "RANDOM", "RANDOM"].entries())
++      test(`SEEDCRIT one stroke ${theme} ${id} run${n}`, async ({ page }) => {
++        const room = `tally-seed-${theme}-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
++        if (id !== "RANDOM")
++          await page.addInitScript(([r, i]) => { try { sessionStorage.setItem("session-identity-v1", JSON.stringify({ [r]: i })); } catch {} }, [room, id]);
++        await page.goto(`/?size=3&difficulty=EASY&wire=local&s=${room}`);
++        await settled(page);
++        await page.mouse.move(640, 790);
++        const bound = await page.evaluate((r) => { try { return JSON.parse(sessionStorage.getItem("session-identity-v1") ?? "{}")[r] ?? null; } catch { return null; } }, room);
++        const poses: number[] = [];
++        const crops: Painted[] = [];
++        for (const k of [1, 2, 3, 4]) {
++          const t = await page.addStyleTag({ content: `.pt-marks > g.pt-pose { opacity: 0 !important; } .pt-marks > g.pt-pose:nth-of-type(${k}) { opacity: 1 !important; }` });
++          await stable(() => mark(page).evaluate((e) => e.getBoundingClientRect().width));
++          crops.push(await painted(page, await mark(page).screenshot({ animations: "disabled" })));
++          await t.evaluate((e) => (e as HTMLElement).remove());
++        }
++        const D = theme === "light" ? 603 : 548;
++        for (const c of crops) poses.push(inkOf(c.hist, D, 2));
++        console.log("SEEDCRIT", JSON.stringify({ engine: test.info().project.name, theme, asked: id, bound, cores: crops.map((c) => c.core), poses }));
++      });
++  });

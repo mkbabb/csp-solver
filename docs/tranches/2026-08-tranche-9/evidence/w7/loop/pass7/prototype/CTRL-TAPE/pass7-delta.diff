@@ -1,0 +1,1981 @@
+diff --git a/web/frontend/.prettierignore b/web/frontend/.prettierignore
+index 196ad3ab..7c37a340 100644
+--- a/web/frontend/.prettierignore
++++ b/web/frontend/.prettierignore
+@@ -14,3 +14,8 @@ src/games/thermo/data/templates.ts
+ # 2026-08-03 (close-record §9.1, second bite of the class). Configuration now refuses what
+ # memory once had to.
+ e2e/
++
++# The chair's shape-census library (T9-W7 pass 7, LAWS P6 §I), vendored BYTE-IDENTICAL from
++# `evidence/w7/loop/pass7/instruments/shape-census.mjs`: `check-tape-foot --self-test` pins its
++# sha1, so a format pass here would fork the ONE copy.
++scripts/lib/shape-census.mjs
+diff --git a/web/frontend/e2e/mobile-affordances.spec.ts b/web/frontend/e2e/mobile-affordances.spec.ts
+index e1d48256..142480b8 100644
+--- a/web/frontend/e2e/mobile-affordances.spec.ts
++++ b/web/frontend/e2e/mobile-affordances.spec.ts
+@@ -544,3 +544,39 @@ test("COST's focus contract: a keyboard arm lands on keep, and Escape hands focu
+   // The sheet is still up: the first Escape answered the question, and only that.
+   await expect(page.locator("#controls-drawer .drawer-case")).toBeVisible();
+ });
++
++test("COST's lapse returns focus only to a reader still in the question (pass 7)", async ({ page }) => {
++  // The window closing is a timer, not an answer. A reader left on `keep` is handed home to the
++  // verb; a reader who has moved on (focus on a control in the panel, the question still
++  // standing) stays where they went. Pass 6's lapse pulled focus back from `Normal` to `Deal a
++  // new board` 2.5 s later (chromium; the pass-6 critic's §3); the pass-6 dist reds arm 2.
++  await dirtyThenOpen(page);
++  const panel = page.locator(".mobile-control-panel");
++  const deal = panel.getByRole("button", { name: "Deal a new board" });
++  const ribbon = page.locator(".confirm-ribbon");
++  const focused = () =>
++    page.evaluate(() => {
++      const a = document.activeElement;
++      return a?.getAttribute("aria-label") ?? a?.textContent?.trim() ?? null;
++    });
++  const lapsed = async () => {
++    await expect(ribbon).toHaveCount(0, { timeout: 6000 });
++    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++  };
++
++  // ARM 1 · the reader stays on `keep`: the lapse hands focus home.
++  await deal.focus();
++  await page.keyboard.press("Enter");
++  await expect.poll(focused).toBe("keep");
++  await lapsed();
++  await expect.poll(focused, { message: "arm 1: the lapse hands a reader on keep home" }).toBe("Deal a new board");
++
++  // ARM 2 · the reader moves on while the question stands: the lapse leaves them there.
++  await deal.focus();
++  await page.keyboard.press("Enter");
++  await expect.poll(focused).toBe("keep");
++  await panel.getByRole("button", { name: "Normal", exact: true }).focus();
++  await expect(ribbon, "the question still stands after the reader moves on").toHaveCount(1);
++  await lapsed();
++  expect(await focused(), "arm 2: the lapse must not pull a reader who moved on").toBe("Normal");
++});
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 395505e0..272bc2e1 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -668,14 +668,26 @@ test.describe("the foot on the inset @ 390×844 coarse", () => {
+   // `env(safe-area-inset-bottom)` read a number in-engine ("Playwright resolves env() to 0" is
+   // false for chromium — the pass-5 critic). At 34px (a Face ID phone's) the foot's pad is 34 + 12,
+   // the bar's box stands 46 off the viewport's bottom, and the frame's lowest PAINTED ink stays
+-  // ≥ 2 css above the inset line. WebKit has no such override; its arm is the owner's device row.
+-  test("T9-M18 §6.1 — under a real 34px inset the frame's ink stays out of the home-indicator band (chromium CDP)", async ({
++  // ≥ 2 css above the inset line. WebKit has no such override: it reads the same painted row on
++  // the flat phone (inset 0, the line is the viewport's edge), and its 34px arm is the RUNSHEET's.
++  //
++  // PASS 7 · THE READ IS IMMUNE TO THE CASE'S BOIL. Pass 6 took ONE frame-on/frame-off pair and
++  // the lowest changed row; the case's own outline boils on the shared beat, so a beat between
++  // the two photographs put 3–8 changed px on its bottom stroke (y 843) and the row redded the
++  // correct tree 4 of 7 runs (the pass-6 critic) while its negative went green for the wrong
++  // reason. Now: the beat is PARKED (reduced motion), the ink is a pixel that changes in BOTH of
++  // two independent on/off pairs, and only the columns under the bar's own span (± the frame's
++  // outset) are read.
++  test("T9-M18 §6.1 — the frame's ink stays out of the home-indicator band (chromium: a real 34px inset over CDP; WebKit: the flat phone)", async ({
+     page,
+     browserName,
+   }) => {
+-    test.skip(browserName !== "chromium", "the safe-area override is a CDP call; WebKit's arm is the RUNSHEET's device row");
+-    const cdp = await page.context().newCDPSession(page);
+-    await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: 34 } });
++    const inset = browserName === "chromium" ? 34 : 0;
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    if (inset) {
++      const cdp = await page.context().newCDPSession(page);
++      await cdp.send("Emulation.setSafeAreaInsetsOverride", { insets: { bottom: inset } });
++    }
+     await loadSudoku(page);
+     await page.locator(".drawer-tab").click();
+     await expect
+@@ -696,12 +708,16 @@ test.describe("the foot on the inset @ 390×844 coarse", () => {
+         return { pad: getComputedStyle(f).paddingBottom, barBottom: bar.bottom, barL: bar.left, barR: bar.right, vh: innerHeight };
+       });
+       const clip = { x: 0, y: Math.floor(box.barBottom - 4), width: 390, height: box.vh - Math.floor(box.barBottom - 4) };
+-      const on = (await page.screenshot({ clip })).toString("base64");
+-      const hide = await page.addStyleTag({ content: ".bar-frame svg { visibility: hidden !important }" });
+-      const off = (await page.screenshot({ clip })).toString("base64");
+-      await hide.evaluate((n) => (n as Element).remove());
++      const pair = async () => {
++        const on = (await page.screenshot({ clip })).toString("base64");
++        const hide = await page.addStyleTag({ content: ".bar-frame svg { visibility: hidden !important }" });
++        const off = (await page.screenshot({ clip })).toString("base64");
++        await hide.evaluate((n) => (n as Element).remove());
++        return { on, off };
++      };
++      const pairs = [await pair(), await pair()];
+       const lowest = await page.evaluate(
+-        async ({ on, off }) => {
++        async ({ pairs, x0, x1 }) => {
+           const px = async (b64: string) => {
+             const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+             const c = new OffscreenCanvas(bmp.width, bmp.height);
+@@ -709,36 +725,48 @@ test.describe("the foot on the inset @ 390×844 coarse", () => {
+             g.drawImage(bmp, 0, 0);
+             return g.getImageData(0, 0, bmp.width, bmp.height);
+           };
+-          const [a, b] = [await px(on), await px(off)];
++          const dpr = window.devicePixelRatio || 1;
++          const masks = [];
++          for (const { on, off } of pairs) {
++            const [a, b] = [await px(on), await px(off)];
++            const m = new Uint8Array(a.width * a.height);
++            for (let i = 0; i < m.length; i++) {
++              const o = i * 4;
++              m[i] = Math.max(...[0, 1, 2].map((k) => Math.abs(a.data[o + k] - b.data[o + k]))) > 24 ? 1 : 0;
++            }
++            masks.push({ m, w: a.width, h: a.height });
++          }
++          const { w, h } = masks[0];
+           let low = -1;
+-          for (let y = 0; y < a.height; y++)
+-            for (let x = 0; x < a.width; x++) {
+-              const o = (y * a.width + x) * 4;
+-              if (Math.max(...[0, 1, 2].map((k) => Math.abs(a.data[o + k] - b.data[o + k]))) > 24) {
++          for (let y = 0; y < h; y++)
++            for (let x = Math.max(0, Math.floor(x0 * dpr)); x < Math.min(w, Math.ceil(x1 * dpr)); x++)
++              if (masks.every((k) => k.m[y * w + x])) {
+                 low = y;
+                 break;
+               }
+-            }
+-          return low < 0 ? null : low / (window.devicePixelRatio || 1);
++          return low < 0 ? null : low / dpr;
+         },
+-        { on, off },
++        { pairs, x0: box.barL - 6, x1: box.barR + 6 },
+       );
+       return { ...box, lowestInk: lowest === null ? null : +(clip.y + lowest).toFixed(2) };
+     };
+     const real = await read();
+-    const line = real.vh - 34;
+-    console.log(`[inset 34] ${JSON.stringify({ ...real, insetLine: line })}`);
+-    expect(real.pad, "the pad stacks on the inset").toBe("46px");
+-    expect(real.vh - real.barBottom, "the bar's box stands pad + inset off the viewport").toBeGreaterThanOrEqual(46 - 0.51);
++    const line = real.vh - inset;
++    console.log(`[inset ${inset}] ${JSON.stringify({ ...real, insetLine: line })}`);
++    expect(real.pad, "the pad stacks on the inset").toBe(`${12 + inset}px`);
++    expect(real.vh - real.barBottom, "the bar's box stands pad + inset off the viewport").toBeGreaterThanOrEqual(12 + inset - 0.51);
+     expect(real.lowestInk, "a painted frame is found (a missing subject reds)").not.toBeNull();
+     expect(line - real.lowestInk!, "the frame's lowest ink keeps ≥ 2 css above the inset line").toBeGreaterThanOrEqual(2);
+ 
+-    // NEGATIVE CONTROL, same run: pass 5's `max(pad, env())` puts the ink inside the band.
+-    await page.addStyleTag({ content: "#card-foot { padding-bottom: max(0.75rem, env(safe-area-inset-bottom)) !important }" });
++    // NEGATIVE CONTROL, same run: chromium, pass 5's `max(pad, env())` puts the ink inside the
++    // band; WebKit, the refuted 0.5rem pad (0–0.5 css above the edge).
++    const neg = inset ? "max(0.75rem, env(safe-area-inset-bottom))" : "0.5rem";
++    await page.addStyleTag({ content: `#card-foot { padding-bottom: ${neg} !important }` });
+     await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+-    const max = await read();
+-    console.log(`[inset 34 NEG max()] ${JSON.stringify(max)}`);
+-    expect(line - max.lowestInk!, "negative control: max() stands the ink in the band").toBeLessThan(2);
++    const struck = await read();
++    console.log(`[inset ${inset} NEG ${neg}] ${JSON.stringify(struck)}`);
++    expect(struck.lowestInk, "negative control: the frame is still found").not.toBeNull();
++    expect(line - struck.lowestInk!, `negative control: ${neg} stands the ink in the band`).toBeLessThan(2);
+   });
+ });
+ 
+@@ -871,7 +899,6 @@ test("THE REGISTRATION TOOK and THE PUBLISHER RAN — §6.5's trade, both halves
+     "--masthead-foot",
+     "--case-offset",
+     "--sheet-chrome",
+-    "--card-foot-h",
+     "--pin-band",
+   ];
+   const READ = (names: string[]) => {
+@@ -882,7 +909,9 @@ test("THE REGISTRATION TOOK and THE PUBLISHER RAN — §6.5's trade, both halves
+ 
+   // ROW 2 first, while the publisher is still alive: every PUBLISHED name ≠ its 0px initial.
+   const live = await page.evaluate(READ, NAMES);
+-  const PUBLISHED = ["--masthead-foot", "--card-foot-h"];
++  // pass 7: `--card-foot-h` is no longer published (the case is a flex column), and its
++  // registration went with it.
++  const PUBLISHED = ["--masthead-foot"];
+   for (const n of PUBLISHED) {
+     expect(parseFloat(live[n]), `THE PUBLISHER RAN: ${n} is still at its initial (${live[n]})`).toBeGreaterThan(0);
+   }
+@@ -910,11 +939,8 @@ test("THE REGISTRATION TOOK and THE PUBLISHER RAN — §6.5's trade, both halves
+ 
+   // ROW 1 — delete the publishers' written values and read again.
+   await page.evaluate(() => {
+-    const card = document.querySelector(".controls-card") as HTMLElement | null;
+     for (const n of ["--masthead-foot", "--case-offset"])
+       document.documentElement.style.removeProperty(n);
+-    for (const n of ["--card-foot-h"])
+-      card?.style.removeProperty(n);
+   });
+   await page.waitForTimeout(150);
+   const stripped = await page.evaluate(READ, NAMES);
+diff --git a/web/frontend/eslint.config.js b/web/frontend/eslint.config.js
+index 2bbde768..d0d1c98a 100644
+--- a/web/frontend/eslint.config.js
++++ b/web/frontend/eslint.config.js
+@@ -101,7 +101,10 @@ export default tseslint.config(
+   // now separate and each says what it is: prettier stays out by the owner's ruling, eslint
+   // comes in. Born-RED banked at evidence/w6/gates-e2e/eslint-born-red.txt — one live
+   // `no-unexpected-multiline` in `multiplayer.spec.ts`, cured in the same commit as this line.
+-  { ignores: ['dist*/**', 'node_modules/**'] },
++  // `scripts/lib/shape-census.mjs` is the chair's shape-census library vendored BYTE-IDENTICAL
++  // (T9-W7 pass 7, LAWS P6 §I; `check-tape-foot --self-test` pins its sha1): lint it where it
++  // lives, never here, or the fix forks the one copy.
++  { ignores: ['dist*/**', 'node_modules/**', 'scripts/lib/shape-census.mjs'] },
+   js.configs.recommended,
+   ...tseslint.configs.recommended,
+   // 'essential' (correctness only), not 'recommended'/'strongly-recommended' — this repo's
+diff --git a/web/frontend/scripts/check-tape-foot.mjs b/web/frontend/scripts/check-tape-foot.mjs
+index 737a7f82..09ba3ad3 100644
+--- a/web/frontend/scripts/check-tape-foot.mjs
++++ b/web/frontend/scripts/check-tape-foot.mjs
+@@ -3,350 +3,725 @@
+  * THE FOOT'S DECLARATION WITNESS (T9-W7 · CTRL-TAPE, the shape of CTRL-COST's `check-cost-face`).
+  *
+  * CI is browserless (O-12), so what CI can hold is the DECLARATION a measured row follows from.
+- * Each clause below is the load-bearing half of a row read on paint in the e2e estate; deleting it
+- * throws nothing and reds no unit, which is why it is witnessed here, every lane, every commit.
++ * Each clause below is the load-bearing half of a row read on paint in the e2e estate.
+  *
+- *   1 THE INSET      every `.card-foot` padding-bottom spends `env(safe-area-inset-bottom)` AND a
+- *                    pad no smaller than its regime's swept floor (0.75rem dock, 1.125rem short
+- *                    landscape, 3.5rem the rail's note berth). Outside the berth the pad is ADDED
+- *                    to the inset (pass 6): the frame's ink hangs 7 css under the bar's box, so
+- *                    `max(pad, env())` stood that ink inside the home-indicator band.
+- *   2 THE LAYER      `.card-foot` is positioned at a z-index ≥ `.controls-card`'s. Unpositioned, it
+- *                    paints UNDER the card and the frame's top stroke is hidden (coverage 0.00).
+- *   3 THE PEN        the bar's `HandDrawnOutline` carries the WELLS' four props (stroke-width,
+- *                    outset, radius, pose), mounts unconditionally (no `v-if`/`v-show`/`style`),
+- *                    and every rule whose selector names `.bar-frame` declares ONLY its layout
+- *                    (position, inset, pointer-events, z-index): no colour, opacity, visibility,
+- *                    display, stroke or mask can reach the drawn layer (pass 6: keyed on the
+- *                    rule's SHAPE, a whitelist, so a plant not yet thought of reds too).
+- *   4 ONE HAND       no rule whose subject is the bar's own box (`.action-bar`, `.action-verbs`,
+- *                    `.card-foot`) draws an edge or lays a slab: no border longhand or shorthand
+- *                    (physical or logical) with a width, no `outline`, no `box-shadow`, no
+- *                    `background`/`background-color`/`background-image` (R6 L5); and none sets
+- *                    the `color`, `opacity` or `visibility` the frame's `currentColor` ink rides.
+- *   5 THE FLOOR      the confirm's answers take `min-width`/`min-height: var(--tap-floor)` BARE.
+- *   6 THE BAND       `.controls-card` spends `padding-top: var(--pin-band)`, `--pin-band` is a
+- *                    `calc()`, and nothing in src publishes it (or its dead sample `--card-pad-t`).
++ * PASS 7 · KEYED ON SHAPE, NOT ON SPELLING (LAWS P6 §F). Pass 6's gate listed the props it
++ * forbade on three literal selectors and read one file per clause: fifteen one-line breaks the
++ * critic fed it stayed GREEN (`overflow: hidden` and `contain: paint` on the bar, a `:deep()`
++ * rule hiding the frame's svg, `overflow: clip` on the foot, `#card-foot` and the logical and
++ * shorthand pads), four of them erasing the frame on paint. This gate reads EVERY site a
++ * declaration can reach the foot from — every stylesheet and every SFC `<style>` block (a second
++ * block too), `index.html`, `public/**`, template `style`/`:style`/utility classes on the
++ * elements themselves and script style writes in the foot's owners — through the chair's ONE
++ * shape-census library (`lib/shape-census.mjs`, byte-identical to `pass7/instruments/`), keys
++ * on the SUBJECT COMPOUND (class or id, `:is()` arms, `:deep()` unwrapped) and WHITELISTS where
++ * pass 6 enumerated.
+  *
+- * `--self-test` breaks each clause in a copy of the live source and requires it to RED, and
+- * requires the live source GREEN. Run: `node scripts/check-tape-foot.mjs [--self-test]`, cwd
+- * web/frontend.
++ *   1 THE INSET   every site that sets the foot's bottom pad (`padding-bottom`,
++ *                 `padding-block-end`, `padding-block`, `padding`, any selector whose subject
++ *                 is `.card-foot` or `#card-foot`, `var()` resolved) spends
++ *                 `env(safe-area-inset-bottom)` ADDED to a net pad no smaller than its regime's
++ *                 swept floor (0.75rem dock, 1.125rem short landscape; the rail's note berth
++ *                 `max(3.5rem, env())`). No utility class, inline style or script write sets it.
++ *   2 THE LAYER   every site positioning the foot keeps it positioned, and every `z-index` on it
++ *                 is ≥ the card's (unpositioned it paints UNDER the card; coverage 0.00).
++ *   3 THE PEN     the bar's `HandDrawnOutline` carries the WELLS' four props, mounts whenever the
++ *                 bar mounts (no `v-if`/`v-show`/`style`/`:class` on it or on any element between
++ *                 it and `.action-bar`), every rule whose subject is `.bar-frame` declares only
++ *                 its layout, and NO rule that descends from the bar or the foot may reach the
++ *                 frame's subtree: its subject must positively name a class or tag the frame
++ *                 (`HandDrawnOutline`'s own template) cannot carry.
++ *   4 ONE HAND    no rule on the bar's own box (`.action-bar`, `.action-verbs`, the foot) draws
++ *                 an edge, lays a slab or touches the ink the frame's `currentColor` rides.
++ *   5 THE FLOOR   the confirm's answers take `min-width`/`min-height: var(--tap-floor)` BARE.
++ *   6 THE BAND    `.controls-card` spends `padding-top: var(--pin-band)`, `--pin-band` is a
++ *                 `calc()`, and nothing in src publishes it (or its dead sample `--card-pad-t`).
++ *   7 THE REGIME  ONE predicate per regime (LAWS P5, the berth law): the foot's short-landscape
++ *                 pad, the tongue's flank (`DrawerTab`) and the quick set's berth
++ *                 (`useLandscapeFlank`) key on the SAME query, the note berth's pad and its mount
++ *                 (`useNoteBerth`) on the same query, and no module but `useCoarsePointer.ts`
++ *                 mints a media ref (a per-mount listener restates a regime).
++ *   8 THE CLIP    no clip-bearing property on the frame's ancestry (`.bar-frame`, `.action-bar`,
++ *                 the foot, `.drawer-case`): `overflow` other than visible, `contain` with
++ *                 paint/layout/strict/content, `clip-path`, `clip`, `mask*`, `content-visibility`;
++ *                 on the bar, the foot and the frame also `filter`, `opacity`, `visibility`,
++ *                 `display: none|contents` — by any selector, utility class or inline style.
++ *
++ * `--self-test` feeds every plant in memory (no tree file is written) and requires each to RED
++ * the clause beside it and the live tree GREEN. Run: `node scripts/check-tape-foot.mjs
++ * [--self-test]`, cwd web/frontend.
+  */
++import crypto from "node:crypto";
+ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
++import {
++  cssRules,
++  sfc,
++  sources,
++  stripHtml,
++  subjectCompound,
++  compoundClasses,
++  scriptWrites,
++  resolve,
++} from "./lib/shape-census.mjs";
+ 
+ const ROOT = path.join(import.meta.dirname, "..");
+-const FILES = {
+-  scene: "src/games/shared/scene.css",
+-  panel: "src/games/shared/GameControlPanel.vue",
+-  ribbon: "src/games/shared/ConfirmRibbon.vue",
++/** The library is the chair's ONE copy (LAWS P6 §I); a local fork reds the self-test. */
++const LIB_SHA1 = "3ba7738ee8d423bb121101dd54e65f2f140fefa2";
++const PANEL = "src/games/shared/GameControlPanel.vue";
++const SCENE_SFC = "src/games/shared/GameScene.vue";
++const RIBBON = "src/games/shared/ConfirmRibbon.vue";
++const OUTLINE = "src/pencil/grid/HandDrawnOutline.vue";
++const REGIME_TS = "src/games/shared/useCoarsePointer.ts";
++const TAB = "src/games/shared/DrawerTab.vue";
++const SCENE_CSS = "src/games/shared/scene.css";
++
++const FOOT = { cls: ["card-foot"], id: ["card-foot"] };
++const BOX = { cls: ["action-bar", "action-verbs", "card-foot"], id: ["card-foot"] };
++const INKED = { cls: ["bar-frame", "action-bar", "card-foot"], id: ["card-foot"] };
++const CHAIN = {
++  cls: ["bar-frame", "action-bar", "card-foot", "drawer-case"],
++  id: ["card-foot"],
+ };
++const DESCENT = { cls: ["action-bar", "card-foot", "bar-frame"], id: ["card-foot"] };
+ 
+-const blank = (s) =>
+-  s.replace(/\/\*[\s\S]*?\*\/|<!--[\s\S]*?-->/g, (m) => m.replace(/[^\n]/g, " "));
++// ------------------------------------------------------------------------------ the tree
++const disk = new Map();
++const fromDisk = (f) => disk.get(f) ?? disk.set(f, fs.readFileSync(f, "utf8")).get(f);
++let listed = null;
++function tree(overlay = {}) {
++  listed ??= sources(ROOT);
++  const files = [
++    ...new Set([...listed, ...Object.keys(overlay).map((r) => path.join(ROOT, r))]),
++  ];
++  const read = (f) => overlay[path.relative(ROOT, f)] ?? fromDisk(f);
++  return { files, read, rel: (f) => path.relative(ROOT, f) };
++}
+ 
+-/** Bodies of every flat rule whose selector list has `sel` as one whole part. */
+-function bodies(css, sel) {
++/** Every CSS rule in the tree: {file, ctx, prelude, decls}. */
++const parsed = new Map();
++function allRules(t) {
+   const out = [];
+-  const re = /([^{}]*)\{([^{}]*)\}/g;
+-  let m;
+-  while ((m = re.exec(blank(css)))) {
+-    const prelude = m[1].slice(m[1].lastIndexOf("}") + 1);
+-    if (prelude.split(",").some((p) => p.trim() === sel)) out.push(m[2]);
++  for (const f of t.files) {
++    const text = t.read(f);
++    const key = f + "\0" + text;
++    if (parsed.has(key)) {
++      out.push(...parsed.get(key));
++      continue;
++    }
++    const at = out.length;
++    const blocks = f.endsWith(".vue")
++      ? sfc(text).styles.map((b) => ({ css: b.css, line: b.line }))
++      : f.endsWith(".css")
++        ? [{ css: text, line: 1 }]
++        : f.endsWith(".html")
++          ? [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => ({
++              css: m[1],
++              line: 1,
++            }))
++          : [];
++    for (const b of blocks)
++      for (const r of cssRules(b.css, b.line))
++        out.push({
++          file: t.rel(f),
++          ctx: r.ctx.join(" "),
++          prelude: r.prelude,
++          decls: r.decls,
++        });
++    parsed.set(key, out.slice(at));
+   }
+   return out;
+ }
+ 
+-const decl = (body, prop) => {
+-  const m = new RegExp(`(?:^|[;\\s])${prop}\\s*:\\s*([^;]+)`).exec(body);
+-  return m ? m[1].trim() : null;
++const deep = (sel) => sel.replace(/:deep\(([^)]*)\)/g, " $1").replace(/::v-deep/g, " ");
++const selectors = (prelude) => {
++  const out = [];
++  let d = 0,
++    cur = "";
++  for (const c of prelude) {
++    if (c === "(" || c === "[") d++;
++    if (c === ")" || c === "]") d--;
++    if (c === "," && d === 0) {
++      out.push(cur.trim());
++      cur = "";
++    } else cur += c;
++  }
++  out.push(cur.trim());
++  return out.filter(Boolean);
+ };
++const ids = (s) =>
++  [...s.replace(/:not\((?:[^()]|\([^()]*\))*\)/g, "").matchAll(/#([\w-]+)/g)].map(
++    (m) => m[1],
++  );
++/** Does a compound (or a run of compounds) positively name one of `set`'s classes or ids? */
++const names = (text, set) =>
++  [...compoundClasses(text).pos].some((c) => set.cls.includes(c)) ||
++  ids(text).some((i) => set.id.includes(i));
++/** The selector's subject compound and the text of everything above it. */
++function split(sel) {
++  const s = deep(sel);
++  const subj = subjectCompound(sel);
++  const at = s.lastIndexOf(subj);
++  return { subj, above: at > 0 ? s.slice(0, at) : "" };
++}
++const subjectIs = (prelude, set) =>
++  selectors(prelude).some((sel) => names(split(sel).subj, set));
+ 
+-/** Every flat rule as [selector, body] (comments blanked; at-rule preludes excluded). */
+-function rules(css) {
++const stripped = new Map();
++/** Template elements (every SFC) whose static class, `:class` or id names one of `set`. */
++function elements(t, set) {
+   const out = [];
+-  const re = /([^{}]*)\{([^{}]*)\}/g;
+-  let m;
+-  while ((m = re.exec(blank(css)))) {
+-    const prelude = m[1].slice(m[1].lastIndexOf("}") + 1).trim();
+-    if (prelude && !prelude.startsWith("@")) out.push([prelude, m[2]]);
++  for (const f of t.files) {
++    if (!f.endsWith(".vue")) continue;
++    const text = t.read(f);
++    if (!stripped.has(text))
++      stripped.set(text, stripHtml(sfc(text).template?.text ?? ""));
++    const s = stripped.get(text);
++    if (!s) continue;
++    for (const m of s.matchAll(
++      /<([a-zA-Z][\w-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*\/?>/g,
++    )) {
++      const attrs = m[2] ?? "";
++      const cls = [
++        ...attrs.matchAll(
++          /(?:^|\s)(?::class|v-bind:class|class)\s*=\s*("([^"]*)"|'([^']*)')/g,
++        ),
++      ]
++        .map((a) => a[2] ?? a[3])
++        .join(" ");
++      const id = /(?:^|\s)id\s*=\s*"([^"]*)"/.exec(attrs)?.[1];
++      const words = cls.split(/[^\w:/[\].-]+/).filter(Boolean);
++      if (words.some((w) => set.cls.includes(w)) || (id && set.id.includes(id)))
++        out.push({ file: t.rel(f), tag: m[1], attrs, words });
++    }
+   }
+   return out;
+ }
+ 
+-/** Every declaration of a body as [prop, value]. */
+-const decls = (body) =>
+-  [...body.matchAll(/(?:^|;)\s*([\w-]+)\s*:\s*([^;]+)/g)].map((m) => [
+-    m[1],
+-    m[2].trim(),
+-  ]);
+-
+-/** Every `.card-foot` padding-bottom with the `@media` prelude it sits under ("" at top level). */
+-function footPads(css) {
+-  const src = blank(css);
++// ------------------------------------------------------------------------------ the pad
++const topSplit = (v) => {
+   const out = [];
+-  const stack = [];
+-  let start = 0;
+-  for (let i = 0; i < src.length; i++) {
+-    if (src[i] === "{") {
+-      stack.push(src.slice(start, i).trim());
+-      start = i + 1;
+-    } else if (src[i] === "}") {
+-      const prelude = stack.pop() ?? "";
+-      if (prelude.split(",").some((p) => p.trim() === ".card-foot")) {
+-        const v = decl(src.slice(start, i), "padding-bottom");
+-        if (v)
+-          out.push({
+-            media: stack.filter((p) => p.startsWith("@media")).join(" "),
+-            value: v,
+-          });
+-      }
+-      start = i + 1;
+-    } else if (src[i] === ";" && !stack.length) start = i + 1;
++  let d = 0,
++    cur = "";
++  for (const c of v.trim()) {
++    if (c === "(") d++;
++    if (c === ")") d--;
++    if (/\s/.test(c) && d === 0) {
++      if (cur) out.push(cur);
++      cur = "";
++    } else cur += c;
+   }
++  if (cur) out.push(cur);
+   return out;
++};
++/** The bottom pad a declaration sets, or null when it sets none. */
++function bottomOf(d) {
++  if (d.prop === "padding-bottom" || d.prop === "padding-block-end") return d.value;
++  if (d.prop === "padding-block") {
++    const p = topSplit(d.value);
++    return p[1] ?? p[0];
++  }
++  if (d.prop === "padding") {
++    const p = topSplit(d.value);
++    return p[2] ?? p[0];
++  }
++  return null;
+ }
+-
+-function props(tpl, cls) {
+-  const m = new RegExp(`<HandDrawnOutline\\s[^>]*class="${cls}[^"]*"[^>]*>`).exec(tpl);
+-  if (!m) return null;
+-  const read = (p) => (new RegExp(`:${p}="([^"]+)"`).exec(m[0]) || [])[1] ?? null;
+-  return ["stroke-width", "outset", "radius", "pose"]
+-    .map((p) => `${p}=${read(p)}`)
+-    .join(" ");
++/** Net rem of a calc() sum outside env() (px read at 16). NaN when a term is not a length. */
++function netRem(v) {
++  const body = v.replace(/^calc\(/, "(").replace(/env\([^)]*\)/g, "0rem");
++  if (/\b(max|min|clamp|var)\(/.test(body)) return NaN;
++  const terms = [
++    ...body
++      .replace(/[()]/g, " ")
++      .matchAll(/([+-]?)\s*(\d*\.?\d+)(rem|px)|([+-]?)\s*(\d*\.?\d+)(?![\w.])/g),
++  ];
++  let sum = 0;
++  for (const m of terms) {
++    if (m[2] === undefined) {
++      if (+m[5] !== 0) return NaN;
++      continue;
++    }
++    const n = (m[1] === "-" ? -1 : 1) * +m[2];
++    sum += m[3] === "px" ? n / 16 : n;
++  }
++  return sum;
+ }
+ 
+-export function check(src) {
++// ------------------------------------------------------------------------------ props
++const CLIP = (p, v) =>
++  /^overflow(-[xy]|-block|-inline)?$/.test(p)
++    ? !/^visible$/.test(v)
++    : p === "contain"
++      ? /paint|layout|strict|content/.test(v)
++      : p === "clip-path" || p === "clip"
++        ? !/^(none|auto)$/.test(v)
++        : /^(-webkit-)?mask/.test(p)
++          ? !/^none$/.test(v)
++          : p === "content-visibility"
++            ? !/^visible$/.test(v)
++            : false;
++const INK = (p, v) =>
++  (p === "filter" || p === "backdrop-filter") && !/^none$/.test(v)
++    ? true
++    : p === "opacity" ||
++        p === "visibility" ||
++        p === "color" ||
++        p === "-webkit-text-fill-color"
++      ? true
++      : p === "display" && /^(none|contents)$/.test(v);
++const EDGE = (p, v) =>
++  ((/^border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?(?:-(?:width|style|image))?$/.test(
++    p,
++  ) ||
++    /^outline(?:-(?:width|style))?$/.test(p) ||
++    p === "box-shadow") &&
++    !/^(none|0|0px|transparent)$/.test(v)) ||
++  /^background(?:-color|-image)?$/.test(p);
++const LAYOUT = /^(position|inset|top|right|bottom|left|pointer-events|z-index)$/;
++const UTIL_CLIP =
++  /^(?:[\w-]+:)*!?(overflow(-[xy])?-(hidden|clip|auto|scroll)|contain-(paint|layout|strict|content)|\[(clip-path|mask|overflow|contain)[^\]]*\]|mask-.+|opacity-\d+|invisible|hidden|contents|bg-.+|border(-[trblxyse])?(-\d+)?|ring(-\d+|-inset)?|shadow(-(sm|md|lg|xl|2xl|inner))?|outline(-(\d+|dashed|dotted|double))?)$/;
++const UTIL_PAD = /^(?:[\w-]+:)*!?(p|py|pb)-.+$/;
++const UTIL_LAYER = /^(?:[\w-]+:)*!?(z-.+|static)$/;
++
++// ------------------------------------------------------------------------------ the check
++export function check(overlay = {}) {
++  const t = tree(overlay);
+   const fails = [];
+-  const scene = src.scene;
+-  const panel = blank(src.panel);
+-  const tpl = panel.slice(
+-    panel.indexOf("<template>"),
+-    panel.lastIndexOf("</template>"),
++  const rules = allRules(t);
++  // the token map `tokens()` would build, from the rules already parsed (last wins per name)
++  const map = new Map(
++    rules.flatMap((r) =>
++      r.decls.filter((d) => d.prop.startsWith("--")).map((d) => [d.prop, d.value]),
++    ),
+   );
+-  const style = panel.slice(panel.indexOf("<style"));
++  const where = (r) => `${r.file} \`${r.ctx ? r.ctx + " " : ""}${r.prelude}\``;
+ 
+-  // 1 · THE INSET — every padding-bottom on the foot, read with the media block it sits in
+-  const pads = footPads(scene);
+-  if (!pads.length) fails.push("1 THE INSET: no `.card-foot` padding-bottom declared");
+-  for (const { media, value } of pads) {
+-    const berth = /hover:\s*hover/.test(media) && /pointer:\s*fine/.test(media);
+-    const floor = berth ? 3.5 : /orientation:\s*landscape/.test(media) ? 1.125 : 0.75;
+-    const rem = [...value.matchAll(/(\d*\.?\d+)rem/g)].map((m) => +m[1]);
+-    const env = /env\(\s*safe-area-inset-bottom\s*\)/.test(value);
+-    const stacked = /^calc\([^;]*\+/.test(value) && env;
+-    const where = media || "(no media)";
+-    if (!env)
+-      fails.push(
+-        `1 THE INSET: \`${where}\` .card-foot padding-bottom \`${value}\` spends no env(safe-area-inset-bottom)`,
+-      );
+-    else if (!rem.length || Math.min(...rem) < floor)
+-      fails.push(
+-        `1 THE INSET: \`${where}\` .card-foot pad \`${value}\` is under the swept floor ${floor}rem`,
+-      );
+-    else if (!berth && !stacked)
+-      fails.push(
+-        `1 THE INSET: \`${where}\` .card-foot pad \`${value}\` must ADD the pad to the inset (the frame's ink hangs under the box)`,
+-      );
+-  }
++  // 1 · THE INSET
++  let pads = 0;
++  for (const r of rules)
++    if (subjectIs(r.prelude, FOOT))
++      for (const d of r.decls) {
++        const raw = bottomOf(d);
++        if (raw === null) continue;
++        pads++;
++        const v = resolve(raw, map).trim();
++        const berth = /hover:\s*hover/.test(r.ctx) && /pointer:\s*fine/.test(r.ctx);
++        const floor = /orientation:\s*landscape/.test(r.ctx) ? 1.125 : 0.75;
++        const env = /env\(\s*safe-area-inset-bottom/.test(v);
++        if (!env) {
++          fails.push(
++            `1 THE INSET: ${where(r)} ${d.prop}: ${v} spends no env(safe-area-inset-bottom)`,
++          );
++          continue;
++        }
++        if (berth) {
++          const m =
++            /^max\(\s*(\d*\.?\d+)rem\s*,\s*env\(safe-area-inset-bottom\)\s*\)$/.exec(v);
++          if (!m || +m[1] < 3.5)
++            fails.push(
++              `1 THE INSET: ${where(r)} the berth pad \`${v}\` is not max(≥3.5rem, env())`,
++            );
++          continue;
++        }
++        const added =
++          /^calc\(/.test(v) &&
++          /\+\s*env\(safe-area-inset-bottom|env\(safe-area-inset-bottom[^)]*\)\s*\+/.test(
++            v,
++          );
++        const net = netRem(v);
++        if (!added || !(net >= floor))
++          fails.push(
++            `1 THE INSET: ${where(r)} ${d.prop}: \`${v}\` must ADD the inset to a net pad ≥ ${floor}rem (net ${Number.isNaN(net) ? "unreadable" : net.toFixed(3) + "rem"})`,
++          );
++      }
++  if (!pads) fails.push("1 THE INSET: no site sets the foot's bottom pad");
+ 
+   // 2 · THE LAYER
+-  const z = (sel) =>
+-    Math.max(
+-      -1,
+-      ...bodies(scene, sel).map((b) => parseInt(decl(b, "z-index") ?? "-1", 10)),
+-    );
+-  const positioned = bodies(scene, ".card-foot").some((b) =>
+-    /^(relative|absolute|sticky)$/.test(decl(b, "position") ?? ""),
++  const zOf = (set) =>
++    rules
++      .filter((r) => subjectIs(r.prelude, set))
++      .flatMap((r) =>
++        r.decls
++          .filter((d) => d.prop === "z-index")
++          .map((d) => ({ r, z: parseInt(resolve(d.value, map), 10) })),
++      );
++  const cardZ = Math.max(
++    -1,
++    ...zOf({ cls: ["controls-card"], id: [] }).map((x) => x.z),
+   );
+-  if (!positioned || z(".card-foot") < z(".controls-card"))
+-    fails.push(
+-      `2 THE LAYER: \`.card-foot\` must be positioned at z ≥ the card's (${z(".card-foot")} vs ${z(".controls-card")})`,
++  const footZ = zOf(FOOT);
++  const footPos = rules
++    .filter((r) => subjectIs(r.prelude, FOOT))
++    .flatMap((r) =>
++      r.decls.filter((d) => d.prop === "position").map((d) => ({ r, v: d.value })),
+     );
++  if (!footPos.length || !footZ.length)
++    fails.push("2 THE LAYER: the foot declares no position or no z-index");
++  for (const { r, v } of footPos)
++    if (!/^(relative|absolute|sticky|fixed)$/.test(v))
++      fails.push(`2 THE LAYER: ${where(r)} position: ${v}`);
++  for (const { r, z } of footZ)
++    if (!(z >= cardZ))
++      fails.push(`2 THE LAYER: ${where(r)} z-index ${z} under the card's ${cardZ}`);
+ 
+   // 3 · THE PEN
+-  const well = props(tpl, "tray-well");
+-  const lip = props(tpl, "bar-frame");
+-  if (!lip || lip !== well)
+-    fails.push(`3 THE PEN: the bar's frame is \`${lip}\`, the wells' \`${well}\``);
++  const panelText = t.read(path.join(ROOT, PANEL));
++  const tpl = sfc(panelText).template?.text ?? "";
+   const lipTag =
+-    /<HandDrawnOutline\s[^>]*class="bar-frame[^"]*"[^>]*>/.exec(tpl)?.[0] ?? "";
+-  if (/\s(?:v-if|v-show|v-else(?:-if)?|:?style|:class)\s*=/.test(lipTag))
++    /<HandDrawnOutline\s[^>]*class="bar-frame[^"]*"[^>]*>/.exec(stripHtml(tpl))?.[0] ??
++    "";
++  const four = (tag) =>
++    tag
++      ? ["stroke-width", "outset", "radius", "pose"]
++          .map(
++            (p) => `${p}=${(new RegExp(`:${p}="([^"]+)"`).exec(tag) || [])[1] ?? null}`,
++          )
++          .join(" ")
++      : null;
++  const wellTag =
++    /<HandDrawnOutline\s[^>]*class="tray-well[^"]*"[^>]*>/.exec(stripHtml(tpl))?.[0] ??
++    "";
++  if (!lipTag || four(lipTag) !== four(wellTag))
+     fails.push(
+-      `3 THE PEN: the frame's tag is conditional or styled inline: \`${lipTag.replace(/\s+/g, " ")}\``,
++      `3 THE PEN: the bar's frame is \`${four(lipTag)}\`, the wells' \`${four(wellTag)}\``,
+     );
+-  for (const [sel, body] of rules(style + "\n" + scene))
+-    if (/\.bar-frame(?![\w-])/.test(sel))
+-      for (const [prop] of decls(body))
+-        if (!/^(position|inset|pointer-events|z-index)$/.test(prop))
++  if (
++    /\s(?:v-if|v-show|v-else(?:-if)?|v-for|:?style|v-bind:style|:class|v-bind:class)\s*=/.test(
++      lipTag,
++    )
++  )
++    fails.push(`3 THE PEN: the frame's tag is conditional or styled inline`);
++  // the lip's ancestry inside the bar: a template walk (a tag stack over the stripped template)
++  {
++    const s = stripHtml(tpl);
++    const stack = [];
++    let anc = null;
++    const VOID = /^(input|img|br|hr|meta|link|source|col|area|base|wbr)$/i;
++    for (const m of s.matchAll(
++      /<(\/?)([a-zA-Z][\w-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'/]|\/(?!>))+)*)\s*(\/?)>/g,
++    )) {
++      const [whole, close, tag, attrs, self] = m;
++      if (close) {
++        const i = stack.map((x) => x.tag).lastIndexOf(tag);
++        if (i >= 0) stack.length = i;
++        continue;
++      }
++      if (
++        whole === lipTag ||
++        (tag === "HandDrawnOutline" && /class="bar-frame/.test(attrs))
++      )
++        anc = [...stack];
++      if (!self && !VOID.test(tag)) stack.push({ tag, attrs: attrs ?? "" });
++    }
++    const barAt = anc
++      ? anc.findIndex((x) => /class="action-bar[\s"]/.test(x.attrs))
++      : -1;
++    if (barAt < 0) fails.push("3 THE PEN: the frame is not inside `.action-bar`");
++    else
++      for (const x of anc.slice(barAt))
++        if (/\s(?:v-if|v-show|v-else(?:-if)?|v-for)\s*=|\sv-else(?:\s|$)/.test(x.attrs))
+           fails.push(
+-            `3 THE PEN: \`${sel.trim()} { ${prop} }\` reaches the drawn layer`,
++            `3 THE PEN: the frame mounts under a conditional <${x.tag}> between it and the bar`,
+           );
++  }
++  const outline = sfc(t.read(path.join(ROOT, OUTLINE))).template?.text ?? "";
++  const FRAME_CLS = new Set([
++    "bar-frame",
++    ...[...outline.matchAll(/class="([^"]+)"/g)].flatMap((m) => m[1].split(/\s+/)),
++    ...[...outline.matchAll(/'([\w-]+)'\s*:/g)].map((m) => m[1]),
++  ]);
++  const FRAME_TAG = new Set([...outline.matchAll(/<([a-z][\w-]*)/g)].map((m) => m[1]));
++  for (const r of rules)
++    for (const sel of selectors(r.prelude)) {
++      const { subj, above } = split(sel);
++      if (names(subj, { cls: ["bar-frame"], id: [] })) {
++        for (const d of r.decls)
++          if (!LAYOUT.test(d.prop))
++            fails.push(`3 THE PEN: ${where(r)} { ${d.prop} } reaches the drawn layer`);
++        continue;
++      }
++      if (!names(above, DESCENT)) continue;
++      const pos = [...compoundClasses(subj).pos];
++      const tag = /^([a-zA-Z][\w-]*|\*)/.exec(subj.replace(/^[>+~\s]+/, ""))?.[1];
++      const outside =
++        pos.some((c) => !FRAME_CLS.has(c)) ||
++        (!pos.length && tag && tag !== "*" && !FRAME_TAG.has(tag));
++      if (!outside && r.decls.length)
++        fails.push(
++          `3 THE PEN: ${where(r)} descends from the bar to a subject the frame can be (\`${subj || "*"}\`)`,
++        );
++    }
+ 
+-  // 4 · ONE HAND — the rule's SUBJECT is the bar's own box when its last compound names it
+-  for (const [sel, body] of rules(style + "\n" + scene))
+-    for (const part of sel.split(","))
+-      if (
+-        /\.(?:action-bar|action-verbs|card-foot)(?![\w-])(?:::?[\w-]+(?:\([^)]*\))?)*\s*$/.test(
+-          part.trim(),
++  // 4 · ONE HAND, and 8 · THE CLIP (rules)
++  for (const r of rules) {
++    const box = subjectIs(r.prelude, BOX);
++    const inked = subjectIs(r.prelude, INKED);
++    const chain = subjectIs(r.prelude, CHAIN);
++    if (!box && !chain) continue;
++    for (const d of r.decls) {
++      const v = resolve(d.value, map).trim();
++      if (box && EDGE(d.prop, v))
++        fails.push(`4 ONE HAND: ${where(r)} { ${d.prop}: ${v} }`);
++      if (box && /^(color|-webkit-text-fill-color)$/.test(d.prop))
++        fails.push(`4 ONE HAND: ${where(r)} { ${d.prop}: ${v} }`);
++      if (chain && CLIP(d.prop, v))
++        fails.push(`8 THE CLIP: ${where(r)} { ${d.prop}: ${v} }`);
++      if (inked && INK(d.prop, v) && d.prop !== "color")
++        fails.push(`8 THE CLIP: ${where(r)} { ${d.prop}: ${v} } fades the frame's ink`);
++    }
++  }
++  // 1/2/8 · the elements themselves: inline style, :style, utility classes
++  for (const el of elements(t, CHAIN)) {
++    const foot = el.words.includes("card-foot") || /id="card-foot"/.test(el.attrs);
++    const drawn =
++      !el.words.includes("drawer-case") ||
++      foot ||
++      el.words.some((w) => INKED.cls.includes(w));
++    if (/(?:^|\s)(?::style|v-bind:style|style)\s*=/.test(el.attrs))
++      fails.push(
++        `8 THE CLIP: <${el.tag} ${el.words.join(" ")}> in ${el.file} carries an inline style`,
++      );
++    for (const w of el.words) {
++      if (foot && UTIL_PAD.test(w))
++        fails.push(`1 THE INSET: the foot's element in ${el.file} carries \`${w}\``);
++      if (foot && UTIL_LAYER.test(w))
++        fails.push(`2 THE LAYER: the foot's element in ${el.file} carries \`${w}\``);
++      if (UTIL_CLIP.test(w) && (drawn || /overflow|contain|clip|mask/.test(w)))
++        fails.push(`8 THE CLIP: <${el.tag}> in ${el.file} carries \`${w}\``);
++    }
++  }
++  // …and script writes in the foot's owners (element binding unresolved: any write counts)
++  for (const f of [PANEL, SCENE_SFC, RIBBON]) {
++    const text = t.read(path.join(ROOT, f));
++    for (const p of [
++      "padding-bottom",
++      "padding-block-end",
++      "padding",
++      "overflow",
++      "contain",
++      "clip-path",
++      "opacity",
++      "visibility",
++      "z-index",
++    ])
++      for (const w of scriptWrites(text, p))
++        if (
++          !w.unresolved ||
++          /padding|overflow|contain|clip|opacity|visibility|z-?index/i.test(w.prop)
+         )
+-      )
+-        for (const [prop, val] of decls(body)) {
+-          const edge =
+-            (/^border(?:-(?:top|right|bottom|left|block|inline)(?:-(?:start|end))?)?(?:-width)?$/.test(
+-              prop,
+-            ) ||
+-              /^outline(?:-width)?$/.test(prop) ||
+-              prop === "box-shadow") &&
+-            !/^(none|0|0px|transparent)$/.test(val);
+-          const slab = /^background(?:-color|-image)?$/.test(prop);
+-          const ink = /^(color|opacity|visibility)$/.test(prop);
+-          if (edge || slab || ink)
+-            fails.push(`4 ONE HAND: \`${part.trim()} { ${prop}: ${val} }\``);
+-        }
++          fails.push(`8 THE CLIP: ${f}:${w.line} a script writes \`${w.prop}\``);
++  }
+ 
+   // 5 · THE FLOOR, BARE
+-  const ans = bodies(blank(src.ribbon), ".confirm-answer");
++  const answers = rules.filter(
++    (r) =>
++      r.file === RIBBON && subjectIs(r.prelude, { cls: ["confirm-answer"], id: [] }),
++  );
+   for (const p of ["min-width", "min-height"])
+-    if (!ans.some((b) => decl(b, p) === "var(--tap-floor)"))
++    if (
++      !answers.some((r) =>
++        r.decls.some((d) => d.prop === p && d.value === "var(--tap-floor)"),
++      )
++    )
+       fails.push(
+         `5 THE FLOOR: \`.confirm-answer\` needs \`${p}: var(--tap-floor)\`, bare`,
+       );
+ 
+   // 6 · THE BAND
+-  const card = bodies(scene, ".controls-card");
++  const card = rules.filter(
++    (r) =>
++      r.file === SCENE_CSS && selectors(r.prelude).includes(".controls-card") && !r.ctx,
++  );
+   if (
+-    !card.some((b) => decl(b, "padding-top") === "var(--pin-band)") ||
+-    !card.some((b) => /^calc\(/.test(decl(b, "--pin-band") ?? ""))
++    !card.some((r) =>
++      r.decls.some((d) => d.prop === "padding-top" && d.value === "var(--pin-band)"),
++    ) ||
++    !card.some((r) =>
++      r.decls.some((d) => d.prop === "--pin-band" && /^calc\(/.test(d.value)),
++    )
+   )
+     fails.push(
+       "6 THE BAND: `.controls-card` must derive `--pin-band` with calc() and spend it as padding-top",
+     );
+-  if (/setProperty\(\s*["'`]--(?:pin-band|card-pad-t)["'`]/.test(src.panel))
++  if (/setProperty\(\s*["'`]--(?:pin-band|card-pad-t)["'`]/.test(panelText))
+     fails.push(
+       "6 THE BAND: a script publishes `--pin-band`/`--card-pad-t`; the band is CSS's",
+     );
+ 
++  // 7 · THE REGIME
++  const norm = (q) =>
++    q
++      .replace(/^@media\s+/, "")
++      .replace(/\s+/g, " ")
++      .trim();
++  const regimeTs = t.read(path.join(ROOT, REGIME_TS));
++  const ref = (name) =>
++    norm(
++      new RegExp(`const ${name} = mediaRef\\(\\s*"([^"]+)"`).exec(regimeTs)?.[1] ?? "",
++    );
++  const flank = ref("landscapeFlank");
++  const berthQ = ref("noteBerth");
++  const padCtx = (test) => [
++    ...new Set(
++      rules
++        .filter(
++          (r) =>
++            subjectIs(r.prelude, FOOT) &&
++            r.decls.some((d) => bottomOf(d) !== null) &&
++            test(r.ctx),
++        )
++        .map((r) => norm(r.ctx)),
++    ),
++  ];
++  const landPad = padCtx((c) => /orientation:\s*landscape/.test(c));
++  const berthPad = padCtx((c) => /hover:\s*hover/.test(c));
++  if (!flank || landPad.length !== 1 || landPad[0] !== flank)
++    fails.push(
++      `7 THE REGIME: the foot's landscape pad keys on ${JSON.stringify(landPad)}, the flank on "${flank}"`,
++    );
++  if (!berthQ || berthPad.length !== 1 || berthPad[0] !== berthQ)
++    fails.push(
++      `7 THE REGIME: the note berth's pad keys on ${JSON.stringify(berthPad)}, its mount on "${berthQ}"`,
++    );
++  const tabCtx = [
++    ...new Set(
++      rules
++        .filter((r) => r.file === TAB && /orientation:\s*landscape/.test(r.ctx))
++        .flatMap((r) => r.ctx.split(/,\s*(?![^()]*\))/))
++        .map(norm)
++        .filter((q) => /orientation:\s*landscape/.test(q)),
++    ),
++  ];
++  if (tabCtx.some((q) => q !== flank))
++    fails.push(
++      `7 THE REGIME: the tongue's flank keys on ${JSON.stringify(tabCtx)}, not "${flank}"`,
++    );
++  for (const f of t.files) {
++    const r = t.rel(f);
++    if (
++      r === REGIME_TS ||
++      !/\.(vue|ts)$/.test(r) ||
++      /\.test\.ts$/.test(r) ||
++      !r.startsWith("src/games/shared")
++    )
++      continue;
++    // a component's setup mints one listener PER MOUNT; a module elsewhere may keep its own
++    // singletons, but never a second copy of the foot's regimes (landscape, hover)
++    const text = t.read(f);
++    const perMount =
++      r.endsWith(".vue") &&
++      /\b(?:mediaRef|useMediaQuery|matchMedia)\(\s*(?:[^"'`\s]|["'`][^"'`]*(?:orientation|hover|pointer|width))/.test(
++        text,
++      );
++    const restated =
++      /\b(?:mediaRef|useMediaQuery|matchMedia)\(\s*["'`][^"'`]*(?:orientation:\s*landscape|hover)/.test(
++        text,
++      );
++    if (perMount || restated)
++      fails.push(
++        `7 THE REGIME: ${r} mints its own media query (one MediaQueryList per regime lives in useCoarsePointer.ts)`,
++      );
++  }
+   return fails;
+ }
+ 
+-const read = () =>
+-  Object.fromEntries(
+-    Object.entries(FILES).map(([k, f]) => [
+-      k,
+-      fs.readFileSync(path.join(ROOT, f), "utf8"),
+-    ]),
+-  );
+-
++// ------------------------------------------------------------------------------ self-test
+ function selfTest() {
+-  const live = read();
+-  // Each plant is one real regression, one line. B1–B8 are the pass-5 critic's breaks (seven of
+-  // them stayed GREEN on the pass-5 gate); X1/X2 are PLR-SELF's critic's paint plants on the drawn
+-  // layer and FAINT the chair's existence-is-not-visibility plant (pass6 rulings A.5.3). Every one
+-  // must red the clause named beside it.
+-  const bar = (decl) => ({
+-    panel: live.panel.replace(
+-      /(\.action-bar \{[^}]*?)padding-block/,
+-      `$1${decl};\n  padding-block`,
+-    ),
+-  });
+-  const frame = (decl) => ({
+-    panel: live.panel.replace(
+-      /(\.bar-frame \{[^}]*?)z-index: 0;/,
+-      `$1z-index: 0;\n  ${decl};`,
+-    ),
+-  });
++  let bad = 0;
++  const lib = fs.readFileSync(path.join(ROOT, "scripts/lib/shape-census.mjs"));
++  if (crypto.createHash("sha1").update(lib).digest("hex") !== LIB_SHA1) {
++    console.error("self-test: lib/shape-census.mjs is not the chair's copy (sha1)");
++    bad++;
++  }
++  const rd = (r) => fs.readFileSync(path.join(ROOT, r), "utf8");
++  const live = {
++    panel: rd(PANEL),
++    scene: rd(SCENE_CSS),
++    gsfc: rd(SCENE_SFC),
++    ribbon: rd(RIBBON),
++    regime: rd(REGIME_TS),
++    html: rd("index.html"),
++    tab: rd(TAB),
++  };
++  const once = (s, a, b) => (s.includes(a) ? s.replace(a, b) : null);
++  const re = (s, a, b) => (a.test(s) ? s.replace(a, b) : null);
++  const P = (panel) => ({ [PANEL]: panel });
++  const SC = (scene) => ({ [SCENE_CSS]: scene });
++  const panelRule = (rule) =>
++    P(
++      once(
++        live.panel,
++        ".action-bar > .action-verbs,",
++        `${rule}\n\n.action-bar > .action-verbs,`,
++      ),
++    );
++  const bar = (decl) =>
++    P(
++      re(
++        live.panel,
++        /(\n\.action-bar \{[^}]*?)padding-block/,
++        `$1${decl};\n  padding-block`,
++      ),
++    );
++  const frame = (decl) =>
++    P(re(live.panel, /(\.bar-frame \{[^}]*?)z-index: 0;/, `$1z-index: 0;\n  ${decl};`));
++  const addScene = (rule) => SC(live.scene + "\n" + rule + "\n");
++  const DOCK = "calc(0.75rem + env(safe-area-inset-bottom))";
+   const plants = [
++    // pass 6's 23 (B1–B8, X1, X2, FAINT and the clause rows)
+     [
+       "1",
+       "B1 pad 0",
+-      {
+-        scene: live.scene.replace(
+-          "calc(0.75rem + env(safe-area-inset-bottom))",
+-          "max(0rem, env(safe-area-inset-bottom))",
+-        ),
+-      },
++      SC(once(live.scene, DOCK, "max(0rem, env(safe-area-inset-bottom))")),
+     ],
+     [
+       "1",
+       "the pass-5 max() form",
+-      {
+-        scene: live.scene.replace(
+-          "calc(0.75rem + env(safe-area-inset-bottom))",
+-          "max(0.75rem, env(safe-area-inset-bottom))",
+-        ),
+-      },
+-    ],
+-    [
+-      "1",
+-      "no inset",
+-      {
+-        scene: live.scene.replace(
+-          "calc(0.75rem + env(safe-area-inset-bottom))",
+-          "0.75rem",
+-        ),
+-      },
++      SC(once(live.scene, DOCK, "max(0.75rem, env(safe-area-inset-bottom))")),
+     ],
++    ["1", "no inset", SC(once(live.scene, DOCK, "0.75rem"))],
+     [
+       "1",
+       "landscape under its floor",
+-      {
+-        scene: live.scene.replace(
+-          "calc(1.125rem + env(safe-area-inset-bottom))",
+-          "calc(0.75rem + env(safe-area-inset-bottom))",
+-        ),
+-      },
++      SC(once(live.scene, "calc(1.125rem + env(safe-area-inset-bottom))", DOCK)),
+     ],
+     [
+       "2",
+-      "the foot under the card",
+-      {
+-        scene: live.scene.replace(
+-          /(\.card-foot \{[^}]*?)z-index: 45;/,
+-          "$1z-index: 1;",
+-        ),
+-      },
++      "B6 the foot under the card",
++      SC(re(live.scene, /(\.card-foot \{[^}]*?)z-index: 45;/, "$1z-index: 1;")),
+     ],
+     [
+       "3",
+       "the pen's radius",
+-      {
+-        panel: live.panel.replace(/(class="bar-frame"[\s\S]*?:radius=")3(")/, "$10$2"),
+-      },
++      P(re(live.panel, /(class="bar-frame"[\s\S]*?:radius=")3(")/, "$10$2")),
+     ],
+     ["3", "the frame's own colour", frame("color: var(--ink-press-rule)")],
+     ["3", "B2 visibility: hidden", frame("visibility: hidden")],
+     [
+       "3",
+       "B3 v-if false",
+-      {
+-        panel: live.panel.replace(
++      P(
++        once(
++          live.panel,
+           '<HandDrawnOutline\n          class="bar-frame"',
+           '<HandDrawnOutline\n          v-if="false"\n          class="bar-frame"',
+         ),
+-      },
++      ),
+     ],
+     [
+       "3",
+       "B8 stroke-width 0 on the paths",
+-      {
+-        panel: live.panel.replace(
+-          ".action-bar > .action-verbs,",
+-          ".bar-frame :deep(path) { stroke-width: 0; }\n\n.action-bar > .action-verbs,",
+-        ),
+-      },
++      panelRule(".bar-frame :deep(path) { stroke-width: 0; }"),
+     ],
+     ["3", "X1 opacity 0", frame("opacity: 0")],
+     [
+       "3",
+       "X2 transparent ink",
+-      {
+-        panel: live.panel.replace(
+-          ".action-bar > .action-verbs,",
+-          ".bar-frame :deep(svg) { color: transparent; stroke: rgba(0, 0, 0, 0); }\n\n.action-bar > .action-verbs,",
+-        ),
+-      },
++      panelRule(
++        ".bar-frame :deep(svg) { color: transparent; stroke: rgba(0, 0, 0, 0); }",
++      ),
+     ],
+     ["3", "FAINT opacity 0.15", frame("opacity: 0.15")],
+     ["4", "a border-top", bar("border-top: 2.5px solid")],
+@@ -363,18 +738,20 @@ function selfTest() {
+     [
+       "4",
+       "a border on the foot",
+-      {
+-        scene: live.scene.replace(
++      SC(
++        re(
++          live.scene,
+           /(\.card-foot \{[^}]*?)z-index: 45;/,
+           "$1z-index: 45;\n  border-top: 1px solid;",
+         ),
+-      },
++      ),
+     ],
+     [
+       "5",
+       "the floor with a fallback",
+       {
+-        ribbon: live.ribbon.replace(
++        [RIBBON]: once(
++          live.ribbon,
+           "min-height: var(--tap-floor);",
+           "min-height: var(--tap-floor, 2.75rem);",
+         ),
+@@ -383,34 +760,228 @@ function selfTest() {
+     [
+       "6",
+       "a published band",
+-      {
+-        panel: live.panel.replace(
++      P(
++        once(
++          live.panel,
+           "cardEl.value = card;",
+           'cardEl.value = card;\n    card.style.setProperty("--card-pad-t", "20px");',
+         ),
++      ),
++    ],
++    // the pass-6 critic's K1–K15 (every one stayed GREEN on pass 6's gate)
++    ["8", "K1 overflow: hidden on the bar", bar("overflow: hidden")],
++    ["8", "K2 contain: paint on the bar", bar("contain: paint")],
++    ["8", "K3 filter: opacity(0.15) on the bar", bar("filter: opacity(0.15)")],
++    [
++      "3",
++      "K4 :deep(.outline-svg) display none",
++      panelRule(".action-bar :deep(.outline-svg) { display: none; }"),
++    ],
++    [
++      "3",
++      "K5 :first-child hidden",
++      panelRule(".action-bar > :first-child { visibility: hidden; }"),
++    ],
++    [
++      "1",
++      "K6 #card-foot padding-bottom 0",
++      addScene("#card-foot { padding-bottom: 0; }"),
++    ],
++    ["1", "K7 padding-block-end 0", addScene(".card-foot { padding-block-end: 0; }")],
++    ["1", "K8 padding shorthand 0", addScene(".card-foot { padding: 0; }")],
++    ["8", "K9 overflow: clip on the foot", addScene(".card-foot { overflow: clip; }")],
++    [
++      "3",
++      "K10 <template v-if> around the lip",
++      P(
++        re(
++          live.panel,
++          /(<HandDrawnOutline\n\s+class="bar-frame"[\s\S]*?\/>)/,
++          '<template v-if="false">$1</template>',
++        ),
++      ),
++    ],
++    ["8", "K11 clip-path on the bar", bar("clip-path: inset(0)")],
++    [
++      "8",
++      "K12 mask-image on the bar",
++      bar("mask-image: linear-gradient(transparent, transparent)"),
++    ],
++    ["2", "K13 #card-foot z-index 0", addScene("#card-foot { z-index: 0; }")],
++    [
++      "1",
++      "K14 compound .drawer-case .card-foot pad 0",
++      addScene(".drawer-case .card-foot { padding-bottom: 0; }"),
++    ],
++    [
++      "1",
++      "K15 calc(pad + env() − pad)",
++      SC(
++        once(live.scene, DOCK, "calc(0.75rem + env(safe-area-inset-bottom) - 0.75rem)"),
++      ),
++    ],
++    // pass 7's own, the siblings no one named (the SHAPE law's list: :is(), a second block,
++    // index.html, the element's own style/utility, a script write, a var-led pad, `!important`
++    // in a media block, content-visibility, a clip on the case)
++    [
++      "8",
++      "N1 :is(.action-bar) overflow hidden",
++      panelRule(":is(.action-bar) { overflow: hidden; }"),
++    ],
++    [
++      "8",
++      "N2 a second <style> block, contain: strict",
++      P(live.panel + "\n<style>\n.action-bar { contain: strict; }\n</style>\n"),
++    ],
++    [
++      "1",
++      "N3 index.html <style> #card-foot pad 0",
++      {
++        "index.html": once(
++          live.html,
++          "</head>",
++          "<style>#card-foot{padding-bottom:0}</style></head>",
++        ),
++      },
++    ],
++    [
++      "8",
++      "N4 inline style on the bar's element",
++      P(
++        re(
++          live.panel,
++          /(\n\s*class="action-bar")/,
++          '$1\n        style="overflow: hidden"',
++        ),
++      ),
++    ],
++    [
++      "1",
++      "N5 a utility pad on the foot's element",
++      { [SCENE_SFC]: once(live.gsfc, 'class="card-foot"', 'class="card-foot pb-0"') },
++    ],
++    [
++      "8",
++      "N6 a script writes the foot's overflow",
++      P(
++        once(
++          live.panel,
++          "cardEl.value = card;",
++          'cardEl.value = card;\n    if (foot) foot.style.overflow = "hidden";',
++        ),
++      ),
++    ],
++    [
++      "1",
++      "N7 a var-led pad resolving to 0",
++      addScene(
++        ":root { --foot-pad: 0rem; }\n.card-foot { padding-bottom: var(--foot-pad); }",
++      ),
++    ],
++    [
++      "3",
++      "N8 !important opacity on the frame in a media block",
++      panelRule("@media (hover: hover) { .bar-frame { opacity: 0 !important; } }"),
++    ],
++    [
++      "8",
++      "N9 content-visibility on the foot",
++      addScene(".card-foot { content-visibility: hidden; }"),
++    ],
++    [
++      "8",
++      "N10 overflow hidden on the case (closed pose)",
++      addScene("html.drawer-closed .drawer-case { overflow: hidden; }"),
++    ],
++    [
++      "8",
++      "N11 a utility clip on the case's element",
++      {
++        [SCENE_SFC]: re(
++          live.gsfc,
++          /class="([^"]*\bdrawer-case\b[^"]*)"/,
++          'class="$1 overflow-hidden"',
++        ),
++      },
++    ],
++    // row 6 · the three-predicate plant (the pad, the flank, the mount each re-keyed alone)
++    [
++      "7",
++      "R1 the landscape pad keyed on a narrower query",
++      SC(
++        once(
++          live.scene,
++          "@media (max-width: 1023.98px) and (orientation: landscape) {\n  .card-foot",
++          "@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) {\n  .card-foot",
++        ),
++      ),
++    ],
++    [
++      "7",
++      "R2 the flank ref keyed on another query",
++      {
++        [REGIME_TS]: once(
++          live.regime,
++          '"(max-width: 1023.98px) and (orientation: landscape)"',
++          '"(max-width: 1023px) and (orientation: landscape)"',
++        ),
++      },
++    ],
++    [
++      "7",
++      "R3 a per-mount media ref in the panel",
++      P(
++        once(
++          live.panel,
++          "const landscapeFlank = useLandscapeFlank();",
++          'const landscapeFlank = mediaRef("(orientation: landscape)");',
++        ),
++      ),
++    ],
++    [
++      "7",
++      "R4 the berth pad keyed off its mount's query",
++      SC(
++        once(
++          live.scene,
++          "@media (min-width: 1024px) and (hover: hover) and (pointer: fine) {\n  .card-foot",
++          "@media (min-width: 1024px) and (hover: hover) {\n  .card-foot",
++        ),
++      ),
++    ],
++    [
++      "7",
++      "R5 the tongue's flank on its own query",
++      {
++        [TAB]: once(
++          live.tab,
++          "@media (max-width: 1023.98px) and (orientation: landscape) {",
++          "@media (max-width: 900px) and (orientation: landscape) {",
++        ),
+       },
+     ],
+   ];
+-  let bad = 0;
+-  const green = check(live);
++  const green = check();
+   if (green.length) {
+-    console.error(`self-test: the LIVE source reds:\n  ${green.join("\n  ")}`);
++    console.error(`self-test: the LIVE tree reds:\n  ${green.join("\n  ")}`);
+     bad++;
+   }
+   for (const [clause, name, patch] of plants) {
+-    const src = { ...live, ...patch };
+-    if (Object.keys(patch).every((k) => patch[k] === live[k])) {
+-      console.error(
+-        `self-test: plant "${name}" (clause ${clause}) did not apply (the live shape moved)`,
+-      );
++    if (Object.values(patch).some((v) => v === null)) {
++      console.error(`self-test: plant "${name}" did not apply (the live shape moved)`);
+       bad++;
+       continue;
+     }
+-    const f = check(src);
++    const f = check(patch);
+     if (!f.some((x) => x.startsWith(`${clause} `))) {
+-      console.error(`self-test: plant "${name}" stayed GREEN on clause ${clause}`);
++      console.error(
++        `self-test: plant "${name}" stayed GREEN on clause ${clause}${f.length ? ` (red elsewhere: ${f[0]})` : ""}`,
++      );
+       bad++;
+-    }
++    } else if (process.argv.includes("--verbose"))
++      console.log(
++        `  RED  ${name.padEnd(48)} ${f.find((x) => x.startsWith(`${clause} `))}`,
++      );
+   }
+   console.log(
+     bad
+@@ -423,8 +994,8 @@ function selfTest() {
+ if (process.argv[1] === import.meta.filename) {
+   let bad = 0;
+   if (process.argv.includes("--self-test")) bad += selfTest();
+-  const fails = check(read());
++  const fails = check();
+   for (const f of fails) console.error(`check-tape-foot: ${f}`);
+-  if (!fails.length) console.log("check-tape-foot: 6 clauses hold");
++  if (!fails.length) console.log("check-tape-foot: 8 clauses hold");
+   process.exit(bad || fails.length ? 1 : 0);
+ }
+diff --git a/web/frontend/scripts/lib/shape-census.mjs b/web/frontend/scripts/lib/shape-census.mjs
+new file mode 100644
+index 00000000..5a92fb10
+--- /dev/null
++++ b/web/frontend/scripts/lib/shape-census.mjs
+@@ -0,0 +1,327 @@
++// shape-census.mjs — THE shape-census library (T9-W7 pass 7, chair's instruments; registry-v6 §2.10;
++// LAWS P6 §F "THE SHAPE LAW"). Seeded from NOTE-LEDGER's critic's `reserve-law.PROPOSED.mjs` (pass6/
++// critique/NOTE-LEDGER/instruments/). A source gate reads the SHAPE, not the spelling. ONE copy: a lane
++// that hand-rolls a second is a row against LAWS P6 §I.
++//
++// What it reads (every site a declaration can reach a subject from):
++//   · EVERY <style> block of every SFC (scoped or not, a second block too), every stylesheet under src/,
++//     public/** and index.html's <style>; comments stripped by a STRING-AWARE stripper per language
++//     (a `/*` inside `accept="image/*"` or a CSS string never opens a comment)
++//   · nested rules at any depth with their at-rule context, every declaration in SOURCE ORDER with
++//     `!important` read; a SHORTHAND whose value is var()-led is a literal hit on every longhand
++//   · the SUBJECT COMPOUND of each selector (the last compound): positive classes (incl. :is()/:where()
++//     arms) vs negated ones (:not()) — `.x:not(.y)` is subject x under a condition, `.y:not(.x)` is NOT x
++//   · template `style="…"` attributes, `:style` objects (quoted and unquoted keys, camelCase), `:style`
++//     strings and template literals, and Tailwind candidates on elements whose class names the subject
++//   · script style writes anywhere (.vue/.ts/.tsx/.js): `.style.prop =`, `.style['prop'] =`,
++//     `.style[expr] =` (a COMPUTED key is reported unresolved — never dropped), `setProperty(…)` incl.
++//     concatenated names, `Object.assign(x.style, {…})`
++//   · tokens: `--x:` declarations everywhere; `resolve(value)` evaluates var() with fallbacks;
++//     `var(--stem-${x})` is read as EVERY token under the stem
++//   · colours: ONE parser for hex 3/4/6/8, rgb/rgba (comma or space, %), hsl/hsla (deg/turn/rad/grad),
++//     hwb, lab, lch, oklab, oklch, color(srgb|srgb-linear|display-p3 …), named colours, transparent,
++//     color-mix(in srgb|oklab …) → sRGB; `deltaE` in OKLab. A literal is scored by ΔE, never spelling.
++import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
++import { join, relative } from "node:path";
++
++// ---------------------------------------------------------------------------------------- files
++export function walk(dir, pred, out = []) {
++  if (!existsSync(dir)) return out;
++  for (const n of readdirSync(dir)) {
++    if (n === "node_modules" || n.startsWith(".")) continue;
++    const p = join(dir, n); const s = statSync(p);
++    if (s.isDirectory()) walk(p, pred, out); else if (pred(p)) out.push(p);
++  }
++  return out;
++}
++const isTest = (p) => /\.(test|spec)\.[cm]?[jt]sx?$/.test(p) || /[\\/]__tests__[\\/]/.test(p);
++/** Every source a declaration can come from, under the frontend root `fe`. */
++export function sources(fe, { tests = false } = {}) {
++  const src = walk(join(fe, "src"), (p) => /\.(vue|css|ts|tsx|js|mjs|json)$/.test(p) && (tests || !isTest(p)));
++  const pub = walk(join(fe, "public"), (p) => /\.css$/.test(p));
++  const html = existsSync(join(fe, "index.html")) ? [join(fe, "index.html")] : [];
++  return [...src, ...pub, ...html];
++}
++
++// ------------------------------------------------------------------------- string-aware strippers
++/** CSS: removes /* … *\/ outside strings; keeps line count (comments → spaces, newlines kept). */
++export function stripCss(s) {
++  let o = "", q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (q) { o += c; if (c === "\\") { o += s[++i] ?? ""; continue; } if (c === q) q = null; continue; }
++    if (c === '"' || c === "'") { q = c; o += c; continue; }
++    if (c === "/" && s[i + 1] === "*") { const e = s.indexOf("*/", i + 2); const end = e < 0 ? s.length : e + 2; o += s.slice(i, end).replace(/[^\n]/g, " "); i = end - 1; continue; }
++    o += c;
++  }
++  return o;
++}
++/** JS/TS: removes // and /* *\/ outside strings and template literals (with ${} nesting). */
++export function stripJs(s) {
++  let o = "", i = 0; const stack = [];
++  const blank = (t) => t.replace(/[^\n]/g, " ");
++  while (i < s.length) {
++    const c = s[i], top = stack.at(-1);
++    if (top === "`") { if (c === "\\") { o += c + (s[i + 1] ?? ""); i += 2; continue; } if (c === "`") { stack.pop(); o += c; i++; continue; } if (c === "$" && s[i + 1] === "{") { stack.push("{"); o += "${"; i += 2; continue; } o += c; i++; continue; }
++    if (top === '"' || top === "'") { if (c === "\\") { o += c + (s[i + 1] ?? ""); i += 2; continue; } if (c === top || c === "\n") stack.pop(); o += c; i++; continue; }
++    if (c === '"' || c === "'" || c === "`") { stack.push(c); o += c; i++; continue; }
++    if (c === "{" && top === "{") { stack.push("{"); o += c; i++; continue; }
++    if (c === "}" && top === "{") { stack.pop(); o += c; i++; continue; }
++    if (c === "/" && s[i + 1] === "/") { const e = s.indexOf("\n", i); const end = e < 0 ? s.length : e; o += blank(s.slice(i, end)); i = end; continue; }
++    if (c === "/" && s[i + 1] === "*") { const e = s.indexOf("*/", i + 2); const end = e < 0 ? s.length : e + 2; o += blank(s.slice(i, end)); i = end; continue; }
++    o += c; i++;
++  }
++  return o;
++}
++/** HTML/template: removes <!-- … --> (attribute values never open one: `<!--` only starts outside a tag). */
++export function stripHtml(s) {
++  let o = "", inTag = false, q = null;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (inTag) { if (q) { if (c === q) q = null; } else if (c === '"' || c === "'") q = c; else if (c === ">") inTag = false; o += c; continue; }
++    if (s.startsWith("<!--", i)) { const e = s.indexOf("-->", i + 4); const end = e < 0 ? s.length : e + 3; o += s.slice(i, end).replace(/[^\n]/g, " "); i = end - 1; continue; }
++    if (c === "<" && /[a-zA-Z/]/.test(s[i + 1] ?? "")) inTag = true;
++    o += c;
++  }
++  return o;
++}
++
++// ------------------------------------------------------------------------------------- SFC blocks
++const lineAt = (s, idx) => s.slice(0, idx).split("\n").length;
++/** { styles: [{attrs, css, line}], template: {text, line} | null, scripts: [{text, line}] } — EVERY block. */
++export function sfc(text) {
++  const styles = [...text.matchAll(/<style([^>]*)>([\s\S]*?)<\/style>/g)].map((m) => ({ attrs: m[1], css: m[2], line: lineAt(text, m.index + m[0].indexOf(">") + 1) }));
++  const scripts = [...text.matchAll(/<script([^>]*)>([\s\S]*?)<\/script>/g)].map((m) => ({ attrs: m[1], text: m[2], line: lineAt(text, m.index + m[0].indexOf(">") + 1) }));
++  const t0 = text.indexOf("<template"); const t1 = text.lastIndexOf("</template>");
++  const template = t0 >= 0 && t1 > t0 ? { text: text.slice(text.indexOf(">", t0) + 1, t1), line: lineAt(text, text.indexOf(">", t0) + 1) } : null;
++  return { styles, scripts, template };
++}
++
++// --------------------------------------------------------------------------------------- CSS rules
++/** Nested rules: [{ctx: [at-preludes], prelude, decls: [{prop, value, important, line}], line}] in source order. */
++export function cssRules(css, baseLine = 1, ctx = [], out = []) {
++  const s = stripCss(css);
++  let depth = 0, start = 0, open = 0;
++  for (let i = 0; i < s.length; i++) {
++    const c = s[i];
++    if (c === '"' || c === "'") { const q = c; i++; while (i < s.length && s[i] !== q) { if (s[i] === "\\") i++; i++; } continue; }
++    if (c === "{") { if (depth++ === 0) open = i; }
++    else if (c === "}") {
++      if (--depth === 0) {
++        const prelude = s.slice(start, open).trim().replace(/^[;\s]+/, "").split(/;\s*/).pop().trim();
++        const body = s.slice(open + 1, i);
++        const line = baseLine + lineAt(s, open) - 1;
++        if (prelude.startsWith("@")) cssRules(body, line, [...ctx, prelude.replace(/\s+/g, " ")], out);
++        else {
++          // a nested rule inside a style rule (CSS nesting) — flatten with `&`
++          const nested = [];
++          const flat = body.replace(/([^{};]+)\{([^{}]*)\}/g, (m, pre, inner) => { nested.push({ pre: pre.trim(), inner }); return ""; });
++          out.push({ ctx, prelude: prelude.replace(/\s+/g, " "), decls: decls(flat, line), line });
++          for (const n of nested) out.push({ ctx, prelude: n.pre.includes("&") ? n.pre.replace(/&/g, prelude) : `${prelude} ${n.pre}`, decls: decls(n.inner, line), line });
++        }
++        start = i + 1;
++      }
++    } else if (c === ";" && depth === 0) start = i + 1;
++  }
++  return out;
++}
++/** Declarations of a block body in source order (strings respected). */
++export function decls(body, line = 0) {
++  const out = []; let cur = "", q = null, par = 0;
++  const push = () => { const m = /^\s*(--[\w-]+|-?[a-zA-Z][\w-]*)\s*:\s*([\s\S]*)$/.exec(cur); if (m) { let v = m[2].trim(); const imp = /!\s*important\s*$/i.test(v); if (imp) v = v.replace(/!\s*important\s*$/i, "").trim(); out.push({ prop: m[1].startsWith("--") ? m[1] : m[1].toLowerCase(), value: v, important: imp, line }); } cur = ""; };
++  for (const c of body) { if (q) { cur += c; if (c === q) q = null; continue; } if (c === '"' || c === "'") { q = c; cur += c; continue; } if (c === "(") par++; if (c === ")") par--; if (c === ";" && par === 0) { push(); continue; } cur += c; }
++  push();
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- selectors
++const splitTop = (s, sep) => { const out = []; let d = 0, cur = "", q = null; for (const c of s) { if (q) { cur += c; if (c === q) q = null; continue; } if (c === '"' || c === "'") q = c; if (c === "(" || c === "[") d++; if (c === ")" || c === "]") d--; if (d === 0 && sep.test(c)) { out.push(cur); cur = ""; continue; } cur += c; } out.push(cur); return out.map((x) => x.trim()).filter(Boolean); };
++/** The subject compound of one complex selector (the last compound after a combinator). */
++export function subjectCompound(sel) {
++  const s = sel.replace(/:deep\(([^)]*)\)/g, " $1").replace(/::v-deep/g, " ").replace(/::?[\w-]+$/, (m) => (/^::/.test(m) ? "" : m));
++  const parts = splitTop(s, /[\s>+~]/);
++  return parts.at(-1) ?? "";
++}
++/** { pos: Set<class>, neg: Set<class>, tags } of a compound: :not() args negate; :is()/:where() args are positive arms. */
++export function compoundClasses(compound) {
++  const pos = new Set(), neg = new Set();
++  let rest = compound;
++  rest = rest.replace(/:not\(((?:[^()]|\([^()]*\))*)\)/g, (m, inner) => { for (const c of inner.matchAll(/\.([\w-]+)/g)) neg.add(c[1]); return ""; });
++  rest = rest.replace(/:(?:is|where|matches)\(((?:[^()]|\([^()]*\))*)\)/g, (m, inner) => { for (const arm of splitTop(inner, /,/)) for (const c of subjectCompound(arm).matchAll(/\.([\w-]+)/g)) pos.add(c[1]); return ""; });
++  for (const c of rest.matchAll(/\.([\w-]+)/g)) pos.add(c[1]);
++  return { pos, neg };
++}
++/** Does the prelude's selector list carry `cls` in some selector's SUBJECT compound (positively)? */
++export function subjectHas(prelude, cls) {
++  return splitTop(prelude, /,/).some((sel) => compoundClasses(subjectCompound(sel)).pos.has(cls));
++}
++
++// ---------------------------------------------------------------------------------- shorthands
++const SHORTHANDS = {
++  font: ["font-family", "font-size", "font-weight", "font-style", "line-height", "font-variant", "font-stretch"],
++  margin: ["margin-top", "margin-right", "margin-bottom", "margin-left"], padding: ["padding-top", "padding-right", "padding-bottom", "padding-left"],
++  inset: ["top", "right", "bottom", "left"], transition: ["transition-property", "transition-duration", "transition-timing-function", "transition-delay"],
++  animation: ["animation-name", "animation-duration", "animation-timing-function", "animation-delay", "animation-iteration-count", "animation-direction", "animation-fill-mode"],
++  overflow: ["overflow-x", "overflow-y"], "contain-intrinsic-size": ["contain-intrinsic-width", "contain-intrinsic-height"],
++  border: ["border-width", "border-style", "border-color"], outline: ["outline-width", "outline-style", "outline-color"], background: ["background-color", "background-image"],
++};
++/** Does declaration `d` set `prop` (directly, via its shorthand, or as a var()-led shorthand — a literal hit)? */
++export function sets(d, prop) {
++  if (d.prop === prop) return true;
++  const lh = SHORTHANDS[d.prop];
++  if (lh && lh.includes(prop)) return true;
++  if (d.prop === "min-block-size" && prop === "min-height") return true;
++  return false;
++}
++const kebab = (k) => k.replace(/^['"]|['"]$/g, "").replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
++
++// ------------------------------------------------------------------------- template + script sites
++/** Elements in a template whose static class or :class names `cls`: their style=, :style, Tailwind candidates. */
++export function templateSites(tpl, cls, baseLine = 1) {
++  const t = stripHtml(tpl); const out = [];
++  for (const m of t.matchAll(/<([a-zA-Z][\w-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*\/?>/g)) {
++    const attrs = m[2] ?? ""; const line = baseLine + lineAt(t, m.index) - 1;
++    const classes = [...attrs.matchAll(/(?:^|\s)(?::class|v-bind:class|class)\s*=\s*("([^"]*)"|'([^']*)')/g)].map((a) => a[2] ?? a[3]).join(" ");
++    if (!new RegExp(`(^|[^\\w-])${cls.replace(/[-]/g, "\\-")}(?![\\w-])`).test(classes)) continue;
++    for (const a of attrs.matchAll(/(?:^|\s)(:style|v-bind:style|style)\s*=\s*("([^"]*)"|'([^']*)')/g)) {
++      const raw = a[3] ?? a[4];
++      if (a[1] === "style") for (const d of decls(raw, line)) out.push({ kind: "style-attr", ...d, file: null });
++      else {
++        for (const kv of raw.matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g)) out.push({ kind: "style-object", prop: kebab(kv[2]), value: kv[3].trim(), important: /!important/.test(kv[3]), line });
++        for (const str of raw.matchAll(/(`|')([^`']*?:[^`']*)\1/g)) for (const d of decls(str[2], line)) out.push({ kind: "style-string", ...d });
++      }
++    }
++    for (const tw of classes.split(/[\s'"{},:\[\]]+/)) { const map = TAILWIND(tw); if (map) out.push({ kind: "tailwind", prop: map[0], value: map[1], important: tw.startsWith("!"), line, token: tw }); }
++  }
++  return out;
++}
++/** A small Tailwind candidate table (the utilities the estate's gates key on); unknown utilities are ignored. */
++export function TAILWIND(tw) {
++  const t = tw.replace(/^!/, "").replace(/^[\w-]+:/, "");
++  let m;
++  if ((m = /^min-h-(.+)$/.exec(t))) return ["min-height", m[1] === "0" ? "0px" : m[1].replace(/^\[|\]$/g, "")];
++  if ((m = /^font-(sans|serif|mono|hand|display)$/.exec(t))) return ["font-family", m[1]];
++  if ((m = /^font-\[(.+)\]$/.exec(t))) return ["font-family", m[1]];
++  if ((m = /^overflow-(hidden|clip|visible|auto|scroll)$/.exec(t))) return ["overflow", m[1]];
++  if ((m = /^(?:text|bg|border|stroke|fill)-\[(#[0-9a-fA-F]{3,8}|(?:rgb|hsl|oklch|oklab|lab|lch|hwb)\([^\]]+\))\]$/.exec(t))) return ["color-literal", m[1]];
++  return null;
++}
++/** Script style writes of `prop` (kebab) anywhere in `text`; computed keys are reported as unresolved sites. */
++export function scriptWrites(text, prop, baseLine = 1) {
++  const s = stripJs(text); const out = []; const camel = prop.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
++  const L = (i) => baseLine + lineAt(s, i) - 1;
++  for (const m of s.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)\s*([^;\n]+)/g)) if (m[1] === camel) out.push({ kind: "script-write", prop, value: m[2].trim(), line: L(m.index) });
++  for (const m of s.matchAll(/\.style\[\s*(['"`])([^'"`]+)\1\s*\]\s*=(?!=)\s*([^;\n]+)/g)) if (kebab(m[2]) === prop) out.push({ kind: "script-write", prop, value: m[3].trim(), line: L(m.index) });
++  for (const m of s.matchAll(/\.style\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g)) out.push({ kind: "script-write-computed", prop: `?${m[1].trim()}`, value: m[2].trim(), line: L(m.index), unresolved: true });
++  for (const m of s.matchAll(/setProperty\(\s*([^,]+),\s*([^)]+)\)/g)) {
++    const k = m[1].trim(); const lit = /^(['"`])([^'"`$]*)\1$/.exec(k);
++    if (lit) { if (kebab(lit[2]) === prop) out.push({ kind: "script-setProperty", prop, value: m[2].trim(), line: L(m.index) }); }
++    else out.push({ kind: "script-setProperty-computed", prop: `?${k}`, value: m[2].trim(), line: L(m.index), unresolved: true });
++  }
++  for (const m of s.matchAll(/Object\.assign\(\s*[\w.$?]+\.style\s*,\s*\{([^}]*)\}/g)) for (const kv of m[1].matchAll(/(['"]?)([a-zA-Z-]+)\1\s*:\s*([^,}]+)/g)) if (kebab(kv[2]) === prop) out.push({ kind: "script-assign", prop, value: kv[3].trim(), line: L(m.index) });
++  return out;
++}
++
++// ------------------------------------------------------------------------------------- the census
++/** Every site that sets `prop` on subject class `cls`, tree-wide, in source order per file.
++ *  Returns [{file, kind, ctx, prelude, prop, value, important, line, unresolved?}]. */
++export function census(fe, cls, prop, { files, read, extra = [] } = {}) {
++  const out = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const rel = relative(fe, f); const text = rd(f);
++    const cssBlocks = f.endsWith(".vue") ? sfc(text).styles.map((b) => ({ css: b.css, line: b.line, kind: /scoped/.test(b.attrs) ? "sfc-style-scoped" : "sfc-style" }))
++      : f.endsWith(".css") ? [{ css: text, line: 1, kind: rel.startsWith("public") ? "public-css" : "stylesheet" }]
++      : f.endsWith(".html") ? [...text.matchAll(/<style[^>]*>([\s\S]*?)<\/style>/g)].map((m) => ({ css: m[1], line: lineAt(text, m.index), kind: "index-html" })) : [];
++    for (const b of cssBlocks) for (const r of cssRules(b.css, b.line)) if (subjectHas(r.prelude, cls)) for (const d of r.decls) if (sets(d, prop)) out.push({ file: rel, kind: b.kind, ctx: r.ctx.join(" "), prelude: r.prelude, prop: d.prop, value: d.value, important: d.important, line: d.line, varLed: d.prop !== prop && /^\s*var\(/.test(d.value) });
++    if (f.endsWith(".vue")) {
++      const b = sfc(text);
++      if (b.template) for (const s of templateSites(b.template.text, cls, b.template.line)) if (s.prop === prop) out.push({ file: rel, ctx: "", prelude: `<template .${cls}>`, ...s });
++      for (const sc of b.scripts) for (const w of scriptWrites(sc.text, prop, sc.line)) out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++    } else if (/\.(ts|tsx|js|mjs)$/.test(f)) for (const w of scriptWrites(text, prop)) out.push({ file: rel, ctx: "", prelude: "<script>", ...w });
++  }
++  return out;
++}
++/** Tokens: every `--x: v` declaration tree-wide (last wins per name; all kept in `all`). */
++export function tokens(fe, { files, read, extra = [] } = {}) {
++  const map = new Map(), all = []; const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  for (const f of [...(files ?? sources(fe)), ...extra]) {
++    const text = rd(f);
++    const blocks = f.endsWith(".vue") ? sfc(text).styles.map((b) => b.css) : f.endsWith(".css") ? [text] : [];
++    for (const css of blocks) for (const r of cssRules(css)) for (const d of r.decls) if (d.prop.startsWith("--")) { map.set(d.prop, d.value); all.push({ file: relative(fe, f), prelude: r.prelude, ctx: r.ctx.join(" "), ...d }); }
++  }
++  return { map, all };
++}
++/** Resolve var() with fallbacks against a token map; `var(--stem-${x})` → every token under the stem. */
++export function resolve(value, map, depth = 0) {
++  if (depth > 8) return value;
++  return value.replace(/var\(\s*(--[\w-]*(?:\$\{[^}]*\}[\w-]*)?)\s*(?:,\s*((?:[^()]|\([^()]*\))*))?\)/g, (m, name, fb) => {
++    if (name.includes("${")) { const stem = name.slice(0, name.indexOf("${")); const hits = [...map.keys()].filter((k) => k.startsWith(stem)); return hits.length ? `{${hits.map((k) => resolve(map.get(k), map, depth + 1)).join("|")}}` : (fb != null ? resolve(fb, map, depth + 1) : m); }
++    if (map.has(name)) return resolve(map.get(name), map, depth + 1);
++    return fb != null ? resolve(fb.trim(), map, depth + 1) : m;
++  });
++}
++
++// ------------------------------------------------------------------------------------------ colour
++const NAMED = "aliceblue f0f8ff antiquewhite faebd7 aqua 00ffff aquamarine 7fffd4 azure f0ffff beige f5f5dc bisque ffe4c4 black 000000 blanchedalmond ffebcd blue 0000ff blueviolet 8a2be2 brown a52a2a burlywood deb887 cadetblue 5f9ea0 chartreuse 7fff00 chocolate d2691e coral ff7f50 cornflowerblue 6495ed cornsilk fff8dc crimson dc143c cyan 00ffff darkblue 00008b darkcyan 008b8b darkgoldenrod b8860b darkgray a9a9a9 darkgreen 006400 darkgrey a9a9a9 darkkhaki bdb76b darkmagenta 8b008b darkolivegreen 556b2f darkorange ff8c00 darkorchid 9932cc darkred 8b0000 darksalmon e9967a darkseagreen 8fbc8f darkslateblue 483d8b darkslategray 2f4f4f darkslategrey 2f4f4f darkturquoise 00ced1 darkviolet 9400d3 deeppink ff1493 deepskyblue 00bfff dimgray 696969 dimgrey 696969 dodgerblue 1e90ff firebrick b22222 floralwhite fffaf0 forestgreen 228b22 fuchsia ff00ff gainsboro dcdcdc ghostwhite f8f8ff gold ffd700 goldenrod daa520 gray 808080 green 008000 greenyellow adff2f grey 808080 honeydew f0fff0 hotpink ff69b4 indianred cd5c5c indigo 4b0082 ivory fffff0 khaki f0e68c lavender e6e6fa lavenderblush fff0f5 lawngreen 7cfc00 lemonchiffon fffacd lightblue add8e6 lightcoral f08080 lightcyan e0ffff lightgoldenrodyellow fafad2 lightgray d3d3d3 lightgreen 90ee90 lightgrey d3d3d3 lightpink ffb6c1 lightsalmon ffa07a lightseagreen 20b2aa lightskyblue 87cefa lightslategray 778899 lightslategrey 778899 lightsteelblue b0c4de lightyellow ffffe0 lime 00ff00 limegreen 32cd32 linen faf0e6 magenta ff00ff maroon 800000 mediumaquamarine 66cdaa mediumblue 0000cd mediumorchid ba55d3 mediumpurple 9370db mediumseagreen 3cb371 mediumslateblue 7b68ee mediumspringgreen 00fa9a mediumturquoise 48d1cc mediumvioletred c71585 midnightblue 191970 mintcream f5fffa mistyrose ffe4e1 moccasin ffe4b5 navajowhite ffdead navy 000080 oldlace fdf5e6 olive 808000 olivedrab 6b8e23 orange ffa500 orangered ff4500 orchid da70d6 palegoldenrod eee8aa palegreen 98fb98 paleturquoise afeeee palevioletred db7093 papayawhip ffefd5 peachpuff ffdab9 peru cd853f pink ffc0cb plum dda0dd powderblue b0e0e6 purple 800080 rebeccapurple 663399 red ff0000 rosybrown bc8f8f royalblue 4169e1 saddlebrown 8b4513 salmon fa8072 sandybrown f4a460 seagreen 2e8b57 seashell fff5ee sienna a0522d silver c0c0c0 skyblue 87ceeb slateblue 6a5acd slategray 708090 slategrey 708090 snow fffafa springgreen 00ff7f steelblue 4682b4 tan d2b48c teal 008080 thistle d8bfd8 tomato ff6347 turquoise 40e0d0 violet ee82ee wheat f5deb3 white ffffff whitesmoke f5f5f5 yellow ffff00 yellowgreen 9acd32".split(" ");
++const NAMED_MAP = new Map(); for (let i = 0; i < NAMED.length; i += 2) NAMED_MAP.set(NAMED[i], NAMED[i + 1]);
++const toLin = (c) => (c <= 0.04045 ? c / 12.92 : ((c + 0.055) / 1.055) ** 2.4), toGam = (c) => (c <= 0.0031308 ? 12.92 * c : 1.055 * c ** (1 / 2.4) - 0.055);
++const clamp01 = (x) => Math.min(1, Math.max(0, x));
++function oklabToSrgb(L, a, b) {
++  const l_ = L + 0.3963377774 * a + 0.2158037573 * b, m_ = L - 0.1055613458 * a - 0.0638541728 * b, s_ = L - 0.0894841775 * a - 1.291485548 * b;
++  const l = l_ ** 3, m = m_ ** 3, s = s_ ** 3;
++  return [4.0767416621 * l - 3.3077115913 * m + 0.2309699292 * s, -1.2684380046 * l + 2.6097574011 * m - 0.3413193965 * s, -0.0041960863 * l - 0.7034186147 * m + 1.707614701 * s].map((v) => clamp01(toGam(v)));
++}
++export function srgbToOklab([r, g, b]) {
++  const R = toLin(r), G = toLin(g), B = toLin(b);
++  const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B), m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B), s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
++  return [0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s, 1.9779984951 * l - 2.428592205 * m + 0.4505937099 * s, 0.0259040371 * l + 0.7827717662 * m - 0.808675766 * s];
++}
++function labToSrgb(L, a, b) { // CIE Lab (D50) → sRGB
++  const fy = (L + 16) / 116, fx = fy + a / 500, fz = fy - b / 200, e = 216 / 24389, k = 24389 / 27;
++  const X = 0.96422 * (fx ** 3 > e ? fx ** 3 : (116 * fx - 16) / k), Y = L > k * e ? fy ** 3 : L / k, Z = 0.82521 * (fz ** 3 > e ? fz ** 3 : (116 * fz - 16) / k);
++  const Xd = 0.9554734527042182 * X - 0.023098536874261423 * Y + 0.0632593086610217 * Z, Yd = -0.028369706963208136 * X + 1.0099954580058226 * Y + 0.021041398966943008 * Z, Zd = 0.012314001688319899 * X - 0.020507696433157868 * Y + 1.3303659366080753 * Z;
++  return [3.2404542 * Xd - 1.5371385 * Yd - 0.4985314 * Zd, -0.969266 * Xd + 1.8760108 * Yd + 0.041556 * Zd, 0.0556434 * Xd - 0.2040259 * Yd + 1.0572252 * Zd].map((v) => clamp01(toGam(v)));
++}
++const num = (t, pct = 1) => (t.endsWith("%") ? (parseFloat(t) / 100) * pct : parseFloat(t));
++const hue = (t) => (t.endsWith("turn") ? parseFloat(t) * 360 : t.endsWith("grad") ? parseFloat(t) * 0.9 : t.endsWith("rad") ? (parseFloat(t) * 180) / Math.PI : parseFloat(t));
++function hslToRgb(h, s, l) { h = ((h % 360) + 360) % 360; const f = (n) => { const k = (n + h / 30) % 12, a = s * Math.min(l, 1 - l); return l - a * Math.max(-1, Math.min(k - 3, 9 - k, 1)); }; return [f(0), f(8), f(4)]; }
++/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated. */
++export function parseColor(str) {
++  const s = String(str).trim().toLowerCase();
++  if (s === "transparent") return { rgb: [0, 0, 0], a: 0 };
++  if (NAMED_MAP.has(s)) return parseColor("#" + NAMED_MAP.get(s));
++  let m;
++  if ((m = /^#([0-9a-f]{3,8})$/.exec(s))) { let h = m[1]; if (h.length <= 4) h = [...h].map((c) => c + c).join(""); if (h.length !== 6 && h.length !== 8) return null; const v = [0, 2, 4, 6].map((i) => parseInt(h.slice(i, i + 2) || "ff", 16) / 255); return { rgb: v.slice(0, 3), a: v[3] }; }
++  if ((m = /^([a-z-]+)\((.*)\)$/.exec(s))) {
++    const fn = m[1]; const inner = m[2];
++    if (fn === "color-mix") {
++      const parts = splitTop(inner, /,/); const space = /in\s+([\w-]+)/.exec(parts[0])?.[1] ?? "srgb";
++      const arm = (p) => { const pm = /\s(\d*\.?\d+)%\s*$/.exec(p) ?? /^(\d*\.?\d+)%\s/.exec(p); return { c: parseColor(p.replace(/\s*\d*\.?\d+%\s*/, " ").trim()), p: pm ? parseFloat(pm[1]) / 100 : null }; };
++      const A = arm(parts[1]), B = arm(parts[2]); if (!A.c || !B.c) return null;
++      let pa = A.p ?? (B.p != null ? 1 - B.p : 0.5), pb = B.p ?? 1 - pa; const sum = pa + pb; const alphaMul = sum < 1 ? sum : 1; pa /= sum; pb /= sum;
++      const a = A.c.a * pa + B.c.a * pb;
++      const pre = (c) => (space === "oklab" || space === "oklch" ? srgbToOklab(c.rgb) : c.rgb).map((v) => v * c.a);
++      const mix = pre(A.c).map((v, i) => (v * pa + pre(B.c)[i] * pb) / (a || 1));
++      return { rgb: space === "oklab" || space === "oklch" ? oklabToSrgb(...mix) : mix, a: a * alphaMul };
++    }
++    const [body, alpha] = inner.split("/").map((x) => x?.trim());
++    const t = body.split(/[\s,]+/).filter(Boolean); const a = alpha != null ? num(alpha) : t.length === 4 ? num(t[3]) : 1;
++    if (fn === "rgb" || fn === "rgba") return { rgb: t.slice(0, 3).map((x) => num(x, 255) / 255), a };
++    if (fn === "hsl" || fn === "hsla") return { rgb: hslToRgb(hue(t[0]), num(t[1].endsWith("%") ? t[1] : t[1] + "%"), num(t[2].endsWith("%") ? t[2] : t[2] + "%")), a };
++    if (fn === "hwb") { const w = num(t[1]), b = num(t[2]); const base = hslToRgb(hue(t[0]), 1, 0.5); const k = w + b > 1 ? 1 / (w + b) : 1; return { rgb: base.map((v) => v * (1 - w * k - b * k) + w * k), a }; }
++    if (fn === "oklab") return { rgb: oklabToSrgb(num(t[0]), num(t[1], 0.4), num(t[2], 0.4)), a };
++    if (fn === "oklch") { const L = num(t[0]), C = num(t[1], 0.4), H = (hue(t[2]) * Math.PI) / 180; return { rgb: oklabToSrgb(L, C * Math.cos(H), C * Math.sin(H)), a }; }
++    if (fn === "lab") return { rgb: labToSrgb(num(t[0], 100), num(t[1], 125), num(t[2], 125)), a };
++    if (fn === "lch") { const C = num(t[1], 150), H = (hue(t[2]) * Math.PI) / 180; return { rgb: labToSrgb(num(t[0], 100), C * Math.cos(H), C * Math.sin(H)), a }; }
++    if (fn === "color") { const sp = t[0]; const v = t.slice(1, 4).map((x) => num(x)); if (sp === "srgb") return { rgb: v, a }; if (sp === "srgb-linear") return { rgb: v.map(toGam), a }; if (sp === "display-p3") { const L = v.map(toLin); return { rgb: [1.2249 * L[0] - 0.2247 * L[1], -0.0420 * L[0] + 1.0419 * L[1], -0.0197 * L[0] - 0.0786 * L[1] + 1.0979 * L[2]].map((x) => clamp01(toGam(x))), a }; } }
++  }
++  return null;
++}
++/** ΔE in OKLab (×100, the usual scale: 2 ≈ just noticeable). */
++export function deltaE(c1, c2) { const A = srgbToOklab(c1.rgb), B = srgbToOklab(c2.rgb); return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]); }
++/** Every colour literal in a value, in any syntax. */
++export function colorLiterals(value) {
++  const out = []; const re = /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)|\b[a-zA-Z]+\b/g;
++  for (const m of value.matchAll(re)) { if (/^[a-zA-Z]+$/.test(m[0]) && !NAMED_MAP.has(m[0].toLowerCase())) continue; const c = parseColor(m[0]); if (c) out.push({ text: m[0], ...c }); }
++  return out;
++}
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index bfa52867..14359f6c 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -166,11 +166,6 @@
+   inherits: true;
+   initial-value: 0px;
+ }
+-@property --card-foot-h {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+ @property --pin-band {
+   syntax: "<length>";
+   inherits: true;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index bb907830..d802eb5e 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -575,6 +575,17 @@ function keepAsk() {
+   );
+ }
+ 
++// PASS 7 · THE LAPSE IS NOT THE READER'S ACT. `keep` and Escape are answers, so they owe focus
++// home; the window closing is a timer, and a timer may only return focus to a reader still IN
++// the question (on the ribbon, or dropped to `<body>` as it unmounts). Pass 6 sent the lapse
++// through `keepAsk` whatever `activeElement` was: a keyboard reader who had moved on to a
++// difficulty chip was pulled back to the verb 2.5 s later (the pass-6 critic, chromium 390×844).
++function lapseAsk() {
++  const at = document.activeElement;
++  if (at && at !== document.body && !at.closest(".confirm-ribbon")) askHome = null;
++  keepAsk();
++}
++
+ // ── THE FOCUS CONTRACT, WHICH IS THE WHOLE ENGINE-SPLIT CURE (§2.5; W1 §1.5 owns the law) ──
+ // A POINTER ARM MOVES NO FOCUS. The measured failure it repairs: an arm that focuses anything
+ // costs the pressed control a `focusout`, WebKit dispatches that BEFORE the second `click`, the
+@@ -594,7 +605,7 @@ function arm(name: AskableAct, fromKeys: boolean, home: string | null) {
+   askHome = fromKeys ? home : null;
+   // A HOLD, not travel: the window is how long the question stands, so it keeps its literal
+   // (`MOTION.confirmWindowMs`) and takes no easing and no rung.
+-  askTimer = setTimeout(keepAsk, MOTION.confirmWindowMs);
++  askTimer = setTimeout(lapseAsk, MOTION.confirmWindowMs);
+ }
+ 
+ function fireAsk() {
+@@ -783,24 +794,14 @@ const wrapEl = ref<HTMLElement | null>(null);
+  *  is a berth. Resolved once at mount, beside the card the same pass finds. */
+ const footBerth = ref(false);
+ 
+-// ── PASS 3 · THE OBSERVER WATCHES WHAT IT PUBLISHES (found by the inset's own row) ─────────
+-// This callback publishes `#card-foot`'s height and watched the BAR's box. The two were the
+-// same number until the foot grew a padding of its own (§1.3, the safe-area inset):
+-// a bottom inset changes the FOOT's height and leaves the bar's untouched, so no resize fires,
+-// `--card-foot-h` stays at the old 75px, the card's cap never gives the 34px back, and the case
+-// overflows its own cap. MEASURED at 390×844 with a 34px inset before the cure: the foot's
+-// bottom landed at 853.77 against an innerHeight of 844 — the verbs hanging 9.77px BELOW the
+-// viewport's bottom edge, which is a worse fault than the flush stroke the inset was spent to
+-// fix. It is App.vue's own lesson in the small (a subject that is not the thing observed goes
+-// stale the moment the two move apart), so the foot joins the subjects and one number is still
+-// published.
+-//
+-// AND `box: "border-box"` IS THE OTHER HALF, which the first cure missed and the row caught.
+-// A `ResizeObserver` reports the CONTENT box by default, and the inset is spent as the foot's
+-// `padding-bottom`: the content box never moves, so observing the foot on the default box fires
+-// nothing and `--card-foot-h` stayed at 75px with the foot standing 108.77 tall. The number this
+-// callback publishes is `getBoundingClientRect().height` — a BORDER box — so the box it watches
+-// is now the box it reads. Measured before: foot bottom 853.77 against innerHeight 844.
++// ── PASS 7 · THE FOOT'S HEIGHT IS NO LONGER PUBLISHED ───────────────────────────────────────
++// Passes 2–6 published `#card-foot`'s border box as `--card-foot-h` from here and the card's cap
++// subtracted it (pass 3 re-aimed this observer at the foot and its border box when a 34px inset
++// left the number at 75px and hung the verbs 9.77px below the viewport). A number published after
++// layout lands a frame late: the verbs rode the crib's fold for that frame (the §10 integrator,
++// keys-crib G3). The case is a flex column now (`scene.css`), so the card gives the foot its
++// height in the same layout and there is nothing to publish. This observer keeps its two other
++// offices: it finds the card, and it re-reads the fold when the foot changes the card's box.
+ useResizeObserver(
+   [actionBarEl, () => actionBarEl.value?.closest<HTMLElement>("#card-foot") ?? null],
+   () => {
+@@ -808,13 +809,6 @@ useResizeObserver(
+     const card = wrapEl.value?.closest<HTMLElement>(".controls-card");
+     if (!bar || !card) return;
+     cardEl.value = card;
+-    const foot = bar.closest<HTMLElement>("#card-foot");
+-    // UNROUNDED (pass 5): a `Math.ceil` here gave the card back up to 1px more than the foot
+-    // took, so the case read 0.19–0.86px short of the control at every rail rung.
+-    card.style.setProperty(
+-      "--card-foot-h",
+-      `${foot ? foot.getBoundingClientRect().height.toFixed(3) : 0}px`,
+-    );
+     // pass 5: `--card-pad-x` and `--card-pad-b` are no longer published. The first was set on
+     // the card and read by `#card-foot`, its SIBLING, which never inherits it (0px in every cell,
+     // both engines); the foot takes the card's inline utility in `GameScene` now. The second was
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index 26ed78af..f8a7efb5 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -127,11 +127,12 @@
+    the whole ratified rung an internal scrollbar. The portrait dock gets its own cap below,
+    derived from its own chrome. */
+ @media (min-width: 1024px) {
++  /* …and the cap is the CASE's since pass 7 (below, "the case is a column"): the card and its
++     foot share it in one layout, so the foot's height is never published to be subtracted. */
++  .drawer-case {
++    max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem);
++  }
+   .controls-card {
+-    /* …less the case's foot (T9-W7 §10 pass 2 §1.3): the bar left the scrollport for a sibling
+-       box inside the same case, so the cap that held the CASE inside the sheet has a second
+-       term. Published from the foot's own border box, never spelled. */
+-    max-height: calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem - var(--card-foot-h));
+     overflow-y: auto;
+     overscroll-behavior: contain;
+   }
+@@ -275,8 +276,8 @@
+    The fifth compartment, and the one thing in this case that is NOT in the scrollport. The bar
+    teleports here (`GameControlPanel`), so "the bar covers no group" (M04 term 2) is answered by
+    construction: there is no scroll offset at which a control and the bar share a band, because
+-   they are not in the same box. The card's cap gives back exactly `--card-foot-h` in both
+-   regimes, so the case's outer height is unmoved and the board it is centred against does not
++   they are not in the same box. The card gives the foot back its height in both regimes (the
++   case's column, below), so the case's outer height is unmoved and the board it is centred against does not
+    walk. The inline padding is the CARD's utility, bound in `GameScene` by the same expression,
+    so the fifth compartment's verbs sit on the same content column as the four above it.
+ 
+@@ -293,9 +294,24 @@
+    LANDSCAPE pays more, below: the frame's hand wanders with its side, and an 828px side hangs
+    10.5 css under its box (a 374px one, 6.6–7), so 0.75rem there CROSSED the case's stroke
+    (−1.0 / −1.5 css, both engines, 844×390 and 812×375).
+-   The card's cap gives back `--card-foot-h`, read from this element's border box, so the foot
+-   growing by the inset shrinks the scrollport by the same number and nothing is covered. */
++   The case's column gives the foot its border box first, so the foot growing by the inset
++   shrinks the scrollport by the same number and nothing is covered. */
++
++/* ── PASS 7 · THE CASE IS A COLUMN, AND THE CAP IS ONE LAYOUT ─────────────────────────────────
++   The case holds the cap; the card shrinks inside it (a scrollport's automatic minimum is 0) and
++   the foot never does. Passes 2–6 capped the CARD at the case's cap less `--card-foot-h`, a
++   number a ResizeObserver published after layout: in the frame a foot grows (the keys crib
++   opening, an inset arriving) the card still held the old cap, the case grew by the difference,
++   and the verbs rode it for a frame (keys-crib G3, 5.9–30.8 px read in the frame; the §10
++   integrator). A flex column resolves both boxes in the same layout, so there is no frame to
++   ride and no number to publish, park or re-publish. */
++.drawer-case {
++  display: flex;
++  flex-direction: column;
++}
++
+ .card-foot {
++  flex: none;
+   /* THE FOOT PAINTS AFTER THE CARD, IN THE CARD'S LAYER. The frame's top stroke stands 4px +
+      half a stroke ABOVE the bar's box, over the card's bottom padding; the card is `z-index: 45`
+      and an unpositioned foot paints under it, so the top side of the edge the owner asked for
+@@ -646,15 +662,15 @@
+ 
+   /* The card fills the sheet and scrolls INSIDE it — the sheet's own box never moves, so an
+      interior scroll can never become a page scroll. 1.5rem is the outline frame's own outset
+-     plus the card's padding-block, measured, not guessed. */
++     plus the card's padding-block, measured, not guessed. The cap is the CASE's (pass 7). */
+   .controls-card {
+-    max-height: calc(100dvh - var(--sheet-chrome) - 1.5rem - var(--card-foot-h));
+     overflow-y: auto;
+     overscroll-behavior: contain;
+   }
+ 
+   .drawer-case {
+     width: 100%;
++    max-height: calc(100dvh - var(--sheet-chrome) - 1.5rem);
+   }
+ 
+   /* The handle's berth while the sheet is UP: the case's top-right, with the handle itself
