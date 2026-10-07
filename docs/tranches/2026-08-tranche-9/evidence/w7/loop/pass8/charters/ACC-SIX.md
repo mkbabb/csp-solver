@@ -1,0 +1,35 @@
+# ACC-SIX · pass-9 charter (§3 LEADER · 85, held)
+
+Status at v8: ALIVE · LEADER of §3 · 85 (= 85; the lane claimed 86, the critic held it, the union held it down). Tree `wf_f72f3b5a-83a-45` at 3fa7af64 (pass8.diff 2ee89a53, 585,315 B; delta on the union 8bc516d0; on FIVE's union b198cb99). Lane port **4237**, control port **4250**. Base + π control 74a2b5d9. Read LAWS.md (pass 8) first; registry-v7 §2.5 (clause sabotage), §2.11 (the battery), §8.1 (the return) bind.
+
+## What pass 8 earned (the critic re-derived every row)
+FIT arm real (overyield reds 1280 + 844 both engines); the before-paint claim gated post-paint (late150 reds 19/20 cr, 14/15 wk; late16 reds with 1–2 frames); the product drives the row (20.8 reproduced, the 41.59 artifact gone); the wash as an arm behind one const (graphite 1.120 / 1.112–1.114 reproduced); π clean against the control in 16 painted readings incl. `prefers-contrast: more`; FIVE's cures blob-identical by sha; every bank tree reproduces; served @property 42 = 42.
+
+## Why 85 and not more — the open gaps, in order (every one is a pass-9 row)
+1. **G-RO · the yield's ResizeObserver half is ungated.** `noro` (delete `new ResizeObserver(readYield)`) leaves count-yield 8/8 GREEN both engines while the product paints the count on ROW TWO after 1280×800→393×699 (Range top 573.7 vs voice mid 564.3 cr / 574.1 vs 564.0 wk) and 844×390→600×390 (342.8 vs 333.2 / 342.9 vs 332.6). The font-landing path is unread for the same reason (the spec waits on fonts.ready).
+2. **G-W7 · the wash gate's SIXTH escape.** `--wash-blue: transparent` inside `@media (prefers-contrast: more) :root` passes check-theme-tokens (0 offences) and wash-step 2/2 while the painted step under contrast:more reads 1.000 both themes both engines (tree 1.143 / 1.224–1.225). W8 (the arm at 1 %) also passes the source gate. The reach never reads the arm tokens; the paint row never reads contrast:more (LAWS P7 §E(i)).
+3. **The count line's glyph AA is RED at DPR1**: light 2.359 both engines (78.9 % / 78.4 % of pixels under 4.5), dark 4.459 cr / 3.287 wk; DPR2 GREEN. The ink is HEAD's `--ink-press-quiet` .68, now carrying the count. Routed to §INK PRESSURE / NOTE-LEDGER and NOT landed.
+4. **On the WAVE union, count-yield reads 0/4 both engines** (inherited from the pass-7 union, worse on pass 8's: ABSOLUTE tab 246.38 vs 166.59 at 844×390): SIX's ABSOLUTE strip clause is keyed on 74a2b5d9's 20.8 px and contradicts §7's reserve (21.98 / 22.09 / 23.63 at rest). **RULING (v8, chair may overrule): the clause MOVES — SIX re-keys the strip floor on the §7 reserve as painted on the union (the reserve is the product; 20.8 is the control's).** The yield at 1280/844 and 393 never laying the count are read on the union after the re-key.
+5. **Union-born tape reds are SIX's**: SIX deletes the text term from the tape seed, which re-rolls every tape's tilt — Clear's hover note −0.76°→+1.21° rises 0.52 px into the five foot verbs (TAPE's berth 1.6 px; viewport-law:396), the "pencils" tag +0.44°→−0.92° reads −1.44 against FACE's > −0.5 (face-law:781). With the one term put back the tape covers nothing. SIX lands the term back (or a tilt-proof berth is TAPE's — the chair rules; default: the term returns, it was never SIX's row).
+6. **B-TALLY-16 (OUTSIDE tally) unbuilt** on this tree; the phone clearance caption (10 px vs 15–16) unread. GRAPHITE is UNBLOCKED at v8 (its charter) and builds the gauge on-union; SIX keeps the ballot row and reads the clearance.
+7. The kenken +/÷ coverage row pinned OPEN with no chair cite — the cite is owed, or the row is struck on the record.
+8. **T9-B-ACC6-1's caption names ONE variable where the const flips TWO**: `--accent-glow` (the sparkle glow) rides with the trace ink and is neither framed nor read (LAWS P7 §C). Re-cut the caption or split the const.
+9. Trace AA per arm read on the paper core only; the line/border split is carried (FIVE's gold, the pass-6 ledger's violet), not re-read.
+10. **Three instrument homes FORKED in the tree** (glyph-pop +40, postpaint +57 carrying FIVE's `len:`, shape-census +63) and both deltas carry them past the chair's fold (LAWS P7 §I). The chair folds the three PROPOSED rows first or the lane strips them from its deltas; count-yield's PAINT fails loud (not vacuous) without `range:`.
+11. Check 8 FLOOR BAND (restamped once on the WAVE union, 74a2b5d9 · 2026-10-06) — read, not re-stamped. The `--head-rule` masked fallbacks (App.vue:1215, AttributionCard.vue:132) red lint:theme-tokens on the union: §3's gate meets §10's registration; PLR-SELF's bank strikes both — read on the union after SELF folds, else SIX strikes them.
+12. G10 and the hold-LOSS strobe not re-derived by the critic — re-run both with the critic's load declared.
+
+## Pass-9 rows (numbers first; each with its plant; the critic never the author)
+- R1 **resize/rotate leg** of count-yield: 1280×800→393×699 and 844×390→600×390 after 3 presses, both engines, both themes, post-paint; `noro` its negative (RED 8/8), the font-landing path with a `document.fonts` delay plant.
+- R2 **the wash reach reads every media block's arm tokens**; W7 and W8 as self-test plants (RED); wash-step gains the `prefers-contrast: more` arm both themes both engines with W7 in-run. The clause-sabotage battery re-run over the new clauses.
+- R3 the count-line AA: take LEDGER's rung by sha if it lands in batch ≤ 2, else land a `.margin-note-meta` ink rung on this tree gated by glyph-pop at DPR1 light (≥ 4.5 median; 64/64 plants RED) and hand it to §7 as a PROPOSED row.
+- R4 the ABSOLUTE strip clause re-keyed on the painted reserve (gap 4); count-yield 4/4 on the union both engines; the 844×390 tab read.
+- R5 the tape seed's text term restored (gap 5); viewport-law:396 and face-law:781 GREEN on the union; the seed's tilt per tape printed vs 74a2b5d9.
+- R6 T9-B-ACC6-1 re-captioned for both variables, or the glow behind its own const with its own pair (one payload, one variable, a retiree named; ≤ 32,890 B — the pass-8 composite is the retiree if re-shot).
+- R7 the three PROPOSED home rows handed to the instruments lane at open; the lane's deltas cut net of homes (`pass9.delta.own.diff`), apply --check 0 on homes + union.
+- R8 G10 (FIVE's primitive by sha, incl. FIVE's pass-9 stall-run cure) and the strobe re-derived; the median-of-nine observer is NOT taken by sha until FIVE's D10 cap lands (FIVE charter row 1).
+- R9 the kenken cite or the strike; check 8 read; the --head-rule fallbacks read after SELF.
+- Constraints: AA from painted bytes; π on unclaimed surfaces vs 74a2b5d9 (16 readings incl. contrast:more, as pass 8); filterBudget 9 = 9; M16 0; @property 42 = control (+ the union's 58 on the union).
+
+## Return (registry-v7 §8.1, unchanged)
+Sha at bank, --shortstat, bytes, apply --check 0 on 74a2b5d9 AND on the WAVE union acb9c08e (on-union delta), born-RED transcript, plants incl. the clause-sabotage battery, π/AA, box load, the pairs by path with headroom, every instrument by relative product path. Earliest 100 for §3 = pass 10 (pass 9 clean, pass 10 the second clean).

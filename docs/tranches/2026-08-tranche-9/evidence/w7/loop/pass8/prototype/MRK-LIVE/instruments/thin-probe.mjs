@@ -1,0 +1,17 @@
+import { playwright } from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/lib/paint-lib.mjs";
+import { EDGE_PLANTS, applyEdgePlant } from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/lib/edge-bands.mjs";
+const B = "ATMuMDAzMDA2MDgwMDUwNzAwMTAzMDA5MDIwMDUwMjAwNTA3MDAxMDYwMDkwMjAwODAxMDA0MDYwMDQwNjAwOTAyMDA4MDEwMDQwOTAwMzA1MDA4";
+const browser = await playwright().chromium.launch();
+const page = await (await browser.newContext({ viewport: { width: 1280, height: 800 }, reducedMotion: "reduce" })).newPage();
+await page.goto("http://127.0.0.1:4238/?size=3&board=" + B);
+await page.waitForFunction(() => document.querySelectorAll(".board-shell .game-cell").length === 81, null, { timeout: 120000 });
+await page.locator(".board-shell .game-cell .cell-native-input").nth(40).focus(); await page.keyboard.press("Shift"); await page.waitForTimeout(600);
+const T2 = ".game-cell:has(input:focus-visible) .cell-ghost";
+const read = () => page.evaluate(() => [...document.querySelectorAll(".game-cell:has(input:focus-visible) .cell-ghost *")].map((e) => { const c = getComputedStyle(e); return e.tagName + " sw=" + c.strokeWidth + " ve=" + c.vectorEffect + " so=" + c.strokeOpacity + " op=" + c.opacity + " fill=" + c.fill + " fo=" + c.fillOpacity; }));
+console.log("clean", JSON.stringify(await read()));
+console.log("plant css:", EDGE_PLANTS(T2).THIN_1PX);
+await applyEdgePlant(page, T2, EDGE_PLANTS(T2).THIN_1PX); await page.waitForTimeout(300);
+console.log("THIN", JSON.stringify(await read()));
+const svg = await page.evaluate(() => { const s = document.querySelector(".game-cell:has(input:focus-visible) .cell-ghost svg"); const r = s?.getBoundingClientRect(); return s ? { vb: s.getAttribute("viewBox"), w: r.width, h: r.height, par: s.getAttribute("preserveAspectRatio") } : null; });
+console.log("svg", JSON.stringify(svg));
+await browser.close();

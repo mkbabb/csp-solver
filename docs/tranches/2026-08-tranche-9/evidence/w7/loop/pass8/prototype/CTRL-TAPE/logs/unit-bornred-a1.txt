@@ -1,0 +1,92 @@
+
+ RUN  v4.1.11 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tape8/arch-a1/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.test.ts (38 tests | 5 failed) 897ms
+     × a DIRTY board asks first at a fine pointer, and only the answer acts 24ms
+     × the input split: a POINTER arm moves no focus onto the question; a KEYBOARD arm lands on keep 15ms
+     × the lapse hands a reader still on keep home to the verb that asked 17ms
+     × …and a reader dropped to <body> (WebKit's Tab path) home too — `lapseAsk`'s body branch 21ms
+     × …but leaves a reader who moved on while the question stood 17ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > a DIRTY board asks first at a fine pointer, and only the answer acts
+AssertionError: expected [ [] ] to be undefined
+
+- Expected:
+undefined
+
++ Received:
+[
+  [],
+]
+
+ ❯ src/games/shared/GameControlPanel.test.ts:228:32
+    226|     press(w.get(CLEAR).element, 1);
+    227|     await settle();
+    228|     expect(w.emitted("clear")).toBeUndefined();
+       |                                ^
+    229|     expect(document.querySelector(`${ASK}[aria-label="clear the board?…
+    230|     press(document.querySelector(`${ASK} .confirm-go`)!, 1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/5]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > the input split: a POINTER arm moves no focus onto the question; a KEYBOARD arm lands on keep
+AssertionError: expected null not to be null
+ ❯ src/games/shared/GameControlPanel.test.ts:244:45
+    242|     press(w.get(CLEAR).element, 1);
+    243|     await settle();
+    244|     expect(document.querySelector(ASK)).not.toBeNull();
+       |                                             ^
+    245|     expect(focusedName(), "a pointer arm focuses nothing in the ribbon…
+    246|     w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/5]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > the lapse hands a reader still on keep home to the verb that asked
+AssertionError: expected 'BODY' to be 'keep' // Object.is equality
+
+Expected: "keep"
+Received: "BODY"
+
+ ❯ src/games/shared/GameControlPanel.test.ts:259:27
+    257|     press(w.get(CLEAR).element, 0);
+    258|     await settle();
+    259|     expect(focusedName()).toBe("keep");
+       |                           ^
+    260|     vi.advanceTimersByTime(5000);
+    261|     await settle();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/5]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > …and a reader dropped to <body> (WebKit's Tab path) home too — `lapseAsk`'s body branch
+AssertionError: a blur to nowhere is not a departure: expected null not to be null
+ ❯ src/games/shared/GameControlPanel.test.ts:274:85
+    272|     (document.activeElement as HTMLElement).blur();
+    273|     expect(focusedName()).toBe("BODY");
+    274|     expect(document.querySelector(ASK), "a blur to nowhere is not a de…
+       |                                                                                     ^
+    275|     vi.advanceTimersByTime(5000);
+    276|     await settle();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/5]⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > …but leaves a reader who moved on while the question stood
+AssertionError: focus inside the card keeps the question: expected null not to be null
+ ❯ src/games/shared/GameControlPanel.test.ts:287:89
+    285|     await settle();
+    286|     (w.get(DEAL).element as HTMLElement).focus();
+    287|     expect(document.querySelector(ASK), "focus inside the card keeps t…
+       |                                                                                         ^
+    288|     vi.advanceTimersByTime(5000);
+    289|     await settle();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[5/5]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  5 failed | 33 passed (38)
+   Start at  19:14:18
+   Duration  3.62s (transform 1.27s, setup 102ms, import 1.51s, tests 897ms, environment 892ms)
+
+EXIT 1

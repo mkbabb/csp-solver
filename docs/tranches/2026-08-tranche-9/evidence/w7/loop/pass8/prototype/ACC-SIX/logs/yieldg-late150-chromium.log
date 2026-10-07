@@ -1,0 +1,57 @@
+
+Running 4 tests using 1 worker
+
+YIELD 393x699 coarse: rest strip 20.8/20.8 tab 508.73/508.73 meta - · press1 strip 20.8/20.8 tab 508.73/508.73 meta - · press2 strip 20.8/20.8 tab 508.73/508.73 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 508.73/508.73 meta 1 of 170 on the board · press3 strip 20.8/20.8 tab 508.73/508.73 meta - · press4 strip 20.8/20.8 tab 508.73/508.73 meta - · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 66, with count 20, row two 19
+  ✘  1 [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse (5.4s)
+YIELD 812x375 coarse: rest strip 20.8/20.8 tab 159.09/159.09 meta - · press1 strip 21.97/21.97 tab 159.67/159.67 meta - · press2 strip 20.8/20.8 tab 159.09/159.09 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 159.09/159.09 meta 1 of 170 on the board · press3 strip 21.97/21.97 tab 159.67/159.67 meta - · press4 strip 20.8/20.8 tab 159.09/159.09 meta - · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 69, with count 20, row two 19
+  ✘  2 [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse (5.4s)
+YIELD 1280x800 fine: rest strip 20.8/20.8 tab 398.45/398.45 meta - · press1 strip 23.61/23.61 tab 398.45/398.45 meta - · press2 strip 20.8/20.8 tab 398.45/398.45 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 398.45/398.45 meta 1 of 170 on the board · press3 strip 23.61/23.61 tab 398.45/398.45 meta 1 of 170 on the board · press4 strip 20.8/20.8 tab 398.45/398.45 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 35, with count 35, row two 0
+  ✓  3 [chromium] › e2e/count-yield.spec.ts:199:3 › the count stays where it fits, on one row, painting no second · 1280x800 fine (5.5s)
+YIELD 844x390 coarse: rest strip 20.8/20.8 tab 166.59/166.59 meta - · press1 strip 22.09/22.09 tab 167.23/167.23 meta - · press2 strip 20.8/20.8 tab 166.59/166.59 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 166.59/166.59 meta 1 of 170 on the board · press3 strip 22.09/22.09 tab 167.23/167.23 meta 1 of 170 on the board · press4 strip 20.8/20.8 tab 166.59/166.59 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 34, with count 34, row two 0
+  ✓  4 [chromium] › e2e/count-yield.spec.ts:199:3 › the count stays where it fits, on one row, painting no second · 844x390 coarse (5.2s)
+
+
+  1) [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse 
+
+    Error: PAINT: frames painting the count on a second row (of 66)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 19
+
+      229 |     const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
+      230 |     expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
+    > 231 |     expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+          |                                                                                                             ^
+      232 |     console.log(
+      233 |       `YIELD ${cell.name}: ` +
+      234 |         tree.order
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:231:109
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-yieldg-late150-chromium/e2e-count-yield-the-count--28d8c--no-second-·-393x699-coarse-chromium/error-context.md
+
+  2) [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse 
+
+    Error: PAINT: frames painting the count on a second row (of 69)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 19
+
+      229 |     const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
+      230 |     expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
+    > 231 |     expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+          |                                                                                                             ^
+      232 |     console.log(
+      233 |       `YIELD ${cell.name}: ` +
+      234 |         tree.order
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:231:109
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-yieldg-late150-chromium/e2e-count-yield-the-count--4a762--no-second-·-812x375-coarse-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse 
+    [chromium] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse 
+  2 passed (22.6s)

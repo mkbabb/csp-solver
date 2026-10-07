@@ -1,0 +1,43 @@
+live: 0 fails
+X RED  9 THE COLUMN                  M1 @media (min-width: 1600px) { .drawer-case { display: block } } (a 1920 desk)
+X RED  8 THE CLIP                    M2 @media (min-resolution: 2dppx) { .card-foot { overflow: clip } } (every retina/phone)
+X RED  8 THE CLIP                    M3 @media (prefers-reduced-motion: reduce) { .card-foot { opacity: 0 } }
+X RED  8 THE CLIP                    M4 @media (prefers-contrast: more) { .action-bar { visibility: hidden } }
+X RED  9 THE COLUMN                  M5 @media (orientation: portrait) and (min-width: 700px) { .drawer-case { display: block } } (iPad portrait)
+X RED  1 THE INSET                   M6 @media (prefers-color-scheme: dark) { .card-foot { padding-bottom: 0 } }
+X RED  9 THE COLUMN                  M7 @media (min-height: 1000px) { .drawer-case { flex-direction: row } }
+X RED  3 THE PEN|8 THE CLIP          M8 @media (forced-colors: active) { .bar-frame { display: none } }
+X GREEN                              C1 .controls-card { overflow-y: visible } (automatic min = content: the card cannot shrink)
+X RED  9 THE COLUMN                  C2 .drawer-case { flex-wrap: wrap } (the foot wraps to a second column)
+X RED  9 THE COLUMN                  C3 .drawer-case { flex-direction: column-reverse }
+X GREEN                              C4 .card-foot { order: -1 } (the foot above the card)
+X RED  9 THE COLUMN                  C5 .controls-card { flex: 1 0 auto }
+X GREEN                              C6 .drawer-case { max-height: 999rem } (a vacuous cap)
+X GREEN                              C7 .controls-card { overflow-y: clip } (clip is not a scrollport)
+X RED  9 THE COLUMN                  C8 .drawer-case { display: grid }
+X GREEN                              C9 .card-foot { margin-top: 100vh }
+X GREEN                              C10 .card-foot { padding-top: 100vh }
+X GREEN                              C11 .card-foot { height: 0 }
+X GREEN                              C12 .action-bar { height: 0 } (the frame collapses to the bar's box)
+X RED  2 THE LAYER                   C13 .controls-card { z-index: 99; margin-bottom: -4rem } (the card laps the foot)
+X GREEN                              C14 .drawer-case { padding-bottom: 100vh }
+X RED  8 THE CLIP                    P1 .card-foot { display: none }
+X RED  8 THE CLIP                    P2 .action-bar { visibility: hidden }
+X RED  8 THE CLIP                    P3 .card-foot { content-visibility: hidden }
+X RED  8 THE CLIP                    P4 .card-foot { animation: tapefade 1ms forwards } + @keyframes to{opacity:0}
+X RED  4 ONE HAND                    P5 .card-foot::after paper slab over the bar
+X RED  4 ONE HAND                    P6 .action-bar { color: transparent }
+X GREEN                              P7 .action-bar { font-size: 0 }
+X RED  8 THE CLIP                    P8 .card-foot { overflow: var(--foot-ov) } + :root { --foot-ov: hidden }
+X GREEN                              P9 .card-foot { @apply overflow-hidden }
+X RED  8 THE CLIP                    P10 index.css: * { contain: paint }
+X RED  8 THE CLIP                    P11 index.css: body .card-foot { overflow: clip }
+X RED  8 THE CLIP                    P12 .drawer-case > * { overflow: clip }
+X GREEN                              P13 .card-foot { mix-blend-mode: multiply; opacity: 1 } + isolation (control: harmless)
+X RED  8 THE CLIP                    T1 inline style=overflow:hidden on #card-foot
+X RED  8 THE CLIP                    T2 :style binding opacity on the bar
+X RED  3 THE PEN                     T3 v-if=false on the bar
+X GREEN                              T4 v-show=false on #card-foot
+X GREEN                              T5 Teleport disabled always
+X GREEN                              T6 hidden attribute on #card-foot
+pass-8 new siblings GREEN 15/41

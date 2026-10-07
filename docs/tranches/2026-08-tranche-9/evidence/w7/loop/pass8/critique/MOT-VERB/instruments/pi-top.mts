@@ -1,0 +1,18 @@
+import { createRequire } from 'node:module';
+const require = createRequire('/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend/package.json');
+const pw = require('playwright');
+const [engine, url, tag, scheme] = process.argv.slice(2);
+const b = await pw[engine].launch();
+const ctx = await b.newContext({ viewport: { width: 1280, height: 800 }, colorScheme: scheme, reducedMotion: 'no-preference' });
+const page = await ctx.newPage();
+await page.goto(url + '/?game=sudoku');
+await page.locator('.board-cells').first().waitFor();
+await page.locator('.boil-frame-bitmap').nth(3).waitFor({ state: 'attached', timeout: 30000 });
+const cell = page.locator('.board-cells [aria-label]').first();
+await cell.click();
+await page.waitForTimeout(1500);
+const g = await page.evaluate(() => { const r = document.querySelector('svg.hand-drawn-grid')!.getBoundingClientRect(); return { x: r.left, y: r.top, w: r.width, h: r.height }; });
+const lab = await cell.getAttribute('aria-label');
+await page.screenshot({ path: '/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/verbcrit8/pi-' + tag + '.png', clip: { x: g.x - 20, y: g.y - 20, width: 260, height: 180 } });
+console.log(tag, JSON.stringify(g), lab);
+await b.close();

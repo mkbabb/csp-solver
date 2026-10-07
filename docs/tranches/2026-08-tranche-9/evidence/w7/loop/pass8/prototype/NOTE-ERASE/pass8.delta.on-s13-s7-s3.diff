@@ -1,0 +1,1255 @@
+diff --git a/web/frontend/e2e/affordances.spec.ts b/web/frontend/e2e/affordances.spec.ts
+index 902b9d29..13f288b5 100644
+--- a/web/frontend/e2e/affordances.spec.ts
++++ b/web/frontend/e2e/affordances.spec.ts
+@@ -1,6 +1,7 @@
+ import { test, expect, type Page } from '@playwright/test';
+ import { encodeSudoku } from './wire';
+ import { MOTION } from '../src/pencil/config/pencilConfig';
++import { installTimeline } from './lib/postpaint.mjs';
+ 
+ // PRM: live, because the print row asserts the print stylesheet strips animation to `none`—a
+ //   freeze would hand it that answer for free—and the wrapper's 500ms box-shadow transition is
+@@ -393,6 +394,326 @@ for (const adversary of DROP_CLOCK_ADVERSARIES) {
+   });
+ }
+ 
++// ── 2a′. A leave with no animation has no clock (pass 8, LAWS P7 §F) ─
++//
++// Vue's fallback timer reads the leaving node's `animation-duration` and never its
++// `animation-name`, so a rung written onto a leave whose computed name is `none` holds the node
++// for the rung on an animation that never runs (pass 7's hook did it to the union's `note-swap`:
++// the sentence on both lines for 16–20 frames). The hook keys its length on the COMPUTED name.
++// This leg reads the leave both ways a page can switch the verb off, the site's PRM arm and an
++// author `animation-name: none !important`, and counts the frames the leaving node is PAINTED:
++// each read is a task queued from its frame's rAF (`installTimeline`, the recorder's post-paint
++// track). Its negative runs in the same file on the same dist: the fence BLINDED (the hook's one
++// read is made to answer a running verb, so it writes the rung on every leave, which is the
++// pass-7 hook) holds the node for the rung and more frames than the bound.
++
++/** The in-run negative. Every computed style read off a node wearing a leave class answers a
++ *  running rub-out for `animation-name`; every other property is the real one, so Vue's own
++ *  clock read (duration and delay) is untouched. Only the hook's key is lied to. */
++const BLIND_THE_FENCE = `(() => {
++  const real = window.getComputedStyle;
++  window.getComputedStyle = function (el, pseudo) {
++    const cs = real.call(window, el, pseudo);
++    if (!(el instanceof Element) || !/-leave-active/.test(String(el.getAttribute('class')))) return cs;
++    return new Proxy(cs, {
++      get: (t, k) => (k === 'animationName' ? 'ink-rub-out' : typeof t[k] === 'function' ? t[k].bind(t) : t[k]),
++    });
++  };
++})();`;
++
++type PaintedTrack = { post: { k: number; r: unknown }[]; on: boolean };
++
++/** Watch the next leave of `leaving` (a selector matched once its leave class is on): the node's
++ *  DOM lifetime, its computed clock, and the frames it was painted, read post-paint. */
++async function watchLeave(page: Page, leaving: string) {
++  await page.evaluate(installTimeline, leaving);
++  await page.evaluate((sel) => {
++    const rec: LeaveRecord = {};
++    (window as unknown as { __leave: LeaveRecord }).__leave = rec;
++    new MutationObserver(() => {
++      const el = rec.el ?? document.querySelector(sel);
++      if (el && !rec.el) {
++        const cs = getComputedStyle(el);
++        Object.assign(rec, {
++          el,
++          t0: performance.now(),
++          animationName: cs.animationName,
++          animationDuration: cs.animationDuration,
++        });
++      }
++      if (rec.el && rec.t1 === undefined && !rec.el.isConnected) rec.t1 = performance.now();
++    }).observe(document.body, {
++      subtree: true,
++      childList: true,
++      attributes: true,
++      attributeFilter: ['class'],
++    });
++  }, leaving);
++  return async () => {
++    const read = () =>
++      page.evaluate(() => {
++        const r = (window as unknown as { __leave: LeaveRecord }).__leave;
++        return r.t1 === undefined || r.t0 === undefined ? null : r.t1 - r.t0;
++      });
++    await expect.poll(read, { timeout: 5000 }).not.toBeNull();
++    // Two more frames, so the frame after the removal has its post-paint read too.
++    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++    return page.evaluate(() => {
++      const w = window as unknown as { __leave: LeaveRecord; __pf: PaintedTrack };
++      w.__pf.on = false;
++      const r = w.__leave;
++      return {
++        ms: +(r.t1! - r.t0!).toFixed(1),
++        animationName: r.animationName!,
++        animationDuration: r.animationDuration!,
++        painted: w.__pf.post.filter((p) => p.r !== null).length,
++      };
++    });
++  };
++}
++
++/** A red line on the pinned board, then the edit that rubs it out, with the leave watched. */
++async function redLineLeaves(page: Page, arm?: (page: Page) => Promise<void>) {
++  await loadSudoku(page, '?board=' + CONFLICT_BOARD);
++  await expect
++    .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 15000 })
++    .toBe(72);
++  await arm?.(page);
++  await setCellValue(page, 0, '9');
++  await setCellValue(page, 1, '9');
++  await page.locator('.controls-card button[aria-label="Solve puzzle"]').click();
++  await expect(page.locator('.margin-note')).toHaveClass(/teacher-red/, { timeout: 15000 });
++  const done = await watchLeave(page, '.margin-note .margin-note-ink[class*="leave-active"]');
++  await setCellValue(page, 1, '');
++  return done();
++}
++
++const STILL_LEAVES: { name: string; arm: (page: Page) => Promise<void> }[] = [
++  {
++    name: "the site's PRM arm",
++    arm: (page) => page.emulateMedia({ reducedMotion: 'reduce' }),
++  },
++  {
++    name: 'animation-name: none !important on the leave class',
++    arm: (page) =>
++      page
++        .addStyleTag({
++          content: '.margin-note-ink.note-leave-active { animation-name: none !important; }',
++        })
++        .then(() => undefined),
++  },
++];
++
++for (const still of STILL_LEAVES) {
++  test(`drop clock: a leave with no animation has no clock — ${still.name}`, async ({ page }) => {
++    const leave = await redLineLeaves(page, still.arm);
++    expect(leave.animationName).toBe('none');
++    expect(leave.animationDuration).toBe('0s');
++    // A zero-length leave: gone inside one whisper, painted on at most two frames.
++    expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
++    expect(leave.painted).toBeLessThanOrEqual(2);
++    console.log(`still leave ${still.name}: ${leave.ms} ms, ${leave.painted} painted frames`);
++  });
++}
++
++test('drop clock (negative, in-run): the fence blinded holds a still leave for the rung', async ({
++  page,
++}) => {
++  await page.addInitScript(BLIND_THE_FENCE);
++  await page.emulateMedia({ reducedMotion: 'reduce' });
++  const leave = await redLineLeaves(page);
++  // The pass-7 hook's reading: the rung written on a leave with no verb, the node held for it.
++  expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  expect(leave.painted).toBeGreaterThan(2);
++  console.log(`drop-clock negative: held ${leave.ms} ms over ${leave.painted} painted frames`);
++});
++
++// ── 2a″. The union's two lines: the SWAP and line two's own rub-out (pass 8, §7's fence) ─
++//
++// HOLD's default path: a hint is answered (the record is held), the next hint displaces it, and
++// line one gives the record to line two in the same write. The old line-one node leaves as
++// `note-swap` (`animation: none`): a sentence displacing another is not an exit, and line two
++// already paints it, so that node must not outlive a frame or two. Pass 7's hook wrote the rung on
++// it and held it ~160 ms with the sentence on both lines for 16–20 frames (every gate green,
++// because the drop-clock rows read `.note-leave-active` only). This leg reads BOTH leaves of a
++// pushed record, post-paint, in both themes: the swap (zero-length) and line two's later
++// rub-out (the rung, whatever an author says), with the fence blinded and pass 6's hook as the
++// in-run negatives.
++const HOLD_GIVENS: Record<number, number> = {
++  0: 5, 1: 3, 4: 7, 9: 6, 12: 1, 13: 9, 14: 5, 19: 9, 20: 8, 25: 6, 27: 8, 31: 6, 35: 3, 36: 4,
++  39: 8, 41: 3, 44: 1, 45: 7, 49: 2, 53: 6, 55: 6, 60: 2, 61: 8, 66: 4, 67: 1, 68: 9, 71: 5,
++  76: 8, 79: 7, 80: 9,
++};
++const HOLD_BOARD = encodeSudoku(3, HOLD_GIVENS, 81);
++const HOLD_SOLUTION =
++  '534678912672195348198342567859761423426853791713924856961537284287419635345286179';
++const lineOne = (page: Page) =>
++  page.evaluate(() => (document.querySelector('.margin-note')?.textContent ?? '').trim());
++const lineTwo = (page: Page) =>
++  page.evaluate(() => (document.querySelector('.margin-note-previous')?.textContent ?? '').trim());
++
++/** Ask for a hint at the first empty cell (the `h` key), and wait for line one to change. */
++async function ask(page: Page) {
++  const before = await lineOne(page);
++  await page.evaluate(() =>
++    ([...document.querySelectorAll('.board-cells input')] as HTMLInputElement[])
++      .find((i) => !i.value)
++      ?.focus(),
++  );
++  await page.keyboard.press('h');
++  await expect.poll(() => lineOne(page), { timeout: 5000 }).not.toBe(before);
++}
++
++/** Answer the hint on line one: the digit it names, typed into the one cell it marks. */
++async function answer(page: Page) {
++  const said = await lineOne(page);
++  const digit = (/(?:only|is)\s+(\S+)\s/.exec(said) ?? [])[1] ?? (/^(\S+)\s+goes/.exec(said) ?? [])[1];
++  expect(digit, `a digit in "${said}"`).toBeTruthy();
++  const target = await page.evaluate(
++    ([d, sol]) =>
++      [...document.querySelectorAll('.game-cell')]
++        .map((c, i) => ({ c, i }))
++        .filter(
++          ({ c, i }) =>
++            c.querySelector('.cell-because') &&
++            !(c.querySelector('input') as HTMLInputElement).value &&
++            sol[i] === d,
++        )
++        .map(({ i }) => i),
++    [digit!, HOLD_SOLUTION] as const,
++  );
++  expect(target, `one cell for "${said}"`).toHaveLength(1);
++  await page.locator('.game-cell input').nth(target[0]).focus();
++  await page.keyboard.type(digit!);
++}
++
++/** The pinned deal, in `scheme`, with `arm` applied after the deal lands. */
++async function holdDeal(page: Page, scheme: 'light' | 'dark', arm?: (page: Page) => Promise<void>) {
++  await page.emulateMedia({ colorScheme: scheme });
++  await loadSudoku(page, '?board=' + HOLD_BOARD);
++  await arm?.(page);
++  await ask(page);
++  await answer(page);
++  await page.waitForTimeout(MOTION.rungs.note * 2);
++}
++
++const LINE_ONE_LEAVING = '.margin-note .margin-note-ink[class*="leave-active"]';
++const LINE_TWO_LEAVING = '.margin-note-previous[class*="leave-active"]';
++
++for (const scheme of ['light', 'dark'] as const) {
++  test(`drop clock, the SWAP: a pushed record's old line leaves in a frame or two — ${scheme}`, async ({
++    page,
++  }) => {
++    await holdDeal(page, scheme);
++    const held = await lineOne(page);
++    const done = await watchLeave(page, LINE_ONE_LEAVING);
++    await ask(page);
++    const leave = await done();
++    // The push happened: line two holds the displaced record, line one the new hint.
++    await expect.poll(() => lineTwo(page)).toBe(held);
++    expect(await lineOne(page)).not.toBe(held);
++    expect(leave.animationName).toBe('none');
++    expect(leave.animationDuration).toBe('0s');
++    expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
++    // Every frame the old node is painted, line two already paints its sentence: these ARE the
++    // both-line frames.
++    expect(leave.painted).toBeLessThanOrEqual(2);
++    console.log(`swap ${scheme}: ${leave.ms} ms, ${leave.painted} painted frames`);
++  });
++}
++
++test('drop clock, the SWAP (negative, in-run): the fence blinded holds the swap for the rung', async ({
++  page,
++}) => {
++  await page.addInitScript(BLIND_THE_FENCE);
++  await holdDeal(page, 'light');
++  const done = await watchLeave(page, LINE_ONE_LEAVING);
++  await ask(page);
++  const leave = await done();
++  expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  expect(leave.painted).toBeGreaterThan(2);
++  console.log(`swap negative: held ${leave.ms} ms over ${leave.painted} painted frames`);
++});
++
++// Line two's own leave: the third record retires the first from line two, through the eraser.
++// The four adversaries pass 7's critic found beyond the author's own (a layered `!important`, the
++// shorthand with a delay, the rung `!important` on :root, an iteration count) plus the verb
++// switched off (`animation-name: none !important`, a zero-length leave).
++const TWO = '.margin-note-previous.note-previous-leave-active';
++const LINE_TWO_ADVERSARIES: { name: string; css: string; still?: boolean }[] = [
++  { name: 'none', css: '' },
++  {
++    name: '@layer duration + delay !important',
++    css: `@layer adv { ${TWO} { animation-duration: 900ms !important; animation-delay: 300ms !important; } }`,
++  },
++  {
++    name: 'the shorthand with a delay !important',
++    css: `${TWO} { animation: ink-rub-out 900ms linear 200ms !important; }`,
++  },
++  { name: 'the rung !important on :root', css: ':root { --motion-whisper: 900ms !important; }' },
++  { name: 'an iteration count !important', css: `${TWO} { animation-iteration-count: 6 !important; }` },
++  {
++    name: 'animation-name: none !important',
++    css: `${TWO} { animation-name: none !important; }`,
++    still: true,
++  },
++];
++
++/** Pass 6's hook: the transition fenced, the animation axis NOT written (its two longhands dropped). */
++const PASS_SIX_HOOK = `(() => {
++  const set = CSSStyleDeclaration.prototype.setProperty;
++  CSSStyleDeclaration.prototype.setProperty = function (p, v, pr) {
++    if (p === 'animation-duration' || p === 'animation-delay') return;
++    return set.call(this, p, v, pr);
++  };
++})();`;
++
++async function lineTwoLeaves(page: Page, css: string) {
++  await holdDeal(page, 'light', css ? (p) => p.addStyleTag({ content: css }).then(() => undefined) : undefined);
++  await ask(page); // the push: line two = the first record
++  await answer(page);
++  await page.waitForTimeout(MOTION.rungs.note * 2);
++  const first = await lineTwo(page);
++  const done = await watchLeave(page, LINE_TWO_LEAVING);
++  await ask(page); // the second push: the first record leaves line two
++  const leave = await done();
++  await expect.poll(() => lineTwo(page)).not.toBe(first);
++  return leave;
++}
++
++for (const adv of LINE_TWO_ADVERSARIES) {
++  test(`drop clock, line two: the second line rubs out on the rung — ${adv.name}`, async ({
++    page,
++  }) => {
++    const leave = await lineTwoLeaves(page, adv.css);
++    if (adv.still) {
++      expect(leave.animationName).toBe('none');
++      expect(leave.animationDuration).toBe('0s');
++      expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
++      expect(leave.painted).toBeLessThanOrEqual(2);
++    } else {
++      expect(leave.animationName).toContain('ink-rub-out');
++      for (const d of leave.animationDuration.split(','))
++        expect(Math.round(parseFloat(d) * 1000)).toBe(MOTION.rungs.whisper);
++      expect(leave.ms).toBeLessThan(MOTION.rungs.note);
++    }
++    console.log(`line two ${adv.name}: ${leave.ms} ms, ${leave.painted} painted frames`);
++  });
++}
++
++for (const adv of LINE_TWO_ADVERSARIES.filter((a) => /layer|shorthand|:root/.test(a.name)))
++  test(`drop clock, line two (negative, in-run): pass 6's hook is held by ${adv.name}`, async ({
++    page,
++  }) => {
++    await page.addInitScript(PASS_SIX_HOOK);
++    const leave = await lineTwoLeaves(page, adv.css);
++    // Without the animation axis the adversary owns the clock: 900 ms and more.
++    expect(leave.ms).toBeGreaterThan(3 * MOTION.rungs.note);
++    console.log(`line two negative ${adv.name}: held ${leave.ms} ms`);
++  });
++
+ // ── 2b. The verdict names the unit that is actually broken ──────────
+ //
+ // T9-W1 §1.2 (family F7). `findConflicts` BUILT per-unit buckets, read them for `positions`,
+diff --git a/web/frontend/e2e/lib/postpaint.d.mts b/web/frontend/e2e/lib/postpaint.d.mts
+new file mode 100644
+index 00000000..3f163e90
+--- /dev/null
++++ b/web/frontend/e2e/lib/postpaint.d.mts
+@@ -0,0 +1,27 @@
++// postpaint.d.mts — the TYPE of the ONE post-paint library (`./postpaint.mjs`), so a TypeScript spec
++// can import it under `typecheck:e2e` (strict, no `allowJs`: a bare `.mjs` import is TS7016). No
++// behaviour lives here. `installTimeline` is typed for its page-side use (`page.evaluate(installTimeline,
++// sel)`); every other export is declared `unknown` until a spec that calls it types it.
++// NOT-A-LANE: a declaration of the chair's home (T9-W7 pass 8, NOTE-ERASE's drop-clock row).
++
++/** Page-side: the painted timeline on `window.__pf` ({rafs, post, on}); `sel` is read post-paint each frame. */
++export function installTimeline(sel?: string | null): void;
++
++export const installSampler: unknown;
++export const kPaintOf: unknown;
++export const analyse: unknown;
++export const SKIP_PLANT: unknown;
++export const F2_PLANT: unknown;
++export const readMover: unknown;
++export const fmtArm: unknown;
++export const samplerSelfTest: unknown;
++export const loadArr: unknown;
++export const startPhotos: unknown;
++export const stat: unknown;
++export const analysePhotos: unknown;
++export const analyseTimeline: unknown;
++export const clockSelfTest: unknown;
++export const record: unknown;
++export const verdict: unknown;
++export const ladder: unknown;
++export const recorderSelfTest: unknown;
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index b0428c2b..b7c789b3 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -53,17 +53,26 @@
+  * each rung must have exactly one `@property --motion-<rung>` at brace depth 0, `syntax:
+  * "<time>"`, `inherits: true`, `initial-value: 0ms`, and no other `--motion-*` is registered.
+  * `--self-test` deletes `--motion-whisper`'s block and nests all seven in `:root {}`; each must
+- * red. Uniqueness across homes and script emitters are the fold's `check-property-block`'s.
++ * red. Pass 8: the row reads every registration through the ONE shape library
++ * (`propertyRegistrations`: every Vite CSS language, every `<style>`, `index.html`, `public/**`,
++ * CSS in script strings, and every `registerProperty({…})` with its name folded), and every rung
++ * must have a CONSUMER on the tree or be named, by file, as a fold consumer.
+  */
+ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
+ import {
++  clockReads,
+   consumerSites,
+   hasCompound,
++  propertyRegistrations,
++  rulesOf,
++  sfc,
++  sources,
+   stripCss,
+   stripHtml,
+   stripJs,
++  varRefs,
+ } from "./shape-census.mjs";
+ 
+ // THE ONE COPY (T9-W7 pass 6, the chair's instruments lane; pass6/CHAIR-RULINGS §1.3): every
+@@ -131,39 +140,6 @@ const UTILITY_NAMESPACES = {
+   "--breakpoint-": [],
+ };
+ 
+-/**
+- * Comments out, strings kept. A `/*` inside a quoted string never opens a comment (a CSS
+- * `content: "/*"` before a real rule ate the rule under the old regex); in script, `//` opens one
+- * too and backticks quote. The SHAPE law's string-aware stripper (the chair's
+- * `pass7/instruments/shape-census.mjs` `stripCss`/`stripJs`), inlined because a product gate does
+- * not import from the evidence tree; the self-test below plants the string case.
+- */
+-function stripComments(text, script = false) {
+-  let out = "";
+-  let q = null;
+-  for (let i = 0; i < text.length; i++) {
+-    const c = text[i];
+-    if (q) {
+-      out += c;
+-      if (c === "\\") out += text[++i] ?? "";
+-      else if (c === q) q = null;
+-      continue;
+-    }
+-    if (c === '"' || c === "'" || (script && c === "`")) q = c;
+-    else if (c === "/" && text[i + 1] === "*") {
+-      const e = text.indexOf("*/", i + 2);
+-      i = e < 0 ? text.length : e + 1;
+-      continue;
+-    } else if (script && c === "/" && text[i + 1] === "/") {
+-      const e = text.indexOf("\n", i);
+-      i = e < 0 ? text.length : e - 1;
+-      continue;
+-    }
+-    out += c;
+-  }
+-  return out;
+-}
+-
+ /** The `@theme` block's body, brace-balanced. */
+ function themeBody(css) {
+   const open = css.indexOf("@theme");
+@@ -237,7 +213,7 @@ const referencedBy = (text, token) => {
+ };
+ 
+ export function census(cssText) {
+-  const css = stripComments(cssText);
++  const css = stripCss(cssText);
+   const declared = declaredIn(themeBody(css));
+   const corpus = corpusFiles()
+     .map((f) => fs.readFileSync(f, "utf8"))
+@@ -566,119 +542,152 @@ export function rungKeys(tsText) {
+   return [...body.matchAll(/(\w+)\s*:\s*\d+/g)].map((m) => m[1]);
+ }
+ 
+-/** Every `@property --motion-*` in `cssText`, with its brace depth and descriptors. */
+-function motionRegistrations(cssText, file = "src/assets/index.css") {
+-  const css = stripComments(cssText);
+-  const out = [];
+-  let depth = 0;
+-  for (let i = 0; i < css.length; i++) {
+-    const c = css[i];
+-    if (c === "{") depth++;
+-    else if (c === "}") depth--;
+-    else if (c === "@" && css.startsWith("@property", i)) {
+-      const m = /^@property\s+(--[\w-]+)\s*\{([^}]*)\}/.exec(css.slice(i));
+-      if (!m || !m[1].startsWith("--motion-")) continue;
+-      const desc = Object.fromEntries(
+-        [...m[2].matchAll(/([\w-]+)\s*:\s*([^;]+);?/g)].map((d) => [d[1], d[2].trim()]),
+-      );
+-      out.push({ name: m[1], depth, desc, file });
+-      i += m[0].length - 1;
++const HOME = "src/assets/index.css";
++/** The row's CLAUSES, each switchable off for the clause-sabotage battery (LAWS P7 §F (ii)):
++ *  `THEME_SABOTAGE=script,count,…` and `--self-test` must then red. */
++const REG_CLAUSES = [
++  "script",
++  "count",
++  "home",
++  "depth",
++  "syntax",
++  "inherits",
++  "initial",
++  "stray",
++  "unread",
++  "stale",
++  "foldname",
++];
++const OFF = new Set((process.env.THEME_SABOTAGE ?? "").split(",").filter(Boolean));
++const clauseOn = (id) => !OFF.has(id);
++for (const id of OFF)
++  if (!REG_CLAUSES.includes(id))
++    throw new Error(`THEME_SABOTAGE: no clause ${id} (${REG_CLAUSES.join(", ")})`);
++/** A registration a SCRIPT makes: `registerProperty(` in code, or `@property` text in a script
++ *  string (the library's `script-css`). C4's shape: any of them reds, whatever the name. */
++const fromScript = (r) => r.kind === "registerProperty" || /script/.test(r.kind);
++
++/**
++ * THE REGISTRATION ROW, THROUGH THE ONE LIBRARY (pass 8, LAWS P7 §F/§I). Pass 7's row walked
++ * `.css|vue|ts|tsx|js|mjs` with its own reader, so a `.pcss` sheet imported from `main.ts` shipped
++ * `@property --motion-whisper { inherits: false }` with the row at 0, and its script clause wanted
++ * the literal `--motion-` within 240 characters of `registerProperty`, so a split name
++ * (`{ name: W }`) read 0 too. The library's `propertyRegistrations` reads every Vite CSS language,
++ * every `<style>`, `index.html`, `public/**`, CSS in script strings and every `registerProperty({…})`
++ * with its name folded (unfoldable = UNRESOLVED, never dropped). `opts` is the library's own
++ * `{files, read, exists}`, so a plant is a file the library reads, never a sheet handed in.
++ */
++export function registrationRow(rungs, opts = {}) {
++  const read = opts.read ?? ((f) => fs.readFileSync(f, "utf8"));
++  const regs = propertyRegistrations(ROOT, opts);
++  const red = regs
++    .filter((r) => clauseOn("script") && fromScript(r))
++    .map(
++      (r) =>
++        `${r.file}:${r.line} registers ${r.name} from script (${r.kind}; the ladder has one static home)`,
++    );
++  const motion = regs.filter((r) => !fromScript(r) && r.name.startsWith("--motion-"));
++  for (const rung of rungs) {
++    const name = `--motion-${rung}`;
++    const mine = motion.filter((r) => r.name === name);
++    if (mine.length !== 1) {
++      if (clauseOn("count"))
++        red.push(
++          `${name} registered ${mine.length}× (want exactly 1)` +
++            (mine.length ? ` in ${mine.map((r) => r.file).join(", ")}` : ""),
++        );
++      continue;
+     }
++    const r = mine[0];
++    if (clauseOn("home") && r.file !== HOME)
++      red.push(`${name} registered in ${r.file}, not the ladder's home ${HOME}`);
++    // Depth, off the library's own rule list: the at-rule context the registration sits in. (A
++    // registration nested in a STYLE rule is not an at-rule to the library and never reaches the
++    // list at all, so it reds above as 0×.)
++    const abs = path.join(ROOT, r.file);
++    const ctx = rulesOf(abs, read(abs), ROOT).find(
++      (x) => x.line === r.line && x.prelude.startsWith(`@property ${name}`),
++    )?.ctx;
++    if (clauseOn("depth") && ctx?.length)
++      red.push(`${name} registered inside ${ctx.join(" › ")}, not at file scope`);
++    if (clauseOn("syntax") && r.syntax !== '"<time>"')
++      red.push(`${name} syntax ${r.syntax}`);
++    if (clauseOn("inherits") && r.inherits !== "true")
++      red.push(`${name} inherits ${r.inherits}`);
++    if (clauseOn("initial") && r.initial !== "0ms")
++      red.push(`${name} initial-value ${r.initial}`);
+   }
+-  return out;
++  for (const r of motion)
++    if (clauseOn("stray") && !rungs.includes(r.name.slice("--motion-".length)))
++      red.push(`${r.name} registered in ${r.file} but no rung of MOTION.rungs`);
++  return red;
+ }
+ 
+ /**
+- * EVERY OTHER STYLESHEET, AND EVERY SCRIPT THAT COULD EMIT ONE (T9-W7 §7, pass 7). The row read
+- * `index.css` alone, so a second `@property --motion-whisper { inherits: false }` in
+- * `typography.css` passed it (pass-6 critique §1A). A registration can reach the page from any
+- * of: a `.css` under `src/` or `public/`, EVERY `<style>` block of an SFC (a second block too),
+- * `index.html`, or a script (`CSS.registerProperty`, or `@property` text a script appends). Each
+- * is returned as a sheet `{ file, css }`; a script's text counts when it names both the at-rule
+- * or the API and a `--motion-` name (comments stripped; test files are not the product).
++ * EVERY RUNG IS SPENT (pass 8, row 4). The row above REQUIRES seven registrations; a rung nobody
++ * reads is substrate kept alive by the gate that requires it. A rung is consumed where a source
++ * READS it: a `var(--motion-<rung>)` in code (comments stripped by the library's strippers, a
++ * `${}` stem never counts), a clock read `MOTION.rungs.<rung>` (the library's `clockReads`), or
++ * §13's `spend(<verb>, "<rung>")`. A rung with no reader on THIS tree is named in `FOLD_CONSUMERS`
++ * with the file that reads it on the §13+§7+§3 union; an entry whose rung IS read here is STALE and
++ * reds, so the table empties itself at the fold.
+  */
+-export function otherSheets(root = ROOT) {
+-  const out = [];
+-  const walk = (dir, keep) => {
+-    if (!fs.existsSync(dir)) return;
+-    for (const e of fs.readdirSync(dir, { withFileTypes: true })) {
+-      const p = path.join(dir, e.name);
+-      if (e.isDirectory()) walk(p, keep);
+-      else if (keep(e.name)) out.push(p);
+-    }
++export const FOLD_CONSUMERS = {};
++export function rungReaders(rungs, { files, read } = {}) {
++  const rd = read ?? ((f) => fs.readFileSync(f, "utf8"));
++  const list = files ?? sources(ROOT);
++  const out = Object.fromEntries(rungs.map((r) => [r, []]));
++  const note = (rung, where) => {
++    if (out[rung]) out[rung].push(where);
+   };
+-  walk(path.join(root, "src"), (n) => /\.(css|vue|ts|tsx|js|mjs)$/.test(n));
+-  walk(path.join(root, "public"), (n) => /\.(css|html)$/.test(n));
+-  out.push(path.join(root, "index.html"));
+-  return out
+-    .filter(
+-      (p) => p !== INDEX_CSS && !/\.(test|spec)\.[jt]sx?$/.test(p) && fs.existsSync(p),
+-    )
+-    .flatMap((p) => sheetsOf(path.relative(root, p), fs.readFileSync(p, "utf8")));
+-}
+-
+-/** The sheets ONE file contributes (the reader the walk and every plant share, so a plant proves
+- *  the extraction, not only the rule): a `.css` whole, each `<style>` block of an SFC or an HTML
+- *  file, and a script that names the at-rule or the API beside a `--motion-` name. */
+-export function sheetsOf(file, text) {
+-  const sheets = [];
+-  if (file.endsWith(".css")) sheets.push({ file, css: text });
+-  else if (/\.(vue|html)$/.test(file))
+-    for (const m of text.matchAll(/<style\b[^>]*>([\s\S]*?)<\/style>/g))
+-      sheets.push({ file, css: m[1] });
+-  if (/\.(vue|ts|tsx|js|mjs)$/.test(file)) {
+-    const src = file.endsWith(".vue")
+-      ? [...text.matchAll(/<script\b[^>]*>([\s\S]*?)<\/script>/g)]
+-          .map((m) => m[1])
+-          .join("\n")
+-      : text;
+-    const code = stripComments(src, true);
+-    if (
+-      /(@property|registerProperty)[\s\S]{0,240}--motion-|--motion-[\s\S]{0,240}registerProperty/.test(
+-        code,
+-      )
+-    )
+-      sheets.push({ file, css: "", script: true });
++  for (const f of list) {
++    if (f === path.join(ROOT, HOME)) continue;
++    const text = rd(f);
++    const rel = path.relative(ROOT, f);
++    const blocks = f.endsWith(".vue")
++      ? (() => {
++          const b = sfc(text);
++          return [
++            ...b.styles.map((x) => stripCss(x.css)),
++            ...(b.template ? [b.template.text] : []),
++            ...b.scripts.map((x) => stripJs(x.text)),
++          ];
++        })()
++      : /\.(ts|tsx|js|mjs)$/.test(f)
++        ? [stripJs(text)]
++        : [stripCss(text)];
++    for (const code of blocks) {
++      for (const v of varRefs(code))
++        if (!v.stem && v.name.startsWith("--motion-"))
++          note(v.name.slice(9), `${rel} ${v.name}`);
++      for (const c of clockReads(code)) {
++        const m = /^MOTION\.rungs\.(\w+)$/.exec(c.expr);
++        if (m) note(m[1], `${rel} ${c.expr}`);
++      }
++      for (const m of code.matchAll(
++        /\bspend\(\s*["'`]\w+["'`]\s*,\s*["'`](\w+)["'`]\s*\)/g,
++      ))
++        note(m[1], `${rel} spend(…, "${m[1]}")`);
++    }
+   }
+-  return sheets;
++  return out;
+ }
+-
+-export function registrationRow(cssText, rungs, others = otherSheets()) {
+-  const regs = [
+-    ...motionRegistrations(cssText),
+-    ...others.flatMap((o) => motionRegistrations(o.css, o.file)),
+-  ];
+-  const red = others
+-    .filter((o) => o.script)
+-    .map(
+-      (o) =>
+-        `${o.file} registers a --motion-* rung from script (the ladder has one static home)`,
+-    );
++export function consumerRow(rungs, readers, fold = FOLD_CONSUMERS) {
++  const red = [];
+   for (const rung of rungs) {
+-    const name = `--motion-${rung}`;
+-    const mine = regs.filter((r) => r.name === name);
+-    if (mine.length !== 1) {
++    const here = readers[rung] ?? [];
++    if (clauseOn("unread") && !here.length && !fold[rung])
+       red.push(
+-        `${name} registered ${mine.length}× (want exactly 1)` +
+-          (mine.length ? ` in ${mine.map((r) => r.file).join(", ")}` : ""),
++        `--motion-${rung} has no reader on this tree and no fold consumer named`,
+       );
+-      continue;
+-    }
+-    const { depth, desc, file } = mine[0];
+-    if (file !== "src/assets/index.css")
++    if (clauseOn("stale") && here.length && fold[rung])
+       red.push(
+-        `${name} registered in ${file}, not the ladder's home src/assets/index.css`,
++        `--motion-${rung} FOLD_CONSUMERS entry is STALE (read here: ${here[0]})`,
+       );
+-    if (depth !== 0)
+-      red.push(`${name} registered at brace depth ${depth}, not file scope`);
+-    if (desc.syntax !== '"<time>"') red.push(`${name} syntax ${desc.syntax}`);
+-    if (desc.inherits !== "true") red.push(`${name} inherits ${desc.inherits}`);
+-    if (desc["initial-value"] !== "0ms")
+-      red.push(`${name} initial-value ${desc["initial-value"]}`);
+   }
+-  for (const r of regs)
+-    if (!rungs.includes(r.name.slice("--motion-".length)))
+-      red.push(`${r.name} registered in ${r.file} but no rung of MOTION.rungs`);
++  for (const k of Object.keys(fold))
++    if (clauseOn("foldname") && !rungs.includes(k))
++      red.push(`FOLD_CONSUMERS names ${k}, no rung of MOTION.rungs`);
+   return red;
+ }
+ 
+@@ -920,7 +929,7 @@ function main() {
+     rel: path.relative(ROOT, f),
+     text: fs.readFileSync(f, "utf8"),
+   }));
+-  const internalFile = { rel: "src/assets/index.css", text: stripComments(cssText) };
++  const internalFile = { rel: "src/assets/index.css", text: stripCss(cssText) };
+   const lawOffences = lawTwenty([...corpus, internalFile]);
+   console.log(
+     `\nlaw 20 (chrome names the RUNG, never the STOP): ${lawOffences.length} offence(s)` +
+@@ -929,11 +938,18 @@ function main() {
+   for (const o of lawOffences) console.log(`  ${o}`);
+ 
+   const rungs = rungKeys(fs.readFileSync(PENCIL_CONFIG, "utf8"));
+-  const regRed = registrationRow(cssText, rungs);
++  const regRed = registrationRow(rungs);
+   console.log(
+     `\nladder registration: ${rungs.length} rungs, ${regRed.length} breaches`,
+   );
+   for (const r of regRed) console.log(`  ${r}`);
++  const readers = rungReaders(rungs);
++  const conRed = consumerRow(rungs, readers);
++  console.log(
++    `ladder readers: ${rungs.map((r) => `${r} ${readers[r].length}${FOLD_CONSUMERS[r] ? " (fold)" : ""}`).join(" · ")}; ${conRed.length} breaches`,
++  );
++  for (const r of conRed) console.log(`  ${r}`);
++  regRed.push(...conRed);
+ 
+   // THE ALIAS LAW, WITH AN EXIT CODE (T9-W7 §3, T5-W2 2.3's rule finally enforced). An
+   // alias-only token — declared, read by nothing in the corpus, alive only because another
+@@ -953,77 +969,201 @@ function main() {
+   }
+ 
+   if (selfTest) {
+-    // NEGATIVE CONTROLS for the registration row: a deletion and a nest, each must red.
+-    // Keyed on the rule's SHAPE, not on this file's layout: every `@property --motion-*` block,
+-    // wherever it sits, so the plant holds on any tree that carries the ladder.
++    // NEGATIVE CONTROLS. Each plant is a FILE the library reads: the tree's real source list plus
++    // one planted path, whose text is the real file's (when it exists) with the plant appended,
++    // or a whole-file replacement. The row sees exactly what it would see on disk.
++    const real = (rel) =>
++      fs.existsSync(path.join(ROOT, rel))
++        ? fs.readFileSync(path.join(ROOT, rel), "utf8")
++        : "";
++    const plantFile = (rel, text) => {
++      const abs = path.join(ROOT, rel);
++      const files = sources(ROOT);
++      return {
++        files: files.includes(abs) ? files : [...files, abs],
++        read: (f) => (f === abs ? text : fs.readFileSync(f, "utf8")),
++        exists: (f) => f === abs || fs.existsSync(f),
++      };
++    };
+     const REG = /@property\s+--motion-[\w-]+\s*\{[^}]*\}/g;
+-    const deleted = cssText.replace(/@property\s+--motion-whisper\s*\{[^}]*\}/, "");
+-    const nested = cssText.replace(REG, (m) => `:root {\n${m}\n}`);
+-    // Pass 7: a registration at every OTHER site a sheet reaches the page from. Each is the
+-    // live sheet set plus ONE planted sheet, so the tree's own sheets stay in every plant.
+-    // Each plant is the REAL file's text with the plant appended, read through `sheetsOf` (the
+-    // walk's own reader), so a plant that the extraction cannot see stays green here too.
+-    const others = otherSheets();
++    const home = real(HOME);
+     const dup =
+       '@property --motion-whisper { syntax: "<time>"; inherits: false; initial-value: 0ms; }';
+-    const real = (f) =>
+-      fs.existsSync(path.join(ROOT, f))
+-        ? fs.readFileSync(path.join(ROOT, f), "utf8")
+-        : "";
+-    const plus = (file, tail) => [
+-      ...others.filter((o) => o.file !== file),
+-      ...sheetsOf(file, real(file) + "\n" + tail),
+-    ];
+     const plants = [
+-      ["delete --motion-whisper's block", deleted],
+-      [`nest every rung in :root {} (${(cssText.match(REG) ?? []).length})`, nested],
++      [
++        "delete --motion-whisper's block",
++        plantFile(HOME, home.replace(/@property\s+--motion-whisper\s*\{[^}]*\}/, "")),
++      ],
++      [
++        `nest every rung in :root {} (${(home.match(REG) ?? []).length})`,
++        plantFile(
++          HOME,
++          home.replace(REG, (m) => `:root {\n${m}\n}`),
++        ),
++      ],
++      [
++        "nest every rung in @media {}",
++        plantFile(
++          HOME,
++          home.replace(REG, (m) => `@media screen {\n${m}\n}`),
++        ),
++      ],
++      // One plant per clause that no other clause can see (the sabotage battery needs each alone).
++      [
++        "the one registration MOVED to typography.css (home)",
++        plantFile(HOME, home.replace(/@property\s+--motion-whisper\s*\{[^}]*\}/, "")),
++        "src/assets/typography.css",
++        real("src/assets/typography.css") +
++          "\n" +
++          dup.replace("inherits: false", "inherits: true"),
++      ],
++      [
++        "syntax <length> in the home",
++        plantFile(
++          HOME,
++          home.replace(
++            /(@property\s+--motion-whisper\s*\{[^}]*?syntax:\s*)"<time>"/,
++            '$1"<length>"',
++          ),
++        ),
++      ],
++      [
++        "inherits: false in the home",
++        plantFile(
++          HOME,
++          home.replace(
++            /(@property\s+--motion-whisper\s*\{[^}]*?inherits:\s*)true/,
++            "$1false",
++          ),
++        ),
++      ],
++      [
++        "initial-value 150ms in the home",
++        plantFile(
++          HOME,
++          home.replace(
++            /(@property\s+--motion-whisper\s*\{[^}]*?initial-value:\s*)0ms/,
++            "$1150ms",
++          ),
++        ),
++      ],
++      [
++        "a stray rung in the home",
++        plantFile(
++          HOME,
++          `${home}\n${dup.replace("whisper", "erase").replace("inherits: false", "inherits: true")}\n`,
++        ),
++      ],
+       [
+         "a second registration in typography.css",
+-        cssText,
+-        plus("src/assets/typography.css", dup),
++        plantFile(
++          "src/assets/typography.css",
++          real("src/assets/typography.css") + "\n" + dup,
++        ),
+       ],
+       [
+         "one in a SECOND <style> block of an SFC",
+-        cssText,
+-        plus("src/pencil/chrome/MarginNote.vue", `<style>\n${dup}\n</style>`),
++        plantFile(
++          "src/pencil/chrome/MarginNote.vue",
++          real("src/pencil/chrome/MarginNote.vue") + `\n<style>\n${dup}\n</style>\n`,
++        ),
++      ],
++      [
++        "one in index.html",
++        plantFile(
++          "index.html",
++          real("index.html").replace("</head>", `<style>${dup}</style></head>`),
++        ),
++      ],
++      ["one in public/", plantFile("public/x.css", dup)],
++      // Pass 8, the critic's two (pass-7 critique §1D): Vite ships a `.pcss` sheet through the same
++      // pipeline as `.css`, and a split name reads nothing to a literal window.
++      [
++        "a .pcss sheet imported from main.ts (inherits: false)",
++        plantFile("src/assets/plant.pcss", dup),
++      ],
++      [
++        "a split-name registerProperty({ name: W })",
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") +
++            '\nconst W = "--motion-" + "whisper";\nCSS.registerProperty({ name: W, syntax: "<time>", inherits: false, initialValue: "0ms" });\n',
++        ),
+       ],
+-      ["one in index.html", cssText, plus("index.html", `<style>${dup}</style>`)],
+-      ["one in public/", cssText, plus("public/x.css", dup)],
+       [
+-        "a script emitter",
+-        cssText,
+-        plus(
++        "a registerProperty of any name (C4: any registerProperty( in code)",
++        plantFile(
+           "src/main.ts",
+-          'CSS.registerProperty({ name: "--motion-whisper", syntax: "<time>", inherits: false, initialValue: "0ms" });',
++          real("src/main.ts") +
++            '\nCSS.registerProperty({ name: pick(), syntax: "<time>", inherits: true, initialValue: "0ms" });\n',
++        ),
++      ],
++      [
++        "@property text a script appends",
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") +
++            `\ndocument.head.append(Object.assign(document.createElement("style"), { textContent: '${dup}' }));\n`,
+         ),
+       ],
+       [
+         "a stray rung in another sheet",
+-        cssText,
+-        plus("src/games/shared/scene.css", dup.replace("whisper", "erase")),
++        plantFile(
++          "src/games/shared/scene.css",
++          real("src/games/shared/scene.css") + "\n" + dup.replace("whisper", "erase"),
++        ),
+       ],
+       [
+         "one after a CSS string holding /*",
+-        cssText,
+-        plus(
++        plantFile(
+           "src/assets/typography.css",
+-          `.x::before { content: "/*"; }\n${dup}\n/* */`,
++          real("src/assets/typography.css") +
++            `\n.x::before { content: "/*"; }\n${dup}\n/* */`,
+         ),
+       ],
+       [
+         "the home's own copy after a CSS string holding /*",
+-        `${cssText}\n.x::before { content: "/*"; }\n${dup}\n/* */`,
++        plantFile(HOME, `${home}\n.x::before { content: "/*"; }\n${dup}\n/* */`),
+       ],
+     ];
+-    for (const [label, text, sheets] of plants) {
+-      const caught =
+-        (text !== cssText || !!sheets) &&
+-        registrationRow(text, rungs, sheets).length > 0;
++    for (const [label, opts, rel2, text2] of plants) {
++      // a two-file plant: the second file rides the first's read
++      const o = rel2
++        ? (() => {
++            const abs2 = path.join(ROOT, rel2);
++            return {
++              files: opts.files.includes(abs2) ? opts.files : [...opts.files, abs2],
++              read: (f) => (f === abs2 ? text2 : opts.read(f)),
++              exists: (f) => f === abs2 || opts.exists(f),
++            };
++          })()
++        : opts;
++      const caught = registrationRow(rungs, o).length > 0;
+       console.log(
+         `negative control (${label}): ${caught ? "RED as required" : "FAILED — the row did not catch it"}`,
+       );
+       if (!caught) process.exit(2);
+     }
++    // The consumer row: a rung with no reader and no fold entry reds; a fold entry for a rung
++    // that IS read here reds (STALE); a fold entry naming no rung reds.
++    const unread = Object.fromEntries(rungs.map((r) => [r, []]));
++    const consumerPlants = [
++      ["a rung nobody reads and no fold entry", consumerRow(rungs, unread, {})],
++      [
++        "a STALE fold entry (the rung is read here)",
++        consumerRow(rungs, readers, { ...FOLD_CONSUMERS, whisper: "x" }),
++      ],
++      [
++        "a fold entry naming no rung",
++        consumerRow(rungs, readers, { ...FOLD_CONSUMERS, erase: "x" }),
++      ],
++    ];
++    for (const [label, red] of consumerPlants) {
++      console.log(
++        `negative control (${label}): ${red.length ? "RED as required" : "FAILED — the row did not catch it"}`,
++      );
++      if (!red.length) process.exit(2);
++    }
+ 
+     // NEGATIVE CONTROL: re-add a known shadcn default and the census must go RED.
+     const patched = cssText.replace(
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 44a8b7c7..cc29b894 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -205,25 +205,33 @@ onUnmounted(() => {
+ // `delay + duration` (`runtime-dom` `getTimeout`), so the delay is written too: an author
+ // `animation-delay: 750ms !important` is the same 900 ms by the other longhand. Under PRM the
+ // verb is deleted at the site, and the length it writes is 0s.
+-function stopTheClock(el: Element, still = false): void {
++//
++// A LEAVE WITH NO ANIMATION HAS NO CLOCK (pass 8, LAWS P7 §F). Vue's fallback timer reads the
++// leaving node's `animation-duration` and never its `animation-name` (`runtime-dom`
++// `getTransitionInfo`, `:318-346`), so a rung written onto a leave whose computed name is `none`
++// holds a node for 150 ms on an animation that never runs: the pass-7 hook did exactly that to
++// `note-swap` (NOTE-LEDGER found it; the sentence on both lines for 16-20 frames). The fence is
++// keyed on the COMPUTED name, never on the transition's name string: `none` is a zero-length
++// leave, and the length written is 0s. That one read carries the swap (`animation: none`), the
++// site's PRM arm (`animation: none`) and an author `animation-name: none`, on both lines, and a
++// later rule that gives the swap a real verb gets the rung. The read runs on `@leave`, not
++// `@before-leave`: Vue calls `before-leave` before it puts the leave's classes on the node
++// (`runtime-dom` `:212-233`), so a name read there is the resting ink's. `@leave` runs after
++// `*-leave-active` is on and before Vue's next frame reads the clock. ONE parameter: a hook that
++// declares `done` takes the clock away from Vue (`hasExplicitCallback`).
++function stopTheClock(el: Element): void {
+   const style = (el as HTMLElement).style;
+-  const reduced = window.matchMedia?.("(prefers-reduced-motion: reduce)").matches;
++  const name = getComputedStyle(el).animationName;
++  const still = !name || name.split(",").every((n) => n.trim() === "none");
+   style.setProperty(
+     "animation-duration",
+-    reduced || still ? "0s" : `${MOTION.rungs.whisper}ms`,
++    still ? "0s" : `${MOTION.rungs.whisper}ms`,
+     "important",
+   );
+   style.setProperty("animation-delay", "0s", "important");
+   style.setProperty("transition", "none", "important");
+ }
+ 
+-// THE SWAP HAS NO CLOCK (NOTE-LEDGER pass 7, on NOTE-ERASE's pass-7 critique §1B). `note-swap`
+-// leaves with `animation-name: none`, and Vue's fallback timer reads `animation-duration`, never the
+-// name: a written rung held a one-frame swap for ~160 ms with the sentence on both lines. Line
+-// one's hook writes 0s on the swap; line two's (a real rub-out) keeps the rung.
+-const stopLineOne = (el: Element): void =>
+-  stopTheClock(el, leaveName() === "note-swap");
+-
+ const liveEl = ref<HTMLElement | null>(null);
+ const previousEl = ref<HTMLElement | null>(null);
+ 
+@@ -337,7 +345,7 @@ const leaveName = (): string =>
+       <Transition
+         :name="leaveName()"
+         mode="out-in"
+-        @before-leave="stopLineOne"
++        @leave="stopTheClock"
+         @after-leave="$emit('left')"
+       >
+         <span
+@@ -398,8 +406,9 @@ const leaveName = (): string =>
+          it. Keyed on the write counter: a third record is a NEW node, so the old one leaves
+          through the eraser instead of having its text swapped under it. -->
+     <!-- Line two rubs out on the same verb as line one, so it carries the same clock fence
+-         (`stopTheClock`: transition none, the rung's duration, no delay, all inline !important). -->
+-    <Transition name="note-previous" @before-leave="stopTheClock">
++         (`stopTheClock`: transition none, no delay, and the rung's duration unless the leave's
++         computed animation is none, all inline !important). -->
++    <Transition name="note-previous" @leave="stopTheClock">
+       <p
+         v-if="previous"
+         :key="previousSeq"
+diff --git a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+index 3d880d20..9b922e09 100644
+--- a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
++++ b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+@@ -68,10 +68,17 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+ 
+   it("G16 (static half): the honest clock is an inline !important on the leaving node", () => {
+     // Vue drops the node on max(transition, animation). Pass 4 fenced it with a (0,4,0) selector
+-    // and a declaration at (1,1,0) walked past it; an inline `!important` written at
+-    // `before-leave` outranks every author rule, so the bound is the author origin. The live
+-    // half is `e2e/affordances.spec.ts`'s drop-clock row, planted at (1,1,0) `!important`.
+-    expect(MARGIN_NOTE_SRC).toContain('@before-leave="stopTheClock"');
++    // and a declaration at (1,1,0) walked past it; an inline `!important` outranks every author
++    // rule, so the bound is the author origin. The live half is `e2e/affordances.spec.ts`'s
++    // drop-clock row, planted at (1,1,0) `!important`.
++    // Pass 8: the hook rides `@leave`, where the leave's classes are ON the node, and reads the
++    // COMPUTED `animation-name` before it writes a length (LAWS P7 §F). On `@before-leave` the
++    // name read is the resting ink's (`runtime-dom` adds `*-leave-active` after that hook).
++    expect(MARGIN_NOTE_SRC).toContain('@leave="stopTheClock"');
++    expect(MARGIN_NOTE_SRC).not.toMatch(/@before-leave="stopTheClock"/);
++    // ONE declared parameter: a hook that declares `done` takes the clock from Vue.
++    expect(MARGIN_NOTE_SRC).toMatch(/function stopTheClock\(el: Element\): void/);
++    expect(MARGIN_NOTE_SRC).toMatch(/getComputedStyle\(el\)\.animationName/);
+     expect(MARGIN_NOTE_SRC).toContain(
+       'style.setProperty("transition", "none", "important")',
+     );
+@@ -84,70 +91,141 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     expect(/\.note-leave-active\s*\{[^}]*transition:/.test(STYLE)).toBe(false);
+   });
+ 
+-  it("G16 (CI half): the LEAVING node carries `transition: none !important`", async () => {
++  /** Mount, replace the line, and return the LEAVING node's inline clock as `value|priority`.
++   *  vitest loads no SFC styles, so `sheet` stands in for the leave class's computed name; jsdom
++   *  cascades the `animation-name` LONGHAND (never the shorthand), so the stand-in is a longhand. */
++  async function leaveClock(sheet: string) {
++    const st = document.createElement("style");
++    st.textContent = sheet;
++    document.head.append(st);
++    try {
++      const w = mount(MarginNote, {
++        props: { text: "one", seq: 1 },
++        global: { stubs: { transition: false } },
++        attachTo: document.body,
++      });
++      await nextTick();
++      const leaving = (w.element as HTMLElement).querySelector(
++        ".margin-note-ink",
++      ) as HTMLElement | null;
++      expect(leaving).not.toBeNull();
++      // Before the leave, the ink carries no inline clock: the write below is the hook's.
++      expect(leaving!.style.getPropertyValue("transition")).toBe("");
++      expect(leaving!.style.getPropertyValue("animation-duration")).toBe("");
++      await w.setProps({ text: "two", seq: 2 });
++      await nextTick();
++      const c = leaving!.style;
++      const read = (p: string) =>
++        `${c.getPropertyValue(p)}|${c.getPropertyPriority(p)}`;
++      const out = {
++        name: getComputedStyle(leaving!).animationName,
++        duration: read("animation-duration"),
++        delay: read("animation-delay"),
++        transition: read("transition"),
++      };
++      w.unmount();
++      return out;
++    } finally {
++      st.remove();
++    }
++  }
++
++  it("G16 (CI half): a rub-out leave carries the rung, no delay, no transition", async () => {
+     // The row above reads the hook's TEXT, so a dead hook with its strings intact
+     // (`if (el) return;` as its first line) stayed 11/11 green, and the drop-clock row that sees
+     // it is a browser row — under O-12 a local instrument, never CI. This is the behaviour on the
+-    // CI surface: the real <Transition> (unstubbed) runs the real `@before-leave` on a real
+-    // replacement, and the node that is leaving is read.
+-    const w = mount(MarginNote, {
+-      props: { text: "one", seq: 1 },
+-      global: { stubs: { transition: false } },
+-      attachTo: document.body,
+-    });
+-    await nextTick();
+-    const leaving = (w.element as HTMLElement).querySelector(
+-      ".margin-note-ink",
+-    ) as HTMLElement | null;
+-    expect(leaving).not.toBeNull();
+-    // Before the leave, the ink carries no inline clock: the write below is the hook's.
+-    expect(leaving!.style.getPropertyValue("transition")).toBe("");
+-    expect(leaving!.style.getPropertyValue("animation-duration")).toBe("");
+-    await w.setProps({ text: "two", seq: 2 });
+-    await nextTick();
+-    const clock = leaving!.style;
+-    expect(
+-      `${clock.getPropertyValue("transition")}|${clock.getPropertyPriority("transition")}`,
+-    ).toBe("none|important");
++    // CI surface: the real <Transition> (unstubbed) runs the real hook on a real replacement, and
++    // the node that is leaving is read.
++    const clock = await leaveClock(
++      ".note-leave-active { animation-name: ink-rub-out, ink-rub-out-fade; }",
++    );
++    expect(clock.name).toBe("ink-rub-out, ink-rub-out-fade");
++    expect(clock.transition).toBe("none|important");
+     // BOTH AXES (pass 7): the rub-out's own length, written from the rung's one home. An ancestor
+     // `--motion-whisper: 900ms` or an author `animation-duration: … !important` held the node for
+     // 904 ms while the transition fence above stood green (pass-6 critique §1B).
+-    expect(
+-      `${clock.getPropertyValue("animation-duration")}|${clock.getPropertyPriority("animation-duration")}`,
+-    ).toBe(`${MOTION.rungs.whisper}ms|important`);
++    expect(clock.duration).toBe(`${MOTION.rungs.whisper}ms|important`);
+     // Vue's fallback clock is delay + duration: the delay is the third longhand of the same fence.
+-    expect(
+-      `${clock.getPropertyValue("animation-delay")}|${clock.getPropertyPriority("animation-delay")}`,
+-    ).toBe("0s|important");
+-    w.unmount();
++    expect(clock.delay).toBe("0s|important");
++  });
++
++  it("G16 (CI half): a leave whose COMPUTED animation-name is none is a zero-length leave", async () => {
++    // Pass 8 (LAWS P7 §F). Vue's fallback timer reads the duration and never the name, so the
++    // pass-7 hook's rung on a leave with `animation: none` (the site's PRM arm; the union's
++    // `note-swap`; an author `animation-name: none !important`) held the node 150 ms on an
++    // animation that never runs. The fence is the COMPUTED name, so each of those reads 0s here.
++    for (const sheet of [
++      "",
++      ".note-leave-active { animation-name: none; }",
++      ".note-leave-active { animation-name: none, none; }",
++    ]) {
++      const clock = await leaveClock(sheet);
++      expect(clock.name).toMatch(/^none(, none)?$/);
++      expect(clock.duration).toBe("0s|important");
++      expect(clock.delay).toBe("0s|important");
++      expect(clock.transition).toBe("none|important");
++    }
+   });
+ 
+-  it("G16 (CI half, PRM): the hook writes 0s on the animation axis under reduced motion", async () => {
+-    const real = window.matchMedia;
+-    window.matchMedia = ((q: string) =>
+-      ({
+-        matches: q.includes("reduce"),
+-        media: q,
+-      }) as MediaQueryList) as typeof window.matchMedia;
++  it("G16 (CI half, the union): a PUSH's swap leave is zero-length; line two's rub-out keeps the rung", async () => {
++    // HOLD's default path: a record displaced by the next write leaves line one as `note-swap`
++    // (`animation: none`) while line two takes it. The swap must not hold the node (pass-7
++    // critique §1B: 156.9-165.7 ms, the sentence on both lines for 16-20 frames); line two's own
++    // later leave is a real rub-out and must carry the rung.
++    const st = document.createElement("style");
++    st.textContent =
++      ".note-previous-leave-active { animation-name: ink-rub-out, ink-rub-out-fade; }";
++    document.head.append(st);
++    // jsdom has no WAAPI: the push's FLIP mover is stubbed (its clock is not this row's).
++    const realAnimate = Element.prototype.animate;
++    Element.prototype.animate =
++      (() => ({})) as unknown as typeof Element.prototype.animate;
+     try {
+       const w = mount(MarginNote, {
+-        props: { text: "one", seq: 1 },
++        props: { text: "only 5 fits here", seq: 1, kind: "record" },
+         global: { stubs: { transition: false } },
+         attachTo: document.body,
+       });
+       await nextTick();
+-      const leaving = (w.element as HTMLElement).querySelector(
++      const one = (w.element as HTMLElement).querySelector(
+         ".margin-note-ink",
+-      ) as HTMLElement | null;
+-      await w.setProps({ text: "two", seq: 2 });
++      ) as HTMLElement;
++      // The push: line one gives its record to line two in the same write.
++      await w.setProps({
++        text: "only 2 fits here",
++        seq: 2,
++        previous: "only 5 fits here",
++        previousSeq: 1,
++      });
+       await nextTick();
+-      const clock = leaving!.style;
++      const swap = one.style;
++      expect(one.className).toContain("note-swap-leave-active");
++      expect(
++        `${swap.getPropertyValue("animation-duration")}|${swap.getPropertyPriority("animation-duration")}`,
++      ).toBe("0s|important");
++      const two = (w.element as HTMLElement).querySelector(
++        ".margin-note-previous",
++      ) as HTMLElement;
++      // A third record: line two's node leaves through the eraser.
++      await w.setProps({
++        text: "only 7 fits here",
++        seq: 4,
++        previous: "only 2 fits here",
++        previousSeq: 3,
++      });
++      await nextTick();
++      const rub = two.style;
++      expect(two.className).toContain("note-previous-leave-active");
++      expect(
++        `${rub.getPropertyValue("animation-duration")}|${rub.getPropertyPriority("animation-duration")}`,
++      ).toBe(`${MOTION.rungs.whisper}ms|important`);
+       expect(
+-        `${clock.getPropertyValue("animation-duration")}|${clock.getPropertyPriority("animation-duration")}`,
++        `${rub.getPropertyValue("animation-delay")}|${rub.getPropertyPriority("animation-delay")}`,
+       ).toBe("0s|important");
+       w.unmount();
+     } finally {
+-      window.matchMedia = real;
++      st.remove();
++      Element.prototype.animate = realAnimate;
+     }
+   });
+ 

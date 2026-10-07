@@ -1,0 +1,28 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/player-mark.spec.ts:1047:1 › the frame follows the ground's corner at an 18px root (2.6s)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:1047:1 › the frame follows the ground's corner at an 18px root 
+
+    Error: {"r16":{"want":15,"mean":14.31},"r18":{"want":17,"mean":14.29}}
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 1
+    Received:    2.710000000000001
+
+      1090 |   expect(r18.want, JSON.stringify({ r16, r18 })).toBe(17);
+      1091 |   expect(Math.abs(r16.mean - r16.want), JSON.stringify({ r16, r18 })).toBeLessThanOrEqual(1);
+    > 1092 |   expect(Math.abs(r18.mean - r18.want), JSON.stringify({ r16, r18 })).toBeLessThanOrEqual(1);
+           |                                                                       ^
+      1093 |   expect(r18.mean - r16.mean, JSON.stringify({ r16, r18 })).toBeGreaterThanOrEqual(1);
+      1094 | });
+      1095 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/e2e/player-mark.spec.ts:1092:71
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself8r/pw-out-spec/player-mark-the-frame-foll-24f51-nd-s-corner-at-an-18px-root-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/player-mark.spec.ts:1047:1 › the frame follows the ground's corner at an 18px root 

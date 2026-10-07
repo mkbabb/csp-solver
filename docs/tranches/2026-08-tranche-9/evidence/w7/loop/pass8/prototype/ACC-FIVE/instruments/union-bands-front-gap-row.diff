@@ -1,0 +1,15 @@
+--- a/web/frontend/scripts/check-motion-bands.mjs	2026-09-25 11:16:22
++++ b/web/frontend/scripts/check-motion-bands.mjs	2026-09-25 11:16:22
+@@ -2320,6 +2320,12 @@
+     expr: "MOTION.hand.stepMs - 1",
+     ms: 16,
+     why: "RATE — `FRONT_MIN_MS`, frontGate's budget: the hand's displacement clause less one millisecond (A.6, INTAKE-23 row 20)",
++  },
++  {
++    file: "src/pencil/grid/gridPaths.ts",
++    expr: "FRONT_MIN_MS - 0.5",
++    ms: 15.5,
++    why: "RATE — `FRONT_GAP_MS`, A.6's floor between two re-cut FRAMES: the budget read to the half millisecond (ACC-FIVE pass 8, registry-v7 §2.7a)",
+   },
+ ];
+ 

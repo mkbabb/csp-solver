@@ -1,0 +1,289 @@
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+new file mode 100644
+index 0000000..389d474
+--- /dev/null
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -0,0 +1,52 @@
++// Types for the ONE four-band edge probe (`edge-bands.mjs`), as the TypeScript specs call it
++// (T9-W7 CTRL-FACE pass 8, PROPOSED to the homes: `tsconfig.e2e.json` has no `allowJs`, so a spec
++// that imports the home by relative path needs its declaration beside it). Narrow on purpose:
++// what a spec calls, in the shapes it calls them.
++import type { Page } from "@playwright/test";
++
++export interface Band {
++  stations: number;
++  coreMedian: number;
++  fracUnder: number;
++  dropped: number;
++  holeFrac: number;
++  holeRuns: number;
++  longestHole: number;
++  thickness: number;
++  ink: "computed" | "p99";
++  occluder: string | null;
++}
++export interface FourBands {
++  red: boolean;
++  why: string[];
++  bands: Record<"top" | "right" | "bottom" | "left", Band> | null;
++  edgeCount: number;
++  topOnly?: "GREEN" | "RED";
++  station8?: "GREEN" | "RED";
++}
++export interface FourBandsOptions {
++  subject: string;
++  edge: string;
++  off?: string | null;
++  out?: number;
++  inn?: number;
++  span?: [number, number];
++  floor?: number;
++  thick?: number;
++  thickTol?: number;
++  holes?: number;
++  above?: number | null;
++}
++export const EDGE_CLAUSES: string[];
++export function fourBands(page: Page, options: FourBandsOptions): Promise<FourBands>;
++export function EDGE_PLANTS(edge: string): Record<
++  | "X6_bottom_erased"
++  | "X4_opacity_015"
++  | "STROKE_OPACITY015"
++  | "PATH_OPACITY015"
++  | "FILTER_OPACITY015"
++  | "THIN_1PX"
++  | "DASH_1IN8"
++  | "INFO_X5_opacity_04",
++  string
++> & { FADE15_desc: { fade: number } };
+diff --git a/web/frontend/e2e/lib/paint-lib.d.mts b/web/frontend/e2e/lib/paint-lib.d.mts
+new file mode 100644
+index 0000000..3b39216
+--- /dev/null
++++ b/web/frontend/e2e/lib/paint-lib.d.mts
+@@ -0,0 +1,15 @@
++// Types for the ONE painted-byte library (`paint-lib.mjs`), as the TypeScript specs call it
++// (T9-W7 CTRL-FACE pass 8, PROPOSED to the homes; see edge-bands.d.mts). Narrow on purpose.
++import type { Page } from "@playwright/test";
++
++export interface Raw {
++  w: number;
++  h: number;
++  data: Uint8Array;
++}
++export function onOff(
++  page: Page,
++  clip: { x: number; y: number; width: number; height: number },
++  offCss: string,
++): Promise<{ on: Raw; off: Raw }>;
++export function settle(page: Page): Promise<void>;
+diff --git a/web/frontend/scripts/shape-census.d.mts b/web/frontend/scripts/shape-census.d.mts
+new file mode 100644
+index 0000000..d3a524c
+--- /dev/null
++++ b/web/frontend/scripts/shape-census.d.mts
+@@ -0,0 +1,5 @@
++// The narrow surface `vite.config.ts` (face-stamp) reads off the ONE shape-census library
++// (registry-v7 §2.4). An ambient `declare module` cannot name a relative path, so the declaration
++// sits beside the module, as `e2e/lib/*.d.mts` do.
++/** The files `files` pull in through CSS `@import` chains, the inputs included. */
++export function followImports(files: string[]): string[];
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb3..39b360d 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -69,6 +69,14 @@ export const CLAUSES = {
+   "tw-split": "FACE · Tailwind arbitrary values kept whole (font-[ … ])",
+   "tpl-file": "FACE · template sites attributed to their file",
+   "script-css": "FACE · CSS text inside script strings",
++  "script-shorthand":
++    "FACE p8 · a script write of a SHORTHAND (`.style.font =`) is a site of its longhands",
++  "script-style-object":
++    "FACE p8 · a script STYLE OBJECT key (`{ fontFamily: … }`, `style: { font: … }`) is a site",
++  "svg-presentation":
++    "FACE p8 · an SVG presentation attribute (`font-family=`, `:font-family=`) is a site",
++  "tw-var-shorthand":
++    "FACE p8 · Tailwind v4 `font-( --x )` is `font-family: var(--x)`; `font-[ var() ]` is a WEIGHT",
+   "tok-sites": "GRAPHITE · tokenSites: every publisher of a custom property",
+   "tw-arbitrary":
+     "GRAPHITE · Tailwind arbitrary properties [ --tok:v ] as declaration sites",
+@@ -816,8 +824,8 @@ function stripVariants(t) {
+   let d = 0,
+     cut = 0;
+   for (let i = 0; i < t.length; i++) {
+-    if (t[i] === "[") d++;
+-    else if (t[i] === "]") d--;
++    if (t[i] === "[" || (t[i] === "(" && on("tw-var-shorthand"))) d++;
++    else if (t[i] === "]" || (t[i] === ")" && on("tw-var-shorthand"))) d--;
+     else if (t[i] === ":" && d === 0) cut = i + 1;
+   }
+   return t.slice(cut);
+@@ -836,7 +844,18 @@ export function TAILWIND_ALL(tw) {
+     out.push(["min-height", m[1] === "0" ? "0px" : m[1].replace(/^\[|\]$/g, "")]);
+   else if ((m = /^font-(sans|serif|mono|hand|display)$/.exec(t)))
+     out.push(["font-family", m[1]]);
+-  else if ((m = /^font-\[(.+)\]$/.exec(t))) out.push(["font-family", arb(m[1])]);
++  else if (
++    on("tw-var-shorthand") &&
++    (m = /^font-\((?:family-name:)?(--[\w-]+)\)$/.exec(t))
++  )
++    out.push(["font-family", `var(${m[1]})`]);
++  else if (
++    on("tw-var-shorthand") &&
++    (m = /^font-\[(?!family-name:)(var\(.+\)|\d+)\]$/.exec(t))
++  )
++    out.push(["font-weight", arb(m[1])]); // Tailwind v4 infers a bare var()/number as a weight
++  else if ((m = /^font-\[(.+)\]$/.exec(t)))
++    out.push(["font-family", arb(m[1]).replace(/^family-name:/, "")]);
+   else if ((m = /^overflow-(hidden|clip|visible|auto|scroll)$/.exec(t)))
+     out.push(["overflow", m[1]]);
+   else if (
+@@ -969,6 +988,32 @@ export function templateSites(tpl, cls, baseLine = 1) {
+           for (const d of decls(str[2], line)) out.push({ kind: "style-string", ...d });
+       }
+     }
++    if (on("svg-presentation"))
++      for (const a of attrsOf(attrs)) {
++        const nm = a.name.replace(/^(?::|v-bind:)/, "");
++        if (!/^font-(family|size|weight|style)$/.test(nm) || a.value == null) continue;
++        const bound = nm !== a.name;
++        const lit = bound ? /^\s*(['"`])([\s\S]*)\1\s*$/.exec(a.value) : null;
++        out.push(
++          bound && !lit && nm === "font-family"
++            ? {
++                kind: "presentation-attr-computed",
++                prop: `?${nm}`,
++                value: a.value,
++                line,
++                unresolved: true,
++              }
++            : bound && !lit
++              ? null
++              : {
++                  kind: "presentation-attr",
++                  prop: nm,
++                  value: lit ? lit[2] : a.value,
++                  line,
++                },
++        );
++        if (out.at(-1) === null) out.pop();
++      }
+     for (const tw of candidates(classes))
+       for (const [prop, value] of TAILWIND_ALL(tw))
+         out.push({
+@@ -1082,6 +1127,17 @@ export function scriptWrites(text, prop, baseLine = 1) {
+   for (const m of s.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)\s*([^;\n]+)/g))
+     if (m[1] === camel)
+       out.push({ kind: "script-write", prop, value: carry(m[2]), line: L(m.index) });
++    else if (
++      on("script-shorthand") &&
++      m[1] !== "cssText" &&
++      SHORTHANDS[kebab(m[1])]?.includes(prop)
++    )
++      out.push({
++        kind: "script-write",
++        prop: kebab(m[1]),
++        value: carry(m[2]),
++        line: L(m.index),
++      });
+   for (const m of s.matchAll(
+     /\.style\[\s*(['"`])([^'"`]+)\1\s*\]\s*=(?!=)\s*([^;\n]+)/g,
+   ))
+@@ -1133,6 +1189,34 @@ export function scriptWrites(text, prop, baseLine = 1) {
+           value: carry(kv[3]),
+           line: L(m.index),
+         });
++  if (on("script-style-object")) {
++    // any object key spelling `prop` (camel or kebab, quoted or not), and inside a `style: {…}`
++    // object any key that is a SHORTHAND of `prop`; type annotations (`fontFamily: string`) skipped
++    const seen = new Set(out.map((o) => `${o.line}|${o.value}`));
++    // a key INSIDE a string literal is CSS text (script-css's), never an object key
++    const strs = [...s.matchAll(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g)].map((m) => [
++      m.index,
++      m.index + m[0].length,
++    ]);
++    const inStr = (i) => strs.some(([a, b]) => i > a && i < b);
++    const push = (k, v, i) => {
++      const value = carry(v);
++      if (/^(string|number|boolean|undefined|null|unknown|any)\b/.test(value)) return;
++      const line = L(i);
++      if (seen.has(`${line}|${value}`)) return;
++      seen.add(`${line}|${value}`);
++      out.push({ kind: "script-object", prop: kebab(k), value, line });
++    };
++    for (const m of s.matchAll(
++      /(?:^|[{,(\s])(['"]?)([a-zA-Z][\w-]*)\1\s*:\s*([^,{}\n;]+)/g,
++    ))
++      if (kebab(m[2]) === prop && !inStr(m.index + m[0].indexOf(m[2])))
++        push(m[2], m[3], m.index);
++    for (const o of s.matchAll(/\bstyle\s*:\s*\{([^{}]*)\}/g))
++      if (!inStr(o.index))
++        for (const kv of o[1].matchAll(/(['"]?)([a-zA-Z][\w-]*)\1\s*:\s*([^,}]+)/g))
++          if (SHORTHANDS[kebab(kv[2])]?.includes(prop)) push(kv[2], kv[3], o.index);
++  }
+   if (on("csstext"))
+     for (const m of s.matchAll(
+       /(?:\.style\s*\.\s*cssText\s*\+?=(?!=)|setAttribute\(\s*(["'`])style\1\s*,)\s*([^;\n]+)/g,
+@@ -3351,6 +3435,62 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "script-shorthand",
++    "FACE",
++    "p8: `el.style.font = '16px X'` is a font-family site (a shorthand write)",
++    (L) => {
++      const f = fixture({ "src/w.ts": 'el.style.font = "16px Comic Sans MS";\n' });
++      return L.census(f.fe, "*", "font-family", f).some(
++        (s) => s.prop === "font" && /Comic/.test(s.value),
++      );
++    },
++  ],
++  [
++    "script-style-object",
++    "FACE",
++    "p8: a TS style object `{ style: { fontFamily } }` and `style: { font }` are sites",
++    (L) => {
++      const f = fixture({
++        "src/o.ts":
++          'export const a = { style: { fontFamily: "Comic Sans MS" } };\nexport const b = h("p", { style: { font: "12px Papyrus" } });\ntype T = { fontFamily: string };\n',
++      });
++      const s = L.census(f.fe, "*", "font-family", f);
++      return s.length === 2 && s.some((x) => /Papyrus/.test(x.value));
++    },
++  ],
++  [
++    "svg-presentation",
++    "FACE",
++    "p8: an SVG `font-family=` / `:font-family=` presentation attribute is a site",
++    (L) => {
++      const f = fixture({
++        "src/S.vue":
++          '<template><svg><text font-family="Comic Sans MS">a</text><text :font-family="\'Papyrus\'">b</text><text :font-family="fam">c</text></svg></template>\n',
++      });
++      const s = L.census(f.fe, "*", "font-family", f);
++      return (
++        s.filter((x) => x.kind === "presentation-attr").length === 2 &&
++        s.some((x) => x.unresolved)
++      );
++    },
++  ],
++  [
++    "tw-var-shorthand",
++    "FACE",
++    "p8: Tailwind `font-( --x )` is a var() family; `font-[ var() ]` is a weight",
++    (L) => {
++      const a = L.TAILWIND_ALL(J("font-", "(--plant-lit)"));
++      const b = L.TAILWIND_ALL(J("md:font-", "(family-name:--plant-lit)"));
++      const c = L.TAILWIND_ALL(J("font-", "[var(--face-written)]"));
++      return (
++        a[0]?.[0] === "font-family" &&
++        a[0]?.[1] === "var(--plant-lit)" &&
++        b[0]?.[1] === "var(--plant-lit)" &&
++        c[0]?.[0] === "font-weight"
++      );
++    },
++  ],
+   // --- GRAPHITE
+   [
+     "tok-sites",

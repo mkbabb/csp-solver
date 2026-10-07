@@ -1,0 +1,98 @@
+ok   [sfc-toplevel · FACE] a <style> inside a <script> string/comment is not a stylesheet
+ok   [at-own · FACE] @utility x { font-family } is read as .x
+ok   [at-own · GRAPHITE] @theme's own tokens are read (as :root)
+ok   [wildcard · FACE] the wildcard subject `*` reads every rule and element
+ok   [tw-split · FACE] an arbitrary value font-[ … ] is one candidate
+ok   [tpl-file · FACE] a template site carries its file
+ok   [script-css · FACE] CSS text inside a script string is read (HandwrittenLogo's pose sheet)
+ok   [tok-sites · GRAPHITE] a TS object publishes a token
+ok   [tw-arbitrary · GRAPHITE] R1: a Tailwind arbitrary property [ --tok:v ] is a declaration site
+ok   [at-property-site · GRAPHITE] R4: @property initial-value is a declaration site
+ok   [r1-dark-arm · GRAPHITE] R1: a chromatic ring token with no dark arm reds; its dark arm cures it
+ok   [r1-dark-arm · GRAPHITE] R1: royalblue / lch on the ring and a script-published token red; graphite and a flipping script token stay green
+ok   [strip-regex · TIN] a regex literal `/\//g` is code, not a `//` comment (26.2 % of shipped JS)
+ok   [rel-color · TIN] D36 relative colour with literal channels (and keywords) resolves
+FAIL [fold-hole · TIN] D11/D35 a minted name keeps its hole: `"--color-peer-" + i + "-name"` → `--color-peer-?-name`
+FAIL [fold-int · TIN] D23 a packed int `(0xffb2f3).toString(16)` folds to its digits (decimal too)
+FAIL [fold-text · TIN] D24/D25/D28/D33/D34/D39/D50 fold in place; a regex literal and a call's arguments are not touched  (L.foldText is not a function)
+FAIL [tw-palette · TIN] D30 a palette utility resolves to its colour (variant, alpha); a spacing utility does not
+FAIL [channel-arity · TIN] a script's `lab(want)` / `hsl(x)` / `rgb(1)` is no colour and never throws; `lab(50 20 -30)` still is  (Cannot read properties of undefined (reading 'endsWith'))
+ok   [masked · LIVE] X7 VAR(), X8 a ${} stem, X9 a concatenation are masked defaults
+ok   [is-where-arms · VERB] X16: a tail inside :is()/:where() holds only when every arm carries it
+ok   [stem-all · VERB] X15/X15b: a stem is every name the whole template spells, else unresolved
+ok   [setprop-computed · VERB] X17: setProperty(<non-literal>, 'var(--ghost)') is a `?` site
+ok   [const-carried · VERB] X18: a const carries its value to the write
+ok   [url-dyn · SIX] T7 url(${base}#${id}) and T8 url(${'#' + id}) are UNRESOLVED
+ok   [decode · SIX] T9 &#35; and T10 a CSS escape decode before the id regex; D29 #ff\62 2f3
+ok   [- · SIX] T6: a const url(#${id}) bound as :stroke is the STROKE's, unresolved
+ok   [tag-unresolved · SIX] F9: a tag that resolves to no file is UNRESOLVED
+ok   [h-spread · SIX] F5 a spread, F6 a computed key, F7 an aliased createVNode are read
+ok   [barrel · SIX] F8: a barrel alias is followed to its file
+ok   [pin-binds · SIX] F10: a pin admits its bind SET, never the site
+ok   [csstext · WALK] A2 a concatenated cssText and A3 setAttribute('style') publish the token
+ok   [style-computed-key · WALK] A4: a computed :style key is a `?` site
+ok   [import-chain · WALK] A5: an @import reaches a sheet outside src/ and public/
+ok   [collect-walk · LADDER] L4: index.html and public/** are sources
+ok   [longhand · LADDER] L1: a longhand answers for its shorthand
+ok   [semicolon-less · LADDER] L3: a semicolon-less declaration before a nested rule is a declaration
+ok   [clock-arith · LADDER] M1 Math.min, M2 a bracket, M3 a shift on a clock read are arithmetic
+ok   [pcss · ERASE] a .pcss sheet's @property inherits:false is read
+ok   [register-split · ERASE] a split-name registerProperty resolves (else it is UNRESOLVED)
+ok   [element-keyed · TAPE] S1 an extra class, S2 a structural subject, S4 [id=], S5 [class~=] reach the element
+ok   [tw-utility · TAPE] S8a–e utilities that move paint are read
+ok   [media-eval · LEDGER] M2 `not all and`, M3 landscape-only, M8 unsatisfiable are EVALUATED
+ok   [em-lh · LEDGER] M4: 1lh/1em resolve at the consumer's own font
+ok   [r4-bound · LEDGER] R4: a lower bound through clamp/calc/min/max
+ok   [html-comment · TAB-PEN] C6: links inside <!-- --> ship nothing
+ok   [one-link · TAB-PEN] C7: a second rel=icon reds `exactly one`
+ok   [token-conflict · TAB-PEN] C9: two placed @theme sites that disagree
+ok   [- · chair] colour #3a7bc4 ≈ rgb(58 123 196)
+ok   [- · chair] colour #3a7bc4 ≈ rgba(58,123,196,1)
+ok   [- · chair] colour #3a7bc4 ≈ hsl(212.2 54.5% 49.8%)
+ok   [- · chair] colour #3a7bc4 ≈ hsl(0.5895turn 54.5% 49.8%)
+ok   [- · chair] colour #3a7bc4 ≈ oklch(0.5703 0.1285 253.6)
+ok   [- · chair] colour #3a7bc4 ≈ oklab(0.5703 -0.0363 -0.1233)
+ok   [- · chair] colour #3a7bc4 ≈ color(srgb 0.2275 0.4824 0.7686)
+ok   [- · chair] colour #3a7bc4 ≈ lab(50.08 -2.44 -44.99)
+ok   [- · chair] colour #3a7bc4 ≈ lch(50.08 45.06 266.9)
+ok   [- · chair] colour #3a7bc4 ≈ hwb(212.2 22.7% 23.1%)
+ok   [- · chair] colour rebeccapurple ≈ #663399
+ok   [- · chair] colour #abc ≈ #aabbcc
+ok   [- · chair] colour #aabbccff ≈ #abc
+ok   [- · chair] colour color-mix(in srgb, #ff0000 50%, #0000ff) ≈ rgb(127.5 0 127.5)
+ok   [- · chair] var-led shorthand sets font-family
+ok   [- · chair] subject compound .a .b:not(.c) → b
+ok   [- · chair] .b:not(.a) is not subject a; :is(.a,.x) is; .a .b is not
+ok   [- · chair] var() fallback evaluated; a stem expands to its tokens
+ok   [- · chair] the CSS stripper keeps a string holding /*
+ok   [- · chair] the JS stripper keeps accept="image/*" in a string
+ok   [- · chair] colour literals in any syntax
+ok   [- · LEDGER] reserve · clean (the union's 1lh seat) → GREEN
+ok   [- · LEDGER] reserve · E1 shadowed → RED
+ok   [- · LEDGER] reserve · E2 a second <style scoped> → RED
+ok   [- · LEDGER] reserve · E2b a compound override → RED
+ok   [- · LEDGER] reserve · E3 the block at 1px → RED
+ok   [- · LEDGER] reserve · E4 landscape !important → RED
+ok   [- · FACE] reserve · S6 a var-led token at 0px → RED
+ok   [- · FACE] reserve · S7 a template style= → RED
+ok   [- · VERB] reserve · S8 a :style object → RED
+ok   [- · VERB] reserve · S8b a quoted :style key → RED
+ok   [- · VERB] reserve · S9 a :style string → RED
+ok   [- · VERB] reserve · S10 a script write → RED
+ok   [- · VERB] reserve · S10b a concatenated setProperty → RED
+ok   [- · VERB] reserve · S10c a computed key → RED
+ok   [- · VERB] reserve · S11 a :not() tail → RED
+ok   [- · WALK] reserve · X a public/ stylesheet → RED
+ok   [- · TIN] reserve · X an index.html <style> → RED
+ok   [- · WALK] reserve · X a Tailwind candidate → RED
+ok   [- · SIX] reserve · X a string holding /* → RED
+ok   [- · TIN] reserve · X a .tsx write → RED
+ok   [- · LEDGER] reserve · M1 the block at 1px inside <1024 → RED
+ok   [- · LEDGER] reserve · M2 the seat under `not all and` → RED
+ok   [- · LEDGER] reserve · M3 the seat in the landscape block only → RED
+ok   [- · LEDGER] reserve · M4' the block's line 1px inside <1024 (the lh twin of M4) → RED
+ok   [- · TAPE] reserve · M6 `> p:first-child` (element-keyed) → RED
+ok   [- · TAPE] reserve · M7 `[role=status]` (element-keyed) → RED
+ok   [- · LEDGER] reserve · M8 an unsatisfiable seat → RED
+ok   [- · chair] reserve · NN `.margin-note-previous:not(.margin-note)` is not the voice → GREEN
+SELF-TEST on the seed /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tin8/shape-census.homes-a1d8adeb.mjs: 92/97 read as the law · 5 fail · clauses planted 45/45

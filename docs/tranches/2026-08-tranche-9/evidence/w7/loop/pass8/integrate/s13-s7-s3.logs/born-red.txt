@@ -1,0 +1,12 @@
+== GREEN arm (the integrated tree's bytes, f1c9c3fe) load { 12.54 11.26 9.56 }
+lint:bands rc=0
+typecheck:e2e rc=0
+planted 4 edits (J1 row struck, J2 two directives restored, J3 comment restored)
+plant rc=0
+== RED arm (the three seams reverted)
+lint:bands rc=1
+  • [B13 ARITHMETIC] src/pencil/grid/gridPaths.ts:702  clock += Math.min(dt, Math.max(MOTION.hand.stepMs, panelFrameMs(dt, origin + t))) — arithmetic on a clock; the consumer's value is the subject: an ADMITTED_ARITH row with its `expr` and
+typecheck:e2e rc=2
+e2e/count-yield.spec.ts(2,1): error TS2578: Unused '@ts-expect-error' directive.
+e2e/tally-flash.spec.ts(4,1): error TS2578: Unused '@ts-expect-error' directive.
+BORNRED DONE

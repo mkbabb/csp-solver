@@ -1,0 +1,143 @@
+diff --git a/web/frontend/src/pencil/grid/gridPaths.frame.test.ts b/web/frontend/src/pencil/grid/gridPaths.frame.test.ts
+new file mode 100644
+index 00000000..e651478a
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.frame.test.ts
+@@ -0,0 +1,137 @@
++import { describe, expect, it } from "vitest";
++import { BOIL_CONFIG } from "@pencil/config/pencilConfig";
++import {
++  generateFrameTraceFrames,
++  generateGridBoilFrames,
++  generateRectBoilFrames,
++} from "./gridPaths";
++
++/**
++ * T9-W7 §13 pass 8 · THE FRAME IS PAINTED WHOLE, in viewBox units (the chair's geometric assertion,
++ * T9-W7 chair §6.2's FRAME_PAD row). The steady grid is four BAKED poses exactly the 1000-unit box,
++ * so any part of the frame's 12-unit stroke outside [0, 1000] is never painted. Every pose of the
++ * frame ring must hold its stroke inside the box on all four sides to within 2 units: the boil's
++ * wobble puts one vertex of a side up to 1.73 units past the half stroke on HEAD's own sides (inset 12
++ * since T4, unmoved here), and in paint every side reads 0.999–1.016 of the stroke
++ * (`e2e/frame-halfstroke.spec.ts`), so a one-vertex overhang is not a clipped stroke. The ring sits the
++ * same distance in on every side. Born RED at `FRAME_Y_PAD` 0: the top and bottom reach ~11 units
++ * past the box (half of each stroke outside). (A frame whose every vertex holds its whole stroke is
++ * an inset of 14 on all four sides — the sides move 2 units; not taken, the chair's §6.2 row.)
++ */
++const SLACK = 2; // units: the wobble's one-vertex overhang (1.73 on HEAD's sides), never a half stroke
++const VB = 1000;
++const HALF = 12 / 2; // the frame's stroke-width in the grid and in its bake (HandDrawnGrid)
++const points = (d: string): [number, number][] => {
++  const n = (d.match(/-?\d+(?:\.\d+)?(?:e-?\d+)?/g) ?? []).map(Number);
++  const out: [number, number][] = [];
++  for (let i = 0; i + 1 < n.length; i += 2) out.push([n[i], n[i + 1]]);
++  return out;
++};
++const box = (d: string) => {
++  const p = points(d);
++  const xs = p.map((q) => q[0]);
++  const ys = p.map((q) => q[1]);
++  return {
++    x0: Math.min(...xs),
++    x1: Math.max(...xs),
++    y0: Math.min(...ys),
++    y1: Math.max(...ys),
++  };
++};
++
++/** Every clause, as findings (empty = whole): the overhang per side and the insets' agreement. */
++function unclipped(poses: string[]): string[] {
++  const bad: string[] = [];
++  const med = (a: number[]) => [...a].sort((u, v) => u - v)[a.length >> 1];
++  poses.forEach((d, f) => {
++    const b = box(d);
++    const over = {
++      top: HALF - b.y0,
++      bottom: b.y1 + HALF - VB,
++      left: HALF - b.x0,
++      right: b.x1 + HALF - VB,
++    };
++    for (const [side, o] of Object.entries(over))
++      if (o > SLACK)
++        bad.push(
++          `pose ${f}: the ${side} stroke leaves the bake by ${o.toFixed(2)} units`,
++        );
++    // the same inset on every side: each side's median coordinate (its wobble averages out)
++    const p = points(d);
++    const inset = {
++      top: med(p.filter((q) => q[1] < 50).map((q) => q[1])),
++      bottom: VB - med(p.filter((q) => q[1] > VB - 50).map((q) => q[1])),
++      right: VB - med(p.filter((q) => q[0] > VB - 50).map((q) => q[0])),
++    };
++    const left = med(p.filter((q) => q[0] < 50).map((q) => q[0]));
++    for (const [side, v] of Object.entries(inset))
++      if (Math.abs(v - left) >= 2)
++        bad.push(
++          `pose ${f}: the ${side} sits ${v.toFixed(2)} in, the left ${left.toFixed(2)}`,
++        );
++  });
++  return bad;
++}
++
++describe("the board frame lies inside its bake (T9-W7 §13, FRAME_PAD)", () => {
++  for (const [size, sub] of [
++    [4, 2],
++    [6, 3],
++    [9, 3],
++    [16, 4],
++  ] as const)
++    it(`${size}×${size}: every pose's frame stroke is inside [0, ${VB}] on all four sides`, () => {
++      const { frame } = generateGridBoilFrames(
++        size,
++        sub,
++        VB,
++        42,
++        BOIL_CONFIG.frameCount,
++        BOIL_CONFIG.frameBoil,
++        BOIL_CONFIG.subgridBoil,
++        BOIL_CONFIG.cellBoil,
++      );
++      expect(frame.length).toBe(BOIL_CONFIG.frameCount);
++      expect(unclipped(frame)).toEqual([]);
++    });
++  it("THE NEGATIVE: HEAD's ring (top and bottom on the box's edge, FRAME_Y_PAD 0) reds every pose", () => {
++    const head = generateRectBoilFrames(
++      12,
++      0,
++      VB - 24,
++      VB,
++      { roughness: 0.5, segments: 6, seed: 42, jagged: true },
++      BOIL_CONFIG.frameBoil,
++      BOIL_CONFIG.frameCount,
++    );
++    const bad = unclipped(head);
++    for (let f = 0; f < head.length; f++) {
++      expect(bad.some((b) => b.startsWith(`pose ${f}: the top stroke leaves`))).toBe(
++        true,
++      );
++      expect(bad.some((b) => b.startsWith(`pose ${f}: the bottom stroke leaves`))).toBe(
++        true,
++      );
++    }
++  });
++  it("the progress trace shares the frame's rect (registration)", () => {
++    const trace = generateFrameTraceFrames(
++      VB,
++      42,
++      BOIL_CONFIG.frameCount,
++      BOIL_CONFIG.frameBoil,
++    );
++    const { frame } = generateGridBoilFrames(
++      9,
++      3,
++      VB,
++      42,
++      BOIL_CONFIG.frameCount,
++      BOIL_CONFIG.frameBoil,
++    );
++    const a = box(trace[0]);
++    const b = box(frame[0]);
++    expect(Math.abs(a.y0 - b.y0)).toBeLessThan(2);
++    expect(Math.abs(a.x0 - b.x0)).toBeLessThan(2);
++  });
++});

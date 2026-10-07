@@ -1,0 +1,37 @@
+# pre-return battery, BARE, tree be10b47d | control = git archive 74a2b5d9 (+ csp-solver, scripts, .github, web/relay), node_modules symlinked; npm run -s <script>
+| gate | tree | control |
+|---|---|---|
+| lint:lanes | 0 | 0 |
+| lint:theme-tokens | 0 | 0 |
+| lint:sleep | 0 | 0 |
+| lint:bands | 1 | 1 |
+| lint:verbs | 1 | 1 |
+| test:e2e:projects | 0 | 0 |
+| lint:arcs | 0 | 1 |
+| lint:copy | 0 | 0 |
+| lint:ink | 0 | 0 |
+| lint:motion | 0 | 0 |
+| lint:catch | 0 | 0 |
+| lint:theme-selectors | 0 | 0 |
+| lint:live-regions | 0 | 0 |
+| lint:tdz | 0 | 0 |
+| lint:boundary | 0 | 0 |
+| lint | 0 | 2 |
+| lint:knip | 0 | 0 |
+| typecheck:e2e | 0 | 0 |
+| typecheck:node | 0 | 0 |
+| eslint | 0 | 0 |
+| copy-register | 0 | 0 |
+| property-block | 0 | 0 |
+notes: lint:bands / lint:verbs exit 1 on both sides = npm 'Missing script' (neither exists at 74a2b5d9 or on this tree). control lint:arcs 1 = no such script at 74a2b5d9. control 'lint' first read 2 (prettier: no files matching ../relay/ — the control archive lacked web/relay); re-run with web/relay extracted: All matched files use Prettier code style! exit 0. eslint counts warnings (--max-warnings 0); re-run after the scratch dir left the tree: exit 0. property-block = pass6/instruments/check-property-block.mjs --fe <side> --dist <side's dist> (tree: the out-of-tree build; control: w7-control's dist).
+
+## vue-tsc on a git archive of tree be10b47d
+arch	vuetsc-b	0
+arch	vuetsc-e2e	0
+
+## vitest by directory on the tree
+src_games exit 0:  Test Files 57 passed (57)  Tests 760 passed (760) 
+src_pencil exit 0:  Test Files 8 passed (8)  Tests 73 passed (73) 
+src_composables exit 0:  Test Files 3 passed (3)  Tests 16 passed (16) 
+src_lib exit 1: No test files found, exiting with code 1 
+(src/lib holds no test file: vitest's 'No test files found' exit 1; src/games + src/pencil + src/composables are every *.test.ts under src/)

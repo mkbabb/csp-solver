@@ -1,0 +1,19 @@
+// tilt-wave8.mjs — the tape tilt before (seed*K + text.charCodeAt(0)) and after (seed*K), per card tape.
+import { mulberry32 } from "@mkbabb/pencil-boil";
+const K = 2654435761;
+const tapes = [
+  [13, "new game"], [53, "hold to peek"], [29, "pencils"],
+  [31, "normal writes a digit. corner and center write small pencil marks"],
+  [41, "show every digit that still fits in a cell"], [59, "checking"],
+  [47, "when your mistakes get checked"], [67, "players"],
+  [61, "share this board and everyone writes on the same grid"],
+  [23, "wipe every digit you've written"], [43, "fill the cells that have only one digit left"],
+  [37, "finishes the board for you"], [71, "copy a link to this board"], [89, "what the keys do"],
+];
+const tilt = (s) => { const r = mulberry32(s); for (let i = 0; i < 6; i++) r(); return (r() - 0.5) * 3; };
+for (const [seed, text] of tapes) {
+  const a = tilt(seed * K + text.charCodeAt(0)), b = tilt(seed * K);
+  // a 240 px (15rem) tape's rotated box rises (w/2)·sin|t| above its laid box
+  const rise = (t, w) => (w / 2) * Math.sin(Math.abs(t) * Math.PI / 180);
+  console.log(String(seed).padStart(3), a.toFixed(2).padStart(6), "->", b.toFixed(2).padStart(6), " rise@240 ", rise(a, 240).toFixed(2), "->", rise(b, 240).toFixed(2), " ", text.slice(0, 40));
+}

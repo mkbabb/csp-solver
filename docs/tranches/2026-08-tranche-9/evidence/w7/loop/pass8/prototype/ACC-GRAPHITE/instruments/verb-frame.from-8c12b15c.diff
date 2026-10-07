@@ -1,0 +1,47 @@
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 17210770..6cc5fc63 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -330,13 +330,25 @@ export function generateRectBoilFrames(
+ 
+ // ── Board frame rect insets (shared: the grid frame + the W9 progress trace) ──
+ //
+-// The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom
+-// (top/bottom flush with the card edge, sides pulled in slightly). Module-level so
+-// generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below, same file)
+-// build off ONE source and the violet trace provably hugs the frame (A-1c) — never a
+-// re-declared magic number that could drift out of registration.
++// The frame ring's rect is inset `FRAME_X_PAD` on the sides, `FRAME_Y_PAD` top/bottom.
++// Module-level so generateGridBoilFrames and the T4-W9 generateFrameTraceFrames (both below,
++// same file) build off ONE source and the violet trace provably hugs the frame (A-1c) — never
++// a re-declared magic number that could drift out of registration.
++//
++// T9-W7 §13 · THE FRAME IS PAINTED WHOLE (T9-W7 chair §6.2's FRAME_PAD row, landed by §13 in
++// pass 8). The top and bottom used to sit ON the box's edge (`FRAME_Y_PAD` 0, "flush with the
++// card edge"), and the steady look is four BAKED poses the box's exact size: half of each of
++// those 12-unit strokes fell outside the bitmap and was never painted, so the owner saw the
++// sides at full weight and the top and bottom at half (painted depth 3.4–4.0 px against the
++// sides' 7.6 at desk, `e2e/frame-halfstroke.spec.ts`). The live fallback (overflow visible)
++// painted them whole, so the frame also thinned the moment the bake landed. The ring is now
++// inset the same on all four sides. The move is 7.63 CSS px at 1280 on every board and the
++// board goldens are blind to it (a thin line's 7 px move sits under `maxDiffPixelRatio` 0.02),
++// so the row carries its own gates: a geometric assertion in viewBox units
++// (`gridPaths.frame.test.ts`) and the painted read; the golden re-mint off a built dist and the
++// owner's disposition are the fold's.
+ const FRAME_X_PAD = 12;
+-const FRAME_Y_PAD = 0;
++const FRAME_Y_PAD = FRAME_X_PAD;
+ 
+ /**
+  * The board frame ring as `frameCount` grain-BAKED closed poses — the T4-W9 progress
+@@ -446,8 +458,8 @@ export function generateGridBoilFrames(
+     () => {
+       const cellSize = viewBoxSize / boardSize;
+       const pad = 26;
+-      // Frame rect: top/bottom flush with card edge, sides pulled in slightly.
+-      // Shared with the W9 progress trace via the exported constants (registration).
++      // Frame rect: inset the same on all four sides, so every baked pose holds the whole
++      // stroke. Shared with the W9 progress trace via the module constants (registration).
+       const frameXPad = FRAME_X_PAD;
+       const frameYPad = FRAME_Y_PAD;
+ 

@@ -1,0 +1,31 @@
+
+ RUN  v4.1.11 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tape8/arch-m2/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.test.ts (38 tests | 1 failed) 1865ms
+     × …but leaves a reader who moved on while the question stood 72ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > …but leaves a reader who moved on while the question stood
+AssertionError: the lapse must not pull a reader who moved on: expected 'Clear the board' to be 'Deal a new board' // Object.is equality
+
+Expected: "Deal a new board"
+Received: "Clear the board"
+
+ ❯ src/games/shared/GameControlPanel.test.ts:290:76
+    288|     vi.advanceTimersByTime(5000);
+    289|     await settle();
+    290|     expect(focusedName(), "the lapse must not pull a reader who moved …
+       |                                                                            ^
+    291|     w.unmount();
+    292|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 37 passed (38)
+   Start at  19:14:27
+   Duration  4.19s (transform 1.17s, setup 33ms, import 1.31s, tests 1.87s, environment 747ms)
+
+EXIT 1

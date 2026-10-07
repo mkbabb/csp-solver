@@ -1,0 +1,22 @@
+== tree: node scripts/shape-census.mjs --tree .
+FAIL reserve · M4' the block's line 1px inside <1024 (the lh twin of M4): PLANT DID NOT MOVE THE SOURCE (anchor absent)
+ok   reserve · M6 `> p:first-child` (element-keyed): RED  R1 16 voice sites / R2 16rem
+ok   reserve · M7 `[role=status]` (element-keyed): RED  R1 16 voice sites / R2 16rem
+FAIL reserve · M8 an unsatisfiable seat: PLANT DID NOT MOVE THE SOURCE (anchor absent)
+FAIL reserve · NN `.margin-note-previous:not(.margin-note)` is not the voice: RED  R1 15 voice sites / R2 16rem
+exit=2
+== u8: node scripts/shape-census.mjs --tree .
+ok   reserve · M4' the block's line 1px inside <1024 (the lh twin of M4): RED  R4 phone-portrait-390x844: reserve 1 < the voice's line 20.8 / R4 phone-portrait-375x812: reserve 1 < the voice's line 20.8
+ok   reserve · M6 `> p:first-child` (element-keyed): RED  R1 2 voice sites / R2 0
+ok   reserve · M7 `[role=status]` (element-keyed): RED  R1 2 voice sites / R2 0
+ok   reserve · M8 an unsatisfiable seat: RED  R3 seated in 
+ok   reserve · NN `.margin-note-previous:not(.margin-note)` is not the voice: GREEN
+exit=0
+== union: node scripts/shape-census.mjs --tree .
+exit=0
+== control (w7-control, read-only, the library from the tree copy)
+ok   reserve · M6 `> p:first-child` (element-keyed): RED  R1 16 voice sites / R2 16rem
+ok   reserve · M7 `[role=status]` (element-keyed): RED  R1 16 voice sites / R2 16rem
+FAIL reserve · M8 an unsatisfiable seat: PLANT DID NOT MOVE THE SOURCE (anchor absent)
+FAIL reserve · NN `.margin-note-previous:not(.margin-note)` is not the voice: RED  R1 15 voice sites / R2 16rem
+exit=0

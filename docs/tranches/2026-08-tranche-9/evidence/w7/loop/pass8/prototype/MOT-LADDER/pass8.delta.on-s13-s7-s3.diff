@@ -1,0 +1,1710 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index 2df5a89b..5bc8c7e3 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -1077,6 +1077,8 @@ jobs:
+             # and `lint:bands` reds rather than trust `motion-bank.json` alone (a 3-line commit
+             # lowering the bank and re-stamping its digest exited 0 at depth 1). One commit, no
+             # history: the gate reads `git show <base>:…`, which needs that tree and nothing else.
++            # Pass 8: the fetch is proven over https (the runner's protocol), and the gate PINS its
++            # floor: a step-level `BASE_REF`/`ROOT` env that disagrees with the pin is a finding.
+             - name: fetch the motion ratchet's base (74a2b5d9, one commit)
+               run: git fetch --no-tags --depth=1 origin 74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+             - name: motion bands (the duration ladder, self-tested)
+diff --git a/web/frontend/e2e/live-fit-ablation.spec.ts b/web/frontend/e2e/live-fit-ablation.spec.ts
+index 2172aeb1..a230191a 100644
+--- a/web/frontend/e2e/live-fit-ablation.spec.ts
++++ b/web/frontend/e2e/live-fit-ablation.spec.ts
+@@ -31,10 +31,19 @@ const BOARD = encodeSudoku(
+   81,
+ );
+ 
+-test('GC1 · an unmeasured fit paints no board (the declaring host stripped of its fit)', async ({
++// PASS 8 (charter row 9): the key is read at ≥ 2 POSES — the desk the row was born at and a phone
++// in portrait, where the gallery's face is sized by another slot. One pose was one reading of the
++// fit, and a fit declared or clamped for one layout only would pass there.
++const POSES = [
++  { name: 'desk 1440×900', width: 1440, height: 900 },
++  { name: 'phone 390×844', width: 390, height: 844 },
++];
++
++for (const pose of POSES)
++test(`GC1 · an unmeasured fit paints no board (the declaring host stripped of its fit) · ${pose.name}`, async ({
+   page,
+ }) => {
+-  await page.setViewportSize({ width: 1440, height: 900 });
++  await page.setViewportSize({ width: pose.width, height: pose.height });
+   await page.goto('/?game=sudoku&board=' + BOARD);
+   await page.locator('.board-cells').first().waitFor();
+   expect(await page.locator('.board-cells [aria-label*="given clue"]').count()).toBe(71);
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index e4fa2094..bdb55643 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -67,18 +67,26 @@ import process from "node:process";
+ // THE PARSER IS THE CHAIR'S (pass 7, charter row 1; LAWS P6 §I): every stylesheet, SFC <style>
+ // block, public/ sheet and index.html is read through the ONE shape-census library.
+ import {
++  clockReads,
+   compoundClasses,
++  cssBlocks as shapeBlocks,
+   cssRules,
+   scriptWrites,
+   sfc,
+   sources,
++  splitTop,
+   stripHtml,
+   stripJs,
+   subjectCompound,
++  tokenSites,
+ } from "./shape-census.mjs";
+ 
+ const HERE = dirname(fileURLToPath(import.meta.url));
+-const ROOT = resolve(process.env.ROOT ?? join(HERE, ".."));
++/** PASS 8 (charter row 10) · NO KNOB ON THE FLOOR. The tree the gate reads and the base it
++ *  ratchets against were each one `env:` line away from another tree (`ROOT`, `BASE_REF`): a
++ *  step-level `BASE_REF: HEAD` re-derived the floor off the commit under review. Both are pinned;
++ *  an override that disagrees is a finding (`knobFindings`, printed under B6), never a re-point. */
++const ROOT = resolve(join(HERE, ".."));
+ const SRC = join(ROOT, "src");
+ const CONFIG = join(SRC, "pencil/config/pencilConfig.ts");
+ const THEME = join(SRC, "assets/index.css");
+@@ -89,8 +97,22 @@ const BANK = join(HERE, "motion-bank.json");
+  *  hand: a band a gate reads out of the prose it is meant to test is a spec citing itself
+  *  (pass-3 critique §2.3). */
+ const SERIES = join(HERE, "motion-dock-series.json");
+-/** The wave's base commit — the git fallback when the bank is unreadable. */
+-const BASE_REF = process.env.BASE_REF ?? "74a2b5d9";
++/** The wave's base commit — the floor's tree. `BASE_REF` is its display name (the bank's `base`
++ *  field); `BASE_SHA` is what git is asked for, whole: a 40-hex name is never shadowed by a ref. */
++const BASE_REF = "74a2b5d9";
++const BASE_SHA = "74a2b5d9317e7795cee6bf63e861bd44f54ae80e";
++function knobFindings(env) {
++  if (!mon("knobs")) return [];
++  return [
++    ["BASE_REF", env.BASE_REF, [BASE_REF, BASE_SHA]],
++    ["ROOT", env.ROOT && resolve(env.ROOT), [ROOT]],
++  ]
++    .filter(([, v, ok]) => v !== undefined && v !== "" && !ok.includes(v))
++    .map(
++      ([k, v, ok]) =>
++        `${k}=${v} — the environment re-points the ratchet's ${k === "ROOT" ? "tree" : "floor"} away from ${ok[0]}; the gate is pinned and an override is a finding, never a re-point (charter row 10).`,
++    );
++}
+ 
+ /** A ladder is short or it is a list. */
+ const LADDER_MAX = 8;
+@@ -411,6 +433,45 @@ const LIST = process.argv.includes("--list");
+ const INVENTORY = process.argv.includes("--inventory");
+ const WRITE_BANK = process.argv.includes("--bank");
+ const SELF_TEST = process.argv.includes("--self-test");
++/** THE GATE'S OWN CLAUSE-SABOTAGE SWITCHES (pass 8, LAWS P7 §F (ii)). Each ratchet clause has an
++ *  id; `MOTION_SABOTAGE=<id>` switches it off, and `--sabotage-battery` runs the self-test once per
++ *  id and demands a red every time (a clause the self-test cannot miss is a clause with a plant).
++ *  The library's own clauses are switched the same way through `SHAPE_SABOTAGE`. */
++const GATE_CLAUSES = {
++  "subject-reach":
++    "B6 · a new site whose SUBJECT COMPOUND reaches a banked subject may not ship shorter",
++  "collect-sources":
++    "B6 · collect() walks the library's sources (index.html, public/**, every CSS language)",
++  "lib-decls":
++    "B6 · a declaration the library reads and the positional scan missed is collected (semicolon-less)",
++  "longhand-term":
++    "B6 · a longhand is keyed by its property and reaches every term of its subject",
++  "consumer-roster":
++    "B6 · TS consumers of the clock roots are banked and ratcheted (a swap to a shorter rung)",
++  "arith-lib":
++    "B13 · Math.min/max, bracket access and bitwise operators on a clock read are arithmetic",
++  "curve-publishers":
++    "B8 · a script setProperty of a curve token is a publisher, read by value",
++  "fit-one-writer":
++    "B3 · the measured fit has ONE writer; any other declaration of it reds",
++  knobs: "B6 · BASE_REF / ROOT overrides are findings, never re-points",
++  "twin-ratchet":
++    "B8 · a lane-admitted KEYWORD_TWIN is frozen by name and may not gain readers",
++  "rung-ratchet": "B6 · a banked rung may not fall without a RETUNE",
++  "site-ratchet": "B6 · a banked site may not fall without a RETUNE",
++  orphan: "B6 · a banked site that leaves needs a MOVED/DELETED row with its value",
++  "ts-ratchet": "B6 · a banked TS clock may not fall without a RETUNE",
++  "floor-digest": "B6 · the bank digests to the stamp this script holds",
++  "floor-derive": "B6 · the floor is re-derived off the base; an unreachable base reds",
++};
++const MOTION_OFF = new Set(
++  (process.env.MOTION_SABOTAGE ?? "")
++    .split(",")
++    .map((x) => x.trim())
++    .filter(Boolean),
++);
++const mon = (id) => !MOTION_OFF.has(id);
++const SABOTAGE_BATTERY = process.argv.includes("--sabotage-battery");
+ 
+ /* ── collection ────────────────────────────────────────────────────────────── */
+ 
+@@ -572,7 +633,7 @@ function collectText(text, rel) {
+     const head = text.slice(lineStart, m.index).trim();
+     if (head.startsWith("*") || head.startsWith("//") || head.startsWith("/*"))
+       continue; // prose
+-    const pos = positions(prop, body);
++    const pos = termed(prop, positions(prop, body));
+     if (!pos.length) continue;
+     decls.push({
+       file: rel,
+@@ -581,6 +642,7 @@ function collectText(text, rel) {
+       selector: selectorOf(scan, m.index),
+       prop,
+       body: body.replace(/\s+/g, " ").trim().slice(0, 120),
++      whole: normBody(body),
+       pos,
+       // the text window an ADMITTED row's anchor is read against
+       window: text.slice(
+@@ -595,10 +657,94 @@ function collectText(text, rel) {
+   return decls;
+ }
+ 
++/** Every file the collection reads. PASS 8 (charter row 2): the library's `sources()` — src/,
++ *  public/** in every Vite CSS language, index.html, and every `@import` chain — beside the
++ *  positional walk of src/ (a `<style>` in index.html shortened the reveal to 50 ms with every CI
++ *  gate at 0). Test files stay in: the pass-7 bank was keyed on the walk, which read them. */
++function collectFiles() {
++  const out = new Set([...walk(SRC)]);
++  if (mon("collect-sources"))
++    for (const f of sources(ROOT)) {
++      const rel = relative(ROOT, f);
++      if (!/\.(vue|css|pcss|postcss|ts|html)$/.test(rel)) continue;
++      if (NO_DEV && rel.split("/").includes("dev")) continue;
++      out.add(f);
++    }
++  return [...out].sort();
++}
++
++const normBody = (v) =>
++  v
++    .replace(/!\s*important\s*$/i, "")
++    .replace(/\s+/g, " ")
++    .trim();
++
++/** A declaration the ONE library reads in a CSS block (an SFC `<style>`, a stylesheet, index.html's
++ *  `<style>`, a public/ sheet) that the positional scan did not collect — the semicolon-less last
++ *  declaration (`animation-duration: 50ms }`), and any shape the scan's regex cannot spell — is
++ *  collected from the library's reading (PASS 8, charter row 2; LAWS P7 §F (i): the library is the
++ *  census of record, the scan only adds the text window an ADMITTED anchor is read against). */
++function libraryOnly(file, text, rel, found) {
++  if (!mon("lib-decls")) return [];
++  const have = new Map();
++  for (const d of found) {
++    const k = `${d.prop} :: ${d.whole ?? normBody(d.body)}`;
++    have.set(k, (have.get(k) ?? 0) + 1);
++  }
++  const out = [];
++  const lines = text.split("\n");
++  const offsetOf = (line) =>
++    lines.slice(0, Math.max(0, line - 1)).reduce((n, l) => n + l.length + 1, 0);
++  for (const b of shapeBlocks(file, text, ROOT))
++    for (const r of cssRules(b.css, b.line))
++      for (const d of r.decls) {
++        if (!/^(transition|animation)(-[a-z-]+)?$/.test(d.prop)) continue;
++        const k = `${d.prop} :: ${normBody(d.value)}`;
++        if ((have.get(k) ?? 0) > 0) {
++          have.set(k, have.get(k) - 1);
++          continue;
++        }
++        const pos = positions(d.prop, d.value);
++        if (!pos.length) continue;
++        const at = offsetOf(d.line);
++        const selector =
++          (r.as ?? r.prelude).replace(/\s+/g, " ").trim().slice(0, 80) || "—";
++        out.push({
++          file: rel,
++          line: d.line,
++          rel: `${rel}:${d.line}`,
++          selector,
++          prop: d.prop,
++          body: normBody(d.value).slice(0, 120),
++          pos: termed(d.prop, pos),
++          window: text.slice(Math.max(0, at - ANCHOR_BACK), at + 2000),
++          named: pos.some((p) => p.kind === "rung") || MOTION_TS.test(d.value),
++          dev: rel.includes("/pencil/dev/"),
++          all: /^transition$/.test(d.prop) && /^\s*all\b/.test(d.value),
++          library: true,
++        });
++      }
++  return out;
++}
++
++/** A LONGHAND's term is its property (PASS 8, charter row 2). `animation-duration:
++ *  var(--motion-whisper)` read its first word as the term (`var`), a key no bank ever held, so a
++ *  longhand shortening the banked shorthand's duration in the SAME rule was 'a new position with
++ *  nothing to shorten'. Keyed by its property, it is flagged `longhand` and reaches every term of
++ *  its subject (B6's subject clause). */
++function termed(prop, pos) {
++  if (!mon("longhand-term") || !/-(duration|delay)$/.test(prop)) return pos;
++  return pos.map((q) => ({ ...q, term: prop, longhand: true }));
++}
++
+ function collect() {
+   const decls = [];
+-  for (const file of walk(SRC))
+-    decls.push(...collectText(readFileSync(file, "utf8"), relative(ROOT, file)));
++  for (const file of collectFiles()) {
++    const text = readFileSync(file, "utf8");
++    const rel = relative(ROOT, file);
++    const found = collectText(text, rel);
++    decls.push(...found, ...libraryOnly(file, text, rel, found));
++  }
+   return decls;
+ }
+ 
+@@ -801,6 +947,64 @@ function liveFitLaw(theme, files = null) {
+     ))
+       bad.push(`${rel}  ${m[0]} — the fit's script fallback (INTAKE row 33).`);
+   }
++  bad.push(...fitOneWriter(files));
++  return bad;
++}
++
++/** THE MEASURED TOKEN HAS ONE WRITER (pass 8, charter row 5; LAWS P7 §F). `.live-face-fit {
++ *  --live-fit: 0.99; … }` left the consumer's shape bare, so every clause above read 0 while GC1
++ *  (the host's inline fit ablated) painted the board at 665×665 in both engines (pass-7 critique
++ *  §2.6, F1) — the pass-6 X3 class through a third door: the fallback moved from the consumer to a
++ *  declaration. Every site that declares `--live-fit`, read by the ONE library's `tokenSites` (CSS
++ *  in every language and block, `style=`, `:style` keys, Tailwind arbitrary properties, script
++ *  `setProperty`/`.style[]`/`cssText`, CSS strings, `@property`'s `initial-value`), is the
++ *  registration (`index.css`, 0) or the publisher (`App.vue`'s `mount.style.setProperty`) — and
++ *  anything else reds. A computed name in a STYLE position is UNRESOLVED and reds; a computed key
++ *  in a plain script object is not a style write, and is printed, never counted. */
++const FIT_WRITERS = [
++  { file: "src/assets/index.css", kind: "at-property", value: /^0$/ },
++  {
++    file: "src/App.vue",
++    kind: "script-setProperty",
++    value: /^String\(Math\.min\(faceW \/ bw, faceH \/ bh\)\)\)?$/,
++  },
++];
++function fitOneWriter(files = null) {
++  if (!mon("fit-one-writer")) return [];
++  const opt = files
++    ? (() => {
++        const m = new Map(files.map(([rel, text]) => [join(ROOT, rel), text]));
++        return {
++          files: [...m.keys()],
++          read: (f) => (m.has(f) ? m.get(f) : readFileSync(f, "utf8")),
++          exists: (f) => m.has(f) || existsSync(f),
++        };
++      })()
++    : {};
++  const sites = tokenSites(ROOT, "--live-fit", opt);
++  const bad = [];
++  const hits = new Map(FIT_WRITERS.map((w) => [w, 0]));
++  for (const x of sites) {
++    if (x.unresolved && /^script-key-computed$|^json-key-computed$/.test(x.kind))
++      continue;
++    const w = FIT_WRITERS.find(
++      (w) =>
++        w.file === x.file && w.kind === x.kind && w.value.test(String(x.value).trim()),
++    );
++    if (w) {
++      hits.set(w, hits.get(w) + 1);
++      continue;
++    }
++    bad.push(
++      `${x.file}:${x.line}  ${x.kind} ${x.prelude ?? ""} → --live-fit: ${String(x.value).slice(0, 40)} — ${x.unresolved ? "an UNRESOLVED style write that may declare the measured fit" : "a SECOND writer of the measured fit (a declared default paints a board where no fit was measured)"}; the fit has ONE writer.`,
++    );
++  }
++  if (!files)
++    for (const [w, n] of hits)
++      if (n !== 1)
++        bad.push(
++          `--live-fit's ${w.kind === "at-property" ? "registration" : "publisher"} in ${w.file} is present ${n}× — the fit's one writer is exactly one.`,
++        );
+   return bad;
+ }
+ 
+@@ -1149,6 +1353,10 @@ function inventoryRows(decls, { rungs }) {
+         key: `${d.file} :: ${d.selector} :: ${q.term}`,
+         ms: q.kind === "rung" ? (byName.get(q.rung) ?? 0) : q.ms,
+         clause: q.clause,
++        fam: /^animation/.test(d.prop) ? "animation" : "transition",
++        term: q.term,
++        longhand: !!q.longhand,
++        rel: d.rel,
+       });
+     }
+   }
+@@ -1194,6 +1402,25 @@ function consumesCharacter(
+   return false;
+ }
+ 
++/** The subject compound of every selector in a list (top-level commas; `:is()` arms stay whole),
++ *  as `{ pos, neg }` class sets — read by the ONE library, never by a second regex. */
++function subjectSets(selector = "") {
++  return splitTop(selector.replace(/^<style[^>]*>\s*/, ""), /,/).map((sel) =>
++    compoundClasses(subjectCompound(sel)),
++  );
++}
++/** Does a subject in `rs` reach an element some subject in `ks` names? It carries every positive
++ *  class of that subject and negates none of them; a class-less subject reaches every element. */
++function reaches(rs, ks) {
++  return rs.some((R) =>
++    ks.some(
++      (K) =>
++        ![...K.pos].some((c) => R.neg.has(c)) &&
++        (R.pos.size === 0 || (K.pos.size > 0 && [...K.pos].every((c) => R.pos.has(c)))),
++    ),
++  );
++}
++
+ /** The document shapes a RETUNE's `why` may cite. */
+ const RETUNE_CITE =
+   /CHAIR-RULINGS|INTAKE-?\d*|census\/|critique|registry-v\d|DISPOSITIONS|T9-B\d+/;
+@@ -1234,7 +1461,7 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+     const was = bank.rungs?.[r.key];
+     if (was === undefined) continue;
+     const to = rungTo.get(r.key);
+-    if (r.value < was && to === undefined)
++    if (r.value < was && to === undefined && mon("rung-ratchet"))
+       bad.push(
+         `MOTION.rungs.${r.key}  ${was}ms → ${r.value}ms — the RUNG shortened (W8 QUALITY LAW). A shortening needs a RETUNE row with a cite and \`to: ${r.value}\`.`,
+       );
+@@ -1255,7 +1482,7 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+     const was = sites[r.key];
+     if (was === undefined) continue; // a new position has nothing to shorten
+     const to = siteTo.get(r.key);
+-    if (r.ms < was && to === undefined)
++    if (r.ms < was && to === undefined && mon("site-ratchet"))
+       bad.push(
+         `${r.key}  ${was}ms → ${r.ms}ms — SHORTENED (W8 QUALITY LAW). A shortening needs a RETUNE row keyed on this site with a cite and \`to: ${r.ms}\`.  ${r.clause}`,
+       );
+@@ -1267,6 +1494,36 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   for (const [key] of siteTo)
+     if (!liveMs.has(key))
+       bad.push(`RETUNE row for ${key}, which is not a live site — STALE.`);
++  // 2b · THE SUBJECT COMPOUND, NEVER THE PRELUDE (pass 8, charter row 1; LAWS P7 §F). A new key
++  //     was 'a new position with nothing to shorten', so `html .cell-reveal-animated { animation:
++  //     cell-reveal var(--motion-whisper) … }` in index.css — or `.cell.cell-reveal-animated` in
++  //     scene.css, or a longhand `animation-duration` in the banked rule itself — shipped the reveal
++  //     at 150 ms in both engines with every CI gate at 0 (pass-7 critique §2.1, L7a/L7b/L1–L3).
++  //     A site's subject is the positive classes of its selector's subject compound, read by the
++  //     ONE library: a NEW key whose subject carries every class of a banked key's subject (so it
++  //     reaches that element — a descendant scope, a compound, an `:is()` arm, a state) and moves
++  //     the same thing (the same family, and the same term unless it is an animation, which
++  //     replaces the element's animation whole, or a longhand, which sets every term) may not ship
++  //     below the banked length. A class-less subject (`*`, a tag, an attribute) reaches every
++  //     subject. The escape is a RETUNE keyed on the NEW site, with its value and its cite.
++  if (mon("subject-reach")) {
++    const live = new Map();
++    for (const r of rows) if (r.key in sites && !live.has(r.key)) live.set(r.key, r);
++    for (const r of rows) {
++      if (r.key in sites || siteTo.has(r.key)) continue;
++      const rs = subjectSets(r.key.split(" :: ")[1]);
++      for (const [k, was] of Object.entries(sites)) {
++        if (r.ms >= was) continue;
++        const kr = live.get(k);
++        if (!kr || kr.fam !== r.fam) continue;
++        if (!(r.longhand || r.fam === "animation" || kr.term === r.term)) continue;
++        if (!reaches(rs, subjectSets(k.split(" :: ")[1]))) continue;
++        bad.push(
++          `${r.key}  ships ${r.ms}ms and its SUBJECT reaches ${k}, banked at ${was}ms — a compound override on a banked subject is a shortening, not a new position. A RETUNE keyed on this site with a cite and \`to: ${r.ms}\`, or ship it at ≥ ${was}ms.  ${r.clause}`,
++        );
++      }
++    }
++  }
+   // 3 · THE ORPHAN CLAUSE (pass-4, the other half of §2.1's cure). Masking the selector shut
+   //     the prose door; this shuts the last one. A shortening can now hide ONLY by moving the
+   //     key itself — rewriting the rule head, re-spelling the property — and a banked key that
+@@ -1385,9 +1642,10 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+           );
+       continue;
+     }
+-    bad.push(
+-      `${key}  banked at ${was}ms and GONE — the KEY moved or the file left, which is how a shortening hides from a content-anchored ratchet. Needs a MOVED row (\`newKey\`, \`ms: ${was}\`) or a DELETED row (\`ms: ${was}\`) with a cite.`,
+-    );
++    if (mon("orphan"))
++      bad.push(
++        `${key}  banked at ${was}ms and GONE — the KEY moved or the file left, which is how a shortening hides from a content-anchored ratchet. Needs a MOVED row (\`newKey\`, \`ms: ${was}\`) or a DELETED row (\`ms: ${was}\`) with a cite.`,
++      );
+   }
+   // 4 · THE TS CLOCKS (pass 7, charter row 5 / INTAKE-23 row 18). The code roster counted
+   //     22 clocks and ratcheted none: `gridSubgrid.duration` 280 → 250 was a silent edit. A
+@@ -1415,7 +1673,7 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+         );
+       continue;
+     }
+-    if (now < was && to === undefined)
++    if (now < was && to === undefined && mon("ts-ratchet"))
+       bad.push(
+         `${path}  ${was}ms → ${now}ms — a TS clock SHORTENED (W8 QUALITY LAW). A deliberate shortening is a RETUNE \`{ ts: "${path}", to: ${now} }\` citing its census.`,
+       );
+@@ -1499,7 +1757,7 @@ function baseConsumers(cls) {
+         "-F",
+         "-e",
+         tr ? tr[1] : cls,
+-        BASE_REF,
++        BASE_SHA,
+         "--",
+         ":(top)web/frontend/src",
+         ":(top)web/frontend/index.html",
+@@ -1519,7 +1777,7 @@ function baseConsumers(cls) {
+         rel,
+         codeOf(
+           rel,
+-          execFileSync("git", ["show", `${BASE_REF}:web/frontend/${rel}`], {
++          execFileSync("git", ["show", `${BASE_SHA}:web/frontend/${rel}`], {
+             cwd: ROOT,
+             encoding: "utf8",
+             maxBuffer: 32e6,
+@@ -1581,7 +1839,7 @@ function subjectBinding(oldKey, newKey, was, rows, sites, ctx = {}) {
+ /** Is BASE_REF in this clone? CI's checkout is depth 1; ci.yml fetches the one commit. */
+ function baseReachable() {
+   try {
+-    execFileSync("git", ["rev-parse", "--verify", "--quiet", `${BASE_REF}^{commit}`], {
++    execFileSync("git", ["rev-parse", "--verify", "--quiet", `${BASE_SHA}^{commit}`], {
+       cwd: ROOT,
+       stdio: "ignore",
+     });
+@@ -1598,7 +1856,7 @@ function deriveBase(decls, lad) {
+   try {
+     src = execFileSync(
+       "git",
+-      ["show", `${BASE_REF}:web/frontend/src/pencil/config/pencilConfig.ts`],
++      ["show", `${BASE_SHA}:web/frontend/src/pencil/config/pencilConfig.ts`],
+       {
+         cwd: ROOT,
+         encoding: "utf8",
+@@ -1617,7 +1875,7 @@ function baseSites(decls, lad) {
+   for (const f of new Set(decls.filter((d) => !d.dev).map((d) => d.file))) {
+     let text;
+     try {
+-      text = execFileSync("git", ["show", `${BASE_REF}:web/frontend/${f}`], {
++      text = execFileSync("git", ["show", `${BASE_SHA}:web/frontend/${f}`], {
+         cwd: ROOT,
+         encoding: "utf8",
+         maxBuffer: 32e6,
+@@ -1626,7 +1884,9 @@ function baseSites(decls, lad) {
+     } catch {
+       continue;
+     }
+-    for (const r of inventoryRows(collectText(text, f), lad))
++    const found = collectText(text, f);
++    const all = [...found, ...libraryOnly(join(ROOT, f), text, f, found)];
++    for (const r of inventoryRows(all, lad))
+       sites[r.key] = Math.max(sites[r.key] ?? 0, r.ms);
+   }
+   return sites;
+@@ -1659,7 +1919,7 @@ function readBank(decls, lad) {
+  * that digests otherwise reds; re-banking is a change to THIS file, in review. Where BASE_REF is
+  * reachable the floor is also RE-DERIVED, and any bank site below (or missing from) the base reds.
+  */
+-const BANK_SHA256 = "f6de1ab4092694dc65ae048b158cfb8375767e8e16b33102c61cde017fa1363f";
++const BANK_SHA256 = "477a28ab8b00cdf325db92ad5891654660813e12b48f5a9150f37dc31c7b416d";
+ 
+ function bankDigest(j) {
+   const sorted = (o = {}) =>
+@@ -1673,6 +1933,7 @@ function bankDigest(j) {
+         rungs: sorted(j.rungs),
+         sites: sorted(j.sites),
+         ts: sorted(j.ts),
++        consumers: j.consumers ? sorted(j.consumers) : undefined,
+       }),
+     )
+     .digest("hex");
+@@ -1682,7 +1943,7 @@ function b6Floor(bank, derive, digest = BANK_SHA256) {
+   if (!bank || bank.fromGit) return [];
+   const bad = [];
+   const got = bankDigest(bank);
+-  if (got !== digest)
++  if (got !== digest && mon("floor-digest"))
+     bad.push(
+       `motion-bank.json digests to ${got.slice(0, 12)}…, and the gate holds ${digest.slice(0, 12)}… — the floor was re-written outside the gate. Re-bank with --bank and re-stamp BANK_SHA256 in this script (a reviewed change), or restore the file.`,
+     );
+@@ -1696,10 +1957,11 @@ function b6Floor(bank, derive, digest = BANK_SHA256) {
+   // so the floor was the stamp alone — and the stamp lives in the file the same commit edits
+   // (the critic's 3-line A2c: bank 200 → 150 + CSS + a re-stamped BANK_SHA256 exited 0 printing
+   // "nothing shortened"). An unreachable base is RED; ci.yml fetches the one commit.
++  if (!base && !mon("floor-derive")) return bad;
+   if (!base)
+     return [
+       ...bad,
+-      `${BASE_REF} is not in this clone — the floor cannot be re-derived, and a stamp its author can re-write is no floor. Fetch it (ci.yml: \`git fetch --depth=1 origin ${BASE_REF}\`).`,
++      `${BASE_REF} is not in this clone — the floor cannot be re-derived, and a stamp its author can re-write is no floor. Fetch it (ci.yml: \`git fetch --no-tags --depth=1 origin ${BASE_SHA}\`).`,
+     ];
+   for (const [k, v] of Object.entries(base.ts ?? {})) {
+     const b = bank.ts?.[k];
+@@ -1804,12 +2066,14 @@ const KEYWORD_TWINS = [
+     points: UA_POINTS["ease-in"],
+     since: "T3-W13 (the Bloom's star tuck, kept verbatim under T9-M15)",
+     chair: null,
++    ceiling: 2,
+   },
+   {
+     token: "--ease-starFade",
+     points: UA_POINTS["ease-out"],
+     since: "T3-W13 (the star's crest fade)",
+     chair: null,
++    ceiling: 1,
+   },
+   {
+     token: "--ease-prmFade",
+@@ -1822,15 +2086,25 @@ const KEYWORD_TWINS = [
+     points: UA_POINTS.linear,
+     since: "the laminate's PRM fade (a same-frame fallback)",
+     chair: null,
++    ceiling: 1,
+   },
+   {
+     token: "--verb-dusk-ease",
+     points: UA_POINTS.ease,
+     since: "T3-W10 — the dusk's `ease`, published as a verb",
+     chair: null,
++    ceiling: 2,
+   },
+ ];
+ 
++/** The lane-admitted twins, frozen by name (pass 8, charter row 7). */
++const LANE_TWINS = new Set([
++  "--ease-starTuck",
++  "--ease-starFade",
++  "--ease-prmLinear",
++  "--verb-dusk-ease",
++]);
++
+ /** The CSS text of a source: every SFC `<style>` block, a stylesheet whole, index.html's
+  *  `<style>` — the SHAPE law's "every stylesheet" (LAWS P6 §F), read through the one library. */
+ function cssBlocks(f, text) {
+@@ -1844,16 +2118,65 @@ function cssBlocks(f, text) {
+ /** Every `--ease-*` / `--verb-*-ease` declaration in every stylesheet (src, public/, index.html,
+  *  `@theme` included): name → [values]. Pass 6 read src .css/.vue by regex; the library reads the
+  *  declarations whole, `!important` and all. */
+-function curveTokens(files = sources(ROOT)) {
++const CURVE_TOKEN = /^--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)$/;
++function curveTokens(files = sources(ROOT), read = (f) => readFileSync(f, "utf8")) {
+   const map = new Map();
++  const code = [];
+   for (const f of files) {
+-    const text = readFileSync(f, "utf8");
++    const text = read(f);
+     for (const css of cssBlocks(f, text))
+       for (const r of cssRules(css))
+         for (const d of r.decls)
+-          if (/^--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)$/.test(d.prop))
++          if (CURVE_TOKEN.test(d.prop))
+             map.set(d.prop, [...(map.get(d.prop) ?? []), d.value]);
++    if (f.endsWith(".vue"))
++      for (const sc of sfc(text).scripts) code.push([f, sc.text, sc.line]);
++    else if (/\.(ts|tsx|js|mjs)$/.test(f)) code.push([f, text, 1]);
++    else if (f.endsWith(".html"))
++      for (const m of text.matchAll(/<script[^>]*>([\s\S]*?)<\/script>/g))
++        code.push([f, m[1], 1]);
+   }
++  // THE SCRIPT PUBLISHER (pass 8, charter row 4). `setProperty("--ease-anticipatePop", "ease-in")`
++  // in main.ts made the reveal AND DarkModeToggle's `scale … var(--ease-anticipatePop)` transition
++  // compute `ease-in` in both engines while this map read stylesheets only (pass-7 critique §2.5,
++  // E1). Every script write of a curve token — `setProperty`, `.style[…]`, `Object.assign`,
++  // `cssText` — is read through the ONE library's `scriptWrites` and joins the token's values; a
++  // value that is not a string literal, or a computed name that could spell a curve token, is
++  // UNRESOLVED and reds (B8 cannot read the curve it publishes).
++  const blind = [];
++  if (mon("curve-publishers"))
++    for (const [f, text, line] of code) {
++      if (!/setProperty|\.style\b|cssText|setAttribute/.test(text)) continue;
++      const names = new Set([
++        ...map.keys(),
++        ...[...text.matchAll(/--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)\b/g)].map(
++          (m) => m[0],
++        ),
++      ]);
++      const seen = new Set();
++      for (const name of names)
++        for (const w of scriptWrites(text, name, line)) {
++          const at = `${relative(ROOT, f)}:${w.line}`;
++          if (w.unresolved) {
++            if (seen.has(at)) continue;
++            seen.add(at);
++            if (/ease|verb|`|\+|\[/.test(w.prop) || !/^\?["'`]?--/.test(w.prop))
++              blind.push(
++                `${at}  ${w.kind} ${w.prop.slice(1)} = ${w.value.slice(0, 40)} — a script write whose NAME the library cannot resolve; it may publish a curve token B8 never reads (UNRESOLVED, never a non-publisher).`,
++              );
++            continue;
++          }
++          const lit = /^(["'`])([^"'`$]*)\1$/.exec(w.value.trim());
++          if (!lit) {
++            blind.push(
++              `${at}  ${name} = ${w.value.slice(0, 40)} — a curve token published from script with a value B8 cannot read (UNRESOLVED).`,
++            );
++            continue;
++          }
++          map.set(name, [...(map.get(name) ?? []), lit[2]]);
++        }
++    }
++  map.blind = blind;
+   return map;
+ }
+ 
+@@ -1959,8 +2282,9 @@ function b8Curve(
+   twins = KEYWORD_TWINS,
+   longhands = timingLonghands(),
+ ) {
+-  const bad = [];
++  const bad = [...(toks.blind ?? [])];
+   const twinUsed = new Set();
++  const twinReads = new Map();
+   for (const d of decls) {
+     if (d.dev || !/^transition$/.test(d.prop)) continue;
+     const seen = new Set();
+@@ -1989,8 +2313,10 @@ function b8Curve(
+             const kw = Object.keys(UA_POINTS).find((k) => UA_POINTS[k] === pts);
+             if (!kw) continue;
+             const row = twins.find((r) => r.token === name && r.points === pts);
+-            if (row) twinUsed.add(row);
+-            else
++            if (row) {
++              twinUsed.add(row);
++              twinReads.set(row, (twinReads.get(row) ?? 0) + 1);
++            } else
+               bad.push(
+                 `${d.rel}  var(${name}) = ${v} — \`${kw}\`'s own points under a house name, and no KEYWORD_TWINS row admits it by value.  ${q.clause}`,
+               );
+@@ -2033,6 +2359,27 @@ function b8Curve(
+       bad.push(
+         `KEYWORD_TWINS ${r.token} @ (${r.points}) admits nothing — no shipped transition reads it at those points; STALE.`,
+       );
++  // THE LANE'S OWN ADMISSIONS ARE RATCHETED (pass 8, charter row 7). The four twins no chair
++  // admitted (`chair: null`) are FROZEN by name, and each is held to the number of shipped
++  // transition clauses that read it at this bank (`ceiling`): the UA's taste may shrink, never
++  // spread. A new lane-admitted row, a frozen row that loses its ceiling, or a twin read by one
++  // more clause than its ceiling, reds; the chair's row (`chair: "<ruling>"`) is the only door.
++  if (mon("twin-ratchet"))
++    for (const r of twins) {
++      if (r.chair) continue;
++      if (!LANE_TWINS.has(r.token))
++        bad.push(
++          `KEYWORD_TWINS ${r.token} is a NEW lane-admitted twin (chair: null) — a lane may not admit a keyword by value; the chair's row or none.`,
++        );
++      else if (typeof r.ceiling !== "number")
++        bad.push(
++          `KEYWORD_TWINS ${r.token} carries no \`ceiling\` — a lane's admission is ratcheted by its reads.`,
++        );
++      else if ((twinReads.get(r) ?? 0) > r.ceiling)
++        bad.push(
++          `KEYWORD_TWINS ${r.token} is read by ${twinReads.get(r)} shipped transition clauses, above its ceiling ${r.ceiling} — a lane-admitted keyword SPREAD.`,
++        );
++    }
+   return bad;
+ }
+ 
+@@ -2321,6 +2668,20 @@ const ADMITTED_ARITH = [
+     ms: 16,
+     why: "RATE — `FRONT_MIN_MS`, frontGate's budget: the hand's displacement clause less one millisecond (A.6, INTAKE-23 row 20)",
+   },
++  // PASS 8 · a COMPUTED bracket into the rungs is a runtime read (the library's `bracket`): each
++  // row names what types the index, so a new `MOTION.rungs[pick]` elsewhere reds until it does.
++  {
++    file: "src/pencil/config/pencilConfig.ts",
++    expr: "MOTION.rungs[rung]",
++    ms: null,
++    why: "RUNTIME — `spend(verb, rung)`: the rung is TYPED to `MOTION.verbs[verb].rungs[number]`, so the index is the verb's own table (lint:verbs holds the table)",
++  },
++  {
++    file: "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts",
++    expr: "serial ? MOTION.rungs[MOTION.hand.serial[key]] : preset.duration",
++    ms: null,
++    why: "RUNTIME — the one hand's line clock: the rung NAMED per line class in `MOTION.hand.serial` (T9-B25 arm a; INTAKE-23 row 1)",
++  },
+ ];
+ 
+ /** The clock roots: MOTION and the admitted TS sets that live in pencilConfig (the bank's). */
+@@ -2405,12 +2766,46 @@ function arithSites(files = null) {
+       /\bconst\s+(\w+)\s*=\s*(-?\d+(?:\.\d+)?|true|false)(?:\s+as\s+\w+)?\s*;/g,
+     ))
+       consts.set(m[1], m[2]);
++    // PASS 8 (charter row 3; LAWS P7 §F): a clock read is arithmetic when the ONE library says so —
++    // an operator (`* / % - +`, `>>`, `<<`, `|`, `&`, `^`), an argument of `Math.min/max/floor/…`,
++    // or a bracket access (`MOTION.rungs["whisper"] / 3`, `MOTION.rungs[k]`). The pass-7 reader
++    // matched `* / % -` after a dotted read only: `Math.min(MOTION.rungs.whisper, 40)`,
++    // `MOTION.rungs["whisper"] / 3` and `MOTION.rungs.whisper >> 2` each shipped a 37–50 ms WAAPI
++    // clock with every gate at 0. Aliases and derived names are read BARE (`clock-alias`).
++    const libNames = [
++      ...roots.map((n) => [n, false]),
++      ...[...alias.keys(), ...derived.keys()].map((n) => [n, true]),
++    ];
++    // B13's subject is SHORTENING arithmetic (a sum only ever lengthens — the pass-7 NEGATIVE-
++    // NEGATIVE stands): `Math.*`, a bracket into a group that holds numbers, and every operator but
++    // `+` (`>>`, `<<`, `|`, `&`, `^`, `~`, `**` beside `* / % -`).
++    const numericGroup = (expr) => {
++      const head = expr.slice(0, expr.indexOf("["));
++      const path = alias.get(head) ?? head;
++      return [...CLOCK_LEAVES].some((l) => l.startsWith(`${path}.`));
++    };
++    const libArith = (line) =>
++      mon("arith-lib") &&
++      libNames.some(([n, bare]) =>
++        clockReads(line, n, { bare }).some(
++          (r) =>
++            r.arith &&
++            (r.how === "math" ||
++              (r.how === "bracket" && numericGroup(r.expr)) ||
++              (r.how === "operator" && r.op !== "+")),
++        ),
++      );
+     code.split("\n").forEach((line, i) => {
+       for (const m of line.matchAll(read)) {
+-        if (roots.includes(m[0])) continue; // a bare root object, no member read
++        if (roots.includes(m[0]) && !/^\s*\[/.test(line.slice(m.index + m[0].length)))
++          continue; // a bare root object, no member read
+         const before = line.slice(0, m.index);
+         const after = line.slice(m.index + m[0].length);
+-        if (!/^\s*\)*\s*[-*/%](?![=>])/.test(after) && !/[-*/%]\s*\(*\s*$/.test(before))
++        if (
++          !/^\s*\)*\s*[-*/%](?![=>])/.test(after) &&
++          !/[-*/%]\s*\(*\s*$/.test(before) &&
++          !libArith(line)
++        )
+           continue;
+         const expr = unwrapLine(
+           line
+@@ -2438,7 +2833,9 @@ function arithValue({ expr, alias, derived = new Map(), consts }, lad) {
+     for (const [k, v] of Object.entries(tsLeaves(lad.src ?? "", root)))
+       leaves[`${root}.${k}`] = v;
+   for (const r of lad.rungs) leaves[`MOTION.rungs.${r.key}`] = r.value;
+-  let s = expr;
++  // a literal bracket is a member (`MOTION.rungs["whisper"]` → `MOTION.rungs.whisper`); a
++  // computed one stays, and the value is then a runtime read (null)
++  let s = expr.replace(/\[\s*(["'`])([A-Za-z_$][\w$]*)\1\s*\]/g, ".$2");
+   for (let pass = 0; pass < 4; pass++)
+     for (const [d, rhs] of derived)
+       s = s.replace(new RegExp(`(?<![\\w.$])${reEsc(d)}\\b`, "g"), `(${rhs})`);
+@@ -2463,6 +2860,117 @@ function arithValue({ expr, alias, derived = new Map(), consts }, lad) {
+   }
+ }
+ 
++/**
++ * THE CONSUMER ROSTER (pass 8, charter row 3; LAWS P7 §F: "TS consumers of `MOTION.*` are banked
++ * and ratcheted like CSS sites"). The bank held the 22 TS clock DECLARATIONS; a consumer that read
++ * `MOTION.rungs.leave` could read `.whisper` instead (AnswerKeyLaminate's `LIFT_MS`, App.vue's
++ * beat 0: 200 → 150 ms, every gate and eslint at 0 — pass-7 critique §2.3, L5/L6). The roster is
++ * every read of a clock root in shipped code, keyed `file :: ROOT.path` (a literal bracket folded
++ * to a member; a computed one is `[?]`, B13's subject) with its count and its value; destructured
++ * members (`const { leave } = MOTION.rungs`) are reads of each member.
++ */
++function consumerRoster(files = null, lad = null) {
++  const src = lad?.src ?? readFileSync(CONFIG, "utf8");
++  const leaves = {};
++  for (const root of CLOCK_ROOTS)
++    for (const [k, v] of Object.entries(tsLeaves(src, root)))
++      leaves[`${root}.${k}`] = v;
++  for (const r of lad?.rungs ?? []) leaves[`MOTION.rungs.${r.key}`] = r.value;
++  const texts =
++    files ??
++    sources(ROOT)
++      .map((f) => [relative(ROOT, f), f])
++      .filter(
++        ([rel]) =>
++          /\.(ts|tsx|js|vue)$/.test(rel) &&
++          !/\.(test|spec)\.[jt]sx?$/.test(rel) &&
++          !rel.includes("/pencil/dev/"),
++      )
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  const out = {};
++  const add = (rel, path) => {
++    const k = `${rel} :: ${path}`;
++    const ms = leaves[path];
++    out[k] = [(out[k]?.[0] ?? 0) + 1, typeof ms === "number" ? ms : null];
++  };
++  for (const [rel, text] of texts) {
++    const code = rel.endsWith(".vue")
++      ? sfc(text)
++          .scripts.map((sc) => stripJs(sc.text))
++          .join("\n")
++      : stripJs(text);
++    for (const root of CLOCK_ROOTS) {
++      for (const r of clockReads(code, root))
++        add(
++          rel,
++          r.expr
++            .replace(/\[(["'`])([A-Za-z_$][\w$]*)\1\]/g, ".$2")
++            .replace(/\[[^\]]*\]\]?/g, "[?]"),
++        );
++      for (const m of code.matchAll(
++        new RegExp(
++          `\\{([^{}]*)\\}\\s*=\\s*(${reEsc(root)}(?:\\.\\w+)*)\\s*[;\\n]`,
++          "g",
++        ),
++      ))
++        for (const part of m[1].split(",")) {
++          const from = part.split(":")[0].split("=")[0].trim();
++          if (/^[A-Za-z_$][\w$]*$/.test(from)) add(rel, `${m[2]}.${from}`);
++        }
++    }
++  }
++  return out;
++}
++
++/** B6 · 5 — the roster ratchet. A banked read (`file :: path` at n reads, value ms) that the tree
++ *  holds FEWER of has left its line: lawful when the same file gained reads of paths worth at
++ *  least ms (a move up, a rename), RED when the file gained a SHORTER one (the swap), RED when it
++ *  gained nothing (it left — a DELETED/MOVED row `{ consumer, ms }` with a cite), unless a RETUNE
++ *  `{ consumer, to }` licenses the one swap it names. */
++function consumerRatchet(bank, roster, ledger = LEDGER) {
++  if (!mon("consumer-roster")) return [];
++  const bad = [];
++  const banked = bank?.consumers;
++  if (!banked)
++    return [
++      "motion-bank.json carries no `consumers` roster — the TS consumers of the ladder are unratcheted (charter row 3).",
++    ];
++  const esc = (k) => ledger.find((r) => r.consumer === k);
++  for (const [k, [n, ms]] of Object.entries(banked)) {
++    if (ms === null) continue;
++    const now = roster[k]?.[0] ?? 0;
++    if (now >= n) continue;
++    const file = k.split(" :: ")[0];
++    const gained = Object.entries(roster).filter(
++      ([g, [gn, gms]]) =>
++        g !== k &&
++        g.split(" :: ")[0] === file &&
++        gms !== null &&
++        gn > (banked[g]?.[0] ?? 0),
++    );
++    const lower = gained.filter(([, [, gms]]) => gms < ms);
++    const row = esc(k);
++    if (row) {
++      if (row.cls === "RETUNE" && lower.some(([, [, gms]]) => gms === row.to)) continue;
++      if (
++        (row.cls === "DELETED" || row.cls === "MOVED") &&
++        row.ms === ms &&
++        !lower.length
++      )
++        continue;
++    }
++    if (lower.length)
++      bad.push(
++        `${k}  banked ${n}× at ${ms}ms, now ${now}× — and ${file} gained ${lower.map(([g, [, gms]]) => `${g.split(" :: ")[1]} (${gms}ms)`).join(", ")}: a consumer SWAPPED to a shorter rung. A RETUNE \`{ consumer: "${k}", to: <ms> }\` citing its census, or read the rung it read.`,
++      );
++    else if (!gained.some(([, [, gms]]) => gms >= ms))
++      bad.push(
++        `${k}  banked ${n}× at ${ms}ms, now ${now}× — a consumer LEFT. A DELETED or MOVED row \`{ consumer: "${k}", ms: ${ms} }\` with a cite.`,
++      );
++  }
++  return bad;
++}
++
+ function b13Arith(lad, sites = arithSites(), admitted = ADMITTED_ARITH) {
+   const bad = [];
+   const used = new Set();
+@@ -2774,13 +3282,16 @@ if (WRITE_BANK) {
+   // TS clocks: the base's value, or the tree's where the tree is longer or the clock is new
+   const ts = { ...base.ts };
+   for (const [k, v] of Object.entries(lad.ts)) ts[k] = Math.max(ts[k] ?? 0, v);
+-  const j = { base: BASE_REF, rungs, sites, ts };
++  // the consumer roster (pass 8): the tree's, as it stands — the ladder does not exist at the
++  // base, so this floor is the STAMP's (a re-bank is a change to BANK_SHA256, in review)
++  const consumers = consumerRoster(null, lad);
++  const j = { base: BASE_REF, rungs, sites, ts, consumers };
+   writeFileSync(
+     BANK,
+     JSON.stringify({ at: new Date().toISOString(), ...j }, null, 1) + "\n",
+   );
+   console.log(
+-    `banked ${Object.keys(rungs).length} rungs + ${Object.keys(sites).length} sites + ${Object.keys(ts).length} TS clocks → ${relative(ROOT, BANK)}\n` +
++    `banked ${Object.keys(rungs).length} rungs + ${Object.keys(sites).length} sites + ${Object.keys(ts).length} TS clocks + ${Object.keys(consumers).length} consumer reads → ${relative(ROOT, BANK)}\n` +
+       `re-stamp: const BANK_SHA256 = "${bankDigest(j)}";`,
+   );
+   process.exit(0);
+@@ -2851,8 +3362,10 @@ const checks = (ledger = LEDGER) => [
+   [
+     "B6 RATCHET",
+     () => [
++      ...knobFindings(process.env),
+       ...b6Floor(bank, () => deriveBase(decls, lad)),
+       ...b6NoShorten(rows, bank, lad, ledger),
++      ...consumerRatchet(bank, consumerRoster(null, lad), ledger),
+     ],
+   ],
+   ["B7 TAILWIND", () => b7Tailwind()],
+@@ -2885,6 +3398,44 @@ if (awaiting.length)
+     `  KEYWORD_TWINS awaiting the chair's row or their strike (a lane's own admission): ${awaiting.map((r) => r.token).join(", ")}`,
+   );
+ 
++if (SABOTAGE_BATTERY) {
++  // THE GATE'S CLAUSE-SABOTAGE BATTERY (pass 8, LAWS P7 §F (ii)): each ratchet clause switched off
++  // in turn (a child process, `MOTION_SABOTAGE=<id>`), and the self-test must RED every time.
++  const bad = [];
++  for (const id of Object.keys(GATE_CLAUSES)) {
++    let out;
++    let code = 0;
++    try {
++      out = execFileSync(
++        process.execPath,
++        [fileURLToPath(import.meta.url), "--self-test"],
++        {
++          env: { ...process.env, MOTION_SABOTAGE: id },
++          encoding: "utf8",
++          stdio: ["ignore", "pipe", "pipe"],
++          maxBuffer: 64e6,
++        },
++      );
++    } catch (e) {
++      code = e.status ?? 1;
++      out = String(e.stdout ?? "");
++    }
++    const hits = out
++      .split("\n")
++      .map((l, i, a) => (/GREEN — VACUOUS|REGRESSED/.test(l) ? a[i - 1].trim() : null))
++      .filter(Boolean);
++    const red = code !== 0 && hits.length > 0;
++    console.log(
++      `SABOTAGE ${id.padEnd(17)} → ${red ? `RED (${hits.length}: ${hits[0].slice(0, 110)})` : "GREEN — the clause has no plant"}`,
++    );
++    if (!red) bad.push(id);
++  }
++  console.log(
++    `SABOTAGE BATTERY: ${Object.keys(GATE_CLAUSES).length - bad.length}/${Object.keys(GATE_CLAUSES).length} clauses red the self-test when deleted${bad.length ? ` · GREEN: ${bad.join(", ")}` : ""}`,
++  );
++  process.exit(bad.length ? 1 : 0);
++}
++
+ const failures = [];
+ for (const [name, fn] of CHECKS) {
+   const found = run(fn);
+@@ -4177,6 +4728,493 @@ if (SELF_TEST) {
+           ],
+         ]),
+     ],
++    // ══ PASS 8 · the pass-7 critic's plants, each through the clause that now reads it ══════════
++    // ── charter row 1 · B6 on the SUBJECT COMPOUND (L7a, L7b, L1–L3; the `:is()` arm, `*`)
++    ...(() => {
++      const f = "src/assets/index.css";
++      const banked = `.cell-reveal-animated {\n  animation: cell-reveal 0.3s var(--ease-anticipatePop);\n}\n`;
++      const key = `${f} :: .cell-reveal-animated :: cell-reveal`;
++      const bank = { rungs: {}, sites: { [key]: 300 } };
++      const rowsOf = (text, file = f) => {
++        const found = collectText(text, file);
++        return inventoryRows(
++          [...found, ...libraryOnly(join(ROOT, file), text, file, found)],
++          lad,
++        );
++      };
++      const plant = (text, file = f, ledger = []) =>
++        b6NoShorten(
++          [...rowsOf(banked), ...(file === f ? [] : []), ...rowsOf(text, file)],
++          bank,
++          { rungs: [] },
++          ledger,
++        );
++      const overlay = (css) => plant(banked + css);
++      return [
++        [
++          "B6 RATCHET",
++          "L7a VERBATIM — `html .cell-reveal-animated { animation: cell-reveal var(--motion-whisper) … }` in index.css (a compound override; the banked rule untouched)",
++          () =>
++            overlay(
++              "html .cell-reveal-animated {\n  animation: cell-reveal var(--motion-whisper) var(--ease-anticipatePop);\n}\n",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L7b VERBATIM — `.cell.cell-reveal-animated` at whisper in scene.css (another file, a compound)",
++          () =>
++            b6NoShorten(
++              [
++                ...rowsOf(banked),
++                ...rowsOf(
++                  ".cell.cell-reveal-animated {\n  animation: cell-reveal var(--motion-whisper) var(--ease-anticipatePop);\n}\n",
++                  "src/games/shared/scene.css",
++                ),
++              ],
++              bank,
++              { rungs: [] },
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L1 VERBATIM — a longhand `animation-duration: var(--motion-whisper)` inside the banked rule",
++          () =>
++            plant(
++              `.cell-reveal-animated {\n  animation: cell-reveal 0.3s var(--ease-anticipatePop);\n  animation-duration: var(--motion-whisper);\n}\n`,
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L2t — a `transition-duration: 50ms` longhand on a banked transition's subject (the term the longhand cannot spell)",
++          () =>
++            b6NoShorten(
++              rowsOf(
++                ".x {\n  transition: opacity 0.3s var(--ease-standard);\n}\n.x { transition-duration: 50ms; }\n",
++              ),
++              { rungs: {}, sites: { [`${f} :: .x :: opacity`]: 300 } },
++              { rungs: [] },
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L3 VERBATIM — a semicolon-less last declaration `animation-duration: 50ms }` (the library's reading, the scan's blind spot)",
++          () => overlay(".cell-reveal-animated { animation-duration: 50ms }\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "L4 VERBATIM — index.html's `<style>.cell-reveal-animated{animation-duration:50ms;}</style>`",
++          () =>
++            b6NoShorten(
++              [
++                ...rowsOf(banked),
++                ...rowsOf(
++                  "<html><head><style>.cell-reveal-animated{animation-duration:50ms;}</style></head></html>",
++                  "index.html",
++                ),
++              ],
++              bank,
++              { rungs: [] },
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "an `:is()` arm — `:is(.board, .cell-reveal-animated) { animation: cell-reveal 0.15s … }`",
++          () =>
++            overlay(
++              ":is(.board, .cell-reveal-animated) {\n  animation: cell-reveal 0.15s var(--ease-anticipatePop);\n}\n",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "the wildcard subject — `* { animation-duration: 50ms }` (outside any reduce block) reaches every subject",
++          () => overlay("* { animation-duration: 50ms; }\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a compound override at a LONGER rung (`html .cell-reveal-animated` at dusk 350 ≥ 300)",
++          () =>
++            overlay(
++              "html .cell-reveal-animated {\n  animation: cell-reveal var(--motion-dusk) var(--ease-anticipatePop);\n}\n",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — L7a with a RETUNE keyed on the NEW site, its value and its cite",
++          () =>
++            plant(
++              banked +
++                "html .cell-reveal-animated {\n  animation: cell-reveal var(--motion-whisper) var(--ease-anticipatePop);\n}\n",
++              f,
++              [
++                {
++                  cls: "RETUNE",
++                  key: `${f} :: html .cell-reveal-animated :: cell-reveal`,
++                  to: 150,
++                  why: "registry-v9 — the reveal re-cut",
++                },
++              ],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a NEW transition on another term of a banked subject (`.x :: transform` 150 beside `.x :: opacity` 300), and a sibling class (`.cell-revealer`)",
++          () =>
++            b6NoShorten(
++              rowsOf(
++                ".x {\n  transition: opacity 0.3s var(--ease-standard);\n}\n.x.y {\n  transition: transform 0.15s var(--ease-standard);\n}\n.cell-revealer { animation: cell-reveal 0.15s var(--ease-standard); }\n" +
++                  banked,
++              ),
++              { rungs: {}, sites: { [`${f} :: .x :: opacity`]: 300, [key]: 300 } },
++              { rungs: [] },
++              [],
++            ),
++        ],
++      ];
++    })(),
++    // ── charter row 2 · the collection walks the library's sources (index.html, public/**)
++    [
++      "B6 RATCHET",
++      "NEGATIVE-NEGATIVE — collect() reads index.html (a finding here means the walk is src/ only again)",
++      () =>
++        collectFiles().some((p) => relative(ROOT, p) === "index.html")
++          ? []
++          : [
++              "index.html is not collected — a `<style>` there shortens a subject past B6.",
++            ],
++    ],
++    // ── charter row 3 · the TS consumer roster (L5, L6) and B13's spellings (M1–M3)
++    ...(() => {
++      const ak = "src/pencil/sheet/AnswerKeyLaminate.vue";
++      const app = "src/App.vue";
++      const sfcOf = (code) => `<script setup lang="ts">\n${code}\n</script>\n`;
++      const bank = {
++        consumers: {
++          [`${ak} :: MOTION.rungs.leave`]: [1, 200],
++          [`${app} :: MOTION.rungs.leave`]: [2, 200],
++        },
++      };
++      const roster = (pairs) => consumerRoster(pairs, lad);
++      const both = (akCode, appCode) =>
++        roster([
++          [ak, sfcOf(akCode)],
++          [app, sfcOf(appCode)],
++        ]);
++      const lawful = both(
++        "const LIFT_MS = MOTION.rungs.leave;",
++        "t = setTimeout(() => {}, MOTION.rungs.leave);\nconst u = MOTION.rungs.leave;",
++      );
++      return [
++        [
++          "B6 RATCHET",
++          "L5 VERBATIM — AnswerKeyLaminate `LIFT_MS = MOTION.rungs.leave` → `.whisper` (200 → 150)",
++          () =>
++            consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = MOTION.rungs.whisper;",
++                "t = setTimeout(() => {}, MOTION.rungs.leave);\nconst u = MOTION.rungs.leave;",
++              ),
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L6 VERBATIM — App.vue beat 0 `}, MOTION.rungs.leave);` → `.whisper`",
++          () =>
++            consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = MOTION.rungs.leave;",
++                "t = setTimeout(() => {}, MOTION.rungs.whisper);\nconst u = MOTION.rungs.leave;",
++              ),
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "L6 through a destructure — `const { whisper: beat0 } = MOTION.rungs` in place of the leave read",
++          () =>
++            consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = MOTION.rungs.leave;",
++                "const { whisper: beat0 } = MOTION.rungs;\nconst u = MOTION.rungs.leave;",
++              ),
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "a banked consumer LEAVES with no row (the read deleted, nothing gained)",
++          () =>
++            consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = 0;",
++                "const u = MOTION.rungs.leave;\nconst v = MOTION.rungs.leave;",
++              ),
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the lawful roster, a swap UP (leave → dusk), and a RETUNE naming the one swap",
++          () => [
++            ...consumerRatchet(bank, lawful, []),
++            ...consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = MOTION.rungs.dusk;",
++                "t = setTimeout(() => {}, MOTION.rungs.leave);\nconst u = MOTION.rungs.leave;",
++              ),
++              [],
++            ),
++            ...consumerRatchet(
++              bank,
++              both(
++                "const LIFT_MS = MOTION.rungs.whisper;",
++                "t = setTimeout(() => {}, MOTION.rungs.leave);\nconst u = MOTION.rungs.leave;",
++              ),
++              [
++                {
++                  cls: "RETUNE",
++                  consumer: `${ak} :: MOTION.rungs.leave`,
++                  to: 150,
++                  why: "T9-B99 — the lift re-cut",
++                },
++              ],
++            ),
++          ],
++        ],
++      ];
++    })(),
++    ...(() => {
++      const f = "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts";
++      const one = (code, admitted = []) =>
++        b13Arith(lad, arithSites([[f, code]]), admitted);
++      return [
++        [
++          "B13 ARITHMETIC",
++          "M1 VERBATIM — `duration: Math.min(MOTION.rungs.whisper, 40),` (a 40 ms clock, no operator)",
++          () =>
++            one("x.animate(k, {\n  duration: Math.min(MOTION.rungs.whisper, 40),\n});"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          'M2 VERBATIM — `duration: MOTION.rungs["whisper"] / 3,` (a bracket)',
++          () => one('x.animate(k, {\n  duration: MOTION.rungs["whisper"] / 3,\n});'),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "M3 VERBATIM — `duration: MOTION.rungs.whisper >> 2,` (a shift)",
++          () => one("x.animate(k, {\n  duration: MOTION.rungs.whisper >> 2,\n});"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "an ALIAS read bare — `const W = MOTION.rungs.whisper;` then `duration: Math.min(W, 40)`",
++          () =>
++            one(
++              "const W = MOTION.rungs.whisper;\nx.animate(k, {\n  duration: Math.min(W, 40),\n});",
++            ),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "a computed bracket — `duration: MOTION.rungs[pick],` (any rung at runtime)",
++          () => one("x.animate(k, {\n  duration: MOTION.rungs[pick],\n});"),
++        ],
++        [
++          "B13 ARITHMETIC",
++          "NEGATIVE-NEGATIVE — a fallback `x || MOTION.rungs.whisper` and a read of a string group (`MOTION.verbs[v].ease`) are not arithmetic",
++          () =>
++            one(
++              "const d = opts.d || MOTION.rungs.whisper;\nconst e = MOTION.verbs[v].ease;",
++            ),
++        ],
++      ];
++    })(),
++    // ── charter row 4 · B8 reads a script publisher of a curve token (E1)
++    ...(() => {
++      const css = join(ROOT, "src/assets/index.css");
++      const mainTs = join(ROOT, "src/main.ts");
++      const read = (body) => (p) => (p === mainTs ? body : readFileSync(p, "utf8"));
++      const toggle = [
++        d1(
++          "src/pencil/celestial/DarkModeToggle.vue:913",
++          "scale 150ms var(--ease-anticipatePop) 560ms",
++        ),
++      ];
++      const b8 = (body) =>
++        b8Curve(toggle, curveTokens([css, mainTs], read(body)), [], []);
++      return [
++        [
++          "B8 CURVE",
++          'E1 VERBATIM — main.ts `document.documentElement.style.setProperty("--ease-anticipatePop", "ease-in")`',
++          () =>
++            b8(
++              'document.documentElement.style.setProperty("--ease-anticipatePop", "ease-in");\n',
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "E1 by points — the publisher writes ease-in's own cubic-bezier",
++          () =>
++            b8(
++              'document.documentElement.style.setProperty("--ease-anticipatePop", "cubic-bezier(0.42, 0, 1, 1)");\n',
++            ),
++        ],
++        [
++          "B8 CURVE",
++          'an UNRESOLVED publisher — `setProperty("--ease-anticipatePop", curve)` (a value B8 cannot read)',
++          () =>
++            b8(
++              'const pick = () => "ease-in";\nel.style.setProperty("--ease-anticipatePop", pick());\n',
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "NEGATIVE-NEGATIVE — main.ts publishing the house curve's own points, and no publisher at all",
++          () => [
++            ...b8(
++              'document.documentElement.style.setProperty("--ease-anticipatePop", "cubic-bezier(0.68, -0.55, 0.265, 1.55)");\n',
++            ),
++            ...b8("export {};\n"),
++          ],
++        ],
++      ];
++    })(),
++    // ── charter row 5 · the measured fit has ONE writer (F1)
++    ...(() => {
++      const theme = readFileSync(THEME, "utf8");
++      const card = "src/pencil/chrome/GameGallery/GameCard.vue";
++      const shipped = `<template><div class="live-face-fit"></div></template>\n<style scoped>\n.live-face-fit {\n  transform: translate(-50%, -50%) scale(var(--live-fit));\n}\n</style>\n`;
++      return [
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "F1 VERBATIM — `.live-face-fit { --live-fit: 0.99; … }` in GameCard.vue (a declared default)",
++          () =>
++            liveFitLaw(theme, [
++              [
++                card,
++                shipped.replace(
++                  ".live-face-fit {\n",
++                  ".live-face-fit {\n  --live-fit: 0.99;\n",
++                ),
++              ],
++            ]),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "a `:style` key — `:style=\"{ '--live-fit': 1 }\"` on the mount",
++          () =>
++            liveFitLaw(theme, [
++              [
++                card,
++                shipped.replace(
++                  'class="live-face-fit"',
++                  `class="live-face-fit" :style="{ '--live-fit': 1 }"`,
++                ),
++              ],
++            ]),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "a second script writer — `el.style.setProperty('--live-fit', '1')` in another file",
++          () =>
++            liveFitLaw(theme, [
++              [
++                "src/games/shared/useFlipGlide.ts",
++                "el.style.setProperty('--live-fit', '1');\n",
++              ],
++            ]),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "NEGATIVE-NEGATIVE — GameCard.vue as shipped (the consumer, no writer)",
++          () => liveFitLaw(theme, [[card, shipped]]),
++        ],
++      ];
++    })(),
++    // ── charter row 7 · the lane-admitted twins, frozen and ratcheted by their reads
++    ...(() => {
++      const toks = curveTokens();
++      const withRow = (row) => [...KEYWORD_TWINS, row];
++      return [
++        [
++          "B8 CURVE",
++          "a FIFTH lane-admitted twin (`--ease-hush` at ease-in-out's points, chair: null) on a shipped transition",
++          () =>
++            b8Curve(
++              [...decls, d1("q.vue:1", "opacity var(--motion-leave) var(--ease-hush)")],
++              new Map([...toks, ["--ease-hush", ["cubic-bezier(0.42, 0, 0.58, 1)"]]]),
++              withRow({
++                token: "--ease-hush",
++                points: UA_POINTS["ease-in-out"],
++                chair: null,
++                ceiling: 1,
++              }),
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "a frozen twin SPREADS — one more shipped transition reads `--ease-starTuck` (ceiling 2)",
++          () =>
++            b8Curve(
++              [
++                ...decls,
++                d1("q.vue:1", "opacity var(--motion-leave) var(--ease-starTuck)"),
++              ],
++              toks,
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "NEGATIVE-NEGATIVE — the four frozen twins at their ceilings, and a chair-admitted fifth",
++          () =>
++            b8Curve(
++              [...decls, d1("q.vue:1", "opacity var(--motion-leave) var(--ease-hush)")],
++              new Map([...toks, ["--ease-hush", ["cubic-bezier(0.42, 0, 0.58, 1)"]]]),
++              withRow({
++                token: "--ease-hush",
++                points: UA_POINTS["ease-in-out"],
++                chair: "CHAIR-RULINGS §x",
++              }),
++            ),
++        ],
++      ];
++    })(),
++    // ── the digest clause alone: a bank edited in the lawful direction (a site RAISED, which the
++    //    base floor accepts) and NOT re-stamped — only the stamp can see it
++    [
++      "B6 RATCHET",
++      "a bank RAISED by hand and not re-stamped (the floor re-derived is satisfied; the digest is not)",
++      () => {
++        const k = Object.keys(bank?.sites ?? {})[0];
++        const raised = { ...bank, sites: { ...bank.sites, [k]: bank.sites[k] + 1 } };
++        return b6Floor(raised, () => deriveBase(decls, lad));
++      },
++    ],
++    // ── charter row 10 · no knob on the floor
++    [
++      "B6 RATCHET",
++      "`BASE_REF: HEAD` in a step's env (the floor re-pointed at the commit under review)",
++      () => knobFindings({ BASE_REF: "HEAD" }),
++    ],
++    [
++      "B6 RATCHET",
++      "`ROOT: <another tree>` in a step's env",
++      () => knobFindings({ ROOT: "/tmp/lawful-copy" }),
++    ],
++    [
++      "B6 RATCHET",
++      "NEGATIVE-NEGATIVE — BASE_REF set to the pin itself (short and whole), ROOT unset",
++      () => [
++        ...knobFindings({ BASE_REF: BASE_REF }),
++        ...knobFindings({ BASE_REF: BASE_SHA }),
++      ],
++    ],
+   ];
+   const vacuous = [];
+   for (const [target, desc, fn] of cases) {
+diff --git a/web/frontend/scripts/motion-bank.json b/web/frontend/scripts/motion-bank.json
+index 35a7895b..9598965c 100644
+--- a/web/frontend/scripts/motion-bank.json
++++ b/web/frontend/scripts/motion-bank.json
+@@ -1,5 +1,5 @@
+ {
+-  "at": "2026-09-24T05:04:54.497Z",
++  "at": "2026-09-25T22:55:56.670Z",
+   "base": "74a2b5d9",
+   "rungs": {
+     "whisper": 150,
+@@ -114,6 +114,86 @@
+     "CELEBRATION.heartBounceMs": 550,
+     "CELEBRATION.heartBlinkMs": 240,
+     "MOTION.settleGuardMs": 220,
+-    "MOTION.characters.refuse": 600
++    "MOTION.characters.refuse": 600,
++    "MOTION.hand.stepMs": 17,
++    "MOTION.hand.bakeCeilingMs": 1200
++  },
++  "consumers": {
++    "src/App.vue :: MOTION.rungs.leave": [2, 200],
++    "src/App.vue :: MOTION.settleGuardMs": [1, 220],
++    "src/games/shared/DifficultyTally.vue :: DRAW_IN_PRESETS.glyph.duration": [1, 350],
++    "src/games/shared/GameBoard.vue :: MOTION.characters.refuse": [1, 600],
++    "src/games/shared/useFlipGlide.ts :: MOTION.settleGuardMs": [1, 220],
++    "src/games/shared/useGameCell.ts :: MOTION.characters.refuse": [1, 600],
++    "src/pencil/celestial/DarkModeToggle.vue :: MOTION.bands.moon": [1, 1.5],
++    "src/pencil/celestial/DarkModeToggle.vue :: MOTION.bands.sun": [1, 2],
++    "src/pencil/celestial/DarkModeToggle.vue :: MOTION.beatMs": [1, 125],
++    "src/pencil/chrome/CelebrationHeart.vue :: CELEBRATION.heartBounceMs": [2, 550],
++    "src/pencil/chrome/CelebrationHeart.vue :: CELEBRATION.heartCrestMs": [2, 2650],
++    "src/pencil/chrome/CelebrationHeart.vue :: CELEBRATION.wiggleCycleMs": [1, 600],
++    "src/pencil/chrome/CelebrationHeart.vue :: CELEBRATION.heartBlinkMs": [1, 240],
++    "src/pencil/chrome/CelebrationHeart.vue :: CELEBRATION.heartBlinkDelayMs": [
++      1, 1800
++    ],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starBloomStartMs": [1, 2050],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starBloomMs": [1, 600],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starCrestMs": [1, 2650],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starFlashMs": [1, 320],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starFadeMs": [1, 540],
++    "src/pencil/chrome/CelebrationStar.vue :: CELEBRATION.starLandMs": [1, 260],
++    "src/pencil/chrome/GameGallery/GameCard.vue :: GLYPH_ANIM.hoverWiggleDuration": [
++      1, 600
++    ],
++    "src/pencil/chrome/GameGallery/GameGallery.vue :: MOTION.rungs.throw": [1, 520],
++    "src/pencil/chrome/GameGallery/GameGallery.vue :: MOTION.dealStaggerMs": [1, 90],
++    "src/pencil/chrome/GameGallery/GameGallery.vue :: DRAW_IN_PRESETS.gridFrame.duration": [
++      1, 350
++    ],
++    "src/pencil/chrome/GameGallery/useCarouselGlide.ts :: MOTION.settleGuardMs": [
++      1, 220
++    ],
++    "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue :: MOTION.beatMs": [1, 125],
++    "src/pencil/composables/boilBeat.ts :: MOTION.beatMs": [1, 125],
++    "src/pencil/composables/bootHand.ts :: MOTION.hand.stepMs": [1, 17],
++    "src/pencil/composables/celebration.ts :: CELEBRATION.murmurWindowMs": [2, 2500],
++    "src/pencil/config/pencilConfig.ts :: MOTION.curves.handStroke": [1, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.rungs": [1, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.verbs": [4, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.rungs[?]": [1, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.verbs[?].ease": [1, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.verbs[?].fill": [1, null],
++    "src/pencil/config/pencilConfig.ts :: MOTION.beatMs": [1, 125],
++    "src/pencil/config/pencilConfig.ts :: CELEBRATION.revealStaggerMin": [2, 4],
++    "src/pencil/config/pencilConfig.ts :: CELEBRATION.revealStaggerMax": [1, 24],
++    "src/pencil/config/pencilConfig.ts :: CELEBRATION.revealWindowMs": [1, 1200],
++    "src/pencil/config/pencilConfig.ts :: CELEBRATION.wavefrontCrossMs": [1, 500],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: MOTION.rungs.whisper": [1, 150],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: DRAW_IN_PRESETS.glyph.duration": [1, 350],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: DRAW_IN_PRESETS.glyph.baseDelay": [1, 0],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: GLYPH_ANIM.hoverWiggleDuration": [2, 600],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: CELEBRATION.beat2StartMs": [1, 1350],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: CELEBRATION.flourishCycles": [1, 2],
++    "src/pencil/glyph/HandwrittenGlyph.vue :: CELEBRATION.wiggleCycleMs": [1, 600],
++    "src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue :: MOTION.hand.bakeCeilingMs": [
++      1, 1200
++    ],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: MOTION.rungs[?]": [1, null],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: MOTION.hand.lift": [1, 0.6],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: MOTION.rungs.whisper": [
++      1, 150
++    ],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: DRAW_IN_PRESETS.gridFrame": [
++      1,
++      null
++    ],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: DRAW_IN_PRESETS.gridSubgrid": [
++      1,
++      null
++    ],
++    "src/pencil/grid/HandDrawnGrid/usePathAnimation.ts :: DRAW_IN_PRESETS.gridCell": [
++      1,
++      null
++    ],
++    "src/pencil/sheet/AnswerKeyLaminate.vue :: MOTION.rungs.leave": [1, 200]
+   }
+ }
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb30..3a9aedeb 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -98,6 +98,12 @@ export const CLAUSES = {
+   "semicolon-less": "LADDER · a semicolon-less declaration before a nested rule",
+   "clock-arith":
+     "LADDER · Math.min/max, bracket and bitwise clock reads are arithmetic",
++  "custom-case":
++    "LADDER (pass 8) · a custom property's name is case-sensitive (never kebab-cased) in script writes",
++  "value-parens":
++    "LADDER (pass 8) · a script write's value keeps its own parentheses (a cubic-bezier)",
++  "clock-alias":
++    "LADDER (pass 8) · a bare alias of a clock (`const W = MOTION.rungs.whisper`; `W >> 2`) is a clock read",
+   pcss: "ERASE · .pcss/.postcss sheets walked",
+   "register-split": "ERASE · a split-name registerProperty is resolved or UNRESOLVED",
+   "element-keyed": "TAPE · the subject resolved to template ELEMENTS",
+@@ -740,8 +746,14 @@ export function sets(d, prop) {
+   if (on("longhand") && SHORTHANDS[prop]?.includes(d.prop)) return true;
+   return false;
+ }
+-const kebab = (k) =>
+-  k.replace(/^['"]|['"]$/g, "").replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
++const kebab = (k) => {
++  const n = k.replace(/^['"]|['"]$/g, "");
++  // LADDER (pass 8): a CUSTOM property is case-sensitive and never kebab-cased —
++  // `setProperty("--ease-anticipatePop", …)` read as `--ease-anticipate-pop` matched no token,
++  // so a script publisher of a camelCase curve token was invisible to every token reader
++  if (n.startsWith("--") && on("custom-case")) return n;
++  return n.replace(/[A-Z]/g, (m) => "-" + m.toLowerCase());
++};
+ 
+ // ------------------------------------------------------------------------ folding (VERB/WALK/ERASE)
+ /** Same-file `const|let|var NAME = <foldable>` bindings → their string value (VERB X18: a value
+@@ -1101,9 +1113,12 @@ export function scriptWrites(text, prop, baseLine = 1) {
+         unresolved: true,
+       });
+   }
+-  for (const m of s.matchAll(
+-    /setProperty\(\s*((?:[^,()]|\([^()]*\))+?)\s*,\s*([^)]+)\)/g,
+-  )) {
++  // LADDER (pass 8): a VALUE may carry its own parentheses (`"cubic-bezier(0.68, -0.55, …)"`);
++  // `[^)]+` cut it at the first `)` and the publisher read as a half-string
++  const setPropRe = on("value-parens")
++    ? /setProperty\(\s*((?:[^,()]|\([^()]*\))+?)\s*,\s*((?:[^()]|\((?:[^()]|\([^()]*\))*\))+?)\s*\)/g
++    : /setProperty\(\s*((?:[^,()]|\([^()]*\))+?)\s*,\s*([^)]+)\)/g;
++  for (const m of s.matchAll(setPropRe)) {
+     const k = m[1].trim();
+     const lit = /^(['"`])([^'"`$]*)\1$/.exec(k);
+     const folded = lit ? lit[2] : on("csstext") ? foldConcat(k, consts) : null;
+@@ -1809,20 +1824,28 @@ export function propertyRegistrations(fe, { files, read, exists } = {}) {
+ /** Every read of the motion clock `root` (`MOTION.rungs.whisper`, `MOTION["rungs"].x`) with `arith`
+  *  true when it is ARITHMETIC: an operand of `* / % + - >> << >>> | & ^ ~`, an argument of a Math
+  *  call (`Math.min(MOTION.x, 40)`), or read through a bracket (LADDER M1–M3). */
+-export function clockReads(text, root = "MOTION") {
++export function clockReads(text, root = "MOTION", { bare = false } = {}) {
+   const s = stripJs(text);
+   const out = [];
++  // LADDER (pass 8): a name BOUND to a clock (`const W = MOTION.rungs.whisper`) is read bare —
++  // `Math.min(W, 40)` has no member access, and a root-only reader never saw it
++  const tail = bare && on("clock-alias") ? "*" : "+";
+   const re = new RegExp(
+-    `\\b${root}((?:\\s*\\.\\s*[A-Za-z_$][\\w$]*|\\s*\\[[^\\]]+\\])+)`,
++    `(?<![\\w$.])${root}((?:\\s*\\.\\s*[A-Za-z_$][\\w$]*|\\s*\\[[^\\]]+\\])${tail})(?![\\w$])`,
+     "g",
+   );
+   for (const m of s.matchAll(re)) {
+     const before = s.slice(Math.max(0, m.index - 40), m.index);
+     const after = s.slice(m.index + m[0].length, m.index + m[0].length + 6);
+     const bracket = m[1].includes("[");
+-    const op =
+-      /(?:[*/%^|&~]|>>>?|<<|[^+]\+|[^-]-)\s*$/.test(before) ||
+-      /^\s*(?:[*/%^|&]|>>>?|<<|\+(?!\+)|-(?!-))/.test(after);
++    // the operator itself is returned (pass 8): a consumer that bounds only SHORTENING arithmetic
++    // reads `op`. A LOGICAL `||`/`&&` is a fallback, never a bitwise `|`/`&` (pass 8: the
++    // `props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay` read was 'arithmetic' by its last bar)
++    const opB = /(>>>?|<<|\*\*|[*/%^~]|(?<![|&])[|&]|(?<=[^+])\+|(?<=[^-])-)\s*$/.exec(
++      before,
++    );
++    const opA = /^\s*(>>>?|<<|\*\*|[*/%^]|[|&](?![|&])|\+(?!\+)|-(?!-))/.exec(after);
++    const op = !!(opB || opA);
+     const inMath =
+       /Math\.(?:min|max|floor|round|ceil|trunc|abs|pow|sign)\(\s*(?:[^()]*,\s*)?$/.test(
+         before,
+@@ -1834,6 +1857,7 @@ export function clockReads(text, root = "MOTION") {
+         ? op || inMath || bracket
+         : /[*/%-]\s*$/.test(before) || /^\s*[*/%-]/.test(after),
+       how: inMath ? "math" : bracket ? "bracket" : op ? "operator" : "read",
++      op: (opB ?? opA)?.[1] ?? null,
+     });
+   }
+   return out;
+@@ -3742,7 +3766,56 @@ const TESTS = [
+         r("const d = Math.min(MOTION.rungs.whisper, 40);") === true &&
+         r('const d = MOTION.rungs["whisper"];') === true &&
+         r("const d = MOTION.rungs.whisper >> 1;") === true &&
+-        r("const d = MOTION.rungs.whisper;") === false
++        r("const d = MOTION.rungs.whisper;") === false &&
++        r("const d = x || MOTION.rungs.whisper;") === false &&
++        r("const d = MOTION.rungs.whisper || x;") === false &&
++        r("const d = x | MOTION.rungs.whisper;") === true &&
++        L.clockReads("const d = MOTION.rungs.whisper >> 2;")[0]?.op === ">>"
++      );
++    },
++  ],
++  [
++    "custom-case",
++    "LADDER",
++    "E1: a script setProperty of a camelCase custom property is that property's write (pass 8)",
++    (L) =>
++      L.scriptWrites(
++        'el.style.setProperty("--ease-anticipatePop", "ease-in");',
++        "--ease-anticipatePop",
++      ).length === 1 &&
++      L.scriptWrites(
++        'el.style["--ease-anticipatePop"] = "ease-in";',
++        "--ease-anticipatePop",
++      ).length === 1 &&
++      L.scriptWrites(
++        'el.style.setProperty("--ease-anticipate-pop", "x");',
++        "--ease-anticipatePop",
++      ).length === 0,
++  ],
++  [
++    "value-parens",
++    "LADDER",
++    "a setProperty value with parentheses is read whole (pass 8)",
++    (L) =>
++      L.scriptWrites(
++        'el.style.setProperty("--ease-x", "cubic-bezier(0.68, -0.55, 0.265, 1.55)");',
++        "--ease-x",
++      )[0]?.value === '"cubic-bezier(0.68, -0.55, 0.265, 1.55)"' &&
++      L.scriptWrites('el.style.setProperty("--w", String(Math.min(a, b)));', "--w")[0]
++        ?.value === "String(Math.min(a, b))",
++  ],
++  [
++    "clock-alias",
++    "LADDER",
++    "a bare alias of a clock read inside Math.min or under a shift is arithmetic (pass 8)",
++    (L) => {
++      const r = (t) => L.clockReads(t, "W", { bare: true }).find((x) => x.arith)?.how;
++      return (
++        r("const d = Math.min(W, 40);") === "math" &&
++        r("const d = W >> 2;") === "operator" &&
++        r("const d = W;") === undefined &&
++        L.clockReads("const Wx = 1; const d = aW + 1;", "W", { bare: true }).length ===
++          0
+       );
+     },
+   ],

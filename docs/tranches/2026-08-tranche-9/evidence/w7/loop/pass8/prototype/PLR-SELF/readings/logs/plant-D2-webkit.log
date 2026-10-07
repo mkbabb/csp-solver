@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [webkit] › e2e/player-mark.spec.ts:790:1 › one tap is one toggle when the tap's click is labelled as a mouse (3.5s)
+
+
+  1) [webkit] › e2e/player-mark.spec.ts:790:1 › one tap is one toggle when the tap's click is labelled as a mouse 
+
+    Error: expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+    @@ -3,7 +3,8 @@
+          "mouse",
+        ],
+        "states": Array [
+          "false",
+          "true",
+    +     "false",
+        ],
+      }
+
+      835 |   // the plant is live in this engine: the tap's one click reached the mark labelled `mouse`...
+      836 |   // ...and it toggled nothing; the release did.
+    > 837 |   expect(await read()).toEqual({ states: ['false', 'true'], clicks: ['mouse'] });
+          |                        ^
+      838 |   await mark(page).tap();
+      839 |   await stable(read);
+      840 |   expect(await read()).toEqual({ states: ['false', 'true', 'false'], clicks: ['mouse', 'mouse'] });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/e2e/player-mark.spec.ts:837:24
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself8r/pw-out-spec/player-mark-one-tap-is-one-b74f6-lick-is-labelled-as-a-mouse-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/player-mark.spec.ts:790:1 › one tap is one toggle when the tap's click is labelled as a mouse 

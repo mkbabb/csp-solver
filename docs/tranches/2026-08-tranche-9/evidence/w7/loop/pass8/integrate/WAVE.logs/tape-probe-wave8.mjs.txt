@@ -1,0 +1,48 @@
+// tape-probe-wave8.mjs — WAVE integrator's scratch probe (not a product instrument). The Clear verb's hover note
+// against the foot's verbs at 1440x900, the predicate of viewport-law §2.5 (rect ∩ rect, w*h > 0.5), read on
+// several dists served from disk through context.route (no port is taken).
+// usage: node tape-probe-wave8.mjs <label>=<dist dir> ...
+import { chromium } from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/playwright/index.mjs";
+import { readFileSync, existsSync } from "node:fs";
+import { join, extname } from "node:path";
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".mjs": "text/javascript", ".css": "text/css", ".wasm": "application/wasm",
+  ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png", ".ico": "image/x-icon", ".webmanifest": "application/manifest+json", ".txt": "text/plain" };
+const b = await chromium.launch();
+for (const arg of process.argv.slice(2)) {
+  const [label, dist] = arg.split("=");
+  const ctx = await b.newContext({ viewport: { width: 1440, height: 900 } });
+  await ctx.route("http://wave8.local/**", (route) => {
+    let p = new URL(route.request().url()).pathname; if (p === "/") p = "/index.html";
+    const f = join(dist, p);
+    if (!existsSync(f)) return route.fulfill({ status: 404, body: "" });
+    route.fulfill({ status: 200, contentType: TYPES[extname(f)] ?? "application/octet-stream", body: readFileSync(f) });
+  });
+  const page = await ctx.newPage();
+  const t0 = Date.now();
+  try {
+    await page.goto("http://wave8.local/?size=3&difficulty=EASY", { timeout: 600000 });
+    await page.waitForSelector(".sudoku-cell", { timeout: 600000 });
+    const js = await page.evaluate(() => [...document.scripts].map((s) => s.src).find((s) => /index-.*\.js/.test(s))?.split("/").pop());
+    const clear = page.locator('.drawer-case button[aria-label="Clear the board"]');
+    await clear.waitFor({ timeout: 600000 });
+    await clear.hover({ timeout: 600000 });
+    await page.waitForFunction(() => { const t = document.querySelector('button[aria-label="Clear the board"] .washi-label'); return t && +getComputedStyle(t).opacity > 0.99; }, null, { timeout: 600000 });
+    await page.waitForTimeout(600);
+    const r = await page.evaluate(() => {
+      const tape = document.querySelector('button[aria-label="Clear the board"] .washi-label');
+      const t = tape.getBoundingClientRect(); const cs = getComputedStyle(tape);
+      const rows = [...document.querySelectorAll(".drawer-case .action-bar button")].map((el) => {
+        const q = el.getBoundingClientRect();
+        const w = Math.max(0, Math.min(q.right, t.right) - Math.max(q.left, t.left));
+        const h = Math.max(0, Math.min(q.bottom, t.bottom) - Math.max(q.top, t.top));
+        return { target: (el.getAttribute("aria-label") || "").slice(0, 28), bottom: +q.bottom.toFixed(2), w: +w.toFixed(2), h: +h.toFixed(2), px: +(w * h).toFixed(1) };
+      });
+      return { tilt: cs.getPropertyValue("--washi-tilt").trim(), laidW: tape.offsetWidth, laidH: tape.offsetHeight, marginTop: cs.marginTop,
+        rect: { top: +t.top.toFixed(2), bottom: +t.bottom.toFixed(2), width: +t.width.toFixed(2), height: +t.height.toFixed(2) }, rows };
+    });
+    const over = r.rows.filter((x) => x.px > 0.5);
+    console.log(`${label} ${js} tilt ${r.tilt} laid ${r.laidW}x${r.laidH} margin-top ${r.marginTop} rect top ${r.rect.top} (box ${r.rect.width}x${r.rect.height}) · verbs' bottom ${[...new Set(r.rows.map((x) => x.bottom))].join("/")} · covered (>0.5 px²): ${over.length ? over.map((x) => `${x.target} ${x.px} (${x.w}x${x.h})`).join(" | ") : "NONE"} · ${Date.now() - t0} ms`);
+  } catch (e) { console.log(`${label} UNREAD after ${Date.now() - t0} ms: ${String(e).split("\n")[0]}`); }
+  await ctx.close();
+}
+await b.close();

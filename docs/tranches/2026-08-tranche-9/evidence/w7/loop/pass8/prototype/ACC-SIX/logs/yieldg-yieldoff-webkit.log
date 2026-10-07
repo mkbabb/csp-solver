@@ -1,0 +1,153 @@
+
+Running 4 tests using 1 worker
+
+YIELD 393x699 coarse: rest strip 20.8/20.8 tab 508.42/508.42 meta - · press1 strip 20.8/20.8 tab 508.42/508.42 meta - · press2 strip 20.8/20.8 tab 508.42/508.42 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 508.42/508.42 meta 1 of 170 on the board · press3 strip 20.8/20.8 tab 508.42/508.42 meta 1 of 170 on the board ROW2 · press4 strip 20.8/20.8 tab 508.42/508.42 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 26, with count 26, row two 25
+  ✘  1 [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse (6.6s)
+YIELD 812x375 coarse: rest strip 20.8/20.8 tab 159.09/159.09 meta - · press1 strip 21.97/21.97 tab 159.67/159.67 meta - · press2 strip 20.8/20.8 tab 159.09/159.09 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 159.09/159.09 meta 1 of 170 on the board · press3 strip 21.97/21.97 tab 159.67/159.67 meta 1 of 170 on the board ROW2 · press4 strip 20.8/20.8 tab 159.09/159.09 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 26, with count 26, row two 25
+  ✘  2 [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse (6.6s)
+YIELD 1280x800 fine: rest strip 20.8/20.8 tab 398.16/398.16 meta - · press1 strip 23.61/23.61 tab 398.16/398.16 meta - · press2 strip 20.8/20.8 tab 398.16/398.16 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 398.16/398.16 meta 1 of 170 on the board · press3 strip 23.61/23.61 tab 398.16/398.16 meta 1 of 170 on the board · press4 strip 20.8/20.8 tab 398.16/398.16 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 26, with count 26, row two 0
+  ✓  3 [webkit] › e2e/count-yield.spec.ts:199:3 › the count stays where it fits, on one row, painting no second · 1280x800 fine (6.6s)
+YIELD 844x390 coarse: rest strip 20.8/20.8 tab 166.59/166.59 meta - · press1 strip 22.06/22.06 tab 167.22/167.22 meta - · press2 strip 20.8/20.8 tab 166.59/166.59 meta 1 of 170 on the board · laid strip 20.8/20.8 tab 166.59/166.59 meta 1 of 170 on the board · press3 strip 22.06/22.06 tab 167.22/167.22 meta 1 of 170 on the board · press4 strip 20.8/20.8 tab 166.59/166.59 meta 2 of 170 on the board · press3 voice "E goes nowhere else in this column" (34) · post-paint frames 26, with count 26, row two 0
+  ✓  4 [webkit] › e2e/count-yield.spec.ts:199:3 › the count stays where it fits, on one row, painting no second · 844x390 coarse (6.0s)
+
+
+  1) [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse 
+
+    Error: press3: ROW the count never sits on a second row
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      216 |       expect.soft(Math.abs(p.strip - c.strip), `${n}: ABSOLUTE strip ${p.strip} vs control ${c.strip}`).toBeLessThanOrEqual(0.5);
+      217 |       expect.soft(Math.abs((p.tabY ?? 0) - (c.tabY ?? 0)), `${n}: ABSOLUTE tab ${p.tabY} vs control ${c.tabY}`).toBeLessThanOrEqual(0.5);
+    > 218 |       expect.soft(p.metaRow2, `${n}: ROW the count never sits on a second row`).toBe(false);
+          |                                                                                 ^
+      219 |     }
+      220 |     if (cell.fits) {
+      221 |       expect.soft(P.press3.meta, "FIT: beside the long line the count stays").toBe("1 of 170 on the board");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:218:81
+
+    Error: YIELD: beside the long line the count gives up its line
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "1 of 170 on the board"
+
+      222 |       expect.soft(P.press4.meta, "FIT: the next write updates it in place").toBe("2 of 170 on the board");
+      223 |     } else {
+    > 224 |       expect.soft(P.press3.meta, "YIELD: beside the long line the count gives up its line").toBe(null);
+          |                                                                                             ^
+      225 |       expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+      226 |     }
+      227 |     const mid = P.laid.voiceMid ?? 0;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:224:93
+
+    Error: YIELD: once yielded the count stays gone (no blink)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "2 of 170 on the board"
+
+      223 |     } else {
+      224 |       expect.soft(P.press3.meta, "YIELD: beside the long line the count gives up its line").toBe(null);
+    > 225 |       expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+          |                                                                                         ^
+      226 |     }
+      227 |     const mid = P.laid.voiceMid ?? 0;
+      228 |     const row2 = tree.frames.filter((f) => f.r && f.r.h > 0 && f.r.y > mid);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:225:89
+
+    Error: PAINT: frames painting the count on a second row (of 26)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 25
+
+      229 |     const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
+      230 |     expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
+    > 231 |     expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+          |                                                                                                             ^
+      232 |     console.log(
+      233 |       `YIELD ${cell.name}: ` +
+      234 |         tree.order
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:231:109
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-yieldg-yieldoff-webkit/e2e-count-yield-the-count--28d8c--no-second-·-393x699-coarse-webkit/error-context.md
+
+  2) [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse 
+
+    Error: press3: ROW the count never sits on a second row
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      216 |       expect.soft(Math.abs(p.strip - c.strip), `${n}: ABSOLUTE strip ${p.strip} vs control ${c.strip}`).toBeLessThanOrEqual(0.5);
+      217 |       expect.soft(Math.abs((p.tabY ?? 0) - (c.tabY ?? 0)), `${n}: ABSOLUTE tab ${p.tabY} vs control ${c.tabY}`).toBeLessThanOrEqual(0.5);
+    > 218 |       expect.soft(p.metaRow2, `${n}: ROW the count never sits on a second row`).toBe(false);
+          |                                                                                 ^
+      219 |     }
+      220 |     if (cell.fits) {
+      221 |       expect.soft(P.press3.meta, "FIT: beside the long line the count stays").toBe("1 of 170 on the board");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:218:81
+
+    Error: YIELD: beside the long line the count gives up its line
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "1 of 170 on the board"
+
+      222 |       expect.soft(P.press4.meta, "FIT: the next write updates it in place").toBe("2 of 170 on the board");
+      223 |     } else {
+    > 224 |       expect.soft(P.press3.meta, "YIELD: beside the long line the count gives up its line").toBe(null);
+          |                                                                                             ^
+      225 |       expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+      226 |     }
+      227 |     const mid = P.laid.voiceMid ?? 0;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:224:93
+
+    Error: YIELD: once yielded the count stays gone (no blink)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "2 of 170 on the board"
+
+      223 |     } else {
+      224 |       expect.soft(P.press3.meta, "YIELD: beside the long line the count gives up its line").toBe(null);
+    > 225 |       expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+          |                                                                                         ^
+      226 |     }
+      227 |     const mid = P.laid.voiceMid ?? 0;
+      228 |     const row2 = tree.frames.filter((f) => f.r && f.r.h > 0 && f.r.y > mid);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:225:89
+
+    Error: PAINT: frames painting the count on a second row (of 26)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 25
+
+      229 |     const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
+      230 |     expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
+    > 231 |     expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+          |                                                                                                             ^
+      232 |     console.log(
+      233 |       `YIELD ${cell.name}: ` +
+      234 |         tree.order
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:231:109
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-yieldg-yieldoff-webkit/e2e-count-yield-the-count--4a762--no-second-·-812x375-coarse-webkit/error-context.md
+
+  2 failed
+    [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 393x699 coarse 
+    [webkit] › e2e/count-yield.spec.ts:199:3 › the count yields and stays gone, on one row, painting no second · 812x375 coarse 
+  2 passed (28.2s)

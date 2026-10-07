@@ -1,0 +1,91 @@
+--- a/web/frontend/b/web/frontend/e2e/lib/postpaint.mjs	2026-09-26 00:33:26
++++ b/web/frontend/e2e/lib/postpaint.mjs	2026-09-26 00:34:46
+@@ -58,7 +58,7 @@
+  *  transition nor a CSS animation (the product's scripted motion), or any when `anyAnim`. */
+ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = true }) {
+   const w = window;
+-  w.__pp = { inRAF: [], post: [], rAF2: [], stamps: [], io: null, done: false };
++  w.__pp = { inRAF: [], post: [], rAF2: [], stamps: [], nows: [], io: null, done: false };
+   if (io) {
+     const animate = Element.prototype.animate;
+     Element.prototype.animate = function (...a) {
+@@ -92,6 +92,9 @@
+     // IntersectionObserver entry with the rendering update's own time, which precedes any in-callback
+     // clock, so a mover started in the sampler's first frame keyed to frame −1 (pass 8, WebKit r1)
+     w.__pp.stamps[k] = ts;
++    // …and the callback's own clock beside it: Chromium back-dates a late frame's rAF time to the vsync
++    // it missed, so after a long first frame the NEXT frame's rAF time can precede the entry (below)
++    w.__pp.nows[k] = performance.now();
+     const tl = Number(document.timeline.currentTime ?? 0);
+     const s = read(k, tl);
+     if (s) w.__pp.inRAF.push(s);
+@@ -114,8 +117,20 @@
+   requestAnimationFrame(tick);
+ }
+ 
+-/** The frame that first painted the mover: the last frame whose rAF time is at or before the entry. */
+-export const kPaintOf = (pp) => (pp.io == null || pp.io < 0 ? -1 : pp.stamps.reduce((k, r, i) => (r <= pp.io ? i : k), -1));
++/** The frame that first painted the mover. WebKit stamps the entry with the rendering update's own
++ *  time, which IS that frame's rAF time: the frame whose rAF time equals the entry. Chromium stamps it
++ *  when the update computes it, after that frame's callbacks and before the next frame's: the last frame
++ *  whose CALLBACK ran at or before the entry. (Keyed on the rAF time alone, a first frame whose update
++ *  runs past the next vsync is dropped in Chromium: the next frame's back-dated rAF time precedes the
++ *  entry, and GA1 read frame 2 as frame 1 on every cell, ct 13–22 — MOT-VERB pass 8, the HEAVY row.) */
++export const kPaintByStamp = (pp) => (pp.io == null || pp.io < 0 ? -1 : pp.stamps.reduce((k, r, i) => (r <= pp.io ? i : k), -1));
++export const kPaintOf = (pp) => {
++  if (pp.io == null || pp.io < 0) return -1;
++  const same = pp.stamps.findIndex((r) => r === pp.io);
++  if (same >= 0) return same;
++  const byNow = (pp.nows ?? []).reduce((k, r, i) => (r <= pp.io ? i : k), -1);
++  return byNow >= 0 ? byNow : kPaintByStamp(pp);
++};
+ 
+ /** Frames with the animation present, keyed on `kPaint` (reads before it DROPPED); F1 + CI verdicts. */
+ export function analyse(frames, rest, { kPaint = -1, tolPx = 3, tolMs = 2, ks = [2, 3] } = {}) {
+@@ -192,8 +207,12 @@
+   await page.waitForFunction(() => window.__pp.done, null, { timeout: 20000 });
+   const pp = await page.evaluate(() => window.__pp);
+   const kPaint = kPaintOf(pp);
++  const kStamp = kPaintByStamp(pp);
+   return {
+     kPaint,
++    kStamp,
++    /** the same POST frames keyed on the rAF time alone (the homes' pass-8 key), for the HEAVY row */
++    byStamp: analyse(pp.post, rest, { kPaint: kStamp }),
+     io: pp.io == null ? "none" : pp.io < 0 ? "pending" : +pp.io.toFixed(1),
+     post: analyse(pp.post, rest, { kPaint }),
+     legacy: analyse(pp.post, rest),
+@@ -224,12 +243,19 @@
+   mc.port1.onmessage = go;
+   const loop = () => {
+     if (arm === "r") go();
++    // HEAVY: the mover starts in this frame as "r" does, and the frame's update then runs 30 ms long
++    // (a reparent's first layout), past the next vsync
++    if (arm === "h") {
++      go();
++      const t = performance.now();
++      while (performance.now() - t < 30);
++    }
+     if (arm === "t") mc.port2.postMessage(0);
+     arm = null;
+     requestAnimationFrame(loop);
+   };
+   requestAnimationFrame(loop);
+-  addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "t") arm = e.key; });
++  addEventListener("keydown", (e) => { if (e.key === "r" || e.key === "t" || e.key === "h") arm = e.key; });
+ </script></body></html>`;
+ 
+ export async function samplerSelfTest(browser) {
+@@ -260,6 +286,12 @@
+       if (!r.post[want]) hole = true;
+       rows.push(`POSTPAINT self-test r${rep} RAF-mover PLANT ${plant} | POST ${fmtArm(r.post)} → ${r.post[want] ? "RED (" + want + ")" : "GREEN ← a hole"}`);
+     }
++    // HEAVY: a mover that starts at rest in a frame whose update runs past the next vsync. The keyed
++    // reader must hold it GREEN (frame 1 is its rest pose); keyed on the rAF time alone, Chromium drops
++    // frame 1 (printed: the pass-8 homes' hole, MOT-VERB's GA1 on every cell)
++    const h = await run("h", null);
++    if (h.post.red) cleanRed = true;
++    rows.push(`POSTPAINT self-test r${rep} HEAVY-mover CLEAN io ${h.io} kPaint ${h.kPaint} (rAF-time key ${h.kStamp}) | POST ${fmtArm(h.post)} → ${h.post.red ? "RED " + h.post.why.join("; ") : "GREEN"} | rAF-TIME KEY ${fmtArm(h.byStamp)} → ${h.byStamp.red ? "RED ← the homes' hole: frame 1 dropped" : "GREEN (not contaminated this run)"}`);
+     // born-RED: the task-started mover's first painted frame is a frame in; the keyed reader must red it
+     const t = await run("t", null);
+     if (!t.post.f1red) hole = true;

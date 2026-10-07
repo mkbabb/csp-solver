@@ -1,0 +1,131 @@
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -90,6 +90,8 @@
+   "h-spread": "SIX · spread/computed keys in h()/createVNode (aliased) as v-bind=obj",
+   barrel: "SIX · a barrel alias is followed to its file",
+   "pin-binds": "SIX · a pin carries its bind set",
++  alias:
++    "SIX · the bundler's `@/` alias resolves to src/ (without it every estate import is UNRESOLVED)",
+   csstext: "WALK · concatenated cssText and setAttribute('style') writes",
+   "style-computed-key": "WALK · a computed :style key is a `?` site",
+   "import-chain": "WALK · @import chains followed wherever they lead",
+@@ -1923,9 +1925,26 @@
+ const pascal = (t) => t.replace(/(^|-)([a-z])/g, (m, d, c) => c.toUpperCase());
+ /** The file a module specifier + imported name reaches, following barrels (SIX F8:
+  *  `export { default as Band } from "./StagingBand.vue"`). null = UNRESOLVED. */
++/** The bundler's `resolve.alias` table, read from `vite.config.ts` (`'@pencil': path.resolve(__dirname,
++ *  './src/pencil')`), longest key first; `@` → `src` when the config names none. Set by componentSites. */
++let ALIASES = [];
++function aliasTable(fe, rd, ex) {
++  const cfg = join(fe, "vite.config.ts");
++  const text = ex(cfg) ? stripJs(rd(cfg)) : "";
++  const rows = [
++    ...text.matchAll(
++      /(["'])(@[\w-]*)\1\s*:\s*path\.resolve\(\s*__dirname\s*,\s*(["'])([^"']+)\3\s*\)/g,
++    ),
++  ].map((m) => [m[2], resolvePath(fe, m[4])]);
++  if (!rows.length) rows.push(["@", join(fe, "src")]);
++  return rows.sort((a, b) => b[0].length - a[0].length);
++}
+ function resolveImport(fromFile, spec, name, rd, ex, depth = 0) {
+-  if (depth > 5 || !/^\.{1,2}\//.test(spec)) return null;
+-  const base = resolvePath(dirname(fromFile), spec);
++  const hit = on("alias") && ALIASES.find(([k]) => spec.startsWith(`${k}/`));
++  if (depth > 5 || (!hit && !/^\.{1,2}\//.test(spec))) return null;
++  const base = hit
++    ? join(hit[1], spec.slice(hit[0].length + 1))
++    : resolvePath(dirname(fromFile), spec);
+   const cands = [
+     base,
+     `${base}.ts`,
+@@ -1963,6 +1982,7 @@
+   const rd = read ?? ((f) => readFileSync(f, "utf8"));
+   const ex = exists ?? existsSync;
+   const list = files ?? sources(fe, { read: rd, exists: ex });
++  ALIASES = aliasTable(fe, rd, ex);
+   const out = [];
+   for (const f of list) {
+     if (!/\.(vue|ts|tsx|js|mjs)$/.test(f)) continue;
+@@ -1993,7 +2013,9 @@
+           else imports.set(alias ?? orig, resolveImport(f, m[3], orig, rd, ex));
+         }
+       for (const m of s.matchAll(
+-        /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*\)/g,
++        on("alias")
++          ? /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*,?\s*\)/g
++          : /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*\)/g,
+       )) {
+         const d = /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(
+           s.slice(0, m.index),
+@@ -2050,6 +2072,11 @@
+           if (!imports.has(comp)) continue;
+           const body = m[2] ?? "";
+           const keys = splitTop(body, /,/);
++          // a NON-LITERAL second argument (`h(X, props)`) is a v-bind object too (SIX pass 8)
++          const objArg =
++            on("h-spread") &&
++            m[2] == null &&
++            /^\s*,\s*[A-Za-z_$(]/.test(s.slice(m.index + m[0].length));
+           out.push({
+             file,
+             line: sc.line + lineAt(s, m.index) - 1,
+@@ -2062,7 +2089,7 @@
+               .filter(Boolean)
+               .map((x) => x[2] ?? x[3]),
+             spread: on("h-spread")
+-              ? keys.some((k) => /^\.\.\.|^\[/.test(k.trim()))
++              ? objArg || keys.some((k) => /^\.\.\.|^\[/.test(k.trim()))
+               : false,
+             via: orig,
+           });
+@@ -3608,18 +3635,18 @@
+   [
+     "h-spread",
+     "SIX",
+-    "F5 a spread, F6 a computed key, F7 an aliased createVNode are read",
++    "F5 a spread, F6 a computed key, F7 an aliased createVNode, a non-literal props argument are read",
+     (L) => {
+       const f = fixture({
+         "src/StagingBand.vue": "<template><i /></template>\n",
+         "src/a.ts":
+           'import { h } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const a = (p) => h(StagingBand, { ...p });\nexport const b = (x) => h(StagingBand, { ["safeVerb"]: x });\n',
+         "src/c.ts":
+-          'import { createVNode as cv } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const c = (safeVerb) => cv(StagingBand, { safeVerb });\n',
++          'import { createVNode as cv } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const c = (safeVerb) => cv(StagingBand, { safeVerb });\nexport const d = (props) => cv(StagingBand, props);\n',
+       });
+       const s = L.componentSites(f.fe, f);
+       return (
+-        s.filter((x) => x.spread).length === 2 &&
++        s.filter((x) => x.spread).length === 3 &&
+         s.some((x) => x.file === "src/c.ts" && x.binds.includes("safeVerb"))
+       );
+     },
+@@ -3641,6 +3668,28 @@
+     },
+   ],
+   [
++    "alias",
++    "SIX",
++    "F11: tags imported through the bundler's aliases (`@/`, `@pencil/`, a prettier-formatted async import) resolve to their files",
++    (L) => {
++      const f = fixture({
++        "src/chrome/StagingBand.vue": "<template><i /></template>\n",
++        "src/pencil/Glyph.vue": "<template><i /></template>\n",
++        "vite.config.ts":
++          "export default { resolve: { alias: { '@pencil': path.resolve(__dirname, './src/pencil'), '@': path.resolve(__dirname, './src') } } };\n",
++        "src/App.vue":
++          '<template><StagingBand :safe-verb="x" /><Glyph :text="x" /><Lam :text="x" /></template>\n<script setup>\nimport StagingBand from "@/chrome/StagingBand.vue";\nimport Glyph from "@pencil/Glyph.vue";\nconst Lam = defineAsyncComponent(\n  () => import("@pencil/Glyph.vue"),\n);\nconst x = 1;\n</script>\n',
++      });
++      const s = L.componentSites(f.fe, f);
++      return (
++        s.length === 3 &&
++        s[0].target === "src/chrome/StagingBand.vue" &&
++        s[1].target === "src/pencil/Glyph.vue" &&
++        s[2].target === "src/pencil/Glyph.vue"
++      );
++    },
++  ],
++  [
+     "pin-binds",
+     "SIX",
+     "F10: a pin admits its bind SET, never the site",

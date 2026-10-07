@@ -1,0 +1,25 @@
+start 03:52:43 load 130.81 76.73 58.34
+t8 sha ink 5a8483ffdd27 fc 2108b1a2b54b lib 5b8739d50fa2 MN d5d8f3d3ffb2
+t8 lint:ink --self-test --plants --sabotage-battery exit=0
+t8 test:font-coverage --self-test exit=0
+t8 shape-census --tree exit=0
+t8 shape-census --self-test exit=0
+br8 MN 855ef8b5ef5a (74a2b5d9's 855ef8b5ef5a)
+br8 (control MarginNote) lint:ink bare exit=1
+  ✗ note reserve: R1 the voice's min-height is set at 15 sites (want 1): src/App.vue:1157 .scene-loading { min-height: 16rem } | src/assets/index.css:833 @media (pointer: coarse) .ctrl-btn, .mobile-heading-btn, .attribution-trigger, .error-note-retry { min-height: var(--tap-floor, 2.75rem) } | src/games/shared/DrawerTab.vue:172 @media (max-width: 1023.98px) and (orientation: portrait) .drawer-tab 
+  ✗ note reserve: R2 src/App.vue:1157 .scene-loading { min-height: 16rem } resolves to '16rem'
+  ✗ note reserve: R3 src/App.vue:1157 .scene-loading { min-height: 16rem } holds in [phone-portrait-390x844, phone-portrait-375x812, phone-landscape-844x390, phone-landscape-812x375, tablet-1024x768-coarse, desk-1280x800, desk-1440x900], not every phone and no desk
+br8 shape-census --tree exit=2
+clause R1 DELETED (its test replaced by false) -> lint:ink --self-test exit=1 note-reserve · seat deleted: GREEN
+clause R2 DELETED (its test replaced by false) -> lint:ink --self-test exit=1 note-reserve · zeroed: the seat at 
+clause R3-important DELETED (its test replaced by false) -> lint:ink --self-test exit=1 note-reserve · inherit !important: GREEN
+clause R3-seat DELETED (its test replaced by false) -> lint:ink --self-test exit=1 note-reserve · wide: the seat outside any media block
+pass-7 pin (marginRecordCopy by name) under the new plants -> exit=1
+  ok  self-test · the margin group with `closed: true` deleted: 1 finding(s)
+  BAD self-test · SPLIT: the verdicts moved to an open twin deriving `marginVerdictCopy`: 0 finding(s)
+  BAD self-test · SPLIT: the same twin through a renamed extractor: 0 finding(s)
+  BAD self-test · SPLIT + `setMargin("solved it!")` deleted (the pass-7 critic's evasion): 0 finding(s)
+  ok  self-test · `setMargin("solved it!")` deleted: 1 finding(s)
+  ok  self-test · CONTROL — the margin extractors pinned: 2 finding(s)
+  ok  self-test · CONTROL — the flags and the tree as they stand: 0 finding(s)
+DONE 04:02:47 load 156.77 134.57 96.48

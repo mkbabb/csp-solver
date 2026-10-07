@@ -1,0 +1,33 @@
+// CRITIC probe: REACH_LAW from zone-grammar.spec.ts verbatim, on the critic's plants. Browserless.
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+const FE = process.argv[2];
+const { tokenSites, census: shapeCensus } = await import(join(FE, "scripts/shape-census.mjs"));
+const REACH_LAW = (plant = null) => {
+  const read = (f) => { const t = readFileSync(f, "utf8"); return plant && f === join(FE, plant[0]) ? (plant[2] ? t.replace(plant[2], plant[1]) : `${t}\n${plant[1]}`) : t; };
+  const all = tokenSites(FE, "--toggle-reach", { read });
+  const writers = all.filter((x) => !x.unresolved && x.kind !== "script-key-computed");
+  const hover = shapeCensus(FE, "sun-moon-toggle", "transform", { read }).filter((x) => /:hover/.test(x.prelude));
+  const foot = tokenSites(FE, "--toggle-foot", { read }).filter((x) => /style/.test(x.kind));
+  const bad = [];
+  if (writers.length !== 1) bad.push(`writers ${writers.length}: ${writers.map((x) => `${x.file}:${x.line}:${x.kind}`).join(", ")}`);
+  for (const h of hover) if (!/^scale\(\s*var\(--toggle-reach\)\s*\)$/.test(String(h.value).trim())) bad.push(`hover ${h.file}:${h.line} ${h.value}`);
+  if (!hover.length) bad.push("no :hover transform");
+  for (const f of foot) if (!/var\(--toggle-reach\)/.test(f.value) || /\*\s*0?\.\d/.test(f.value)) bad.push(`foot ${f.file}:${f.line} ${f.value.replace(/\s+/g, " ")}`);
+  if (!foot.length) bad.push("no --toggle-foot");
+  return { bad, sites: all.map((x) => `${x.file}:${x.line}:${x.kind}${x.unresolved ? ":UNRESOLVED" : ""}`) };
+};
+const run = (n, p, want) => { const r = REACH_LAW(p); console.log(`${r.bad.length ? "RED  " : "GREEN"} (${want}) ${n} :: ${JSON.stringify(r.bad).slice(0, 220)}`); return r; };
+const s = run("shipped", null, "GREEN"); console.log("   sites:", s.sites.join(" | "));
+run("lane: second writer .page-root", ["src/App.vue", "<style scoped>.page-root { --toggle-reach: 1.1; }</style>"], "RED");
+run("R1 script setProperty in main.ts", ["src/main.ts", "document.documentElement.style.setProperty('--toggle-reach', '1.25');"], "RED owed");
+run("R2 :style object on DarkModeToggle root", ["src/App.vue", "<template><div :style=\"{ '--toggle-reach': 1.25 }\"></div></template>"], "RED owed");
+run("R3 Tailwind arbitrary property in a template", ["src/App.vue", "<template><div class=\"[--toggle-reach:1.25]\"></div></template>"], "RED owed");
+run("R4 individual scale property on hover", ["src/pencil/celestial/DarkModeToggle.vue", "<style scoped>.sun-moon-toggle:hover { scale: 1.25; }</style>"], "(behavioural row's)");
+run("R5 hover via :is()", ["src/pencil/celestial/DarkModeToggle.vue", "<style scoped>:is(.sun-moon-toggle):hover { transform: scale(1.25); }</style>"], "RED owed");
+run("R6 second @property registration in typography.css", ["src/assets/typography.css", "@property --toggle-reach { syntax: '<number>'; inherits: true; initial-value: 1.25; }"], "RED owed");
+run("R7 foot literal 1.08/2", ["src/App.vue", "<style scoped>.page-root { --toggle-foot: calc(var(--head-rule) + var(--toggle-size) / 2 + var(--toggle-hit) * 1.08 / 2); }</style>"], "RED owed");
+console.log("== template plants injected INTO the existing template (replace mode)");
+run("R2b :style object in App.vue's template", ["src/App.vue", "<template>\n  <div :style=\"{ '--toggle-reach': 1.25 }\"></div>", "<template>"], "RED owed");
+run("R2c static style attr in App.vue's template", ["src/App.vue", "<template>\n  <div style=\"--toggle-reach: 1.25\"></div>", "<template>"], "RED owed");
+run("R3b Tailwind arbitrary property in App.vue's template", ["src/App.vue", "<template>\n  <div class=\"[--toggle-reach:1.25]\"></div>", "<template>"], "RED owed");

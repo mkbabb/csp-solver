@@ -1,0 +1,93 @@
+--- /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/palwalk8/lp-a.mjs	2026-09-25 13:28:27
++++ /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/palwalk8/lp-b.mjs	2026-09-25 13:29:30
+@@ -15,6 +15,7 @@
+  */
+ import fs from "node:fs";
+ import path from "node:path";
++import { spawnSync } from "node:child_process";
+ 
+ // `LAW_FE` re-points the read (a lane runs the probe on its tree, the control and a sibling's
+ // tree); the relative default is r0's own depth.
+@@ -230,74 +231,18 @@
+         why.push(`${bad} string(s) off the walk, first ${first}`);
+       }
+     }
+-    // THE PAIR, keyed on SHAPE (the pass-6 critic's LA1–LA3: an arm under `.dark .game-cell`,
+-    // `html.dark` or `.board-cells` was invisible to a reader of three block names). EVERY rule in
+-    // the sheet is walked with its at-rule context; every ring-arm declaration found is classified
+-    // by its rule: exactly `@theme` / `:root` at top level is the light arm, exactly `.dark` at top
+-    // level the dark one; `@media print` and `forced-colors` are neither and must carry none; ANY
+-    // other rule carrying a ring arm is a third arm and RED, whatever it paints.
+-    const rules = [];
+-    const walkRules = (text, ctx) => {
+-      let depth = 0, start = 0, open = 0;
+-      for (let k = 0; k < text.length; k++) {
+-        if (text[k] === "{") { if (depth++ === 0) open = k; }
+-        else if (text[k] === "}" && --depth === 0) {
+-          const prelude = text.slice(start, open).trim().split(/;\s*/).pop().trim().replace(/\s+/g, " ");
+-          const body = text.slice(open + 1, k);
+-          if (prelude.startsWith("@") && prelude !== "@theme") walkRules(body, [...ctx, prelude]);
+-          else rules.push({ ctx, prelude, body: body.replace(/[^{}]*\{[^{}]*\}/g, "") });
+-          if (!prelude.startsWith("@") || prelude === "@theme") walkRules(body.replace(/^[^{}]*;/, ""), [...ctx, prelude]);
+-          start = k + 1;
+-        } else if (text[k] === ";" && depth === 0) start = k + 1;
+-      }
+-    };
+-    walkRules(css, []);
+-    const lin = (v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+-    const okL = ([r, g, b]) => {
+-      const [R, G, B] = [r, g, b].map((v) => lin(v / 255));
+-      const l = Math.cbrt(0.4122214708 * R + 0.5363325363 * G + 0.0514459929 * B);
+-      const m = Math.cbrt(0.2119034982 * R + 0.6806995451 * G + 0.1073969566 * B);
+-      const s = Math.cbrt(0.0883024619 * R + 0.2817188376 * G + 0.6299787005 * B);
+-      return 0.2104542553 * l + 0.793617785 * m - 0.0040720468 * s;
+-    };
+-    const lOf = (v) => {
+-      let m;
+-      if ((m = /^([\d.]+)$/.exec(v))) return Number(m[1]);
+-      if ((m = /^oklch\(\s*([\d.]+)(%?)/.exec(v))) return Number(m[1]) / (m[2] ? 100 : 1);
+-      if ((m = /^#([0-9a-f]{3,8})$/i.exec(v))) {
+-        const x = m[1].length <= 4 ? [...m[1]].map((c) => c + c).join("") : m[1];
+-        return okL([0, 2, 4].map((k) => parseInt(x.slice(k, k + 2), 16)));
+-      }
+-      if ((m = /^rgba?\(\s*(\d+)[\s,]+(\d+)[\s,]+(\d+)/.exec(v))) return okL([m[1], m[2], m[3]].map(Number));
+-      return NaN; // an alias or a mix is not a lightness anyone can hold — RED below
+-    };
+-    const PAIR = { light: 0.295, dark: 0.79 };
+-    const TOL = 0.005; // a hex rounds OKLab L by ≤ 0.002
+-    const RING_ARM = /(--peer-ring-l|--color-peer-[\w-]*ring[\w-]*|--color-peer-cursor-ink)\s*:\s*([^;]+)/g;
+-    const seen = { light: [], dark: [] };
+-    const stray = [];
+-    let pair = true;
+-    for (const r of rules)
+-      for (const m of r.body.matchAll(RING_ARM)) {
+-        const v = m[2].trim();
+-        const top = r.ctx.length === 0 || (r.ctx.length === 1 && r.ctx[0] === "@theme");
+-        const theme =
+-          top && (r.prelude === "@theme" || r.prelude === ":root") ? "light" : top && r.prelude === ".dark" ? "dark" : null;
+-        if (!theme) {
+-          stray.push(`${[...r.ctx, r.prelude].join(" ")} { ${m[1]}: ${v} }`);
+-          continue;
+-        }
+-        const L = lOf(v);
+-        seen[theme].push(`${m[1]} L ${Number.isFinite(L) ? L.toFixed(3) : "unreadable"}`);
+-        if (!(Math.abs(L - PAIR[theme]) <= TOL)) pair = false;
+-      }
+-    if (!seen.light.length || !seen.dark.length || stray.length) pair = false;
++    // THE PAIR — LANDED in the product gate (pass 8, registry-v7 §2.13i): `scripts/check-peer-arcs.mjs`
++    // check 5 reads index.css AND every sheet it @imports through the ONE shape library, keys all
++    // three band vars and the three ink tokens, and carries A7/A8/A9/A9b as self-test plants. The
++    // law row asks the gate, never a second reader of its own.
++    const r = spawnSync(process.execPath, [path.join(FE, "scripts/check-peer-arcs.mjs")], { encoding: "utf8" });
++    const line = (r.stdout.match(/^\s*[✓✗] 5 THE PAIR[^\n]*/m) ?? ["(no check 5 on this tree)"])[0].trim();
++    const pair = line.startsWith("✓");
+     return {
+       ok: formula && pair,
+       detail:
+         `formula (the module's output, 289 indices): ${formula}${why.length ? ` — ${why.join("; ")}` : ""}; ` +
+-        `ring arms at the pair ${PAIR.light}/${PAIR.dark}: ${pair} — light ${seen.light.join(", ") || "NO ring arm"} · dark ${seen.dark.join(", ") || "NO ring arm"}` +
+-        (stray.length ? ` · OUTSIDE the two theme blocks: ${stray.join(" | ")}` : ""),
++        `the pair (the product gate's check 5, exit ${r.status}): ${line}`,
+     };
+   },
+ );

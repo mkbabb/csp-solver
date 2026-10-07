@@ -1,0 +1,469 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb3..2468a71 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -56,6 +56,7 @@
+ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+ import { join, relative, dirname, resolve as resolvePath } from "node:path";
+ import { fileURLToPath } from "node:url";
++import { createRequire } from "node:module";
+ import process from "node:process";
+ 
+ // -------------------------------------------------------------------------------------- clauses
+@@ -77,6 +78,15 @@ export const CLAUSES = {
+   "r1-dark-arm": "GRAPHITE · R1's second path (a chromatic token with no dark arm)",
+   "strip-regex": "TIN · the JS stripper is regex-literal aware",
+   "rel-color": "TIN · relative colour syntax with literal channels",
++  "fold-hole":
++    "TIN · foldConcat({hole}) keeps an unresolved leaf as a HOLE (a minted `--x-?-y` stays readable)",
++  "fold-int": "TIN · a packed int `(0xffb2f3).toString(16)` folds to its digits",
++  "fold-text":
++    "TIN · foldText: every literal expression in a JS text replaced by its folded string",
++  "tw-palette":
++    "TIN · a Tailwind palette utility (text + indigo-200, a variant, an /alpha) resolves to its colour",
++  "channel-arity":
++    "TIN · a colour function with too few or non-numeric channels (`lab(want)` in a script) is no colour, never a throw",
+   masked: "LIVE · maskedDefaults (case-insensitive var(, stems, concatenation)",
+   "is-where-arms":
+     "VERB · a tail holds under :is()/:where() only when every arm carries it",
+@@ -754,21 +764,32 @@ export function constBindings(js) {
+     for (const m of s.matchAll(
+       /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[\w<>[\]|'" ]+)?\s*=\s*([^;\n]+)/g,
+     )) {
+-      if (map.has(m[1])) continue;
+-      const v = foldConcat(m[2].replace(/\s+as\s+const\s*$/, ""), map);
+-      if (v != null) map.set(m[1], v);
++      // TIN (fold-text): a DECLARATOR LIST `const H = "#ff", T = "b2f3"` binds every name in it
++      const list = on("fold-text")
++        ? splitTop(`${m[1]} = ${m[2]}`, /,/).map((d) =>
++            /^([A-Za-z_$][\w$]*)(?:\s*:\s*[\w<>[\]|'" ]+)?\s*=\s*([\s\S]+)$/.exec(d),
++          )
++        : [m];
++      for (const d of list) {
++        if (!d || map.has(d[1])) continue;
++        const v = foldConcat(d[2].replace(/\s+as\s+const\s*$/, ""), map);
++        if (v != null) map.set(d[1], v);
++      }
+     }
+   return map;
+ }
+ /** Fold a JS expression of literals into its string, or null: `"a" + "b"`, `` `a${"b"}` ``,
+  *  `["a", "b"].join("-")`, `"a".concat("b", "c")`, `String("a")`, a same-file const, and a
+  *  `"\x23"`/`"#"` escape. Anything else (a call, a member, an argument) is null → UNRESOLVED. */
+-export function foldConcat(expr, consts = new Map()) {
++export function foldConcat(expr, consts = new Map(), opts = {}) {
++  // TIN (fold-hole): with `{ hole: "?" }` an unresolved leaf folds to the hole instead of null, so
++  // `"--color-peer-" + i + "-name"` reads `--color-peer-?-name` — a minted name, not UNRESOLVED
++  const hole = on("fold-hole") && opts.hole != null ? opts.hole : null;
+   const e = String(expr).trim();
+-  if (!e) return null;
++  if (!e) return hole;
+   const parts = splitTop(e.replace(/\s+as\s+[\w<>[\]|'" ]+$/, ""), /\+/);
+   if (parts.length > 1) {
+-    const f = parts.map((p) => foldConcat(p, consts));
++    const f = parts.map((p) => foldConcat(p, consts, opts));
+     return f.every((x) => x != null) ? f.join("") : null;
+   }
+   const p = parts[0] ?? "";
+@@ -777,27 +798,34 @@ export function foldConcat(expr, consts = new Map()) {
+   if ((m = /^`([^`]*)`$/.exec(p))) {
+     let ok = true;
+     const out = m[1].replace(/\$\{([^}]*)\}/g, (x, inner) => {
+-      const v = foldConcat(inner, consts);
++      const v = foldConcat(inner, consts, opts);
+       if (v == null) ok = false;
+       return v ?? "";
+     });
+     return ok ? unescapeJs(out) : null;
+   }
+-  if ((m = /^\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts);
+-  if ((m = /^String\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts);
++  // TIN (fold-int): a colour PACKED as an int and printed in base 16 — `(0xffb2f3).toString(16)`,
++  // `(16757491).toString(16)` — folds to the digits the bundler would ship
++  if (
++    on("fold-int") &&
++    (m = /^\(?\s*(0x[0-9a-f]+|\d+)\s*\)?\s*\.\s*toString\(\s*16\s*\)$/i.exec(p))
++  )
++    return Number(m[1]).toString(16);
++  if ((m = /^\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts, opts);
++  if ((m = /^String\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts, opts);
+   if ((m = /^\[([\s\S]*)\]\s*\.\s*join\(\s*([\s\S]*?)\s*\)$/.exec(p))) {
+-    const items = splitTop(m[1], /,/).map((x) => foldConcat(x, consts));
+-    const sep = m[2] ? foldConcat(m[2], consts) : ",";
++    const items = splitTop(m[1], /,/).map((x) => foldConcat(x, consts, opts));
++    const sep = m[2] ? foldConcat(m[2], consts, opts) : ",";
+     return items.every((x) => x != null) && sep != null ? items.join(sep) : null;
+   }
+   if ((m = /^([\s\S]+?)\s*\.\s*concat\(([\s\S]*)\)$/.exec(p))) {
+-    const head = foldConcat(m[1], consts);
+-    const rest = splitTop(m[2], /,/).map((x) => foldConcat(x, consts));
++    const head = foldConcat(m[1], consts, opts);
++    const rest = splitTop(m[2], /,/).map((x) => foldConcat(x, consts, opts));
+     return head != null && rest.every((x) => x != null) ? head + rest.join("") : null;
+   }
+   if (/^-?\d+(\.\d+)?$/.test(p)) return p;
+   if (/^[A-Za-z_$][\w$]*$/.test(p) && consts.has(p)) return consts.get(p);
+-  return null;
++  return hole;
+ }
+ const unescapeJs = (s) =>
+   s
+@@ -807,6 +835,202 @@ const unescapeJs = (s) =>
+     )
+     .replace(/\\(.)/g, "$1");
+ 
++/** TIN (fold-text): every LITERAL EXPRESSION in a JS text (comments already stripped) replaced by
++ *  the string it folds to — what a bundler ships, so a reader keyed on literals sees it: `"#ff" + P`
++ *  with a same-file `const P`, `` `#ff${"b2f3"}` ``, `["#ff", "b2f3"].join("")`, `"a".concat(…)`,
++ *  `"\x23ffb2f3"`, `"#" + (0xffb2f3).toString(16)`. An expression is a chain of atoms (a string, a
++ *  template, an array with `.join(…)`, a paren group, a same-file const, a packed int) joined by `+`,
++ *  each atom with `.join`/`.concat`/`.toString(16)` postfixes. Unresolved leaves fold to `hole`
++ *  (default `?`), so a minted `--color-peer-?-name` is readable. Regex literals are skipped whole.
++ *  Only a span that MOVES (an operator, a template, an escape, a postfix) is replaced. */
++export function foldText(js, { consts = null, hole = "?" } = {}) {
++  if (!on("fold-text")) return js;
++  const K = consts ?? constBindings(js);
++  const n = js.length;
++  const skipWs = (i) => {
++    while (i < n && /\s/.test(js[i])) i++;
++    return i;
++  };
++  const strEnd = (i) => {
++    const q = js[i];
++    let j = i + 1;
++    if (q === "`") {
++      let d = 0;
++      while (j < n) {
++        const c = js[j];
++        if (c === "\\") j += 2;
++        else if (d === 0 && c === "`") return j + 1;
++        else if (c === "$" && js[j + 1] === "{") {
++          d++;
++          j += 2;
++        } else if (d > 0 && c === "}") {
++          d--;
++          j++;
++        } else if (d > 0 && (c === '"' || c === "'" || c === "`")) j = strEnd(j);
++        else j++;
++      }
++      return -1;
++    }
++    while (j < n && js[j] !== "\n") {
++      if (js[j] === "\\") j += 2;
++      else if (js[j] === q) return j + 1;
++      else j++;
++    }
++    return -1;
++  };
++  const groupEnd = (i) => {
++    const open = js[i],
++      close = open === "(" ? ")" : open === "[" ? "]" : "}";
++    let d = 0,
++      j = i;
++    while (j < n) {
++      const c = js[j];
++      if (c === '"' || c === "'" || c === "`") {
++        const e = strEnd(j);
++        if (e < 0) return -1;
++        j = e;
++        continue;
++      }
++      if (c === "(" || c === "[" || c === "{") d++;
++      else if (c === ")" || c === "]" || c === "}") {
++        d--;
++        if (d === 0) return c === close ? j + 1 : -1;
++      }
++      j++;
++    }
++    return -1;
++  };
++  const POST = /^\s*\.\s*(join|concat|toString)\s*\(/;
++  // one atom (+ postfixes) from i → [end, moved] or null
++  const atom = (i) => {
++    let e,
++      moved = false;
++    const c = js[i];
++    if (c === '"' || c === "'" || c === "`") {
++      e = strEnd(i);
++      if (e < 0) return null;
++      const body = js.slice(i + 1, e - 1);
++      if (c === "`" || body.includes("\\")) moved = true;
++    } else if (c === "[" || c === "(") {
++      // a `(` or `[` after a name, `)` or `]` is a CALL or a MEMBER access, never a literal group
++      let b = i - 1;
++      while (b >= 0 && /\s/.test(js[b])) b--;
++      if (b >= 0 && /[\w$)\]]/.test(js[b])) return null;
++      e = groupEnd(i);
++      if (e < 0) return null;
++      if (c === "[" && !POST.test(js.slice(e, e + 40))) return null;
++      if (c === "(" && !POST.test(js.slice(e, e + 40)) && js[skipWs(e)] !== "+")
++        return null;
++    } else {
++      const m = /^[A-Za-z_$][\w$]*/.exec(js.slice(i, i + 64));
++      if (!m || (i > 0 && /[\w$.]/.test(js[i - 1]))) return null;
++      e = i + m[0].length;
++      if (m[0] === "String" && js[skipWs(e)] === "(") {
++        e = groupEnd(skipWs(e));
++        if (e < 0) return null;
++        moved = true;
++      }
++    }
++    for (;;) {
++      const pm = POST.exec(js.slice(e, e + 40));
++      if (!pm) break;
++      const g = groupEnd(e + pm[0].length - 1);
++      if (g < 0) break;
++      e = g;
++      moved = true;
++    }
++    return [e, moved];
++  };
++  const reps = [];
++  let i = 0;
++  while (i < n) {
++    const c = js[i];
++    if (
++      c === "/" &&
++      i + 1 < n &&
++      js[i + 1] !== "/" &&
++      js[i + 1] !== "*" &&
++      regexStart(js.slice(Math.max(0, i - 64), i))
++    ) {
++      let j = i + 1,
++        cls = false;
++      while (j < n && js[j] !== "\n") {
++        const d = js[j];
++        if (d === "\\") {
++          j += 2;
++          continue;
++        }
++        if (cls) {
++          if (d === "]") cls = false;
++        } else if (d === "[") cls = true;
++        else if (d === "/") break;
++        j++;
++      }
++      i = js[j] === "/" ? j + 1 : i + 1;
++      continue;
++    }
++    const lit =
++      c === '"' ||
++      c === "'" ||
++      c === "`" ||
++      c === "[" ||
++      c === "(" ||
++      /[A-Za-z_$]/.test(c);
++    if (!lit) {
++      i++;
++      continue;
++    }
++    const first = atom(i);
++    if (!first) {
++      if (c === '"' || c === "'" || c === "`") {
++        const e = strEnd(i);
++        i = e > i ? e : i + 1;
++      } else i++;
++      continue;
++    }
++    const strish = (a, b) =>
++      /["'`]/.test(js.slice(a, b)) ||
++      (/^[A-Za-z_$][\w$]*$/.test(js.slice(a, b)) &&
++        typeof K.get(js.slice(a, b)) === "string");
++    let [end, moved] = first,
++      hasStr = strish(i, end);
++    for (;;) {
++      const k = skipWs(end);
++      if (js[k] !== "+" || js[k + 1] === "+" || js[k + 1] === "=") break;
++      const a = atom(skipWs(k + 1));
++      if (!a) break;
++      hasStr ||= strish(skipWs(k + 1), a[0]);
++      end = a[0];
++      moved = true;
++    }
++    const step = () =>
++      c === '"' || c === "'" || c === "`"
++        ? Math.max(strEnd(i), i + 1)
++        : /[A-Za-z_$]/.test(c)
++          ? i + (/^[\w$]+/.exec(js.slice(i, i + 64))?.[0].length ?? 1)
++          : i + 1;
++    if (!moved || (!hasStr && !/toString\s*\(\s*16/.test(js.slice(i, end)))) {
++      i = step();
++      continue;
++    }
++    const v = foldConcat(js.slice(i, end), K, { hole });
++    if (v == null || typeof v !== "string") {
++      i = step();
++      continue;
++    }
++    reps.push([i, end, JSON.stringify(v).replace(/\n/g, "\\n")]);
++    i = end;
++  }
++  if (!reps.length) return js;
++  let out = "",
++    at = 0;
++  for (const [a, b, v] of reps) {
++    out += js.slice(at, a) + v;
++    at = b;
++  }
++  return out + js.slice(at);
++}
++
+ // ------------------------------------------------------------------------------------ Tailwind
+ const TW_PX = (n) =>
+   n === "0" ? "0px" : /^\d+(\.\d+)?$/.test(n) ? `${+n * 0.25}rem` : n;
+@@ -822,6 +1046,27 @@ function stripVariants(t) {
+   }
+   return t.slice(cut);
+ }
++/** TIN (tw-palette): Tailwind's default palette, `name-shade` → its `<color>` (`indigo-200` →
++ *  `oklch(87% 0.065 274.039)`), read from the installed `tailwindcss/theme.css` — the bytes the
++ *  build ships for a palette utility. Empty (never a throw) where the package is absent. */
++let TW_PALETTE = null;
++export function twPalette() {
++  if (TW_PALETTE) return TW_PALETTE;
++  TW_PALETTE = new Map();
++  try {
++    const css = readFileSync(
++      createRequire(import.meta.url).resolve("tailwindcss/theme.css"),
++      "utf8",
++    );
++    for (const m of css.matchAll(/--color-([a-z]+(?:-\d{2,3})?):\s*([^;]+);/g))
++      TW_PALETTE.set(m[1], m[2].trim());
++  } catch {
++    /* no tailwindcss installed: the palette reads empty */
++  }
++  return TW_PALETTE;
++}
++const TW_COLOR_UTIL =
++  /^(?:text|bg|border(?:-[xytrbl]|-[se])?|fill|stroke|outline|ring|ring-offset|decoration|accent|caret|from|via|to|divide|placeholder|shadow|inset-shadow|inset-ring|drop-shadow)-([a-z]+-\d{2,3}|black|white)(?:\/(?:\d+|\[[^\]]+\]))?$/;
+ /** Every (prop, value) a Tailwind candidate writes (the estate's gates key on these); [] if unknown. */
+ export function TAILWIND_ALL(tw) {
+   const t = on("tw-split")
+@@ -846,6 +1091,8 @@ export function TAILWIND_ALL(tw) {
+       ))
+   )
+     out.push(["color-literal", m[1]]);
++  else if (on("tw-palette") && (m = TW_COLOR_UTIL.exec(t)) && twPalette().has(m[1]))
++    out.push(["color", twPalette().get(m[1])]);
+   else if (on("tw-utility")) {
+     // TAPE S8a–e: utilities on an element that move or erase its paint
+     if ((m = /^opacity-(\d+|\[.+\])$/.exec(t)))
+@@ -2738,8 +2985,18 @@ function hslToRgb(h, s, l) {
+   };
+   return [f(0), f(8), f(4)];
+ }
+-/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated. */
++/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated.
++ *  TIN (channel-arity): a call that names a colour function over identifiers (`lab(want)`, a script's
++ *  own helper) reads as null: too few channels, or any channel that does not come out a number. */
+ export function parseColor(str) {
++  const c = parseColorAny(str);
++  return on("channel-arity") &&
++    c &&
++    !(c.rgb.length === 3 && [...c.rgb, c.a].every(Number.isFinite))
++    ? null
++    : c;
++}
++function parseColorAny(str) {
+   const s = String(str).trim().toLowerCase();
+   if (s === "transparent") return { rgb: [0, 0, 0], a: 0 };
+   if (NAMED_MAP.has(s)) return parseColor("#" + NAMED_MAP.get(s));
+@@ -2794,6 +3051,7 @@ export function parseColor(str) {
+     }
+     const [body, alpha] = rel.split("/").map((x) => x?.trim());
+     const t = body.split(/[\s,]+/).filter(Boolean);
++    if (on("channel-arity") && t.length < (fn === "color" ? 4 : 3)) return null;
+     const a = alpha != null ? num(alpha) : t.length === 4 ? num(t[3]) : 1;
+     if (fn === "rgb" || fn === "rgba")
+       return { rgb: t.slice(0, 3).map((x) => num(x, 255) / 255), a };
+@@ -3483,6 +3741,81 @@ const TESTS = [
+       return !!a && !!c && L.deltaE(a, b) < 0.5 && L.deltaE(c, d) < 0.5;
+     },
+   ],
++  [
++    "fold-hole",
++    "TIN",
++    'D11/D35 a minted name keeps its hole: `"--color-peer-" + i + "-name"` → `--color-peer-?-name`',
++    (L) =>
++      L.foldConcat('"--color-peer-" + i + "-name"', new Map(), { hole: "?" }) ===
++        "--color-peer-?-name" &&
++      L.foldConcat('["--color-peer", i, "name"].join("-")', new Map(), {
++        hole: "?",
++      }) === "--color-peer-?-name" &&
++      L.foldConcat('"a" + i') === null,
++  ],
++  [
++    "fold-int",
++    "TIN",
++    "D23 a packed int `(0xffb2f3).toString(16)` folds to its digits (decimal too)",
++    (L) =>
++      L.foldConcat('"#" + (0xffb2f3).toString(16)') === "#ffb2f3" &&
++      L.foldConcat('"#" + (16757491).toString(16)') === "#ffb2f3",
++  ],
++  [
++    "fold-text",
++    "TIN",
++    "D24/D25/D28/D33/D34/D39/D50 fold in place; a regex literal and a call's arguments are not touched",
++    (L) => {
++      const f = (t) => L.foldText(t);
++      return (
++        f('export const x = ["#ff", "b2f3"].join("");').includes('"#ffb2f3"') &&
++        f('export const x = `#ff${"b2f3"}`;').includes('"#ffb2f3"') &&
++        f('export const x = "\\x23ffb2f3";').includes('"#ffb2f3"') &&
++        f('el.style.setProperty(`--color-${"peer"}-${i}-name`, v);').includes(
++          '"--color-peer-?-name"',
++        ) &&
++        f(
++          'el.style.setProperty("--color-peer-".concat(String(i), "-name"), v);',
++        ).includes('"--color-peer-?-name"') &&
++        f('const P = "b2f3"; export const x = "#ff" + P;').includes('"#ffb2f3"') &&
++        f('const H = "#ff", T = "b2f3"; export const x = H + T;').includes(
++          '"#ffb2f3"',
++        ) &&
++        f('s.replace(/"/g, "_") + "#ff" + "b2f3"') ===
++          's.replace(/"/g, "_") + "#ffb2f3"' &&
++        f('g(a, "b")') === 'g(a, "b")'
++      );
++    },
++  ],
++  [
++    "tw-palette",
++    "TIN",
++    "D30 a palette utility resolves to its colour (variant, alpha); a spacing utility does not",
++    (L) => {
++      const c = (t) => (L.TAILWIND_ALL(t).find(([p]) => p === "color") ?? [])[1];
++      // split in the bytes: Tailwind scans scripts/ and would ship the classes (T9-R6)
++      const a = c("text-" + "indigo-200"),
++        b = c("hover:bg-" + "pink-200/50");
++      return (
++        !!a &&
++        !!b &&
++        L.deltaE(L.parseColor(a), L.parseColor("oklch(87% 0.065 274.039)")) < 0.01 &&
++        c("px-2") === undefined
++      );
++    },
++  ],
++  [
++    "channel-arity",
++    "TIN",
++    "a script's `lab(want)` / `hsl(x)` / `rgb(1)` is no colour and never throws; `lab(50 20 -30)` still is",
++    (L) =>
++      L.parseColor("lab(want)") === null &&
++      L.parseColor("hsl(10)") === null &&
++      L.parseColor("rgb(1)") === null &&
++      L.parseColor("oklch(a b c)") === null &&
++      L.colorLiterals("const x = lab(want) + lab(name.rgb);").length === 0 &&
++      !!L.parseColor("lab(50 20 -30)"),
++  ],
+   // --- LIVE
+   [
+     "masked",
+@@ -4358,6 +4691,8 @@ const LIB = {
+   sets,
+   constBindings,
+   foldConcat,
++  foldText,
++  twPalette,
+   TAILWIND,
+   TAILWIND_ALL,
+   candidates,

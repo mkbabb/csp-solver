@@ -1,0 +1,17 @@
+MOT-LADDER pass 8 bank (cut BEFORE MOT-VERB opens the shared §13 tree)
+worktree      .claude/worktrees/wf_f72f3b5a-83a-59
+base          74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+opened on     e7cc2ae873c9e5cb53cc158360991f3f2538070f (MOT-VERB pass7.diff tree; LADDER's own p7 cut cb17b5f3 lies under it)
+tree (T8)     547b50d5f7c9064de6c5d9284fab7f9d09c75491  <- the sha handed to VERB
+cumulative    pass8.diff                    865,797 B  sha1 ec7a362f76f9f4d2d04828df1eb66cc7737e95b7  74a2b5d9 -> T8   69 files +17136/-340 (--binary)
+delta         pass8-ladder-delta.diff       372,299 B  sha1 21e270ff8bdecce6c100dec0aec9c472f65c9209  e7cc2ae8 -> T8   11 files +7264/-322 (homes + this pass)
+own delta     pass8.delta.own.diff           76,854 B  sha1 631bf4907c875fdb64188c40d7b27906b7ce17e2  (e7cc2ae8 + homes = 5ccf0a6e) -> T8   5 files +1249/-47
+on-union      pass8.delta.on-s13-s7-s3.diff  76,890 B  sha1 3d2cfea0b2f1ee906cf0b1f8f500b998a9949736  (74a2b5d9 + s13-s7-s3 + homes.on-s13-s7-s3 = 1f8a729a) -> caa4898a   5 files +1249/-47
+apply --check cumulative on 74a2b5d9 (temp index): 0 -> writes 547b50d5
+apply --check delta on e7cc2ae8 (temp index): 0 -> writes 547b50d5
+apply --check own delta on union+homes (1f8a729a): 1 (check-motion-bands.mjs:2247, the union's S1 ADMITTED_ARITH rows) -> rebased by git merge-file (both row sets kept) = the on-union delta
+apply --check on-union delta on 1f8a729a: 0 -> writes caa4898a
+apply --check full delta on the union WITHOUT homes: 1 by construction (shape-census.mjs is an ADD in homes.diff, a MODIFY on the union)
+battery sha1  check-motion-bands.mjs 5cefa7a65bba · shape-census.mjs b64d41280020 · motion-bank.json 7856799a2980 · live-fit-ablation.spec.ts 776bd2728a58
+BANK_SHA256   477a28ab8b00cdf325db92ad5891654660813e12b48f5a9150f37dc31c7b416d (was f6de1ab4…; + consumers roster, + VERB's two hand clocks)
+cut           GIT_INDEX_FILE temp indexes only; the lane's real index untouched

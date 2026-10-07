@@ -1,0 +1,33 @@
+
+Running 1 test using 1 worker
+
+G10 webkit clock driven 125 Hz (vsync stamps): measured 125.0 Hz over 826 gaps, 102 vsyncs dropped by a late pump, 0 frame callbacks threw (precondition ≥ 93.75 Hz) · deal HARD ×6, tally inked 2 · .progress-trace nodes 4
+G10 webkit gauge: 68 d records, 17 frames (4.00 d/frame; by burst 4.00/4.00/4.00), 3 bursts, rates 18.0/18.0/18.0/s (worst 18.0, slowest 18.0; floor (gated) 0.9 × min(125.0 Hz, 62.5) = 56.3 RED 3/3; A.6-delivered (printed) 52.7/55.0/55.0 RED 3/3), DOM rates 18.2/18.1/18.1/s, frame min 54.0 ms [frames 6058.0→6112.0, DOM 6060.0→6112.0, lags 2.0/NaN], DOM min 51.0 ms, min gap by burst 54.0/54.0/54.0 ms (DOM 52.0/52.0/51.0), flush lag by burst 2.0–2.0/1.0–2.0/1.0–3.0 ms, 3 of 17 outside a frame
+G10 webkit tally: 72 d records, 11 frames (6.55 d/frame; by burst 6.55), 1 bursts, rates 18.2/s (worst 18.2, slowest 18.2; floor (gated) 0.9 × min(125.0 Hz, 62.5) = 56.3 RED 1/1; A.6-delivered (printed) 52.4 RED 1/1), DOM rates 18.2/s, frame min 49.0 ms [frames 505.0→554.0, DOM 505.0→556.0, lags NaN/2.0], DOM min 51.0 ms, min gap by burst 49.0 ms (DOM 51.0), flush lag by burst 0.0–6.0 ms, 2 of 11 outside a frame
+G10 webkit join: 40 d records, 10 frames (4.00 d/frame; by burst 4.00), 1 bursts, rates 17.8/s (worst 17.8, slowest 17.8; floor (gated) 0.9 × min(125.0 Hz, 62.5) = 56.3 RED 1/1; A.6-delivered (printed) 55.1 RED 1/1), DOM rates 17.9/s, frame min 56.0 ms [frames 17434.0→17490.0, DOM 17437.0→17492.0, lags 3.0/2.0], DOM min 54.0 ms, min gap by burst 56.0 ms (DOM 54.0), flush lag by burst 2.0–4.0 ms, 1 of 10 outside a frame
+G10 webkit CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor RED
+  ✘  1 [webkit] › e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it (19.9s)
+
+
+  1) [webkit] › e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 
+
+    Error: gauge re-cut a burst 38.3/s under its floor 0.9 × min(125.0 Hz, 62.5) = 56.3 (A.6-delivered, printed: 52.7/55.0/55.0)
+
+    expect(received).toBeGreaterThanOrEqual(expected)
+
+    Expected: >= 0
+    Received:    -38.264388489208635
+
+      385 |     expect(worsts[k], `${k} re-cuts ${worsts[k].toFixed(1)}/s against the budget`).toBeLessThanOrEqual(BUDGET_PER_S);
+      386 |     expect(minGaps[k], `${k}'s shortest gap between re-cut frames ${minGaps[k].toFixed(1)} ms is inside the budget's window`).toBeGreaterThanOrEqual(MIN_GAP_MS);
+    > 387 |     expect(shortfall[k], `${k} re-cut a burst ${(-shortfall[k]).toFixed(1)}/s under its floor 0.9 × min(${hz.hz.toFixed(1)} Hz, 62.5) = ${chairFloor.toFixed(1)} (A.6-delivered, printed: ${floorsOf[k].map((v) => v.toFixed(1)).join("/")})`).toBeGreaterThanOrEqual(0);
+          |                                                                                                                                                                                                                                                ^
+      388 |   }
+      389 |   await ctx.close();
+      390 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/front-rate.spec.ts:387:240
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-g10-slow49-125a-webkit/e2e-front-rate-G10-every-p-34d81-t-the-panel-s-rate-below-it-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 

@@ -1,0 +1,20 @@
+RED   exit 1 red[de]  C1 SVG ink mass: a block of five pen lines (the thick tab again, PNG kept)
+      d.arm: the path or stroke-width is not the arm table's (scripts/icons.mjs ARM W, WIDTH 4) | d.mass: the path's ink mass 0.420 (analytic, 180 px), outside [0.18, 0.32] | e.png-tie: the touch icon is not the path: mean |Δcoverage| 0.2317 (<= 0.02), IoU 0.4706 (>= 0.97)
+RED   exit 1 red[e]  C2 a PNG of four ink bars (not the s), coverage ~0.23
+      e.png-tie: the touch icon is not the path: mean |Δcoverage| 0.3250 (<= 0.02), IoU 0.2414 (>= 0.97)
+RED   exit 1 red[de]  C3 the letter Z at the same box and pen
+      d.arm: the path or stroke-width is not the arm table's (scripts/icons.mjs ARM W, WIDTH 4) | e.png-tie: the touch icon is not the path: mean |Δcoverage| 0.1819 (<= 0.02), IoU 0.4117 (>= 0.97)
+RED   exit 1 red[de]  C4 T9-B28 arm B: stroke-width 5 (the ballot's own arm)
+      d.arm: the path or stroke-width is not the arm table's (scripts/icons.mjs ARM W, WIDTH 4) | d.window: stroke/H 0.200 outside [0.15, 0.17] (WIDTH 4) | e.png-tie: the touch icon is not the path: mean |Δcoverage| 0.0617 (<= 0.02), IoU 0.7858 (>= 0.97)
+RED   exit 1 red[de]  C5 arm H's path with W's PNG kept (SVG/PNG divergence)
+      d.arm: the path or stroke-width is not the arm table's (scripts/icons.mjs ARM W, WIDTH 4) | e.png-tie: the touch icon is not the path: mean |Δcoverage| 0.0376 (<= 0.02), IoU 0.8512 (>= 0.97)
+RED   exit 1 red[e]  C6 both icon links commented out in index.html (no icon ships)
+      e.link-icon: index.html carries 0 uncommented rel~=icon link(s) (); exactly one, to /icon.svg, wanted | e.link-touch: index.html carries 0 uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted
+RED   exit 1 red[e]  C7 a second rel=icon after ours, to main's thick favicon (browsers take the last)
+      e.link-icon: index.html carries 2 uncommented rel~=icon link(s) (/icon.svg, /thick.svg); exactly one, to /icon.svg, wanted
+RED   exit 1 red[ce]  C8 a second @theme site for the paper in another file (placed, order-resolved)
+      c.conflict: --color-background has 2 placed sites that disagree (src/assets/index.css hsl(48 15% 98%) · src/zz-palette.css #f4efe4): walk order is not the cascade | c.tokens: the light tokens don't resolve to opaque ink and paper at >= 7:1 | e.png-paper: the touch icon's paper is not the light token
+RED   exit 1 red[ce]  C9 a second @theme site sorting first
+      c.conflict: --color-background has 2 placed sites that disagree (src/assets/aa-palette.css #f4efe4 · src/assets/index.css hsl(48 15% 98%)): walk order is not the cascade | c.tokens: the light tokens don't resolve to opaque ink and paper at >= 7:1 | e.png-paper: the touch icon's paper is not the ligh
+RED   exit 1 red[c]  C10 a .dark site in an SFC style retoning the ink (placed as dark)
+      c.conflict: --color-foreground has 2 placed sites that disagree (src/assets/index.css hsl(48 10% 92%) · src/zz.vue #8a8a8a): walk order is not the cascade | c.tokens: the dark tokens don't resolve to opaque ink and paper at >= 7:1

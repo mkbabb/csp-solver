@@ -1,0 +1,1675 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..7555b646 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -986,6 +986,14 @@ jobs:
+             - name: theme-token census (every @theme token has a consumer, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:theme-tokens
++            # T9-M22 (TAB-PEN) — the tab's s: one pen line in the page's own ink on its own paper.
++            # It reads the SHAPE (markup allowlist, every <style> rule in source order, the page's links
++            # and tokens through shape-census, the path rastered analytically, the touch icon's own
++            # pixels held to that raster), and its self-test plants 61 defects plus 8 negative-
++            # negatives; `--sabotage-battery` (by hand, ~3 min) switches each of its 54 checks off.
++            - name: favicon gate (the house pen, the page's tokens, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:favicon
+             # T5-W2 2.1c — the TDZ probe, WIRED at T7-W6. `lint:tdz` has been in package.json
+             # since 2.1 and no CI step ever called it, which is a package.json script, not a
+             # lane. Two arms: the GRAPH arm asserts the three severed edges of the old
+diff --git a/.gitignore b/.gitignore
+index bd478ff0..177cea65 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -63,8 +63,11 @@ web/frontend/playwright-report-throttle/
+ # web/frontend/scripts/check-golden-bytes.mjs (≤150 KB/image, EVIDENCE-POLICY).
+ !web/frontend/e2e/goldens/
+ !web/frontend/e2e/goldens/**/*.png
+-# T4-W3 social card — the one committed public PNG (og:image, <=150 KB under B1).
++# The committed public PNGs, excepted from the global *.png ignore: T4-W3's social card (og:image,
++# <=150 KB under B1) and T9-M22's touch icon (rastered from public/icon.svg by scripts/icons.mjs;
++# lint:favicon (e) holds it to the path in CI).
+ !web/frontend/public/og-card.png
++!web/frontend/public/apple-touch-icon.png
+ # T4-W8 author avatar — BUNDLED same-origin (AttributionCard.vue imports it; Vite emits it
+ # content-hashed under /assets/) to retire the app's last third-party network hit (ROW 5 /
+ # FAM-14). A real deploy asset (6 KB), must ship despite the global *.png ignore.
+diff --git a/web/frontend/index.html b/web/frontend/index.html
+index b6f93288..16d2fde2 100644
+--- a/web/frontend/index.html
++++ b/web/frontend/index.html
+@@ -12,7 +12,8 @@
+       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+     />
+     <title>sudoku</title>
+-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
++    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
++    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+     <!-- P5 (Tranche II): fonts are self-hosted woff2 subsets, wired via @font-face
+          in src/assets/index.css — the Google Fonts CDN link is gone, so is the
+          fonts.googleapis.com / fonts.gstatic.com CSP allowance (see public/_headers). -->
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index f569bb75..100f51f4 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -34,6 +34,8 @@
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
+     "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
++    "lint:favicon": "node scripts/check-favicon.mjs --self-test",
++    "icons": "node scripts/icons.mjs",
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
+diff --git a/web/frontend/public/apple-touch-icon.png b/web/frontend/public/apple-touch-icon.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c4a97038dddd828ab7c0bfbe37477beecb19611
+GIT binary patch
+literal 2473
+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
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/public/favicon.svg b/web/frontend/public/favicon.svg
+deleted file mode 100644
+index d0473d6a..00000000
+--- a/web/frontend/public/favicon.svg
++++ /dev/null
+@@ -1,17 +0,0 @@
+-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+-  <defs>
+-    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
+-      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
+-      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+-    </filter>
+-    <clipPath id="c">
+-      <rect width="32" height="32" rx="6" ry="6"/>
+-    </clipPath>
+-  </defs>
+-  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
+-  <g clip-path="url(#c)">
+-    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
+-      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
+-    </g>
+-  </g>
+-</svg>
+diff --git a/web/frontend/public/icon.svg b/web/frontend/public/icon.svg
+new file mode 100644
+index 00000000..f14bf261
+--- /dev/null
++++ b/web/frontend/public/icon.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#fbfaf9}path{stroke:#0a0a0a}@media(prefers-color-scheme:dark){rect{fill:#110f0e}path{stroke:#edece9}}</style><rect width="32" height="32" fill="#fbfaf9"/><path d="M22.6,9.6C21.4,7.1 18.6,6 15.8,6C12,6 9.6,7.9 9.6,10.6C9.6,13.4 12.4,14.6 16.2,15.8C21,17.3 24,18.4 24,21.2C24,24.4 20.4,26 15.8,26C11.6,26 8,24.6 8,22.6" fill="none" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+diff --git a/web/frontend/scripts/check-favicon.mjs b/web/frontend/scripts/check-favicon.mjs
+new file mode 100644
+index 00000000..a19fea4c
+--- /dev/null
++++ b/web/frontend/scripts/check-favicon.mjs
+@@ -0,0 +1,1405 @@
++#!/usr/bin/env node
++/**
++ * THE FAVICON GATE (T9-M22, TAB-PEN). The tab's s is one pen line on the page's paper, in the page's
++ * ink. It reads the SHAPE, not the spelling (LAWS P6 §F): the markup against an allowlist, every
++ * `<style>` rule in source order with the last one winning, the page's links and tokens through the
++ * estate's ONE library (`shape-census.mjs`: `htmlLinks`, `tokenSites`, `tokenConflicts`, colours
++ * scored by ΔE), the path rastered analytically, and the touch icon's own pixels. Browserless.
++ *
++ *   a  the markup     exactly one each of svg, style, rect, path, and nothing else: no comment, no
++ *                     entity, no second element, no attribute outside the allowlist (so no filter,
++ *                     clip, rx/ry, transform, opacity, style="", dasharray). viewBox `0 0 32 32`; the
++ *                     rect covers it at 0,0; the rect is painted before the path.
++ *   b  one pen line   the path: fill none, round caps and joins, stroke-width a bare number in
++ *                     [3.6, 5.2] of the 32 viewBox. The `<style>` body holds `rect{fill}` and
++ *                     `path{stroke}` only, at the top level or inside `@media (prefers-color-scheme:
++ *                     dark)`; no other property, selector, at-rule or !important. <= 600 B.
++ *   c  the page's     the painted fill and stroke, resolved per scheme through the cascade (the
++ *      colours        attributes, then every rule in source order), are the page's
++ *                     --color-background / --color-foreground (ΔE <= 0.5, opaque) in light and in
++ *                     dark. The tokens are read at EVERY site the library finds; a site outside
++ *                     `:root`/`@theme` and `.dark` is RED, two placed sites that disagree are RED
++ *                     (never resolved by walk order), and an unresolved `setProperty` is RED. Ink
++ *                     over paper >= 7:1 in each scheme.
++ *   d  the pen        the path and stroke-width are the arm table's (`scripts/icons.mjs`: PEN[ARM],
++ *                     WIDTH); the exact extrema bbox inflated by half the pen is within [0.55, 0.80]
++ *                     of the tile per axis, centred within 0.5 unit; stroke / (bbox H + stroke) is in
++ *                     WINDOWS[WIDTH] (a tab-size legibility window, 2 px at 16 px, keyed to the pen's
++ *                     width so the owner's arm B needs one const, not a gate edit); the path's ink
++ *                     MASS, rastered analytically at 180 (4 × 4 samples a pixel), is in [0.18, 0.32].
++ *   e  the estate     index.html (comments stripped) carries EXACTLY ONE rel~=icon, to /icon.svg, and
++ *                     exactly one apple-touch-icon, to /apple-touch-icon.png; favicon.svg is gone
++ *                     (the rename busts the favicon store); scripts/icons.provenance.json carries both
++ *                     files' sha256; the PNG decodes to 180 x 180, opaque, its paper the light token
++ *                     (ΔE <= 2), its ink coverage in [0.18, 0.32], its darkest pixel the light ink
++ *                     (ΔE <= 4), and it IS the path: its per-pixel coverage against the analytic
++ *                     raster reads mean |Δ| <= 0.02 and IoU >= 0.97. A PNG that isn't the s reds on
++ *                     content, whatever the sidecar says.
++ *
++ * `--self-test` plants defects in memory; each must RED exactly its clause set (and the check ids it
++ * names), and the negative-negatives must stay GREEN. `--sabotage-battery` switches each check off in
++ * turn, and each of the library clauses this gate reads, and the self-test must red every time.
++ * Run: `node scripts/check-favicon.mjs [--self-test | --sabotage-battery] [--root <web/frontend>]`.
++ */
++import { createHash } from "node:crypto";
++import fs from "node:fs";
++import path from "node:path";
++import process from "node:process";
++import zlib from "node:zlib";
++import { ARM, PEN, WIDTH, WINDOWS } from "./icons.mjs";
++import {
++  cssRules,
++  deltaE,
++  exactlyOneLink,
++  parseColor,
++  resolve,
++  sabotage,
++  sources,
++  stripCss,
++  tokenConflicts,
++  tokenSites,
++  tokens,
++} from "./shape-census.mjs";
++
++const argRoot = process.argv.indexOf("--root");
++const ROOT =
++  argRoot > 0
++    ? path.resolve(process.argv[argRoot + 1])
++    : path.join(import.meta.dirname, "..");
++const TOKENS = ["--color-background", "--color-foreground"];
++const sha256 = (b) => createHash("sha256").update(b).digest("hex");
++const OFF = new Set(); // the gate's own sabotage switch (check ids)
++
++/* ── colour ─────────────────────────────────────────────────────────────────── */
++const lum = ({ rgb }) =>
++  rgb
++    .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
++    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
++const contrast = (a, b) => {
++  const [hi, lo] = [lum(a), lum(b)].sort((p, q) => q - p);
++  return (hi + 0.05) / (lo + 0.05);
++};
++const opaque = (c) => c && (c.a ?? 1) >= 0.999;
++
++/** The page's two tokens through the ONE library, placed light (`:root`, which `@theme` reads as) /
++ *  dark (`.dark`) / unplaced, with the library's conflicts. The library reads each file once (cached
++ *  on its path and text; a plant that adds a file pays for that file alone); memoised per list. */
++const siteCache = new WeakMap();
++const fileCache = new Map();
++function fileTokens({ file, text }) {
++  const key = `${file}\u0000${text}`;
++  if (!fileCache.has(key)) {
++    const abs = path.join(ROOT, file);
++    const io = {
++      files: [abs],
++      read: (p) => (p === abs ? text : fs.readFileSync(p, "utf8")),
++      exists: (p) => p === abs || fs.existsSync(p),
++    };
++    const mine = (x) => x.file === file; // an @import's target is read at its own entry
++    fileCache.set(key, {
++      sites: TOKENS.flatMap((prop) =>
++        tokenSites(ROOT, prop, io)
++          .filter(mine)
++          .map((x) => ({ ...x, prop })),
++      ),
++      decls: tokens(ROOT, io).all.filter(mine),
++    });
++  }
++  return fileCache.get(key);
++}
++function pageTokens(files) {
++  if (siteCache.has(files)) return siteCache.get(files);
++  const per = files.map(fileTokens);
++  const sites = per.flatMap((f) => f.sites);
++  const map = new Map(per.flatMap((f) => f.decls.map((x) => [x.prop, x.value])));
++  const placed = sites.filter((s) => !s.unresolved);
++  const home = (s) =>
++    s.ctx || s.important
++      ? null
++      : s.prelude.replace(/\s+/g, "") === ":root"
++        ? "light"
++        : s.prelude.replace(/\s+/g, "") === ".dark"
++          ? "dark"
++          : null;
++  const tok = { light: {}, dark: {} };
++  for (const s of placed)
++    if (home(s)) tok[home(s)][s.prop] = parseColor(resolve(s.value, map));
++  const conflicts = tokenConflicts(placed);
++  // A token whose placed sites disagree has no value this gate can know (the build's order decides):
++  // it resolves to nothing, in whichever order the walk met the sites.
++  for (const c of conflicts) if (home(c.sites[0])) tok[home(c.sites[0])][c.name] = null;
++  const out = {
++    tok,
++    unplaced: placed.filter((s) => !home(s)),
++    unresolved: sites.filter((s) => s.unresolved),
++    conflicts,
++  };
++  siteCache.set(files, out);
++  return out;
++}
++
++/* ── the markup ─────────────────────────────────────────────────────────────── */
++const ALLOWED = {
++  svg: ["xmlns", "viewBox"],
++  style: [],
++  rect: ["width", "height", "fill", "x", "y"],
++  path: ["d", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin"],
++};
++function parseSvg(svg) {
++  const els = [];
++  let styleText = "";
++  const tag =
++    /<(\/?)([A-Za-z][\w:.-]*)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/y;
++  const junk = [];
++  let i = 0;
++  let inStyle = false;
++  while (i < svg.length) {
++    if (inStyle) {
++      const end = svg.indexOf("</style>", i);
++      if (end < 0) return { els, styleText, junk: ["an unclosed <style>"] };
++      styleText += svg.slice(i, end);
++      i = end;
++      inStyle = false;
++      continue;
++    }
++    const lt = svg.indexOf("<", i);
++    const text = svg.slice(i, lt < 0 ? svg.length : lt);
++    if (text.trim()) junk.push(`text "${text.trim().slice(0, 20)}"`);
++    if (lt < 0) break;
++    tag.lastIndex = lt;
++    const m = tag.exec(svg);
++    if (!m) {
++      junk.push(`markup this gate can't read at "${svg.slice(lt, lt + 12)}"`);
++      break;
++    }
++    i = tag.lastIndex;
++    if (m[1]) continue;
++    const attrs = [...m[3].matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(
++      (a) => [a[1], a[2] ?? a[3]],
++    );
++    els.push({
++      name: m[2],
++      attrs,
++      dupe: new Set(attrs.map(([k]) => k)).size < attrs.length,
++    });
++    if (m[2] === "style" && !m[4]) inStyle = true;
++  }
++  return { els, styleText, junk };
++}
++
++/* ── geometry: absolute M/L/H/V/C/Q/Z → polylines (curves at 24 steps) and exact extrema ─────── */
++function geometry(d) {
++  const t = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g);
++  if (!t || t.some((x) => /[a-z]/.test(x) || /[^MLHVCQZ\d.e-]/.test(x))) return null;
++  const xs = [];
++  const ys = [];
++  const lines = [];
++  let line = null;
++  const ext = (v) => {
++    const out = [v[0], v[v.length - 1]];
++    const roots = [];
++    if (v.length === 4) {
++      const [a, b, c] = [
++        -v[0] + 3 * v[1] - 3 * v[2] + v[3],
++        2 * (v[0] - 2 * v[1] + v[2]),
++        v[1] - v[0],
++      ];
++      if (Math.abs(a) < 1e-12) {
++        if (Math.abs(b) > 1e-12) roots.push(-c / b);
++      } else if (b * b - 4 * a * c >= 0) {
++        const s = Math.sqrt(b * b - 4 * a * c);
++        roots.push((-b + s) / (2 * a), (-b - s) / (2 * a));
++      }
++    } else if (Math.abs(v[0] - 2 * v[1] + v[2]) > 1e-12)
++      roots.push((v[0] - v[1]) / (v[0] - 2 * v[1] + v[2]));
++    for (const u of roots.filter((r) => r > 0 && r < 1)) out.push(bez(v, u));
++    return out;
++  };
++  const bez = (v, u) =>
++    v.length === 4
++      ? (1 - u) ** 3 * v[0] +
++        3 * (1 - u) ** 2 * u * v[1] +
++        3 * (1 - u) * u * u * v[2] +
++        u ** 3 * v[3]
++      : (1 - u) ** 2 * v[0] + 2 * (1 - u) * u * v[1] + u * u * v[2];
++  let [cx, cy] = [0, 0];
++  let cmd = "";
++  for (let i = 0; i < t.length;) {
++    if (/[A-Z]/.test(t[i])) cmd = t[i++];
++    const n = () => +t[i++];
++    if (cmd === "Z") {
++      if (line) {
++        line.push(line[0]);
++        [cx, cy] = line[0];
++      }
++      continue;
++    }
++    if (cmd === "M") {
++      [cx, cy] = [n(), n()];
++      lines.push((line = [[cx, cy]]));
++      cmd = "L"; // implicit lineto after a moveto's first pair
++    } else if (cmd === "L") [cx, cy] = [n(), n()];
++    else if (cmd === "H") cx = n();
++    else if (cmd === "V") cy = n();
++    else if (cmd === "C" || cmd === "Q") {
++      const p = [[cx, cy]];
++      for (let k = 0; k < (cmd === "C" ? 3 : 2); k++) p.push([n(), n()]);
++      xs.push(...ext(p.map((q) => q[0])));
++      ys.push(...ext(p.map((q) => q[1])));
++      for (let k = 1; k <= 24; k++)
++        line?.push([
++          bez(
++            p.map((q) => q[0]),
++            k / 24,
++          ),
++          bez(
++            p.map((q) => q[1]),
++            k / 24,
++          ),
++        ]);
++      [cx, cy] = p[p.length - 1];
++      continue;
++    } else return null;
++    if (!line) return null;
++    if (cmd !== "L" || line.length > 1 || line[0][0] !== cx || line[0][1] !== cy)
++      line.push([cx, cy]);
++    xs.push(cx);
++    ys.push(cy);
++  }
++  if (!lines.length || xs.some(Number.isNaN)) return null;
++  return {
++    box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
++    lines,
++  };
++}
++
++/** Per-pixel ink coverage of a round-capped, round-joined pen of `pen` units along the path, on an
++ *  `n` × `n` raster of the 32 viewBox, `ss` × `ss` samples a pixel (the union of capsules IS the
++ *  round-cap/round-join stroke). Memoised. */
++const rasterCache = new Map();
++function raster(d, pen, n = 180, ss = 4) {
++  const key = `${d}|${pen}|${n}|${ss}`;
++  if (rasterCache.has(key)) return rasterCache.get(key);
++  const g = geometry(d);
++  if (!g) return null;
++  const k = (n * ss) / 32;
++  const S = n * ss;
++  const r = (pen / 2) * k;
++  const ink = new Uint8Array(S * S);
++  for (const line of g.lines)
++    for (let j = 0; j < line.length; j++) {
++      const [ax, ay] = [line[j][0] * k, line[j][1] * k];
++      const [bx, by] =
++        j + 1 < line.length ? [line[j + 1][0] * k, line[j + 1][1] * k] : [ax, ay];
++      const [dx, dy] = [bx - ax, by - ay];
++      const L2 = dx * dx + dy * dy;
++      const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - r));
++      const x1 = Math.min(S - 1, Math.ceil(Math.max(ax, bx) + r));
++      const y0 = Math.max(0, Math.floor(Math.min(ay, by) - r));
++      const y1 = Math.min(S - 1, Math.ceil(Math.max(ay, by) + r));
++      for (let y = y0; y <= y1; y++)
++        for (let x = x0; x <= x1; x++) {
++          const [px, py] = [x + 0.5 - ax, y + 0.5 - ay];
++          const u = L2 ? Math.max(0, Math.min(1, (px * dx + py * dy) / L2)) : 0;
++          const [ex, ey] = [px - u * dx, py - u * dy];
++          if (ex * ex + ey * ey <= r * r) ink[y * S + x] = 1;
++        }
++    }
++  const cov = new Float64Array(n * n);
++  for (let y = 0; y < S; y++)
++    for (let x = 0; x < S; x++)
++      if (ink[y * S + x])
++        cov[Math.floor(y / ss) * n + Math.floor(x / ss)] += 1 / (ss * ss);
++  const out = { cov, mass: cov.reduce((s, v) => s + v, 0) / (n * n) };
++  rasterCache.set(key, out);
++  return out;
++}
++
++/* ── the touch icon's pixels (PNG, non-interlaced, any colour type) ─────────── */
++function decodePng(buf) {
++  if (!buf || buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) return null;
++  let o = 8;
++  let hdr = null;
++  let plte = null;
++  let trns = null;
++  const idat = [];
++  while (o + 8 <= buf.length) {
++    const len = buf.readUInt32BE(o);
++    const type = buf.toString("latin1", o + 4, o + 8);
++    const data = buf.subarray(o + 8, o + 8 + len);
++    o += 12 + len;
++    if (type === "IHDR")
++      hdr = {
++        w: data.readUInt32BE(0),
++        h: data.readUInt32BE(4),
++        depth: data[8],
++        ct: data[9],
++        lace: data[12],
++      };
++    else if (type === "PLTE") plte = data;
++    else if (type === "tRNS") trns = data;
++    else if (type === "IDAT") idat.push(data);
++    else if (type === "IEND") break;
++  }
++  const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[hdr?.ct];
++  if (!hdr || hdr.lace || !ch || (hdr.ct === 3 && !plte)) return null;
++  const bits = ch * hdr.depth;
++  const stride = Math.ceil((hdr.w * bits) / 8);
++  const step = Math.max(1, bits >> 3);
++  let raw;
++  try {
++    raw = zlib.inflateSync(Buffer.concat(idat));
++  } catch {
++    return null;
++  }
++  const px = Buffer.alloc(stride * hdr.h);
++  for (let y = 0; y < hdr.h; y++) {
++    const f = raw[y * (stride + 1)];
++    for (let x = 0; x < stride; x++) {
++      const r = raw[y * (stride + 1) + 1 + x];
++      const a = x >= step ? px[y * stride + x - step] : 0;
++      const b = y ? px[(y - 1) * stride + x] : 0;
++      const c = x >= step && y ? px[(y - 1) * stride + x - step] : 0;
++      const pa = Math.abs(b - c);
++      const pb = Math.abs(a - c);
++      const pc = Math.abs(a + b - 2 * c);
++      const pred = [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][
++        f
++      ];
++      px[y * stride + x] = (r + pred) & 255;
++    }
++  }
++  const sample = (y, k) => {
++    const bit = k * hdr.depth;
++    const byte = px[y * stride + (bit >> 3)];
++    if (hdr.depth >= 8) return byte;
++    return (byte >> (8 - hdr.depth - (bit & 7))) & ((1 << hdr.depth) - 1);
++  };
++  const scale = hdr.depth < 8 && hdr.ct !== 3 ? 255 / ((1 << hdr.depth) - 1) : 1;
++  const rgba = [];
++  const w16 = hdr.depth === 16 ? 2 : 1;
++  for (let y = 0; y < hdr.h; y++)
++    for (let x = 0; x < hdr.w; x++) {
++      const s = (k) => sample(y, x * ch * w16 + k * w16) * scale;
++      if (hdr.ct === 3) {
++        const i = s(0);
++        rgba.push([plte[3 * i], plte[3 * i + 1], plte[3 * i + 2], trns?.[i] ?? 255]);
++      } else if (hdr.ct < 2 || hdr.ct === 4)
++        rgba.push([s(0), s(0), s(0), hdr.ct === 4 ? s(1) : 255]);
++      else rgba.push([s(0), s(1), s(2), hdr.ct === 6 ? s(3) : 255]);
++    }
++  return { w: hdr.w, h: hdr.h, rgba };
++}
++
++/** The PNG's per-pixel ink coverage against the light paper and ink, in the encoded channels (the
++ *  rasteriser composites there), and its fit to the analytic raster: mean |Δ| and IoU at 0.5. */
++export function tie(img, ras, paper, ink) {
++  const P = paper.rgb.map((v) => v * 255);
++  const I = ink.rgb.map((v) => v * 255);
++  let sum = 0;
++  let inter = 0;
++  let union = 0;
++  for (let i = 0; i < img.rgba.length; i++) {
++    const a =
++      [0, 1, 2].reduce((s, c) => s + (P[c] - img.rgba[i][c]) / (P[c] - I[c]), 0) / 3;
++    const got = Math.min(1, Math.max(0, a));
++    const want = ras.cov[i];
++    sum += Math.abs(got - want);
++    if (got >= 0.5 || want >= 0.5) union++;
++    if (got >= 0.5 && want >= 0.5) inter++;
++  }
++  return { meanDelta: sum / img.rgba.length, iou: union ? inter / union : 0 };
++}
++
++/* ── the audit: one model in, a list of [clause, id, reason] out ─────────────── */
++function audit(m, arm = { name: ARM, width: WIDTH, d: PEN[ARM] }) {
++  const fails = [];
++  const red = (clause, id, why) => {
++    if (!OFF.has(id)) fails.push([clause, id, why]);
++  };
++  const svg = m.svg ?? "";
++  const { tok, unplaced, unresolved, conflicts } = pageTokens(m.files);
++
++  // a · the markup
++  const { els, styleText, junk } = parseSvg(svg);
++  for (const j of junk) red("a", "a.junk", j);
++  const count = (n) => els.filter((e) => e.name === n).length;
++  for (const n of Object.keys(ALLOWED))
++    if (count(n) !== 1)
++      red("a", "a.count", `${count(n)} <${n}> elements, exactly one wanted`);
++  for (const e of els) {
++    if (!ALLOWED[e.name])
++      red("a", "a.element", `<${e.name}> is not one of svg, style, rect, path`);
++    else
++      for (const [k] of e.attrs)
++        if (!ALLOWED[e.name].includes(k))
++          red("a", "a.attr", `<${e.name}> carries ${k}=`);
++    if (e.dupe) red("a", "a.dupe", `<${e.name}> repeats an attribute`);
++  }
++  const get = (n, k) =>
++    els.find((e) => e.name === n)?.attrs.find(([a]) => a === k)?.[1];
++  if (els[0]?.name !== "svg") red("a", "a.root", "the root element is not <svg>");
++  if (get("svg", "xmlns") !== "http://www.w3.org/2000/svg")
++    red("a", "a.ns", "the svg namespace is wrong");
++  if (
++    (get("svg", "viewBox") ?? "")
++      .trim()
++      .split(/[\s,]+/)
++      .join(" ") !== "0 0 32 32"
++  )
++    red("a", "a.viewbox", `viewBox "${get("svg", "viewBox")}", 0 0 32 32 wanted`);
++  if (get("rect", "width") !== "32" || get("rect", "height") !== "32")
++    red("a", "a.paper", "the paper is not 32 x 32");
++  for (const k of ["x", "y"])
++    if (get("rect", k) !== undefined && +get("rect", k) !== 0)
++      red("a", "a.paper-xy", `the paper's ${k} is not 0`);
++  const order = els.map((e) => e.name);
++  if (order.indexOf("rect") > order.indexOf("path"))
++    red("a", "a.order", "the paper is painted over the pen");
++
++  // b · one pen line
++  if (get("path", "fill") !== "none")
++    red("b", "b.fill", `fill="${get("path", "fill")}", not a pen line`);
++  if (get("path", "stroke-linecap") !== "round")
++    red("b", "b.cap", "stroke-linecap is not round");
++  if (get("path", "stroke-linejoin") !== "round")
++    red("b", "b.join", "stroke-linejoin is not round");
++  const swText = get("path", "stroke-width") ?? "";
++  const sw = /^\d+(\.\d+)?$/.test(swText) ? +swText : NaN;
++  if (!(sw >= 3.6 && sw <= 5.2))
++    red("b", "b.width", `stroke-width "${swText}" outside [3.6, 5.2]`);
++  const rules = cssRules(styleText);
++  if (/@(?!media\b)/.test(stripCss(styleText)))
++    red("b", "b.at-rule", "an at-rule other than @media in <style>");
++  const DARK = "@media (prefers-color-scheme:dark)";
++  const own = { rect: "fill", path: "stroke" };
++  for (const r of rules) {
++    const at = r.ctx.map((c) =>
++      c.replace(/\s*([():])\s*/g, "$1").replace(/^@media\(/, "@media ("),
++    );
++    if (at.length > 1 || (at.length === 1 && at[0] !== DARK))
++      red("b", "b.context", `a rule under "${r.ctx.join(" ")}"`);
++    if (!own[r.prelude])
++      red("b", "b.selector", `a rule for "${r.prelude}", only rect and path allowed`);
++    for (const d of r.decls) {
++      if (d.prop !== own[r.prelude])
++        red("b", "b.prop", `${r.prelude}{${d.prop}} in <style>`);
++      if (d.important) red("b", "b.important", `!important on ${r.prelude}{${d.prop}}`);
++    }
++    r.dark = at.length === 1;
++  }
++  if (Buffer.byteLength(svg) > 600)
++    red("b", "b.bytes", `${Buffer.byteLength(svg)} B > 600`);
++
++  // c · the page's colours, resolved through the cascade per scheme
++  for (const s of unplaced)
++    red(
++      "c",
++      "c.unplaced",
++      `${s.prop} is declared at ${s.file} "${[s.ctx, s.prelude].join(" ").trim()}", a site this gate doesn't place`,
++    );
++  for (const s of unresolved.filter((u) => /setProperty/.test(u.kind)))
++    red(
++      "c",
++      "c.unresolved",
++      `${s.file}: ${s.kind} "${s.prelude}" may write the page's tokens`,
++    );
++  for (const c of conflicts)
++    red(
++      "c",
++      "c.conflict",
++      `${c.name} has ${c.sites.length} placed sites that disagree (${c.sites.map((s) => `${s.file} ${s.value}`).join(" · ")}): walk order is not the cascade`,
++    );
++  for (const scheme of ["light", "dark"]) {
++    const t = tok[scheme];
++    const want = { rect: t["--color-background"], path: t["--color-foreground"] };
++    if (!opaque(want.rect) || !opaque(want.path) || contrast(want.rect, want.path) < 7)
++      red(
++        "c",
++        "c.tokens",
++        `the ${scheme} tokens don't resolve to opaque ink and paper at >= 7:1`,
++      );
++    for (const el of ["rect", "path"]) {
++      let value = get(el, own[el]);
++      for (const r of rules)
++        if (r.prelude === el && (!r.dark || scheme === "dark"))
++          for (const d of r.decls) if (d.prop === own[el]) value = d.value;
++      const got = parseColor(value ?? "");
++      if (!opaque(got))
++        red(
++          "c",
++          "c.opaque",
++          `${scheme} ${el} ${own[el]} "${value}" is not an opaque colour`,
++        );
++      else if (want[el] && deltaE(got, want[el]) > 0.5)
++        red(
++          "c",
++          "c.delta",
++          `${scheme} ${el} ${own[el]} "${value}" is ΔE ${deltaE(got, want[el]).toFixed(1)} off the page's token`,
++        );
++    }
++    if (scheme === "light")
++      for (const el of ["rect", "path"]) {
++        const attr = parseColor(get(el, own[el]) ?? "");
++        if (!opaque(attr) || (want[el] && deltaE(attr, want[el]) > 0.5))
++          red(
++            "c",
++            "c.fallback",
++            `the ${el}'s ${own[el]} attribute (the no-CSS fallback) is not the light token`,
++          );
++      }
++  }
++
++  // d · the pen: the arm table's, its box, its window, its mass
++  const d = get("path", "d") ?? "";
++  if (d !== arm.d || sw !== arm.width)
++    red(
++      "d",
++      "d.arm",
++      `the path or stroke-width is not the arm table's (scripts/icons.mjs ARM ${arm.name}, WIDTH ${arm.width})`,
++    );
++  const g = geometry(d);
++  const ras = g && Number.isFinite(sw) ? raster(d, sw) : null;
++  if (!g)
++    red(
++      "d",
++      "d.unreadable",
++      "the path's geometry is unreadable (relative or unknown commands)",
++    );
++  else {
++    const pen = Number.isFinite(sw) ? sw : 0;
++    const [W, H] = [g.box[2] - g.box[0] + pen, g.box[3] - g.box[1] + pen];
++    for (const [axis, v] of [
++      ["width", W / 32],
++      ["height", H / 32],
++    ])
++      if (!(v >= 0.55 && v <= 0.8))
++        red(
++          "d",
++          "d.extent",
++          `ink ${axis} ${v.toFixed(3)} of the tile, outside [0.55, 0.80]`,
++        );
++    const [cx, cy] = [(g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2];
++    if (Math.hypot(cx - 16, cy - 16) > 0.5)
++      red(
++        "d",
++        "d.centre",
++        `ink centre (${cx.toFixed(2)}, ${cy.toFixed(2)}) off (16, 16)`,
++      );
++    const [lo, hi] = WINDOWS[arm.width] ?? [NaN, NaN];
++    if (!(pen / H >= lo && pen / H <= hi))
++      red(
++        "d",
++        "d.window",
++        `stroke/H ${(pen / H).toFixed(3)} outside [${lo}, ${hi}] (WIDTH ${arm.width})`,
++      );
++    if (ras && !(ras.mass >= 0.18 && ras.mass <= 0.32))
++      red(
++        "d",
++        "d.mass",
++        `the path's ink mass ${ras.mass.toFixed(3)} (analytic, 180 px), outside [0.18, 0.32]`,
++      );
++  }
++
++  // e · the estate and the touch icon's own pixels
++  const icon = exactlyOneLink(m.html, "icon");
++  if (!icon.ok || icon.links[0].href !== "/icon.svg")
++    red(
++      "e",
++      "e.link-icon",
++      `index.html carries ${icon.links.length} uncommented rel~=icon link(s) (${icon.links.map((l) => l.href).join(", ")}); exactly one, to /icon.svg, wanted`,
++    );
++  const touch = exactlyOneLink(m.html, "apple-touch-icon");
++  if (!touch.ok || touch.links[0].href !== "/apple-touch-icon.png")
++    red(
++      "e",
++      "e.link-touch",
++      `index.html carries ${touch.links.length} uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted`,
++    );
++  if (!m.iconExists) red("e", "e.icon-file", "public/icon.svg is missing");
++  if (m.faviconExists) red("e", "e.favicon", "public/favicon.svg still ships");
++  const prov = m.provenance ?? {};
++  if (prov["icon.svg"] !== sha256(svg))
++    red("e", "e.prov-svg", "the provenance sha is not icon.svg's (run npm run icons)");
++  if (!m.png) red("e", "e.png-file", "public/apple-touch-icon.png is missing");
++  else {
++    if (prov["apple-touch-icon.png"] !== sha256(m.png))
++      red(
++        "e",
++        "e.prov-png",
++        "the provenance sha is not apple-touch-icon.png's (run npm run icons)",
++      );
++    const img = decodePng(m.png);
++    if (!img || img.w !== 180 || img.h !== 180)
++      red("e", "e.png-size", "apple-touch-icon.png is not a readable 180 x 180 PNG");
++    else {
++      const paper = tok.light["--color-background"];
++      const ink = tok.light["--color-foreground"];
++      const col = ([r, gg, b]) => ({ rgb: [r / 255, gg / 255, b / 255], a: 1 });
++      if (img.rgba.some((p) => p[3] < 255))
++        red("e", "e.png-opaque", "the touch icon has transparent pixels");
++      if (!paper || deltaE(col(img.rgba[0]), paper) > 2)
++        red("e", "e.png-paper", "the touch icon's paper is not the light token");
++      let cover = 0;
++      let dark = img.rgba[0];
++      for (const p of img.rgba) {
++        if (lum(col(p)) < lum(col(dark))) dark = p;
++        if (paper && ink)
++          cover += Math.min(
++            1,
++            Math.max(0, (lum(paper) - lum(col(p))) / (lum(paper) - lum(ink))),
++          );
++      }
++      cover /= img.rgba.length;
++      if (!(cover >= 0.18 && cover <= 0.32))
++        red(
++          "e",
++          "e.png-coverage",
++          `the touch icon's ink coverage ${cover.toFixed(3)}, outside [0.18, 0.32]`,
++        );
++      if (!ink || deltaE(col(dark), ink) > 4)
++        red(
++          "e",
++          "e.png-darkest",
++          "the touch icon's darkest pixel is not the light ink",
++        );
++      if (paper && ink && ras) {
++        const fit = tie(img, ras, paper, ink);
++        if (!(fit.meanDelta <= 0.02 && fit.iou >= 0.97))
++          red(
++            "e",
++            "e.png-tie",
++            `the touch icon is not the path: mean |Δcoverage| ${fit.meanDelta.toFixed(4)} (<= 0.02), IoU ${fit.iou.toFixed(4)} (>= 0.97)`,
++          );
++      } else if (!ras)
++        red("e", "e.png-tie", "the path has no raster to hold the touch icon to");
++    }
++  }
++  return fails;
++}
++
++function readTree(root) {
++  const read = (...p) => {
++    try {
++      return fs.readFileSync(path.join(root, ...p));
++    } catch {
++      return null;
++    }
++  };
++  const html = String(read("index.html") ?? "");
++  const one = exactlyOneLink(html, "icon").links[0]?.href;
++  const href = one?.startsWith("/") ? one.slice(1) : "icon.svg";
++  let provenance;
++  try {
++    provenance = JSON.parse(String(read("scripts", "icons.provenance.json")));
++  } catch {
++    provenance = null;
++  }
++  return {
++    svg: String(read("public", href) ?? ""),
++    html,
++    files: sources(root).map((f) => ({
++      file: path.relative(root, f),
++      text: fs.readFileSync(f, "utf8"),
++    })),
++    png: read("public", "apple-touch-icon.png"),
++    provenance,
++    iconExists: read("public", "icon.svg") !== null,
++    faviconExists: read("public", "favicon.svg") !== null,
++  };
++}
++
++const MAIN_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
++  <defs>
++    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
++      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
++      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
++    </filter>
++    <clipPath id="c">
++      <rect width="32" height="32" rx="6" ry="6"/>
++    </clipPath>
++  </defs>
++  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
++  <g clip-path="url(#c)">
++    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
++      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
++    </g>
++  </g>
++</svg>
++`;
++
++/** An n x n PNG whose pixel i is `fn(i)` → [r, g, b] (or [r, g, b, a] with `alpha`): the self-test's
++ *  touch icons. */
++function pngN(n, fn, alpha = false) {
++  const chunk = (t, d) => {
++    const out = Buffer.alloc(12 + d.length);
++    out.writeUInt32BE(d.length, 0);
++    out.write(t, 4, "latin1");
++    d.copy(out, 8);
++    out.writeUInt32BE(
++      zlib.crc32(Buffer.concat([Buffer.from(t), d])) >>> 0,
++      8 + d.length,
++    );
++    return out;
++  };
++  const rows = [];
++  for (let y = 0; y < n; y++)
++    rows.push(
++      Buffer.from([0, ...Array.from({ length: n }, (_, x) => fn(y * n + x)).flat()]),
++    );
++  return Buffer.concat([
++    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
++    chunk("IHDR", Buffer.from([0, 0, 0, n, 0, 0, 0, n, 8, alpha ? 6 : 2, 0, 0, 0])),
++    chunk("IDAT", zlib.deflateSync(Buffer.concat(rows))),
++    chunk("IEND", Buffer.alloc(0)),
++  ]);
++}
++const png180 = (fn, alpha) => pngN(180, fn, alpha);
++const BLOCK = "M8,6H24V26H8ZM8,11H24M8,16H24M8,21H24"; // C1: five pen lines, a near-solid tab
++const PAPER_RGB = [251, 250, 249];
++const INK_RGB = [10, 10, 10];
++/** The path rastered analytically and encoded over the light paper and ink (what `npm run icons` makes). */
++const pngOf = (d, pen, alphaAt = -1) => {
++  const { cov } = raster(d, pen);
++  const px = (i) => PAPER_RGB.map((p, c) => Math.round(p + (INK_RGB[c] - p) * cov[i]));
++  return alphaAt < 0
++    ? png180(px)
++    : png180((i) => [...px(i), i === alphaAt ? 0 : 255], true);
++};
++/** Every absolute x,y pair of a path moved by (dx, dy) and scaled by k about (16, 16). */
++const movePath = (d, dx, dy, k = 1) =>
++  d.replace(
++    /(-?\d*\.?\d+),(-?\d*\.?\d+)/g,
++    (_, x, y) =>
++      `${+(16 + (x - 16) * k + dx).toFixed(3)},${+(16 + (y - 16) * k + dy).toFixed(3)}`,
++  );
++
++function selfTest(clean, { quiet = false } = {}) {
++  // Every plant re-stamps the sidecar as `npm run icons` would (the gate must red on SHAPE, not on a
++  // stale sha), except P6, whose point is the stale sha. `ids` are check ids the plant must fire.
++  const plant = (
++    label,
++    edit,
++    want,
++    {
++      keepSha = false,
++      stalePng = false,
++      png = null,
++      files = null,
++      html = null,
++      arm,
++      patch = null,
++      ids = [],
++    } = {},
++  ) => {
++    const svg = edit(clean.svg);
++    const m = {
++      ...clean,
++      svg,
++      png: png ?? clean.png,
++      files: files ?? clean.files,
++      html: html ? html(clean.html) : clean.html,
++      ...patch,
++    };
++    if (!keepSha)
++      m.provenance = {
++        "icon.svg": sha256(svg),
++        "apple-touch-icon.png": stalePng
++          ? clean.provenance?.["apple-touch-icon.png"]
++          : m.png && sha256(m.png),
++      };
++    const fails = audit(m, arm);
++    const got = [...new Set(fails.map(([c]) => c))].sort().join("");
++    const fired = new Set(fails.map(([, id]) => id));
++    const missing = ids.filter((i) => !fired.has(i));
++    const changed = svg !== clean.svg || png || files || html || arm || patch;
++    const ok = got === want && changed && !missing.length;
++    if (!quiet)
++      console.log(
++        `  ${ok ? (want ? "RED as required" : "GREEN as required") : "FAILED"}  ${label}: red ${got || "none"}, want ${want || "none"}${ids.length ? ` [${ids.map((i) => (fired.has(i) ? i : `${i}:MISSING`)).join(" ")}]` : ""}`,
++      );
++    return ok;
++  };
++  const inStyle = (css) => (s) => s.replace("</style>", `${css}</style>`);
++  const withFile = (file, text) => [...clean.files, { file, text }];
++  const pathTo = (d) => (s) => s.replace(/ d="[^"]*"/, ` d="${d}"`);
++  const bars = png180((i) => {
++    const [x, y] = [i % 180, Math.floor(i / 180)];
++    return Math.floor(y / 22) % 2 === 1 && y > 10 && y < 170 && x > 30 && x < 150
++      ? INK_RGB
++      : PAPER_RGB;
++  });
++  if (!quiet) console.log("\nself-test plants:");
++  const results = [
++    plant("P1 main's favicon.svg verbatim", () => MAIN_FAVICON, "abcde"),
++    plant("P2 ink #1a1a1a", (s) => s.replaceAll("#0a0a0a", "#1a1a1a"), "c", {
++      ids: ["c.delta", "c.fallback"],
++    }),
++    plant(
++      "P3 stroke-width 6",
++      (s) => s.replace(/stroke-width="[^"]*"/, 'stroke-width="6"'),
++      "bde",
++      { ids: ["b.width", "d.window", "d.arm", "e.png-tie"] },
++    ),
++    plant(
++      "P4 @media deleted",
++      (s) => s.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/, ""),
++      "c",
++    ),
++    plant(
++      "P5 FAINT INK stroke-opacity 0.15",
++      (s) => s.replace("<path ", '<path stroke-opacity="0.15" '),
++      "a",
++      { ids: ["a.attr"] },
++    ),
++    plant(
++      "P5b FAINT INK #e8e6e3 on the light paper",
++      (s) => s.replaceAll("#0a0a0a", "#e8e6e3"),
++      "c",
++    ),
++    plant(
++      "P6 the SVG edited after the PNG",
++      (s) => s.replace(/d="M[\d.]+/, (x) => `${x}1`),
++      "de",
++      { keepSha: true, ids: ["e.prov-svg", "d.arm"] },
++    ),
++    plant(
++      "E1 CSS stroke-width:9px (the owner's defect)",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;stroke-width:9px}"),
++      "b",
++      { ids: ["b.prop"] },
++    ),
++    plant("E2 FAINT INK by a later rule", inStyle("path{stroke:#e8e6e3}"), "c"),
++    plant(
++      "E3 a second ink element",
++      (s) =>
++        s.replace("</svg>", '<circle cx="16" cy="16" r="12" fill="#0a0a0a"/></svg>'),
++      "a",
++      { ids: ["a.element"] },
++    ),
++    plant(
++      "E4 the pen hidden",
++      (s) =>
++        s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;visibility:hidden}"),
++      "b",
++    ),
++    plant("E5 a solid-red 180 PNG, sidecar re-stamped", (s) => s, "e", {
++      png: png180(() => [255, 0, 0]),
++      ids: ["e.png-paper", "e.png-darkest", "e.png-tie"],
++    }),
++    plant(
++      "E6 paper 8 x 8",
++      (s) => s.replace('<rect width="32" height="32"', '<rect width="8" height="8"'),
++      "a",
++      { ids: ["a.paper"] },
++    ),
++    plant(
++      "E7 viewBox 64 (the ink halves)",
++      (s) => s.replace('viewBox="0 0 32 32"', 'viewBox="0 0 64 64"'),
++      "a",
++      { ids: ["a.viewbox"] },
++    ),
++    plant(
++      "E8 a dashed pen",
++      (s) =>
++        s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;stroke-dasharray:1 6}"),
++      "b",
++    ),
++    plant(
++      "E9 the light rule moved after @media (dark ink on dark paper)",
++      (s) =>
++        s
++          .replace("<style>rect{fill:#fbfaf9}path{stroke:#0a0a0a}", "<style>")
++          .replace("</style>", "rect{fill:#fbfaf9}path{stroke:#0a0a0a}</style>"),
++      "c",
++    ),
++    plant(
++      "E10 FAINT INK by alpha, #0a0a0a26",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a26}"),
++      "c",
++      { ids: ["c.opaque"] },
++    ),
++    plant(
++      "E11 style= on the path",
++      (s) => s.replace("<path ", '<path style="stroke-width:9px" '),
++      "a",
++    ),
++    plant(
++      "E12 a second <style> (read too)",
++      (s) => s.replace("</style>", "</style><style>path{stroke-width:9px}</style>"),
++      "ab",
++      { ids: ["a.count"] },
++    ),
++    plant(
++      "E13 the paper painted over the pen",
++      (s) => s.replace(/(<rect[^>]*\/>)(<path[^>]*\/>)/, "$2$1"),
++      "a",
++      { ids: ["a.order"] },
++    ),
++    plant(
++      "E14 @import in <style>",
++      (s) => s.replace("<style>", "<style>@import url(x.css);"),
++      "b",
++      { ids: ["b.at-rule"] },
++    ),
++    plant("E15 a rule for every element", inStyle("*{stroke-width:9px}"), "b", {
++      ids: ["b.selector"],
++    }),
++    plant(
++      "E16 !important",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a!important}"),
++      "b",
++      { ids: ["b.important"] },
++    ),
++    plant(
++      "E17 a comment hiding markup",
++      (s) => s.replace("</svg>", "<!-- --></svg>"),
++      "a",
++      { ids: ["a.junk"] },
++    ),
++    plant(
++      "E18 ink by an unresolvable var()",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:var(--x,#e8e6e3)}"),
++      "c",
++    ),
++    plant(
++      "E19 the page's paper moved at a palette family's :root (disagrees with @theme)",
++      (s) => s,
++      "ce",
++      {
++        files: withFile(
++          "src/assets/palette.css",
++          ":root { --color-background: #f4efe4; }",
++        ),
++        ids: ["c.conflict", "c.tokens", "e.png-paper"],
++      },
++    ),
++    // pass 8 (the pass-7 critic's C-plants and the clauses they bite)
++    plant(
++      "C1 SVG ink mass: five pen lines, a near-solid block (the thick tab again)",
++      pathTo(BLOCK),
++      "de",
++      { ids: ["d.mass", "d.arm", "e.png-tie"] },
++    ),
++    plant(
++      "C1m the block entered in the arm table itself, its PNG rastered from it",
++      pathTo(BLOCK),
++      "de",
++      {
++        arm: { name: "block", width: WIDTH, d: BLOCK },
++        png: pngOf(BLOCK, WIDTH),
++        ids: ["d.mass"],
++      },
++    ),
++    plant("C2 a 180 PNG of four ink bars, coverage ~0.23 (not the s)", (s) => s, "e", {
++      png: bars,
++      ids: ["e.png-tie"],
++    }),
++    plant("C3 the letter Z at the same box and pen", pathTo("M9,6H23L9,26H23"), "de", {
++      ids: ["d.arm", "e.png-tie"],
++    }),
++    plant(
++      "C5 arm H by its const, W's PNG kept (the tab and the home screen disagree)",
++      pathTo(PEN.H),
++      "e",
++      { arm: { name: "H", width: WIDTH, d: PEN.H }, ids: ["e.png-tie"] },
++    ),
++    plant(
++      "C6 both icon links commented out in index.html (no icon ships)",
++      (s) => s,
++      "e",
++      {
++        html: (h) =>
++          h.replace(
++            /(<link rel="icon"[^>]*>\s*<link rel="apple-touch-icon"[^>]*>)/,
++            "<!-- $1 -->",
++          ),
++        ids: ["e.link-icon", "e.link-touch"],
++      },
++    ),
++    plant("C7 a second rel=icon after ours, to a thick SVG", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="icon" type="image/svg+xml" href="/thick.svg" />',
++        ),
++      ids: ["e.link-icon"],
++    }),
++    plant("C7b a second apple-touch-icon, to another PNG", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="apple-touch-icon" sizes="180x180" href="/thick.png" />',
++        ),
++      ids: ["e.link-touch"],
++    }),
++    plant("C7c `shortcut icon` to a thick SVG (rel is a token list)", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="shortcut icon" href="/thick.svg" />',
++        ),
++      ids: ["e.link-icon"],
++    }),
++    plant(
++      "C7d a second icon link whose rel is spelled with an entity (&#105;con)",
++      (s) => s,
++      "e",
++      {
++        html: (h) =>
++          h.replace(
++            /(<link rel="apple-touch-icon"[^>]*>)/,
++            '$1\n    <link rel="&#105;con" href="/thick.svg" />',
++          ),
++        ids: ["e.link-icon"],
++      },
++    ),
++    plant("C15 the paper re-declared in index.html's own <style>", (s) => s, "ce", {
++      files: clean.files.map((f) =>
++        f.file === "index.html"
++          ? {
++              ...f,
++              text: f.text.replace(
++                "</head>",
++                "<style>:root{--color-background:#f4efe4}</style></head>",
++              ),
++            }
++          : f,
++      ),
++      html: (h) =>
++        h.replace("</head>", "<style>:root{--color-background:#f4efe4}</style></head>"),
++      ids: ["c.conflict"],
++    }),
++    plant("C8 a second @theme paper sorting AFTER index.css", (s) => s, "ce", {
++      files: withFile("src/zz-palette.css", "@theme { --color-background: #f4efe4; }"),
++      ids: ["c.conflict", "c.tokens"],
++    }),
++    plant(
++      "C9 a second @theme paper sorting BEFORE index.css (walk order made it GREEN)",
++      (s) => s,
++      "ce",
++      {
++        files: [
++          {
++            file: "src/assets/aa-palette.css",
++            text: "@theme { --color-background: #f4efe4; }",
++          },
++          ...clean.files,
++        ],
++        ids: ["c.conflict", "c.tokens"],
++      },
++    ),
++    plant("C10 a .dark site in an SFC retoning the ink", (s) => s, "c", {
++      files: withFile(
++        "src/zz.vue",
++        "<template><i/></template>\n<style>\n.dark { --color-foreground: #8a8a8a; }\n</style>\n",
++      ),
++      ids: ["c.conflict"],
++    }),
++    plant("C11 the paper at an unplaced site (a scoped rule)", (s) => s, "c", {
++      files: withFile("src/zz-scope.css", ".board { --color-background: #f4efe4; }"),
++      ids: ["c.unplaced"],
++    }),
++    plant("C12 a computed setProperty that may write the paper", (s) => s, "c", {
++      files: withFile(
++        "src/zz-write.ts",
++        "export const w = (k: string) => document.documentElement.style.setProperty(k, '#f4efe4');\n",
++      ),
++      ids: ["c.unresolved"],
++    }),
++    plant("C13 favicon.svg left beside icon.svg", (s) => s, "e", {
++      patch: { faviconExists: true },
++      ids: ["e.favicon"],
++    }),
++    plant("C14 the icon link's href moved to /favicon.svg", (s) => s, "e", {
++      html: (h) => h.replace('href="/icon.svg"', 'href="/favicon.svg"'),
++      ids: ["e.link-icon"],
++    }),
++    // pass 8: one plant per check the clause-sabotage battery found un-bitten (each fires its id alone)
++    plant(
++      "S1 a repeated attribute",
++      (s) =>
++        s.replace(
++          'stroke-linecap="round"',
++          'stroke-linecap="round" stroke-linecap="round"',
++        ),
++      "a",
++      { ids: ["a.dupe"] },
++    ),
++    plant("S2 an element before the root <svg>", (s) => `<style></style>${s}`, "a", {
++      ids: ["a.root"],
++    }),
++    plant(
++      "S3 the XHTML namespace",
++      (s) =>
++        s.replace(
++          'xmlns="http://www.w3.org/2000/svg"',
++          'xmlns="http://www.w3.org/1999/xhtml"',
++        ),
++      "a",
++      { ids: ["a.ns"] },
++    ),
++    plant(
++      "S4 the paper offset x=4",
++      (s) => s.replace('<rect width="32"', '<rect x="4" width="32"'),
++      "a",
++      { ids: ["a.paper-xy"] },
++    ),
++    plant("S5 the pen filled", (s) => s.replace('fill="none"', 'fill="#0a0a0a"'), "b", {
++      ids: ["b.fill"],
++    }),
++    plant(
++      "S6 butt caps",
++      (s) => s.replace('stroke-linecap="round"', 'stroke-linecap="butt"'),
++      "b",
++      { ids: ["b.cap"] },
++    ),
++    plant(
++      "S7 mitre joins",
++      (s) => s.replace('stroke-linejoin="round"', 'stroke-linejoin="miter"'),
++      "b",
++      { ids: ["b.join"] },
++    ),
++    plant(
++      "S8 a rule under a foreign @media",
++      inStyle("@media(min-width:1px){path{stroke:#0a0a0a}}"),
++      "bc",
++      { ids: ["b.context"] },
++    ),
++    plant(
++      "S9 the file padded past 600 B",
++      (s) => s.replace("</svg>", `${" ".repeat(200)}</svg>`),
++      "b",
++      { ids: ["b.bytes"] },
++    ),
++    plant("S10 relative commands (m/c)", (s) => s.replace(/ d="M/, ' d="m'), "de", {
++      ids: ["d.unreadable"],
++    }),
++    plant(
++      "S11 an arm drawn at 0.6 scale (in the table, PNG from its path)",
++      pathTo(movePath(PEN[ARM], 0, 0, 0.6)),
++      "de",
++      {
++        arm: { name: "small", width: WIDTH, d: movePath(PEN[ARM], 0, 0, 0.6) },
++        png: pngOf(movePath(PEN[ARM], 0, 0, 0.6), WIDTH),
++        ids: ["d.extent"],
++      },
++    ),
++    plant(
++      "S12 an arm moved 2 units right (in the table, PNG from its path)",
++      pathTo(movePath(PEN[ARM], 2, 0)),
++      "d",
++      {
++        arm: { name: "moved", width: WIDTH, d: movePath(PEN[ARM], 2, 0) },
++        png: pngOf(movePath(PEN[ARM], 2, 0), WIDTH),
++        ids: ["d.centre"],
++      },
++    ),
++    plant("S13 public/icon.svg missing", (s) => s, "e", {
++      patch: { iconExists: false },
++      ids: ["e.icon-file"],
++    }),
++    plant("S14 the touch icon missing", (s) => s, "e", {
++      patch: { png: null },
++      ids: ["e.png-file"],
++    }),
++    plant("S15 a re-rastered PNG with the old sha in the sidecar", (s) => s, "e", {
++      png: pngOf(PEN[ARM], WIDTH),
++      stalePng: true,
++      ids: ["e.prov-png"],
++    }),
++    plant("S16 a 90 x 90 touch icon", (s) => s, "e", {
++      png: pngN(90, () => PAPER_RGB),
++      ids: ["e.png-size"],
++    }),
++    plant("S17 one transparent pixel in the touch icon", (s) => s, "e", {
++      png: pngOf(PEN[ARM], WIDTH, 180 * 90),
++      ids: ["e.png-opaque"],
++    }),
++    plant(
++      "NN1 the same ink spelled rgb(10 10 10)",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:rgb(10 10 10)}"),
++      "",
++    ),
++    plant(
++      "NN2 a decoy rule inside a CSS comment",
++      (s) =>
++        s.replace(
++          "path{stroke:#0a0a0a}",
++          "path{stroke:#0a0a0a/* path{stroke-width:9px} */}",
++        ),
++      "",
++    ),
++    plant("NN3 a decoy second rel=icon inside an HTML comment", (s) => s, "", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <!-- <link rel="icon" href="/thick.svg" /> -->',
++        ),
++    }),
++    plant(
++      "NN8 the icon link's href spelled with an entity (/icon&#46;svg) is the same link",
++      (s) => s,
++      "",
++      { html: (h) => h.replace('href="/icon.svg"', 'href="/icon&#46;svg"') },
++    ),
++    plant("NN4 a second @theme paper that AGREES with index.css", (s) => s, "", {
++      files: withFile(
++        "src/zz-agree.css",
++        "@theme { --color-background: hsl(48 15% 98%); }",
++      ),
++    }),
++    plant(
++      "NN5 the owner's arm B by one const (WIDTH 5), its PNG rastered from the path",
++      (s) => s.replace('stroke-width="4"', 'stroke-width="5"'),
++      "",
++      {
++        arm: { name: ARM, width: 5, d: PEN[ARM] },
++        png: pngOf(PEN[ARM], 5),
++      },
++    ),
++    plant(
++      "NN6 the owner's arm H by one const, its PNG rastered from the path",
++      pathTo(PEN.H),
++      "",
++      { arm: { name: "H", width: WIDTH, d: PEN.H }, png: pngOf(PEN.H, WIDTH) },
++    ),
++    plant(
++      "NN7 the shipped PNG against a raster of the same path (a W PNG from the analytic raster)",
++      (s) => s,
++      "",
++      { png: pngOf(PEN[ARM], WIDTH) },
++    ),
++  ];
++  return results.every(Boolean);
++}
++
++const model = readTree(ROOT);
++
++if (process.argv.includes("--sabotage-battery")) {
++  // Every check id the self-test names, and the library clauses this gate reads: each switched off
++  // alone must red the self-test (LAWS P7 §F (ii)).
++  const ids = [
++    "a.junk",
++    "a.count",
++    "a.element",
++    "a.attr",
++    "a.dupe",
++    "a.root",
++    "a.ns",
++    "a.viewbox",
++    "a.paper",
++    "a.paper-xy",
++    "a.order",
++    "b.fill",
++    "b.cap",
++    "b.join",
++    "b.width",
++    "b.at-rule",
++    "b.context",
++    "b.selector",
++    "b.prop",
++    "b.important",
++    "b.bytes",
++    "c.unplaced",
++    "c.unresolved",
++    "c.conflict",
++    "c.tokens",
++    "c.opaque",
++    "c.delta",
++    "c.fallback",
++    "d.arm",
++    "d.unreadable",
++    "d.extent",
++    "d.centre",
++    "d.window",
++    "d.mass",
++    "e.link-icon",
++    "e.link-touch",
++    "e.icon-file",
++    "e.favicon",
++    "e.prov-svg",
++    "e.png-file",
++    "e.prov-png",
++    "e.png-size",
++    "e.png-opaque",
++    "e.png-paper",
++    "e.png-coverage",
++    "e.png-darkest",
++    "e.png-tie",
++  ];
++  const lib = [
++    "html-comment",
++    "one-link",
++    "token-conflict",
++    "tok-sites",
++    "at-own",
++    "collect-walk",
++    "decode",
++  ];
++  let bite = 0;
++  const rows = [];
++  for (const id of ids) {
++    OFF.clear();
++    OFF.add(id);
++    const ok = selfTest(model, { quiet: true });
++    rows.push(`  ${ok ? "HOLE" : "BITE"}  gate  ${id}`);
++    if (!ok) bite++;
++  }
++  OFF.clear();
++  for (const id of lib) {
++    sabotage([id]);
++    fileCache.clear(); // the library's readings under this clause's absence
++    const m2 = readTree(ROOT);
++    const ok = selfTest(m2, { quiet: true });
++    rows.push(`  ${ok ? "HOLE" : "BITE"}  lib   ${id}`);
++    if (!ok) bite++;
++  }
++  sabotage([]);
++  fileCache.clear();
++  console.log(
++    `check-favicon --sabotage-battery:\n${rows.join("\n")}\n  ${bite}/${ids.length + lib.length} bite`,
++  );
++  process.exit(bite === ids.length + lib.length ? 0 : 2);
++}
++
++const fails = audit(model);
++console.log(`check-favicon (${ROOT}):`);
++for (const clause of "abcde") {
++  const mine = fails.filter(([c]) => c === clause);
++  console.log(
++    `  ${clause}  ${mine.length ? "RED" : "GREEN"}${mine.map(([, id, w]) => `\n       ${id}: ${w}`).join("")}`,
++  );
++}
++const ras = raster(PEN[ARM], WIDTH);
++const img = decodePng(model.png);
++const pt = pageTokens(model.files);
++if (
++  ras &&
++  img &&
++  pt.tok.light["--color-background"] &&
++  pt.tok.light["--color-foreground"]
++) {
++  const fit = tie(
++    img,
++    ras,
++    pt.tok.light["--color-background"],
++    pt.tok.light["--color-foreground"],
++  );
++  console.log(
++    `  readings: arm ${ARM} width ${WIDTH} · mass ${ras.mass.toFixed(4)} · png tie mean |Δ| ${fit.meanDelta.toFixed(4)} IoU ${fit.iou.toFixed(4)} · unresolved non-setProperty sites ${pt.unresolved.length - pt.unresolved.filter((u) => /setProperty/.test(u.kind)).length} (printed, not red)`,
++  );
++}
++if (process.argv.includes("--self-test") && !selfTest(model)) {
++  console.error(
++    "\ncheck-favicon: a plant did not red its clause (or a negative-negative went red)",
++  );
++  process.exit(2);
++}
++if (fails.length) {
++  console.error(`\ncheck-favicon: ${fails.length} failure(s)`);
++  process.exit(1);
++}
++console.log(
++  "\ncheck-favicon: the tab's s is one pen line, on the page's paper, in its ink",
++);
+diff --git a/web/frontend/scripts/icons.mjs b/web/frontend/scripts/icons.mjs
+new file mode 100644
+index 00000000..c71865e1
+--- /dev/null
++++ b/web/frontend/scripts/icons.mjs
+@@ -0,0 +1,96 @@
++#!/usr/bin/env node
++/**
++ * THE TAB'S PEN (T9-M22, TAB-PEN). Writes `public/icon.svg` from one pen line, rasters its light arm
++ * to `public/apple-touch-icon.png` (180 × 180, square paper: iOS rounds the corners itself, palette
++ * PNG), and records both files' sha256 in `scripts/icons.provenance.json`. CI never rasters: the PNG
++ * is vendored, and `check-favicon.mjs` (d, e) re-derives the path's coverage analytically and holds
++ * the PNG to it.
++ *
++ * THE ARM TABLE. Two owner ballots, one const each; flip one, run `npm run icons`, and the gate reads
++ * the pair against that arm's own windows:
++ *   ARM   (T9-B27, the hand): `W` the written monoline s (the default), `H` the house hand (the same
++ *         box, pen and paper with the 5's grammar borrowed: a short down-tick into a flat, slightly
++ *         tilted top stroke, one hard join at 94.5°).
++ *   WIDTH (T9-B28, the pen's width in the 32 viewBox): `4` (arm A, the default) or `5` (arm B).
++ * Arm P (a Fraunces outline) is not a pen line: choosing it re-cuts clause b, not a const.
++ *
++ * `sharp` is NOT a dependency of this package. It is miniflare's transitive (package-lock.json,
++ * `node_modules/sharp`), resolved through createRequire only when this file runs as a script, so the
++ * gate can import the table without it; a wrangler/miniflare bump can move it.
++ *
++ * NOT-A-LANE: it rides an undeclared transitive (sharp via miniflare) and writes committed binaries, so its cadence is a re-cut of the pen, run by hand; CI holds the pair through lint:favicon, which reads this file's arm table, the sidecar and the PNG's own pixels with no rasteriser (scripts/check-favicon.mjs).
++ *
++ * Run: `node scripts/icons.mjs` (write) · `node scripts/icons.mjs --check` (re-derive; exit 1 on
++ * any drift: the SVG's bytes, the PNG's decoded pixels, the sidecar). cwd web/frontend.
++ */
++import { createHash } from "node:crypto";
++import { createRequire } from "node:module";
++import fs from "node:fs";
++import path from "node:path";
++import process from "node:process";
++import { pathToFileURL } from "node:url";
++
++export const ARM = "W";
++export const WIDTH = 4;
++export const PEN = {
++  W: "M22.6,9.6C21.4,7.1 18.6,6 15.8,6C12,6 9.6,7.9 9.6,10.6C9.6,13.4 12.4,14.6 16.2,15.8C21,17.3 24,18.4 24,21.2C24,24.4 20.4,26 15.8,26C11.6,26 8,24.6 8,22.6",
++  H: "M23.6,8.7L23.9,6.3L15.2,5.9C11.2,5.8 9.3,8.1 9.6,10.9C10,13.9 12.8,14.7 16.6,16C21.4,17.5 24.2,18.9 23.8,21.7C23.5,24.7 19.9,26.3 15.4,26.1C11.4,25.9 8.4,24.2 8.1,22.2",
++};
++/** Clause d's stroke / (bbox H + stroke) window per pen width: each arm's own reading ± 0.01. */
++export const WINDOWS = { 4: [0.15, 0.17], 5: [0.19, 0.21] };
++// The page's tokens (index.css @theme / .dark), byte-copied; lint:favicon (c) reds any drift.
++const [PAPER, INK, DARK_PAPER, DARK_INK] = ["#fbfaf9", "#0a0a0a", "#110f0e", "#edece9"];
++
++const style = (paper, ink) => `rect{fill:${paper}}path{stroke:${ink}}`;
++export const icon = (d, width = WIDTH, dark = true) =>
++  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>${style(PAPER, INK)}${
++    dark ? `@media(prefers-color-scheme:dark){${style(DARK_PAPER, DARK_INK)}}` : ""
++  }</style><rect width="32" height="32" fill="${PAPER}"/><path d="${d}" fill="none" stroke="${INK}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/></svg>\n`;
++
++async function main() {
++  const ROOT = path.join(import.meta.dirname, "..");
++  const SVG = path.join(ROOT, "public", "icon.svg");
++  const PNG = path.join(ROOT, "public", "apple-touch-icon.png");
++  const SIDECAR = path.join(ROOT, "scripts", "icons.provenance.json");
++  const SIZE = 180;
++  const sha = (b) => createHash("sha256").update(b).digest("hex");
++  const sharp = createRequire(path.join(ROOT, "package.json"))("sharp");
++  const svg = icon(PEN[ARM]);
++  // The light arm, explicitly: the rasteriser's own prefers-color-scheme is not a thing to rely on.
++  const raster = () =>
++    sharp(Buffer.from(icon(PEN[ARM], WIDTH, false)), { density: (72 * SIZE) / 32 })
++      .resize(SIZE, SIZE)
++      .png({ palette: true, compressionLevel: 9 })
++      .toBuffer();
++  const pixels = (buf) => sharp(buf).ensureAlpha().raw().toBuffer();
++  const sidecar = (png) =>
++    `${JSON.stringify({ arm: ARM, width: WIDTH, "icon.svg": sha(svg), "apple-touch-icon.png": sha(png) }, null, 2)}\n`;
++
++  if (process.argv.includes("--check")) {
++    const kept = fs.readFileSync(PNG);
++    const [fresh, old] = [await pixels(await raster()), await pixels(kept)];
++    let maxDelta = fresh.length === old.length ? 0 : 255;
++    for (let i = 0; i < Math.min(fresh.length, old.length); i++)
++      maxDelta = Math.max(maxDelta, Math.abs(fresh[i] - old[i]));
++    const svgOk = fs.readFileSync(SVG, "utf8") === svg;
++    const sideOk = fs.readFileSync(SIDECAR, "utf8") === sidecar(kept);
++    console.log(
++      `icons --check (arm ${ARM}, width ${WIDTH}): svg ${svgOk ? "current" : "STALE"}, png decoded max Δ ${maxDelta}, sidecar ${sideOk ? "current" : "STALE"}`,
++    );
++    process.exit(svgOk && maxDelta === 0 && sideOk ? 0 : 1);
++  }
++
++  const png = await raster();
++  fs.writeFileSync(SVG, svg);
++  fs.writeFileSync(PNG, png);
++  fs.writeFileSync(SIDECAR, sidecar(png));
++  console.log(
++    `icon.svg (arm ${ARM}, width ${WIDTH}) ${sha(svg)} · apple-touch-icon.png ${SIZE}×${SIZE}, ${png.length} B`,
++  );
++}
++
++if (
++  process.argv[1] &&
++  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
++)
++  await main();
+diff --git a/web/frontend/scripts/icons.provenance.json b/web/frontend/scripts/icons.provenance.json
+new file mode 100644
+index 00000000..734242ab
+--- /dev/null
++++ b/web/frontend/scripts/icons.provenance.json
+@@ -0,0 +1,6 @@
++{
++  "arm": "W",
++  "width": 4,
++  "icon.svg": "856c8ad5bdfe114aaf93fb4cd75e55122acc6fd055d880c9b03eaafadb14d338",
++  "apple-touch-icon.png": "b07f52f90cf3c4c49c4577787c9364df008491346fd61ea0c7595e0aa0dc5de6"
++}

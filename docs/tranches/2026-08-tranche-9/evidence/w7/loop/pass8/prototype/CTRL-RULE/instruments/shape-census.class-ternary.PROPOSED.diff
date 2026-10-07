@@ -1,0 +1,75 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb3..a7875c2 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -20,6 +20,7 @@
+ //   LADDER   collect-walk · longhand · semicolon-less · clock-arith
+ //   ERASE    pcss · register-split
+ //   TAPE     element-keyed · tw-utility
++//   RULE     class-ternary
+ //   LEDGER   media-eval · em-lh · r4-bound
+ //   TAB-PEN  html-comment · one-link · token-conflict
+ //
+@@ -101,6 +102,8 @@ export const CLAUSES = {
+   pcss: "ERASE · .pcss/.postcss sheets walked",
+   "register-split": "ERASE · a split-name registerProperty is resolved or UNRESOLVED",
+   "element-keyed": "TAPE · the subject resolved to template ELEMENTS",
++  "class-ternary":
++    "RULE · a :class ternary whose branches are string literals binds only those classes",
+   "tw-utility":
+     "TAPE · utility classes that move paint (opacity-[…], sr-only, blur, contain, translate)",
+   "media-eval": "LEDGER · media queries EVALUATED over the regime set",
+@@ -2109,9 +2112,15 @@ export function templateElements(tpl, baseLine = 1) {
+       for (const lit of dyn.matchAll(/(['"`])([\w\s-]+)\1/g))
+         for (const c of lit[2].split(/\s+/)) if (c) classes.add(c);
+       for (const key of dyn.matchAll(/(?:[{,]\s*)([\w-]+)\s*:/g)) classes.add(key[1]);
++      // RULE (pass 8): `cond ? 'a' : 'b'` binds a or b and nothing else — both literals are
++      // already in `classes` (above); the element is not a wildcard. A non-literal branch still is.
++      const ternary =
++        on("class-ternary") &&
++        /^\s*[^?'"`{}[\]]+\?\s*(['"])[\w\s-]*\1\s*:\s*(['"])[\w\s-]*\2\s*$/.test(dyn);
+       dynClass =
+-        !/^\s*(\{[^}]*\}|\[[^\]]*\]|(['"`])[^'"`]*\2)\s*$/.test(dyn) ||
+-        /\$\{/.test(dyn);
++        !ternary &&
++        (!/^\s*(\{[^}]*\}|\[[^\]]*\]|(['"`])[^'"`]*\2)\s*$/.test(dyn) ||
++          /\$\{/.test(dyn));
+     }
+     const el = {
+       i: els.length,
+@@ -3818,6 +3827,35 @@ const TESTS = [
+       );
+     },
+   ],
++  // --- RULE
++  [
++    "class-ternary",
++    "RULE",
++    "a `:class` ternary of two string literals binds those classes only; a non-literal branch stays a wildcard",
++    (L) => {
++      const f = fixture({
++        "src/GameScene.vue":
++          '<template>\n  <div class="drawer-case">\n    <div id="card-foot" class="card-foot" :class="rowRegime ? \'px-5\' : \'px-2\'"></div>\n    <div id="loose" class="loose" :class="rowRegime ? pick : \'px-2\'"></div>\n  </div>\n</template>\n',
++        "src/s.css":
++          ".board-group { padding-bottom: 0; }\n.px-5 { padding-bottom: 1.25rem; }\n.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); }\n",
++      });
++      const at = (id) =>
++        L.elementSites(f.fe, {
++          file: "src/GameScene.vue",
++          pick: (e) => e.id === id,
++          props: ["padding-bottom"],
++          ...f,
++        }).sites.map((x) => x.prelude);
++      const foot = at("card-foot"),
++        loose = at("loose");
++      return (
++        foot.length === 2 &&
++        foot.includes(".px-5") &&
++        !foot.includes(".board-group") &&
++        loose.includes(".board-group")
++      );
++    },
++  ],
+   [
+     "tw-utility",
+     "TAPE",

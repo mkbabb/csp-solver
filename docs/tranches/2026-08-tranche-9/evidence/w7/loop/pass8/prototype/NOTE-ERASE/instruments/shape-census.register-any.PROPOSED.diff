@@ -1,0 +1,53 @@
+--- a/web/frontend/scripts/shape-census.mjs	2026-09-24 22:15:33
++++ b/web/frontend/scripts/shape-census.mjs	2026-09-24 22:15:34
+@@ -100,6 +100,8 @@
+     "LADDER · Math.min/max, bracket and bitwise clock reads are arithmetic",
+   pcss: "ERASE · .pcss/.postcss sheets walked",
+   "register-split": "ERASE · a split-name registerProperty is resolved or UNRESOLVED",
++  "register-any":
++    "ERASE (pass 8) · registerProperty(<non-literal>) is an UNRESOLVED registration",
+   "element-keyed": "TAPE · the subject resolved to template ELEMENTS",
+   "tw-utility":
+     "TAPE · utility classes that move paint (opacity-[…], sr-only, blur, contain, translate)",
+@@ -1800,6 +1802,20 @@
+           line: lineAt(s, m.index),
+         });
+       }
++      // ERASE (pass 8): `registerProperty(opts)`, `registerProperty(...defs)` — an argument that is
++      // not an object literal is a registration whose name nothing can read: UNRESOLVED, never dropped
++      if (on("register-any"))
++        for (const m of s.matchAll(/registerProperty\s*\(\s*(?!\{)([^)]*)\)/g))
++          out.push({
++            name: `?${m[1].trim()}`,
++            unresolved: true,
++            inherits: null,
++            syntax: null,
++            initial: null,
++            kind: "registerProperty",
++            file,
++            line: lineAt(s, m.index),
++          });
+     }
+   }
+   return out;
+@@ -3776,6 +3792,20 @@
+       return (
+         r.some((x) => x.name === "--motion-whisper" && x.inherits === "false") &&
+         r.some((x) => x.unresolved)
++      );
++    },
++  ],
++  [
++    "register-any",
++    "ERASE",
++    "registerProperty(<non-literal>) is an UNRESOLVED registration",
++    (L) => {
++      const f = fixture({
++        "src/r.ts":
++          'const defs = { name: "--motion-whisper", syntax: "<time>", inherits: false, initialValue: "0s" };\nCSS.registerProperty(defs);\n',
++      });
++      return L.propertyRegistrations(f.fe, f).some(
++        (x) => x.kind === "registerProperty" && x.unresolved && x.name === "?defs",
+       );
+     },
+   ],

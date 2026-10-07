@@ -1,0 +1,48 @@
+// postpaint.d.mts — the TYPE of the post-paint home (`./postpaint.mjs`), so a TypeScript spec can
+// import it under `typecheck:e2e` (strict, no `allowJs`: a bare `.mjs` import is TS7016). No
+// behaviour lives here. The sampler a spec installs is typed; every other export is `unknown`
+// until a spec that calls it types it.
+// NOT-A-LANE: a declaration of the chair's home (T9-W7 pass 8, CTRL-TAPE's keys-crib G3). A SUPERSET of
+// NOTE-ERASE's pass-8 declaration (its `installTimeline` typed the same), so the two fold as one file.
+
+/** One read of the subject: frame index, the timeline time, the scripted animation's clock, the centre. */
+export interface PPRead {
+  k: number;
+  tl: number;
+  ct: number | null;
+  ps: string | null;
+  x: number;
+  y: number;
+  w: number;
+}
+/** `window.__pp` after `installSampler`: in-rAF, POST-PAINT (a task queued from the frame's rAF)
+ *  and rAF+2 reads, the rAF stamps, and the IntersectionObserver key (null when `io: false`). */
+export interface PP {
+  inRAF: PPRead[];
+  post: PPRead[];
+  rAF2: PPRead[];
+  stamps: number[];
+  io: number | null;
+  done: boolean;
+}
+export function installSampler(o: { sel: string; anyAnim?: boolean; maxFrames?: number; io?: boolean }): void;
+export function kPaintOf(pp: PP): number;
+/** Page-side: the painted timeline on `window.__pf` ({rafs, post, on}); `sel` is read post-paint each frame. */
+export function installTimeline(sel?: string | null): void;
+
+export const analyse: unknown;
+export const SKIP_PLANT: unknown;
+export const F2_PLANT: unknown;
+export const readMover: unknown;
+export const fmtArm: unknown;
+export const samplerSelfTest: unknown;
+export const loadArr: unknown;
+export const startPhotos: unknown;
+export const stat: unknown;
+export const analysePhotos: unknown;
+export const analyseTimeline: unknown;
+export const clockSelfTest: unknown;
+export const record: unknown;
+export const verdict: unknown;
+export const ladder: unknown;
+export const recorderSelfTest: unknown;

@@ -1,0 +1,31 @@
+import { test, expect } from '@playwright/test';
+import fs from 'node:fs';
+import { settled, stable, mark } from './lib';
+const OUT = process.env.OUT!;
+for (const wait of [0, 1500]) test(`debt wait ${wait}`, async ({ browser }, info) => {
+  const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
+  const page = await ctx.newPage();
+  await page.goto('./?size=3&difficulty=EASY&wire=local');
+  await settled(page);
+  await mark(page).evaluate((el) => {
+    const w = window as any;
+    w.__st = [el.getAttribute('aria-expanded')];
+    w.__ev = [];
+    new MutationObserver(() => { const v = el.getAttribute('aria-expanded'); if (v !== w.__st.at(-1)) w.__st.push(v); }).observe(el, { attributes: true });
+    for (const t of ['pointerdown', 'pointerup', 'click']) addEventListener(t, (e) => el.contains(e.target as Node) && w.__ev.push(`${t}:${(e as PointerEvent).pointerType ?? '-'}@${e.timeStamp.toFixed(1)}`), { capture: true });
+  });
+  const read = () => page.evaluate(() => ({ st: (window as any).__st, ev: (window as any).__ev }));
+  await mark(page).tap();
+  await stable(read);
+  const afterTap = await read();
+  if (wait) await page.waitForTimeout(wait);
+  await mark(page).evaluate((el) => (el as HTMLElement).click());
+  await stable(read);
+  const after1 = await read();
+  await mark(page).evaluate((el) => (el as HTMLElement).click());
+  await stable(read);
+  const after2 = await read();
+  const l = JSON.stringify({ eng: info.project.name, wait, afterTap: afterTap.st, after1: after1.st, after2: after2.st, ev: after2.ev });
+  fs.appendFileSync(OUT, l + '\n'); console.log(l);
+  await ctx.close();
+});

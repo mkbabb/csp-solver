@@ -1,0 +1,288 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 1664f00..2842e6e 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -1,4 +1,13 @@
+ import { test, expect, devices, type Page } from "@playwright/test";
++import { readFileSync } from "node:fs";
++import { join } from "node:path";
++import { fileURLToPath } from "node:url";
++// CTRL-RULE pass 8 (portable rows) — the ONE shape library at its product home (registry-v7 §2.4).
++// @ts-expect-error — the ONE shape library is an .mjs product home with no declaration (registry-v7 §2.4)
++import { elementSites, REGIMES, effectiveAt, sabotage } from "../scripts/shape-census.mjs";
++
++/** The package root, for the browserless source arm (it reads the tree, not the page). */
++const FE = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+ 
+ // PRM: live, because the census reads rendered names and ranks, and the frozen-well row asserts a
+ //   pose stack that never swaps by construction—both hold with the beat running, and no route
+@@ -1446,3 +1455,269 @@ for (const cell of [
+     });
+   });
+ }
++
++/** CTRL-RULE pass 8 · INTAKE-22 row 28's inset law, PORTED onto the merged §10 page (its foot is
++ *  TAPE's flex-column foot, `calc(0.75rem + env())` at the dock; the rail's hover-note berth
++ *  `max(3.5rem, env())` is one of the source arm's decoys, since at the rail the case stands clear
++ *  of the screen's edge). The three arms are the ruled page's rows by sha, keyed on `#card-foot`
++ *  and nothing of the ruled page's own. */
++test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
++  test.use({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 });
++  /** The foot's LOWEST PAINTED INK, in css px: the foot photographed ON and with every child
++   *  hidden, the lowest device row where any pixel moved. A computed `34px` is not paint. */
++  const LOWEST_INK = async (page: Page) => {
++    const g = await page.evaluate(() => {
++      const b = document.getElementById("card-foot")!.getBoundingClientRect();
++      return { x: Math.max(0, Math.floor(b.left)), y: Math.floor(b.top), w: Math.floor(Math.min(b.width, innerWidth - b.left)), h: Math.ceil(Math.min(b.bottom, innerHeight) - Math.floor(b.top)) };
++    });
++    const clip = { x: g.x, y: g.y, width: g.w, height: g.h };
++    // TWO ON photographs: a pixel counts only where both agree, so a boil tick between shots (the
++    // case frame's pose swap — CTRL-TAPE's 4-of-7 red on the correct tree) is not read as ink.
++    const on = (await page.screenshot({ clip })).toString("base64");
++    const on2 = (await page.screenshot({ clip })).toString("base64");
++    const hide = await page.addStyleTag({ content: "#card-foot * { visibility: hidden !important; }" });
++    const off = (await page.screenshot({ clip })).toString("base64");
++    await hide.evaluate((n) => (n as Element).remove());
++    const lowestRow = await page.evaluate(
++      async ({ on, on2, off, ch }) => {
++        const px = async (b64: string) => {
++          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
++          const c = new OffscreenCanvas(bmp.width, bmp.height);
++          const x = c.getContext("2d")!;
++          x.drawImage(bmp, 0, 0);
++          return x.getImageData(0, 0, bmp.width, bmp.height);
++        };
++        const [a, a2, b] = [await px(on), await px(on2), await px(off)];
++        const d = (p: ImageData, q: ImageData, o: number) =>
++          Math.max(Math.abs(p.data[o] - q.data[o]), Math.abs(p.data[o + 1] - q.data[o + 1]), Math.abs(p.data[o + 2] - q.data[o + 2]));
++        for (let y = a.height - 1; y >= 0; y--)
++          for (let x = 0; x < a.width; x++) {
++            const o = (y * a.width + x) * 4;
++            if (d(a, b, o) > 24 && d(a, a2, o) <= 8) return { y, dpr: a.height / ch };
++          }
++        return null;
++      },
++      { on, on2, off, ch: clip.height },
++    );
++    return lowestRow ? +(clip.y + (lowestRow.y + 1) / lowestRow.dpr).toFixed(2) : null;
++  };
++  const OPEN = async (page: Page) => {
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    await loadSudoku(page);
++    if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++      await page.locator(".drawer-tab").tap();
++    await SHEET_SETTLED(page);
++  };
++  /** ROW 28's SOURCE ARM, through the ONE library (pass 8; LAWS P7 §F (i)): every declaration that
++   *  may reach `#card-foot`'s `padding-bottom` — keyed on the TEMPLATE ELEMENT (`GameScene.vue`),
++   *  never on a class name — read in every DOCK regime its media context holds in (the library's
++   *  cells under 1024 wide: W2's sheet, whose foot IS the screen's bottom edge, the only place an
++   *  inset reaches it; at the rail the case stands clear of the edge), and EVERY live site must
++   *  stack the inset on the pad. Every site, not the source-order winner: a non-stacked site
++   *  with the higher specificity wins the real cascade from anywhere in the file. `plant` is CSS
++   *  appended to `scene.css` (`{ prepend }` puts it first; `{ shadow }` writes a second
++   *  `padding-bottom` into the shipped block itself), read through the library's `read` seam, so
++   *  no file on disk is touched. `off` switches this gate's own clauses off (the sabotage row). */
++  const DOCK = Object.entries(REGIMES as Record<string, { width: number }>)
++    .filter(([, r]) => r.width < 1024)
++    .map(([k]) => k);
++  const STACKED = /^calc\(\s*[^;]*\+\s*env\(\s*safe-area-inset-bottom\s*\)\s*\)$/;
++  type Plant = { css?: string; prepend?: string; shadow?: string } | null;
++  const FOOT_PAD = (plant: Plant = null, off: string[] = []) => {
++    const scene = join(FE, "src/games/shared/scene.css");
++    const read = (f: string) => {
++      let t = readFileSync(f, "utf8");
++      if (!plant || f !== scene) return t;
++      if (plant.shadow)
++        t = t.replace(
++          /(\.card-foot\s*\{[^}]*padding-bottom:\s*calc\([^;]*\);)/,
++          `$1\n  padding-bottom: ${plant.shadow};`,
++        );
++      return `${plant.prepend ?? ""}\n${t}\n${plant.css ?? ""}`;
++    };
++    const r = elementSites(FE, {
++      file: "src/games/shared/GameScene.vue",
++      pick: (el: { id?: string }) => el.id === "card-foot",
++      props: ["padding-bottom"],
++      read,
++    });
++    // `regimes` off = the one portrait cell (what a row that reads one emulated cell sees)
++    const regimes: string[] = off.includes("regimes") ? ["phone-portrait-390x844"] : DOCK;
++    const bad: string[] = [];
++    if (!r.elements.length) bad.push("no #card-foot in GameScene's template");
++    for (const regime of regimes) {
++      const live = r.sites.filter((x: { regimes?: string[] }) => (x.regimes ?? DOCK).includes(regime));
++      const read1 = off.includes("every-site") ? [effectiveAt(r.sites, regime)].filter(Boolean) : live;
++      if (!read1.length) bad.push(`${regime}: no site pads the foot`);
++      for (const x of read1)
++        if (!(off.includes("shape") ? /env\(\s*safe-area-inset-bottom/ : STACKED).test(String(x.value).trim()))
++          bad.push(`${regime}: ${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value}${x.important ? " !important" : ""} }`);
++    }
++    return { sites: r.sites.length, bad };
++  };
++  const FOOT_PAD_PLANTS: [string, Plant][] = [
++    ["E4 !important max() in a coarse block", { css: "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }" }],
++    ["E3 the #card-foot.card-foot compound override", { css: "#card-foot.card-foot { padding-bottom: 0.15rem; }" }],
++    ["a shadowing padding-bottom in the SAME block", { shadow: "0.15rem" }],
++    ["the compound override PREPENDED (wins on specificity, loses on source order)", { prepend: "#card-foot.card-foot { padding-bottom: 0.15rem; }" }],
++    ["an id-only selector (no class to key on)", { css: "#card-foot { padding-bottom: 0.15rem; }" }],
++    ["a phone-only block", { css: "@media (max-width: 480px) { .card-foot { padding-bottom: 0.15rem; } }" }],
++    ["a landscape-only block", { css: "@media (max-width: 1023.98px) and (orientation: landscape) { .card-foot { padding-bottom: 0.15rem; } }" }],
++    ["the shorthand", { css: ".card-foot { padding: 0 0 0.15rem; }" }],
++  ];
++  /** DECOYS: declarations that can never reach the foot in any regime — each must stay GREEN, so the
++   *  law is not a text match that reds on a dead block (LAWS P7 §F: a media query EVALUATED). */
++  const FOOT_PAD_DECOYS: [string, Plant][] = [
++    ["an unsatisfiable media block", { css: "@media (min-width: 5000px) { .card-foot { padding-bottom: 0.15rem; } }" }],
++    ["`not all and` a live query", { css: "@media not all and (min-width: 1px) { .card-foot { padding-bottom: 0.15rem; } }" }],
++    ["a rail-only berth (the case clear of the edge)", { css: "@media (min-width: 1024px) and (hover: hover) and (pointer: fine) { .card-foot { padding-bottom: max(3.5rem, env(safe-area-inset-bottom)); } }" }],
++  ];
++
++  test("row 28 · source: every site that may pad #card-foot at the dock stacks the inset, through the ONE library — eight plants red, three decoys green, and each clause bites", () => {
++    const shipped = FOOT_PAD();
++    console.log(`[RULE row 28 source] shipped ${JSON.stringify(shipped)}`);
++    expect(shipped.bad, "the shipped foot").toEqual([]);
++    expect(shipped.sites).toBeGreaterThan(0);
++    // RED is the verdict a plant owes and GREEN the one a decoy owes: `ok` is "read as the law".
++    const verdict = (off: string[] = []) =>
++      Object.fromEntries([
++        ...FOOT_PAD_PLANTS.map(([name, p]) => [name, FOOT_PAD(p, off).bad.length > 0]),
++        ...FOOT_PAD_DECOYS.map(([name, p]) => [`decoy ${name}`, FOOT_PAD(p, off).bad.length === 0]),
++      ]);
++    const clean = verdict();
++    console.log(`[RULE row 28 source] plants RED, decoys GREEN ${JSON.stringify(clean)}`);
++    for (const [name, ok] of Object.entries(clean)) expect(ok, `read as the law: ${name}`).toBe(true);
++    // THE CLAUSE-SABOTAGE BATTERY (LAWS P7 §F (ii)): each clause off in turn, and at least one plant
++    // must go GREEN — else the clause is decoration. The library's own clause is switched off
++    // through its `sabotage()`; this gate's three are switched off through `off`.
++    const battery: Record<string, string[]> = {};
++    for (const [clause, run] of [
++      ["library element-keyed", () => { sabotage(["element-keyed"]); try { return verdict(); } finally { sabotage([]); } }],
++      ["library media-eval", () => { sabotage(["media-eval"]); try { return verdict(); } finally { sabotage([]); } }],
++      ["gate every-site", () => verdict(["every-site"])],
++      ["gate regimes", () => verdict(["regimes"])],
++      ["gate stacked shape", () => verdict(["shape"])],
++    ] as const) {
++      const v = (run as () => Record<string, boolean>)();
++      battery[clause] = Object.entries(v).filter(([, red]) => !red).map(([n]) => n);
++    }
++    console.log(`[RULE row 28 source] sabotage → rows no longer read as the law ${JSON.stringify(battery)}`);
++    for (const [clause, greens] of Object.entries(battery)) expect(greens.length, `clause ${clause} bites`).toBeGreaterThan(0);
++  });
++
++  /** The SERVED cascade at the element (the behavioural twin of the source arm; LAWS P7 §F (iii)):
++   *  every CSSOM style rule the engine says MATCHES `#card-foot` (selector matching by the engine,
++   *  media by `matchMedia`, layers and nesting walked) plus the inline style, each `padding-bottom`
++   *  it declares. Sees what no source reader can: a runtime inline write, a structural selector. */
++  const SERVED_PAD = (page: Page) =>
++    page.evaluate(() => {
++      const el = document.getElementById("card-foot")!;
++      const out: string[] = [];
++      const walk = (rules: CSSRuleList, live: boolean) => {
++        for (const r of Array.from(rules)) {
++          if (r instanceof CSSMediaRule) walk(r.cssRules, live && matchMedia(r.conditionText).matches);
++          else if (r instanceof CSSStyleRule) {
++            let hit = false;
++            try {
++              hit = el.matches(r.selectorText);
++            } catch {
++              hit = false;
++            }
++            const v = r.style.getPropertyValue("padding-bottom");
++            // a UNIVERSAL reset (Tailwind's preflight `*, ::after, ::before`, specificity 0 in
++            // the base layer) matches every element and loses to every class: it is not a site
++            // that can decide the foot's pad, and it is the only selector the arm sets aside —
++            // unless it is `!important`, which outranks every normal declaration (a plant below)
++            const imp = !!r.style.getPropertyPriority("padding-bottom");
++            const universal = !r.selectorText.replace(/::?(before|after|backdrop|marker|placeholder|file-selector-button)|\*|,|\s/g, "");
++            if (live && hit && v && (!universal || imp)) out.push(`${r.selectorText} { ${v}${r.style.getPropertyPriority("padding-bottom") ? " !important" : ""} }`);
++            if ((r as unknown as { cssRules?: CSSRuleList }).cssRules?.length) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
++          } else if ((r as unknown as { cssRules?: CSSRuleList }).cssRules) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
++        }
++      };
++      for (const sh of Array.from(document.styleSheets)) {
++        try {
++          walk(sh.cssRules, true);
++        } catch {
++          out.push(`UNREADABLE ${sh.href}`);
++        }
++      }
++      if (el.style.paddingBottom) out.push(`style="padding-bottom: ${el.style.paddingBottom}"`);
++      return out;
++    });
++  const SERVED_OK = (sites: string[]) =>
++    sites.length > 0 && sites.every((x) => /\{ calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\) \}$/.test(x));
++
++  test("row 28 · behaviour, both engines on the FLAT phone (inset 0 — WebKit has no inset emulation): the served cascade stacks and the lowest ink clears the screen's edge", async ({
++    page,
++    browserName,
++  }) => {
++    await OPEN(page);
++    const served = await SERVED_PAD(page);
++    console.log(`[RULE row 28 served] ${browserName} ${JSON.stringify(served)}`);
++    expect(SERVED_OK(served), `served padding-bottom sites ${JSON.stringify(served)}`).toBe(true);
++    const padB = await page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
++    const ink = await LOWEST_INK(page);
++    const clears = ink === null ? null : +(844 - ink).toFixed(2);
++    console.log(`[RULE row 28 flat] ${browserName} inset 0 pad ${padB} lowest ink ${ink} clears ${clears}`);
++    expect(parseFloat(padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
++    expect(clears, "the lowest ink clears the screen's edge by ≥ 2 css").toBeGreaterThanOrEqual(2);
++    // NEGATIVE CONTROLS, same page — the served arm reds on each; the paint arm on the ones that move ink.
++    for (const [name, css, paints] of [
++      ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false],
++      ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false],
++      ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false],
++      ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true],
++      ["an !important universal", "* { padding-bottom: 0 !important; }", true],
++    ] as const) {
++      const tag = await page.addStyleTag({ content: css });
++      await SHEET_SETTLED(page);
++      const s = await SERVED_PAD(page);
++      const low = paints ? await LOWEST_INK(page) : null;
++      console.log(`[RULE row 28 flat] ${browserName} plant ${name}: served ${JSON.stringify(s)}${paints ? ` clears ${low === null ? null : +(844 - low).toFixed(2)}` : ""}`);
++      expect(SERVED_OK(s), `negative control ${name}`).toBe(false);
++      if (paints) expect(low === null ? 0 : 844 - low, `negative control ${name} on paint`).toBeLessThan(2);
++      await tag.evaluate((n) => (n as Element).remove());
++    }
++    // the runtime write no source reader sees
++    await page.evaluate(() => (document.getElementById("card-foot")!.style.paddingBottom = "0px"));
++    const inline = await SERVED_PAD(page);
++    console.log(`[RULE row 28 flat] ${browserName} plant inline write: served ${JSON.stringify(inline)}`);
++    expect(SERVED_OK(inline), "negative control: an inline write").toBe(false);
++  });
++
++  test("row 28 · paint under a real inset (chromium CDP): the lowest ink clears the inset line by ≥ 2 css, and max() reds it", async ({
++    page,
++    browserName,
++  }) => {
++    test.skip(browserName !== "chromium", "the inset override is a chromium CDP method; WebKit's arm is the flat phone above");
++    // THE PAINTED ARM (chromium, DPR 2): under a 34px inset the foot's lowest ink sits ≥ 2 css
++    // above the inset line (innerHeight − 34); with no inset the pad is the foot's own (2.4px here).
++    const cdp = await page.context().newCDPSession(page);
++    const at = async (bottom: number) => {
++      await cdp.send("Emulation.setSafeAreaInsetsOverride" as never, {
++        insets: { top: 0, left: 0, right: 0, bottom },
++      } as never);
++      await OPEN(page);
++      const padB = await page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
++      const ink = await LOWEST_INK(page);
++      return { padB, ink, clears: ink === null ? null : +(844 - bottom - ink).toFixed(2) };
++    };
++    const i34 = await at(34);
++    console.log(`[RULE row 28] inset 34 ${JSON.stringify(i34)}`);
++    expect(i34.clears, `the lowest ink against the inset line ${JSON.stringify(i34)}`).toBeGreaterThanOrEqual(2);
++    // NEGATIVE CONTROL, same page and inset: the pass-6 shape (the inset REPLACES the pad).
++    const tag = await page.addStyleTag({ content: "#card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; }" });
++    await SHEET_SETTLED(page);
++    const ink = await LOWEST_INK(page);
++    const red = ink === null ? null : +(844 - 34 - ink).toFixed(2);
++    console.log(`[RULE row 28] inset 34, max() planted: clears ${red}`);
++    expect(red, "negative control: max() gives the band away").toBeLessThan(2);
++    await tag.evaluate((n) => (n as Element).remove());
++    const i0 = await at(0);
++    console.log(`[RULE row 28] inset 0 ${JSON.stringify(i0)}`);
++    expect(parseFloat(i0.padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
++    expect(parseFloat(i34.padB) - parseFloat(i0.padB), `the inset STACKS on the pad (${i0.padB} → ${i34.padB})`).toBeCloseTo(34, 1);
++    expect(i0.clears).toBeGreaterThanOrEqual(2);
++  });
++});

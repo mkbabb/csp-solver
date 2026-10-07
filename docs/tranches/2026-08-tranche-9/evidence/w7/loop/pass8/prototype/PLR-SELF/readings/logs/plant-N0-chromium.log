@@ -1,0 +1,36 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/player-mark.spec.ts:640:1 › the desk draws four rows over four cells at rest, whatever the room's age (10.5s)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:640:1 › the desk draws four rows over four cells at rest, whatever the room's age 
+
+    Error: [{"rows":1,"lapped":2,"top":124},{"rows":1,"lapped":2,"top":124},{"rows":1,"lapped":2,"top":124}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 4,
+    -   "rows": 4,
+    +   "lapped": 2,
+    +   "rows": 1,
+        "top": 124,
+      }
+
+      656 |     await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+      657 |   }
+    > 658 |   for (const r of reads) expect(r, JSON.stringify(reads)).toEqual({ rows: 4, lapped: 4, top: 124 });
+          |                                                           ^
+      659 | });
+      660 |
+      661 | /**
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/e2e/player-mark.spec.ts:658:59
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself8r/pw-out-spec/player-mark-the-desk-draws-df5ec-est-whatever-the-room-s-age-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/player-mark.spec.ts:640:1 › the desk draws four rows over four cells at rest, whatever the room's age 

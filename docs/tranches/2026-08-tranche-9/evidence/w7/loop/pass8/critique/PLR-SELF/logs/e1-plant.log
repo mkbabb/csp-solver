@@ -1,0 +1,57 @@
+START 17:20:29 LOAD { 162.75 122.51 87.35 } PM d41d87dde1da
+
+Running 4 tests using 1 worker
+
+  -  1 [chromium] › e2e/critic-cells.spec.ts:914:6 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes
+  ✘  2 [chromium] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes (37.8s)
+  -  3 [webkit] › e2e/critic-cells.spec.ts:914:6 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes
+  ✘  4 [webkit] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes (1.1m)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes 
+
+    Error: dark .corner-left [data-lobby] clean: top 1 d0 (n206 <3:1 holes 206/1r≤206 s8 1/26 [first start 1 | center 1 | end 1]) · right 1 d0 (n67 <3:1 holes 67/1r≤67 s8 1/9 occ svg.handwritten-logo.is-drawn [first nearest 1 occ svg.handwritten-logo.is-drawn | center 1 occ svg.handwritten-logo.is-drawn]) · bottom 1 d0 (n206 <3:1 holes 206/1r≤206 s8 1/26 occ main.main-content.flex [first end 1 occ main.main-content.flex | center 1 occ main.main-content.flex | start 1 occ main.main-content.flex]) · left 1 d0 (n67 <3:1 holes 67/1r≤67 s8 1/9 [first nearest 1 | center 1]) | topOnly RED station8 RED → RED B2 top core median 1 < 3; B3 top painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 top holes 1 > 0.02 (206 stations in 1 runs, longest 206); B2 right core median 1 < 3 (occluder svg.handwritten-logo.is-drawn); B3 right painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 right holes 1 > 0.02 (67 stations in 1 runs, longest 67); B2 bottom core median 1 < 3 (occluder main.main-content.flex); B3 bottom painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 bottom holes 1 > 0.02 (206 stations in 1 runs, longest 206); B2 left core median 1 < 3; B3 left painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 left holes 1 > 0.02 (67 stations in 1 runs, longest 67)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      929 |       // own frame on the control. The 1px plant must still red.
+      930 |       const { clean, plants } = await edgeGate(page, { subject, edge, plants: EDGE_PLANTS(edge), thick: 1.5 });
+    > 931 |       expect(clean.red, `${scheme} ${subject} clean: ${fmt(clean)}`).toBe(false);
+          |                                                                      ^
+      932 |       for (const [name, r] of Object.entries(plants)) {
+      933 |         if (r.info) test.info().annotations.push({ type: `${scheme} ${subject} ${name}`, description: fmt(r) });
+      934 |         else expect(r.red, `${scheme} ${subject} ${name}: ${fmt(r)}`).toBe(true);
+        at gate (/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:931:70)
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:940:5
+
+    Error Context: ../../../pw-out/player-mark-both-head-disc-99ed1-o-CSS-border-in-both-themes-chromium/error-context.md
+
+  2) [webkit] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes 
+
+    Error: dark .corner-left [data-lobby] clean: top 1 d0 (n206 <3:1 holes 206/1r≤206 s8 1/26 [first start 1 | center 1 | end 1]) · right 1 d0 (n67 <3:1 holes 67/1r≤67 s8 1/9 occ svg.handwritten-logo.is-drawn [first nearest 1 occ svg.handwritten-logo.is-drawn | center 1 occ svg.handwritten-logo.is-drawn]) · bottom 1 d0 (n206 <3:1 holes 206/1r≤206 s8 1/26 [first end 1 | center 1 | start 1]) · left 1 d0 (n67 <3:1 holes 67/1r≤67 s8 1/9 [first nearest 1 | center 1]) | topOnly RED station8 RED → RED B2 top core median 1 < 3; B3 top painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 top holes 1 > 0.02 (206 stations in 1 runs, longest 206); B2 right core median 1 < 3 (occluder svg.handwritten-logo.is-drawn); B3 right painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 right holes 1 > 0.02 (67 stations in 1 runs, longest 67); B2 bottom core median 1 < 3; B3 bottom painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 bottom holes 1 > 0.02 (206 stations in 1 runs, longest 206); B2 left core median 1 < 3; B3 left painted depth 0 css px < 1.35 (1.5 × 0.9; ink computed); B4 left holes 1 > 0.02 (67 stations in 1 runs, longest 67)
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      929 |       // own frame on the control. The 1px plant must still red.
+      930 |       const { clean, plants } = await edgeGate(page, { subject, edge, plants: EDGE_PLANTS(edge), thick: 1.5 });
+    > 931 |       expect(clean.red, `${scheme} ${subject} clean: ${fmt(clean)}`).toBe(false);
+          |                                                                      ^
+      932 |       for (const [name, r] of Object.entries(plants)) {
+      933 |         if (r.info) test.info().annotations.push({ type: `${scheme} ${subject} ${name}`, description: fmt(r) });
+      934 |         else expect(r.red, `${scheme} ${subject} ${name}: ${fmt(r)}`).toBe(true);
+        at gate (/private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:931:70)
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:940:5
+
+    Error Context: ../../../pw-out/player-mark-both-head-disc-99ed1-o-CSS-border-in-both-themes-webkit/error-context.md
+
+  2 failed
+    [chromium] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes 
+    [webkit] › e2e/player-mark.spec.ts:914:1 › both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes 
+  2 skipped
+EXIT 1 17:22:17 LOAD { 88.99 110.16 86.93 }

@@ -1,0 +1,10 @@
+# instruments/g19probe.mjs, run from the critic's copy (= tree 8f19557d) web/frontend: the ONE library's
+# maskedDefaults over stripJs(text), then G-LIVE-19's own filter (!unresolved && registered.includes(name)).
+X8_known           raw [{"n":"--motion-note","u":false}] → spec keeps ["--motion-note"] RED
+X10_bare_stem      raw [{"n":"--focus-ring-outset","u":false},{"n":"--toggle-bleed","u":false},{"n":"--motion-note","u":false}] → spec keeps [...3] RED
+X11_const_name     raw [] → spec keeps [] GREEN (hole)     'var(' + N + ', 280ms)' with const N='--motion-note'
+X12_template_name  raw [] → spec keeps [] GREEN (hole)     `var(${N}, 280ms)` with const N='--motion-note'
+X13_fn_stem        raw [{"n":"--motion-note","u":false}] → spec keeps ["--motion-note"] RED
+X9_concat          raw [{"n":"--motion-note","u":false}] → spec keeps ["--motion-note"] RED
+EXIT=0
+# File plant X12 (cplants.py) in AnswerKeyLaminate.vue: G-LIVE-19 passed in both engines in run2 (logs/run2-plants.log).

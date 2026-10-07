@@ -1,0 +1,30 @@
+# r2 accent-kinship probe (r0 R2 instrument, the pass-6 copy with OUT re-pointed and the name key, run from the lane's scratch config), re-run against the tree with check 5 (L6's pair) LANDED; DPR 1, both engines; tree dev :4244, control dev :4252 (git archive 74a2b5d9); payload: r2 deals its own board (not pinned — the one variable it carries is the focused cell's label)
+== kin-tree-chromium:  4 failed  1 passed (13.8s)  EXIT 1
+      1     Error: a focused control's ring must be drawn in --color-focus-sketch
+      2     Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+      1     Error: no interactive surface may paint a colour no token names
+== kin-tree-webkit:  4 failed  1 passed (20.5s)  EXIT 1
+      2     Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+      1     Error: no control was reached by Tab in webkit — the row has no subject, it is not green
+      1     Error: no interactive surface may paint a colour no token names
+== kin-control-chromium:  4 failed  1 passed (10.9s)  EXIT 1
+      1     Error: a focused control's ring must be drawn in --color-focus-sketch
+      2     Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+      1     Error: no interactive surface may paint a colour no token names
+== kin-control-webkit:  4 failed  1 passed (21.8s)  EXIT 1
+      2     Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+      1     Error: no control was reached by Tab in webkit — the row has no subject, it is not green
+      1     Error: no interactive surface may paint a colour no token names
+tree chromium toll {'peerWorst': 7.27, 'peerOnTape': 11.84, 'peerOnTapeNameKeyShipped': True, 'peerOnTapeRingKey': 11.84, 'peerOnTapeDigitKey': 6.49, 'peerCount': 40} rainbow [5.4, 5.6, 6.21, 5.39, 5.29]
+tree webkit toll {'peerWorst': 7.27, 'peerOnTape': 11.84, 'peerOnTapeNameKeyShipped': True, 'peerOnTapeRingKey': 11.84, 'peerOnTapeDigitKey': 6.49, 'peerCount': 40} rainbow [5.4, 5.6, 6.21, 5.39, 5.29]
+control chromium toll {'peerWorst': 5.36, 'peerOnTape': 4.79, 'peerOnTapeNameKeyShipped': False, 'peerOnTapeRingKey': 4.79, 'peerOnTapeDigitKey': 4.79, 'peerCount': 40} rainbow [5.4, 5.6, 6.21, 5.39, 5.29]
+control webkit toll {'peerWorst': 5.36, 'peerOnTape': 4.78, 'peerOnTapeNameKeyShipped': False, 'peerOnTapeRingKey': 4.78, 'peerOnTapeDigitKey': 4.78, 'peerCount': 40} rainbow [5.4, 5.6, 6.21, 5.39, 5.29]
+kinship-chromium-light tree==control IDENTICAL
+kinship-chromium-dark tree==control IDENTICAL
+inline-literals-chromium tree==control IDENTICAL
+focus-ring-chromium tree vs control: 4 differing lines, every one the focused cell's label (non-label lines: 0)
+kinship-webkit-light tree==control IDENTICAL
+kinship-webkit-dark tree==control IDENTICAL
+inline-literals-webkit tree==control IDENTICAL
+focus-ring-webkit tree vs control: 40 differing lines, every one the focused cell's label (non-label lines: 0)
+# incident: the first control run found :4252 dead (ERR_CONNECTION_REFUSED, cause unknown, no exit line in its log); the control server was restarted 16:57 and both control rows re-run; only the re-run is cited

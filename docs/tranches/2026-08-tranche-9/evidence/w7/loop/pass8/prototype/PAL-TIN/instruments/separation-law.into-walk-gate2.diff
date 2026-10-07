@@ -1,0 +1,77 @@
+diff --git a/web/frontend/scripts/check-peer-arcs.mjs b/web/frontend/scripts/check-peer-arcs.mjs
+index bb15c9e..e372424 100644
+--- a/web/frontend/scripts/check-peer-arcs.mjs
++++ b/web/frontend/scripts/check-peer-arcs.mjs
+@@ -146,11 +146,22 @@ const MIN_DE = 0.1;
+  *  (the light name IS the ring's string) is false for the walk — the day name's chroma is under
+  *  the ring's for 53 of 144 hands — so the walk's light names are gated at MIN_DE like the dark. */
+ const EXEMPT_FLOOR = 0.075;
+-/** The room the law is held for: the walk's CAPACITY under it (a third player breaks it). This is
+- *  NOT TIN's law whole: TIN holds it for its room of TIN_ROOM (its five sticks), and at that room the
+- *  walk reds (printed as an OPEN row every run, never a pass) — watch 2 stays HALF MET. */
+-const SEP_ROOM = 2;
++/** PAL-TIN's LIGHT RING floor (registry-v7 §2.13f; TIN's gate 2 `RING_FLOOR`): the day rings sit at
++ *  the section's pair L 0.295, where sRGB holds five hues 0.10 apart only at L ≥ 0.380; a ring never
++ *  carries identity alone (the digit and the roster tick do), so the day ring pair is floored at the
++ *  shipped 0.0769 less the 8-bit slack. The night rings, the digits and the names hold MIN_DE. */
++const RING_FLOOR = 0.075;
++/** THE ROOM THE LAW IS HELD FOR: TIN's WHOLE law — its room of five (five sticks, the room the section
++ *  seats before a colour repeats), in all three strings a player is told apart by (the digit, the
++ *  ring, the name), both arms (PAL-TIN pass 8, registry-v7 §2.13b; handed by sha). */
+ const TIN_ROOM = 5;
++const SEP_ROOM = TIN_ROOM;
++/** The strings the law reads: [ink token, band token, floor by day, floor at night]. */
++const SEP_STRINGS = [
++  ["--color-user-ink", "--peer-ink-l", MIN_DE, MIN_DE],
++  ["--color-peer-cursor-ink", "--peer-ring-l", RING_FLOOR, MIN_DE],
++  ["--color-peer-name-ink", "--peer-name-l", MIN_DE, MIN_DE],
++];
+ 
+ const BAND_TOKENS = ["--peer-ink-l", "--peer-ring-l", "--peer-name-l"];
+ const INK_TOKENS = [
+@@ -364,14 +375,18 @@ function check2Separation(ctx, ts, inkAt = walkModule.inkFor) {
+     if (w.every((x) => x.d >= MIN_DE) && capacity === n - 1) capacity = n;
+   }
+   const room = bands.map((L) => nearestOf(inkAt, "--color-peer-name-ink", L, SEP_ROOM));
+-  if (on("c2-law"))
+-    room.forEach((x, k) => {
+-      if (!(x.d >= MIN_DE))
++  const whole = [];
++  for (const [tok, band, day, night] of SEP_STRINGS)
++    [light, dark].forEach((arm, k) => {
++      const x = nearestOf(inkAt, tok, Number(arm.get(band)), SEP_ROOM);
++      const floor = k ? night : day;
++      whole.push(`${tok} ${k ? "dark" : "light"} ${x.d.toFixed(4)} (${x.at}) ≥ ${floor}`);
++      if (on("c2-law") && !(x.d >= floor))
+         out.push(
+-          `the ${k ? "dark" : "light"} names of a room of ${SEP_ROOM} are ${x.d.toFixed(4)} apart (hands ${x.at}), under PAL-TIN's ${MIN_DE}`,
++          `the ${k ? "dark" : "light"} ${tok} of a room of ${SEP_ROOM} are ${x.d.toFixed(4)} apart (hands ${x.at}), under PAL-TIN's ${floor}`,
+         );
+     });
+-  return { failures: out, span, room, capacity, table };
++  return { failures: out, span, room, capacity, table, whole };
+ }
+ 
+ // ── 3 ────────────────────────────────────────────────────────────────────────────────────────
+@@ -916,20 +931,7 @@ console.log(
+   `  ${R.c2.failures.length ? "✗" : "✓"} 2 THE SEPARATION LAW — a room of ${SEP_ROOM}: names ${R.c2.room.map((x) => x.d.toFixed(4)).join(" light / ")} dark ≥ ${MIN_DE}; the walk's capacity under the law is ${R.c2.capacity} player(s) (${R.c2.span.toFixed(4)}° open, no repeated hue in 144)`,
+ );
+ for (const row of R.c2.table) console.log(`      ${row}`);
+-{
+-  const { light, dark } = armsOf(CTX);
+-  const tin = [light, dark].map((a) =>
+-    nearestOf(
+-      walkModule.inkFor,
+-      "--color-peer-name-ink",
+-      Number(a.get("--peer-name-l")),
+-      TIN_ROOM,
+-    ),
+-  );
+-  console.log(
+-    `      OPEN (not gated): TIN's law at TIN's room of ${TIN_ROOM}: the walk's names ${tin.map((x) => `${x.d.toFixed(4)} (${x.at})`).join(" light / ")} dark, under ${MIN_DE} — the walk holds TIN's floor for ${R.c2.capacity} player(s) only`,
+-  );
+-}
++console.log(`      TIN's WHOLE law at a room of ${SEP_ROOM}: ${R.c2.whole.join(" · ")}`);
+ failures.push(...R.c2.failures.map((f) => `[2 THE SEPARATION LAW] ${f}`));
+ console.log(
+   `  ${R.c3.failures.length ? "✗" : "✓"} 3 BANDS AGREE — DIGIT_BANDS, RING_BANDS and NAME_BANDS are the bands index.css publishes, both arms; the name's night band ≥ ${NAME_FLOOR} on both sides`,

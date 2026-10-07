@@ -1,0 +1,52 @@
+
+Running 2 tests using 1 worker
+
+WASH light: cell 40 peer 36 step 1.078 (floor 1.072) · W1 1.019 · W5 1.078 · computed color(srgb 0.290196 0.564706 0.85098 / 0.07)
+  ✘  1 [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · light (1.7s)
+WASH dark: cell 40 peer 36 step 1.103 (floor 1.098) · W1 1.016 · W5 1.103 · computed color(srgb 0.415686 0.670588 0.921569 / 0.07)
+  ✘  2 [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · dark (1.8s)
+
+
+  1) [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · light 
+
+    Error: plant W5 must read under the floor (the row can fail)
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 1.072
+    Received:   1.078
+
+      109 |     expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(FLOOR[scheme]);
+      110 |     for (const [k, v] of Object.entries(planted))
+    > 111 |       expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(FLOOR[scheme]);
+          |                                                                                 ^
+      112 |   });
+      113 | }
+      114 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/wash-step.spec.ts:111:81
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-wash-control-webkit/e2e-wash-step-the-wash-pai-3b040-ts-that-fade-it-red-·-light-webkit/error-context.md
+
+  2) [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · dark 
+
+    Error: plant W5 must read under the floor (the row can fail)
+
+    expect(received).toBeLessThan(expected)
+
+    Expected: < 1.098
+    Received:   1.103
+
+      109 |     expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(FLOOR[scheme]);
+      110 |     for (const [k, v] of Object.entries(planted))
+    > 111 |       expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(FLOOR[scheme]);
+          |                                                                                 ^
+      112 |   });
+      113 | }
+      114 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/wash-step.spec.ts:111:81
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/six8/pw-wash-control-webkit/e2e-wash-step-the-wash-pai-6a4de-nts-that-fade-it-red-·-dark-webkit/error-context.md
+
+  2 failed
+    [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · light 
+    [webkit] › e2e/wash-step.spec.ts:59:3 › the wash paints its step over the card, and the plants that fade it red · dark 

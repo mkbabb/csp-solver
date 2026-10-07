@@ -1,0 +1,400 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb30..829af4f8 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -19,7 +19,7 @@
+ //   WALK     csstext · style-computed-key · import-chain
+ //   LADDER   collect-walk · longhand · semicolon-less · clock-arith
+ //   ERASE    pcss · register-split
+-//   TAPE     element-keyed · tw-utility
++//   TAPE     element-keyed · tw-utility · closed-context · class-writes · class-ternary · self-close · ws-combinator · param-carried (pass 8, PROPOSED)
+ //   LEDGER   media-eval · em-lh · r4-bound
+ //   TAB-PEN  html-comment · one-link · token-conflict
+ //
+@@ -103,6 +103,18 @@ export const CLAUSES = {
+   "element-keyed": "TAPE · the subject resolved to template ELEMENTS",
+   "tw-utility":
+     "TAPE · utility classes that move paint (opacity-[…], sr-only, blur, contain, translate)",
++  "closed-context":
++    "TAPE (pass 8) · mayMatch's `outer` predicate: a compound above the KNOWN root matches only what the page above it can carry",
++  "class-ternary":
++    "TAPE (pass 8) · a `:class` ternary whose branches are all string literals names only those classes (not dynamic)",
++  "self-close":
++    "TAPE (pass 8) · `<Foo ... />` with a space before `/>` is SELF-CLOSED (the `/` is never an attribute character)",
++  "ws-combinator":
++    "TAPE (pass 8) · a run of whitespace is ONE descendant combinator (`:deep(x)` → `  x` left an empty compound that matched everything)",
++  "param-carried":
++    "TAPE (pass 8) · `setProperty(name, v)` through a local function's parameter is resolved at its call sites (all literal, or UNRESOLVED)",
++  "class-writes":
++    "TAPE (pass 8) · script class writes (classList.add/toggle/replace, className, setAttribute('class')) read as candidates",
+   "media-eval": "LEDGER · media queries EVALUATED over the regime set",
+   "em-lh": "LEDGER · em/lh/rem resolved at the consumer",
+   "r4-bound": "LEDGER · a lower bound through calc/clamp/min/max",
+@@ -1115,6 +1127,18 @@ export function scriptWrites(text, prop, baseLine = 1) {
+           value: carry(m[2]),
+           line: L(m.index),
+         });
++      continue;
++    }
++    const carried = on("param-carried") ? paramCarried(s, k, m.index, consts) : null;
++    if (carried) {
++      for (const c of carried)
++        if (kebab(c.name) === prop)
++          out.push({
++            kind: "script-setProperty-param",
++            prop,
++            value: carry(c.value),
++            line: L(c.at),
++          });
+     } else
+       out.push({
+         kind: "script-setProperty-computed",
+@@ -1158,6 +1182,110 @@ export function scriptWrites(text, prop, baseLine = 1) {
+     }
+   return out;
+ }
++/** TAPE (pass 8, param-carried): a `setProperty(name, v)` whose `name` is a PARAMETER of the
++ *  local function that encloses it (`const put = (name: string, v: string) => …` or `function
++ *  put(name, v)`) is resolved at that function's CALL SITES — every call's argument must fold to
++ *  a literal, or the write stays UNRESOLVED. Returns `[{ name, value, at }]` or null. */
++function paramCarried(s, id, at, consts) {
++  if (!/^[A-Za-z_$][\w$]*$/.test(id)) return null;
++  const defs = [
++    ...s.matchAll(
++      /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*\(([^()]*)\)\s*(?::[^=]+)?=>/g,
++    ),
++    ...s.matchAll(/function\s+([A-Za-z_$][\w$]*)\s*\(([^()]*)\)/g),
++  ].filter((d) => d.index < at);
++  if (!defs.length) return null;
++  const d = defs.sort((a, b) => b.index - a.index)[0];
++  const params = d[2].split(",").map((x) => x.split(/[:=]/)[0].replace(/[?\s]/g, ""));
++  const i = params.indexOf(id);
++  if (i < 0) return null;
++  const out = [];
++  for (const c of s.matchAll(
++    new RegExp(`(?<![\\w$.])${d[1]}\\(((?:[^()]|\\([^()]*\\))*)\\)`, "g"),
++  )) {
++    if (c.index === d.index || s.slice(c.index - 9, c.index).includes("function"))
++      continue;
++    const args = splitArgs(c[1]);
++    const a = (args[i] ?? "").trim();
++    const lit = /^(['"`])([^'"`$]*)\1$/.exec(a);
++    const name = lit ? lit[2] : foldConcat(a, consts);
++    if (name == null) return null;
++    out.push({ name, value: (args[i + 1] ?? "").trim(), at: c.index });
++  }
++  return out.length ? out : null;
++}
++function splitArgs(t) {
++  const out = [];
++  let depth = 0,
++    cur = "",
++    q = null;
++  for (const ch of t) {
++    if (q) {
++      cur += ch;
++      if (ch === q) q = null;
++      continue;
++    }
++    if (ch === "'" || ch === '"' || ch === "`") q = ch;
++    else if ("([{".includes(ch)) depth++;
++    else if (")]}".includes(ch)) depth--;
++    else if (ch === "," && depth === 0) {
++      out.push(cur);
++      cur = "";
++      continue;
++    }
++    cur += ch;
++  }
++  out.push(cur);
++  return out;
++}
++
++/** TAPE (pass 8, class-writes): script CLASS writes — `classList.add(…)`, `classList.toggle(x)`,
++ *  `classList.replace(a, b)` (b), `className =`/`+=`, `setAttribute("class", …)` — as Tailwind
++ *  candidates (`candidates()`), each with its line; a non-literal argument is UNRESOLVED (never
++ *  dropped). A utility class a script adds is a declaration site the template never shows (S9d). */
++export function classWrites(text, baseLine = 1) {
++  if (!on("class-writes")) return [];
++  const s = stripJs(text);
++  const out = [];
++  const L = (i) => baseLine + lineAt(s, i) - 1;
++  const consts = constBindings(s);
++  const lit = (a) => {
++    const t = a.trim();
++    const q = /^(['"`])([^'"`$]*)\1$/.exec(t);
++    return q ? q[2] : foldConcat(t, consts);
++  };
++  const push = (args, at, kind) => {
++    for (const a of args) {
++      const v = lit(a);
++      if (v == null)
++        out.push({
++          kind: `${kind}-computed`,
++          classes: [],
++          value: a.trim(),
++          line: L(at),
++          unresolved: true,
++        });
++      else out.push({ kind, classes: candidates(v), value: v, line: L(at) });
++    }
++  };
++  for (const m of s.matchAll(
++    /\.classList\s*\.\s*(add|toggle|replace)\(\s*((?:[^()]|\([^()]*\))*)\)/g,
++  )) {
++    const args = splitTop(m[2], /,/);
++    push(
++      m[1] === "add" ? args : m[1] === "toggle" ? args.slice(0, 1) : args.slice(1, 2),
++      m.index,
++      "classList",
++    );
++  }
++  for (const m of s.matchAll(/\.className\s*\+?=(?!=)\s*([^;\n]+)/g))
++    push([m[1]], m.index, "className");
++  for (const m of s.matchAll(
++    /setAttribute\(\s*(["'`])class\1\s*,\s*((?:[^()]|\([^()]*\))+)\)/g,
++  ))
++    push([m[2]], m.index, "setAttribute-class");
++  return out;
++}
+ /** CSS TEXT inside script strings (FACE: HandwrittenLogo's pose sheet `text{font-family:…}` is a
+  *  shipping stylesheet the census never saw): adjacent literals folded, `${…}` a placeholder,
+  *  `<style>` tags dropped; rules and bare declaration strings both read. */
+@@ -2092,8 +2220,9 @@ export function templateElements(tpl, baseLine = 1) {
+   const t = stripHtml(tpl);
+   const els = [];
+   const stack = [];
+-  const re =
+-    /<\/([a-zA-Z][\w.-]*)\s*>|<([a-zA-Z][\w.-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*(\/?)>/g;
++  const re = on("self-close")
++    ? /<\/([a-zA-Z][\w.-]*)\s*>|<([a-zA-Z][\w.-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'/]|\/(?!>))+)*)\s*(\/?)>/g
++    : /<\/([a-zA-Z][\w.-]*)\s*>|<([a-zA-Z][\w.-]*)((?:\s+(?:"[^"]*"|'[^']*'|[^\s>"'])+)*)\s*(\/?)>/g;
+   for (const m of t.matchAll(re)) {
+     if (m[1]) {
+       const k = stack.map((x) => els[x].tag).lastIndexOf(m[1]);
+@@ -2106,12 +2235,25 @@ export function templateElements(tpl, baseLine = 1) {
+     const dyn = attrs.get(":class") ?? attrs.get("v-bind:class");
+     let dynClass = false;
+     if (dyn != null) {
+-      for (const lit of dyn.matchAll(/(['"`])([\w\s-]+)\1/g))
++      for (const lit of dyn.matchAll(
++        on("class-ternary") ? /(['"`])([\w\s:/.%[\]-]+)\1/g : /(['"`])([\w\s-]+)\1/g,
++      ))
+         for (const c of lit[2].split(/\s+/)) if (c) classes.add(c);
+       for (const key of dyn.matchAll(/(?:[{,]\s*)([\w-]+)\s*:/g)) classes.add(key[1]);
+       dynClass =
+         !/^\s*(\{[^}]*\}|\[[^\]]*\]|(['"`])[^'"`]*\2)\s*$/.test(dyn) ||
+         /\$\{/.test(dyn);
++      // TAPE (pass 8, class-ternary): `cond ? 'a b' : 'c'` (nested in the else arm too) names only
++      // its literals; the condition is a boolean and never a class.
++      if (
++        dynClass &&
++        on("class-ternary") &&
++        !/\$\{/.test(dyn) &&
++        /^\s*[\w$.!&|()\s<>=]+\?\s*(['"`])[\w\s:/.%[\]-]*\1\s*:\s*(?:[\w$.!&|()\s<>=]+\?\s*(['"`])[\w\s:/.%[\]-]*\2\s*:\s*)*(['"`])[\w\s:/.%[\]-]*\3\s*$/.test(
++          dyn,
++        )
++      )
++        dynClass = false;
+     }
+     const el = {
+       i: els.length,
+@@ -2199,7 +2341,7 @@ function compoundCertain(c, el) {
+  *  parent, ` ` any ancestor, `+`/`~` a may-sibling); past the template's root the context is
+  *  unknown, so the rest may match. An extra class, a structural pseudo, an attribute selector and
+  *  an id attribute all reach the element (S1–S5). */
+-export function mayMatch(sel, el, els) {
++export function mayMatch(sel, el, els, { outer } = {}) {
+   return splitTop(sel, /,/).some((one) => {
+     const s = one
+       .replace(/:deep\(([^)]*)\)/g, " $1")
+@@ -2217,13 +2359,24 @@ export function mayMatch(sel, el, els) {
+         if (c !== " " && c !== "\n") {
+           if (toks.at(-1) === " ") toks.pop();
+           toks.push(c);
+-        } else if (toks.length && !/^[>+~]$/.test(toks.at(-1))) toks.push(" ");
++        } else if (
++          toks.length &&
++          !/^[>+~]$/.test(toks.at(-1)) &&
++          !(on("ws-combinator") && toks.at(-1) === " ")
++        )
++          toks.push(" ");
+         continue;
+       }
+       cur += c;
+     }
+     if (cur) toks.push(cur);
+     while (toks.length && toks.at(-1) === " ") toks.pop();
++    // TAPE (pass 8, closed-context): past the known root, the compounds still unmatched must each
++    // MAY-match the page above it (`outer`); with no `outer` the context stays unknown (a yes).
++    const above = (ti) =>
++      !outer ||
++      !on("closed-context") ||
++      toks.every((c, k) => k > ti - 1 || (ti - 1 - k) % 2 !== 0 || outer(c));
+     const walkUp = (ti, node) => {
+       if (ti < 0) return true;
+       const comb = toks[ti];
+@@ -2231,7 +2384,7 @@ export function mayMatch(sel, el, els) {
+       if (comp == null) return true;
+       if (comb === ">") {
+         const p = node.parent == null ? null : els[node.parent];
+-        if (!p) return true;
++        if (!p) return above(ti);
+         return compoundMayMatch(comp, p) && walkUp(ti - 2, p);
+       }
+       if (comb === " ") {
+@@ -2241,7 +2394,7 @@ export function mayMatch(sel, el, els) {
+           p = p.parent == null ? null : els[p.parent]
+         )
+           if (compoundMayMatch(comp, p) && walkUp(ti - 2, p)) return true;
+-        return true; // the context above the template's root is unknown
++        return above(ti); // the context above the template's root: unknown unless `outer` says
+       }
+       return true; // `+` / `~`: a sibling relation, may hold
+     };
+@@ -3833,6 +3986,137 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "closed-context",
++    "TAPE",
++    "C1 `.ab path` reaches the bar's frame and NOT a well's once the page above the root is closed",
++    (L) => {
++      const els = L.templateElements(
++        '<div class="card"><div class="well"><svg class="osvg"><path /></svg></div><div class="ab"><svg class="osvg"><path /></svg></div></div>',
++      );
++      const paths = els.filter((e) => e.tag === "path");
++      const outer = (c) => !/\.ab\b/.test(c);
++      const sel = ".ab path";
++      return (
++        L.mayMatch(sel, paths[1], els, { outer }) === true &&
++        L.mayMatch(sel, paths[0], els, { outer }) === false &&
++        L.mayMatch(sel, paths[0], els) === true &&
++        L.mayMatch(
++          ".card > .ab > .osvg",
++          els.find((e) => e.tag === "svg" && els[e.parent].classes.has("ab")),
++          els,
++          { outer },
++        ) === true
++      );
++    },
++  ],
++  [
++    "class-ternary",
++    "TAPE",
++    "T1 `:class=\"row ? 'px-5' : 'px-2'\"` names two classes and no third; a computed one stays dynamic",
++    (L) => {
++      const els = L.templateElements(
++        '<div id="f" :class="rowRegime ? \'px-5\' : \'px-2\'"></div><div id="g" :class="a ? \'x\' : b ? \'y\' : \'z\'"></div><div id="h" :class="cls"></div><div id="m" :class="\nmobile\n ? \'mt-3 x\'\n : \'flex md:items-stretch\'\n"></div><div id="k" :class="`p-${n}`"></div>',
++      );
++      const [f, g, h, m, k] = els;
++      return (
++        f.dynClass === false &&
++        f.classes.has("px-5") &&
++        f.classes.has("px-2") &&
++        L.mayMatch(".crayon", f, els) === false &&
++        g.dynClass === false &&
++        g.classes.has("z") &&
++        h.dynClass === true &&
++        k.dynClass === true &&
++        m.dynClass === false &&
++        m.classes.has("md:items-stretch")
++      );
++    },
++  ],
++  [
++    "self-close",
++    "TAPE",
++    'E1 `<slot />` and a multi-line `<Foo\\n  a="1"\\n/>` close themselves; the next sibling is not their child',
++    (L) => {
++      const els = L.templateElements(
++        '<div class="root"><slot /><svg class="s"><path /></svg><Frame\n  class="f"\n  :a="1"\n/><div class="v"></div></div>',
++      );
++      const by = (c) => els.find((e) => e.classes.has(c));
++      return (
++        els[by("s").parent].classes.has("root") &&
++        els[by("v").parent].classes.has("root")
++      );
++    },
++  ],
++  [
++    "ws-combinator",
++    "TAPE",
++    "W1 `.a :deep(path)` and `.a  path` reach a path under .a and NOT one under .b",
++    (L) => {
++      const els = L.templateElements(
++        '<div class="b"><svg><path /></svg></div><div class="a"><svg><path /></svg></div>',
++      );
++      const [pb, pa] = els.filter((e) => e.tag === "path");
++      const outer = () => false;
++      return (
++        L.mayMatch(".a :deep(path)", pa, els, { outer }) === true &&
++        L.mayMatch(".a :deep(path)", pb, els, { outer }) === false &&
++        L.mayMatch(".a  path", pb, els, { outer }) === false
++      );
++    },
++  ],
++  [
++    "param-carried",
++    "TAPE",
++    "S9f `put(name, v)` resolves at literal call sites; a computed call site keeps it UNRESOLVED",
++    (L) => {
++      const good = L.scriptWrites(
++        J(
++          'const put = (name: string, v: string) => {\n  el.style.setProperty(name, v);\n};\nput("--a", "1");\nput("pad',
++          'ding-bottom", "9px");\n',
++        ),
++        J("pad", "ding-bottom"),
++      );
++      const bad = L.scriptWrites(
++        'const put = (name, v) => { el.style.setProperty(name, v); };\nput("--a", "1");\nput(k, "2");\n',
++        J("pad", "ding-bottom"),
++      );
++      return (
++        good.length === 1 &&
++        good[0].value === '"9px"' &&
++        !good[0].unresolved &&
++        bad.some((w) => w.unresolved)
++      );
++    },
++  ],
++  [
++    "class-writes",
++    "TAPE",
++    "S9d classList.add/toggle/replace, className and setAttribute('class') are candidates; a computed one UNRESOLVED",
++    (L) => {
++      const w = L.classWrites(
++        J(
++          'bar.classList.add("overflow-',
++          'hidden", "x");\nel.classList.toggle(\'opacity-',
++          '0\', on);\nel.classList.replace("a", "sr-',
++          'only");\nel.className = "b " + "blur-',
++          'sm";\nel.setAttribute("class", "contain-',
++          '[paint]");\nel.classList.add(name);\n',
++        ),
++      );
++      const has = (c) => w.some((x) => x.classes.includes(c));
++      return (
++        has(J("overflow-", "hidden")) &&
++        has("x") &&
++        has(J("opacity-", "0")) &&
++        has(J("sr-", "only")) &&
++        !has("a") &&
++        has(J("blur-", "sm")) &&
++        has(J("contain-", "[paint]")) &&
++        w.some((x) => x.unresolved && x.value === "name")
++      );
++    },
++  ],
+   // --- LEDGER
+   [
+     "media-eval",
+@@ -4386,6 +4670,7 @@ const LIB = {
+   templateElements,
+   mayMatch,
+   elementSites,
++  classWrites,
+   REGIMES,
+   evalMedia,
+   regimesOf,

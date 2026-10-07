@@ -1,0 +1,87 @@
+--- a/web/frontend/e2e/lib/glyph-pop.mjs
++++ b/web/frontend/e2e/lib/glyph-pop.mjs
+@@ -56,12 +56,24 @@
+ 
+ export async function glyphPopulation(
+   page,
+-  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true },
++  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true },
+ ) {
+   const loc = page.locator(subject).first();
+-  const vis = await loc.isVisible().catch(() => false);
++  // ACC-SIX pass 8 (PROPOSED → the ONE copy; LAWS P7 §E): a text laid in a ZERO-HEIGHT box (the strip's
++  // yielding meta) paints outside its box, so the box is not the clip: the clip is the box ∪ the text
++  // run, and a box Playwright calls invisible (0 px tall) is visible when its run paints. `runClip:
++  // false` is the legacy box clip (the self-test's ZERO row reads it G0/G1 — the hole this closes).
++  const runCss = textRun && runClip ? await page.evaluate(textRunRects, { subject }) : null;
++  const vis = (await loc.isVisible().catch(() => false)) || !!runCss?.length;
+   if (!vis) return { red: true, why: [`G0 subject ${subject} not visible`] };
+-  const b = await loc.boundingBox();
++  let b = await loc.boundingBox();
++  if (runCss?.length && b) {
++    const l = Math.min(b.x, ...runCss.map((q) => q.l)),
++      t = Math.min(b.y, ...runCss.map((q) => q.t)),
++      r = Math.max(b.x + b.width, ...runCss.map((q) => q.r)),
++      bt = Math.max(b.y + b.height, ...runCss.map((q) => q.b));
++    b = { x: l, y: t, width: r - l, height: bt - t };
++  }
+   const vw = page.viewportSize();
+   const dpr = await page.evaluate(() => devicePixelRatio);
+   const x = Math.max(0, Math.floor(b.x - pad)),
+@@ -251,8 +263,13 @@
+   const rects = await page.evaluate(textRunRects, { subject });
+   return page.evaluate(
+     ({ subject, a, b, rects }) => {
+-      const el = document.querySelector(subject);
+-      if (!el || !rects.length) return { ok: false };
++      const sub = document.querySelector(subject);
++      if (!sub || !rects.length) return { ok: false };
++      // ACC-SIX pass 8 (PROPOSED): a ZERO-HEIGHT subject's mask would clip every glyph it overflows
++      // (the mask's painting area is its 0 px box), so the mask goes on its parent, cut at the
++      // subject's own run; the population stays clipped to that run.
++      const el = sub.getBoundingClientRect().height < 1 && sub.parentElement ? sub.parentElement : sub;
++      sub.dataset.maskHost = el === sub ? "self" : "parent";
+       const eb = el.getBoundingClientRect();
+       const left = Math.min(...rects.map((q) => q.l)),
+         right = Math.max(...rects.map((q) => q.r));
+@@ -269,8 +286,10 @@
+ }
+ export async function undoMask(page, subject) {
+   await page.evaluate((subject) => {
+-    const el = document.querySelector(subject);
+-    if (!el) return;
++    const sub = document.querySelector(subject);
++    if (!sub) return;
++    const el = sub.dataset.maskHost === "parent" && sub.parentElement ? sub.parentElement : sub;
++    delete sub.dataset.maskHost;
+     const p = el.dataset.maskPrev;
+     if (p) el.setAttribute("style", p);
+     else el.removeAttribute("style");
+@@ -291,6 +310,7 @@
+   <h2 id="g-head">16 players</h2><br>
+   <span id="g-tape" class="tape">new game<svg viewBox="0 0 40 22"><path d="M2 11h36" stroke="currentColor" stroke-width="3"/></svg></span><br>
+   <img id="g-icon" width="32" height="32" alt="" src="${ICON(true)}">
++  <div style="display:flex;flex-wrap:wrap;width:360px;margin-top:24px"><span>a line</span><p id="g-zero" style="height:0;margin:0">3 of 170 on the board</p></div>
+ </body></html>`;
+ /** A 32-unit tab icon (TAB-PEN's shape: ink from 8/32 to 25/32 on a paper tile) and its paper twin. The ink
+  *  sits at 5.10:1 on the tile (just over AA, like the text fixture): at 12.36:1 an 80 % or 65 % fade stays
+@@ -308,7 +328,7 @@
+     const { ctx, page } = await openCell(browser, { width: 800, height: 400, dpr, colorScheme: scheme });
+     await page.setContent(FIXTURE(scheme));
+     await page.evaluate(() => document.fonts.ready);
+-    for (const subject of ["#g-head", "#g-tape"]) {
++    for (const subject of ["#g-head", "#g-tape", "#g-zero"]) {
+       const g = await glyphGate(page, { subject, payload: `fixture-${scheme}` });
+       if (g.clean.red) cleanRed = true;
+       rows.push(`GLYPH self-test ${scheme} dpr${dpr} ${subject} CLEAN ${fmt(g.clean)} (bound ${g.bound?.toFixed(3)})`);
+@@ -327,6 +347,10 @@
+       if (!r.red) hole = true;
+       rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-icon PLANT ${k} ${fmt(r)}`);
+     }
++    // the LEGACY box clip on a ZERO-HEIGHT subject (ACC-SIX pass 8): G0/G1 — the hole the run clip closes
++    const zl = await glyphPopulation(page, { subject: "#g-zero", runClip: false });
++    rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-zero LEGACY-BOX-CLIP ${fmt(zl)} ← ${zl.red ? "RED (the box clip reads no glyph)" : "GREEN ← the fixture's box is not zero"}`);
++    if (!zl.red) hole = true;
+     // the LEGACY Range (the element's contents, svg included): TAIL12 lands on the svg, fades no glyph
+     const legacy = await page.evaluate(() => {
+       const el = document.querySelector("#g-tape");

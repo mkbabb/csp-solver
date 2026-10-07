@@ -1,0 +1,1020 @@
+diff --git a/web/frontend/e2e/note-reserve.spec.ts b/web/frontend/e2e/note-reserve.spec.ts
+new file mode 100644
+index 00000000..e6a747e6
+--- /dev/null
++++ b/web/frontend/e2e/note-reserve.spec.ts
+@@ -0,0 +1,248 @@
++// PRM: live, because the row reads the EMPTY voice's box at rest in the regime that ships (no
++// motion runs on an empty voice; a reduced-motion emulation would read a regime the owner does not see).
++import { expect, test, type Browser, type Page } from "@playwright/test";
++
++/**
++ * THE NOTE'S RESERVE, READ ON THE PAGE (T9-W7 §7, NOTE-LEDGER; LAWS P7 §F (iii)).
++ *
++ * Below 1024 an EMPTY voice must still hold its line: the push reads line one's rect as its
++ * `from`, and a 0×0 voice flew the record in from nowhere. `lint:ink` carries the source law
++ * (`check-ink-pressure.mjs`, the note's reserve row). A source reader cannot see every way the
++ * voice can lose its box, so this row reads the RECT: at 390×844, 844×390 and 360×800 on a
++ * coarse pointer, in both themes, the empty voice is at least its own line box tall and at least
++ * the block's reserve.
++ *
++ * Each plant is a stylesheet or CSSOM edit written the way a source edit would land: scoped to
++ * the component's own `data-v` attribute and appended after the product's sheet, so it wins by
++ * order at equal specificity. Every plant must turn the verdict RED (M3 only in a portrait cell: in
++ * landscape the moved seat still holds, so there it must stay GREEN), and the page must read GREEN
++ * again once the plant is taken out. `display: contents`, a `:first-child` position and a role
++ * are the three no source law can key on. A 1px font on the block is the negative: the block's
++ * line is a length, so the reserve holds and the row must stay GREEN.
++ */
++
++// The section's classic easy 9×9 (30 givens), read back through the aria-label corpus.
++const GIVENS: Record<number, number> = {
++  0: 5, 1: 3, 4: 7, 9: 6, 12: 1, 13: 9, 14: 5, 19: 9, 20: 8, 25: 6,
++  27: 8, 31: 6, 35: 3, 36: 4, 39: 8, 41: 3, 44: 1, 45: 7, 49: 2, 53: 6,
++  55: 6, 60: 2, 61: 8, 66: 4, 67: 1, 68: 9, 71: 5, 76: 8, 79: 7, 80: 9,
++};
++const cells = Array.from({ length: 81 }, (_, i) => (GIVENS[i] ?? 0).toString(36)).join("");
++const PAYLOAD = btoa(`\u00013.${cells}`)
++  .replace(/\+/g, "-")
++  .replace(/\//g, "_")
++  .replace(/=+$/, "");
++
++const CELLS = [
++  { width: 390, height: 844 },
++  { width: 844, height: 390 },
++  { width: 360, height: 800 },
++] as const;
++
++type Reading = {
++  text: string;
++  height: number;
++  line: number;
++  reserve: number;
++  display: string;
++};
++
++/** The empty voice's box against its own line and the block's reserve. */
++const read = (page: Page): Promise<Reading> =>
++  page.evaluate(() => {
++    const voice = document.querySelector<HTMLElement>(".board-margin .margin-note");
++    const block = voice?.closest<HTMLElement>(".margin-note-block");
++    if (!voice || !block) throw new Error("no .board-margin .margin-note");
++    const cs = getComputedStyle(voice);
++    return {
++      text: (voice.textContent ?? "").trim(),
++      height: voice.getBoundingClientRect().height,
++      line: parseFloat(cs.lineHeight),
++      reserve: parseFloat(getComputedStyle(block).minHeight) || 0,
++      display: cs.display,
++    };
++  });
++const holds = (r: Reading) =>
++  r.text === "" && r.height >= r.line - 0.5 && r.height >= r.reserve - 0.5;
++const settle = (page: Page) =>
++  page.evaluate(
++    () => new Promise((done) => requestAnimationFrame(() => requestAnimationFrame(done))),
++  );
++
++/** A rule written as the SFC would write it: the component's scope attribute on each compound. */
++type Plant = {
++  name: string;
++  css?: (v: string) => string;
++  cssom?: "seat-to-landscape";
++  /** the plant moves nothing in a landscape cell (the seat is still there), so it must stay GREEN */
++  portraitOnly?: boolean;
++};
++const PLANTS: Plant[] = [
++  {
++    name: "M1 the block's reserve at 1px inside the <1024 block",
++    css: (v) => `@media (max-width: 1023.98px) { .margin-note-block[${v}] { min-height: 1px; } }`,
++  },
++  {
++    name: "M3 the seat moved to the landscape block only",
++    cssom: "seat-to-landscape",
++    portraitOnly: true,
++  },
++  {
++    name: "M4 the block's line at 1px inside the <1024 block",
++    css: (v) => `@media (max-width: 1023.98px) { .margin-note-block[${v}] { line-height: 1px; } }`,
++  },
++  {
++    name: "M4em a 1.3em reserve on a 1px block",
++    css: (v) =>
++      `@media (max-width: 1023.98px) { .margin-note-block[${v}] { min-height: 1.3em; font-size: 1px; } }`,
++  },
++  {
++    name: "M5 display: contents on the voice",
++    css: (v) => `.margin-note[${v}] { display: contents; }`,
++  },
++  {
++    name: "M6 `> p:first-child`",
++    css: (v) => `.margin-note-block[${v}] > p:first-child { min-height: 0; }`,
++  },
++  {
++    name: "M7 the voice reached by its role",
++    css: (v) => `[role="status"][${v}] { min-height: 0; }`,
++  },
++];
++const NEGATIVE = (v: string) =>
++  `@media (max-width: 1023.98px) { .margin-note-block[${v}] { font-size: 1px; } }`;
++
++/** The voice's scope attribute (`data-v-…`), read off the element the product rendered. */
++const scopeOf = (page: Page) =>
++  page.evaluate(() => {
++    const voice = document.querySelector(".board-margin .margin-note");
++    const attr = [...(voice?.attributes ?? [])].find((a) => a.name.startsWith("data-v-"));
++    if (!attr) throw new Error("the voice carries no scope attribute");
++    return attr.name;
++  });
++
++/** M3 through the CSSOM: the seat rule leaves the <1024 block and is re-inserted inside the
++ *  landscape one. Returns an undo. */
++async function seatToLandscape(page: Page, scope: string) {
++  const moved = await page.evaluate((scope) => {
++    const isSeat = (r: CSSRule) =>
++      r instanceof CSSStyleRule &&
++      r.selectorText === `.margin-note[${scope}]` &&
++      r.style.getPropertyValue("min-height") === "inherit";
++    for (const sheet of [...document.styleSheets]) {
++      const rules = [...sheet.cssRules];
++      const media = rules.find(
++        (r): r is CSSMediaRule =>
++          r instanceof CSSMediaRule &&
++          /max-width: 1023\.98px/.test(r.conditionText) &&
++          !/orientation/.test(r.conditionText) &&
++          [...r.cssRules].some(isSeat),
++      );
++      const land = rules.find(
++        (r): r is CSSMediaRule =>
++          r instanceof CSSMediaRule &&
++          /max-width: 1023\.98px/.test(r.conditionText) &&
++          /orientation: landscape/.test(r.conditionText),
++      );
++      if (!media || !land) continue;
++      const at = [...media.cssRules].findIndex(isSeat);
++      const text = media.cssRules[at].cssText;
++      media.deleteRule(at);
++      land.insertRule(text, land.cssRules.length);
++      (window as unknown as { __undoSeat: () => void }).__undoSeat = () => {
++        land.deleteRule(land.cssRules.length - 1);
++        media.insertRule(text, at);
++      };
++      return true;
++    }
++    return false;
++  }, scope);
++  if (!moved) throw new Error("M3: no seat rule found under the <1024 block");
++  return () =>
++    page.evaluate(() => (window as unknown as { __undoSeat: () => void }).__undoSeat());
++}
++
++async function openPhone(browser: Browser, browserName: string, cell: (typeof CELLS)[number], scheme: "light" | "dark") {
++  const ctx = await browser.newContext({
++    viewport: cell,
++    deviceScaleFactor: 2,
++    hasTouch: true,
++    isMobile: browserName === "chromium",
++    colorScheme: scheme,
++  });
++  const page = await ctx.newPage();
++  await page.goto(`/?board=${PAYLOAD}`);
++  // ATTACHED, not visible: the empty voice is 0 px wide by design (`width: fit-content`), so a
++  // visibility wait never returns, and its height is the reading this row exists for.
++  await page.waitForSelector(".board-margin .margin-note", { state: "attached", timeout: 30_000 });
++  // the payload was dealt, not a board of the app's own (the aria-label corpus)
++  await expect
++    .poll(() =>
++      page.evaluate(
++        () =>
++          [...document.querySelectorAll(".game-cell input")].filter((i) =>
++            /given clue/.test(i.getAttribute("aria-label") ?? ""),
++          ).length,
++      ),
++    )
++    .toBe(Object.keys(GIVENS).length);
++  const regime = await page.evaluate(() => ({
++    coarse: matchMedia("(pointer: coarse)").matches,
++    dark: matchMedia("(prefers-color-scheme: dark)").matches,
++  }));
++  expect(regime, "the coarse regime is witnessed, not assumed").toEqual({
++    coarse: true,
++    dark: scheme === "dark",
++  });
++  await settle(page);
++  return { ctx, page };
++}
++
++for (const cell of CELLS) {
++  test(`the empty voice holds its line at ${cell.width}×${cell.height} coarse, both themes, every plant red`, async ({
++    browser,
++    browserName,
++  }) => {
++    for (const scheme of ["light", "dark"] as const) {
++      const { ctx, page } = await openPhone(browser, browserName, cell, scheme);
++      const clean = await read(page);
++      console.log(
++        `NOTE-RESERVE|${browserName}|${cell.width}x${cell.height}|${scheme}|clean|${JSON.stringify(clean)}`,
++      );
++      expect(clean.text, `${scheme}: the voice is empty at the deal`).toBe("");
++      expect(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
++      const scope = await scopeOf(page);
++
++      for (const plant of PLANTS) {
++        let undo: () => Promise<unknown>;
++        if (plant.cssom) undo = await seatToLandscape(page, scope);
++        else {
++          const tag = await page.addStyleTag({ content: plant.css!(scope) });
++          undo = () => tag.evaluate((el) => (el as Element).remove());
++        }
++        await settle(page);
++        const planted = await read(page);
++        await undo();
++        await settle(page);
++        const back = await read(page);
++        const bites = !plant.portraitOnly || cell.height > cell.width;
++        // the reading, printed beside the verdict (a row's transcript is its numbers)
++        console.log(
++          `NOTE-RESERVE|${browserName}|${cell.width}x${cell.height}|${scheme}|${plant.name}|${JSON.stringify(planted)}`,
++        );
++        expect(
++          holds(planted),
++          `${scheme} · ${plant.name} must ${bites ? "RED" : "stay GREEN here"}: ${JSON.stringify(planted)}`,
++        ).toBe(!bites);
++        expect(holds(back), `${scheme} · ${plant.name} taken out: ${JSON.stringify(back)}`).toBe(true);
++      }
++
++      const tag = await page.addStyleTag({ content: NEGATIVE(scope) });
++      await settle(page);
++      const negative = await read(page);
++      await tag.evaluate((el) => (el as Element).remove());
++      expect(holds(negative), `${scheme} · a 1px font on the block must stay GREEN: ${JSON.stringify(negative)}`).toBe(true);
++      await ctx.close();
++    }
++  });
++}
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index b43a5f99..71d54d02 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -766,23 +766,92 @@ function declaredRange(css, family) {
+   return out;
+ }
+ 
++/** Check 3 for ONE group: its derivation against its declared strings. `extract` is the table the
++ *  group derives through (the self-test passes a planted one). → {problems, departures} */
++function deriveGroup(face, group, extract = EXTRACT) {
++  const out = { problems: [], departures: [] };
++  const problems = out.problems;
++  const departures = out.departures;
++  if (!group.derive) {
++    problems.push(
++      `${face.family} · ${group.where}: the group declares ${group.strings.length} string(s) ` +
++        `and NO \`derive\`. A corpus nobody compares to the tree is the T8 trap re-armed — ` +
++        `name the extractor that reads where these are authored (${Object.keys(EXTRACT).join(", ")}).`,
++    );
++    return out;
++  }
++  const declared = new Set(group.strings);
++  const seen = new Set();
++  for (const id of group.derive) {
++    const ex = extract[id];
++    if (!ex) {
++      problems.push(
++        `${face.family} · ${group.where}: derives from \`${id}\`, which is not an extractor.`,
++      );
++      continue;
++    }
++    const found = ex.run();
++    if (!found.length)
++      problems.push(
++        `${face.family} · ${group.where}: extractor \`${id}\` (${ex.what}) found NOTHING. ` +
++          `An empty derivation contains anything, so this check would pass on a blind read ` +
++          `— the construct was renamed, or the file moved.`,
++      );
++    for (const { s, where } of found) {
++      seen.add(s);
++      if (declared.has(s)) continue;
++      problems.push(
++        `${face.family} · ${group.where}: ${where} renders "${s}" and the corpus does not ` +
++          `hold it. THIS IS THE RANSOM NOTE: the subset was cut from the list, the app ` +
++          `paints the tree, and the letters this string needs were never asked for. Add it ` +
++          `here and re-cut the woff2 if check 1 then reds.`,
++      );
++    }
++  }
++  for (const s of declared)
++    if (seen.has(s)) continue;
++    else if (group.closed)
++      problems.push(
++        `${face.family} · ${group.where}: declares "${s}" and the tree no longer renders ` +
++          `it. The group is CLOSED (declared == derived): a call site was deleted or ` +
++          `re-worded, so strike the string here or restore the site.`,
++      );
++    else departures.push(`${face.family} · ${group.where}: "${s}"`);
++  return out;
++}
++
+ const css = readFileSync(join(ROOT, INDEX_CSS), "utf8");
+ const problems = [];
+ 
+-// THE FLAG IS PINNED (NOTE-LEDGER row 4, pass-6 critique §2.4). A group that derives the record's
+-// vocabulary is CLOSED (declared == derived), and that is what reds a deleted call site; deleting
+-// `closed: true` together with a call site exited 0. So the flag itself is a row.
+-const MUST_CLOSE = ["marginRecordCopy"];
+-const unclosed = (faces) =>
+-  faces.flatMap((f) =>
++// THE FLAG IS PINNED (NOTE-LEDGER, pass-6 critique §2.4; pass-7 critique §2.3). A group that
++// derives the margin's vocabulary is CLOSED (declared == derived), and that is what reds a
++// deleted call site. Pass 7 pinned ONE extractor by name, and the verdicts walked out of the
++// closed group into an open twin deriving `marginVerdictCopy`, then lost their call site, at exit
++// 0. So the pin covers EVERY margin extractor, and it is keyed on the STRINGS as well as the
++// names: an open group may derive no string a margin extractor derives, whatever it calls its
++// extractor.
++const MUST_CLOSE = Object.keys(EXTRACT).filter((k) => /^margin/.test(k));
++const unclosed = (faces, extract = EXTRACT) => {
++  const margin = new Set(MUST_CLOSE.flatMap((k) => extract[k].run().map((x) => x.s)));
++  return faces.flatMap((f) =>
+     f.corpus
+-      .filter((g) => g.derive?.some((d) => MUST_CLOSE.includes(d)) && !g.closed)
+-      .map(
+-        (g) =>
+-          `${f.family} · ${g.where}: derives ${MUST_CLOSE.join("/")} and is not \`closed\`, so a ` +
+-          `deleted call site would pass as a departure. Restore \`closed: true\`.`,
+-      ),
++      .filter((g) => !g.closed && g.derive)
++      .flatMap((g) => {
++        const named = g.derive.filter((d) => MUST_CLOSE.includes(d));
++        const held = g.derive
++          .flatMap((d) => extract[d]?.run() ?? [])
++          .map((x) => x.s)
++          .filter((s) => margin.has(s));
++        return named.length || held.length
++          ? [
++              `${f.family} · ${g.where}: derives the margin's vocabulary ` +
++                `(${[...named, ...new Set(held)].slice(0, 4).join(", ")}) and is not \`closed\`, so a ` +
++                `deleted call site would pass as a departure. Close it, or fold it into the closed group.`,
++            ]
++          : [];
++      }),
+   );
++};
+ problems.push(...unclosed(FACES));
+ const departures = [];
+ /** T9-W7 §7 — the ransom note's admission ledger, printed so the owner sees the eight. */
+@@ -854,51 +923,9 @@ for (const face of FACES) {
+ 
+   // 3. RENDERED CENSUS ⊆ CORPUS. The tree is the subject; the list only gets to be a superset.
+   for (const group of face.corpus) {
+-    if (!group.derive) {
+-      problems.push(
+-        `${face.family} · ${group.where}: the group declares ${group.strings.length} string(s) ` +
+-          `and NO \`derive\`. A corpus nobody compares to the tree is the T8 trap re-armed — ` +
+-          `name the extractor that reads where these are authored (${Object.keys(EXTRACT).join(", ")}).`,
+-      );
+-      continue;
+-    }
+-    const declared = new Set(group.strings);
+-    const seen = new Set();
+-    for (const id of group.derive) {
+-      const ex = EXTRACT[id];
+-      if (!ex) {
+-        problems.push(
+-          `${face.family} · ${group.where}: derives from \`${id}\`, which is not an extractor.`,
+-        );
+-        continue;
+-      }
+-      const found = ex.run();
+-      if (!found.length)
+-        problems.push(
+-          `${face.family} · ${group.where}: extractor \`${id}\` (${ex.what}) found NOTHING. ` +
+-            `An empty derivation contains anything, so this check would pass on a blind read ` +
+-            `— the construct was renamed, or the file moved.`,
+-        );
+-      for (const { s, where } of found) {
+-        seen.add(s);
+-        if (declared.has(s)) continue;
+-        problems.push(
+-          `${face.family} · ${group.where}: ${where} renders "${s}" and the corpus does not ` +
+-            `hold it. THIS IS THE RANSOM NOTE: the subset was cut from the list, the app ` +
+-            `paints the tree, and the letters this string needs were never asked for. Add it ` +
+-            `here and re-cut the woff2 if check 1 then reds.`,
+-        );
+-      }
+-    }
+-    for (const s of declared)
+-      if (seen.has(s)) continue;
+-      else if (group.closed)
+-        problems.push(
+-          `${face.family} · ${group.where}: declares "${s}" and the tree no longer renders ` +
+-            `it. The group is CLOSED (declared == derived): a call site was deleted or ` +
+-            `re-worded, so strike the string here or restore the site.`,
+-        );
+-      else departures.push(`${face.family} · ${group.where}: "${s}"`);
++    const r = deriveGroup(face, group);
++    problems.push(...r.problems);
++    departures.push(...r.departures);
+   }
+ 
+   banked.push(
+@@ -1571,24 +1598,87 @@ const WRITEABLE_SRC = "src/games/shared/playerIdentity.ts";
+   }
+ }
+ 
+-// The flag's own plants (`--self-test`): the record's group with `closed` deleted must red; the
+-// flags as they stand must not. A gate that hangs on a config flag ships the plant that deletes it.
++// The pin's own plants (`--self-test`). Each one plants a departure the gate exists for, on an
++// in-memory copy of the table (the tree is never written): the flag deleted, the verdicts split
++// into an open twin (by name and by a renamed extractor), a verdict's call site deleted with and
++// without the split. The flags and the tree as they stand must read clean.
+ if (process.argv.includes("--self-test")) {
+-  const unflagged = FACES.map((f) => ({
+-    ...f,
+-    corpus: f.corpus.map((g) =>
+-      g.closed && g.derive?.includes("marginRecordCopy")
+-        ? { ...g, closed: undefined }
+-        : g,
+-    ),
+-  }));
++  // The group under test is the one the pin closes, found by what it DERIVES (a `where` prefix
++  // also finds the count line's `.margin-note-meta` group, which derives none of them).
++  const pinned = (g) => g.closed && g.derive?.some((d) => MUST_CLOSE.includes(d));
++  const hand = FACES.find((f) => f.corpus.some(pinned));
++  const group = hand?.corpus.find(pinned);
++  if (!group) {
++    console.error(
++      "check-font-coverage --self-test: no closed group derives a margin extractor",
++    );
++    process.exit(1);
++  }
++  const withGroups = (groups) =>
++    FACES.map((f) =>
++      f === hand
++        ? { ...f, corpus: f.corpus.flatMap((g) => (g === group ? groups : [g])) }
++        : f,
++    );
++  const verdicts = EXTRACT.marginVerdictCopy.run().map((x) => x.s);
++  const records = new Set(EXTRACT.marginRecordCopy.run().map((x) => x.s));
++  const record = group.strings.filter((s) => records.has(s));
++  const dropCall = (s) => ({
++    ...EXTRACT,
++    marginVerdictCopy: {
++      ...EXTRACT.marginVerdictCopy,
++      run: () => EXTRACT.marginVerdictCopy.run().filter((x) => x.s !== s),
++    },
++  });
++  const renamed = { ...EXTRACT, verdictTwin: EXTRACT.marginVerdictCopy };
++  const recordOnly = { ...group, derive: ["marginRecordCopy"], strings: record };
++  const twin = (derive, closed) => ({
++    where: "a twin group",
++    transform: "none",
++    derive,
++    closed,
++    strings: verdicts,
++  });
++  const findings = (faces, extract = EXTRACT) =>
++    unclosed(faces, extract).length +
++    faces.reduce(
++      (n, f) =>
++        n +
++        f.corpus.reduce((m, g) => m + deriveGroup(f, g, extract).problems.length, 0),
++      0,
++    );
+   const plants = [
+-    ["the record's group with `closed: true` deleted", unclosed(unflagged).length, 1],
+-    ["CONTROL — the closed flags as they stand", unclosed(FACES).length, 0],
++    [
++      "the margin group with `closed: true` deleted",
++      findings(withGroups([{ ...group, closed: undefined }])),
++      1,
++    ],
++    [
++      "SPLIT: the verdicts moved to an open twin deriving `marginVerdictCopy`",
++      findings(withGroups([recordOnly, twin(["marginVerdictCopy"], undefined)])),
++      1,
++    ],
++    [
++      "SPLIT: the same twin through a renamed extractor",
++      findings(withGroups([recordOnly, twin(["verdictTwin"], undefined)]), renamed),
++      1,
++    ],
++    [
++      'SPLIT + `setMargin("solved it!")` deleted (the pass-7 critic\'s evasion)',
++      findings(withGroups([recordOnly, twin(["verdictTwin"], undefined)]), {
++        ...dropCall("solved it!"),
++        verdictTwin: dropCall("solved it!").marginVerdictCopy,
++      }),
++      1,
++    ],
++    ['`setMargin("solved it!")` deleted', findings(FACES, dropCall("solved it!")), 1],
++    ["CONTROL — the margin extractors pinned", MUST_CLOSE.length, 2],
++    ["CONTROL — the flags and the tree as they stand", findings(FACES), 0],
+   ];
+   let bad = 0;
+   for (const [name, got, want] of plants) {
+-    const ok = want ? got >= 1 : got === 0;
++    const ok =
++      want === 0 ? got === 0 : name.startsWith("CONTROL") ? got >= want : got >= 1;
+     if (!ok) bad++;
+     console.log(`  ${ok ? "ok " : "BAD"} self-test · ${name}: ${got} finding(s)`);
+   }
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index 819b4afe..e6229b86 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -39,7 +39,18 @@ import { fileURLToPath } from "node:url";
+ // Explicit import, matching check-golden-bytes / check-prod-shake: eslint runs this file
+ // with browser globals, so the implicit `process` is a no-undef error here.
+ import process from "node:process";
+-import { reserveLaw } from "./shape/reserve-law.mjs";
++import { createHash } from "node:crypto";
++import {
++  census,
++  effectiveAt,
++  elementSites,
++  lengthPx,
++  resolve,
++  sabotage as shapeSabotage,
++  sfc,
++  sources as shapeSources,
++  tokens,
++} from "./shape-census.mjs";
+ 
+ const SRC = join(fileURLToPath(new URL("../src", import.meta.url)));
+ const INDEX_CSS = readFileSync(join(SRC, "assets/index.css"), "utf8");
+@@ -634,41 +645,201 @@ function gateNote(css, srcFiles, note) {
+   return fails;
+ }
+ 
+-/* ── the note's reserve (T9-W7 §7 · NOTE-LEDGER; LAWS P6 §F, the SHAPE law) ─────── */
++/* ── the note's reserve (T9-W7 §7 · NOTE-LEDGER; LAWS P7 §F, the SHAPE law) ─────── */
+ 
+ /**
+  * Below 1024 the push reads line one's rect as its `from`, and an empty voice was a 0×0 box:
+  * the record flew in from nowhere. The cure is ONE declaration in ONE place, `.margin-note
+  * { min-height: inherit }` under the <1024 block, taking the block's one-line reserve.
+  *
+- * The pass-6 row read that as a SPELLING (the first `<style scoped>`, the exact prelude, the
+- * first `min-height`), and five one-line edits put the 0×0 push back with it green (pass-6
+- * critique §2.1). This row is `shape/reserve-law.mjs` on the one shape-census library: every
+- * `<style>` and stylesheet, `public/**` and `index.html`, template `style`/`:style`, Tailwind
+- * candidates and script writes, keyed on the SUBJECT COMPOUND, every declaration in source
+- * order with `!important` read, and the value resolved at the consumer. Its plants are in
+- * `--self-test`: the five that passed the old row, the seat deleted, and a half-line reserve.
++ * The law, read through the ONE shape-census library (`./shape-census.mjs`; LAWS P7 §I): no CSS
++ * or script text is parsed here, only the library's sites, media evaluation and lengths.
++ *   R1  exactly one site sets the voice's `min-height`, keyed on the class AND on the element
++ *       (a tag, a role or a position reaching the voice is a site too)
++ *   R2  it resolves to `inherit`
++ *   R3  no `!important`, and its media context holds in EVERY phone regime and NO desk regime
++ *       (evaluated, never matched as text: `not all and`, an unsatisfiable conjunction and a
++ *       landscape-only block are its plants)
++ *   R4  in every phone regime the block's WINNING reserve, from every site under any context,
++ *       resolved against the block's own font-size and line-height, is at least the voice's
++ *       line box
++ * Pass 7's row matched R3 as a regex and read R4's top-level site only, so eight one-line edits
++ * painted the empty voice at 0–1.3 px with this row green (pass-7 critique §2.1). A source law
++ * cannot see a `display: contents` voice either: `e2e/note-reserve.spec.ts` reads the rect.
+  */
+ const NOTE_FE = fileURLToPath(new URL("..", import.meta.url));
+-const NOTE_SFC = join(NOTE_FE, "src/pencil/chrome/MarginNote.vue");
+-const gateReserve = (read) =>
+-  reserveLaw(NOTE_FE, read ? { read } : {}).fails.map((f) => `note reserve: ${f}`);
++const NOTE_REL = "src/pencil/chrome/MarginNote.vue";
++const NOTE_SFC = join(NOTE_FE, NOTE_REL);
++const PHONES = [
++  "phone-portrait-390x844",
++  "phone-portrait-375x812",
++  "phone-landscape-844x390",
++  "phone-landscape-812x375",
++];
++const DESKS = ["desk-1280x800", "desk-1440x900"];
++/** The law's clauses, each one switched off in turn by the sabotage battery (LAWS P7 §F ii). */
++const RESERVE_CLAUSES = [
++  "R1",
++  "R2",
++  "R3-important",
++  "R3-seat",
++  "R4-every-site",
++  "R4-consumer",
++];
++/** The library clauses the law stands on; the battery switches these off through the library. */
++const LIBRARY_CLAUSES = ["media-eval", "em-lh", "r4-bound", "element-keyed"];
++const reserveOff = new Set();
++const libraryOff = { id: "" };
++
++// The library reads the whole tree on every call, and a plant moves ONE file. So the sites are read
++// file by file in the library's own walk order and cached per file: a file other than the SFC is
++// read once per (subject, property, library clause state); the SFC is read through the plant's
++// overlay every time. The sites and their order are the library's (`s.file` keeps each file's own).
++const NOTE_FILES = shapeSources(NOTE_FE);
++const siteCache = new Map();
++const utf8 = (f) => readFileSync(f, "utf8");
++const sha = (s) => createHash("sha1").update(s).digest("hex");
++function sitesOf(kind, cls, prop, sfcText) {
++  const read = (f) => (f === NOTE_SFC ? sfcText : utf8(f));
++  const sfcKey = sha(sfcText);
++  // another file's element-keyed sites depend on the SFC's TEMPLATE (the elements it renders), so
++  // a plant in the SFC's <style> reuses them
++  const tplKey = sha(sfc(sfcText).template?.text ?? "");
++  const out = [];
++  for (const f of NOTE_FILES) {
++    const own = f === NOTE_SFC;
++    const rel = relative(NOTE_FE, f);
++    const key = [
++      kind,
++      cls,
++      prop,
++      libraryOff.id,
++      rel,
++      own ? sfcKey : kind === "element" ? tplKey : "",
++    ].join("|");
++    let got = siteCache.get(key);
++    if (!got) {
++      const files = own || kind === "class" ? [f] : [NOTE_SFC, f];
++      const all =
++        kind === "class"
++          ? census(NOTE_FE, cls, prop, { files, read })
++          : elementSites(NOTE_FE, {
++              file: NOTE_REL,
++              pick: (e) => e.classes.has(cls),
++              props: [prop],
++              files,
++              read,
++            }).sites;
++      got = all.filter((s) => s.file === rel);
++      siteCache.set(key, got);
++    }
++    out.push(...got);
++  }
++  return out;
++}
++const tokenCache = new Map();
++const tokensOf = (sfcText) => {
++  const key = `${libraryOff.id}|${sha(sfcText)}`;
++  if (!tokenCache.has(key))
++    tokenCache.set(
++      key,
++      tokens(NOTE_FE, { read: (f) => (f === NOTE_SFC ? sfcText : utf8(f)) }).map,
++    );
++  return tokenCache.get(key);
++};
++
++function reserveLaw(read) {
++  const on = (c) => !reserveOff.has(c);
++  const sfcText = (read ?? utf8)(NOTE_SFC);
++  const fails = [];
++  const map = tokensOf(sfcText);
++  const where = (s) =>
++    `${s.file}:${s.line} ${s.ctx ? `${s.ctx} ` : ""}${s.prelude} { ${s.prop}: ${s.value}${s.important ? " !important" : ""} }`;
++  const seen = new Map();
++  const voiceSites = [
++    ...sitesOf("class", "margin-note", "min-height", sfcText),
++    ...sitesOf("element", "margin-note", "min-height", sfcText),
++  ];
++  for (const s of voiceSites) seen.set(`${s.file}:${s.line}:${s.value}`, s);
++  const voice = [...seen.values()];
++  if (on("R1") && voice.length !== 1)
++    fails.push(
++      `R1 the voice's min-height is set at ${voice.length} sites (want 1): ${voice.map(where).join(" | ") || "none"}`,
++    );
++  for (const s of voice) {
++    const v = resolve(s.value, map).trim();
++    if (on("R2") && v !== "inherit") fails.push(`R2 ${where(s)} resolves to '${v}'`);
++    if (on("R3-important") && s.important)
++      fails.push(`R3 ${where(s)} carries !important`);
++    const rg = s.regimes ?? [];
++    if (
++      on("R3-seat") &&
++      (!PHONES.every((p) => rg.includes(p)) || DESKS.some((d) => rg.includes(d)))
++    )
++      fails.push(
++        `R3 ${where(s)} holds in [${rg.join(", ")}], not every phone and no desk`,
++      );
++  }
++  const block = sitesOf("class", "margin-note-block", "min-height", sfcText);
++  const reserveSites = on("R4-every-site") ? block : block.filter((s) => !s.ctx);
++  const at = (cls, prop) => sitesOf("class", cls, prop, sfcText);
++  const fs = {
++    block: at("margin-note-block", "font-size"),
++    voice: at("margin-note", "font-size"),
++  };
++  const lh = {
++    block: at("margin-note-block", "line-height"),
++    voice: at("margin-note", "line-height"),
++  };
++  const fontOf = (who, rg) => {
++    const e = effectiveAt(fs[who], rg);
++    return (e && lengthPx(e.value, {}, map)) ?? 16;
++  };
++  const lineOf = (who, rg, size) => {
++    const e = effectiveAt(lh[who], rg);
++    if (!e) return size * 1.2;
++    const v = resolve(e.value, map).trim();
++    return /^[\d.]+$/.test(v) ? +v * size : lengthPx(e.value, { fontSize: size }, map);
++  };
++  for (const rg of PHONES) {
++    const eff = effectiveAt(reserveSites, rg);
++    const size = fontOf("block", rg);
++    const consumer = on("R4-consumer")
++      ? { fontSize: size, lineHeight: lineOf("block", rg, size) }
++      : {};
++    const reserve = eff ? lengthPx(eff.value, consumer, map) : null;
++    const line = lineOf("voice", rg, fontOf("voice", rg));
++    if (reserve == null || line == null || reserve < line - 0.5)
++      fails.push(
++        `R4 ${rg}: the block reserves ${reserve == null ? "nothing it can bound" : `${reserve.toFixed(2)}px`} (${eff ? where(eff) : "no site"}) under the voice's ${line?.toFixed(2)}px line`,
++      );
++  }
++  return fails;
++}
++const gateReserve = (read) => reserveLaw(read).map((f) => `note reserve: ${f}`);
++
++// Every plant is an edit to the SFC's own bytes, read through an overlay (never written). A plant
++// whose anchor is gone did not move the source and reds as vacuous. `green: true` marks the
++// negative-negatives: an edit that leaves the voice's line whole must NOT red.
+ const SEAT =
+   /(@media \(max-width: 1023\.98px\) \{[\s\S]*?\.margin-note \{\s*)min-height: inherit;/;
++const SEAT_BLOCK =
++  /@media \(max-width: 1023\.98px\) \{(?=[\s\S]*?\.margin-note \{\s*min-height: inherit;)/;
+ const BLOCK = /(\.margin-note-block \{[^}]*?min-height: )[^;]+;/;
++const INNER = /(@media \(max-width: 1023\.98px\) \{\n)/;
+ const LANDSCAPE =
+   /(@media \(max-width: 1023\.98px\) and \(orientation: landscape\) \{\n)/;
++const TAIL = /<\/style>(?![\s\S]*<\/style>)/;
++const tail = (css) => (sfc) => sfc.replace(TAIL, `${css}</style>`);
+ const RESERVE_PLANTS = {
+   "seat deleted": (sfc) => sfc.replace(SEAT, "$1"),
+   "E1 a shadowing zero after inherit": (sfc) =>
+     sfc.replace(SEAT, "$1min-height: inherit;\n    min-height: 0;"),
+   "E2 a second <style scoped>": (sfc) =>
+     `${sfc}\n<style scoped>\n.margin-note-block > .margin-note { min-height: 0; }\n</style>\n`,
+-  "E2b a compound override": (sfc) =>
+-    sfc.replace(
+-      "</style>",
+-      ".margin-note-block > .margin-note {\n  min-height: 0;\n}\n</style>",
+-    ),
++  "E2b a compound override": tail(
++    ".margin-note-block > .margin-note {\n  min-height: 0;\n}\n",
++  ),
+   "E3 the block's reserve at 1px": (sfc) => sfc.replace(BLOCK, "$11px;"),
+   "E4 !important zero in the landscape block": (sfc) =>
+     sfc.replace(
+@@ -676,7 +847,86 @@ const RESERVE_PLANTS = {
+       "$1  .margin-note-block .margin-note {\n    min-height: 0 !important;\n  }\n",
+     ),
+   "a half-line reserve": (sfc) => sfc.replace(BLOCK, "$1calc(1lh / 2);"),
++  // pass 6's four, restored (the pass-7 row dropped them with the unit describe)
++  "zeroed: the seat at 0": (sfc) => sfc.replace(SEAT, "$1min-height: 0;"),
++  "number: the seat at 1.3em, not inherit": (sfc) =>
++    sfc.replace(SEAT, "$1min-height: 1.3em;"),
++  "wide: the seat outside any media block": (sfc) =>
++    tail(".margin-note {\n  min-height: inherit;\n}\n")(sfc.replace(SEAT, "$1")),
++  "desk: the seat under (min-width: 1024px)": (sfc) =>
++    sfc.replace(SEAT_BLOCK, "@media (min-width: 1024px) {"),
++  "inherit !important": (sfc) => sfc.replace(SEAT, "$1min-height: inherit !important;"),
++  // pass 7's critic's eight, each a one-line edit that painted the voice at 0–1.3 px
++  "M1 the block at 1px inside <1024": (sfc) =>
++    sfc.replace(INNER, "$1  .margin-note-block {\n    min-height: 1px;\n  }\n"),
++  "M2 the seat under `not all and`": (sfc) =>
++    sfc.replace(SEAT_BLOCK, "@media not all and (max-width: 1023.98px) {"),
++  "M3 the seat in the landscape block only": (sfc) =>
++    sfc
++      .replace(SEAT, "$1")
++      .replace(LANDSCAPE, "$1  .margin-note {\n    min-height: inherit;\n  }\n"),
++  "M4 the block's line at 1px inside <1024": (sfc) =>
++    sfc.replace(INNER, "$1  .margin-note-block {\n    line-height: 1px;\n  }\n"),
++  "M4em a 1.3em reserve on a 1px block": (sfc) =>
++    sfc
++      .replace(BLOCK, "$11.3em;")
++      .replace(INNER, "$1  .margin-note-block {\n    font-size: 1px;\n  }\n"),
++  "M6 `> p:first-child`": tail(
++    ".margin-note-block > p:first-child {\n  min-height: 0;\n}\n",
++  ),
++  "M7 `[role=status]`": tail('[role="status"] {\n  min-height: 0;\n}\n'),
++  "M8 an unsatisfiable seat": (sfc) =>
++    sfc.replace(SEAT_BLOCK, "@media (min-width: 2000px) and (max-width: 1023.98px) {"),
++  // the negative-negatives
++  "NN a 1px font on the block (its line is a length, the reserve holds)": Object.assign(
++    (sfc) => sfc.replace(INNER, "$1  .margin-note-block {\n    font-size: 1px;\n  }\n"),
++    { green: true },
++  ),
++  "NN `.margin-note-previous:not(.margin-note)` is not the voice": Object.assign(
++    tail(".margin-note-previous:not(.margin-note) {\n  min-height: 0;\n}\n"),
++    { green: true },
++  ),
+ };
++/** One reading of every plant: [name, 'ok' | why it misread, the first failure it read]. Stops at
++ *  the first misread when `first` (the sabotage battery only needs one). */
++function reservePlantRows({ first = false } = {}) {
++  const sfc = readFileSync(NOTE_SFC, "utf8");
++  const rows = [];
++  const clean = gateReserve();
++  rows.push(["clean tree", clean.length ? `RED: ${clean[0]}` : "ok"]);
++  if (first && clean.length) return rows;
++  for (const [name, plant] of Object.entries(RESERVE_PLANTS)) {
++    const planted = plant(sfc);
++    let why = "ok";
++    let read = [];
++    if (planted === sfc) why = "vacuous: the plant's anchor is gone";
++    else {
++      read = gateReserve((f) => (f === NOTE_SFC ? planted : readFileSync(f, "utf8")));
++      if (read.length > 0 === Boolean(plant.green))
++        why = plant.green ? "RED on a whole line" : "GREEN";
++    }
++    rows.push([name, why, read[0] ?? "GREEN"]);
++    if (first && why !== "ok") break;
++  }
++  return rows;
++}
++/** The clause-sabotage battery: each clause off in turn, the plants must misread. */
++function reserveSabotage() {
++  const out = [];
++  for (const c of [...RESERVE_CLAUSES, ...LIBRARY_CLAUSES]) {
++    if (RESERVE_CLAUSES.includes(c)) reserveOff.add(c);
++    else {
++      shapeSabotage([c]);
++      libraryOff.id = c;
++    }
++    const bite = reservePlantRows({ first: true }).find(([, why]) => why !== "ok");
++    reserveOff.clear();
++    shapeSabotage([]);
++    libraryOff.id = "";
++    out.push([c, bite ? `${bite[0]}: ${bite[1]}` : null]);
++  }
++  return out;
++}
+ 
+ /* ── closure 5: the cross-theme rank (T9-W5 §5.4) ────────────────────────── */
+ 
+@@ -876,17 +1126,6 @@ function selfTest() {
+       "note-discovery",
+       () => gateNote(INDEX_CSS, sources(SRC), { ...NOTE_QUIET, discovered: 9999 }),
+     ],
+-    // THE NOTE'S RESERVE, every plant on the SFC's own bytes (read through an overlay, never
+-    // written): a plant whose anchor is gone did not move the source, and that reds too.
+-    ...Object.entries(RESERVE_PLANTS).map(([name, plant]) => [
+-      `note-reserve · ${name}`,
+-      () => {
+-        const sfc = readFileSync(NOTE_SFC, "utf8");
+-        const planted = plant(sfc);
+-        if (planted === sfc) return [];
+-        return gateReserve((f) => (f === NOTE_SFC ? planted : readFileSync(f, "utf8")));
+-      },
+-    ]),
+     // CLOSURE 5, three modes. `rank-moved`: the quiet rung drops to 40%, which slides it under
+     // the register in light and re-orders the string the ruling pins. `rank-stale`: the ruling
+     // is told the two themes agree, which is what a CURED crossing looks like — the admission
+@@ -912,6 +1151,23 @@ function selfTest() {
+     if (run().length === 0)
+       mute.push(`gate "${name}" did not fail on a known-bad input — it is vacuous`);
+   }
++  // THE NOTE'S RESERVE: every plant reads as the law, and every clause the law stands on (its
++  // own and the library's) reds at least one plant when it is switched off.
++  for (const [name, why, first] of reservePlantRows()) {
++    if (process.argv.includes("--plants"))
++      console.log(`  plant ${why === "ok" ? "ok " : "BAD"} ${name} → ${first ?? why}`);
++    if (why !== "ok") mute.push(`note-reserve · ${name}: ${why}`);
++  }
++  for (const [clause, bite] of reserveSabotage()) {
++    if (process.argv.includes("--sabotage-battery"))
++      console.log(
++        `  sabotage ${clause.padEnd(14)} → ${bite ? `RED (${bite})` : "GREEN"}`,
++      );
++    if (!bite)
++      mute.push(
++        `note-reserve · clause ${clause} switched off and every plant still reads: it has no plant`,
++      );
++  }
+   // The fixture's two bad files must BOTH be named, or the collector is half-blind and the
+   // "did not fail" check above would pass on one hit while missing the other spelling.
+   const found = gateOwnership(sources(fixture));
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index 3ef55236..e8173a7c 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -251,6 +251,7 @@ const SPEC_MANIFEST = [
+   "mobile-affordances.spec.ts",
+   "mobile-platform.spec.ts",
+   "multiplayer.spec.ts",
++  "note-reserve.spec.ts",
+   "permalink.spec.ts",
+   "presence.spec.ts",
+   "prm-void-audition.spec.ts",
+diff --git a/web/frontend/scripts/shape/reserve-law.mjs b/web/frontend/scripts/shape/reserve-law.mjs
+deleted file mode 100644
+index 2da98a7f..00000000
+--- a/web/frontend/scripts/shape/reserve-law.mjs
++++ /dev/null
+@@ -1,112 +0,0 @@
+-// reserve-law.mjs — the §7 reserve law re-cut ON the shape-census library (T9-W7 pass 7, chair's
+-// instruments; registry-v6 §2.10 names LEDGER's `reserve-law.PROPOSED.mjs` as the seed). The seed read ONE
+-// SFC and keyed its seat on the prelude's SPELLING (`.margin-note` exactly, `@media (max-width: 1023.98px)`
+-// exactly). This reads EVERY site in the tree (shape-census.mjs `census`) and keys on the SUBJECT COMPOUND.
+-// Law (unchanged in substance from the seed; LEDGER/ERASE's merged note):
+-//   R1  exactly ONE site sets the voice's (`.margin-note`) min-height anywhere in the tree — a second
+-//       <style>, a compound override, a shadowing declaration, a template style=/:style, a Tailwind
+-//       candidate, a script write or a public/ stylesheet are each a second site; an UNRESOLVED script
+-//       write (computed key) is a site too (never dropped)
+-//   R2  that site's value, RESOLVED (var() with fallbacks at the consumer), is `inherit`
+-//   R3  it sits under a max-width media condition (< 1024) and carries no `!important`
+-//   R4  the block (`.margin-note-block`) reserves ≥ 1 line at top level (em/lh/rem ≥ 1) — exactly one site
+-//       R4 reads the value as a LOWER BOUND in line units: `calc()` products and quotients by a
+-//       number, `clamp()` at its floor, `min()`/`max()`; anything it cannot bound is 0, never a
+-//       pass (the merged note derives the reserve as `calc(var(--type-body) *
+-//       var(--type-leading-caption))`, which is one line at the clamp's floor)
+-// Usage: node reserve-law.mjs <web/frontend>   Exit 0 GREEN · 1 RED (every breach printed with file:line).
+-//
+-// LANDED (NOTE-LEDGER, pass 7) from the chair's `pass7/instruments/reserve-law.mjs` (sha1 2498f42e)
+-// with the R4 bound above, and shipped as `check-ink-pressure.mjs`'s note-reserve row, whose
+-// `--self-test` carries the E1/E2/E2b/E3/E4 plants.
+-import process from "node:process";
+-import { census, tokens, resolve } from "../shape-census.mjs";
+-
+-/** A top-level comma split (brackets respected). */
+-const args = (s) => {
+-  const out = [];
+-  let depth = 0,
+-    cur = "";
+-  for (const c of s) {
+-    if (c === "(") depth++;
+-    if (c === ")") depth--;
+-    if (c === "," && depth === 0) {
+-      out.push(cur.trim());
+-      cur = "";
+-    } else cur += c;
+-  }
+-  return [...out, cur.trim()];
+-};
+-/** A lower bound of `v` in LINES (em/lh/rem), or 0 where it cannot be bounded. */
+-/** @public — the library's API (LAWS P6 §I: one copy every gate imports) */
+-export function lines(v) {
+-  const s = v.trim();
+-  const b = bound(s);
+-  return b && b.line ? b.n : 0;
+-}
+-function bound(s) {
+-  let m = /^([\d.]+)(em|lh|rem)?$/.exec(s);
+-  if (m) return { n: +m[1], line: Boolean(m[2]) };
+-  m = /^(calc|clamp|min|max)\(([\s\S]*)\)$/.exec(s);
+-  if (!m) return null;
+-  if (m[1] === "clamp") return bound(args(m[2])[0]);
+-  if (m[1] === "min" || m[1] === "max") {
+-    const all = args(m[2]).map(bound);
+-    const ok = all.filter((b) => b && b.line);
+-    if (m[1] === "min")
+-      return ok.length === all.length
+-        ? { n: Math.min(...ok.map((b) => b.n)), line: true }
+-        : null;
+-    return ok.length ? { n: Math.max(...ok.map((b) => b.n)), line: true } : null;
+-  }
+-  // calc: a product of factors, each optionally divided by a number; one factor carries the unit
+-  const [head, ...divs] = m[2].split(/\s\/\s/);
+-  let out = { n: 1, line: false };
+-  for (const f of head.split(/\s\*\s/)) {
+-    const b = bound(f.trim());
+-    if (!b || (b.line && out.line)) return null;
+-    out = { n: out.n * b.n, line: out.line || b.line };
+-  }
+-  for (const d of divs) {
+-    const b = bound(d.trim());
+-    if (!b || b.line || !b.n) return null;
+-    out.n /= b.n;
+-  }
+-  return out;
+-}
+-
+-export function reserveLaw(fe, opts = {}) {
+-  const fails = [];
+-  const voice = census(fe, "margin-note", "min-height", opts); // subject-compound keyed: .margin-note-block is another class
+-  const { map } = tokens(fe, opts);
+-  const where = (s) =>
+-    `${s.file}:${s.line} [${s.kind}] ${s.ctx ? s.ctx + " " : ""}${s.prelude}: ${s.prop} ${s.value}${s.important ? " !important" : ""}`;
+-  if (voice.length !== 1)
+-    fails.push(
+-      `R1 the voice's min-height is set at ${voice.length} sites (want exactly 1):\n      ${voice.map(where).join("\n      ") || "none"}`,
+-    );
+-  for (const s of voice) {
+-    const v = resolve(s.value, map).trim();
+-    if (v !== "inherit") fails.push(`R2 ${where(s)} resolves to '${v}', not inherit`);
+-    if (s.important) fails.push(`R3 ${where(s)} carries !important`);
+-    if (!/max-width:\s*(1023\.98|1023)px/.test(s.ctx ?? ""))
+-      fails.push(`R3 ${where(s)} is not seated under the <1024 media condition`);
+-  }
+-  const block = census(fe, "margin-note-block", "min-height", opts);
+-  const top = block.filter((s) => !s.ctx);
+-  if (top.length !== 1 || lines(resolve(top[0].value, map)) < 1)
+-    fails.push(
+-      `R4 the block's top-level reserve is not one line: ${top.map(where).join(" | ") || "none"}`,
+-    );
+-  return { fails, voice: voice.map(where), block: block.map(where) };
+-}
+-
+-if (import.meta.url === `file://${process.argv[1]}`) {
+-  const r = reserveLaw(process.argv[2]);
+-  console.log(
+-    r.fails.length
+-      ? `RED\n  ${r.fails.join("\n  ")}`
+-      : `GREEN · voice ${r.voice.join(" ; ")} · block ${r.block.join(" ; ")}`,
+-  );
+-  process.exit(r.fails.length ? 1 : 0);
+-}

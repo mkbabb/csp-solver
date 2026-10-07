@@ -1,0 +1,1280 @@
+diff --git a/web/frontend/e2e/focus-ring.spec.ts b/web/frontend/e2e/focus-ring.spec.ts
+index fe34e873..06143b2d 100644
+--- a/web/frontend/e2e/focus-ring.spec.ts
++++ b/web/frontend/e2e/focus-ring.spec.ts
+@@ -1,9 +1,9 @@
+ import { test, expect, type Page } from "@playwright/test";
+-import { existsSync, mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
++import { mkdirSync, readFileSync, readdirSync, writeFileSync } from "node:fs";
+ import { join } from "node:path";
+-import { fileURLToPath, pathToFileURL } from "node:url";
++import { fileURLToPath } from "node:url";
+ import { wobbleRect } from "@mkbabb/pencil-boil";
+-import { RING_GEOMETRY } from "../src/pencil/config/pencilConfig";
++import { BOIL_CONFIG, RING_GEOMETRY } from "../src/pencil/config/pencilConfig";
+ 
+ // PRM: live, because the ring's whole claim is that it follows a box the dock GLIDES under a
+ // WAAPI transform; freezing motion deletes the subject of gates 4 and 15.
+@@ -55,20 +55,13 @@ import { RING_GEOMETRY } from "../src/pencil/config/pencilConfig";
+  */
+ 
+ const FE_ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+-/** THE CHAIR'S INSTRUMENTS, imported, never hand-rolled (T9-W7 pass 7, LAWS P6 §I: ONE copy of the
+- *  four-band edge probe and the shape-census library). They live in the loop's record until the W7
+- *  fold vendors them beside `e2e/`; a worktree reaches the main tree's copy. A missing copy is a
+- *  thrown error, never a skip. */
+-const INSTRUMENTS =
+-  process.env.PASS7_INSTRUMENTS ??
+-  [FE_ROOT + "/../..", FE_ROOT + "/../../../../.."]
+-    .map((root) => join(root, "docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments"))
+-    .find((d) => existsSync(d));
+-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- untyped .mjs instruments
+-const instrument = async (name: string): Promise<any> => {
+-  if (!INSTRUMENTS) throw new Error("the pass-7 instruments are not reachable (set PASS7_INSTRUMENTS)");
+-  return import(pathToFileURL(join(INSTRUMENTS, name)).href);
+-};
++/** THE INSTRUMENTS, at their PRODUCT HOMES (registry-v7 §2.4, LAWS P7 §I): the four-band edge probe
++ *  (`e2e/lib/edge-bands.mjs`) and the shape-census library (`scripts/shape-census.mjs`), imported by
++ *  RELATIVE path, never hand-rolled and never read from the loop's record. Loaded at run time because
++ *  they are untyped `.mjs` (the e2e typecheck carries no `allowJs`). */
++const instrument = (rel: string): Promise<any> => import(new URL(rel, import.meta.url).href);
++const EDGE_BANDS = "./lib/edge-bands.mjs";
++const SHAPE_CENSUS = "../scripts/shape-census.mjs";
+ 
+ const BOARD = "?game=sudoku";
+ 
+@@ -503,7 +496,8 @@ const frames2 = (page: Page) =>
+ /** Pixels that changed between ON and OFF but NOT between ON and a second ON, decoded in the
+  *  page: the indicator's own pixels, with anything that moves on its own (a caret, a sparkle)
+  *  subtracted pixel by pixel rather than by count. */
+-const indicatorPixels = (page: Page, on: Buffer, off: Buffer, again: Buffer) =>
++type Shot = Awaited<ReturnType<Page["screenshot"]>>;
++const indicatorPixels = (page: Page, on: Shot, off: Shot, again: Shot, offAgain?: Shot) =>
+   page.evaluate(
+     async (shots) => {
+       const load = async (s: string) => {
+@@ -514,20 +508,22 @@ const indicatorPixels = (page: Page, on: Buffer, off: Buffer, again: Buffer) =>
+         x.drawImage(bmp, 0, 0);
+         return x.getImageData(0, 0, bmp.width, bmp.height).data;
+       };
+-      const [p, q, r] = await Promise.all(shots.map(load));
+-      if (p.length !== q.length || p.length !== r.length) return { paint: -1, noise: -1 };
++      const [p, q, r, o] = await Promise.all(shots.map(load));
++      if (p.length !== q.length || p.length !== r.length || (o && o.length !== p.length)) return { paint: -1, noise: -1 };
+       const moved = (u: Uint8ClampedArray, v: Uint8ClampedArray, i: number) =>
+         Math.max(Math.abs(u[i] - v[i]), Math.abs(u[i + 1] - v[i + 1]), Math.abs(u[i + 2] - v[i + 2])) >= 16;
+       let paint = 0;
+       let noise = 0;
+       for (let i = 0; i < p.length; i += 4) {
+-        const n = moved(p, r, i);
++        // With a second OFF shot, a pixel must also hold still OFF → OFF: the grid's boil (live
++        // outside `reduce`) swaps its lines' pose between any two shots and is never the indicator.
++        const n = moved(p, r, i) || (o ? moved(q, o, i) : false);
+         if (n) noise++;
+         else if (moved(p, q, i)) paint++;
+       }
+       return { paint, noise };
+     },
+-    [on, off, again].map((b) => b.toString("base64")),
++    [on, off, again, ...(offAgain ? [offAgain] : [])].map((b) => b.toString("base64")),
+   );
+ 
+ type Kind = "drawn" | "board" | "outline";
+@@ -577,13 +573,17 @@ async function judgeStop(page: Page, i: number): Promise<Verdict> {
+       const rb = r.getBoundingClientRect();
+       return rb.left <= cx && cx <= rb.right && rb.top <= cy && cy <= rb.bottom;
+     });
+-    const rp = ring?.querySelector("path");
++    // THE POSE THAT IS PAINTED, not the first path: the ring and the living cell each carry four
++    // sibling poses and show one per beat (the rest at opacity 0). Under `reduce` the mark rests on
++    // pose 0, so path 1 was always the painted one; outside it the read lands mid-revolution.
++    const shown = (ps: NodeListOf<SVGPathElement> | undefined) => (ps ? Array.from(ps).find((q) => chainOpaque(q)) : undefined);
++    const rp = shown(ring?.querySelectorAll<SVGPathElement>("path"));
+     const drawn =
+       ring && rp && getComputedStyle(rp).stroke !== "none" && chainOpaque(rp)
+         ? pad(ring.getBoundingClientRect(), 2)
+         : null;
+     const cell = e.closest(".game-cell");
+-    const ghost = cell?.querySelector<SVGPathElement>(".cell-ghost-path");
++    const ghost = shown(cell?.querySelectorAll<SVGPathElement>(".cell-ghost-path"));
+     const gs = ghost ? getComputedStyle(ghost) : null;
+     const board =
+       cell && ghost && gs!.stroke !== "none" && parseFloat(gs!.strokeOpacity) >= 0.9 && chainOpaque(ghost)
+@@ -598,8 +598,8 @@ async function judgeStop(page: Page, i: number): Promise<Verdict> {
+   }, i);
+   const v: Verdict = { who: claim.who, judged: claim.judged, ok: false, stranded: claim.stranded, by: null, paint: {} };
+   if (!claim.judged) return v;
+-  // ON, then the indicator removed, then ON again: a pixel counts when it moved ON → OFF and
+-  // held still ON → ON. A clip outside the viewport cannot be photographed and reads −1.
++  // ON, OFF, ON, OFF: a pixel counts when it moved ON → OFF, held still ON → ON and OFF → OFF, and
++  // the indicator is left ON. A clip outside the viewport cannot be photographed and reads −1.
+   const read = async (clip: { x: number; y: number; width: number; height: number }, off: () => Promise<void>, on: () => Promise<void>) => {
+     if (clip.width < 1 || clip.height < 1) return -1;
+     const a = await page.screenshot({ clip, caret: "hide" });
+@@ -609,7 +609,12 @@ async function judgeStop(page: Page, i: number): Promise<Verdict> {
+     await on();
+     await frames2(page);
+     const c = await page.screenshot({ clip, caret: "hide" });
+-    const { paint, noise } = await indicatorPixels(page, a, b, c);
++    await off();
++    await frames2(page);
++    const d = await page.screenshot({ clip, caret: "hide" });
++    await on();
++    await frames2(page);
++    const { paint, noise } = await indicatorPixels(page, a, b, c, d);
+     v.noise = Math.max(v.noise ?? 0, noise);
+     return paint;
+   };
+@@ -623,12 +628,34 @@ async function judgeStop(page: Page, i: number): Promise<Verdict> {
+   const unstyle = () => page.evaluate(() => document.querySelectorAll("style[data-gl16-off]").forEach((s) => s.remove()));
+   if (claim.drawn)
+     v.paint.drawn = await read(claim.drawn, () => style(".focus-ring { visibility: hidden !important; }"), unstyle);
+-  if (claim.board)
++  // The board's indicator is the cell's OWN ghost, its ink removed in place (focus kept): a blur also
++  // lifts the peer-unit wash on the row, column and box, and under `prefers-contrast: more` (13 %)
++  // that wash alone moved 456–516 px of the padded clip with the ghost's stroke planted transparent
++  // (X2b). THE GROUND IS HELD STILL for this read: outside `reduce` the board's grid swaps its baked
++  // pose EVERY beat (`BOIL_CONFIG.intervalMs` 150 → one 125 ms beat), so the four photographs can
++  // alias the boil (ON at one pose, OFF at the other, twice) and 36–37 px of grid rule counted as
++  // the indicator with its ink planted transparent (X2b GREEN in WebKit `no-preference`/`more`,
++  // 5 of 18 WebKit non-`reduce` runs). This row asks whether the indicator EXISTS; the grid is hidden in all four
++  // photographs, and G-LIVE-23 reads the ring against the real ground.
++  if (claim.board) {
++    await page.evaluate(() => {
++      const s = document.createElement("style");
++      s.dataset.gl16Ground = "";
++      s.textContent = ".board-shell .hand-drawn-grid { visibility: hidden !important; }";
++      document.head.appendChild(s);
++    });
++    await frames2(page);
+     v.paint.board = await read(
+       claim.board,
+-      () => page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur()),
+-      () => page.evaluate((i) => document.querySelector<HTMLElement>(`[data-gl16="${i}"]`)?.focus({ preventScroll: true }), i),
++      () =>
++        style(
++          `.game-cell:has([data-gl16="${i}"]) .cell-ghost-path { stroke: rgba(0,0,0,0) !important; fill: none !important; }`,
++        ),
++      unstyle,
+     );
++    await page.evaluate(() => document.querySelectorAll("style[data-gl16-ground]").forEach((s) => s.remove()));
++    await frames2(page);
++  }
+   if (claim.outline)
+     v.paint.outline = await read(claim.outline, () => style(`[data-gl16="${i}"] { outline-style: none !important; }`), unstyle);
+   for (const k of ["drawn", "board", "outline"] as const)
+@@ -640,10 +667,35 @@ async function judgeStop(page: Page, i: number): Promise<Verdict> {
+   return v;
+ }
+ 
+-test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on paint)", async ({ page }) => {
+-  test.setTimeout(180000);
+-  await page.emulateMedia({ reducedMotion: "reduce" });
++/** EVERY REGIME A READER BRINGS (LAWS P7 §E i): the walk settles under `reduce`, and runs whole
++ *  again under `no-preference`, `prefers-contrast: more` and `pointer: coarse` (a touch context,
++ *  witnessed). Each non-settle regime ships the plant only it can see: the ring and the living
++ *  ghost at opacity 0 INSIDE that regime's media query, which must red the stop it is laid on
++ *  (pass 7's reduce-only walk could not see a ring deleted for the majority). */
++const G16_REGIMES = [
++  { name: "reduce", media: { reducedMotion: "reduce", contrast: "no-preference" }, mq: null, touch: false },
++  { name: "no-preference", media: { reducedMotion: "no-preference", contrast: "no-preference" }, mq: "(prefers-reduced-motion: no-preference)", touch: false },
++  { name: "more", media: { reducedMotion: "no-preference", contrast: "more" }, mq: "(prefers-contrast: more)", touch: false },
++  { name: "coarse", media: { reducedMotion: "no-preference", contrast: "no-preference" }, mq: "(pointer: coarse)", touch: true },
++] as const;
++type G16Regime = (typeof G16_REGIMES)[number];
++
++for (const regime of G16_REGIMES) {
++  const title = `G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on paint) [${regime.name}]`;
++  if (regime.touch)
++    test.describe(`G-LIVE-16 · ${regime.name}`, () => {
++      test.use({ hasTouch: true });
++      test(title, ({ page }) => g16(page, regime));
++    });
++  else test(title, ({ page }) => g16(page, regime));
++}
++
++async function g16(page: Page, regime: G16Regime) {
++  test.setTimeout(240000);
++  await page.emulateMedia(regime.media);
+   await boardReady(page);
++  if (regime.mq)
++    expect(await page.evaluate((mq) => matchMedia(mq).matches, regime.mq), `the ${regime.name} regime is witnessed, not assumed`).toBe(true);
+   const sampled = await page.evaluate((FOCUSABLE) => {
+     const s = document.createElement("input");
+     s.className = "cell-native-input";
+@@ -675,6 +727,10 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+ 
+   // A stop is photographed where a reader would see it: scrolled to the viewport's middle first
+   // (a ring below the fold paints nothing a screenshot can hold).
++  // Outside `reduce` the ring SKETCHES IN (its draw-on and the living mark's beats): two frames after
++  // focus it is still at opacity 0, and a read there judges the draw-in, not the indicator. The read
++  // waits for the document's finite animations to drain (the perpetual boil is infinite and excluded)
++  // and for the living mark's breath to end on pose 0 (`docSettled`).
+   const focusStop = async (i: number) => {
+     await page.evaluate((i) => {
+       const e = document.querySelector<HTMLElement>(`[data-gl16="${i}"]`);
+@@ -683,6 +739,7 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+     }, i);
+     await frames2(page);
+     await frames2(page);
++    await docSettled(page);
+   };
+   await page.keyboard.press("Tab");
+   const verdicts: (Verdict & { i: number })[] = [];
+@@ -692,7 +749,7 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+   }
+ 
+   console.log(
+-    "[G-LIVE-16] " +
++    `[G-LIVE-16 ${regime.name}] ` +
+       verdicts.map((v) => `${v.who}:${v.judged ? (v.ok ? v.by : "NONE") : "-"}${JSON.stringify(v.paint)}~${v.noise ?? 0}`).join(" | "),
+   );
+   const judged = verdicts.filter((v) => v.judged);
+@@ -715,6 +772,12 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+     ["X1c the ring at opacity 0", ".focus-ring { opacity: 0 !important; }", drawnStop!.i],
+     ["X2 the living cell's ghost at opacity 0", ".cell-ghost.is-active { opacity: 0 !important; }", boardStop!.i],
+     ["X2b the ghost's stroke transparent", ".cell-ghost-path { stroke: rgba(0,0,0,0) !important; fill: none !important; }", boardStop!.i],
++    ...(regime.mq
++      ? ([
++          [`${regime.name.toUpperCase()}0 the ring at opacity 0 inside ${regime.mq}`, `@media ${regime.mq} { .focus-ring { opacity: 0 !important; } }`, drawnStop!.i],
++          [`${regime.name.toUpperCase()}0 the ghost at opacity 0 inside ${regime.mq}`, `@media ${regime.mq} { .cell-ghost.is-active { opacity: 0 !important; } }`, boardStop!.i],
++        ] as [string, string, number][])
++      : []),
+   ];
+   const planted: { plant: string; who: string; ok: boolean; paint: Verdict["paint"] }[] = [];
+   for (const [name, css, i] of plants) {
+@@ -734,13 +797,13 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+     document.querySelector("[data-gl16-stranded]")?.remove();
+     for (const e of document.querySelectorAll<HTMLElement>("[data-gl16]")) delete e.dataset.gl16;
+   });
+-  console.log("[G-LIVE-16 plants] " + planted.map((p) => `${p.plant} on ${p.who}: ok=${p.ok} ${JSON.stringify(p.paint)}`).join(" | "));
++  console.log(`[G-LIVE-16 ${regime.name} plants] ` + planted.map((p) => `${p.plant} on ${p.who}: ok=${p.ok} ${JSON.stringify(p.paint)}`).join(" | "));
+ 
+   const control = verdicts.find((v) => v.stranded);
+   expect(control?.judged, "the stranded control took focus and matched :focus-visible").toBe(true);
+   expect(control?.ok, "the stranded control is CAUGHT (else this row cannot fail)").toBe(false);
+   for (const p of planted) expect(p.ok, `${p.plant} turns ${p.who} RED (else this row cannot see paint)`).toBe(false);
+-});
++}
+ 
+ // ── G-LIVE-19 ───────────────────────────────────────────────────────────────────────────
+ //
+@@ -764,30 +827,9 @@ test("G-LIVE-16 · the UA outline is suppressed and nobody is stranded (read on
+ //     that carries that rule's scope hash, computes `animation-duration: 0.25s`.
+ // Nothing is wrapped in an `if`: a surface this route should carry and does not is a RED.
+ 
+-/** Every `@property` in one style text, with its brace depth. */
+-function registrationsIn(file: string, text: string) {
+-  const out: { name: string; file: string; depth: number }[] = [];
+-  let depth = 0;
+-  for (let i = 0; i < text.length; i++) {
+-    const c = text[i];
+-    if (c === "{") depth++;
+-    else if (c === "}") depth--;
+-    else if (c === "@" && text.startsWith("@property", i)) {
+-      const m = /^@property\s+(--[\w-]+)/.exec(text.slice(i));
+-      if (m) out.push({ name: m[1], file, depth });
+-    }
+-  }
+-  return out;
+-}
+-
+-/** Every `var(--registered, …)` in one site's text: a second argument behind a registered name. */
+-const maskedIn = (file: string, text: string, registered: Set<string>) =>
+-  [...text.matchAll(/var\(\s*(--[\w-]+)\s*,/g)].filter((m) => registered.has(m[1])).map((m) => `${m[1]} in ${file}`);
+-
+-/** Every site a value can be written from, per file, comments stripped by the library's string-
+- *  aware strippers: `css` (style blocks, stylesheets, `index.html`'s `<style>`) and `code`
++/** Every site a value can be written from, per file, comments stripped by the ONE library's
++ *  string-aware strippers: `css` (style blocks, stylesheets, `index.html`'s `<style>`) and `code`
+  *  (templates and scripts). `plant` overlays one file's raw text in memory. */
+-// eslint-disable-next-line @typescript-eslint/no-explicit-any -- the library is untyped .mjs
+ function sites(shape: any, plant?: { file: string; text: string }) {
+   const out: { file: string; css: string; code: string }[] = [];
+   for (const f of shape.sources(FE_ROOT) as string[]) {
+@@ -797,12 +839,10 @@ function sites(shape: any, plant?: { file: string; text: string }) {
+       const b = shape.sfc(text);
+       out.push({
+         file,
+-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         css: b.styles.map((x: any) => shape.stripCss(x.css)).join("\n"),
+-        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+         code: [b.template ? shape.stripHtml(b.template.text) : "", ...b.scripts.map((x: any) => shape.stripJs(x.text))].join("\n"),
+       });
+-    } else if (f.endsWith(".css")) out.push({ file, css: shape.stripCss(text), code: "" });
++    } else if (shape.isCss(f)) out.push({ file, css: shape.stripCss(text), code: "" });
+     else if (f.endsWith(".html"))
+       out.push({
+         file,
+@@ -814,55 +854,78 @@ function sites(shape: any, plant?: { file: string; text: string }) {
+   return out;
+ }
+ 
++/** THE MASKED-DEFAULT READ IS THE LIBRARY'S (`maskedDefaults`: `var(` matched case-insensitively,
++ *  string concatenation folded, a `${}` stem expanded against the registered names). A hit behind
++ *  a registered name is a RED; a stem that spells no registered name is printed, never dropped. */
++const maskedAt = (shape: any, file: string, text: string, registered: string[]) =>
++  (shape.maskedDefaults(text, registered) as { name: string; stem: string | null; unresolved?: boolean }[])
++    .filter((m) => !m.unresolved && registered.includes(m.name))
++    .map((m) => `${m.name} in ${file}`);
++
+ test("G-LIVE-19 · the ring's seams have one home and no masked default", async ({ page }) => {
+-  const shape = await instrument("shape-census.mjs");
+-  const all = sites(shape);
+-  const source = all.flatMap(({ file, css }) => registrationsIn(file, css));
++  test.setTimeout(120000); // the whole source walk, eight times over (the clean read and seven plants)
++  const shape = await instrument(SHAPE_CENSUS);
++  // ONE HOME, counted by the library's registration reader (every `@property` in every CSS language
++  // and block, every `registerProperty(` in code, names folded or UNRESOLVED): a second registration
++  // of any name is RED. NESTING is read off the library's own rule list: an `@property` whose rule
++  // sits inside another rule's prelude is hoisted silently by the bundler.
++  const regs = shape.propertyRegistrations(FE_ROOT) as { name: string; file: string; kind: string; unresolved?: boolean }[];
+   const per = new Map<string, string[]>();
+-  for (const r of source) per.set(r.name, [...(per.get(r.name) ?? []), r.file]);
++  for (const r of regs) per.set(r.name, [...(per.get(r.name) ?? []), r.file]);
+   expect(
+     [...per].filter(([, v]) => v.length > 1).map(([k, v]) => `${k}: ${v.join(", ")}`),
+     "no custom property is registered twice in source",
+   ).toEqual([]);
+-  expect(
+-    source.filter((r) => r.depth !== 0).map((r) => `${r.name} in ${r.file} at depth ${r.depth}`),
+-    "no @property is nested inside a rule",
+-  ).toEqual([]);
++  expect(regs.filter((r) => r.unresolved).map((r) => `${r.name} in ${r.file}`), "no registration's name is unresolved").toEqual([]);
++  const nested = (shape.sources(FE_ROOT) as string[]).flatMap((f) =>
++    (shape.rulesOf(f, readFileSync(f, "utf8"), FE_ROOT) as { prelude: string; line: number }[])
++      .filter((r) => /@property\s/.test(r.prelude) && !/^@property\s/.test(r.prelude))
++      .map((r) => `${r.prelude} in ${f.slice(FE_ROOT.length + 1)}:${r.line}`),
++  );
++  expect(nested, "no @property is nested inside a rule").toEqual([]);
+   for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
+-    expect(per.get(n), `${n} has one home in source`).toEqual(["assets/index.css"]);
++    expect(per.get(n), `${n} has one home in source`).toEqual(["src/assets/index.css"]);
+ 
+   // NO MASKED DEFAULT, READ IN SOURCE, AT EVERY SITE. The CSSOM below sees only the sheets THIS
+   // route loaded; a lazy SFC never reaches it (pass-5 X3), and a template attribute never reaches
+   // a `<style>`-only scan (pass-6 X5). The walk must have reached the lazy SFCs, the public/
+   // sheets and index.html.
+-  const registered = new Set(per.keys());
++  const registered = [...per.keys()];
++  const all = sites(shape);
+   const files = all.map((x) => x.file);
+   for (const lazy of ["pencil/sheet/AnswerKeyLaminate.vue", "games/sudoku/SudokuPoster.vue", "index.html"])
+     expect(files, `the source walk reads ${lazy}`).toContain(lazy);
+   const masked = (xs: { file: string; css: string; code: string }[]) =>
+-    xs.flatMap(({ file, css, code }) => [...maskedIn(file, css, registered), ...maskedIn(file, code, registered)]);
++    xs.flatMap(({ file, css, code }) => [...maskedAt(shape, file, css, registered), ...maskedAt(shape, file, code, registered)]);
+   expect(masked(all), "no var(…, fallback) stands behind a registered name, at any source site").toEqual([]);
+   // THE PLANTS, in-run, each an in-memory overlay of the lazy laminate's raw file through the same
+   // walk: X3 in a `<style>`, X5 as a template `style=` attribute, X5b a `:style` string, X5c a
+-  // script `setProperty`. Each must be caught; the unplanted file must not be.
++  // script `setProperty`, and the pass-7 critic's siblings — X7 an upper-case `VAR(` (it resolves in
++  // both engines), X8 a `${}` stem template, X9 a string concatenation. Each must be caught; the
++  // unplanted file must not be.
+   const lamFile = "pencil/sheet/AnswerKeyLaminate.vue";
+   const lam = readFileSync(join(FE_ROOT, "src", lamFile), "utf8");
+   const tpl = lam.indexOf("<template>") + "<template>".length;
+   const scr = lam.indexOf("<script setup lang=\"ts\">") + "<script setup lang=\"ts\">".length;
++  const plants: string[] = [];
+   for (const [name, text] of [
+     ["X3 <style>", lam + "\n<style>.x{animation-duration:var(--motion-note, 280ms)}</style>\n"],
+     ["X5 template style=", lam.slice(0, tpl) + '\n<i style="animation-duration: var(--motion-note, 280ms)"></i>' + lam.slice(tpl)],
+     ["X5b :style string", lam.slice(0, tpl) + "\n<i :style=\"'animation-duration: var(--motion-note, 280ms)'\"></i>" + lam.slice(tpl)],
+     ["X5c script setProperty", lam.slice(0, scr) + "\ndocument.body.style.setProperty('animation-duration', 'var(--motion-note, 280ms)');" + lam.slice(scr)],
+-  ] as [string, string][])
+-    expect(masked(sites(shape, { file: lamFile, text })), `${name}: a masked default planted in the lazy laminate is caught`).toEqual([
+-      `--motion-note in ${lamFile}`,
+-    ]);
++    ["X7 VAR( in a template style=", lam.slice(0, tpl) + '\n<i style="animation-duration: VAR(--motion-note, 280ms)"></i>' + lam.slice(tpl)],
++    ["X8 a ${} stem template", lam.slice(0, scr) + "\nconst rung = 'note';\ndocument.body.style.setProperty('animation-duration', `var(--motion-${rung}, 280ms)`);" + lam.slice(scr)],
++    ["X9 a concatenation", lam.slice(0, scr) + '\nconst d9 = "var(--motion-note" + ", 280ms)";\ndocument.body.style.setProperty("animation-duration", d9);' + lam.slice(scr)],
++  ] as [string, string][]) {
++    const got = masked(sites(shape, { file: lamFile, text }));
++    console.log(`[G-LIVE-19 plant] ${name}: ${got.length ? got.join(", ") : "MISSED"}`);
++    plants.push(got.length === 1 && got[0] === `--motion-note in ${lamFile}` ? "" : `${name}: read ${JSON.stringify(got)}`);
++  }
++  expect(plants.filter(Boolean), "every masked default planted in the lazy laminate is caught, once").toEqual([]);
+ 
+   await boardReady(page);
+   const reg = await page.evaluate(() => {
+     const regs: Record<string, string[]> = {};
+-    const masked: string[] = [];
+     const texts: string[] = [];
+     const walk = (list: CSSRuleList) => {
+       for (const r of Array.from(list)) {
+@@ -886,9 +949,7 @@ test("G-LIVE-19 · the ring's seams have one home and no masked default", async
+     // `@property` rules AND the `var(--tw-x, …)` that read them, in one generated block no
+     // author writes (the same line L17's amendment draws for Vue's `data-v-*`).
+     const estate = Object.keys(regs).filter((n) => !n.startsWith("--tw-"));
+-    for (const t of texts)
+-      for (const m of t.matchAll(/var\(\s*(--[\w-]+)\s*,/g))
+-        if (estate.includes(m[1])) masked.push(`${m[1]} in ${t.slice(0, t.indexOf("{"))}`);
++    const shipped = texts.filter((t) => /var\(/i.test(t));
+ 
+     const toggle = document.querySelector<HTMLElement>(".sun-moon-toggle");
+     const tcs = toggle ? getComputedStyle(toggle) : null;
+@@ -908,7 +969,7 @@ test("G-LIVE-19 · the ring's seams have one home and no masked default", async
+     return {
+       regs,
+       estate,
+-      masked,
++      shipped,
+       toggle: !!toggle,
+       toggleOutset: tcs?.getPropertyValue("--focus-ring-outset").trim() ?? null,
+       toggleBleed: tcs?.getPropertyValue("--toggle-bleed").trim() ?? null,
+@@ -922,7 +983,9 @@ test("G-LIVE-19 · the ring's seams have one home and no masked default", async
+   for (const n of ["--focus-ring-outset", "--toggle-bleed", "--motion-note"])
+     expect(reg.regs[n]?.length, `${n} is registered exactly once`).toBe(1);
+   expect(reg.estate.length, "the scan reads the estate's own registrations").toBeGreaterThanOrEqual(3);
+-  expect(reg.masked, "no var(…, fallback) stands behind a registered name").toEqual([]);
++  // The SHIPPED rules, judged by the same library read as the source (no second matcher).
++  const shippedMasked = reg.shipped.flatMap((t) => maskedAt(shape, t.slice(0, t.indexOf("{")), t, reg.estate));
++  expect(shippedMasked, "no var(…, fallback) stands behind a registered name").toEqual([]);
+ 
+   expect(reg.toggle, "the toggle is on this route").toBe(true);
+   // The registration types the value: a host declaring a calc() reaches JS as px, not as a
+@@ -1036,8 +1099,13 @@ test.describe("G-LIVE-20 · coarse", () => {
+ // indicator; the deck keeps DOM focus on its scrollport (an `aria-activedescendant` listbox), and
+ // the scrollport draws no ring of its own on purpose. So the ACTIVE CARD must carry the outline,
+ // or a High Contrast reader has nothing at all on the deck (measured on this tree before the cure:
+-// card `none`, scrollport `none`, ring hidden — both engines). Chromium applies the emulation;
++// card `none`, scrollport `none`, ring hidden — both engines). Both engines apply the emulation;
+ // the row reads `matchMedia` rather than trusting it.
++// EVERY HOST IS JUDGED ON PAINT (LAWS P7 §E iii): the deck's card, a staging face and the armed
++// guard's verb are each photographed focused, blurred and focused again, and the pixels that moved
++// with focus and held still between the two focused shots are counted. A computed outline (style,
++// width, Highlight) is existence: `clip-path: inset(0)` on the host keeps all three and paints 0 px.
++// FCCLIP2, that clip on the card and the staging face, is this row's in-run negative.
+ test("G-LIVE-21 · forced colours: the deck's active card carries the outline", async ({
+   page,
+ }) => {
+@@ -1080,6 +1148,49 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+   });
+   expect(deckInk, "the active card's outline is the system Highlight").toBe(highlight);
+ 
++  /** The pixels focus PAINTS in a host's OUTLINE BAND: the four strips outside its border box, out to
++   *  the outline's offset + width + 2 px, each photographed with focus on, off, on again. The box's
++   *  inside is not read: the deck's card re-renders its own content on focus in WebKit (1,303 px moved
++   *  inside the card with its outline clipped away), and that is not an indicator. */
++  const hostPaint = async (host: () => Promise<string | null>, focus: () => Promise<void>) => {
++    const sel = await host();
++    if (!sel) return -1;
++    const strips = await page.evaluate((sel) => {
++      const el = document.querySelector<HTMLElement>(sel)!;
++      const cs = getComputedStyle(el);
++      const p = Math.ceil((parseFloat(cs.outlineWidth) || 0) + Math.abs(parseFloat(cs.outlineOffset) || 0) + 2);
++      const r = el.getBoundingClientRect();
++      const L = Math.floor(r.left), T = Math.floor(r.top), R = Math.ceil(r.right), B = Math.ceil(r.bottom);
++      return [
++        { x: L - p, y: T - p, width: R - L + 2 * p, height: p },
++        { x: L - p, y: B, width: R - L + 2 * p, height: p },
++        { x: L - p, y: T, width: p, height: B - T },
++        { x: R, y: T, width: p, height: B - T },
++      ]
++        .map((c) => ({ ...c, x: Math.max(0, c.x), y: Math.max(0, c.y) }))
++        .map((c) => ({ ...c, width: Math.min(innerWidth - c.x, c.width), height: Math.min(innerHeight - c.y, c.height) }))
++        .filter((c) => c.width >= 1 && c.height >= 1);
++    }, sel);
++    const shoot = () => Promise.all(strips.map((clip) => page.screenshot({ clip, caret: "hide" })));
++    const on = await shoot();
++    await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
++    await frames2(page);
++    const off = await shoot();
++    await focus();
++    await frames2(page);
++    const again = await shoot();
++    let paint = 0;
++    for (let i = 0; i < strips.length; i++) paint += (await indicatorPixels(page, on[i], off[i], again[i])).paint;
++    return paint;
++  };
++  const deckCard = () =>
++    page.evaluate(() => {
++      const id = document.querySelector(".gallery-viewport")?.getAttribute("aria-activedescendant");
++      return id ? `#${CSS.escape(id)}` : null;
++    });
++  const deckFocus = () => page.evaluate(() => document.querySelector<HTMLElement>(".gallery-viewport")?.focus());
++  const cardPx = await hostPaint(deckCard, deckFocus);
++
+   // THE STAGING FACE, same regime (G-ABS-4f's third host): the deck's verbs take keyboard focus
+   // off the scrollport, and each must carry its own outline in the system ink.
+   await focusByKeyboard(page, ".staging-btn:not([disabled])");
+@@ -1094,7 +1205,34 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+       ink: cs.outlineColor,
+     };
+   });
+-  console.log(`[G-LIVE-21] Highlight ${highlight} · deck card ${deckInk} · staging ${staging.style} ${staging.width}px ${staging.ink}`);
++  await page.evaluate(() => document.activeElement?.setAttribute("data-gl21", ""));
++  const stagingHost = async () => "[data-gl21]";
++  const stagingFocus = () => page.evaluate(() => document.querySelector<HTMLElement>("[data-gl21]")?.focus());
++  const stagingPx = await hostPaint(stagingHost, stagingFocus);
++  // FCCLIP2, in-run: both hosts clipped to their border box. Every property above still reads green;
++  // the paint must not.
++  const clip2 = await page.addStyleTag({
++    content: "@media (forced-colors: active) { .game-card, .staging-btn { clip-path: inset(0) !important; } }",
++  });
++  await deckFocus();
++  await frames2(page);
++  const clipCard = await hostPaint(deckCard, deckFocus);
++  await stagingFocus();
++  await frames2(page);
++  const clipStaging = await hostPaint(stagingHost, stagingFocus);
++  const clipStyle = await page.evaluate(() => getComputedStyle(document.querySelector<HTMLElement>("[data-gl21]")!).outlineStyle);
++  await clip2.evaluate((e) => (e as HTMLElement).remove());
++  await stagingFocus();
++  await frames2(page);
++  await page.evaluate(() => document.querySelector("[data-gl21]")?.removeAttribute("data-gl21"));
++  console.log(
++    `[G-LIVE-21] Highlight ${highlight} · deck card ${deckInk} painted ${cardPx} px · staging ${staging.style} ${staging.width}px ${staging.ink} painted ${stagingPx} px · FCCLIP2 card ${clipCard} px, staging ${clipStaging} px (outline-style still ${clipStyle})`,
++  );
++  expect(cardPx, "focus PAINTS on the deck's active card").toBeGreaterThan(FLOOR);
++  expect(stagingPx, "focus PAINTS on the staging face").toBeGreaterThan(FLOOR);
++  expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
++  expect(clipCard, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
++  expect(clipStaging, "FCCLIP2: a clipped staging outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+   expect(staging.on && staging.fv, "a staging face took keyboard focus").toBe(true);
+   expect(staging.style, "the staging face's outline is drawn").not.toBe("none");
+   expect(staging.width, "with width").toBeGreaterThan(0);
+@@ -1104,7 +1242,7 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+     content: ".staging-btn:focus-visible { outline-color: CanvasText !important; }",
+   });
+   const planted = await page.evaluate(() => getComputedStyle(document.activeElement as HTMLElement).outlineColor);
+-  await canvasText.evaluate((e) => e.remove());
++  await canvasText.evaluate((e) => (e as HTMLElement).remove());
+   expect(planted, "plant: a CanvasText outline is caught by the Highlight clause").not.toBe(highlight);
+ 
+   // THE ARMED GUARD, same forced regime (the pass-5 walk read seven stops and never this one): a
+@@ -1360,7 +1498,7 @@ function mintSudoku(sub: number): string {
+       const keep = i > 1 && (r * 7 + c * 3) % 5 < 2;
+       cells += (keep ? v : 0).toString(36);
+     }
+-  return Buffer.from(String.fromCharCode(1) + `${sub}.${cells}`, "latin1").toString("base64url");
++  return btoa(String.fromCharCode(1) + `${sub}.${cells}`).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+ }
+ 
+ /** The `RING_GEOMETRY` comment, and its figure table `N×N  head +a  graft +b`. */
+@@ -1470,60 +1608,128 @@ test("G-LIVE-22 · MA-N from the DOM at the shipped arm; the comment's figures a
+ 
+ // ── G-LIVE-23 ───────────────────────────────────────────────────────────────────────────
+ //
+-// EXISTENCE IS NOT VISIBILITY (chair A.5.3, LAWS P6 §E). G-LIVE-16 proves a stop paints SOMETHING
+-// (≥ 30 px moved); a ring drawn at opacity 0.15 (1.20:1) left this file 18/18 green in pass 6
+-// (X4), and tier 2 at opacity 0.2 did too (X4b). This row reads the ring the way a reader does:
+-// the chair's four-band probe (`pass7/instruments/edge-bands.mjs`, imported) photographs EACH SIDE
+-// of the ring against the same pixels with the ring hidden, counts a station that paints nothing
+-// as 1.00 (never skipped), and holds every side's core median at 3:1 or better.
++// EXISTENCE IS NOT VISIBILITY (chair A.5.3, LAWS P6 §E, P7 §E). G-LIVE-16 proves a stop paints
++// SOMETHING (≥ 30 px moved); a ring drawn at opacity 0.15 (1.20:1) left this file green in pass 6
++// (X4), and tier 2 at opacity 0.2 did too (X4b). This row reads the ring the way a reader does, through
++// the ONE four-band probe (`e2e/lib/edge-bands.mjs`): EACH SIDE of the ring photographed against the
++// same pixels with the ring hidden, one station per device column (station 1, estate-wide), and the
++// probe's own clauses decide — B1 a band that holds stations, B2 a core median of 3:1 or better, B3 a
++// painted depth of 2 css px or more (a 1 px ring read GREEN on contrast alone), B4 no holes.
+ //   · the chrome ring at every stop key the ring visits: the board route's home stops (one per
+-//     tag.firstClass), the deck's centre card and a staging face, the armed guard's face — at
+-//     least ten keys reached, both themes (MRK-ABS's chrome floor, grafted: registry-v6 §3.1);
+-//   · tier 2 on 9×9 cell 40, over paper.
+-// ADMITTED, with its reason and a floor, and STALE when the side clears (strike the row):
+-//   · the deck's centre card: its ring lies under the card's own drawn sketch on two sides — MRK-ABS
++//     tag.firstClass), the deck's centre card and a staging face, the armed guard's face: at least
++//     ten keys reached, both themes (MRK-ABS's chrome floor, grafted: registry-v6 §3.1);
++//   · tier 2 over paper on 9×9 cell 40, and on the FRAME cell (cell 0) at 9×9 and 16×16.
++// EVERY REGIME A READER BRINGS (LAWS P7 §E i). The walk settles its photographs under
++// `reduce`, and it is read again, whole, under `no-preference` (the majority's regime: the living
++// mark rests on pose 0 after its beats, so the animation set still drains); a clean stop and tier 2
++// are read under `prefers-contrast: more` and under `pointer: coarse` (a touch context, witnessed).
++// Both themes in every regime. Each regime ships the plant only it can see: NOPREF2 / MORE2 /
++// COARSE2 (the ring at 0.15 and tier 2 at 0.2 inside that regime's media query) must red its read,
++// proven live by the computed opacity; pass 7's reduce-only row stayed 20/20 green under all three.
++// ADMITTED, with its reason and a floor at the SHIPPED reading − 0.05 per engine and theme (a worse
++// ring reds), and STALE when the side clears 3:1 (strike the row):
++//   · the deck's centre card: its ring lies under the card's own drawn sketch on two sides; MRK-ABS
+ //     arm D0 (the ring at offset 0) is the deck owners' PROPOSED cure, not this lane's edit;
+-// THE STRIP REACHES THE RING. Tier 2 is drawn by the cell's own ghost svg INSIDE the cell's box
+-// (on the graft's inset about ten px in at 9×9), so its bands read 16 px inside the box: at the
+-// probe's default depth of 8 every station of a correctly painted inset ring reads dropped (a RED,
+-// the safe direction, but a false one), and a HEAD ring read that shallow loses its inner flank.
+-// PLANTS, same run: X4 (the ring at 0.15), FADE15 (its ink at 15 %), X6 (the bottom side clipped
+-// away) and CLIP0 (the ring painted to zero) on a clean chrome stop; X4b (tier 2 at 0.2) and X6 on
+-// tier 2. Each must red; a plant that leaves its stop green means this row cannot see a ring.
++//   · the FRAME cell (cell 0) at 9×9 and 16×16: tier 2's left side lies on the frame rule. This is
++//     HEAD's own reading: the default IS the control's recipe (`RING_GEOMETRY.arm = "head"`), and the
++//     control dist `74a2b5d9` reads the same sides at or below these floors (the lane's pass-8
++//     record), so the default does not lose to it. The cure is the owner's T9-B29 (`sized`).
++// THE STRIP REACHES THE RING. Tier 2 is drawn by the cell's own ghost svg INSIDE the cell's box, so
++// its bands read 16 px inside the box.
++// PLANTS, same run, each must red: on a clean chrome stop X4 (the ring at 0.15), FADE15 (every
++// painted colour of the ring at 15 %), X6 (the bottom side clipped away), CLIP0 (painted to zero),
++// THIN_1PX (the thickness clause) and DASH_1IN8 (the holes clause); on tier 2, X4b (0.2), X6 and
++// THIN_1PX; in dark, X4 and X4b again; and the three regime plants above.
+ const G23_WALK =
+   'a[href], button:not([disabled]), input:not([type=hidden]):not([disabled]), select, textarea, [tabindex]:not([tabindex="-1"])';
+-const G23_ADMITTED: Record<string, { why: string; sides: string[]; floor: number }> = {
++type Side = "top" | "right" | "bottom" | "left";
++type Band = { coreMedian: number; stations: number; dropped: number; thickness: number; fracUnder: number };
++type Row = { key: string; red: boolean; why: string[]; bands: Record<Side, Band> | null };
++type Floors = Partial<Record<Side, number>>;
++/** Admissions per `${engine}/${theme}`: each floor is that side's lowest shipped reading across the
++ *  regimes the row reads it in, − 0.05 (pass-8 lane record). */
++const G23_ADMITTED: Record<string, { why: string; floors: Record<string, Floors>; counts?: Record<string, number> }> = {
++  // shipped (reduce and no-preference, the lower): cr light 2.327 / 1.729, dark 2.964 / 2.261;
++  // wk light 2.322 / 1.709, dark 2.964 / 2.226 (right / bottom).
+   "deck div.gallery-viewport": {
+     why: "the card's own drawn sketch covers two sides; MRK-ABS arm D0 (offset 0), the deck owners' row",
+-    sides: ["right", "bottom"],
+-    floor: 1.5,
++    floors: {
++      "chromium/light": { right: 2.277, bottom: 1.679 },
++      "chromium/dark": { right: 2.914, bottom: 2.211 },
++      "webkit/light": { right: 2.272, bottom: 1.659 },
++      "webkit/dark": { right: 2.914, bottom: 2.176 },
++    },
++  },
++  // shipped, every regime: left cr 2.812 light / 2.404 dark, wk 2.85 / 2.404; 63 stations under 3:1
++  // (left 51, top 6, bottom 6). The control dist reads left cr 2.698 / 2.312, wk 2.693 / 2.316 and the
++  // same 63: the default is the control's recipe and does not lose to it.
++  "tier 2 on 9×9 cell 0": {
++    why: "the frame cell: tier 2's left side lies on the frame rule; HEAD's recipe = the control's; T9-B29 `sized` is the cure",
++    floors: {
++      "chromium/light": { left: 2.762 },
++      "chromium/dark": { left: 2.354 },
++      "webkit/light": { left: 2.8 },
++      "webkit/dark": { left: 2.354 },
++    },
++    counts: { "chromium/light": 63, "chromium/dark": 63, "webkit/light": 63, "webkit/dark": 63 },
++  },
++  // shipped: every side ≥ 3 (left cr 3.609 / 3.697, wk 3.706 / 3.825) and 16 stations under 3:1 (top 8,
++  // bottom 8). The control dist reads left cr 3.338 / 3.484, wk 3.463 / 3.555 and 16–20 under.
++  "tier 2 on 16×16 cell 0": {
++    why: "the frame cell: its corners sit on the frame rule; HEAD's recipe = the control's",
++    floors: {},
++    counts: { "chromium/light": 16, "chromium/dark": 16, "webkit/light": 16, "webkit/dark": 16 },
+   },
+ };
+-const docSettled = (page: Page) =>
+-  expect
++/** A band's stations under 3:1, counted (the probe's `fracUnder` × its stations). */
++const under = (b: Band) => Math.round(b.fracUnder * b.stations);
++const G23_REGIME_PLANT = (mq: string) =>
++  `@media ${mq} { .focus-ring { opacity: 0.15 !important; } .cell-ghost.is-active { opacity: 0.2 !important; } }`;
++/** The document at rest: no finite animation running AND the living mark resting on pose 0.
++ *  The mark's breath is not an animation: it steps the boil beat (`markSettleBeats` × `beatMs`,
++ *  4 × 125 ms) and `getAnimations()` cannot see it. Outside `reduce`, a read taken when the
++ *  animations drain lands mid-breath (measured on this tree: the chrome ring shows poses 1, 2, 3
++ *  for ~460 ms after the drain, the grid's `data-mark-pose` 2 then 3), and the ON/OFF photographs
++ *  hold different poses. Rest must hold on every 100 ms poll for 600 ms (> 4 beats), so the
++ *  landing instant (pose 0 before the first beat) never passes for the end of the breath. Under
++ *  `reduce` the beat is frozen and the mark is born at rest.
++ *  THE GROUND IS AT REST TOO: the board's grid has its `frameCount` baked poses mounted. Until
++ *  they land (a load, a theme flip's re-bake) the grid paints its pinned fallback. Outside
++ *  `reduce`, walk reads of the 16×16 frame cell counted 21-25 stations under 3:1 (the left side,
++ *  on the frame rule) in 3 of ~10 chromium reads, where a reader that waits 900 ms on a fresh
++ *  load counted 16 in 24 of 24. */
++const docSettled = async (page: Page) => {
++  let since = 0;
++  await expect
+     .poll(
+-      () =>
+-        page.evaluate(
+-          () =>
+-            document
+-              .getAnimations()
+-              .filter((a) => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity))
+-              .length,
+-        ),
+-      { timeout: 15000 },
++      async () => {
++        const s = await page.evaluate((poses) => ({
++          running: document
++            .getAnimations()
++            .filter((a) => a.playState === "running" && Number.isFinite(a.effect?.getComputedTiming().endTime ?? Infinity)).length,
++          resting:
++            [...document.querySelectorAll<HTMLElement>("[data-mark-pose]")].every((g) => g.dataset.markPose === "0") &&
++            [...document.querySelectorAll(".focus-ring")].every((r) => r.querySelector<SVGPathElement>("path")?.style.opacity !== "0") &&
++            [...document.querySelectorAll(".board-shell .hand-drawn-grid")].every(
++              (g) => g.querySelectorAll("image.boil-frame-bitmap").length === poses,
++            ),
++          reduce: matchMedia("(prefers-reduced-motion: reduce)").matches,
++        }), BOIL_CONFIG.frameCount);
++        if (s.running || !s.resting) {
++          since = 0;
++          return false;
++        }
++        if (s.reduce) return true;
++        since ||= Date.now();
++        return Date.now() - since >= 600;
++      },
++      { timeout: 15000, intervals: [100] },
+     )
+-    .toBe(0);
++    .toBe(true);
++};
+ 
+-test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key and tier 2 over paper", async ({ page }) => {
+-  test.setTimeout(900000);
+-  await page.emulateMedia({ reducedMotion: "reduce" });
+-  const { fourBands, EDGE_PLANTS } = await instrument("edge-bands.mjs");
+-  const payload = mintSudoku(3);
+-  type Row = { key: string; red: boolean; why: string[]; bands: Record<string, { coreMedian: number; stations: number; dropped: number }> | null };
+-  const brief = (r: Row) =>
+-    r.bands
+-      ? Object.entries(r.bands).map(([s, b]) => `${s} ${b.coreMedian}/${b.stations}${b.dropped ? ` drop ${b.dropped}` : ""}`).join(" · ")
+-      : r.why.join("; ");
++/** The walk's hands, bound to one page. */
++function g23Walk(page: Page) {
+   const setTheme = async (theme: "light" | "dark") => {
+     const isDark = () => page.evaluate(() => document.documentElement.classList.contains("dark"));
+     if ((await isDark()) !== (theme === "dark")) {
+@@ -1534,9 +1740,10 @@ test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key
+     await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+     await docSettled(page);
+   };
+-  const board = async (theme: "light" | "dark") => {
+-    await page.goto(`./?size=3&board=${payload}`);
+-    await expect.poll(() => page.locator(".board-shell .game-cell").count(), { timeout: 120000 }).toBe(81);
++  const board = async (theme: "light" | "dark", sub = 3) => {
++    const payload = mintSudoku(sub);
++    await page.goto(`./?size=${sub}&board=${payload}`);
++    await expect.poll(() => page.locator(".board-shell .game-cell").count(), { timeout: 120000 }).toBe(sub ** 4);
+     await expect.poll(() => page.evaluate(() => new URLSearchParams(location.search).get("board"))).toBe(payload);
+     await setTheme(theme);
+   };
+@@ -1552,9 +1759,45 @@ test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key
+       }
+       return out;
+     }, G23_WALK);
++  return { setTheme, board, keys };
++}
++
++const T2 = ".game-cell:has(input:focus-visible) .cell-ghost";
++
++/** One regime's kit: the reads, the probe's verdict with the admissions, the plants, the record. */
++async function g23Kit(page: Page, regime: string) {
++  const edge = await instrument(EDGE_BANDS);
++  const engine = test.info().project.name;
++  const lines: string[] = [];
++  const log = (l: string) => {
++    lines.push(l);
++    console.log(`[G-LIVE-23 ${engine} ${regime}] ${l}`);
++  };
++  const fails: string[] = [];
++  const stale: string[] = [];
++  const brief = (r: Row) =>
++    r.bands
++      ? (Object.entries(r.bands) as [Side, Band][])
++          .map(([s, b]) => `${s} ${b.coreMedian}/${b.stations} u${under(b)} t${b.thickness}${b.dropped ? ` drop ${b.dropped}` : ""}`)
++          .join(" · ")
++      : r.why.join("; ");
++  const read = async (subject: string, edgeSel: string, out: number, inn: number, key: string): Promise<Row> => {
++    try {
++      const r = await edge.fourBands(page, { subject, edge: edgeSel, out, inn });
++      return { key, red: r.red, why: r.why, bands: r.bands };
++    } catch (e) {
++      return { key, red: true, why: [`B0 the subject was lost mid-read: ${String(e).split("\n")[0]}`], bands: null };
++    }
++  };
+   /** Focus a stop by key with keyboard modality; the subject is what the RING frames (the declared
+    *  owner first), addressed by id where it has one (the deck re-renders its card's attributes). */
+   const chrome = async (key: string, label = key): Promise<Row | null> => {
++    const f = await focusKey(key);
++    return f ? readKey(f, label) : null;
++  };
++  const readKey = (f: { subject: string; outset: number }, label: string) =>
++    read(f.subject, ".focus-ring", Math.max(6, Math.ceil(f.outset) + 6), Math.max(4, Math.ceil(-f.outset) + 6), label);
++  const focusKey = async (key: string) => {
+     await page.keyboard.press("Shift");
+     const f = await page.evaluate(async (key) => {
+       document.querySelectorAll("[data-gl23]").forEach((e) => e.removeAttribute("data-gl23"));
+@@ -1577,42 +1820,79 @@ test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key
+     }, key);
+     if (!f?.took) return null;
+     await docSettled(page);
+-    const o = f.outset;
+-    try {
+-      const r = await fourBands(page, { subject: f.subject, edge: ".focus-ring", out: Math.max(6, Math.ceil(o) + 6), inn: Math.max(4, Math.ceil(-o) + 6) });
+-      return { key: label, red: r.red, why: r.why, bands: r.bands };
+-    } catch (e) {
+-      return { key: label, red: true, why: [`B0 the subject was lost mid-read: ${String(e).split("\n")[0]}`], bands: null };
+-    }
++    return f;
+   };
+-  const tier2 = async (label = "tier 2 on 9×9 cell 40"): Promise<Row> => {
+-    await page.locator(".board-shell .game-cell .cell-native-input").nth(40).focus();
++  const tier2 = async (cell: number, label: string): Promise<Row> => {
++    await focusCell(cell);
++    return read("[data-gl23]", T2, 8, 16, label);
++  };
++  const focusCell = async (cell: number) => {
++    await page.locator(".board-shell .game-cell .cell-native-input").nth(cell).focus();
+     await page.keyboard.press("Shift");
+     await expect.poll(() => page.evaluate(() => document.querySelectorAll(".game-cell:has(input:focus-visible)").length)).toBe(1);
+     await docSettled(page);
+-    await page.evaluate(() => {
++    await page.evaluate((cell) => {
+       document.querySelectorAll("[data-gl23]").forEach((e) => e.removeAttribute("data-gl23"));
+-      document.querySelectorAll(".board-shell .game-cell")[40].setAttribute("data-gl23", "");
+-    });
+-    const r = await fourBands(page, { subject: "[data-gl23]", edge: ".game-cell:has(input:focus-visible) .cell-ghost", out: 8, inn: 16 });
+-    return { key: label, red: r.red, why: r.why, bands: r.bands };
++      document.querySelectorAll(".board-shell .game-cell")[cell].setAttribute("data-gl23", "");
++    }, cell);
+   };
+-  /** The row's verdict on one read: every side ≥ 3, or an admitted side within its floor. */
+-  const verdict = (r: Row, admittedAs = r.key) => {
++  /** The verdict is the PROBE's (its `why`); an admitted side forgives only its own B2 line, and only
++   *  at or above its floor. B1/B3/B4 are never forgiven. */
++  const verdict = (r: Row, admittedAs: string, theme: string) => {
+     const adm = G23_ADMITTED[admittedAs];
+-    const live = adm ?? null;
+-    if (!r.bands) return { ok: false, stale: false, say: `${r.key}: ${r.why.join("; ")}` };
+-    const bad = Object.entries(r.bands).filter(([, b]) => !(b.stations >= 8 && b.coreMedian >= 3));
+-    const ok = bad.every(([s, b]) => live && live.sides.includes(s) && b.stations >= 8 && b.coreMedian >= live.floor);
+-    return { ok, stale: !!live && bad.length === 0, say: `${r.key}: ${brief(r)}${live ? ` [admitted ${live.sides.join("/")} ≥ ${live.floor}: ${live.why}]` : ""}` };
++    const floors: Floors = adm?.floors[`${engine}/${theme}`] ?? {};
++    if (!r.bands) return { ok: false, stale: [] as string[], say: `${r.key}: ${r.why.join("; ")}` };
++    const kept = r.why.filter((w) => {
++      const m = /^B2 (\w+) core median ([\d.]+)/.exec(w);
++      const f = m ? floors[m[1] as Side] : undefined;
++      return !m || f == null || +m[2] < f;
++    });
++    // THE COUNT (the frame cells): the stations under 3:1 on all four bands, held at the shipped count.
++    const cap = adm?.counts?.[`${engine}/${theme}`];
++    const n = (Object.values(r.bands) as Band[]).reduce((a, b) => a + under(b), 0);
++    if (cap != null && n > cap) kept.push(`COUNT ${n} stations under 3:1 > the admitted ${cap}`);
++    const staleSides: string[] = (Object.keys(floors) as Side[]).filter((s) => r.bands![s].coreMedian >= 3);
++    if (cap != null && cap > 0 && n === 0) staleSides.push("count");
++    return {
++      ok: kept.length === 0,
++      stale: staleSides,
++      say: `${r.key}: ${brief(r)}${Object.keys(floors).length ? ` [admitted ${JSON.stringify(floors)}]` : ""}${kept.length ? ` ⟨${kept.join("; ")}⟩` : ""}`,
++    };
++  };
++  const judge = (theme: string, r: Row | null) => {
++    if (!r) return null;
++    const v = verdict(r, r.key, theme);
++    log(`${v.ok ? "ok " : "RED"} ${theme} ${v.say}`);
++    if (!v.ok) fails.push(`${theme} ${v.say}`);
++    if (v.stale.length) stale.push(`${theme} ${r.key} ${v.stale.join("/")}`);
++    return v;
+   };
+-  const plant = async <T,>(css: string, read: () => Promise<T>) => {
+-    const t = await page.addStyleTag({ content: css });
++  /** A plant must red the read it is laid on; a GREEN read under a plant is a hole in this row. */
++  const planted = async (theme: string, name: string, plant: unknown, edgeSel: string, on: string | number, as = "") => {
++    // FOCUS FIRST, THEN PLANT, THEN READ WITHOUT RE-FOCUSING: the probe's `{ fade }` plant is keyed on
++    // the edge's own elements, and a re-focus re-mounts the drawn ring (a fresh node, no key), so a
++    // plant laid before the focus voids itself and reads GREEN (measured: FADE15 4.188 on both engines).
++    const f = typeof on === "string" ? await focusKey(on) : (await focusCell(on), null);
++    if (typeof on === "string" && !f) {
++      fails.push(`${theme} PLANT ${name}: ${on} not reached`);
++      return;
++    }
++    const undo = await edge.applyEdgePlant(page, edgeSel, plant);
+     await docSettled(page);
+-    const out = await read();
+-    await t.evaluate((e) => e.remove());
++    const r = f ? await readKey(f, as || (on as string)) : await read("[data-gl23]", T2, 8, 16, as || `tier 2 on cell ${on}`);
++    await undo();
+     await docSettled(page);
+-    return out;
++    const green = !!r && verdict(r, as, theme).ok;
++    log(`PLANT ${theme} ${name}: ${r ? brief(r) : "not reached"} → ${green ? "GREEN (a hole)" : "RED"}`);
++    if (green) fails.push(`${theme} PLANT ${name} left its read GREEN: this row cannot see it`);
++  };
++  /** The first chrome stop on the board that reads clean, to lay the plants on. */
++  const cleanKey = async (w: ReturnType<typeof g23Walk>) => {
++    for (const key of await w.keys()) {
++      const r = await chrome(key);
++      if (r && !r.red) return key;
++    }
++    return null;
+   };
+   const armGuard = async () => {
+     const blank = await page.evaluate(() => [...document.querySelectorAll(".board-shell .game-cell")].findIndex((c) => !c.querySelector(".glyph-svg")));
+@@ -1624,86 +1904,197 @@ test("G-LIVE-23 · the ring is visible on all four sides: every chrome stop key
+     await page.keyboard.press("Enter");
+     await expect(page.locator(".staging-band")).toBeVisible({ timeout: 20000 });
+     await docSettled(page);
+-    await page.locator(".gallery-viewport").focus();
+-    for (let i = 0; i < 4; i++) {
+-      await page.keyboard.press("ArrowRight");
+-      await docSettled(page);
+-    }
+-    await page.locator(".staging-deal").focus();
+-    await page.keyboard.press("Enter");
+-    await expect(page.locator(".gallery-guard")).toBeVisible({ timeout: 10000 });
++    // The deck's own deal verb, `d` on the scrollport one step off the mounted game (G-LIVE-21's
++    // gesture): focusing `.staging-deal` and pressing Enter raced the staging band's settle outside
++    // `reduce` and twice this pass dealt with no ribbon (the board, not the guard, on screen).
++    const vp = page.locator(".gallery-viewport");
++    await vp.focus();
++    await vp.press("ArrowRight");
++    await docSettled(page);
++    await vp.press("d");
++    await expect(page.locator(".gallery-guard"), "the armed guard (a dirty board, a deal)").toBeVisible({ timeout: 10000 });
+     await docSettled(page);
+   };
+-
+-  const lines: string[] = [];
+-  const fails: string[] = [];
+-  const stale: string[] = [];
+-  const judge = (r: Row | null, admittedAs?: string) => {
+-    if (!r) return;
+-    const v = verdict(r, admittedAs);
+-    lines.push(`${v.ok ? "ok " : "RED"} ${v.say}`);
+-    if (!v.ok) fails.push(v.say);
+-    if (v.stale) stale.push(v.say);
+-  };
+-  for (const theme of ["light", "dark"] as const) {
+-    await board(theme);
++  /** THE WALK, WHOLE, in one theme: every home stop key, tier 2 on cell 40 and on the frame cells
++   *  (9×9 and 16×16 cell 0), the deck's card and staging face, the armed guard. */
++  const walkWhole = async (w: ReturnType<typeof g23Walk>, theme: "light" | "dark", onDeck?: () => Promise<void>) => {
++    await w.board(theme);
+     const reached: string[] = [];
+-    let clean: string | null = null;
+-    for (const key of await keys()) {
++    for (const key of await w.keys()) {
+       const r = await chrome(key);
+       if (!r) continue;
+       reached.push(key);
+-      judge(r);
+-      if (!clean && !r.red) clean = key;
++      judge(theme, r);
+     }
+-    judge(await tier2());
+-    if (theme === "light") {
+-      // THE PLANTS: each must red the stop it is laid on.
+-      expect(fails, `every side of every ring on the light walk reads 3:1 or better\n${lines.join("\n")}`).toEqual([]);
+-      expect(clean, "a chrome stop the walk read clean, to lay the plants on").not.toBeNull();
+-      const P = EDGE_PLANTS(".focus-ring") as Record<string, string>;
+-      for (const [name, css] of [
+-        ["X4 the ring at 0.15", P.X4_opacity_015],
+-        ["FADE15 the ink at 15 %", P.FADE15_ink],
+-        ["X6 the bottom side clipped away", P.X6_bottom_erased],
+-        ["CLIP0 the ring painted to zero", ".focus-ring { clip-path: inset(50%) !important; }"],
+-      ] as [string, string][]) {
+-        const r = await plant(css, () => chrome(clean!));
+-        lines.push(`PLANT ${name} on ${clean}: ${r ? brief(r) : "not reached"}`);
+-        expect(r && verdict(r).ok, `${name} reds ${clean} (else this row cannot see a ring)`).toBe(false);
+-      }
+-      for (const [name, css] of [
+-        ["X4b tier 2 at 0.2", ".cell-ghost.is-active { opacity: 0.2 !important; }"],
+-        ["X6 tier 2's bottom clipped away", (EDGE_PLANTS(".game-cell:has(input:focus-visible) .cell-ghost") as Record<string, string>).X6_bottom_erased],
+-      ] as [string, string][]) {
+-        const r = await plant(css, () => tier2());
+-        lines.push(`PLANT ${name}: ${brief(r)}`);
+-        expect(verdict(r, "tier 2 on 9×9 cell 40").ok, `${name} reds tier 2 (else this row cannot see it)`).toBe(false);
+-      }
+-    }
+-    await page.goto(`./?view=gallery&size=3&board=${payload}`);
++    judge(theme, await tier2(40, "tier 2 on 9×9 cell 40"));
++    judge(theme, await tier2(0, "tier 2 on 9×9 cell 0"));
++    await w.board(theme, 4);
++    judge(theme, await tier2(0, "tier 2 on 16×16 cell 0"));
++    await page.goto(`./?view=gallery&size=3&board=${mintSudoku(3)}`);
+     await expect(page.locator(".staging-band")).toBeVisible({ timeout: 30000 });
+-    await setTheme(theme);
+-    for (const key of await keys())
++    await w.setTheme(theme);
++    for (const key of await w.keys())
+       if (/gallery-viewport|staging-btn/.test(key)) {
+         const r = await chrome(key, `deck ${key}`);
+         if (r) reached.push(`deck ${key}`);
+-        judge(r);
++        judge(theme, r);
+       }
+-    await board(theme);
++    if (onDeck) await onDeck();
++    await w.board(theme);
+     await armGuard();
+-    for (const key of await keys())
++    for (const key of await w.keys())
+       if (/guard-btn/.test(key)) {
+         const r = await chrome(key, `guard ${key}`);
+         if (r) reached.push(`guard ${key}`);
+-        judge(r);
++        judge(theme, r);
+       }
+-    lines.push(`${theme}: ${reached.length} stop keys reached: ${reached.join(", ")}`);
+-    expect(reached.length, `${theme}: the walk reaches the chrome floor's ten stop keys\n${lines.join("\n")}`).toBeGreaterThanOrEqual(10);
++    log(`${theme}: ${reached.length} stop keys reached: ${reached.join(", ")}`);
++    if (reached.length < 10) fails.push(`${theme}: the walk reached ${reached.length} stop keys, under the chrome floor's ten`);
+     for (const must of ["deck div.gallery-viewport", "deck button.staging-btn", "guard button.guard-btn"])
+-      expect(reached, `${theme}: the walk reaches ${must}`).toContain(must);
++      if (!reached.includes(must)) fails.push(`${theme}: the walk did not reach ${must}`);
++  };
++  /** A regime plant, proven IN FORCE (the ring's computed opacity) before its reads count. */
++  const regimeLive = async (mq: string, key: string) => {
++    const t = await page.addStyleTag({ content: G23_REGIME_PLANT(mq) });
++    await chrome(key);
++    const live = await page.evaluate(() => {
++      const r = document.querySelector(".focus-ring");
++      return r ? getComputedStyle(r).opacity : null;
++    });
++    await t.evaluate((e) => (e as HTMLElement).remove());
++    log(`${mq} plant live: ring opacity ${live}`);
++    if (live !== "0.15") fails.push(`the ${mq} plant is not in force (ring opacity ${live}): it proves nothing`);
++  };
++  const finish = () => {
++    expect(fails, `every side of every ring reads 3:1 or better, 2 css px deep, with no holes (or its admitted floor), and every plant reds\n${lines.join("\n")}`).toEqual([]);
++    expect(stale, "STALE: an admitted side now clears 3:1; strike its admission").toEqual([]);
++  };
++  const P = (sel: string) => edge.EDGE_PLANTS(sel) as Record<string, unknown>;
++  return { log, chrome, tier2, judge, planted, cleanKey, walkWhole, regimeLive, finish, P, verdict, brief };
++}
++
++test("G-LIVE-23 · the ring is visible on all four sides [reduce]: the whole walk, both themes, and its plants", async ({ page }) => {
++  test.setTimeout(900000);
++  await page.emulateMedia({ reducedMotion: "reduce", contrast: "no-preference" });
++  const k = await g23Kit(page, "reduce");
++  const w = g23Walk(page);
++  for (const theme of ["light", "dark"] as const) {
++    // The deck card's admission can fail too: its ring at 0.8 drops the admitted sides under their floors.
++    await k.walkWhole(w, theme, theme === "light"
++      ? () => k.planted(theme, "WORSE the ring at 0.8 on the deck card (admitted)", ".focus-ring { opacity: 0.8 !important; }", ".focus-ring", "div.gallery-viewport", "deck div.gallery-viewport")
++      : undefined);
++    await w.board(theme);
++    const clean = await k.cleanKey(w);
++    expect(clean, "a chrome stop the walk read clean, to lay the plants on").not.toBeNull();
++    const C = k.P(".focus-ring");
++    const G = k.P(T2);
++    const plants: [string, unknown, "chrome" | "tier2"][] =
++      theme === "light"
++        ? [
++            ["X4 the ring at 0.15", C.X4_opacity_015, "chrome"],
++            ["FADE15 every painted colour at 15 %", C.FADE15_desc, "chrome"],
++            ["X6 the bottom side clipped away", C.X6_bottom_erased, "chrome"],
++            ["CLIP0 the ring painted to zero", ".focus-ring { clip-path: inset(50%) !important; }", "chrome"],
++            ["THIN_1PX the ring at 1 px", C.THIN_1PX, "chrome"],
++            ["DASH_1IN8 a hole in every eight stations", C.DASH_1IN8, "chrome"],
++            ["X4b tier 2 at 0.2", ".cell-ghost.is-active { opacity: 0.2 !important; }", "tier2"],
++            ["FADE15 tier 2's every painted colour at 15 %", G.FADE15_desc, "tier2"],
++            ["X6 tier 2's bottom clipped away", G.X6_bottom_erased, "tier2"],
++            ["THIN_1PX tier 2 at 1 px", G.THIN_1PX, "tier2"],
++          ]
++        : [
++            ["X4 the ring at 0.15", C.X4_opacity_015, "chrome"],
++            ["X4b tier 2 at 0.2", ".cell-ghost.is-active { opacity: 0.2 !important; }", "tier2"],
++          ];
++    for (const [name, plant, on] of plants)
++      await k.planted(
++        theme,
++        on === "chrome" ? `${name} on ${clean}` : name,
++        plant,
++        on === "chrome" ? ".focus-ring" : T2,
++        on === "chrome" ? clean! : 40,
++      );
++    if (theme === "light") {
++      // THE FRAME CELLS' ADMISSIONS CAN FAIL: a worse ring reds under its own admission. The ghost at
++      // 0.9 drops the 9×9 left side under its floor; at 16×16, where every side's median still clears
++      // 3:1 under it (webkit 3.16–3.36), it reds on the COUNT alone (28 stations under 3:1 > 16).
++      const WORSE = ".cell-ghost.is-active { opacity: 0.9 !important; }";
++      await k.planted(theme, "WORSE90 the ghost at 0.9 on the 9×9 frame cell (admitted)", WORSE, T2, 0, "tier 2 on 9×9 cell 0");
++      await w.board(theme, 4);
++      await k.planted(theme, "WORSE90 the ghost at 0.9 on the 16×16 frame cell (admitted)", WORSE, T2, 0, "tier 2 on 16×16 cell 0");
++    }
++  }
++  k.finish();
++});
++
++test("G-LIVE-23 · the ring is visible on all four sides [no-preference]: the whole walk, both themes, NOPREF2", async ({ page }) => {
++  test.setTimeout(900000);
++  const MQ = "(prefers-reduced-motion: no-preference)";
++  await page.emulateMedia({ reducedMotion: "no-preference", contrast: "no-preference" });
++  const k = await g23Kit(page, "no-preference");
++  const w = g23Walk(page);
++  for (const theme of ["light", "dark"] as const) {
++    await k.walkWhole(w, theme);
++    await w.board(theme);
++    const clean = await k.cleanKey(w);
++    expect(clean, "a chrome stop read clean, to lay NOPREF2 on").not.toBeNull();
++    await k.regimeLive(MQ, clean!);
++    await k.planted(theme, `NOPREF2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean!);
++    await k.planted(theme, "NOPREF2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
++    if (theme === "light") {
++      // THE HOLE PASS 7 LEFT, printed: the same plant read under `reduce`, where it is out of force.
++      await page.emulateMedia({ reducedMotion: "reduce", contrast: "no-preference" });
++      const t = await page.addStyleTag({ content: G23_REGIME_PLANT(MQ) });
++      const r = await k.chrome(clean!);
++      await t.evaluate((e) => (e as HTMLElement).remove());
++      k.log(`WITNESS NOPREF2 read under reduce (out of force) on ${clean}: ${r ? k.brief(r) : "not reached"} → ${r && k.verdict(r, "", "light").ok ? "GREEN" : "RED"}`);
++      await page.emulateMedia({ reducedMotion: "no-preference", contrast: "no-preference" });
++    }
+   }
+-  console.log(`[G-LIVE-23 ${test.info().project.name}]\n${lines.join("\n")}`);
+-  expect(fails, "every side of every ring reads a core median of 3:1 or better (or its admitted floor)").toEqual([]);
+-  expect(stale, "STALE: an admitted side now clears 3:1; strike its admission").toEqual([]);
++  k.finish();
++});
++
++test("G-LIVE-23 · the ring is visible on all four sides [prefers-contrast: more]: a clean stop and tier 2, both themes, MORE2", async ({ page }) => {
++  test.setTimeout(600000);
++  const MQ = "(prefers-contrast: more)";
++  await page.emulateMedia({ reducedMotion: "no-preference", contrast: "more" });
++  const k = await g23Kit(page, "more");
++  const w = g23Walk(page);
++  for (const theme of ["light", "dark"] as const) {
++    await w.board(theme);
++    expect(await page.evaluate((mq) => matchMedia(mq).matches, MQ), "the contrast regime is witnessed").toBe(true);
++    const clean = await k.cleanKey(w);
++    expect(clean, "a chrome stop read clean under prefers-contrast: more").not.toBeNull();
++    k.judge(theme, await k.chrome(clean!));
++    k.judge(theme, await k.tier2(40, "tier 2 on 9×9 cell 40"));
++    k.judge(theme, await k.tier2(0, "tier 2 on 9×9 cell 0"));
++    await k.regimeLive(MQ, clean!);
++    await k.planted(theme, `MORE2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean!);
++    await k.planted(theme, "MORE2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
++  }
++  k.finish();
++});
++
++test.describe("G-LIVE-23 · coarse", () => {
++  test.use({ hasTouch: true });
++  test("G-LIVE-23 · the ring is visible on all four sides [pointer: coarse]: a clean stop and tier 2, both themes, COARSE2", async ({ page }) => {
++    test.setTimeout(600000);
++    const MQ = "(pointer: coarse)";
++    await page.emulateMedia({ reducedMotion: "no-preference", contrast: "no-preference" });
++    const k = await g23Kit(page, "coarse");
++    const w = g23Walk(page);
++    for (const theme of ["light", "dark"] as const) {
++      await w.board(theme);
++      expect(await page.evaluate((mq) => matchMedia(mq).matches, MQ), "the coarse regime is witnessed (a touch context)").toBe(true);
++      const clean = await k.cleanKey(w);
++      expect(clean, "a chrome stop read clean under pointer: coarse").not.toBeNull();
++      k.judge(theme, await k.chrome(clean!));
++      k.judge(theme, await k.tier2(40, "tier 2 on 9×9 cell 40"));
++      k.judge(theme, await k.tier2(0, "tier 2 on 9×9 cell 0"));
++      await k.regimeLive(MQ, clean!);
++      await k.planted(theme, `COARSE2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean!);
++      await k.planted(theme, "COARSE2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
++    }
++    k.finish();
++  });
+ });
+diff --git a/web/frontend/e2e/node.d.ts b/web/frontend/e2e/node.d.ts
+index 78d18f96..84469f44 100644
+--- a/web/frontend/e2e/node.d.ts
++++ b/web/frontend/e2e/node.d.ts
+@@ -6,7 +6,7 @@
+ // silently become available to `src/**`, which is browser code. Widening the app's ambient
+ // types is a ruling, and a ruling lands with the chair (handoff 6b-1 carries the seam).
+ //
+-// WHY NARROW IS NOT A COMPROMISE HERE. These declarations are the six functions and two
++// WHY NARROW IS NOT A COMPROMISE HERE. These declarations are the functions and two
+ // globals the estate calls, in the exact shapes it calls them. A call this file cannot type
+ // is a RED, not a silent pass — which is the behaviour a gate wants. `readFileSync` without an
+ // encoding returns bytes in real node and a string under a loose shim; here it does not
+@@ -20,6 +20,9 @@ declare module 'node:fs' {
+   export function readFileSync(path: string, encoding: 'utf8'): string
+   export function readdirSync(path: string): string[]
+   export function statSync(path: string): { isDirectory(): boolean }
++  /** `focus-ring.spec.ts` G-LIVE-4: each engine's dealt reversal, recorded beside the run. */
++  export function mkdirSync(path: string, options: { recursive: true }): void
++  export function writeFileSync(path: string, data: string): void
+ }
+ 
+ declare module 'node:path' {
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 5e34579d..49584bdb 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -138,7 +138,6 @@
+   --color-muted-foreground: hsl(0 0% 45.1%);
+   --color-accent: hsl(48 8% 96.1%);
+   --color-border: hsl(48 5% 89.8%);
+-  --color-ring: hsl(0 0% 3.9%);
+ 
+   /* The difficulty ramp is the CRAYON ramp, with no alias tier between them. T3 aliased
+      --color-easy/medium/hard onto crayon-green/orange/rose to retire a parallel near-duplicate
+@@ -377,7 +376,6 @@
+   --color-muted-foreground: hsl(48 5% 64%);
+   --color-accent: hsl(24 5% 15%);
+   --color-border: hsl(24 4% 16%);
+-  --color-ring: hsl(48 8% 83%);
+ 
+   --color-user-ink: #60a5fa;
+ 
+@@ -513,8 +511,10 @@
+      live in this one block at EQUAL specificity with the restoration AFTER, and nothing
+      anywhere carries `!important`: a (0,2,0) `outline: none !important` measured beating a
+      (0,1,0) restoration left High Contrast computing `3px none` — no indicator at all. The
+-     `outline-ring/50` sweep that used to ride `*` dies here: it painted a ring on every
+-     element that took focus, in a colour nobody chose, under the six bespoke rules. */
++     half-alpha outline sweep that used to ride `*` (an `@apply` of a Tailwind outline
++     utility) dies here: it painted a ring on every element that took focus, in a colour nobody
++     chose, under the six bespoke rules. The utility's class name is not spelled in this comment:
++     Tailwind reads comments as candidates, and the name alone minted a dead rule into the dist. */
+   :focus-visible {
+     outline: none;
+   }
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index ec062212..36c42d92 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -10,9 +10,9 @@
+  * and `--color-pencil-graphite` are all declared at `:root` (index.css), so a second argument to
+  * `var()` can never be reached and only hides the case where the declaration is gone. Struck at
+  * every site. `--color-peer-cursor-ink` has no fallback either, for the same reason by a
+- * different road: it is declared per cell, inline, by `BoardHost.vue:78`, and the class its one
+- * rule hangs on (`is-peer-cursor`, `BoardHost.vue:315`) is bound by the SAME predicate on the
+- * same key. The rule matches only where the declaration exists, so a second argument could
++ * different road: it is declared per cell, inline, from BoardHost's `peerCursorInk` map, and the
++ * class its one rule hangs on (`is-peer-cursor`, bound in BoardHost's template) is bound by the
++ * SAME predicate on the same key. The rule matches only where the declaration exists, so a second argument could
+  * never be reached. The predicate is the proof, not the declaration site.
+  *
+  * CLASS-NAME CONTRACT — each cell's template MUST carry `game-cell` on its root node (alongside
+@@ -320,12 +320,11 @@
+   stroke: var(--color-focus-sketch);
+   stroke-width: 7;
+   /* 0.95, not 0.9 (T9-W7 §5, MRK-WASH's graft): the ring's binding reading is against its OWN
+-     0.08 fill, and at 0.9 that read 3.34 light / 3.48 dark. At 0.95 the PAINTED median over the
+-     fill reads 3.619 / 3.691 (chromium; webkit 3.615 / 3.695) — index.css `--color-focus-sketch`
+-     carries the table, the frame row it fails, and the threshold row. It is the RANK's second
+-     rung, §6's leader's number, and the value MRK-ABS's comments read at: invalid 1 > tier 2
+-     0.95 > tier 1 0.65 > a peer's 0.55, strictly, in both media arms (`focus-ring.spec.ts`
+-     G-LIVE-14). 1.0 would tie the invalid rung. */
++     0.08 fill. Its floor is read from painted bytes and never restated here: `focus-ring.spec.ts`
++     G-LIVE-23 holds every side of tier 2 at 3:1 in every regime, with the frame cells' sides
++     admitted under that rule by name. It is the RANK's second rung: invalid 1 > tier 2 0.95 >
++     tier 1 0.65 > a peer's 0.55, strictly, in both media arms (G-LIVE-14). 1.0 would tie the
++     invalid rung. */
+   stroke-opacity: 0.95;
+   stroke-dasharray: 1;
+   /* The end state (dashoffset 0) does NOT differ from the cascade, so per the P1-W3 rule the
+@@ -416,7 +415,8 @@
+ }
+ 
+ /* THE GRAPHITE ARM of the section fork (`RING_ARM`, pencilConfig.ts; ACC-GRAPHITE's hunks, carried
+-   by §6). Dead code while the arm reads "blue": nothing sets `data-ring-arm="graphite"`. Tier 2 is
++   by §6). Its one consumer is App.vue, which writes `data-ring-arm` on the root from `RING_ARM`;
++   while the const reads "blue" these rules match nothing (the owner's arm, U-10). Tier 2 is
+    the pencil pressed hard, and a pencil pressed hard draws a RING; it does not tint the paper
+    inside. Tier 2×3 keeps the teacher's red at the same weight: the band may not become a chip
+    because the digit in it is wrong. Both sit AFTER the blue tiers at one more attribute of
+diff --git a/web/frontend/src/pencil/celestial/DarkModeToggle.vue b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+index 1c8c9dec..22d0c9f4 100644
+--- a/web/frontend/src/pencil/celestial/DarkModeToggle.vue
++++ b/web/frontend/src/pencil/celestial/DarkModeToggle.vue
+@@ -720,7 +720,7 @@ onUnmounted(() => {
+ /* Hover rides the CSS layer at exactly the ±8% contract bound (§2 rule 2) — at rest
+    it stretches the frozen stack's cached textures 8%, sub-perceptual at 208px.
+    The `outline: none` this rule and its `:focus` sibling carried are GONE (T9-W7 §6): they
+-   were written against the `outline-ring/50` sweep that used to ride `*`, and once that died
++   were written against the half-alpha outline sweep that used to ride `*`, and once that died
+    they had nothing left to suppress but the forced-colors restoration — measured, the scoped
+    `:focus` pair beat it and High Contrast computed `3px none` on this one control. */
+ .sun-moon-toggle:hover {
+diff --git a/web/frontend/src/pencil/chrome/FocusRing.vue b/web/frontend/src/pencil/chrome/FocusRing.vue
+index 0c8db84a..06d766a9 100644
+--- a/web/frontend/src/pencil/chrome/FocusRing.vue
++++ b/web/frontend/src/pencil/chrome/FocusRing.vue
+@@ -312,7 +312,7 @@ onBeforeUnmount(() => {
+   overflow: visible;
+   /* THE ONE LINE EVERY §10/§11 CONSUMER COPIES (registry v3 §2.9). The ring drinks from the
+      NAME, not the value: `--ring-ink` is what the chrome consumes and `--color-focus-sketch` is
+-     what it resolves to (index.css:233). BARE — a static design token declared at `:root` is
++     what it resolves to (index.css, the `--ring-ink` declaration at `:root`). BARE — a static design token declared at `:root` is
+      always present, so `, currentColor` could only fire where the declaration is gone, and then
+      the ring should be missing rather than painted in a colour nobody named. */
+   stroke: var(--ring-ink);

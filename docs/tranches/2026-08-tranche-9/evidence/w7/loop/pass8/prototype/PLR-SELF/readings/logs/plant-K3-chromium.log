@@ -1,0 +1,35 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes (41.8s)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+
+    Error: 1280x900 fine
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 0,
+    -   "rows": 1,
+    +   "lapped": 2,
+    +   "rows": 4,
+      }
+
+      627 |     await crowd(page, 6, `key-${w}x${h}`);
+      628 |     const r = await drawSheet(page);
+    > 629 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
+          |                                                          ^
+      630 |     await ctx.close();
+      631 |   }
+      632 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/w7-p4-PLR-SELF/web/frontend/e2e/player-mark.spec.ts:629:58
+
+    Error Context: ../../../../../../../../../../private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/plrself8r/pw-out-spec/player-mark-the-row-budget-5f118-over-the-board-on-both-axes-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 

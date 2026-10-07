@@ -1,0 +1,1834 @@
+diff --git a/web/frontend/e2e/count-yield.spec.ts b/web/frontend/e2e/count-yield.spec.ts
+index 5c031d5d..c5623d49 100644
+--- a/web/frontend/e2e/count-yield.spec.ts
++++ b/web/frontend/e2e/count-yield.spec.ts
+@@ -1,41 +1,50 @@
+ import { test, expect, type Browser, type Page } from "@playwright/test";
++// @ts-expect-error — the ONE post-paint recorder is an .mjs home with no declaration (registry-v7 §2.4)
++import { installTimeline } from "./lib/postpaint.mjs";
+ 
+-// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto, in `open()` below. The row
+-//   reads boxes and one text range, never a tween.
++// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto, in `open()` below. The row reads
++//   boxes, one text range and a painted timeline of that range, never a tween.
+ 
+ /**
+- * T9-W7 ACC-SIX · THE COUNT YIELDS, AND THE YIELD IS THE LESSON'S END (registry-v6 §2.12).
++ * T9-W7 ACC-SIX · THE COUNT YIELDS WHERE IT DOES NOT FIT, STAYS WHERE IT DOES, AND NEVER PAINTS A
++ * SECOND ROW (registry-v6 §2.12, registry-v7 §5 row 1–3; LAWS P7 §F "an e2e row DRIVES THE PRODUCT").
+  *
+  * The count ("N of M on the board") rides the margin strip's meta line beside the voice for the
+- * first three writes of a deal. Where the strip has no room for both (a phone, a long hint, the
+- * widest 16x16 count) the count must give up its line: the strip stays ONE line, so W2's drawer
+- * tab and everything under the board hold still; and it must not come back on the next short
+- * line, or it blinks press for press (pass 6 painted 1829 -> 0 -> 1852 -> 0 -> 1883 px at 393x699).
++ * first three writes of a deal. Where the pair does not fit (a phone, a long hint, the widest 16x16
++ * count) the count gives up its line for the rest of the lesson and the strip stays ONE line, so W2's
++ * drawer tab and everything under the board hold still; where the pair fits it stays.
+  *
+- * Per cell, both W2 §2.2 phone cells coarse (`hasTouch`, witnessed), on a real 16x16 deal
+- * (`?board=`, 86 givens, 170 writable — the widest count the lesson can print, "3 of 170"):
+- *   1. rest: the strip's height and the tab's y;
+- *   2. the product's hint twice: press 1 names a step, press 2 writes it, the count lays down;
+- *   3. the widest voice the lesson meets, set in the voice's own span ("G goes nowhere else in
+- *      this column", a hidden single's line), so the pair cannot fit at either cell;
+- *   4. the product's hint twice more: a new line, a new write, the lesson still inside its three.
+- * At every pose the count asks for nothing: the strip and the tab read the same with the count
+- * as with the count taken out (±0.5 px; the voice itself may wrap on a real hint at 393, and that
+- * is the note's height, not the count's), and the count is absent or on the voice's row. After pose 3 the count is gone and stays gone.
+- * Witnessed on green: the count WAS laid down (pose 2), so the row never passes on a board
+- * that simply never showed one.
++ * The row DRIVES THE PRODUCT and writes nothing into a Vue-owned node (pass 7 set its widest voice
++ * with a hand-made span, the product's next hint patched its own line in beside it — two spans, a
++ * 41.59 px strip, a false gap): a real 16x16 deal (`?board=`, 86 givens, 170 writable) and the
++ * product's own hint button, four presses. Press 1 names a step, press 2 writes it (the count lays
++ * down, "1 of 170"), press 3 names the next step with a 34-character line ("E goes nowhere else in
++ * this column"), press 4 writes it.
+  *
+- * BORN-RED (the negative controls, run against the same tree served with one in-memory rewrite,
+- * `pass7/prototype/ACC-SIX/instruments/plant.mts`): the yield's report deleted reds the row on
+- * the count's row (it wraps to row two, below the strip); the pass-6 yield (the report deleted,
+- * the clip back) reds it on the return; and the report deleted with the meta's zero height
+- * undone reds it on the strip and the tab (+18.18 px, W2's ±9.1 each way).
++ * Per cell, four clauses, every pose:
++ *   ABSOLUTE — the strip's height and the drawer tab's y equal the CONTROL's at the same pose
++ *     (`CONTROL=<url>`, the same payload and presses on `74a2b5d9`, which has no count at all):
++ *     the count asks the strip for nothing. Ruling 12's clause, restored.
++ *   ROW — the count's text never sits below the voice's mid-line.
++ *   YIELD (393x699, 812x375 coarse) — from press 3 the count is gone and stays gone.
++ *   FIT (1280x800 fine, 844x390 coarse) — at press 3 the count is still on the voice's row
++ *     ("1 of 170 on the board"): a yield keyed on the hint's LENGTH ends the lesson here.
++ * And across press 3, POST-PAINT (the ONE recorder's `range:` subject, a task queued from every rAF):
++ *   PAINT — 0 frames paint the count's text on a second row ("the same frame, before paint").
++ *
++ * BORN-RED (the same tree served with one in-memory rewrite, `pass8/prototype/ACC-SIX/instruments/
++ * plant.mts`): `overyield` (the yield keyed on the voice's length) reds FIT; `late150` (the report
++ * 150 ms late) reds PAINT; `yieldoff` (no report) reds YIELD, ROW and PAINT.
+  */
+ 
+-const cells = [
+-  { name: "393x699", viewport: { width: 393, height: 699 } },
+-  { name: "812x375", viewport: { width: 812, height: 375 } },
++type Cell = { name: string; viewport: { width: number; height: number }; coarse: boolean; fits: boolean };
++const cells: Cell[] = [
++  { name: "393x699 coarse", viewport: { width: 393, height: 699 }, coarse: true, fits: false },
++  { name: "812x375 coarse", viewport: { width: 812, height: 375 }, coarse: true, fits: false },
++  { name: "1280x800 fine", viewport: { width: 1280, height: 800 }, coarse: false, fits: true },
++  { name: "844x390 coarse", viewport: { width: 844, height: 390 }, coarse: true, fits: true },
+ ];
++const CONTROL = process.env.CONTROL;
+ 
+ // A REAL 16x16 payload: a valid solved grid by the band pattern, 86 givens seeded, 170 writable.
+ function mulberry(a: number) {
+@@ -67,52 +76,41 @@ const BOARD16 =
+     .replace(/\+/g, "-")
+     .replace(/\//g, "_")
+     .replace(/=+$/, "");
+-const WIDEST_VOICE = "G goes nowhere else in this column";
+ 
+ type Pose = {
+   strip: number;
+   tabY: number | null;
+-  /** the same pose with the count taken out (`display: none` on the meta line): the count's
+-   *  own contribution is `strip - stripNoCount`, one variable, whatever the voice does */
+-  stripNoCount: number;
+-  tabYNoCount: number | null;
+   voice: string;
+   meta: string | null;
++  /** the count's TEXT (its Range, the box is 0 px tall) sits below the voice's mid-line */
+   metaRow2: boolean;
++  /** the voice's mid-line, the row-two threshold for the painted timeline */
++  voiceMid: number | null;
+   coarse: boolean;
+ };
++// Read-only: nothing here writes to the page.
+ const SNAP = (): Pose => {
+   const r2 = (n: number) => Math.round(n * 100) / 100;
+-  const stripH = () => r2(document.querySelector(".board-margin")?.getBoundingClientRect().height ?? -1);
+-  const tabAt = () => {
+-    const t = document.querySelector(".drawer-tab");
+-    return t ? r2(t.getBoundingClientRect().y + scrollY) : null;
+-  };
+-  const strip = stripH();
+-  const tabY = tabAt();
+-  const m0 = document.querySelector<HTMLElement>(".margin-note-meta");
+-  m0?.style.setProperty("display", "none");
+-  const stripNoCount = stripH();
+-  const tabYNoCount = tabAt();
+-  m0?.style.removeProperty("display");
++  const strip = r2(document.querySelector(".board-margin")?.getBoundingClientRect().height ?? -1);
++  const t = document.querySelector(".drawer-tab");
++  const tabY = t ? r2(t.getBoundingClientRect().y + scrollY) : null;
+   const voice = document.querySelector(".margin-note");
+   const meta = document.querySelector(".margin-note-meta");
++  const v = voice?.getBoundingClientRect();
++  const voiceMid = v ? v.top + v.height / 2 : null;
+   let metaRow2 = false;
+-  if (meta && voice) {
++  if (meta && voiceMid !== null) {
+     const r = document.createRange();
+     r.selectNodeContents(meta);
+-    const t = r.getBoundingClientRect();
+-    const v = voice.getBoundingClientRect();
+-    metaRow2 = t.top > v.top + v.height / 2;
++    metaRow2 = r.getBoundingClientRect().top > voiceMid;
+   }
+   return {
+     strip,
+     tabY,
+-    stripNoCount,
+-    tabYNoCount,
+     voice: voice?.textContent?.trim() ?? "",
+     meta: meta?.textContent?.trim() ?? null,
+     metaRow2,
++    voiceMid,
+     coarse: matchMedia("(pointer: coarse)").matches,
+   };
+ };
+@@ -134,12 +132,18 @@ async function settled(page: Page): Promise<Pose> {
+     .toBe(true);
+   return pose;
+ }
+-async function open(browser: Browser, viewport: { width: number; height: number }) {
+-  const ctx = await browser.newContext({ viewport, hasTouch: true, isMobile: false });
++async function open(browser: Browser, cell: Cell, base?: string) {
++  const ctx = await browser.newContext({
++    viewport: cell.viewport,
++    hasTouch: cell.coarse,
++    isMobile: false,
++    ...(base ? { baseURL: base } : {}),
++  });
+   const page = await ctx.newPage();
+   await page.emulateMedia({ reducedMotion: "reduce" });
+   await page.goto("/" + BOARD16);
+   await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
++  await page.evaluate(() => document.fonts.ready);
+   return { ctx, page };
+ }
+ /** The product's own hint, as `fillByHint` presses it (the first live match in the DOM). */
+@@ -149,71 +153,88 @@ const hint = (page: Page) =>
+     b?.click();
+     return !!b;
+   });
++const fill = (page: Page) =>
++  page.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuetext") ?? "");
+ const written = (page: Page) =>
+   page.evaluate(() =>
+     Number(document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuetext")?.split(" ")[0] ?? -1),
+   );
+ 
++type Frame = { k: number; t: number; r: { x: number; y: number; w: number; h: number } | null };
++/** Rest, four presses; press 3 is recorded post-paint (`range:` over the count's text). */
++async function drive(browser: Browser, cell: Cell, base?: string) {
++  const { ctx, page } = await open(browser, cell, base);
++  const poses: Array<[string, Pose]> = [["rest", await settled(page)]];
++  // the control (74a2b5d9) says its fill as a percent and has no count: its presses are waited on
++  // the progressbar's value changing, the tree's on the count it writes
++  const control = !!base;
++  for (let k = 0; k < 2; k++) {
++    const before = await fill(page);
++    expect(await hint(page)).toBe(true);
++    if (control && k === 1) await expect.poll(() => fill(page), { timeout: 10000 }).not.toBe(before);
++    else if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBeGreaterThanOrEqual(k);
++    poses.push([`press${k + 1}`, await settled(page)]);
++  }
++  if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBe(1);
++  poses.push(["laid", await settled(page)]);
++  await page.evaluate(installTimeline, "range:.margin-note-meta");
++  expect(await hint(page)).toBe(true);
++  poses.push(["press3", await settled(page)]);
++  const pf = await page.evaluate(() => {
++    const w = window as unknown as { __pf: { on: boolean; post: Frame[] } };
++    w.__pf.on = false;
++    return w.__pf.post;
++  });
++  expect(await hint(page)).toBe(true);
++  // the second write: the tree's count says it; the control's percent cannot (1 and 2 of 170 both
++  // round to 1 %), so the control is given the write's own settle
++  if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBe(2);
++  else await page.waitForTimeout(1500);
++  poses.push(["press4", await settled(page)]);
++  await ctx.close();
++  return { poses: Object.fromEntries(poses) as Record<string, Pose>, order: poses.map(([n]) => n), frames: pf };
++}
++
+ for (const cell of cells) {
+-  test(`the count yields its line and does not come back · ${cell.name} coarse`, async ({
++  test(`the count ${cell.fits ? "stays where it fits" : "yields and stays gone"}, on one row, painting no second · ${cell.name}`, async ({
+     browser,
+   }) => {
+-    test.setTimeout(120000);
+-    const { ctx, page } = await open(browser, cell.viewport);
+-    const rest = await settled(page);
+-    expect(rest.coarse, "the coarse regime is witnessed").toBe(true);
+-    expect(rest.meta, "no count before the first write").toBe(null);
+-
+-    // press 1 names, press 2 writes: the count lays down on the 0 -> 1 write
+-    for (let k = 0; k < 2; k++) {
+-      expect(await hint(page)).toBe(true);
+-      await expect.poll(() => written(page), { timeout: 10000 }).toBeGreaterThanOrEqual(k);
+-      await settled(page);
+-    }
+-    await expect.poll(() => written(page), { timeout: 10000 }).toBe(1);
+-    const laid = await settled(page);
+-    expect(laid.meta, "the count was laid down (the row's witness)").toMatch(/^1 of 170 on the board$/);
+-    const poses: Array<[string, Pose]> = [["laid", laid]];
++    test.setTimeout(180000);
++    expect(CONTROL, "CONTROL=<url of 74a2b5d9> is required: the absolute clause reads the control's strip").toBeTruthy();
++    const tree = await drive(browser, cell);
++    const ctrl = await drive(browser, cell, CONTROL);
++    const P = tree.poses;
++    expect(P.rest.coarse, "the pointer regime is witnessed").toBe(cell.coarse);
++    expect(P.rest.meta, "no count before the first write").toBe(null);
++    expect(P.laid.meta, "the count was laid down (the row's witness)").toBe("1 of 170 on the board");
++    expect(P.press3.voice.length, "press 3 speaks the long line").toBeGreaterThanOrEqual(30);
+ 
+-    // the widest voice the lesson meets, in the voice's own span
+-    // (the voice is silent after a write, so the line is SET as the product sets one: a fresh
+-    // `.margin-note-ink` span in the live region, wearing the component's scope attribute)
+-    await page.evaluate((line) => {
+-      const p = document.querySelector(".margin-note");
+-      if (!p) return;
+-      p.querySelectorAll(".margin-note-ink").forEach((x) => x.remove());
+-      const ink = document.createElement("span");
+-      ink.className = "margin-note-ink";
+-      for (const a of p.getAttributeNames()) if (a.startsWith("data-v-")) ink.setAttribute(a, "");
+-      ink.textContent = line;
+-      p.appendChild(ink);
+-    }, WIDEST_VOICE);
+-    const yielded = await settled(page);
+-    poses.push(["widest", yielded]);
+     // soft from here: a broken tree shows EVERY clause it breaks, not the first
+-    expect.soft(yielded.meta, "the count yields beside the widest voice").toBe(null);
+-
+-    // two more presses: a new line and a new write, still inside the lesson's three writes
+-    for (let k = 0; k < 2; k++) {
+-      expect(await hint(page)).toBe(true);
+-      poses.push([`press${k + 3}`, await settled(page)]);
++    for (const n of tree.order) {
++      const p = P[n];
++      const c = ctrl.poses[n];
++      expect.soft(Math.abs(p.strip - c.strip), `${n}: ABSOLUTE strip ${p.strip} vs control ${c.strip}`).toBeLessThanOrEqual(0.5);
++      expect.soft(Math.abs((p.tabY ?? 0) - (c.tabY ?? 0)), `${n}: ABSOLUTE tab ${p.tabY} vs control ${c.tabY}`).toBeLessThanOrEqual(0.5);
++      expect.soft(p.metaRow2, `${n}: ROW the count never sits on a second row`).toBe(false);
+     }
+-    expect(await written(page), "the lesson is still inside its three writes").toBeLessThan(3);
+-
+-    for (const [name, p] of poses) {
+-      // the count asks the strip for nothing: the pose with it equals the pose without it
+-      expect.soft(Math.abs(p.strip - p.stripNoCount), `${name}: the count adds no height to the strip`).toBeLessThanOrEqual(0.5);
+-      expect.soft(Math.abs((p.tabY ?? 0) - (p.tabYNoCount ?? 0)), `${name}: W2's tab does not move for the count`).toBeLessThanOrEqual(0.5);
+-      expect.soft(p.metaRow2, `${name}: the count never paints on a second row, below the strip`).toBe(false);
++    if (cell.fits) {
++      expect.soft(P.press3.meta, "FIT: beside the long line the count stays").toBe("1 of 170 on the board");
++      expect.soft(P.press4.meta, "FIT: the next write updates it in place").toBe("2 of 170 on the board");
++    } else {
++      expect.soft(P.press3.meta, "YIELD: beside the long line the count gives up its line").toBe(null);
++      expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+     }
+-    for (const [name, p] of poses.slice(1))
+-      expect.soft(p.meta, `${name}: once yielded the count stays gone (no blink)`).toBe(null);
++    const mid = P.laid.voiceMid ?? 0;
++    const row2 = tree.frames.filter((f) => f.r && f.r.h > 0 && f.r.y > mid);
++    const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
++    expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
++    expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+     console.log(
+-      `YIELD ${cell.name}: rest strip ${rest.strip} tab ${rest.tabY} · ` +
+-        poses
+-          .map(([n, p]) => `${n} strip ${p.strip}/${p.stripNoCount} tab ${p.tabY}/${p.tabYNoCount} meta ${p.meta ?? "-"}${p.metaRow2 ? " ROW2" : ""}`)
+-          .join(" · "),
++      `YIELD ${cell.name}: ` +
++        tree.order
++          .map((n) => `${n} strip ${P[n].strip}/${ctrl.poses[n].strip} tab ${P[n].tabY}/${ctrl.poses[n].tabY} meta ${P[n].meta ?? "-"}${P[n].metaRow2 ? " ROW2" : ""}`)
++          .join(" · ") +
++        ` · press3 voice "${P.press3.voice}" (${P.press3.voice.length}) · post-paint frames ${tree.frames.length}, with count ${withCount}, row two ${row2.length}`,
+     );
+-    await ctx.close();
+   });
+ }
+diff --git a/web/frontend/e2e/lib/glyph-pop.mjs b/web/frontend/e2e/lib/glyph-pop.mjs
+index 196b84d0..84466464 100644
+--- a/web/frontend/e2e/lib/glyph-pop.mjs
++++ b/web/frontend/e2e/lib/glyph-pop.mjs
+@@ -56,12 +56,24 @@ const autoSlicePop = (pop, n) => Math.max(3, Math.min(8, Math.round(pop / n / 3)
+ 
+ export async function glyphPopulation(
+   page,
+-  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true },
++  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true },
+ ) {
+   const loc = page.locator(subject).first();
+-  const vis = await loc.isVisible().catch(() => false);
++  // ACC-SIX pass 8 (PROPOSED → the ONE copy; LAWS P7 §E): a text laid in a ZERO-HEIGHT box (the strip's
++  // yielding meta) paints outside its box, so the box is not the clip: the clip is the box ∪ the text
++  // run, and a box Playwright calls invisible (0 px tall) is visible when its run paints. `runClip:
++  // false` is the legacy box clip (the self-test's ZERO row reads it G0/G1 — the hole this closes).
++  const runCss = textRun && runClip ? await page.evaluate(textRunRects, { subject }) : null;
++  const vis = (await loc.isVisible().catch(() => false)) || !!runCss?.length;
+   if (!vis) return { red: true, why: [`G0 subject ${subject} not visible`] };
+-  const b = await loc.boundingBox();
++  let b = await loc.boundingBox();
++  if (runCss?.length && b) {
++    const l = Math.min(b.x, ...runCss.map((q) => q.l)),
++      t = Math.min(b.y, ...runCss.map((q) => q.t)),
++      r = Math.max(b.x + b.width, ...runCss.map((q) => q.r)),
++      bt = Math.max(b.y + b.height, ...runCss.map((q) => q.b));
++    b = { x: l, y: t, width: r - l, height: bt - t };
++  }
+   const vw = page.viewportSize();
+   const dpr = await page.evaluate(() => devicePixelRatio);
+   const x = Math.max(0, Math.floor(b.x - pad)),
+@@ -251,8 +263,13 @@ export async function applyMask(page, subject, [a, b]) {
+   const rects = await page.evaluate(textRunRects, { subject });
+   return page.evaluate(
+     ({ subject, a, b, rects }) => {
+-      const el = document.querySelector(subject);
+-      if (!el || !rects.length) return { ok: false };
++      const sub = document.querySelector(subject);
++      if (!sub || !rects.length) return { ok: false };
++      // ACC-SIX pass 8 (PROPOSED): a ZERO-HEIGHT subject's mask would clip every glyph it overflows
++      // (the mask's painting area is its 0 px box), so the mask goes on its parent, cut at the
++      // subject's own run; the population stays clipped to that run.
++      const el = sub.getBoundingClientRect().height < 1 && sub.parentElement ? sub.parentElement : sub;
++      sub.dataset.maskHost = el === sub ? "self" : "parent";
+       const eb = el.getBoundingClientRect();
+       const left = Math.min(...rects.map((q) => q.l)),
+         right = Math.max(...rects.map((q) => q.r));
+@@ -269,8 +286,10 @@ export async function applyMask(page, subject, [a, b]) {
+ }
+ export async function undoMask(page, subject) {
+   await page.evaluate((subject) => {
+-    const el = document.querySelector(subject);
+-    if (!el) return;
++    const sub = document.querySelector(subject);
++    if (!sub) return;
++    const el = sub.dataset.maskHost === "parent" && sub.parentElement ? sub.parentElement : sub;
++    delete sub.dataset.maskHost;
+     const p = el.dataset.maskPrev;
+     if (p) el.setAttribute("style", p);
+     else el.removeAttribute("style");
+@@ -291,6 +310,7 @@ const FIXTURE = (scheme) => `<!doctype html><html><head><style>
+   <h2 id="g-head">16 players</h2><br>
+   <span id="g-tape" class="tape">new game<svg viewBox="0 0 40 22"><path d="M2 11h36" stroke="currentColor" stroke-width="3"/></svg></span><br>
+   <img id="g-icon" width="32" height="32" alt="" src="${ICON(true)}">
++  <div style="display:flex;flex-wrap:wrap;width:360px;margin-top:24px"><span>a line</span><p id="g-zero" style="height:0;margin:0">3 of 170 on the board</p></div>
+ </body></html>`;
+ /** A 32-unit tab icon (TAB-PEN's shape: ink from 8/32 to 25/32 on a paper tile) and its paper twin. The ink
+  *  sits at 5.10:1 on the tile (just over AA, like the text fixture): at 12.36:1 an 80 % or 65 % fade stays
+@@ -308,7 +328,7 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+     const { ctx, page } = await openCell(browser, { width: 800, height: 400, dpr, colorScheme: scheme });
+     await page.setContent(FIXTURE(scheme));
+     await page.evaluate(() => document.fonts.ready);
+-    for (const subject of ["#g-head", "#g-tape"]) {
++    for (const subject of ["#g-head", "#g-tape", "#g-zero"]) {
+       const g = await glyphGate(page, { subject, payload: `fixture-${scheme}` });
+       if (g.clean.red) cleanRed = true;
+       rows.push(`GLYPH self-test ${scheme} dpr${dpr} ${subject} CLEAN ${fmt(g.clean)} (bound ${g.bound?.toFixed(3)})`);
+@@ -327,6 +347,10 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+       if (!r.red) hole = true;
+       rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-icon PLANT ${k} ${fmt(r)}`);
+     }
++    // the LEGACY box clip on a ZERO-HEIGHT subject (ACC-SIX pass 8): G0/G1 — the hole the run clip closes
++    const zl = await glyphPopulation(page, { subject: "#g-zero", runClip: false });
++    rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-zero LEGACY-BOX-CLIP ${fmt(zl)} ← ${zl.red ? "RED (the box clip reads no glyph)" : "GREEN ← the fixture's box is not zero"}`);
++    if (!zl.red) hole = true;
+     // the LEGACY Range (the element's contents, svg included): TAIL12 lands on the svg, fades no glyph
+     const legacy = await page.evaluate(() => {
+       const el = document.querySelector("#g-tape");
+diff --git a/web/frontend/e2e/lib/postpaint.mjs b/web/frontend/e2e/lib/postpaint.mjs
+index 0e944938..a55f6ea7 100644
+--- a/web/frontend/e2e/lib/postpaint.mjs
++++ b/web/frontend/e2e/lib/postpaint.mjs
+@@ -41,7 +41,7 @@
+ //   node e2e/lib/postpaint.mjs --url <u> --sel <mover> [--key g | --click <sel>] [--ready <sel>]
+ //        [--plant skip|f2] [--cells desk,phone] [--reps 2] [--scheme dark]
+ //   node e2e/lib/postpaint.mjs --recorder --url <u> [--trigger key:<k>|click:<sel>|load] [--roi <sel>]
+-//        [--subject <sel>|css:<sel>:<prop>|ruled:<sel>|len:<sel>] [--eps 0.35] [--window 1200]
++//        [--subject <sel>|css:<sel>:<prop>|ruled:<sel>|len:<sel>|range:<sel>] [--eps 0.35] [--window 1200]
+ //        [--plant busy:<ms>@<delay>] [--held 50] [--runs 1] [--ladder K] [--out <json>] [--selftest-only]
+ // Exit (sampler): 0 GREEN · 1 RED · 3 a plant GREEN (a hole) · 4 both. Exit (recorder): 0 GREEN ·
+ // 1 RED (a held interval ≥ --held, or an EMPTY motion window) · 2 the self-test clock < 55.
+@@ -310,6 +310,18 @@ export function installTimeline(sel) {
+       }
+       return { x: +s.toFixed(2), y: els.length, w: 0, h: 0, ct: null };
+     }
++    if (sel.startsWith("range:")) {
++      // ACC-SIX pass 8 (PROPOSED → the ONE copy): the TEXT RANGE of the first match — the rect its
++      // text paints, never its box. A line laid in a zero-height box (the strip's yielding meta)
++      // reads h 0 as a selector at every pose; its text can still paint a row below (LAWS P7 §E:
++      // a painted-text gate on a 0 px box clips to the Range).
++      const el = document.querySelector(sel.slice(6));
++      if (!el) return null;
++      const rg = document.createRange();
++      rg.selectNodeContents(el);
++      const b = rg.getBoundingClientRect();
++      return { x: +b.left.toFixed(2), y: +b.top.toFixed(2), w: +b.width.toFixed(2), h: +b.height.toFixed(2), ct: null };
++    }
+     if (sel.startsWith("css:")) {
+       const i = sel.lastIndexOf(":");
+       const el = document.querySelector(sel.slice(4, i));
+@@ -666,7 +678,8 @@ export async function ladder(browser, o, K = 4) {
+  *  EPS (chromium: photographs are its primary track): a 2 px stroke growing 3 px per frame across a
+  *  640 × 360 ROI; at eps 0.35 the window is EMPTY, at `--eps 0.001` it is seen, and a 150 ms busy plant
+  *  inside it reds the held clause.
+- *  LEN (ACC-FIVE pass 8, PROPOSED): `#grow` is cut as geometry; `len:#grow` sees it, `ruled:#grow` is EMPTY. */
++ *  LEN (ACC-FIVE pass 8, PROPOSED): `#grow` is cut as geometry; `len:#grow` sees it, `ruled:#grow` is EMPTY.
++ *  RANGE (ACC-SIX pass 8, PROPOSED): a zero-height box's text wraps; `range:#m` sees it, `#m` is EMPTY. */
+ const RULED = `<!doctype html><html><head><style>body{margin:0;background:#fbf8f1}svg{position:absolute;left:20px;top:20px}</style></head><body>
+ <svg width="640" height="360" id="roi">${Array.from({ length: 21 }, (_, i) => `<line class="rl" x1="10" x2="630" y1="${12 + i * 16}" y2="${12 + i * 16}" stroke="#3b3833" stroke-width="2" style="stroke-dasharray: 620; stroke-dashoffset: 620"/>`).join("")}
+ <line id="grow" x1="10" x2="10" y1="350" y2="350" stroke="#3b3833" stroke-width="2"/></svg>
+@@ -686,6 +699,10 @@ const RULED = `<!doctype html><html><head><style>body{margin:0;background:#fbf8f
+   });
+ </script></body></html>`;
+ 
++const RANGE = `<!doctype html><html><head><style>body{margin:0;background:#fbf8f1;font:16px/20px sans-serif}#w{width:600px;margin:20px}#m{height:0}</style></head><body>
++<div id="w"><p id="m">one two three four five six seven eight nine ten</p></div>
++<script>addEventListener("keydown", (e) => { if (e.key === "w") setTimeout(() => (document.getElementById("m").style.wordSpacing = "60px"), 150); });</script></body></html>`;
++
+ export async function recorderSelfTest(browser, engine) {
+   const rows = [];
+   let hole = false;
+@@ -700,6 +717,13 @@ export async function recorderSelfTest(browser, engine) {
+   const lenRuled = await record(browser, engine, { ...base, trigger: "key:g", subject: "ruled:#grow" });
+   if (len.subjectMovedFrames < 10 || lenRuled.subjectMovedFrames >= 1) hole = true;
+   rows.push(`RECORDER self-test ${engine} LEN len:#grow moved ${len.subjectMovedFrames} frames over ${len.motionMs} ms ${len.subjectMovedFrames >= 10 ? "SEEN" : "NOT SEEN ← a hole"} | ruled:#grow moved ${lenRuled.subjectMovedFrames} ${lenRuled.subjectMovedFrames < 1 ? "EMPTY ← the hole len: closes" : "(seen ← the fixture no longer cuts by geometry)"}`);
++  // RANGE (ACC-SIX pass 8, PROPOSED): a line in a ZERO-HEIGHT box wraps to a second row on 'w';
++  // `range:#m` must see its text move, the selector `#m` (the box: same x, y, w and h 0 at both poses)
++  // reads EMPTY.
++  const rng = await record(browser, engine, { ...base, html: RANGE, trigger: "key:w", subject: "range:#m" });
++  const rngBox = await record(browser, engine, { ...base, html: RANGE, trigger: "key:w", subject: "#m" });
++  if (rng.subjectMovedFrames < 1 || rngBox.subjectMovedFrames >= 1) hole = true;
++  rows.push(`RECORDER self-test ${engine} RANGE range:#m moved ${rng.subjectMovedFrames} frames ${rng.subjectMovedFrames >= 1 ? "SEEN" : "NOT SEEN ← a hole"} | #m moved ${rngBox.subjectMovedFrames} ${rngBox.subjectMovedFrames < 1 ? "EMPTY ← the hole range: closes" : "(seen ← the fixture's box moves)"}`);
+   if (engine === "chromium") {
+     const e35 = await record(browser, engine, { ...base, trigger: "key:g", roi: "#roi" });
+     const e1 = await record(browser, engine, { ...base, trigger: "key:g", roi: "#roi", eps: 0.001 });
+diff --git a/web/frontend/e2e/wash-step.spec.ts b/web/frontend/e2e/wash-step.spec.ts
+new file mode 100644
+index 00000000..71d9352d
+--- /dev/null
++++ b/web/frontend/e2e/wash-step.spec.ts
+@@ -0,0 +1,113 @@
++import { test, expect } from "@playwright/test";
++// @ts-expect-error — the ONE paint library is an .mjs home with no declaration (registry-v7 §2.4)
++import { onOff, lum, ratio } from "./lib/paint-lib.mjs";
++
++// PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto. The row reads one painted ground at rest.
++
++/**
++ * T9-W7 ACC-SIX pass 8 · THE WASH, READ AS PAINTED (the behavioural row beside `check-theme-tokens`'
++ * wash reach; LAWS P7 §F (iii): every source law pairs with a paint read on the real surface).
++ *
++ * `.cell-peer` — the selected cell's row / column / box reach — paints ONE ground token whose arm
++ * the const in index.css names. The row selects an empty cell on a real 9x9 deal (`?board=`, 30
++ * givens), photographs the inner 40 % of an empty PEER cell with its wash and with the wash layer
++ * hidden (the SAME pixels, one variable), and reads the step between them (WCAG ratio of the mean
++ * luminances). The step is the wash: it must not fall under HEAD's own painted step (1.078 light /
++ * 1.104 dark, the critic's reading of `74a2b5d9`), less 0.006 for the photograph.
++ *
++ * IN-RUN PLANTS (each must RED, the negative in the same run): W1 the consumer faded
++ * (`.cell-peer { opacity: .2 }`: 1.017-1.026 on GRAPHITE's tree) and W5 an `@property`
++ * re-registration of the token with `initial-value: transparent` (1.000: the consumer never
++ * inherits the const). A source gate reads neither in paint; this row reads both.
++ */
++
++const FLOOR = { light: 1.072, dark: 1.098 };
++const PLANTS = {
++  W1: ".cell-peer { opacity: 0.2 !important; }",
++  W5: "@property --ground-wash-unit { syntax: '<color>'; inherits: false; initial-value: transparent; }",
++};
++
++// A REAL 9x9 payload: a valid solved grid by the band pattern, 30 givens seeded.
++const SOL9 = Array.from({ length: 81 }, (_, i) => {
++  const r = Math.floor(i / 9);
++  return ((3 * (r % 3) + Math.floor(r / 3) + (i % 9)) % 9) + 1;
++});
++const KEEP9 = new Set([0, 4, 8, 10, 13, 16, 20, 22, 24, 27, 31, 35, 37, 39, 41, 43, 45, 49, 53, 56, 58, 60, 64, 67, 70, 72, 76, 80, 2, 78]);
++const PUZ9 = SOL9.map((v, i) => (KEEP9.has(i) ? String(v) : "0")).join("");
++const BOARD9 =
++  "?board=" +
++  btoa(String.fromCharCode(1) + "3." + PUZ9)
++    .replace(/\+/g, "-")
++    .replace(/\//g, "_")
++    .replace(/=+$/, "");
++
++type Page = import("@playwright/test").Page;
++type Px = { data: Uint8Array; w: number; h: number };
++/** The wash's step on ONE clip: mean luminance with the layer vs the same pixels without it. */
++async function step(page: Page, clip: { x: number; y: number; width: number; height: number }) {
++  const { on, off } = (await onOff(page, clip, ".cell-peer { display: none !important; }")) as { on: Px; off: Px };
++  const mean = (p: Px) => {
++    const n = p.w * p.h;
++    let s = 0;
++    for (let k = 0; k < n; k++) s += lum(p.data, k * 3);
++    return s / n;
++  };
++  return +ratio(mean(on), mean(off)).toFixed(3);
++}
++
++for (const scheme of ["light", "dark"] as const) {
++  test(`the wash paints its step over the card, and the plants that fade it red · ${scheme}`, async ({ browser }) => {
++    test.setTimeout(90000);
++    const ctx = await browser.newContext({
++      viewport: { width: 1280, height: 800 },
++      deviceScaleFactor: 1,
++      colorScheme: scheme,
++    });
++    const page = await ctx.newPage();
++    await page.emulateMedia({ reducedMotion: "reduce" });
++    await page.goto("/" + BOARD9);
++    await page.waitForSelector("svg.hand-drawn-grid", { timeout: 60000 });
++    await page.evaluate(() => document.fonts.ready);
++    const empty = await page.evaluate(() =>
++      Array.from(document.querySelectorAll(".game-cell input")).map(
++        (i) => !/given/i.test(i.getAttribute("aria-label") ?? "") && !(i as HTMLInputElement).value,
++      ),
++    );
++    const pick = [40, 30, 50, 21].find((i) => empty[i]);
++    expect(pick, "an empty cell to select").not.toBeUndefined();
++    await page.locator(".game-cell").nth(pick!).click();
++    await page.waitForTimeout(400);
++    const peers = await page.evaluate(() =>
++      Array.from(document.querySelectorAll(".game-cell")).map((c) => !!c.querySelector(".cell-peer")),
++    );
++    const r0 = Math.floor(pick! / 9);
++    const peer = [...Array(81).keys()].find((i) => i !== pick && peers[i] && empty[i] && Math.floor(i / 9) === r0);
++    expect(peer, "an empty peer cell in the selected row").not.toBeUndefined();
++    const b = (await page.locator(".game-cell").nth(peer!).boundingBox())!;
++    const clip = {
++      x: Math.round(b.x + b.width * 0.3),
++      y: Math.round(b.y + b.height * 0.3),
++      width: Math.max(2, Math.round(b.width * 0.4)),
++      height: Math.max(2, Math.round(b.height * 0.4)),
++    };
++    const clean = await step(page, clip);
++    const planted: Record<string, number> = {};
++    for (const [k, css] of Object.entries(PLANTS)) {
++      const tag = await page.addStyleTag({ content: css });
++      await page.waitForTimeout(100);
++      planted[k] = await step(page, clip);
++      await tag.evaluate((e) => (e as Element).remove());
++    }
++    const computed = await page.evaluate(
++      (i) => getComputedStyle(document.querySelectorAll(".game-cell")[i].querySelector(".cell-peer")!).backgroundColor,
++      peer!,
++    );
++    console.log(
++      `WASH ${scheme}: cell ${pick} peer ${peer} step ${clean} (floor ${FLOOR[scheme]}) · W1 ${planted.W1} · W5 ${planted.W5} · computed ${computed}`,
++    );
++    await ctx.close();
++    expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(FLOOR[scheme]);
++    for (const [k, v] of Object.entries(planted))
++      expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(FLOOR[scheme]);
++  });
++}
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index b43a5f99..c094b4ed 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -61,12 +61,18 @@
+  *
+  *   node scripts/check-font-coverage.mjs
+  */
+-import { readFileSync, readdirSync } from "node:fs";
++import { existsSync, readFileSync, readdirSync } from "node:fs";
+ import { fileURLToPath } from "node:url";
+ import { join } from "node:path";
+ import { brotliDecompressSync } from "node:zlib";
+ import process from "node:process";
+-import { sfc, stripHtml, stripJs } from "./shape-census.mjs";
++import {
++  componentSites,
++  pinsBreached,
++  sfc,
++  stripHtml,
++  stripJs,
++} from "./shape-census.mjs";
+ 
+ const ROOT = join(fileURLToPath(new URL(".", import.meta.url)), "..");
+ const INDEX_CSS = "src/assets/index.css";
+@@ -397,21 +403,50 @@ const UNRESOLVED_SINKS = [
+   {
+     where: "src/App.vue",
+     site: 'component :is="sceneFor(scene)"',
+-    why: "every game id routes through `shellFor` to a functional scene rendering `h(GameShell, { spec, leaving, onErased })` (read by the `h()` arm on App.vue itself); the one bind here is `:leaving`, a boolean",
++    binds: ["leaving", "parked"],
++    why: "every game id routes through `shellFor` to a functional scene rendering `h(GameShell, { spec, leaving, parked, onErased })` (read by the `h()` arm on App.vue itself); the two binds here are `:leaving` and the union's `:parked`, both booleans",
+   },
+   {
+     where: "src/games/shared/BoardHost.vue",
+     site: 'component :is="spec.furniture.cell"',
++    binds: [
++      "key",
++      "ref",
++      "position",
++      "value",
++      "is-given",
++      "is-solved",
++      "is-revealed",
++      "is-invalid",
++      "is-because",
++      "is-peer",
++      "noise-delay",
++      "board-size",
++      "geometry",
++      "row-index",
++      "col-index",
++      "tab-index",
++      "style",
++      "is-peer-cursor",
++      "author-name",
++      "ghost-path",
++      "marks",
++      "corner-marks",
++      "center-marks",
++      "pencil-mode",
++    ],
+     why: "all five specs bind `furniture: { cell: DigitCell }`, whose template paints no prop as text (no `{{ }}`, no `v-text`): the digit is a HandwrittenGlyph stroke, never a font",
+   },
+   {
+     where: "src/games/shared/BoardHost.vue",
+     site: 'component :is="spec.clues.overlay"',
++    binds: ["v-bind"],
+     why: "futoshiki's CaretOverlay and thermo's ThermoTube paint no text; killer's and kenken's CageOverlay paint `cage.label` in the HAND face, and kenken's `+` (U+002B) and `÷` (U+00F7) are OUTSIDE the hand's unicode-range: an OPEN estate row this census found (pass 7), the chair's to route (a re-cut or a copy change), pinned here so it is said, not so it is cured",
+   },
+   {
+     where: "src/pencil/chrome/GameGallery/GameCard.vue",
+     site: 'component :is="Poster"',
++    binds: ["preview"],
+     why: "`defineAsyncComponent(() => props.card.poster())`: the five `*Poster.vue` modules in games/cards.ts, each binding only `preview` and painting no prop as text",
+   },
+ ];
+@@ -1033,40 +1068,7 @@ function componentTags(text) {
+     }
+     const written = /-/.test(m[1]) ? pascal(m[1]) : m[1];
+     const tag = imports.has(written) ? imports.get(written) : written;
+-    tags.push({ tag, written: m[1], attrs, expr: null });
+-  }
+-  // `h(X, { … })`: the render function's bind, read as the attributes a tag would carry
+-  for (const { text: raw } of sfc(text).scripts) {
+-    const js = stripJs(raw);
+-    for (const m of js.matchAll(/\bh\(\s*([A-Za-z_$][\w$]*)\s*,\s*/g)) {
+-      if (!imports.has(m[1]) && !/^[A-Z]/.test(m[1])) continue;
+-      const tag = imports.has(m[1]) ? imports.get(m[1]) : m[1];
+-      let i = m.index + m[0].length;
+-      let attrs;
+-      if (js[i] === "{") {
+-        let depth = 0;
+-        const keys = [];
+-        let seg = i + 1;
+-        for (; i < js.length; i++) {
+-          const c = js[i];
+-          if (c === "{" || c === "(" || c === "[") depth++;
+-          else if (c === "}" || c === ")" || c === "]") {
+-            depth--;
+-            if (depth === 0) break;
+-          } else if (c === "," && depth === 1) {
+-            keys.push(js.slice(seg, i));
+-            seg = i + 1;
+-          }
+-        }
+-        keys.push(js.slice(seg, i));
+-        attrs = keys
+-          .map((k) => /^\s*(?:["']([\w-]+)["']|([\w$]+))/.exec(k))
+-          .filter(Boolean)
+-          .map((k) => ` :${k[1] ?? k[2]}="h()"`)
+-          .join("");
+-      } else attrs = ` v-bind="h()"`;
+-      tags.push({ tag, written: `h(${m[1]})`, attrs, expr: null });
+-    }
++    tags.push({ tag, written: m[1], attrs, expr: null, tpl: true });
+   }
+   return tags;
+ }
+@@ -1128,6 +1130,30 @@ function paintedNames(src) {
+   }
+   return painted;
+ }
++// PASS 8 (the pass-7 critic's §2.5: six more shapes greened, the class a FAIL-OPEN). The census
++// resolved a tag by its own import map, so a tag that resolved to no file read as a sink that paints
++// nothing. Resolution is now the ONE library's (`componentSites`): the bundler's aliases and barrels
++// followed, a tag that resolves to NO file is UNRESOLVED (a row, never a non-painter), and the
++// render-function arm reads `h()` and `createVNode` (aliased too) with a spread or a computed key as
++// a `v-bind="obj"`. A pin in UNRESOLVED_SINKS carries its BIND SET (`binds`; `null` = the site binds
++// nothing it paints through, stated), and a site that binds past it reds through the library's
++// `pinsBreached`. What the library does not read, the gate still does, and says so: `<component
++// :is>` (the library skips `component` as a builtin) keeps `isTargets` below.
++const FE = ROOT.replace(/\/$/, "");
++/** The library's component sites over an in-memory corpus (disk behind it for the bundler config). */
++function librarySites(files) {
++  const map = new Map(files.map((f) => [join(FE, f.rel), f.text]));
++  return componentSites(FE, {
++    files: [...map.keys()],
++    read: (f) => (map.has(f) ? map.get(f) : readFileSync(f, "utf8")),
++    exists: (f) => map.has(f) || (!f.startsWith(join(FE, "src")) && existsSync(f)),
++  });
++}
++const baseName = (target) =>
++  target
++    .split("/")
++    .pop()
++    .replace(/\.vue$/, "");
+ /** Run the census over `files` against `pins`; returns the problems (empty = green). */
+ function boundCensus(files, pins, unresolvedPins = UNRESOLVED_SINKS) {
+   const tagOf = (b) => b.tag ?? "SheetWashiLabel";
+@@ -1157,22 +1183,58 @@ function boundCensus(files, pins, unresolvedPins = UNRESOLVED_SINKS) {
+   };
+   const live = [];
+   const unresolved = new Map();
++  const lib = librarySites(files);
++  const libTpl = new Map();
++  for (const x of lib.filter((y) => y.via === "template")) {
++    const k = `${x.file}\0${x.tag}`;
++    libTpl.set(k, [...(libTpl.get(k) ?? []), x.target]);
++  }
++  const uses = [];
+   for (const f of files.filter((x) => /\.vue$/.test(x.rel)))
+-    for (const { tag, attrs, written, expr } of componentTags(f.text)) {
++    for (const t of componentTags(f.text)) {
++      if (t.tpl) {
++        // the ONE library resolves the tag: a file, or UNRESOLVED (never a silent non-painter)
++        const q = libTpl.get(`${f.rel}\0${t.written}`);
++        const target = q?.length ? q.shift() : undefined;
++        if (target === "UNRESOLVED") t.tag = null;
++        else if (target && target !== "native") t.tag = baseName(target);
++      }
++      uses.push({ rel: f.rel, ...t });
++    }
++  for (const x of lib.filter((y) => y.via !== "template"))
++    uses.push({
++      rel: x.file,
++      tag: x.target === "UNRESOLVED" ? null : baseName(x.target),
++      written: `${x.via}(${x.tag})`,
++      attrs:
++        x.binds.map((b) => ` :${b}="${x.via}()"`).join("") +
++        (x.spread ? ` v-bind="${x.via}()"` : ""),
++      expr: null,
++    });
++  const unresolvedSites = [];
++  for (const { rel: fileRel, tag, attrs, written, expr } of uses) {
++    const f = { rel: fileRel };
++    {
+       const binds = boundProps(attrs);
+       if (tag === null) {
+         // a sink no reader can resolve: a site that binds anything through it is one row
+-        if (binds.length)
+-          unresolved.set(
+-            `${f.rel} <${written}${expr ? ` :is="${expr}"` : ""}>`,
+-            binds.length,
+-          );
++        const site = `${written === "component" ? "component" : written}${expr ? ` :is="${expr}"` : ""}`;
++        if (binds.length) {
++          unresolved.set(`${f.rel} <${site}>`, binds.length);
++          unresolvedSites.push({
++            file: f.rel,
++            tag: site,
++            binds: binds.map((b) => b.attr),
++            spread: false,
++          });
++        }
+         continue;
+       }
+       for (const b of binds)
+         if (paintsAsText(tag, b.prop))
+           live.push({ where: f.rel, tag, attr: b.attr, expr: b.expr });
+     }
++  }
+   const key = (b) => `${b.where} <${tagOf(b)} :${attrOf(b)}>="${b.expr}"`;
+   const pinned = new Set(pins.map(key));
+   const found = new Set(live.map(key));
+@@ -1204,6 +1266,15 @@ function boundCensus(files, pins, unresolvedPins = UNRESOLVED_SINKS) {
+       out.push(
+         `UNRESOLVED_SINKS pins \`${p}\` and no such site binds through an unresolved sink. STALE — strike the entry.`,
+       );
++  // a pin admits its BIND SET, never the site (the library's `pinsBreached`)
++  for (const b of pinsBreached(
++    unresolvedSites,
++    unresolvedPins.map((u) => ({ file: u.where, tag: u.site, binds: u.binds })),
++  ))
++    out.push(
++      `${b.file} <${b.tag}> binds ${b.spread ? "a spread/v-bind object" : `\`${b.extra.join(", ")}\``} past its pin's bind set (${b.pinned.join(", ")}). A pin admits the binds it names; a new one is a new string this gate is blind to.`,
++    );
++
+   return { problems: out, live: live.length, unresolved: unresolved.size };
+ }
+ const bound = boundCensus(TREE, BOUND_TAPES);
+@@ -1254,10 +1325,21 @@ if (process.argv.includes("--self-test")) {
+     rel: "src/Plant/Sink.vue",
+     text: `<script setup lang="ts">${script}</script>\n<template>${tpl}</template>`,
+   });
+-  const use = (tag, script = "") => ({
+-    rel: "src/Plant/Use.vue",
+-    text: `<script setup lang="ts">${script}</script>\n<template><div>${tag}</div></template>`,
+-  });
++  // A consumer IMPORTS the sink it names, as every estate SFC does (pass 8: the ONE library reads an
++  // un-imported tag as UNRESOLVED, so a plant that forgot its import would red for the wrong reason).
++  const use = (tag, script = "") => {
++    const imp = [
++      ["Sink", /<Sink\b/],
++      ["StageSink", /<(StageSink|stage-sink)\b/],
++    ]
++      .filter(([n, re]) => re.test(tag) && !new RegExp(`\\b${n}\\b`).test(script))
++      .map(([n]) => `import ${n} from "./${n}.vue"; `)
++      .join("");
++    return {
++      rel: "src/Plant/Use.vue",
++      text: `<script setup lang="ts">${imp}${script}</script>\n<template><div>${tag}</div></template>`,
++    };
++  };
+   // Pass 6: a two-word sink, so its kebab spelling is a real custom-element tag.
+   const stage = (tpl) => ({
+     rel: "src/Plant/StageSink.vue",
+@@ -1379,7 +1461,7 @@ if (process.argv.includes("--self-test")) {
+       stage("<p>{{ text }}</p>"),
+       use(
+         "",
+-        'import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { text: x });',
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { text: x });',
+       ),
+       1,
+     ],
+@@ -1388,7 +1470,7 @@ if (process.argv.includes("--self-test")) {
+       stage("<p>{{ text }}</p>"),
+       use(
+         "",
+-        'import StageSink from "./StageSink.vue"; const r = () => h(StageSink, plantedProps);',
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; const r = () => h(StageSink, plantedProps);',
+       ),
+       1,
+     ],
+@@ -1407,6 +1489,64 @@ if (process.argv.includes("--self-test")) {
+       ),
+       1,
+     ],
++    // ── pass 8, the pass-7 critic's six (§2.5), read through the ONE library ──
++    [
++      "(F5) a SPREAD in `h()` (`h(StageSink, { ...bandProps })`)",
++      stage("<p>{{ text }}</p>"),
++      use(
++        "",
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { ...bandProps });',
++      ),
++      1,
++    ],
++    [
++      '(F6) a COMPUTED key in `h()` (`{ ["text"]: x }`)',
++      stage("<p>{{ text }}</p>"),
++      use(
++        "",
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { ["text"]: x });',
++      ),
++      1,
++    ],
++    [
++      "(F7) an aliased `createVNode` (`cv(StageSink, { text })`)",
++      stage("<p>{{ text }}</p>"),
++      use(
++        "",
++        'import { createVNode as cv } from "vue"; import StageSink from "./StageSink.vue"; const r = () => cv(StageSink, { text: x });',
++      ),
++      1,
++    ],
++    [
++      "(F8) a BARREL alias (`import { Band as Band8 } from './bands'`)",
++      stage("<p>{{ text }}</p>"),
++      use('<Band8 :text="x" />', 'import { Band as Band8 } from "./bands";'),
++      1,
++      [
++        {
++          rel: "src/Plant/bands.ts",
++          text: 'export { default as Band } from "./StageSink.vue";\n',
++        },
++      ],
++    ],
++    [
++      "(F9) an UNKNOWN PascalCase tag (`<NoSuchSink :text>`) is UNRESOLVED, never a non-painter",
++      stage("<p>{{ text }}</p>"),
++      use('<NoSuchSink :text="x" />'),
++      1,
++    ],
++    [
++      "CONTROL — the barrel alias to a sink that paints no prop",
++      stage('<p :class="tone">hello</p>'),
++      use('<Band8 :tone="x" />', 'import { Band as Band8 } from "./bands";'),
++      0,
++      [
++        {
++          rel: "src/Plant/bands.ts",
++          text: 'export { default as Band } from "./StageSink.vue";\n',
++        },
++      ],
++    ],
+     [
+       "CONTROL — `<component :is>` on native tags (`'span'` / `'button'`)",
+       stage("<p>{{ text }}</p>"),
+@@ -1418,7 +1558,7 @@ if (process.argv.includes("--self-test")) {
+       stage('<p :class="tone">hello</p>'),
+       use(
+         "",
+-        'import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { tone: x });',
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; const r = () => h(StageSink, { tone: x });',
+       ),
+       0,
+     ],
+@@ -1427,7 +1567,7 @@ if (process.argv.includes("--self-test")) {
+       stage("<p>{{ text }}</p>"),
+       use(
+         "",
+-        'import StageSink from "./StageSink.vue"; // const r = () => h(StageSink, { text: x });',
++        'import { h } from "vue"; import StageSink from "./StageSink.vue"; // const r = () => h(StageSink, { text: x });',
+       ),
+       0,
+     ],
+@@ -1466,12 +1606,31 @@ if (process.argv.includes("--self-test")) {
+     ],
+   ];
+   let bad = 0;
+-  for (const [name, a, b, want] of PLANTS) {
+-    const got = boundCensus([a, b], [], []).problems.length;
++  for (const [name, a, b, want, extra = []] of PLANTS) {
++    const probs = boundCensus([a, b, ...extra], [], []).problems;
++    const got = probs.length;
++    const ok = want ? got >= 1 : got === 0;
++    if (!ok) bad++;
++    console.log(
++      `bound-census plant · ${name}: ${got} problem(s) — ${ok ? (want ? "RED as required" : "GREEN as required") : "FAILED"}` +
++        (got ? ` [${/cannot resolve/.test(probs[0]) ? "UNRESOLVED" : "PAINTS"}]` : ""),
++    );
++  }
++  // (F10) a pin admits its BIND SET, never the site: a second bind at a pinned unresolved site reds.
++  const pinUse = use('<component :is="pick()" :leaving="x" :text="y" />');
++  const pinStage = stage("<p>{{ text }}</p>");
++  const pinAt = (binds) => [
++    { where: "src/Plant/Use.vue", site: 'component :is="pick()"', binds, why: "plant" },
++  ];
++  for (const [name, binds, want] of [
++    ["(F10) a second bind at a site pinned for `:leaving` only", ["leaving"], 1],
++    ["CONTROL — the same site pinned for both binds", ["leaving", "text"], 0],
++  ]) {
++    const got = boundCensus([pinStage, pinUse], [], pinAt(binds)).problems.length;
+     const ok = want ? got >= 1 : got === 0;
+     if (!ok) bad++;
+     console.log(
+-      `bound-census plant · ${name}: ${got} problem(s) — ${ok ? (want ? "RED as required" : "GREEN as required") : "FAILED"}`,
++      `bound-census pin plant · ${name}: ${got} problem(s) — ${ok ? (want ? "RED as required" : "GREEN as required") : "FAILED"}`,
+     );
+   }
+   // …and the two live bindings the pass-4 shape could not see must be DISCOVERED on the tree.
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index 819b4afe..86108d5a 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -1046,18 +1046,30 @@ function gateCorridor(css) {
+ }
+ 
+ /** the two scopes, re-derived per call so a self-test's mutated css is what gets graded */
++// The section's ink is ONE const (T9-B-ACC6-1): `@theme`'s `--color-progress-ink` names
++// `var(--accent-ink)`, a plain `:root` rule names the arm, and each arm's night rung sits in
++// `.dark`. `colorOf` takes the FIRST declaration in its scope, so each theme's scope is its own
++// block, then the const, then `@theme` — the cascade the page resolves, in reading order.
++const accentConstOf = (css) => scopeOf(css, "\n/* ── T9-B-ACC6-1");
+ const themesScopes = (css) => ({
+-  light: scopeOf(css, "@theme {"),
+-  dark: scopeOf(css, "\n.dark {"),
++  light: scopeOf(css, "@theme {") + accentConstOf(css),
++  dark: scopeOf(css, "\n.dark {") + accentConstOf(css) + scopeOf(css, "@theme {"),
+ });
+ 
+ /** THE NEGATIVE CONTROL: rotate one ink 6° in OKLCH and the kin gate must red. */
+ function rotated(css, token, deg) {
+-  const scope = scopeOf(css, "@theme {");
++  const scope = themesScopes(css).light;
+   const c = oklch(colorOf(scope, token));
+   const [r, g, b] = fromOklch({ ...c, h: (c.h + deg + 360) % 360 });
+   const hex = `#${[r, g, b].map((v) => v.toString(16).padStart(2, "0")).join("")}`;
+-  return css.replace(new RegExp(`(${token}:\\s*)#[0-9a-fA-F]{3,8}`), `$1${hex}`);
++  // rotate the LEAF the alias chain ends on (the const's arm rung), not the alias
++  let leaf = token;
++  for (let m; (m = scope.match(new RegExp(`${leaf}:\\s*var\\(\\s*(--[\\w-]+)`)));)
++    leaf = m[1];
++  const out = css.replace(new RegExp(`(${leaf}:\\s*)#[0-9a-fA-F]{3,8}`), `$1${hex}`);
++  if (out === css)
++    throw new Error(`ink-pressure: the kin plant found no hex on ${leaf}`);
++  return out;
+ }
+ 
+ /* ── run ────────────────────────────────────────────────────────────────── */
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index e6437037..3a6b0470 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -267,6 +267,7 @@ const SPEC_MANIFEST = [
+   "viewport-law.spec.ts",
+   "visual-golden.spec.ts",
+   "visual-regression.spec.ts",
++  "wash-step.spec.ts",
+   "wordmark-integrity.spec.ts",
+   "zone-grammar.spec.ts",
+ ];
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index b0428c2b..db0b8d4b 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -59,11 +59,19 @@ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
+ import {
++  census as consumerCensus,
++  constBindings,
+   consumerSites,
++  decodeCssEscapes,
++  decodeEntities,
+   hasCompound,
++  sfc,
+   stripCss,
+   stripHtml,
+   stripJs,
++  svgRefSites,
++  tokenSites,
++  urlRefs,
+ } from "./shape-census.mjs";
+ 
+ // THE ONE COPY (T9-W7 pass 6, the chair's instruments lane; pass6/CHAIR-RULINGS §1.3): every
+@@ -262,6 +270,14 @@ export function census(cssText) {
+     changed = false;
+     for (const token of [...live]) {
+       const body = declBodies(token);
++      // pass 8 (ACC-SIX): the chain runs through ANY custom property, not only @theme's — the
++      // section's const (`--color-progress-ink: var(--accent-ink)`, a plain `:root` rule naming
++      // the arm) is a live alias whose own value reads the rung
++      for (const m of body.matchAll(/var\(\s*(--[a-zA-Z0-9-]+)/g)) {
++        if (live.has(m[1]) || declared.includes(m[1])) continue;
++        live.add(m[1]);
++        changed = true;
++      }
+       for (const other of declared) {
+         if (live.has(other)) continue;
+         if (body.includes(`var(${other})`) || body.includes(`var(${other},`)) {
+@@ -788,19 +804,50 @@ const paints = (rel) =>
+ //       that name. A paint consumer (fill, stroke, href) reds; a filter/mask/clip/marker consumer
+ //       is lawful (the estate's own ids are all `filter=`); a value no consumer can be found for
+ //       is UNRESOLVED and reds until someone writes the id out.
++// PASS 8 (the pass-7 critic's §2.4: six more legal shapes greened, the class on its FOURTH pass).
++// The pass-7 reader resolved a dynamic url's consumer by the NAME that held it, so a name that
++// spells a non-paint property (`const filter = \`url(#${id})\`` bound as `:stroke="filter"`) read
++// as a filter; `url(${base}#${id})` and `url(${'#' + id})` slipped its `#`-first regex; and
++// `&#35;` and a CSS escape spelled the id past it. The gate now carries NO reader of its own:
++// every reference is read by the ONE library (`./shape-census.mjs`: `urlRefs` decodes entities
++// and CSS escapes and reds every interpolated `url(`; `svgRefSites` resolves a bound value to the
++// ATTRIBUTE that consumes it, never the name that holds it; `constBindings` folds a string held
++// in a const). The rules:
++//   (1) every `#solver-ink` in code (decoded) is a REFERENCE, counted against its file's admission;
++//       a const whose folded value spells it is one too (`'#' + 'solver-ink'` bound as `:href`);
++//   (2) every UNRESOLVED `url(` (an interpolation or a `+` in its argument) is RED unless the library
++//       resolves it to a template attribute that is a filter/mask/clip/marker, or DYN_ADMISSIONS
++//       admits it by file + value + count. A paint consumer (fill, stroke) is red whatever else
++//       reads the same value. A `data:` argument is a separate document and names no id here.
++// Each of the six is a plant below, on the REAL panel file.
+ const REF_RE = /#solver-ink\b/g;
+-const DYN_URL_RE = /url\(\s*['"]?#(?:\$\{|['"]\s*\+)/g;
+-const PAINT = new Set(["fill", "stroke", "href", "xlink:href"]);
+-const NON_PAINT = new Set([
+-  "filter",
+-  "mask",
+-  "clip-path",
+-  "clipPath",
+-  "marker",
+-  "marker-start",
+-  "marker-mid",
+-  "marker-end",
+-]);
++const NON_PAINT_PROP = /^(filter|mask|clip-path|marker(?:-start|-mid|-end)?)$/;
++const DYN_ADMISSIONS = [
++  {
++    file: "src/pencil/celestial/DarkModeToggle.vue",
++    value: "url(#${pid})",
++    count: 2,
++    why: "the two baked poses' `<g filter=\"url(#${pid})\">`, inside the serialized SVG strings the toggle rasters (a FILTER on a detached document's group, never paint); the live twins are the template's `:filter` sites, which the library reads for itself",
++  },
++  {
++    file: "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue",
++    value: "url(#${pid})",
++    count: 1,
++    why: "the wordmark bake's `<g filter=\"url(#${pid})\">`, inside the serialized SVG string it rasters (a FILTER); the live twin is the template's `:filter`",
++  },
++  {
++    file: "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue",
++    value: "url('${faceCss.value}')",
++    count: 1,
++    why: "the bake's `@font-face` `src:` (a font resource, not an element id)",
++  },
++  {
++    file: "src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue",
++    value: "url(${url})",
++    count: 2,
++    why: "the union's T9-M15 grid ink: `mask-image` and `-webkit-mask-image` in one `:style` string, each the baked pose's object URL (a MASK resource, never an element id)",
++  },
++];
+ /** Comments stripped per language by the ONE library (length-preserving, line numbers hold). */
+ function stripByKind(rel, text) {
+   if (/\.css$/.test(rel)) return stripCss(text);
+@@ -816,65 +863,86 @@ function stripByKind(rel, text) {
+   }
+   return out + stripHtml(text.slice(at));
+ }
+-/** Adjacent string literals on one line, folded: `'url(#' + 'solver-ink' + ')'` → `'url(#solver-ink)'`. */
+-function foldConcat(text) {
+-  const re = /(['"])([^'"\n\\]*)\1[ \t]*\+[ \t]*(['"])([^'"\n\\]*)\3/;
+-  for (let prev = null; prev !== text;) {
+-    prev = text;
+-    text = text.replace(re, (_, q, a, _q2, b) => q + a + b + q);
+-  }
+-  return text;
+-}
+-const bare = (name) => name.replace(/^(?:v-bind)?:/, "");
+-/** The consumer(s) of a dynamic url at `i`: [kind, name] pairs, [] when none can be found. */
+-function consumersOf(text, i) {
+-  const before = text.slice(Math.max(0, i - 160), i);
+-  const wrap =
+-    /([\w$:-]+)\s*[=:]\s*(?:computed\s*\(\s*\(\)\s*=>\s*)?["'`]{0,2}\s*$/.exec(before);
+-  if (!wrap) return [];
+-  const name = bare(wrap[1]);
+-  if (PAINT.has(name) || NON_PAINT.has(name)) return [name];
+-  // held in a name: every binding (`:attr="…name…"`) and style key (`key: name`) that reads it
+-  const used = [];
+-  const id = name.replace(/[$]/g, "\\$");
+-  for (const b of text.matchAll(
+-    new RegExp(`(?:v-bind)?:([\\w-]+)\\s*=\\s*"[^"]*\\b${id}\\b`, "g"),
+-  ))
+-    used.push(b[1]);
+-  for (const b of text.matchAll(new RegExp(`([\\w-]+)\\s*:\\s*${id}\\b(?!\\s*=)`, "g")))
+-    if (b.index !== wrap.index) used.push(b[1]);
+-  return used;
+-}
++const decoded = (t) => decodeCssEscapes(decodeEntities(t));
++const argOf = (raw) =>
++  raw
++    .replace(/^url\(\s*/, "")
++    .replace(/\s*\)$/, "")
++    .replace(/^(["'])([\s\S]*)\1$/, "$2");
+ 
+ function lawTwenty(files) {
+   const offences = [];
+   for (const { rel, text: raw } of files.filter((f) => paints(f.rel))) {
+-    const text = foldConcat(stripByKind(rel, raw));
++    const text = decoded(stripByKind(rel, raw));
+     const lineOf = (i) => text.slice(0, i).split("\n").length;
+-    for (const m of text.matchAll(DYN_URL_RE)) {
+-      const used = consumersOf(text, m.index);
+-      const paint = used.filter((u) => !NON_PAINT.has(u));
+-      if (!used.length || paint.length)
++    // (2) every unresolved url(, grouped by its value
++    const dyn = new Map();
++    for (const r of urlRefs(text))
++      if (r.unresolved && !/^data:/i.test(argOf(r.raw)))
++        dyn.set(r.raw, (dyn.get(r.raw) ?? 0) + 1);
++    const sites = /\.vue$/.test(rel) ? svgRefSites(raw) : [];
++    for (const [value, n] of dyn) {
++      const at = text.indexOf(value);
++      const read = sites.filter((x) => x.unresolved && x.raw === value);
++      const paint = read.filter((x) => !NON_PAINT_PROP.test(x.prop));
++      const lawful = read.length - paint.length;
++      const adm = DYN_ADMISSIONS.find((a) => a.file === rel && a.value === value);
++      if (paint.length)
+         offences.push(
+-          `${rel}:${lineOf(m.index)} builds a DYNAMIC \`url(#…)\` ` +
+-            (used.length
+-              ? `that paints (${paint.join(", ")}) — an id no reader can resolve; write it out`
+-              : `with no consumer this gate can resolve — UNRESOLVED; write the id out or bind it where it is built`),
++          `${rel}:${lineOf(at)} binds a DYNAMIC \`${value}\` to ${[...new Set(paint.map((x) => x.prop))].join(", ")} (${paint[0].where}) — it paints, and no reader can resolve the id; write it out`,
++        );
++      else if (n > lawful + (adm?.count ?? 0))
++        offences.push(
++          `${rel}:${lineOf(at)} builds a DYNAMIC \`${value}\` ×${n} and ${lawful} are read on a filter/mask/clip attribute` +
++            (adm ? ` + ${adm.count} admitted` : "") +
++            ` — UNRESOLVED; write the id out or bind it on the attribute that consumes it`,
++        );
++      else if (adm && n < lawful + adm.count)
++        offences.push(
++          `${rel} is admitted ${adm.count} \`${value}\` and reads ${n - lawful} outside a template attribute — STALE, strike or re-count the admission`,
+         );
+     }
++    for (const a of DYN_ADMISSIONS.filter((x) => x.file === rel && !dyn.has(x.value)))
++      offences.push(
++        `${rel} is admitted \`${a.value}\` and has none — STALE, strike the admission`,
++      );
++    // (1) the references, literal and folded through a const
+     const hits = [...text.matchAll(REF_RE)];
++    const scripts = /\.vue$/.test(rel)
++      ? sfc(raw).scripts.map((b) => b.text)
++      : /\.[cm]?[jt]sx?$/.test(rel)
++        ? [raw]
++        : [];
++    const folded = scripts.flatMap((js) =>
++      [...constBindings(js)].filter(
++        ([name, v]) =>
++          /#solver-ink\b/.test(v) &&
++          !new RegExp(`\\b${name.replace(/\$/g, "\\$")}\\s*=[^;\\n]*#solver-ink`).test(
++            decoded(stripJs(js)),
++          ),
++      ),
++    );
++    const refs = [
++      ...hits.map(
++        (m) =>
++          `${rel}:${lineOf(m.index)} references \`#solver-ink\` (\`${text.slice(Math.max(0, m.index - 24), m.index + 11).trim()}\`)`,
++      ),
++      ...folded.map(
++        ([name]) => `${rel} holds \`#solver-ink\` in \`${name}\` by concatenation`,
++      ),
++    ];
+     const adm = URL_ADMISSIONS.find((a) => a.file === rel);
+-    if (adm && hits.length === adm.consumers) continue;
+-    if (adm && hits.length === 0) {
++    if (adm && refs.length === adm.consumers) continue;
++    if (adm && refs.length === 0) {
+       offences.push(
+         `${rel} is admitted ${adm.consumers} \`#solver-ink\` reference(s) and has none — STALE, strike the admission`,
+       );
+       continue;
+     }
+-    for (const m of adm ? hits.slice(adm.consumers) : hits)
++    for (const r of refs.slice(adm?.consumers ?? 0))
+       offences.push(
+-        `${rel}:${lineOf(m.index)} references \`#solver-ink\` (\`${text.slice(Math.max(0, m.index - 24), m.index + 11).trim()}\`) — the answer's five stops by reference` +
+-          (adm ? ` (admitted ${adm.consumers}, found ${hits.length})` : ""),
++        `${r} — the answer's five stops by reference` +
++          (adm ? ` (admitted ${adm.consumers}, found ${refs.length})` : ""),
+       );
+   }
+   for (const { rel, text } of files) {
+@@ -892,6 +960,105 @@ function lawTwenty(files) {
+   return offences;
+ }
+ 
++// ── THE WASH REACH, READ AT THE CONSUMER (T9-W7 ACC-SIX pass 8; ACC-GRAPHITE's graft, its gate
++// re-cut for the class first — the pass-7 critic's five escapes, registry-v7 §2.2/§3.2) ────────
++// `.cell-peer` paints ONE ground token, `--ground-wash-unit`, and the const in index.css names its
++// arm. GRAPHITE's gate read every DECLARATION of the token and never what the consumer paints, so
++// five shapes changed or erased the wash at exit 0: W1 the consumer's `opacity: .2` (1.017-1.026
++// painted), W2 a later `background: transparent`, W3 a 2 % literal on the consumer, W4 a Tailwind
++// arbitrary property `[ --ground-wash-unit : transparent ]` (spaced so Tailwind's scanner does not
++// mint it from this file; the build SHIPS the unspaced form), W5 an `@property`
++// registration with `inherits: false` / `initial-value: transparent` (1.000 painted). The reach is
++// read through the ONE library: every background site of the consumer (`census`, longhands and
++// shorthands, every sheet, template and script) must BE the token; no site may fade, filter, blend,
++// clip or hide the consumer; and the token has exactly the declarations the const writes
++// (`tokenSites`, Tailwind arbitrary properties and `@property` preludes read as declaration sites).
++// An unreadable publisher in a file the estate already carries is pinned by COUNT (the library
++// reads every computed object key as a possible `--ground-wash-unit` publisher); one more reds.
++const WASH = {
++  token: "--ground-wash-unit",
++  consumer: "cell-peer",
++  declared: [
++    {
++      file: "src/assets/index.css",
++      prelude: ":root",
++      value: /^var\(--wash-(blue|graphite)\)$/,
++    },
++  ],
++  // computed object keys the library cannot resolve, by file, as the estate stands (none is a style)
++  unreadable: {
++    "src/games/shared/persistence.ts": 2,
++    "src/games/shared/useControlsDrawer.ts": 1,
++    "src/games/shared/useGameState.ts": 1,
++    "src/games/shared/useJoinWash.ts": 1,
++    "src/games/shared/useSession.ts": 6,
++    "src/games/shared/useStagingBridge.ts": 2,
++    "src/pencil/chrome/GameGallery/GameGallery.vue": 1,
++    // the union's `WaapiVerb` mapped type (`[K in keyof typeof MOTION.verbs]`), a TYPE key
++    "src/pencil/config/pencilConfig.ts": 1,
++  },
++};
++const PAINT_MOVERS = [
++  "opacity",
++  "filter",
++  "visibility",
++  "mix-blend-mode",
++  "clip-path",
++  "mask-image",
++  // joined: the bare literal is a Tailwind utility name, and the scanner would mint it (and nine
++  // @property registrations) into the served CSS from this file
++  "backdrop-" + "filter",
++];
++function washReach(fe, opts = {}) {
++  const out = [];
++  for (const prop of ["background", "background-color", "background-image"])
++    for (const x of consumerCensus(fe, WASH.consumer, prop, opts))
++      if (x.value.replace(/\s+/g, "") !== `var(${WASH.token})`)
++        out.push(
++          `${x.file}:${x.line} \`.${WASH.consumer}\` paints \`${x.prop}: ${x.value}\` — the wash is ONE token (${WASH.token}), never a literal or a second value`,
++        );
++  for (const prop of PAINT_MOVERS)
++    for (const x of consumerCensus(fe, WASH.consumer, prop, opts))
++      out.push(
++        `${x.file}:${x.line} \`.${WASH.consumer}\` sets \`${x.prop}: ${x.value}\` — it moves the wash's painted step off its token`,
++      );
++  const unread = {};
++  let declared = 0;
++  for (const t of tokenSites(fe, WASH.token, opts)) {
++    if (t.unresolved) {
++      unread[t.file] = (unread[t.file] ?? 0) + 1;
++      continue;
++    }
++    const ok = WASH.declared.some(
++      (d) =>
++        d.file === t.file &&
++        d.prelude === t.prelude &&
++        !t.ctx &&
++        d.value.test(String(t.value).trim()),
++    );
++    if (ok) declared++;
++    else
++      out.push(
++        `${t.file}:${t.line} declares ${WASH.token} (${t.kind}${t.prelude ? ` \`${t.prelude}\`` : ""}${t.ctx ? ` in ${t.ctx}` : ""}: \`${t.value}\`) — the const in index.css is its only publisher`,
++      );
++  }
++  if (declared !== WASH.declared.length)
++    out.push(
++      `${WASH.token}: ${declared} const declaration(s), expected ${WASH.declared.length} — the arm is ONE line`,
++    );
++  for (const [f, n] of Object.entries(unread))
++    if (n > (WASH.unreadable[f] ?? 0))
++      out.push(
++        `${f}: ${n} unreadable publisher(s) of ${WASH.token} where ${WASH.unreadable[f] ?? 0} are pinned — a key the library cannot resolve may be the token`,
++      );
++  for (const [f, n] of Object.entries(WASH.unreadable))
++    if ((unread[f] ?? 0) < n)
++      out.push(
++        `${f}: ${WASH.token}'s unreadable-publisher pin reads ${unread[f] ?? 0} of ${n} — STALE, re-count it`,
++      );
++  return out;
++}
++
+ function main() {
+   const selfTest = process.argv.includes("--self-test");
+   const cssText = fs.readFileSync(INDEX_CSS, "utf8");
+@@ -927,6 +1094,11 @@ function main() {
+       ` · ${STOP_ADMISSIONS.length} stop admission(s) by element · ${URL_ADMISSIONS.length} reference admission(s) by file`,
+   );
+   for (const o of lawOffences) console.log(`  ${o}`);
++  const washOffences = washReach(ROOT);
++  console.log(
++    `\nthe wash reach (.${WASH.consumer} paints ${WASH.token}, one const): ${washOffences.length} offence(s)`,
++  );
++  for (const o of washOffences) console.log(`  ${o}`);
+ 
+   const rungs = rungKeys(fs.readFileSync(PENCIL_CONFIG, "utf8"));
+   const regRed = registrationRow(cssText, rungs);
+@@ -1363,6 +1535,121 @@ function main() {
+         ],
+         true,
+       ],
++      // ── pass 8, the pass-7 critic's six (§2.4), each on the REAL panel file ──
++      [
++        '(T6) a url held in a name that SPELLS a non-paint property, bound as paint (`const filter = …` · `:stroke="filter"`)',
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              'const inkId = "solver-ink"; const filter = `url(#${inkId})`;',
++              '<svg><path d="M0 0" :stroke="filter" /></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        "(T6b) the same through `const clipPath` bound to `:fill`",
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              'const inkId = "solver-ink"; const clipPath = `url(#${inkId})`;',
++              '<svg><path d="M0 0" :fill="clipPath" /></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        "(T7) the `<base href>` idiom (`url(${base}#${id})`)",
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              'const base = location.href; const inkId = "solver-ink";',
++              '<svg><path d="M0 0" :stroke="`url(${base}#${inkId})`" /></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        "(T8) the `#` inside the interpolation (`url(${'#' + inkId})`)",
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              'const inkId = "solver-ink";',
++              `<svg><path d="M0 0" :stroke="\`url(\${'#' + inkId})\`" /></svg>`,
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        '(T9) an HTML entity (`stroke="url(&#35;solver-ink)"`, which Vue compiles to `#`)',
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              "",
++              '<svg><path d="M0 0" stroke="url(&#35;solver-ink)" /></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        '(T9\') an entity with no `url(` at all (`href="&#35;solver-ink"`): only the decode sees it',
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              "",
++              '<svg><defs><linearGradient id="plant-grad" href="&#35;solver-ink" /></defs></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        "(T10) a CSS escape (`url(#solver\\-ink)`, which computes to `#solver-ink`)",
++        [
++          {
++            rel: "src/pencil/chrome/Plant.vue",
++            text: "<style>.x { stroke: url(#solver\\-ink); }</style>",
++          },
++        ],
++        true,
++      ],
++      [
++        '(T3\') a gradient `:href` held in a const by CONCATENATION (`"#" + "solver-ink"`)',
++        [
++          {
++            rel: "src/games/shared/GameControlPanel.vue",
++            text: withPanel(
++              'const inkHref = "#" + "solver-ink";',
++              '<svg><defs><linearGradient id="plant-grad" :href="inkHref" /></defs></svg>',
++            ),
++          },
++        ],
++        true,
++      ],
++      [
++        "CONTROL — the toggle as it stands (two admitted serialized filters + two `:filter` sites)",
++        [
++          {
++            rel: "src/pencil/celestial/DarkModeToggle.vue",
++            text: fs.readFileSync(
++              path.join(ROOT, "src/pencil/celestial/DarkModeToggle.vue"),
++              "utf8",
++            ),
++          },
++        ],
++        false,
++      ],
+       [
+         'CONTROL — a dynamic FILTER id built in script, bound by name (`:filter="grainUrl"`)',
+         [
+@@ -1427,6 +1714,87 @@ function main() {
+       );
+     }
+     if (urlBad) process.exit(2);
++    // ── THE WASH REACH's plants (pass 8): the pass-7 critic's five escapes, each RED; the tree GREEN.
++    const overlay = (over) => ({
++      read: (f) => {
++        const rel = path.relative(ROOT, f);
++        return rel in over
++          ? over[rel](fs.readFileSync(f, "utf8"))
++          : fs.readFileSync(f, "utf8");
++      },
++    });
++    const cellCss = "src/games/shared/gameCell.css";
++    const washPlants = [
++      [
++        "W1 the consumer faded (`.cell-peer { opacity: 0.2 }`)",
++        { [cellCss]: (t) => t + "\n.cell-peer {\n  opacity: 0.2;\n}\n" },
++        true,
++      ],
++      [
++        "W2 a later `background: transparent` on the consumer",
++        { [cellCss]: (t) => t + "\n.cell-peer {\n  background: transparent;\n}\n" },
++        true,
++      ],
++      [
++        "W3 a 2 % literal on the consumer",
++        {
++          [cellCss]: (t) =>
++            t + "\n.cell-peer {\n  background: rgb(87 83 78 / 0.02);\n}\n",
++        },
++        true,
++      ],
++      [
++        "W4 a Tailwind arbitrary property that SHIPS (`[ --ground-wash-unit : transparent ]`, unspaced)",
++        {
++          "src/games/shared/GameBoard.vue": (t) =>
++            t.replace(
++              "<template>",
++              // the class is joined at run time: a literal here would be minted into the served CSS
++              `<template>\n  <i class="${"[--ground-wash-unit" + ":transparent]"}" />`,
++            ),
++        },
++        true,
++      ],
++      [
++        "W5 an `@property` re-registration (`inherits: false; initial-value: transparent`)",
++        {
++          "src/assets/index.css": (t) =>
++            t +
++            "\n@property --ground-wash-unit {\n  syntax: '<color>';\n  inherits: false;\n  initial-value: transparent;\n}\n",
++        },
++        true,
++      ],
++      [
++        "W6 a second declaration of the token on the consumer",
++        {
++          [cellCss]: (t) =>
++            t + "\n.cell-peer {\n  --ground-wash-unit: transparent;\n}\n",
++        },
++        true,
++      ],
++      ["CONTROL — the tree as it stands", {}, false],
++      [
++        "CONTROL — the const flipped to the graphite arm (one line)",
++        {
++          "src/assets/index.css": (t) =>
++            t.replace(
++              "--ground-wash-unit: var(--wash-blue);",
++              "--ground-wash-unit: var(--wash-graphite);",
++            ),
++        },
++        false,
++      ],
++    ];
++    let washBad = 0;
++    for (const [name, over, red] of washPlants) {
++      const n = washReach(ROOT, overlay(over)).length;
++      const ok = red ? n >= 1 : n === 0;
++      if (!ok) washBad++;
++      console.log(
++        `wash-reach plant · ${name}: ${n} offence(s) — ${ok ? (red ? "RED as required" : "GREEN as required") : "FAILED"}`,
++      );
++    }
++    if (washBad) process.exit(2);
+     if (plantedLaw20.length !== 1 || twin.length || admitted.length) process.exit(2);
+   }
+ 
+@@ -1795,6 +2163,10 @@ function main() {
+     );
+     process.exit(1);
+   }
++  if (washOffences.length) {
++    console.error(`\ncheck-theme-tokens: ${washOffences.length} wash-reach offence(s)`);
++    process.exit(1);
++  }
+   if (rev.timing.length || rev.any.length || rev.stale.length || rev.masked.length) {
+     console.error(
+       `\ncheck-theme-tokens: ${rev.timing.length + rev.any.length} bare var() naming no declaration in scope, ${rev.masked.length} masked defaults, ${rev.stale.length} stale inheritance rows`,
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb30..52355efc 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -90,6 +90,8 @@ export const CLAUSES = {
+   "h-spread": "SIX · spread/computed keys in h()/createVNode (aliased) as v-bind=obj",
+   barrel: "SIX · a barrel alias is followed to its file",
+   "pin-binds": "SIX · a pin carries its bind set",
++  alias:
++    "SIX · the bundler's `@/` alias resolves to src/ (without it every estate import is UNRESOLVED)",
+   csstext: "WALK · concatenated cssText and setAttribute('style') writes",
+   "style-computed-key": "WALK · a computed :style key is a `?` site",
+   "import-chain": "WALK · @import chains followed wherever they lead",
+@@ -1923,9 +1925,26 @@ const NATIVE =
+ const pascal = (t) => t.replace(/(^|-)([a-z])/g, (m, d, c) => c.toUpperCase());
+ /** The file a module specifier + imported name reaches, following barrels (SIX F8:
+  *  `export { default as Band } from "./StagingBand.vue"`). null = UNRESOLVED. */
++/** The bundler's `resolve.alias` table, read from `vite.config.ts` (`'@pencil': path.resolve(__dirname,
++ *  './src/pencil')`), longest key first; `@` → `src` when the config names none. Set by componentSites. */
++let ALIASES = [];
++function aliasTable(fe, rd, ex) {
++  const cfg = join(fe, "vite.config.ts");
++  const text = ex(cfg) ? stripJs(rd(cfg)) : "";
++  const rows = [
++    ...text.matchAll(
++      /(["'])(@[\w-]*)\1\s*:\s*path\.resolve\(\s*__dirname\s*,\s*(["'])([^"']+)\3\s*\)/g,
++    ),
++  ].map((m) => [m[2], resolvePath(fe, m[4])]);
++  if (!rows.length) rows.push(["@", join(fe, "src")]);
++  return rows.sort((a, b) => b[0].length - a[0].length);
++}
+ function resolveImport(fromFile, spec, name, rd, ex, depth = 0) {
+-  if (depth > 5 || !/^\.{1,2}\//.test(spec)) return null;
+-  const base = resolvePath(dirname(fromFile), spec);
++  const hit = on("alias") && ALIASES.find(([k]) => spec.startsWith(`${k}/`));
++  if (depth > 5 || (!hit && !/^\.{1,2}\//.test(spec))) return null;
++  const base = hit
++    ? join(hit[1], spec.slice(hit[0].length + 1))
++    : resolvePath(dirname(fromFile), spec);
+   const cands = [
+     base,
+     `${base}.ts`,
+@@ -1963,6 +1982,7 @@ export function componentSites(fe, { files, read, exists } = {}) {
+   const rd = read ?? ((f) => readFileSync(f, "utf8"));
+   const ex = exists ?? existsSync;
+   const list = files ?? sources(fe, { read: rd, exists: ex });
++  ALIASES = aliasTable(fe, rd, ex);
+   const out = [];
+   for (const f of list) {
+     if (!/\.(vue|ts|tsx|js|mjs)$/.test(f)) continue;
+@@ -1993,7 +2013,9 @@ export function componentSites(fe, { files, read, exists } = {}) {
+           else imports.set(alias ?? orig, resolveImport(f, m[3], orig, rd, ex));
+         }
+       for (const m of s.matchAll(
+-        /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*\)/g,
++        on("alias")
++          ? /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*,?\s*\)/g
++          : /defineAsyncComponent\(\s*\(\)\s*=>\s*import\(\s*(["'])([^"']+)\1\s*\)\s*\)/g,
+       )) {
+         const d = /(?:const|let)\s+([A-Za-z_$][\w$]*)\s*=\s*$/.exec(
+           s.slice(0, m.index),
+@@ -2050,6 +2072,11 @@ export function componentSites(fe, { files, read, exists } = {}) {
+           if (!imports.has(comp)) continue;
+           const body = m[2] ?? "";
+           const keys = splitTop(body, /,/);
++          // a NON-LITERAL second argument (`h(X, props)`) is a v-bind object too (SIX pass 8)
++          const objArg =
++            on("h-spread") &&
++            m[2] == null &&
++            /^\s*,\s*[A-Za-z_$(]/.test(s.slice(m.index + m[0].length));
+           out.push({
+             file,
+             line: sc.line + lineAt(s, m.index) - 1,
+@@ -2062,7 +2089,7 @@ export function componentSites(fe, { files, read, exists } = {}) {
+               .filter(Boolean)
+               .map((x) => x[2] ?? x[3]),
+             spread: on("h-spread")
+-              ? keys.some((k) => /^\.\.\.|^\[/.test(k.trim()))
++              ? objArg || keys.some((k) => /^\.\.\.|^\[/.test(k.trim()))
+               : false,
+             via: orig,
+           });
+@@ -3608,18 +3635,18 @@ const TESTS = [
+   [
+     "h-spread",
+     "SIX",
+-    "F5 a spread, F6 a computed key, F7 an aliased createVNode are read",
++    "F5 a spread, F6 a computed key, F7 an aliased createVNode, a non-literal props argument are read",
+     (L) => {
+       const f = fixture({
+         "src/StagingBand.vue": "<template><i /></template>\n",
+         "src/a.ts":
+           'import { h } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const a = (p) => h(StagingBand, { ...p });\nexport const b = (x) => h(StagingBand, { ["safeVerb"]: x });\n',
+         "src/c.ts":
+-          'import { createVNode as cv } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const c = (safeVerb) => cv(StagingBand, { safeVerb });\n',
++          'import { createVNode as cv } from "vue";\nimport StagingBand from "./StagingBand.vue";\nexport const c = (safeVerb) => cv(StagingBand, { safeVerb });\nexport const d = (props) => cv(StagingBand, props);\n',
+       });
+       const s = L.componentSites(f.fe, f);
+       return (
+-        s.filter((x) => x.spread).length === 2 &&
++        s.filter((x) => x.spread).length === 3 &&
+         s.some((x) => x.file === "src/c.ts" && x.binds.includes("safeVerb"))
+       );
+     },
+@@ -3640,6 +3667,28 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "alias",
++    "SIX",
++    "F11: tags imported through the bundler's aliases (`@/`, `@pencil/`, a prettier-formatted async import) resolve to their files",
++    (L) => {
++      const f = fixture({
++        "src/chrome/StagingBand.vue": "<template><i /></template>\n",
++        "src/pencil/Glyph.vue": "<template><i /></template>\n",
++        "vite.config.ts":
++          "export default { resolve: { alias: { '@pencil': path.resolve(__dirname, './src/pencil'), '@': path.resolve(__dirname, './src') } } };\n",
++        "src/App.vue":
++          '<template><StagingBand :safe-verb="x" /><Glyph :text="x" /><Lam :text="x" /></template>\n<script setup>\nimport StagingBand from "@/chrome/StagingBand.vue";\nimport Glyph from "@pencil/Glyph.vue";\nconst Lam = defineAsyncComponent(\n  () => import("@pencil/Glyph.vue"),\n);\nconst x = 1;\n</script>\n',
++      });
++      const s = L.componentSites(f.fe, f);
++      return (
++        s.length === 3 &&
++        s[0].target === "src/chrome/StagingBand.vue" &&
++        s[1].target === "src/pencil/Glyph.vue" &&
++        s[2].target === "src/pencil/Glyph.vue"
++      );
++    },
++  ],
+   [
+     "pin-binds",
+     "SIX",
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 2e321983..9a90577b 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -256,8 +256,8 @@
+      two inline rgba() literals, and gold rather than violet: the button that fills the board
+      in glows in the colour the finished board wears. Both resolve through --color-crayon-gold,
+      so the dark arm comes free with the crayon. */
+-  --sparkle-glow-soft: color-mix(in srgb, var(--color-crayon-gold) 30%, transparent);
+-  --sparkle-glow-strong: color-mix(in srgb, var(--color-crayon-gold) 60%, transparent);
++  --sparkle-glow-soft: color-mix(in srgb, var(--accent-glow) 30%, transparent);
++  --sparkle-glow-strong: color-mix(in srgb, var(--accent-glow) 60%, transparent);
+ 
+   /* §INK PRESSURE — the graphite ramp, named. Seven surfaces were each open-coding
+      `color-mix(in srgb, var(--color-pencil-graphite, …) N%, transparent)` at six different
+@@ -331,8 +331,10 @@
+      gold #A87E13 painted 0.2329 — 2.970 on the border, 0.003 over the ceiling. #A27803 holds its
+      hue (83.93° to 83.81° OKLCH, chroma 0.122 kept) and sits at 0.2112, the balanced point: 3.237
+      vs the line, 3.949 vs paper, 3.217 vs the border. The GATE asserts the corridor on all three
+-     grounds (e2e/progress-corridor.spec.ts), never the hex. */
+-  --color-progress-ink: #a27803;
++     grounds (e2e/progress-corridor.spec.ts), never the hex. The rung itself is the gold ARM's
++     (`--accent-gold-ink`); the trace reads the ARM the section's const names (T9-B-ACC6-1, the
++     `:root` block before `.dark`), the gold by default until the owner names one. */
++  --color-progress-ink: var(--accent-ink);
+ 
+   /* §SHEET — the stationery ladder (union adopt-partial: washi tooltip + held
+      answer-key laminate; vellum ControlPanel + lifted attribution styling CUT).
+@@ -517,6 +519,42 @@
+   initial-value: 0;
+ }
+ 
++/* ── T9-B-ACC6-1 · THE SECTION'S INK, ONE CONST (T9-W7 ACC-SIX pass 8, registry-v7 §2.1a) ──────
++   The accent has two built arms and the owner names one: the GOLD (ACC-FIVE: the trace at
++   `#a27803` light / `#7e6a17` night, the glow on the crayon's own gold, whose night rung the
++   crayon carries) and the answer's VIOLET (ACC-SIX: `#8f61f6` / `#7c3aed`, the glow on the pale
++   rung `#c4b5fd`). Each arm is a pair of rungs declared once per theme; THIS rule is the const:
++   it names the arm, and the other arm is the same word changed on both lines. The union keeps
++   FIVE's gold until the owner answers (pass8/CHAIR-RULINGS pick 1). The gold's painted ledger
++   is in `@theme` above, the violet's in ACC-SIX's return; each arm's night rung is in `.dark`.
++   `check-ink-pressure` reads the trace through this block (its kin and corridor rows). */
++:root {
++  --accent-gold-ink: #a27803;
++  --accent-gold-glow: var(--color-crayon-gold);
++  --accent-violet-ink: #8f61f6;
++  --accent-violet-glow: #c4b5fd;
++
++  --accent-ink: var(--accent-gold-ink);
++  --accent-glow: var(--accent-gold-glow);
++
++  /* ── THE GROUND WASH, ONE CONST (ACC-GRAPHITE's graft, registry-v7 §3.2) ──────────────
++     The selected cell's reach (`.cell-peer`) sits on ONE ground token. Its default is HEAD's
++     crayon-blue at 7 % (13 % pressed): a shipped default moves on the owner's word, never on
++     a graft. The other arm is ACC-GRAPHITE's pencil laid flat, graphite at 6 % (12 % pressed),
++     painted 1.120 light / 1.112-1.114 night over the card against HEAD's 1.078 / 1.104. The
++     arm is this one line; `check-theme-tokens`' wash reach reads what the consumer PAINTS. */
++  --wash-blue: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
++  --wash-graphite: color-mix(in srgb, var(--color-pencil-graphite) 6%, transparent);
++  --ground-wash-unit: var(--wash-blue);
++}
++
++@media (prefers-contrast: more) {
++  :root {
++    --wash-blue: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
++    --wash-graphite: color-mix(in srgb, var(--color-pencil-graphite) 12%, transparent);
++  }
++}
++
+ /* Dark theme */
+ .dark {
+   --color-background: hsl(24 8% 6%);
+@@ -593,7 +631,8 @@
+      MORE. Nothing at C ≥ 0.12 clears both floors — the best such candidate scores 2.317. Any
+      move of --grid-line-color or --color-card re-opens this row, which is why the gate asserts
+      the CORRIDOR and not the hex. */
+-  --color-progress-ink: #7e6a17;
++  --accent-gold-ink: #7e6a17;
++  --accent-violet-ink: #7c3aed; /* the violet arm's night rung (HEAD's, byte-identical) */
+ 
+   /* §SHEET dark arms (design-union §2.1 / §7.3): the tape's wax glows and the milk
+      recedes; the catch-light rises — the one place gloss reads MORE at night.
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 32507d2a..072c9e34 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -121,13 +121,9 @@
+    blue focus ghost as one selection system (never the graphite hover or the red conflict tone).
+    Instant like the ghost — it tracks selection with no fade so arrowing the grid reads crisp. */
+ .cell-peer {
+-  background: color-mix(in srgb, var(--color-crayon-blue) 7%, transparent);
+-}
+-
+-@media (prefers-contrast: more) {
+-  .cell-peer {
+-    background: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);
+-  }
++  /* ONE ground token (`--ground-wash-unit`, index.css — its const names the arm and presses it
++     under `prefers-contrast: more`), so this rule has no second arm of its own. */
++  background: var(--ground-wash-unit);
+ }
+ 
+ /* ── T4-W7 hint laminate — the becauseCells wash (peek-laminate tone) ─────

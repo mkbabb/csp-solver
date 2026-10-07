@@ -1,0 +1,54 @@
+--- a/web/frontend/src/pencil/grid/gridPaths.tally.test.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.tally.test.ts
+@@ -6,8 +6,9 @@
+  * LAW A, ON THE EXPORT THE BOARD RUNS (T9-W7 ACC-GRAPHITE). `HandDrawnGrid` renders
+  * `tallyPaths(traceFrames, writable, written)` and nothing else, so these rows hold the law
+  * where it lives: no constant or formula is restated here. The row that matters is the
+- * DISCONTINUITY — the integer form (`k = ceil(written / ceil(writable/slots))`) fills 56 ticks
+- * at writable 56 and 29 at writable 57 on a 9x9 frame of 56 slots.
++ * DISCONTINUITY — the integer form (`k = ceil(written / ceil(writable/slots))`) fills 55 ticks
++ * at writable 55 and 28 at writable 56 on a frame of 55 slots (56 before T9-W7 §13's un-clipped
++ * frame: the ring is inset 12 on all four sides, so its perimeter holds one 70-unit pitch fewer).
+  */
+ const RING = generateFrameTraceFrames(
+   1000,
+@@ -21,9 +22,9 @@
+   tallyPaths(RING, writable, written).map(ticks);
+ 
+ describe("tallyPaths — LAW A, one mark, every board", () => {
+-  it("has NO discontinuity at the slot boundary — 56, 57 and 58 writable all fill 56 ticks", () => {
+-    for (const writable of [56, 57, 58])
+-      expect(counts(writable, writable)).toEqual([56, 56, 56, 56]);
++  it("has NO discontinuity at the slot boundary — 55, 56 and 57 writable all fill 55 ticks", () => {
++    for (const writable of [55, 56, 57])
++      expect(counts(writable, writable)).toEqual([55, 55, 55, 55]);
+   });
+ 
+   it("counts one tick per cell while the frame can hold them, on every pose", () => {
+@@ -40,19 +41,20 @@
+ 
+   it("scales the count into the frame's slots on a board too big to hold one per cell", () => {
+     for (const writable of [64, 146, 172, 240]) {
+-      expect(counts(writable, writable)).toEqual([56, 56, 56, 56]);
++      expect(counts(writable, writable)).toEqual([55, 55, 55, 55]);
+       expect(counts(writable, Math.round(writable / 2))).toEqual([28, 28, 28, 28]);
+     }
+   });
+ 
+   it("rounds a fractional count to the NEAREST tick, never down or up (non-integer ratios)", () => {
+-    // 57 writable cells on 56 slots: one written cell is 0.98 of a tick and draws ONE (floor
+-    // draws none, so the first cell you write would leave no mark); 29 is 28.49 and draws 28
+-    // (ceil draws 29). On 146 cells, 99 is 37.97 and draws 38 (floor draws 37).
++    // 57 writable cells on 55 slots: one written cell is 0.96 of a tick and draws ONE (floor
++    // draws none, so the first cell you write would leave no mark); 30 is 28.95 and draws 29
++    // (floor draws 28). On 146 cells, 98 is 36.92 and draws 37 (floor draws 36); 3 is 1.13 and
++    // draws 1 (ceil draws 2).
+     for (const [writable, written, k] of [
+       [57, 1, 1],
+-      [57, 29, 28],
+-      [146, 99, 38],
++      [57, 30, 29],
++      [146, 98, 37],
+       [146, 3, 1],
+     ] as const)
+       expect(counts(writable, written)).toEqual([k, k, k, k]);

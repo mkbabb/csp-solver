@@ -1,0 +1,89 @@
+--- a/web/frontend/scripts/shape-census.mjs	2026-10-06 13:04:54
++++ b/web/frontend/scripts/shape-census.mjs	2026-10-06 13:04:54
+@@ -137,6 +137,8 @@
+   "html-comment": "TAB-PEN · HTML comments stripped before links are read",
+   "one-link": "TAB-PEN · exactly one uncommented link per rel",
+   "token-conflict": "TAB-PEN · two placed sites of one token that disagree",
++  "tok-param-carried":
++    "WAVE (pass 8, PROPOSED) · tokenSites' setProperty reader takes TAPE's param-carried resolution: the estate's SECOND setProperty reader read `put(name, v)` as computed",
+ };
+ const OFF = new Set(
+   (process.env.SHAPE_SABOTAGE ?? "")
+@@ -1882,15 +1884,36 @@
+             line: L(m.index),
+             stem: true,
+           });
+-      } else
+-        push({
+-          file,
+-          kind: `${kind}-setProperty-computed`,
+-          prelude: k,
+-          value: v,
+-          line: L(m.index),
+-          unresolved: true,
+-        });
++      } else {
++        // WAVE union (pass 8, PROPOSED · tok-param-carried): TAPE's param-carried resolution landed
++        // in `scriptWrites` only, so this, the estate's SECOND setProperty reader, read CTRL-FACE's
++        // `put(name, v)` publisher as an UNRESOLVED write of every token (lint:bands B3 red on the
++        // measured fit at GameControlPanel.vue). One class, every reader (registry-v7 §2.5): a
++        // parameter resolved at ALL-literal call sites names its tokens; any computed call site
++        // keeps the write UNRESOLVED.
++        const carried = on("tok-param-carried")
++          ? paramCarried(js, k, m.index, consts)
++          : null;
++        if (carried) {
++          for (const c of carried)
++            if (c.name === token)
++              push({
++                file,
++                kind: `${kind}-setProperty-param`,
++                prelude: "setProperty",
++                value: c.value,
++                line: L(c.at),
++              });
++        } else
++          push({
++            file,
++            kind: `${kind}-setProperty-computed`,
++            prelude: k,
++            value: v,
++            line: L(m.index),
++            unresolved: true,
++          });
++      }
+     }
+     for (const m of js.matchAll(
+       /(?:\.style\s*\.\s*cssText\s*\+?=(?!=)|setAttribute\(\s*(["'`])style\1\s*,)\s*([^;\n]+)/g,
+@@ -3703,6 +3726,31 @@
+     (L) => {
+       const f = fixture({ "src/p.ts": 'export const o = { "--plant-a": "#123" };\n' });
+       return L.tokenSites(f.fe, "--plant-a", f).length === 1;
++    },
++  ],
++  [
++    "tok-param-carried",
++    "WAVE",
++    "tokenSites resolves `put(name, v)` at its literal call sites (the second setProperty reader); a computed call site stays UNRESOLVED",
++    (L) => {
++      const good = fixture({
++        "src/p.ts":
++          'const put = (name: string, v: string) => {\n  el.style.setProperty(name, v);\n};\nput("--plant-other", "1");\nput("--plant-q", "9px");\n',
++      });
++      const g = L.tokenSites(good.fe, "--plant-q", good);
++      const none = L.tokenSites(good.fe, "--plant-z", good);
++      const bad = fixture({
++        "src/p.ts":
++          'const put = (name, v) => { el.style.setProperty(name, v); };\nput("--plant-q", "1");\nput(k, "2");\n',
++      });
++      const b = L.tokenSites(bad.fe, "--plant-z", bad);
++      return (
++        g.length === 1 &&
++        !g[0].unresolved &&
++        g[0].value === '"9px"' &&
++        none.length === 0 &&
++        b.some((x) => x.unresolved)
++      );
+     },
+   ],
+   [

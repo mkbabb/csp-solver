@@ -1,0 +1,16 @@
+LIBSAB sfc-toplevel exit=0 :: 
+LIBSAB at-own exit=1 :: plant "@utility body" did not red;the face law (check 7): --font-text;the face law (check 7): --font-display;
+LIBSAB wildcard exit=1 :: plant "font-family literal" did not red;plant "font: shorthand" did not red;plant "font: VAR-LED shorthand" did not red;
+LIBSAB tw-split exit=1 :: plant "Tailwind font-[ … ] literal" did not red;
+LIBSAB tpl-file exit=0 :: 
+LIBSAB script-css exit=1 :: plant "a <style> in a script string (.vue)" did not red;plant "a <style> in a script string (.ts)" did not red;plant "the admitted logo literal changed" did not red;
+LIBSAB script-shorthand exit=1 :: plant "script style.font" did not red;
+LIBSAB script-style-object exit=1 :: plant "a TS style object" did not red;
+LIBSAB svg-presentation exit=1 :: plant "an SVG font-family= attribute" did not red;
+LIBSAB tw-var-shorthand exit=1 :: plant "Tailwind font-( --x ) to a literal" did not red;
+LIBSAB csstext exit=0 :: 
+LIBSAB style-computed-key exit=0 :: 
+LIBSAB setprop-computed exit=0 :: 
+LIBSAB const-carried exit=0 :: 
+LIBSAB collect-walk exit=1 :: plant "index.html <style>" did not red;
+DONE

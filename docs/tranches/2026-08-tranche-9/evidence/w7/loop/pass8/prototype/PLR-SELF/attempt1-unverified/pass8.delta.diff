@@ -1,0 +1,609 @@
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+new file mode 100644
+index 00000000..e4bd43c7
+--- /dev/null
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -0,0 +1,37 @@
++// edge-bands.d.mts — the TYPE of the ONE four-band edge probe (`./edge-bands.mjs`), so a TypeScript
++// spec can import it under `typecheck:e2e` (strict, no `allowJs`: a bare `.mjs` import is TS7016).
++// No behaviour lives here. The three exports `player-mark.spec.ts` calls are typed; every other
++// export is declared `unknown` until a spec that calls it types it.
++// NOT-A-LANE: a declaration of the chair's home (T9-W7 pass 8, PLR-SELF's four-band row).
++import type { Page } from "@playwright/test";
++
++export interface Band {
++  stations: number;
++  coreMedian: number;
++  thickness: number;
++  dropped: number;
++  fracUnder: number;
++}
++export interface BandsRead {
++  red: boolean;
++  why: string[];
++  bands: Record<"top" | "right" | "bottom" | "left", Band> | null;
++  edgeCount: number;
++  noop?: boolean;
++  info?: boolean;
++}
++/** A plant is a CSS string, or `{ fade }`: every painted colour of the edge re-set at that alpha. */
++export type EdgePlant = string | { fade: number };
++
++export function EDGE_PLANTS(edge: string): Record<string, EdgePlant>;
++export function edgeGate(
++  page: Page,
++  opts: { subject: string; edge: string; plants?: Record<string, EdgePlant> | null; [k: string]: unknown },
++): Promise<{ clean: BandsRead; plants: Record<string, BandsRead> }>;
++export function fmt(r: BandsRead): string;
++
++export const EDGE_CLAUSES: unknown;
++export const fourBands: unknown;
++export const INK_PLANTS: unknown;
++export const applyEdgePlant: unknown;
++export const selfTest: unknown;
+diff --git a/web/frontend/e2e/player-mark.spec.ts b/web/frontend/e2e/player-mark.spec.ts
+index d995c298..339053cf 100644
+--- a/web/frontend/e2e/player-mark.spec.ts
++++ b/web/frontend/e2e/player-mark.spec.ts
+@@ -18,15 +18,20 @@
+  *   5  the head rule is registered and its absence is visible
+  *   6  Escape has one owner while the sheet is open
+  *   7  the row budget is keyed on the MEASURED space, on both axes, and read again at rest
+- *      when the space changes under an open sheet
++ *      when the space changes under an open sheet; it flips where the price of the three more
++ *      rows does (the area they would draw over the board), swept across each clause's edge,
++ *      and the desk's price is read at rest
+  *   8  a tap opens the mark on a coarse phone in both engines, and is a look, not a look-away:
+- *      one toggle per tap however the tap's click is labelled, and a tap on the sheet keeps the cell
+- *   9  both head disclosures PAINT a drawn edge on all four sides and no CSS border; shut, they
+- *      paint nothing at all
++ *      one toggle per tap however the tap's click is labelled, a tap on the sheet keeps the cell,
++ *      and the tap's debt ENDS: a click with no press after it toggles once
++ *   9  both head disclosures PAINT a drawn edge on all four sides and no CSS border, in both
++ *      themes (the ONE four-band probe, `e2e/lib/edge-bands.mjs`); shut, they paint nothing at
++ *      all; the frame's corner is the ground's, read live at a larger root
+  *  10  the deck's swatch for you is the colour the room paints you (F1's fourth surface)
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+ import { pressCommitted } from './committed-press';
++import { EDGE_PLANTS, edgeGate, fmt } from './lib/edge-bands.mjs';
+ 
+ const SOLO = './?size=3&difficulty=EASY&wire=local';
+ 
+@@ -35,6 +40,20 @@ async function settled(page: Page) {
+   await expect
+     .poll(() => page.locator('.sudoku-cell .glyph-svg').count(), { timeout: 60000 })
+     .toBeGreaterThan(0);
++  // ...and the deal at rest: its staggered `cell-reveal` still running reads a board with cells
++  // missing (1032×768: two cells under the sheet at 0.6s, three at 0.8s, on a loaded box).
++  await expect
++    .poll(
++      () =>
++        page.evaluate(
++          () =>
++            document
++              .getAnimations()
++              .filter((a) => (a as CSSAnimation).animationName === 'cell-reveal' && a.playState === 'running').length,
++        ),
++      { timeout: 30000 },
++    )
++    .toBe(0);
+ }
+ 
+ /** A pose is settled when two reads 150ms apart agree — the dock's slide, the sheet's fade and
+@@ -92,21 +111,35 @@ async function crowd(page: Page, n: number, tag: string) {
+     .toBe(n + 1);
+ }
+ 
+-/** A coarse page, the regime WITNESSED rather than assumed. */
+-async function coarsePage(browser: Browser, width: number, height: number) {
+-  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: true });
++/** A page at one cell, its pointer regime WITNESSED rather than assumed. */
++async function cellPage(browser: Browser, width: number, height: number, coarse: boolean) {
++  const ctx = await browser.newContext({ viewport: { width, height }, hasTouch: coarse });
+   const page = await ctx.newPage();
+   await page.goto(SOLO);
+   await settled(page);
+-  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
++  expect(await page.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(coarse);
+   return { ctx, page };
+ }
+ 
++const coarsePage = (browser: Browser, width: number, height: number) =>
++  cellPage(browser, width, height, true);
++
+ const mark = (page: Page) => page.locator('[data-player-mark]:visible');
+ const lobby = (page: Page) => page.locator('[data-lobby]:visible');
++/** Open means the SETTLED pose: the 150ms fade and scale-in done (opacity 1, no transform left),
++ *  and then the box holding still — a loaded box can freeze a page mid-scale long enough for two
++ *  reads to agree on a sheet still 0.9 of its size. */
+ const openSheet = async (page: Page) => {
+   await expect(lobby(page)).toHaveClass(/is-open/);
+-  await stable(() => lobby(page).evaluate((e) => e.getBoundingClientRect().height));
++  await expect
++    .poll(() =>
++      lobby(page).evaluate((e) => {
++        const c = getComputedStyle(e);
++        return `${c.opacity} ${c.transform}`;
++      }),
++    )
++    .toMatch(/^1 (none|matrix\(1, 0, 0, 1, 0, 0\))$/);
++  await stable(() => lobby(page).evaluate((e) => JSON.stringify(e.getBoundingClientRect())));
+ };
+ const inCell = (page: Page) =>
+   page.evaluate(() => !!(document.activeElement as HTMLElement | null)?.closest('.sudoku-cell'));
+@@ -557,6 +590,74 @@ test('a portrait phone compresses exactly where four rows would lap the board',
+   expect(await cell(844, 390)).toMatchObject({ rows: 4, more: 'and 3 more', lapped: 6 });
+ });
+ 
++/**
++ * THE BUDGET FLIPS WHERE THE PRICE DOES (pass-7 critic gap 1; registry-v7 §2.12a; LAWS P7 §D).
++ * Pass 7's second clause, `board.left <= rowsStart`, read one axis and cliffed between 700 and
++ * 712 wide: at 700×800 the board's left was 14 (one row, four cells) and at 712 it was 20 (four
++ * rows, EIGHT cells), with the board under the same rows either way. The clause is gone. The
++ * key now reads what the three more rows would draw over the board, both axes (PLR-PLACE's
++ * area primitive), against their own area: past 0.7 the names are not worth the cells.
++ *
++ * The row is SWEPT across each clause's edge, not read at the named cells. Clause 2 flips at
++ * 800 → 802 in the 800-tall class, where the page's own layout moves the board (left 64 → 81,
++ * top 88 → 115; 0.750 → 0.684 of the added rows over the board), and continuously at 768 tall
++ * (1032: 0.719, one row; 1056: 0.672, four). Clause 1 (one row clears the board) flips at the
++ * desk between 850 and 900 tall. Today's clause reds 712×800 (4 rows, 8 cells) and 1024×768
++ * fine (4 rows, 8 cells), and so does the pass-6 one-axis key.
++ */
++test('the row budget flips where the three more rows would cover the board, on both axes', async ({
++  browser,
++}) => {
++  test.setTimeout(240000);
++  const cells = [
++    [700, 800, true, 1, 4],
++    [712, 800, true, 1, 4],
++    [768, 800, true, 1, 3],
++    [800, 800, true, 1, 3],
++    [802, 800, true, 4, 6],
++    [1032, 768, true, 1, 3],
++    [1056, 768, true, 4, 6],
++    [1024, 768, false, 1, 4],
++    [1280, 850, false, 4, 4],
++    [1280, 900, false, 1, 0],
++  ] as const;
++  for (const [w, h, coarse, rows, lapped] of cells) {
++    const { ctx, page } = await cellPage(browser, w, h, coarse);
++    await invite(page);
++    await crowd(page, 6, `key-${w}x${h}`);
++    const r = await drawSheet(page);
++    expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
++    await ctx.close();
++  }
++});
++
++/**
++ * THE DESK'S PRICE, READ AT REST (pass-7 critic gap 4; registry-v7 §2.12d; CH-71). The record
++ * quoted two or three cells; at rest it is four, in both engines, with the board's top at
++ * 124.5 (chromium) / 124.2 (webkit). The sheet is read at three ages of the room, each after its
++ * own box holds still, and must say the same thing every time: four rows over four cells.
++ */
++test('the desk draws four rows over four cells at rest, whatever the room\'s age', async ({ page }) => {
++  await page.setViewportSize({ width: 1280, height: 800 });
++  await page.goto(SOLO);
++  await settled(page);
++  await invite(page);
++  await crowd(page, 6, 'desk-rest');
++  const reads = [];
++  for (const age of [0, 1500, 2500]) {
++    // sleep-ok: the room's AGE is the variable this row reads, not a settle for the sheet
++    if (age) await page.waitForTimeout(age);
++    const r = await drawSheet(page);
++    const top = await page.evaluate(
++      () => document.querySelector('.board-peek-host')!.getBoundingClientRect().top,
++    );
++    reads.push({ rows: r.rows, lapped: r.lapped, top: Math.round(top) });
++    await page.keyboard.press('Escape');
++    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++  }
++  for (const r of reads) expect(r, JSON.stringify(reads)).toEqual({ rows: 4, lapped: 4, top: 124 });
++});
++
+ /**
+  * THE SPACE IS READ AGAIN WHEN IT CHANGES UNDER AN OPEN SHEET (pass-6 critic gap 2; LAWS P6
+  * §D). Pass 6 read the board at the open and on a room change only, so a phone that lost 44px
+@@ -741,74 +842,65 @@ test('one tap is one toggle when the tap\'s click is labelled as a mouse', async
+ });
+ 
+ /**
+- * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE ON ALL FOUR SIDES AND NO CSS BORDER (R6 L5; CH-71;
+- * pass-6 critic gap 3; LAWS P6 §E). The pass-6 row photographed the top band only, so a
+- * `clip-path` that erased the bottom edge — the side that meets the board — passed it ×2, and an
+- * edge at 40–50 % passed WebKit. The row is the chair's four-band probe (pass7/instruments/
+- * edge-bands.mjs), read in the page: each side is a strip 8px outside and 8px inside the sheet's
+- * box, photographed with the edge ON and OFF (`visibility: hidden` on the edge layer). A station
+- * is one column (top, bottom) or one row (left, right) of the middle 80 % of the side, and its
+- * value is the best contrast, over the strip's depth, of the ON pixel against the OFF pixel
+- * under it: the stroke against the ground it is painted on. A station that did not change reads
+- * 1.00 and counts. Every side must hold ≥ 8 stations and a core median ≥ 3.0 (§2.4's stroke
+- * floor). Both owner arms clear it: FULL 13–17, QUIET 4.3–5.6.
++ * THE TAP'S DEBT ENDS (pass-7 critic gap 2; registry-v7 §2.12b; LAWS P7 §D). A release that
++ * toggled owes the tap's own click, and pass 7 forgave that debt only with a click, a press or a
++ * key. WebKit sends NO click after a prevented tap, so the debt outlived the tap and swallowed
++ * the next click that came without a press — the shape of an assistive-technology activation —
++ * 1.5 s later or any time after: the reader pressed once and nothing happened. The debt is now
++ * bounded by the release's own time stamp. The row taps, waits past the bound, and activates the
++ * mark with a press-less `click()`: exactly one toggle. It runs twice per engine: with the
++ * engine's own delivery, and with the tap's click withheld (WebKit's delivery, in Chromium too).
+  */
+-const BANDS = ['top', 'right', 'bottom', 'left'] as const;
+-async function fourBands(page: Page, sel: string) {
+-  const sheet = page.locator(`${sel}:visible`).first();
+-  const b = (await sheet.boundingBox())!;
+-  const vw = page.viewportSize()!;
+-  const read: Record<string, { stations: number; median: number }> = {};
+-  for (const side of BANDS) {
+-    const raw =
+-      side === 'top' ? { x: b.x, y: b.y - 8, width: b.width, height: 16 }
+-      : side === 'bottom' ? { x: b.x, y: b.y + b.height - 8, width: b.width, height: 16 }
+-      : side === 'left' ? { x: b.x - 8, y: b.y, width: 16, height: b.height }
+-      : { x: b.x + b.width - 8, y: b.y, width: 16, height: b.height };
+-    const x = Math.max(0, Math.floor(raw.x)), y = Math.max(0, Math.floor(raw.y));
+-    const clip = { x, y, width: Math.min(vw.width - x, Math.ceil(raw.width)), height: Math.min(vw.height - y, Math.ceil(raw.height)) };
+-    const on = (await page.screenshot({ clip, animations: 'disabled' })).toString('base64');
+-    const tag = await page.addStyleTag({ content: '.head-sheet-edge { visibility: hidden !important; }' });
+-    const off = (await page.screenshot({ clip, animations: 'disabled' })).toString('base64');
+-    await tag.evaluate((e) => (e as Element).remove());
+-    read[side] = await page.evaluate(
+-      async ({ on, off, horiz }) => {
+-        const px = async (b64: string) => {
+-          const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b64}`)).blob());
+-          const c = document.createElement('canvas');
+-          c.width = bmp.width;
+-          c.height = bmp.height;
+-          const x = c.getContext('2d')!;
+-          x.drawImage(bmp, 0, 0);
+-          return x.getImageData(0, 0, c.width, c.height);
+-        };
+-        const lum = (d: Uint8ClampedArray, i: number) => {
+-          const f = (v: number) => ((v /= 255) <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4);
+-          return 0.2126 * f(d[i]) + 0.7152 * f(d[i + 1]) + 0.0722 * f(d[i + 2]);
+-        };
+-        const [A, B] = [await px(on), await px(off)];
+-        const len = horiz ? A.width : A.height, depth = horiz ? A.height : A.width;
+-        const st: number[] = [];
+-        for (let s = Math.floor(len * 0.1); s < Math.ceil(len * 0.9); s++) {
+-          let best = 1;
+-          for (let d = 0; d < depth; d++) {
+-            const i = ((horiz ? d : s) * A.width + (horiz ? s : d)) * 4;
+-            const [p, q] = [lum(A.data, i), lum(B.data, i)];
+-            best = Math.max(best, (Math.max(p, q) + 0.05) / (Math.min(p, q) + 0.05));
+-          }
+-          st.push(best);
+-        }
+-        st.sort((p, q) => p - q);
+-        return { stations: st.length, median: st.length ? +st[st.length >> 1].toFixed(3) : 0 };
+-      },
+-      { on, off, horiz: side === 'top' || side === 'bottom' },
+-    );
++test('a click with no press after a tap toggles once, whenever it comes', async ({ browser }) => {
++  for (const withheld of [false, true]) {
++    const ctx = await browser.newContext({ viewport: { width: 390, height: 844 }, hasTouch: true });
++    if (withheld)
++      await ctx.addInitScript(() =>
++        addEventListener(
++          'click',
++          (e) => {
++            if (e.isTrusted && (e as PointerEvent).pointerType === 'touch') e.stopImmediatePropagation();
++          },
++          { capture: true },
++        ),
++      );
++    const page = await ctx.newPage();
++    await page.goto(SOLO);
++    await settled(page);
++    await mark(page).evaluate((el) => {
++      const seen: string[] = [el.getAttribute('aria-expanded')!];
++      (window as any).__states = seen;
++      new MutationObserver(() => {
++        const v = el.getAttribute('aria-expanded')!;
++        if (v !== seen[seen.length - 1]) seen.push(v);
++      }).observe(el, { attributes: true });
++    });
++    const states = () => page.evaluate(() => (window as any).__states as string[]);
++    await mark(page).tap();
++    await stable(states);
++    expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true']);
++    // sleep-ok: the debt's END is the variable; the click must come after the tap's own window
++    await page.waitForTimeout(600);
++    await mark(page).evaluate((el) => (el as HTMLElement).click());
++    await stable(states);
++    expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true', 'false']);
++    await ctx.close();
+   }
+-  return read;
+-}
+-/** Every side painted: ≥ 8 stations and a core median ≥ 3.0 on each of the four. */
+-const painted = (r: Record<string, { stations: number; median: number }>) =>
+-  BANDS.every((k) => r[k].stations >= 8 && r[k].median >= 3);
++});
++
++/**
++ * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE ON ALL FOUR SIDES AND NO CSS BORDER, IN BOTH THEMES
++ * (R6 L5; CH-71; pass-6 critic gap 3; pass-7 critic gaps 3 and 6; LAWS P6 §E, P7 §E, §I). The
++ * row is the ONE four-band probe at its product home (`e2e/lib/edge-bands.mjs`), imported, never
++ * ported: every side read ON against edge-OFF at STATION 1, with its scroll poses and its
++ * occluder named, and six clauses — the subject visible (B0), ≥ 8 css px of stations a side (B1),
++ * a core median ≥ 3.0 (B2), a painted depth ≥ 0.9 × the frame's own 1.5px (B3), holes ≤ 2 % (B4). Pass 7's port read
++ * light only, so a dark-only erase of the edge passed it ×2; this row reads BOTH themes. Its
++ * negative controls are the probe's own plants, in the run, in each theme: the bottom band
++ * clipped (X6), the edge at 15 % three ways (X4, FADE15 through every descendant's ink, and the
++ * stroke's, the path's and a filter's opacity), a 1 px stroke (THIN_1PX), a 1-in-8 dash. Each
++ * must red. The 40 % edge (X5) is printed: in dark it can clear 3.0, a visible edge by §2.4.
++ */
+ const border = (page: Page, sel: string) =>
+   page.locator(`${sel}:visible`).first().evaluate((el) => {
+     const cs = getComputedStyle(el);
+@@ -819,53 +911,43 @@ const border = (page: Page, sel: string) =>
+     );
+   });
+ 
+-test('both head disclosures paint a drawn edge on all four sides and no CSS border', async ({ page }) => {
++test('both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes', async ({
++  page,
++}) => {
++  test.setTimeout(300000);
+   await page.setViewportSize({ width: 1280, height: 800 });
+-  await page.emulateMedia({ colorScheme: 'light' });
+-  await page.goto(SOLO);
+-  await settled(page);
+-
+-  // The lobby, open. (Solo: one person, one row, the sheet still draws.)
+-  await mark(page).click();
+-  await openSheet(page);
+-  expect(await border(page, '[data-lobby]')).toBe(0);
+-  const lob = await fourBands(page, '[data-lobby]');
+-  expect(painted(lob), JSON.stringify(lob)).toBe(true);
+-  await page.keyboard.press('Escape');
+-  await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
+-
+-  // The @mbabb card, open by its own hover (a click would toggle the hover's open back shut).
+-  await page.locator('.corner-left .attribution-trigger').hover();
+-  const card = page.locator('.corner-left .hover-card');
+-  await expect(card).toHaveClass(/is-open/);
+-  await stable(() => card.evaluate((e) => getComputedStyle(e).opacity + JSON.stringify(e.getBoundingClientRect())));
+-  expect(await border(page, '.corner-left .hover-card')).toBe(0);
+-  const crd = await fourBands(page, '.corner-left .hover-card');
+-  expect(painted(crd), JSON.stringify(crd)).toBe(true);
+-
+-  // THE NEGATIVE CONTROLS, same run, same reading. Each must fail at least one side:
+-  //   X1 no ink · X2 inkless · X6 the bottom edge clipped away (top and sides intact; pass 6's
+-  //   plant, and the chair's) · X4 an edge at 15 % · FADE15 its ink mixed to 15 % · X5 an edge
+-  //   at 40 % (in light about 2.6 : 1, under the floor).
+-  for (const plant of [
+-    '.head-sheet-edge { opacity: 0 !important; }',
+-    '.head-sheet-edge { color: transparent !important; } .head-sheet-edge path { stroke: rgba(0, 0, 0, 0) !important; }',
+-    '.head-sheet-edge { clip-path: inset(-4px -4px 16px -4px) !important; }',
+-    '.head-sheet-edge { clip-path: inset(-8px -8px 16px -8px) !important; }',
+-    '.head-sheet-edge { opacity: 0.15 !important; }',
+-    '.head-sheet-edge { color: color-mix(in srgb, currentColor 15%, transparent) !important; stroke: color-mix(in srgb, currentColor 15%, transparent) !important; }',
+-    '.head-sheet-edge { opacity: 0.4 !important; }',
+-  ]) {
+-    const tag = await page.addStyleTag({ content: plant });
+-    const r = await fourBands(page, '.corner-left .hover-card');
+-    expect(painted(r), `${plant} ${JSON.stringify(r)}`).toBe(false);
+-    await tag.evaluate((e) => (e as Element).remove());
++  for (const scheme of ['light', 'dark'] as const) {
++    await page.emulateMedia({ colorScheme: scheme, reducedMotion: 'reduce' });
++    await page.goto(SOLO);
++    await settled(page);
++    expect(await page.evaluate(() => document.documentElement.classList.contains('dark'))).toBe(scheme === 'dark');
++    const gate = async (subject: string) => {
++      const edge = `${subject} .head-sheet-edge`;
++      expect(await border(page, subject), `${scheme} ${subject}`).toBe(0);
++      // B3 at the SHIPPED weight: the frame is the house's 1.5px stroke (`HandDrawnOutline`,
++      // R6 L5), and the probe's default 2px reads 1.50–1.51 on it — as it reads 1.54 on the wells'
++      // own frame on the control. The 1px plant must still red.
++      const { clean, plants } = await edgeGate(page, { subject, edge, plants: EDGE_PLANTS(edge), thick: 1.5 });
++      expect(clean.red, `${scheme} ${subject} clean: ${fmt(clean)}`).toBe(false);
++      for (const [name, r] of Object.entries(plants)) {
++        if (r.info) test.info().annotations.push({ type: `${scheme} ${subject} ${name}`, description: fmt(r) });
++        else expect(r.red, `${scheme} ${subject} ${name}: ${fmt(r)}`).toBe(true);
++      }
++    };
++    // The lobby, open (solo: one person, one row, the sheet still draws).
++    await mark(page).click();
++    await openSheet(page);
++    await gate('.corner-left [data-lobby]');
++    await page.keyboard.press('Escape');
++    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++    // The @mbabb card, open by its own hover (a click would toggle the hover's open back shut).
++    await page.locator('.corner-left .attribution-trigger').hover();
++    const card = page.locator('.corner-left .hover-card');
++    await expect(card).toHaveClass(/is-open/);
++    await stable(() => card.evaluate((e) => getComputedStyle(e).opacity + JSON.stringify(e.getBoundingClientRect())));
++    await gate('.corner-left .hover-card');
++    await page.mouse.move(700, 700);
+   }
+-  // X7, an edge at 50 %, is PRINTED, not required: it paints 3.0–3.5 : 1, which is over the
+-  // stroke floor — a visible edge by §2.4's own measure (the chair's dark X5 is the same case).
+-  const x7 = await page.addStyleTag({ content: '.head-sheet-edge { opacity: 0.5 !important; }' });
+-  test.info().annotations.push({ type: 'X7 opacity 0.5 (printed)', description: JSON.stringify(await fourBands(page, '.corner-left .hover-card')) });
+-  await x7.evaluate((e) => (e as Element).remove());
+   // And the pass-4 border, planted, reads on the computed box.
+   await page.addStyleTag({
+     content: `.hover-card, [data-lobby] { border: 2px solid color-mix(in srgb, var(--color-border) 30%, transparent) !important; }`,
+@@ -951,6 +1033,66 @@ test('shut, both head disclosures paint nothing', async ({ page }) => {
+   await tag.evaluate((e) => (e as Element).remove());
+ });
+ 
++/**
++ * THE FRAME'S CORNER IS THE GROUND'S, READ LIVE (pass-7 critic gap 9; registry-v7 §5 row 9). The
++ * frame's radius is the ground's computed radius less the edge's inset, read on a ResizeObserver.
++ * At a 16px root that is the literal 15 the two used to share, so only a larger root can tell a
++ * live read from a literal one. The row reads the DRAWN corner: every path of the edge sampled
++ * every 0.25px, mapped to the page, and at each of the ground's four corners the nearest drawn
++ * point d. A frame of radius r inset i sits d = (i + r)·√2 − r from the corner, so the drawn
++ * radius is r = (d − i·√2) / (√2 − 1). The hand's wobble spreads the four corners by about ±1.3px,
++ * so the row reads their mean: within 1px of (ground − inset) at 16px AND at 18px, and risen by
++ * at least 1px between them. The literal 15 at 18px sits about 2.7px short.
++ */
++test('the frame follows the ground\'s corner at an 18px root', async ({ page }) => {
++  await page.emulateMedia({ reducedMotion: 'reduce' });
++  await page.goto(SOLO);
++  await settled(page);
++  const read = () =>
++    lobby(page).evaluate((el) => {
++      const g = el.getBoundingClientRect();
++      const inset = (el.querySelector('.head-sheet-edge') as HTMLElement).offsetTop;
++      const pts: [number, number][] = [];
++      for (const p of el.querySelectorAll<SVGPathElement>('.head-sheet-edge path')) {
++        const m = p.getScreenCTM()!;
++        for (let s = 0, L = p.getTotalLength(); s <= L; s += 0.25) {
++          const q = p.getPointAtLength(s);
++          pts.push([m.a * q.x + m.c * q.y + m.e, m.b * q.x + m.d * q.y + m.f]);
++        }
++      }
++      const drawn = [
++        [g.left, g.top],
++        [g.right, g.top],
++        [g.right, g.bottom],
++        [g.left, g.bottom],
++      ].map(([cx, cy]) => {
++        const d = Math.min(...pts.map(([x, y]) => Math.hypot(x - cx, y - cy)));
++        return (d - inset * Math.SQRT2) / (Math.SQRT2 - 1);
++      });
++      return {
++        want: parseFloat(getComputedStyle(el).borderTopLeftRadius) - inset,
++        mean: +(drawn.reduce((a, b) => a + b, 0) / 4).toFixed(2),
++      };
++    });
++  const at = async (root: string) => {
++    await page.evaluate((r) => (document.documentElement.style.fontSize = r), root);
++    await mark(page).click();
++    await openSheet(page);
++    await stable(read);
++    const r = await read();
++    await page.keyboard.press('Escape');
++    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++    return r;
++  };
++  const r16 = await at('16px');
++  const r18 = await at('18px');
++  expect(r16.want, JSON.stringify({ r16, r18 })).toBe(15);
++  expect(r18.want, JSON.stringify({ r16, r18 })).toBe(17);
++  expect(Math.abs(r16.mean - r16.want), JSON.stringify({ r16, r18 })).toBeLessThanOrEqual(1);
++  expect(Math.abs(r18.mean - r18.want), JSON.stringify({ r16, r18 })).toBeLessThanOrEqual(1);
++  expect(r18.mean - r16.mean, JSON.stringify({ r16, r18 })).toBeGreaterThanOrEqual(1);
++});
++
+ /**
+  * F1'S FOURTH SURFACE — THE DECK'S SWATCH (pass-3 G14, re-born; pass-5 row 6). Reached by the
+  * estate's own gallery control (the wordmark), never `?view=gallery`, which reloads the page and
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 55e7a69e..aa9e6441 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -116,28 +116,34 @@ function onBlur(): void {
+  * touch's click as `pointerType: "touch"`, WebKit labels the same click `"mouse"`, and emulated
+  * WebKit sends none at all after a prevented press. So a release that toggled owes the NEXT click,
+  * whatever it says it is; a new press or a key starts a new sequence and forgives the debt.
++ *
++ * AND THE DEBT ENDS. It is owed for `TAP_CLICK_MS` after the release, read off the two events'
++ * own time stamps: 350ms is WebKit's double-tap wait (Chromium's is 300), the longest a tap's own
++ * click can trail its release. Unbounded, a WebKit tap (no click follows it) swallowed the next
++ * click that came without a press, however late: the shape of an assistive-technology activation,
++ * which then took two to toggle. What (b) still costs: a press-less click inside 350ms of a tap is
++ * read as that tap's own.
+  */
+ const TAP_IS_A_LOOK = true;
+-let clickOwed = false;
++const TAP_CLICK_MS = 350;
++let owedAt = -Infinity;
+ 
+ function onPress(e: PointerEvent): void {
+-  clickOwed = false;
++  owedAt = -Infinity;
+   if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
+ }
+ function onRelease(e: PointerEvent): void {
+   if (!TAP_IS_A_LOOK || e.pointerType !== "touch") return;
+   toggle();
+-  clickOwed = true;
++  owedAt = e.timeStamp;
+ }
+-function onClick(): void {
+-  if (clickOwed) {
+-    clickOwed = false;
+-    return;
+-  }
+-  toggle();
++function onClick(e: MouseEvent): void {
++  const owed = e.timeStamp - owedAt < TAP_CLICK_MS;
++  owedAt = -Infinity;
++  if (!owed) toggle();
+ }
+ function onKey(): void {
+-  clickOwed = false;
++  owedAt = -Infinity;
+ }
+ function onSheetPress(e: PointerEvent): void {
+   if (e.pointerType !== "touch" || TAP_IS_A_LOOK) e.preventDefault();
+@@ -220,15 +226,22 @@ const quietAt = ref<Record<string, number | null>>({});
+  *   · each sheet's box is read off the sheet ITSELF, laid out and untransformed (the offset box,
+  *     so the 150ms scale-in is not in it) — a wrapped 29-character slug is in it too;
+  *   · the board's box comes from `App.vue`, because pencil may not import a board.
+- * A lap is an overlap on BOTH axes. The sheet takes `short` when the tall one laps the board AND
+- * either one row clears it (768×1024 coarse: four rows over three cells, one row over none) or
+- * the board runs under the rows from where they start (a phone: whatever one row laps, four lap
+- * more). Otherwise the names are worth more than the cells one row would give back, and the
+- * sheet stays tall at a price, stated rather than denied: the desk's corner (CH-71, 1280×800:
+- * four rows over two or three cells, one row over one or two) and a coarse landscape phone (9×9:
+- * six cells against four at 844×390, five against three at 812×375; 16×16: nine against six,
+- * eighteen against twelve). Both reads and the flip happen in one microtask chain, so neither
+- * trial budget is ever painted.
++ * A lap is an overlap on BOTH axes, and what a sheet covers is the overlap's AREA (PLR-PLACE's
++ * yield primitive). The sheet takes `short` when the tall one laps the board AND either one row
++ * clears it (768×1024 coarse: four rows over three cells, one row over none) or more than
++ * `UNDER_BOARD` of what the three more rows add is drawn over the board. A phone is 0.95 (the
++ * board runs under the rows from where they start); the 800-tall portrait class is 0.75–0.94
++ * up to 800 wide, where the page's own layout moves the board (802: 0.68), so the flip lands on
++ * the board's move and never between two widths where it has not moved (pass 7 keyed the
++ * board's left edge against the rows' start and cliffed at 700 → 712: one row over four cells,
++ * then four over eight). Under 0.7 the names are worth the cells one row would give back, and
++ * the sheet stays tall at a price, stated rather than denied (read at rest, 6 peers): the desk's
++ * corner (CH-71, 1280×800 fine: four rows over FOUR cells, one row over two; 16×16 twelve
++ * against four), 802–844×800 and 1048+×768 coarse (six against three), 1180×820 coarse (four
++ * against two), 800×700 fine (six against three), and a coarse landscape phone (9×9: six
++ * against four at 844×390, five against three at 812×375; 16×16: nine against six, eighteen
++ * against twelve). Both reads and the flip happen in one microtask chain, so neither trial
++ * budget is ever painted.
+  *
+  * WHETHER NAMES ARE WORTH THOSE CELLS IS THE OWNER'S (U-10), ONE CONST. `true`: the above.
+  * `false`: any tall sheet that laps the board takes `short` — landscape pays one row's cells, and
+@@ -243,8 +256,17 @@ const NAMES_OVER_CELLS = true;
+ const cramped = ref(false);
+ const budget = computed(() => (cramped.value ? ROWS.short : ROWS.tall));
+ 
++/** The share of the three more rows' own area the board may run under before they cost more
++ *  than the names are worth (see above: the flip at the layout's own step). */
++const UNDER_BOARD = 0.7;
++
+ const laps = (a: DOMRect, b: DOMRect) =>
+   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
++/** How much of `a` the board `b` runs under: the overlap's area, both axes (PLR-PLACE's yield). */
++const covered = (a: DOMRect, b: DOMRect) =>
++  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
++  Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
++const area = (a: DOMRect) => a.width * a.height;
+ 
+ async function drawn(short: boolean) {
+   cramped.value = short;
+@@ -281,8 +303,10 @@ async function fit(again = false): Promise<void> {
+   if (run !== fits) return;
+   cramped.value =
+     !NAMES_OVER_CELLS ||
+-    board.left <= tall.rowsStart ||
+-    (!!short && !laps(short.box, board));
++    !short ||
++    !laps(short.box, board) ||
++    covered(tall.box, board) - covered(short.box, board) >
++      UNDER_BOARD * (area(tall.box) - area(short.box));
+ }
+ watch([isOpen, () => people.value.length], ([open]) => {
+   if (open) void fit();

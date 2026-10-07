@@ -1,0 +1,10 @@
+# the two PROPOSED extensions to the ONE library (scripts/shape-census.mjs, homes a1d8adeb, sha1 5b8739d5), each applied to a scratch copy with patch -p1, then: its own --self-test; the SAME self-test run against the unpatched home copy as the seed (--lib, the born-RED); the patched copy with its new clause sabotaged (SHAPE_SABOTAGE=<id>)
+== shape-census.style-cast.PROPOSED.diff sha1 890022ed6cd6
+== shape-census.literal-nothrow.PROPOSED.diff sha1 fb378fdf85ee
+style-cast: SELF-TEST on this library: 93/93 read as the law · 0 fail · clauses planted 41/41 · exit 0 (re-run bare: the first read piped through tail)
+  born-RED on the home seed: 92/93 read as the law · 1 fail · clauses planted 41/41 · exit 1 · FAIL [style-cast · WALK] S3b (PAL-WALK pass 8): `(el.style as any)[k] = v` is an UNRESOLVED write, like `el.style[k] = v`
+  sabotaged: SELF-TEST on this library: 92/93 read as the law · 1 fail · clauses planted 41/41 · exit 1
+literal-nothrow: SELF-TEST on this library: 93/93 read as the law · 0 fail · clauses planted 41/41 · exit 0
+  born-RED on the home seed: 92/93 read as the law · 1 fail · clauses planted 41/41 · exit 1 · FAIL [literal-nothrow · WALK] a TS helper `oklab(rgb)` beside a real hex: the hex is read, the call is not, nothing throws
+  sabotaged: SELF-TEST on this library: 92/93 read as the law · 1 fail · clauses planted 41/41 · exit 1
+# on the tree, check-peer-arcs prints S3b as a KNOWN HOLE (never a pass) and blanks-and-counts the 5 non-literal colour calls the home copy throws on, until the chair folds both

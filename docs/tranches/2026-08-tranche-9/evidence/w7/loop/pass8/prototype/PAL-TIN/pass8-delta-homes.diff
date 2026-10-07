@@ -1,0 +1,2115 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index b280d749..0ac4af98 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -946,14 +946,16 @@ jobs:
+             # sticks, five ring arms and five name arms per theme), so the instrument reads the
+             # table per ARM, follows `var()` and `hsl()` down to bytes, and re-derives what this
+             # paper can hold in the same run. Six gates: 1a no stick near a reserved ink by hue,
+-            # 1b none near an ink that paints IN A CELL by ΔE, 2 no two players (stick or name
+-            # arm) within ΔE 0.10, the light names exempt while they ARE the ring arms, 3 the tin
+-            # WHOLE (a missing ring or name arm falls back to another ink), 3b every arm its own
+-            # stick's hue, 4 one publisher (any colour literal within ΔE 0.03 of an arm anywhere
+-            # in src/, e2e/, public/ or index.html reds, in any CSS colour syntax through the
+-            # shape-census library's one parser, and so does a token named by arithmetic or a
+-            # colour derived from an arm) and each arm at its lightness. Fifty-nine negative
+-            # controls, each counted against the baseline.
++            # 1b none near an ink that paints IN A CELL by ΔE, 2 no two players (stick, name or
++            # ring arm) within ΔE 0.10, the light names exempt while they ARE the ring arms and the
++            # light rings floored at 0.075 (each argued at the gate), 3 the tin WHOLE (a missing
++            # ring or name arm falls back to another ink), 3b every arm its own stick's hue, 4 one
++            # publisher (any colour within ΔE 0.03 of an arm anywhere in src/, e2e/, public/ or
++            # index.html reds, read the way the bundler ships it through the shape-census
++            # library: folded expressions, escapes, entities, Tailwind palette utilities; so does
++            # a colour token minted by arithmetic or a colour derived from an arm or an
++            # indirection token) and each arm at its lightness. Eighty-five negative controls,
++            # each counted against the baseline.
+             - name: peer tin (five sticks, ring and name arms, per arm, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:tin
+@@ -1889,10 +1891,12 @@ jobs:
+               working-directory: web/frontend
+               run: node scripts/dist-identity.mjs --dist dist
+             # T9-W7 PAL-TIN — gate 4 on the SHIPPED bytes: a literal the bundler folded, a `.json`
+-            # table an import inlined, a `public/` file copied as is, read as what ships.
+-            - name: peer tin on the built bundle (one publisher, as shipped)
++            # table an import inlined, a `public/` file copied as is, read as what ships (the
++            # stripper is regex-literal aware: a `/\//g` never opens a comment). `--self-test`
++            # also plants the pink name INSIDE the built entry chunk at four offsets; each reds.
++            - name: peer tin on the built bundle (one publisher, as shipped, self-tested in the chunk)
+               working-directory: web/frontend
+-              run: node scripts/check-peer-tin.mjs --dist dist
++              run: node scripts/check-peer-tin.mjs --self-test --dist dist
+             - name: prod-shake — the FORBIDDEN census (5 dev-only symbols absent)
+               working-directory: web/frontend
+               run: npm run test:prod-shake -- dist
+diff --git a/web/frontend/e2e/peer-tin.spec.ts b/web/frontend/e2e/peer-tin.spec.ts
+index b4205b76..1f39a32c 100644
+--- a/web/frontend/e2e/peer-tin.spec.ts
++++ b/web/frontend/e2e/peer-tin.spec.ts
+@@ -1,4 +1,10 @@
+ import { test, expect, type Page } from "@playwright/test";
++// @ts-expect-error — the ONE probe is an .mjs product home with no declaration file (registry-v7 §2.4)
++import { glyphGate, TEXT_PLANTS, fmt as popFmt } from "./lib/glyph-pop.mjs";
++// @ts-expect-error — the ONE paint library, an .mjs product home with no declaration file (§2.4)
++import { onOff, maxDelta } from "./lib/paint-lib.mjs";
++// @ts-expect-error — the ONE shape library's colour parser, an .mjs product home (§2.4)
++import { parseColor, srgbToOklab } from "../scripts/shape-census.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) in `boot()` before every goto. The tally
+ //   is frame [0] of generateLineBoilFrames and the ring's own row is
+@@ -76,22 +82,34 @@ async function invite(page: Page): Promise<string> {
+ const roster = (page: Page) =>
+   page.locator(".controls-card .players-roster .player-row");
+ 
+-/** A room of `n` pages on one board, the product's own invite path. `pinLast` seats the last
+- *  joiner under a FIXED peer id the way the product re-seats a tab (`session-identity-v1`, the
+- *  per-tab map keyed by the room the link names), so the slug the tape prints is part of the
+- *  payload rather than a random variable (LAWS P6 §C). */
+-async function room(browser: import("@playwright/test").Browser, n: number, pinLast?: string) {
++/** A room of `n` pages on one board, the product's own invite path. `pins` seats EVERY page under a
++ *  FIXED peer id the way the product re-seats a tab (`session-identity-v1`, the per-tab map keyed by
++ *  the room the link names), so every slug on the page and every stroke an id seeds is part of the
++ *  payload rather than a random variable (LAWS P6 §C, P7 §C: the pin reaches every id on the page).
++ *  The host is pinned the way PAL-WALK pins it: its map answers for the room the address bar names,
++ *  because the invite writes `?s=` before the page claims its id. */
++async function room(browser: import("@playwright/test").Browser, n: number, pins?: readonly string[]) {
+   const ctx = await browser.newContext();
+   const a = await ctx.newPage();
++  if (pins?.[0])
++    await a.addInitScript((id) => {
++      const get = Storage.prototype.getItem;
++      Storage.prototype.getItem = function (k: string) {
++        const r = new URL(location.href).searchParams.get("s");
++        if (this === sessionStorage && k === "session-identity-v1" && r)
++          return JSON.stringify({ ...JSON.parse(get.call(this, k) || "{}"), [r]: id });
++        return get.call(this, k);
++      };
++    }, pins[0]);
+   await boot(a, LOCAL);
+   const link = await invite(a);
+   const pages = [a];
+   for (let i = 1; i < n; i++) {
+     const p = await ctx.newPage();
+-    if (pinLast && i === n - 1)
++    if (pins?.[i])
+       await p.addInitScript(
+         ([r, id]) => sessionStorage.setItem("session-identity-v1", JSON.stringify({ [r]: id })),
+-        [new URL(link).searchParams.get("s")!, pinLast] as const,
++        [new URL(link).searchParams.get("s")!, pins[i]] as const,
+       );
+     await boot(p, link);
+     pages.push(p);
+@@ -372,11 +390,12 @@ async function paintedName(page: Page, label: ReturnType<Page["locator"]>) {
+   const clip = { x: box.x - 1, y: box.y - 1, width: box.width + 2, height: box.height + 2 };
+   const ink = await rawOf(page, await page.screenshot({ clip }));
+   const spec = await label.evaluate((l) => getComputedStyle(l).color);
+-  await label.evaluate((l) => ((l as HTMLElement).style.color = "transparent"));
++  // a STYLESHEET, never a write into the Vue-owned label (LAWS P7 §F)
++  const off = await page.addStyleTag({ content: `${TAPE} { color: transparent !important; }` });
+   await expect.poll(() => label.evaluate((l) => getComputedStyle(l).color)).toBe("rgba(0, 0, 0, 0)");
+   const bare = await rawOf(page, await page.screenshot({ clip }));
+   const bare2 = await rawOf(page, await page.screenshot({ clip }));
+-  await label.evaluate((l) => ((l as HTMLElement).style.color = ""));
++  await off.evaluate((e) => (e as Element).remove());
+   await expect.poll(() => label.evaluate((l) => getComputedStyle(l).color)).toBe(spec);
+   const again = await rawOf(page, await page.screenshot({ clip }));
+   const specRgb = await page.evaluate((css) => {
+@@ -426,16 +445,14 @@ async function paintedTick(page: Page) {
+   const tick = page.locator(".attribution-tape .roster-tick");
+   const b = (await tick.boundingBox())!;
+   const clip = { x: Math.floor(b.x - 2), y: Math.floor(b.y - 2), width: Math.ceil(b.width + 4), height: Math.ceil(b.height + 4) };
+-  const vis = (v: string) =>
+-    tick.evaluate((el, x) => {
+-      (el as SVGElement).style.visibility = x;
+-      return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+-    }, v);
++  const frames = () => page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+   const on = await rawOf(page, await page.screenshot({ clip }));
+-  await vis("hidden");
++  const hide = await page.addStyleTag({ content: ".attribution-tape .roster-tick { visibility: hidden !important; }" });
++  await frames();
+   const off = await rawOf(page, await page.screenshot({ clip }));
+   const off2 = await rawOf(page, await page.screenshot({ clip }));
+-  await vis("");
++  await hide.evaluate((e) => (e as Element).remove());
++  await frames();
+   const on2 = await rawOf(page, await page.screenshot({ clip }));
+   const dist = (X: number[], Y: number[], k: number) =>
+     Math.abs(X[k] - Y[k]) + Math.abs(X[k + 1] - Y[k + 1]) + Math.abs(X[k + 2] - Y[k + 2]);
+@@ -454,405 +471,221 @@ async function paintedTick(page: Page) {
+   return { top, n: r.length, med: r[r.length >> 1] ?? 0, p10: q(r, 0.1) ?? 0, under3: r.filter((v) => v < 3).length / Math.max(1, r.length) };
+ }
+ 
+-/** THE CHAIR'S GLYPH-POPULATION PROBE, the ONE copy (LAWS P6 §E/§I; `pass7/instruments/glyph-pop.mjs`):
+- *  the WHOLE glyph population (ON vs text-transparent, pixel for pixel), G1 an empty or thin
+- *  population RED, G2 an ABSOLUTE core median, G3 the fraction under 4.5 against a bound, G4 the
+- *  per-slice tail core. `T9_INSTRUMENTS` points at another copy (a lane's, the fold's home). */
+-const INSTRUMENTS =
+-  process.env.T9_INSTRUMENTS ??
+-  new URL("../../../docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/", import.meta.url).pathname;
++/** THE ESTATE'S ONE GLYPH-POPULATION PROBE at its PRODUCT HOME (`./lib/glyph-pop.mjs`, registry-v7
++ *  §2.4): the WHOLE glyph population clipped to the TEXT RUN (the tally's svg is never text), kept
++ *  only where two ON and two OFF photographs agree (the OFF-pair compare: a pixel that moved between
++ *  the OFF photographs of one pair is transient ground, never ink), G1 an empty or thin population
++ *  RED, G2 an ABSOLUTE core median, G3 the fraction under 4.5 bounded PER PAYLOAD (`glyphGate`: this
++ *  read's clean fraction + 0.05, never a pooled stamp), G4 columns scaled to the ink span, G5 per
++ *  glyph. This file carries no reader of its own. */
+ type Pop = {
+   red: boolean;
+   why: string[];
+-  population?: number;
+-  coreMedian?: number;
+-  fracUnder?: number;
+-  slices?: (number | null)[];
+-  transientPx?: number;
+-};
+-type GlyphPop = {
+-  glyphPopulation: (page: Page, o: { subject: string; floor?: number; fracBound?: number | null }) => Promise<Pop>;
+-  TEXT_PLANTS: (s: string) => Record<string, string | { tail: number }>;
+-  applyTail: (page: Page, subject: string, tail: number) => Promise<unknown>;
+-  undoTail: (page: Page, subject: string) => Promise<void>;
++  population: number;
++  coreMedian: number;
++  fracUnder: number;
++  transientOn?: number;
++  transientOff?: number;
+ };
+-const glyphPop = (): Promise<GlyphPop> => import(`${INSTRUMENTS.replace(/\/?$/, "/")}glyph-pop.mjs`);
+-
+-/** B's peer id, PINNED: the tape prints `quickest-rodent` in every run and both engines. */
+-const B_ID = "p-0000000b0b0b";
++type Gate = { payload: string; bound: number | null; clean: Pop; plants: Record<string, Pop> };
++
++/** EVERY ID ON THE PAGE, PINNED (LAWS P7 §C): A the host (hand 0), four joiners, and B — the sixth
++ *  player, index 5, stick 1 on its second lap, so the tape carries a tick. The tape reads
++ *  "quickest-rodent" for B and A's own slug for A in every run and both engines. */
++const IDS = [
++  "p-0000000a0a0a",
++  "p-00000000c1c1",
++  "p-00000000c2c2",
++  "p-00000000c3c3",
++  "p-00000000c4c4",
++  "p-0000000b0b0b",
++] as const;
+ const TAPE = ".attribution-tape .washi-label";
+-const CONTROL = ".tin-control .washi-label";
+-
+-/** THE STAMPS — the shipped reading of every row, per engine · DPR · theme · cell (and · name arm),
+- *  off this tree's clean run with B's id pinned: `[median, fraction under 4.5, clears]`. G3 bounds the
+- *  fraction under 4.5 at the stamp + 0.05 (LAWS P6 §E: the shipped reading + 0.05 until the estate
+- *  stamps the control's). G2 is 4.5 ABSOLUTE wherever the row or HEAD's own ink (photographed OFF
+- *  the subject, below) cleared 4.5 on that key (`clears`), and 0.9 × the stamp where neither did: in
+- *  chromium at DPR 1 the whole population of this 600-weight hand face is mostly antialiased edge,
+- *  and HEAD's own ink reads 1.7–3.4 there. A key with no stamp is RED, never skipped. */
+-const STAMPS: Record<string, [number, number, boolean]> = {
+-  "chromium·dpr1·light·cell11": [2.21, 0.696, false],
+-  "chromium·dpr1·light·cell11·peer-1": [2.202, 0.701, false],
+-  "chromium·dpr1·light·cell11·peer-2": [2.142, 0.715, false],
+-  "chromium·dpr1·light·cell11·peer-3": [2.153, 0.713, false],
+-  "chromium·dpr1·light·cell11·peer-4": [2.381, 0.678, false],
+-  "chromium·dpr1·light·cell11·peer-5": [2.327, 0.684, false],
+-  "chromium·dpr1·light·cell12": [2.202, 0.703, false],
+-  "chromium·dpr1·light·cell12·peer-1": [2.202, 0.703, false],
+-  "chromium·dpr1·light·cell12·peer-2": [2.142, 0.717, false],
+-  "chromium·dpr1·light·cell12·peer-3": [2.153, 0.714, false],
+-  "chromium·dpr1·light·cell12·peer-4": [2.384, 0.674, false],
+-  "chromium·dpr1·light·cell12·peer-5": [2.327, 0.681, false],
+-  "chromium·dpr1·light·cell8": [2.122, 0.8, false],
+-  "chromium·dpr1·light·cell8·peer-1": [2.122, 0.8, false],
+-  "chromium·dpr1·light·cell8·peer-2": [2.066, 0.82, false],
+-  "chromium·dpr1·light·cell8·peer-3": [2.074, 0.813, false],
+-  "chromium·dpr1·light·cell8·peer-4": [2.302, 0.749, false],
+-  "chromium·dpr1·light·cell8·peer-5": [2.253, 0.764, false],
+-  "chromium·dpr1·dark·cell11": [3.448, 0.61, false],
+-  "chromium·dpr1·dark·cell11·peer-1": [3.448, 0.61, false],
+-  "chromium·dpr1·dark·cell11·peer-2": [3.169, 0.629, false],
+-  "chromium·dpr1·dark·cell11·peer-3": [3.131, 0.633, false],
+-  "chromium·dpr1·dark·cell11·peer-4": [3.449, 0.609, false],
+-  "chromium·dpr1·dark·cell11·peer-5": [2.941, 0.672, false],
+-  "chromium·dpr1·dark·cell12": [3.398, 0.612, false],
+-  "chromium·dpr1·dark·cell12·peer-1": [3.398, 0.612, false],
+-  "chromium·dpr1·dark·cell12·peer-2": [3.129, 0.633, false],
+-  "chromium·dpr1·dark·cell12·peer-3": [3.059, 0.638, false],
+-  "chromium·dpr1·dark·cell12·peer-4": [3.455, 0.605, false],
+-  "chromium·dpr1·dark·cell12·peer-5": [2.941, 0.677, false],
+-  "chromium·dpr1·dark·cell8": [2.954, 0.73, false],
+-  "chromium·dpr1·dark·cell8·peer-1": [2.954, 0.73, false],
+-  "chromium·dpr1·dark·cell8·peer-2": [2.773, 0.75, false],
+-  "chromium·dpr1·dark·cell8·peer-3": [2.712, 0.752, false],
+-  "chromium·dpr1·dark·cell8·peer-4": [3.004, 0.717, false],
+-  "chromium·dpr1·dark·cell8·peer-5": [2.614, 0.805, false],
+-  "webkit·dpr1·light·cell11": [9.252, 0.322, true],
+-  "webkit·dpr1·light·cell11·peer-1": [9.252, 0.322, true],
+-  "webkit·dpr1·light·cell11·peer-2": [8.786, 0.332, true],
+-  "webkit·dpr1·light·cell11·peer-3": [8.776, 0.331, true],
+-  "webkit·dpr1·light·cell11·peer-4": [10.312, 0.296, true],
+-  "webkit·dpr1·light·cell11·peer-5": [10.009, 0.299, true],
+-  "webkit·dpr1·light·cell12": [8.755, 0.322, true],
+-  "webkit·dpr1·light·cell12·peer-1": [8.755, 0.322, true],
+-  "webkit·dpr1·light·cell12·peer-2": [8.359, 0.325, true],
+-  "webkit·dpr1·light·cell12·peer-3": [8.296, 0.323, true],
+-  "webkit·dpr1·light·cell12·peer-4": [9.523, 0.297, true],
+-  "webkit·dpr1·light·cell12·peer-5": [9.31, 0.303, true],
+-  "webkit·dpr1·light·cell8": [9.484, 0.323, true],
+-  "webkit·dpr1·light·cell8·peer-1": [9.484, 0.323, true],
+-  "webkit·dpr1·light·cell8·peer-2": [8.981, 0.336, true],
+-  "webkit·dpr1·light·cell8·peer-3": [9.032, 0.334, true],
+-  "webkit·dpr1·light·cell8·peer-4": [10.312, 0.3, true],
+-  "webkit·dpr1·light·cell8·peer-5": [10.114, 0.302, true],
+-  "webkit·dpr1·dark·cell11": [5.982, 0.348, true],
+-  "webkit·dpr1·dark·cell11·peer-1": [5.982, 0.348, true],
+-  "webkit·dpr1·dark·cell11·peer-2": [6.645, 0.303, true],
+-  "webkit·dpr1·dark·cell11·peer-3": [6.652, 0.304, true],
+-  "webkit·dpr1·dark·cell11·peer-4": [6.307, 0.311, true],
+-  "webkit·dpr1·dark·cell11·peer-5": [5.779, 0.353, true],
+-  "webkit·dpr1·dark·cell12": [5.923, 0.334, true],
+-  "webkit·dpr1·dark·cell12·peer-1": [5.923, 0.334, true],
+-  "webkit·dpr1·dark·cell12·peer-2": [6.474, 0.306, true],
+-  "webkit·dpr1·dark·cell12·peer-3": [6.53, 0.308, true],
+-  "webkit·dpr1·dark·cell12·peer-4": [6.171, 0.319, true],
+-  "webkit·dpr1·dark·cell12·peer-5": [5.701, 0.345, true],
+-  "webkit·dpr1·dark·cell8": [6.063, 0.353, true],
+-  "webkit·dpr1·dark·cell8·peer-1": [6.063, 0.353, true],
+-  "webkit·dpr1·dark·cell8·peer-2": [6.646, 0.309, true],
+-  "webkit·dpr1·dark·cell8·peer-3": [6.713, 0.309, true],
+-  "webkit·dpr1·dark·cell8·peer-4": [6.307, 0.318, true],
+-  "webkit·dpr1·dark·cell8·peer-5": [5.84, 0.357, true],
+-  "chromium·dpr2·light·cell11": [5.654, 0.47, true],
+-  "chromium·dpr2·light·cell11·peer-1": [5.654, 0.47, true],
+-  "chromium·dpr2·light·cell11·peer-2": [5.282, 0.475, true],
+-  "chromium·dpr2·light·cell11·peer-3": [5.374, 0.475, true],
+-  "chromium·dpr2·light·cell11·peer-4": [6.65, 0.442, true],
+-  "chromium·dpr2·light·cell11·peer-5": [6.293, 0.449, true],
+-  "chromium·dpr2·light·cell12": [5.593, 0.47, true],
+-  "chromium·dpr2·light·cell12·peer-1": [5.593, 0.47, true],
+-  "chromium·dpr2·light·cell12·peer-2": [5.278, 0.476, true],
+-  "chromium·dpr2·light·cell12·peer-3": [5.3, 0.476, true],
+-  "chromium·dpr2·light·cell12·peer-4": [6.568, 0.442, true],
+-  "chromium·dpr2·light·cell12·peer-5": [6.232, 0.448, true],
+-  "chromium·dpr2·light·cell8": [5.476, 0.473, true],
+-  "chromium·dpr2·light·cell8·peer-1": [5.476, 0.473, true],
+-  "chromium·dpr2·light·cell8·peer-2": [5.159, 0.48, true],
+-  "chromium·dpr2·light·cell8·peer-3": [5.219, 0.48, true],
+-  "chromium·dpr2·light·cell8·peer-4": [6.434, 0.443, true],
+-  "chromium·dpr2·light·cell8·peer-5": [6.129, 0.45, true],
+-  "chromium·dpr2·dark·cell11": [5.62, 0.4, true],
+-  "chromium·dpr2·dark·cell11·peer-1": [5.62, 0.4, true],
+-  "chromium·dpr2·dark·cell11·peer-2": [5.646, 0.413, true],
+-  "chromium·dpr2·dark·cell11·peer-3": [5.683, 0.415, true],
+-  "chromium·dpr2·dark·cell11·peer-4": [5.731, 0.392, true],
+-  "chromium·dpr2·dark·cell11·peer-5": [5.121, 0.441, true],
+-  "chromium·dpr2·dark·cell12": [5.394, 0.402, true],
+-  "chromium·dpr2·dark·cell12·peer-1": [5.394, 0.402, true],
+-  "chromium·dpr2·dark·cell12·peer-2": [5.631, 0.415, true],
+-  "chromium·dpr2·dark·cell12·peer-3": [5.683, 0.417, true],
+-  "chromium·dpr2·dark·cell12·peer-4": [5.482, 0.394, true],
+-  "chromium·dpr2·dark·cell12·peer-5": [5.076, 0.445, true],
+-  "chromium·dpr2·dark·cell8": [5.336, 0.402, true],
+-  "chromium·dpr2·dark·cell8·peer-1": [5.336, 0.402, true],
+-  "chromium·dpr2·dark·cell8·peer-2": [5.631, 0.416, true],
+-  "chromium·dpr2·dark·cell8·peer-3": [5.683, 0.418, true],
+-  "chromium·dpr2·dark·cell8·peer-4": [5.417, 0.395, true],
+-  "chromium·dpr2·dark·cell8·peer-5": [5.076, 0.446, true],
+-  "webkit·dpr2·light·cell11": [12.486, 0.201, true],
+-  "webkit·dpr2·light·cell11·peer-1": [12.486, 0.201, true],
+-  "webkit·dpr2·light·cell11·peer-2": [12.026, 0.208, true],
+-  "webkit·dpr2·light·cell11·peer-3": [11.924, 0.207, true],
+-  "webkit·dpr2·light·cell11·peer-4": [13.143, 0.187, true],
+-  "webkit·dpr2·light·cell11·peer-5": [12.89, 0.192, true],
+-  "webkit·dpr2·light·cell12": [12.243, 0.224, true],
+-  "webkit·dpr2·light·cell12·peer-1": [12.243, 0.224, true],
+-  "webkit·dpr2·light·cell12·peer-2": [11.82, 0.229, true],
+-  "webkit·dpr2·light·cell12·peer-3": [11.719, 0.229, true],
+-  "webkit·dpr2·light·cell12·peer-4": [12.947, 0.208, true],
+-  "webkit·dpr2·light·cell12·peer-5": [12.712, 0.211, true],
+-  "webkit·dpr2·light·cell8": [12.486, 0.2, true],
+-  "webkit·dpr2·light·cell8·peer-1": [12.486, 0.2, true],
+-  "webkit·dpr2·light·cell8·peer-2": [12.026, 0.206, true],
+-  "webkit·dpr2·light·cell8·peer-3": [11.924, 0.205, true],
+-  "webkit·dpr2·light·cell8·peer-4": [13.143, 0.187, true],
+-  "webkit·dpr2·light·cell8·peer-5": [12.89, 0.192, true],
+-  "webkit·dpr2·dark·cell11": [6.806, 0.219, true],
+-  "webkit·dpr2·dark·cell11·peer-1": [6.806, 0.219, true],
+-  "webkit·dpr2·dark·cell11·peer-2": [7.282, 0.212, true],
+-  "webkit·dpr2·dark·cell11·peer-3": [7.353, 0.213, true],
+-  "webkit·dpr2·dark·cell11·peer-4": [6.92, 0.219, true],
+-  "webkit·dpr2·dark·cell11·peer-5": [6.561, 0.227, true],
+-  "webkit·dpr2·dark·cell12": [6.786, 0.238, true],
+-  "webkit·dpr2·dark·cell12·peer-1": [6.786, 0.238, true],
+-  "webkit·dpr2·dark·cell12·peer-2": [7.282, 0.228, true],
+-  "webkit·dpr2·dark·cell12·peer-3": [7.305, 0.229, true],
+-  "webkit·dpr2·dark·cell12·peer-4": [6.913, 0.237, true],
+-  "webkit·dpr2·dark·cell12·peer-5": [6.536, 0.246, true],
+-  "webkit·dpr2·dark·cell8": [6.806, 0.219, true],
+-  "webkit·dpr2·dark·cell8·peer-1": [6.806, 0.219, true],
+-  "webkit·dpr2·dark·cell8·peer-2": [7.282, 0.212, true],
+-  "webkit·dpr2·dark·cell8·peer-3": [7.353, 0.213, true],
+-  "webkit·dpr2·dark·cell8·peer-4": [6.92, 0.221, true],
+-  "webkit·dpr2·dark·cell8·peer-5": [6.561, 0.226, true],
+-};
+-/** The clauses on one reading. The probe runs at 4.5 always, so G3 bounds the fraction UNDER 4.5
+- *  (never under a lowered floor); where neither the row nor HEAD cleared 4.5 on the key, the probe's
+- *  absolute G2 is replaced by the median ≥ 0.9 × the stamp. G1 (empty or thin) and G4 (the tail)
+- *  are never relaxed. A missing stamp is RED. */
+-const judge = (p: Pop, st: [number, number, boolean] | undefined): string[] => {
+-  if (!st) return ["no stamp"];
+-  const why = p.why.filter((w) => st[2] || !w.startsWith("G2"));
+-  if (!st[2] && (p.population ?? 0) >= 40 && (p.coreMedian ?? 0) < 0.9 * st[0])
+-    why.push(`G2' core median ${(p.coreMedian ?? 0).toFixed(3)} < 0.9 × the stamp ${st[0]} (4.5 cleared by nothing on this key)`);
+-  return why;
+-};
+-const probe = (gp: GlyphPop, page: Page, st: [number, number, boolean] | undefined) =>
+-  gp.glyphPopulation(page, { subject: TAPE, floor: 4.5, fracBound: st ? st[1] + 0.05 : null });
+-const fmt = (p: Pop) =>
+-  `pop ${p.population ?? 0} · core median ${(p.coreMedian ?? 0).toFixed(3)} · <4.5 ${((p.fracUnder ?? 1) * 100).toFixed(1)} % · ` +
+-  `slices [${(p.slices ?? []).map((v) => (v === null ? "·" : v.toFixed(1))).join(" ")}] · transient ${p.transientPx ?? 0}` +
+-  (p.why.length ? ` · RED: ${p.why.join("; ")}` : " · GREEN");
++/** HEAD's ink for index i — `74a2b5d9`'s `inkFor`: hue i × 137.5°, chroma 0.11, band 0.5 / 0.8. The
++ *  ballot's control is THIS, the SAME INDEX (LAWS P7 §G, registry-v7 §2.13a); pass 7's control was
++ *  HEAD's best hue (i = 1, 137.5°), printed beside it so the chair holds both numbers. */
++const HEAD_INK = (i: number, arm: "light" | "dark"): string =>
++  `oklch(${arm === "light" ? 0.5 : 0.8} 0.11 ${((i * 137.5) % 360).toFixed(2)}deg)`;
++/** G2 on the hand's tag rung (LEDGER T9-R8): chromium at DPR 1, where this 600-weight face is
++ *  mostly anti-aliased edge and HEAD's same-index ink reads under 4.5 too. G2 is PRINTED there — and
++ *  only while HEAD's same-index ink also reads under 4.5 on the key (LAWS §E: 4.5 wherever the
++ *  control clears it); G1, G3, G4, G5 gate everywhere. */
++const G2_RUNG = new Set(["chromium/1"]);
++/** A plant PRINTED rather than required: WebKit paints an 80 % fill as no fade on this label (its
++ *  core reads ×0.97–1.00; PAL-WALK's reading, and this file's). Every other plant is required in
++ *  both engines — FADE65 included. */
++const printedPlant = (name: string, project: string): boolean => project === "webkit" && /^FADE80/.test(name);
+ 
+ test("§2b the tape writes the author and their tally in the name arm, and both clear on paint", async ({
+   browser,
+ }, info) => {
+-  test.setTimeout(900_000);
+-  const gp = await glyphPop();
+-  // SIX pages: the sixth player (index 5) is stick 1 on its first lap, so the tape carries a tick
+-  const { ctx, pages } = await room(browser, 6, B_ID);
++  test.setTimeout(1_500_000);
++  const { ctx, pages } = await room(browser, 6, IDS);
+   const a = pages[0];
+   const b = pages[5];
++  const project = info.project.name;
+   const inputs = (p: Page) => p.locator(".sudoku-cell input");
+   const empty = [...GIVENS].flatMap((ch, i) => (ch === "." ? [i] : []));
+-  // the tape crosses a GRID LINE with a digit under it (an empty cell with a given above), and
+-  // the top row, where it flips below
+-  const cells = [...empty.filter((i) => i >= 9 && GIVENS[i - 9] !== ".").slice(0, 2), empty[0]];
+-  for (const x of cells) {
+-    await inputs(b).nth(x).click();
+-    await inputs(b).nth(x).fill("7");
+-    await expect.poll(() => inputs(a).nth(x).inputValue()).toBe("7");
+-  }
+-  await inputs(b).nth(GIVENS.indexOf("3")).click({ force: true });
+-  const anchor = a.locator(".attribution-tape");
+-  const label = a.locator(TAPE);
++  // the tape crosses a GRID LINE with a digit under it (an empty cell with a given above), and the
++  // top row, where it flips below: B writes three, A (hand 0) writes the next two of the first kind
++  const under = empty.filter((i) => i >= 9 && GIVENS[i - 9] !== ".");
++  const cellsB = [...under.slice(0, 2), empty[0]];
++  const cellsA = under.slice(2, 4);
++  for (const [w, r, xs, d] of [
++    [b, a, cellsB, "7"],
++    [a, b, cellsA, "5"],
++  ] as const)
++    for (const x of xs) {
++      await inputs(w).nth(x).click();
++      await inputs(w).nth(x).fill(d);
++      await expect.poll(() => inputs(r).nth(x).inputValue()).toBe(d);
++    }
+   const dpr = await a.evaluate(() => devicePixelRatio);
+-  // THE ONE VARIABLE, set on the LABEL: the anchor's `--color-user-ink` is Vue's (`hoveredAuthor`)
+-  // and a session re-render re-patches it; the label's own inline style carries no such key, so an
+-  // override there holds and the name and the tick inside it both inherit it.
+-  const bind = (v: string | null) =>
+-    label.evaluate((t, x) => {
+-      const s = (t as HTMLElement).style;
+-      if (x === null) s.removeProperty("--color-user-ink");
+-      else s.setProperty("--color-user-ink", x);
+-      return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+-    }, v);
+-  /** THE IN-RUN CONTROL, OFF THE SUBJECT (registry-v6 §2.9: a control photographed on the
+-   *  subject's own element inherits the plant). The tape is CLONED beside itself with its
+-   *  `attribution-tape` class struck — so no rule written for the tape reaches it — its label
+-   *  inked in HEAD's own ink inline, and the real label hidden while it is read. It is a
+-   *  comparison row (the ballot's 'beats HEAD'), never a clause: every clause is absolute. */
+-  const headControl = async (ink: string) => {
+-    await anchor.evaluate((t, v) => {
+-      const c = t.cloneNode(true) as HTMLElement;
+-      c.classList.remove("attribution-tape");
+-      c.classList.add("tin-control");
+-      Object.assign(c.style, { position: "absolute", width: "0", height: "0", pointerEvents: "none" });
+-      const l = c.querySelector(".washi-label") as HTMLElement;
+-      l.style.opacity = "1";
+-      l.style.color = v;
+-      l.style.removeProperty("--color-user-ink");
+-      if (t.classList.contains("is-below"))
+-        Object.assign(l.style, { bottom: "auto", top: "100%", marginBottom: "0", marginTop: "0.5rem" });
+-      l.querySelector(".roster-tick")?.remove();
+-      (t.querySelector(".washi-label") as HTMLElement).style.visibility = "hidden";
+-      t.after(c);
+-      return new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
+-    }, ink);
+-    const r = await gp.glyphPopulation(a, { subject: CONTROL });
+-    await anchor.evaluate((t) => {
+-      t.parentElement?.querySelector(".tin-control")?.remove();
+-      (t.querySelector(".washi-label") as HTMLElement).style.visibility = "";
+-    });
+-    return r;
+-  };
+-  const colourOf = (v: string) =>
+-    a.evaluate((x) => {
+-      const p = document.createElement("span");
+-      p.style.color = x;
+-      document.body.appendChild(p);
+-      const c = getComputedStyle(p).color;
+-      p.remove();
+-      return c;
+-    }, v);
++  const rung = G2_RUNG.has(`${project}/${dpr}`);
++  const verdict = (r: Pop): string[] => r.why.filter((w) => !(rung && /^G2/.test(w)));
++  const frames = (page: Page) =>
++    page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+   const rows: string[] = [];
+   const fail: string[] = [];
+   const neg: Record<string, number> = { light: Infinity, dark: Infinity };
+-  for (const arm of ["light", "dark"] as const) {
+-    await setTheme(a, arm);
+-    const names = await Promise.all([1, 2, 3, 4, 5].map((k) => colourOf(`var(--color-peer-${k}-name)`)));
+-    // HEAD's own tape ink for this peer: the walk's second hue at the theme's band
+-    const HEAD = `oklch(${arm === "dark" ? 0.8 : 0.5} 0.11 137.5)`;
+-    // the pass-5 binding (dark: the ring arm) and the stick (light: what a peer's digit is)
+-    const NEG = (k: number) => (arm === "dark" ? `var(--color-peer-${k}-ring)` : `var(--color-peer-${k})`);
+-    for (const x of cells) {
+-      const hover = () =>
+-        expect(async () => {
+-          await a.mouse.move(2, 2);
+-          await a.locator(".game-cell").nth(x).hover();
+-          await expect(label).toBeVisible({ timeout: 3000 });
+-        }).toPass({ timeout: 30000 });
+-      await hover();
+-      const slug = (await label.evaluate((l) => l.firstChild?.textContent ?? "")).trim();
+-      const key = `${info.project.name}·dpr${dpr}·${arm}·cell${x}`;
+-      const tag = `TAPE ${key}${x < 9 ? " (top row)" : ""} "${slug}"`;
+-      // THE PRODUCT'S OWN BINDING FIRST: B's name is written in a name arm, never the ring or stick
+-      const own = await paintedName(a, label);
+-      expect(names, `${arm} cell ${x}: the tape's name is one of the five name arms`).toContain(own.spec);
+-      expect(await a.locator(".attribution-tape .roster-tick").count(), "B is on its first lap").toBe(1);
+-      const head = await headControl(HEAD);
+-      const st = STAMPS[key];
+-      const pop = await probe(gp, a, st);
+-      const vsHead = (p: Pop) => `vs HEAD ${((p.coreMedian ?? 0) - (head.coreMedian ?? 0) >= 0 ? "+" : "")}${((p.coreMedian ?? 0) - (head.coreMedian ?? 0)).toFixed(3)}`;
+-      rows.push(
+-        `${tag} PRODUCT ${own.spec} · flat worst ${own.worst.toFixed(3)} (${own.under45} px <4.5) · ${fmt(pop)} · ${vsHead(pop)}` +
+-          ` || HEAD ${HEAD} OFF the subject: ${fmt(head)} || stamp ${st ? JSON.stringify(st) : "NONE"}`,
++  for (const [page, cells, index, who] of [
++    [a, cellsB, 5, `B ${IDS[5]} (index 5) on A's page`],
++    [b, cellsA, 0, `A ${IDS[0]} (hand 0, the host) on B's page`],
++  ] as const) {
++    // THE READ PAGE IS BROUGHT FORWARD: a page behind another gets no rendering update
++    await page.bringToFront();
++    await inputs(page).nth(GIVENS.indexOf("3")).click({ force: true });
++    const label = page.locator(TAPE);
++    /** One variable through a STYLESHEET, never a write into the Vue-owned label (LAWS P7 §F). */
++    const withCss = async <T,>(css: string, read: () => Promise<T>): Promise<T> => {
++      const tag = await page.addStyleTag({ content: css });
++      await frames(page);
++      const t = await read();
++      await tag.evaluate((e) => (e as Element).remove());
++      await frames(page);
++      return t;
++    };
++    const head = (ink: string): Promise<Pop> =>
++      withCss(
++        `${TAPE} { color: ${ink} !important; }`,
++        async () => (await glyphGate(page, { subject: TAPE, payload: `HEAD ${ink}`, plants: {} })).clean as Pop,
+       );
+-      console.log(`STAMP ${key} ${pop.coreMedian} ${pop.fracUnder} HEAD ${head.coreMedian}`);
+-      const pj = judge(pop, st);
+-      if (pj.length) fail.push(`${key} PRODUCT: ${pj.join("; ")} (reading med ${pop.coreMedian} frac ${pop.fracUnder}; HEAD ${head.coreMedian})`);
+-      if (own.worst < 4.5 || own.under45 > 0) fail.push(`${key} PRODUCT flat: ${own.worst.toFixed(3)}, ${own.under45} px`);
+-      const binds: [string, string][] = [
+-        ...[1, 2, 3, 4, 5].map((k) => [`neg peer-${k}`, NEG(k)] as [string, string]),
+-        ...[1, 2, 3, 4, 5].map((k) => [`name peer-${k}`, `var(--color-peer-${k}-name)`] as [string, string]),
+-      ];
+-      for (const [what, v] of binds) {
+-        await bind(v);
+-        const t = await paintedName(a, label);
+-        if (what.startsWith("neg")) {
+-          neg[arm] = Math.min(neg[arm], t.worst);
+-          rows.push(`${tag} ${what} ${t.spec} · flat worst ${t.worst.toFixed(3)} (${t.under45}/${t.textPx} px <4.5)`);
+-          continue;
+-        }
+-        const ak = `${key}·${what.slice(5)}`;
+-        const as = STAMPS[ak];
+-        const g = await probe(gp, a, as);
+-        rows.push(`${tag} ${what} ${t.spec} · flat worst ${t.worst.toFixed(3)} (${t.under45}/${t.textPx} px <4.5) · ${fmt(g)} · ${vsHead(g)}`);
+-        console.log(`STAMP ${ak} ${g.coreMedian} ${g.fracUnder} HEAD ${head.coreMedian}`);
+-        if (t.worst < 4.5 || t.under45 > 0) fail.push(`${key} ${what}: flat ${t.worst.toFixed(3)}, ${t.under45} px`);
+-        const gj = judge(g, as);
+-        if (gj.length) fail.push(`${ak}: ${gj.join("; ")}`);
+-      }
+-      await bind(null);
+-      // THE TEXT PLANTS, in-run, on the product's own binding at the first cell: each must RED on
+-      // the absolute clauses. FADE65/FADE80 are printed in WebKit (it does not paint a fill fade
+-      // as a fade on this label — PAL-WALK's pass-7 reading, the chair's probe reads the same on
+-      // the control) and required in chromium; FAINT30, TAIL12, TAIL35 and EMPTY in both.
+-      if (x === cells[0]) {
+-        for (const [pname, plant] of Object.entries(gp.TEXT_PLANTS(TAPE))) {
+-          await hover();
+-          let undo: () => Promise<unknown>;
+-          if (typeof plant === "string") {
+-            const tagEl = await a.addStyleTag({ content: plant });
+-            undo = () => tagEl.evaluate((e) => (e as Element).remove());
+-          } else {
+-            await gp.applyTail(a, TAPE, plant.tail);
+-            undo = () => gp.undoTail(a, TAPE);
+-          }
+-          await a.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
+-          const g = await probe(gp, a, st);
+-          await undo();
+-          const gj = judge(g, st);
+-          const required = !(info.project.name.includes("webkit") && /^FADE/.test(pname));
+-          rows.push(`${tag} PLANT ${pname}${required ? "" : " (printed)"} · ${fmt(g)} · judged ${gj.length ? `RED: ${gj.join("; ")}` : "GREEN"}`);
+-          if (required && !gj.length) fail.push(`${key} PLANT ${pname} stayed GREEN: ${fmt(g)}`);
+-        }
+-      }
+-      // THE TALLY, at the first cell only (its ground is the same paper everywhere)
+-      if (x === cells[0]) {
+-        const tick: [string, string, string | null][] = [
+-          ...[1, 2, 3, 4, 5].map((k) => [`name peer-${k}`, `var(--color-peer-${k}-name)`, null] as [string, string, null]),
+-          [`stick peer-5 (the pass-5 binding)`, `var(--color-peer-5)`, null],
+-          // X1 / X2 / FAINT — the existence and visibility plants (chair A.5 ruling 3), in-run
+-          ["X1 opacity 0", "var(--color-peer-5-name)", "opacity:0"],
+-          ["X2 stroke transparent", "var(--color-peer-5-name)", "stroke"],
+-          ["FAINT opacity 0.15", "var(--color-peer-5-name)", "opacity:0.15"],
+-        ];
++    const colourOf = (v: string) =>
++      page.evaluate((x) => {
++        const p = document.createElement("span");
++        p.style.color = x;
++        document.body.appendChild(p);
++        const c = getComputedStyle(p).color;
++        p.remove();
++        return c;
++      }, v);
++    for (const arm of ["light", "dark"] as const) {
++      await setTheme(page, arm);
++      const names = await Promise.all([1, 2, 3, 4, 5].map((k) => colourOf(`var(--color-peer-${k}-name)`)));
++      const NEG = (k: number) => (arm === "dark" ? `var(--color-peer-${k}-ring)` : `var(--color-peer-${k})`);
++      for (const x of cells) {
++        const hover = () =>
++          expect(async () => {
++            await page.mouse.move(2, 2);
++            await page.locator(".game-cell").nth(x).hover();
++            await expect(label).toBeVisible({ timeout: 3000 });
++          }).toPass({ timeout: 30000 });
+         await hover();
+-        for (const [what, v, plant] of tick) {
+-          await bind(v);
+-          if (plant)
+-            await anchor.evaluate((t, p) => {
+-              const svg = t.querySelector(".roster-tick") as SVGElement;
+-              if (p === "stroke") svg.querySelectorAll("path").forEach((q) => ((q as SVGElement).style.stroke = "transparent"));
+-              else svg.style.opacity = p.split(":")[1];
+-            }, plant);
+-          const t = await paintedTick(a);
+-          if (plant)
+-            await anchor.evaluate((t) => {
+-              const svg = t.querySelector(".roster-tick") as SVGElement;
+-              svg.style.opacity = "";
+-              svg.querySelectorAll("path").forEach((q) => ((q as SVGElement).style.stroke = ""));
+-            });
+-          const paints = t.top > 24 && t.n > 4;
++        const slug = (await label.evaluate((l) => l.firstChild?.textContent ?? "")).trim();
++        const key = `${project}·dpr${dpr}·${arm}·${index === 0 ? "A0" : "B"}·cell${x}`;
++        const tag = `TAPE ${key}${x < 9 ? " (top row)" : ""} "${slug}"`;
++        // THE PRODUCT'S OWN BINDING: the author's name is written in a name arm, never the ring or stick
++        const own = await paintedName(page, label);
++        expect(names, `${arm} cell ${x}: the tape's name is one of the five name arms`).toContain(own.spec);
++        expect(await page.locator(".attribution-tape .roster-tick").count(), "B carries its lap; A none").toBe(
++          index === 5 ? 1 : 0,
++        );
++        const plantHere = x === cells[0];
++        const g = (await glyphGate(page, {
++          subject: TAPE,
++          payload: `${who}/${arm}/cell${x}`,
++          plants: plantHere ? TEXT_PLANTS(TAPE) : {},
++        })) as Gate;
++        const same = await head(HEAD_INK(index, arm));
++        const best = await head(HEAD_INK(1, arm));
++        rows.push(
++          `${tag} PRODUCT ${own.spec} · flat worst ${own.worst.toFixed(3)} (${own.under45} px <4.5) · bound ${g.bound?.toFixed(3)} · ${popFmt(g.clean)}` +
++            ` || HEAD same-index ${HEAD_INK(index, arm)} ${same.coreMedian.toFixed(3)} (Δ ${(g.clean.coreMedian - same.coreMedian).toFixed(3)})` +
++            ` · HEAD best-hue ${best.coreMedian.toFixed(3)} (Δ ${(g.clean.coreMedian - best.coreMedian).toFixed(3)})`,
++        );
++        const pj = verdict(g.clean);
++        if (pj.length) fail.push(`${key} PRODUCT: ${pj.join("; ")}`);
++        if (rung && g.clean.coreMedian < 4.5 && same.coreMedian >= 4.5)
++          fail.push(`${key} PRODUCT: G2 on the rung is excused only while HEAD's same-index ink reads under 4.5 too (${same.coreMedian})`);
++        if (own.worst < 4.5 || own.under45 > 0) fail.push(`${key} PRODUCT flat: ${own.worst.toFixed(3)}, ${own.under45} px`);
++        for (const [name, r] of Object.entries(g.plants)) {
++          const required = !printedPlant(name, project);
++          const v = verdict(r);
+           rows.push(
+-            `TICK ${info.project.name} ${arm} ${what}: paints ${paints} (top ${t.top}, core ${t.n} px) · core median ${t.med.toFixed(3)} · ` +
+-              `p10 ${t.p10.toFixed(3)} · ${(t.under3 * 100).toFixed(1)} % <3`,
++            `${tag} ${required ? "PLANT" : "PLANT (printed)"} ${name} · ${popFmt(r)} · median ×${(r.coreMedian / g.clean.coreMedian).toFixed(3)} → ${v.length ? `RED ${v.map((w) => w.split(" ")[0]).join("+")}` : "GREEN"}`,
+           );
+-          const ok = paints && t.med >= 3.0;
+-          if (what.startsWith("name") && !ok) fail.push(`${arm} tick ${what}: paints ${paints}, median ${t.med.toFixed(3)}`);
+-          // a plant that still reads as a painted tick at ≥ 3 is an instrument that cannot fail
+-          if (plant && ok) fail.push(`${arm} tick ${what}: the plant stayed GREEN`);
++          if (required && !v.length) fail.push(`${key} PLANT ${name} stayed GREEN: ${popFmt(r)}`);
+         }
+-        await bind(null);
++        // B-TAPE's ink half: every NAME ARM on B's tape (one variable, `--color-user-ink` on the
++        // label through a stylesheet), each against HEAD's ink for the SAME INDEX — the stick k's
++        // first lap, index k − 1 — and against pass 7's best-hue control, both printed
++        if (index === 5) {
++          for (let k = 1; k <= 5; k++) {
++            const v = `var(--color-peer-${k}-name)`;
++            const set = `${TAPE} { --color-user-ink: ${v} !important; }`;
++            const t = await withCss(set, () => paintedName(page, label));
++            const gk = await withCss(set, async () =>
++              (await glyphGate(page, { subject: TAPE, payload: `${who}/${arm}/cell${x}/peer-${k}`, plants: {} })) as Gate,
++            );
++            const sk = await head(HEAD_INK(k - 1, arm));
++            rows.push(
++              `${tag} name peer-${k} ${t.spec} · flat worst ${t.worst.toFixed(3)} (${t.under45}/${t.textPx} px <4.5) · ${popFmt(gk.clean)}` +
++                ` || B-TAPE vs HEAD same-index (i=${k - 1}, ${HEAD_INK(k - 1, arm)}) ${sk.coreMedian.toFixed(3)} Δ ${(gk.clean.coreMedian - sk.coreMedian).toFixed(3)}` +
++                ` · vs HEAD best-hue ${best.coreMedian.toFixed(3)} Δ ${(gk.clean.coreMedian - best.coreMedian).toFixed(3)}`,
++            );
++            if (t.worst < 4.5 || t.under45 > 0) fail.push(`${key} name peer-${k}: flat ${t.worst.toFixed(3)}, ${t.under45} px`);
++            const gj = verdict(gk.clean);
++            if (gj.length) fail.push(`${key}·peer-${k}: ${gj.join("; ")}`);
++            if (rung && gk.clean.coreMedian < 4.5 && sk.coreMedian >= 4.5)
++              fail.push(`${key}·peer-${k}: G2 on the rung, HEAD's same-index ink clears (${sk.coreMedian})`);
++            const n = await withCss(`${TAPE} { --color-user-ink: ${NEG(k)} !important; }`, () => paintedName(page, label));
++            neg[arm] = Math.min(neg[arm], n.worst);
++            rows.push(`${tag} neg peer-${k} ${n.spec} · flat worst ${n.worst.toFixed(3)} (${n.under45}/${n.textPx} px <4.5)`);
++          }
++        }
++        // THE TALLY, at B's first cell only (its ground is the same paper everywhere): the name arms
++        // and the pass-5 binding, then X1 / X2 / FAINT — the existence and visibility plants
++        if (index === 5 && x === cells[0]) {
++          const TICK = ".attribution-tape .roster-tick";
++          const tick: [string, string, string | null][] = [
++            ...[1, 2, 3, 4, 5].map((k) => [`name peer-${k}`, `var(--color-peer-${k}-name)`, null] as [string, string, null]),
++            [`stick peer-5 (the pass-5 binding)`, `var(--color-peer-5)`, null],
++            ["X1 opacity 0", "var(--color-peer-5-name)", `${TICK} { opacity: 0 !important; }`],
++            ["X2 stroke transparent", "var(--color-peer-5-name)", `${TICK} path { stroke: transparent !important; }`],
++            ["FAINT opacity 0.15", "var(--color-peer-5-name)", `${TICK} { opacity: 0.15 !important; }`],
++          ];
++          await hover();
++          for (const [what, v, plant] of tick) {
++            const t = await withCss(`${TAPE} { --color-user-ink: ${v} !important; } ${plant ?? ""}`, () => paintedTick(page));
++            const paints = t.top > 24 && t.n > 4;
++            rows.push(
++              `TICK ${project} ${arm} ${what}: paints ${paints} (top ${t.top}, core ${t.n} px) · core median ${t.med.toFixed(3)} · ` +
++                `p10 ${t.p10.toFixed(3)} · ${(t.under3 * 100).toFixed(1)} % <3`,
++            );
++            const ok = paints && t.med >= 3.0;
++            if (what.startsWith("name") && !ok) fail.push(`${arm} tick ${what}: paints ${paints}, median ${t.med.toFixed(3)}`);
++            // a plant that still reads as a painted tick at ≥ 3 is an instrument that cannot fail
++            if (plant && ok) fail.push(`${arm} tick ${what}: the plant stayed GREEN`);
++          }
++        }
++        await page.mouse.move(2, 2);
++        await expect(label).toHaveCount(0);
+       }
+-      await a.mouse.move(2, 2);
+-      await expect(label).toHaveCount(0);
+     }
+   }
+   for (const r of rows) console.log(r);
+   console.log(
+-    `TAPE ${info.project.name} the in-run negative (light: the stick · dark: the pass-5 ring arm) flat worst ` +
++    `TAPE ${project} the in-run negative (light: the stick · dark: the pass-5 ring arm) flat worst ` +
+       `${neg.light.toFixed(3)} / ${neg.dark.toFixed(3)}`,
+   );
+   // THE NEGATIVE CONTROL IS IN THE SAME RUN: the binding this pass replaced reads under 4.5 painted
+@@ -863,6 +696,99 @@ test("§2b the tape writes the author and their tally in the name arm, and both
+   await ctx.close();
+ });
+ 
++// ── 2c · GATE 4 ON THE SURFACE ─────────────────────────────────────────────────────────────
++/** THE SOURCE LAW'S BEHAVIOURAL ROW (LAWS P7 §F (iii)): `check-peer-tin` says `index.css` is the one
++ *  publisher of a player's ink; this reads what PAINTS. B's tape (pinned) on A's page, both themes:
++ *  the name's glyphs and the tally's strokes photographed ON and OFF (a stylesheet), the pixels that
++ *  moved ≥ 0.9 × the most-moved (the fully covered core), their median colour in OKLab against the
++ *  published name arm the cascade resolves — within COPY_DE (0.03, the gate's own copy distance).
++ *  Plants no source reader can see, each in-run and each required RED: another arm's ink written
++ *  onto the label and onto the tally by a stylesheet, and a relative colour 0.05 darker. */
++test("§2c gate 4 on the surface: the tape and its tally paint the published name arm", async ({ browser }, info) => {
++  test.setTimeout(600_000);
++  const { ctx, pages } = await room(browser, 6, IDS);
++  const a = pages[0];
++  const b = pages[5];
++  const x = [...GIVENS].flatMap((ch, i) => (ch === "." && i >= 9 && GIVENS[i - 9] !== "." ? [i] : []))[0];
++  await b.locator(".sudoku-cell input").nth(x).click();
++  await b.locator(".sudoku-cell input").nth(x).fill("7");
++  await expect.poll(() => a.locator(".sudoku-cell input").nth(x).inputValue()).toBe("7");
++  await a.bringToFront();
++  const label = a.locator(TAPE);
++  const TICK = ".attribution-tape .roster-tick";
++  const lab = (css: string) => {
++    const c = parseColor(css);
++    return srgbToOklab(c.rgb) as number[];
++  };
++  const dE = (p: number[], q: number[]) => Math.hypot(p[0] - q[0], p[1] - q[1], p[2] - q[2]);
++  /** the painted core colour of `sel` against `off` (a stylesheet that removes its ink) */
++  const core = async (sel: string, off: string) => {
++    const bb = (await a.locator(sel).first().boundingBox())!;
++    const clip = { x: Math.floor(bb.x - 1), y: Math.floor(bb.y - 1), width: Math.ceil(bb.width + 2), height: Math.ceil(bb.height + 2) };
++    const p = (await onOff(a, clip, off)) as { on: { data: number[] }; off: { data: number[] } };
++    let top = 0;
++    const moved: number[] = [];
++    for (let i = 0; i < p.on.data.length; i += 3) {
++      const d = maxDelta(p.on.data, p.off.data, i);
++      moved.push(d);
++      top = Math.max(top, d);
++    }
++    const px: number[][] = [];
++    moved.forEach((d, n) => {
++      if (top > 0 && d >= 0.9 * top) px.push([p.on.data[3 * n], p.on.data[3 * n + 1], p.on.data[3 * n + 2]]);
++    });
++    const med = [0, 1, 2].map((c) => {
++      const v = px.map((q) => q[c]).sort((u, w) => u - w);
++      return v[v.length >> 1] ?? 0;
++    });
++    return { n: px.length, rgb: `rgb(${med.join(" ")})` };
++  };
++  const COPY_DE = 0.03;
++  const fail: string[] = [];
++  for (const arm of ["light", "dark"] as const) {
++    await setTheme(a, arm);
++    await a.mouse.move(2, 2);
++    await a.locator(".game-cell").nth(x).hover();
++    await expect(label).toBeVisible();
++    const want = await label.evaluate((l) => getComputedStyle(l).color);
++    const other = await a.evaluate(() => {
++      const p = document.createElement("span");
++      p.style.color = "var(--color-peer-3-name)";
++      document.body.appendChild(p);
++      const c = getComputedStyle(p).color;
++      p.remove();
++      return c;
++    });
++    const read = async (what: string, plant: string) => {
++      const tag = plant ? await a.addStyleTag({ content: plant }) : null;
++      await a.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++      const name = await core(TAPE, `${TAPE} { color: transparent !important; -webkit-text-fill-color: transparent !important; }`);
++      const tick = await core(TICK, `${TICK} { visibility: hidden !important; }`);
++      if (tag) await tag.evaluate((e) => (e as Element).remove());
++      const dn = dE(lab(name.rgb), lab(want)),
++        dt = dE(lab(tick.rgb), lab(want));
++      console.log(
++        `§2c ${info.project.name} ${arm} ${what}: the arm ${want} · name core ${name.rgb} (${name.n} px) ΔE ${dn.toFixed(4)} · tally core ${tick.rgb} (${tick.n} px) ΔE ${dt.toFixed(4)}`,
++      );
++      return { dn, dt };
++    };
++    const clean = await read("clean", "");
++    if (!(clean.dn <= COPY_DE)) fail.push(`${arm} clean: the name paints ΔE ${clean.dn.toFixed(4)} from its arm`);
++    if (!(clean.dt <= COPY_DE)) fail.push(`${arm} clean: the tally paints ΔE ${clean.dt.toFixed(4)} from its arm`);
++    const plants: [string, string, "dn" | "dt"][] = [
++      ["P1 another arm onto the label", `${TAPE} { color: ${other} !important; }`, "dn"],
++      ["P2 another arm onto the tally", `${TICK} path { stroke: ${other} !important; }`, "dt"],
++      ["P3 the arm 0.05 darker (relative colour)", `${TAPE} { color: oklch(from ${want} calc(l - 0.05) c h) !important; }`, "dn"],
++    ];
++    for (const [what, css, k] of plants) {
++      const r = await read(what, css);
++      if (r[k] <= COPY_DE) fail.push(`${arm} ${what}: stayed GREEN (ΔE ${r[k].toFixed(4)})`);
++    }
++  }
++  expect(fail, fail.join("\n")).toEqual([]);
++  await ctx.close();
++});
++
+ // ── 4 · THE TWO HOMES, AND THE ROW THAT DOES NOT MOVE ─────────────────────────────────────
+ test("the tally appears at the sixth player, inside the name, and the pill stays put", async ({
+   browser,
+diff --git a/web/frontend/scripts/check-peer-tin.mjs b/web/frontend/scripts/check-peer-tin.mjs
+index 0ee894a9..b023227d 100644
+--- a/web/frontend/scripts/check-peer-tin.mjs
++++ b/web/frontend/scripts/check-peer-tin.mjs
+@@ -25,24 +25,35 @@
+  *            floor is quoted as a RATIO of the ceiling as well as an absolute. A bare number is
+  *            gameable by lowering it; a ratio alone lets a drifting reserved set hide a
+  *            drifting tin. Both print, both must pass.
+- *   GATE 2   THE SEPARATION LAW. No two sticks, and no two name arms, closer than MIN_DE in
+- *            OKLab, per arm — the light names EXEMPT while they are the ring arms by alias, with
+- *            the argument and its own floor written at the gate.
++ *   GATE 2   THE SEPARATION LAW. No two sticks, no two name arms and no two ring arms closer
++ *            than MIN_DE in OKLab, per arm — the light names EXEMPT while they are the ring arms by
++ *            alias, and the light rings floored at RING_FLOOR, each with its argument written at
++ *            the gate.
+  *   GATE 3   THE ANCHOR TEST.  No stick IS a reserved ink, said in hexes rather than degrees.
+  *   GATE 3b  THE SAME PENCIL.   A ring arm and a name arm sit within RING_DH of their stick's hue.
+  *   GATE 4   ONE PUBLISHER.     `index.css` is the only place a player's ink is written, agree
+  *            or disagree, whatever the name and whatever the colour syntax (4a), and each arm
+  *            sits at its lightness: the rings at the section's pair, the names at theirs (4b).
++ *            Every source is read the way the bundler ships it, through the ONE library: comments
++ *            out (string- and regex-literal-aware), literal expressions folded in place, entities
++ *            and CSS escapes decoded, Tailwind palette utilities resolved; `--dist` reads the
++ *            built bundle the same way.
+  *
+  * Two rows print and never fail: the GAMUT CEILING per stick (six of the ten arms sit exactly
+  * on `chromaAt(L, h)` — that is sRGB's own limit at that lightness, not a chosen number), and
+  * the 8-BIT ROUND TRIP, which is 0.000° on every stick because a table is authored in bytes.
+  * Printed so nobody later mistakes the absent tax for an absent check.
+  *
+- * `--self-test` mints FIFTY-NINE negative controls, at least one per gate (gate 4's include the
+- * pass-5 critic's C1–C11 and the pass-6 critic's D1–D17; gate 2's the name arms' D20/D22 and both
+- * halves of the light exemption), and one GREEN control (a consumer, a concatenated consumer, a
+- * comment and a bundle's own sheet must not red gate 4).
++ * `--self-test` mints EIGHTY-FIVE negative controls (NINETY with `--dist`), at least one per clause:
++ * gate 4's include the pass-5 critic's C1–C11, the pass-6 critic's D1–D17, the pass-7 critic's fresh
++ * publishers D23–D39 and this lane's D41–D51 (packed ints, `.join`, templates, escapes, Tailwind
++ * palette utilities, derivation through an indirection token, minted names by split template /
++ * `.concat` / `.join`, relative colour syntax, same-file consts), a one-line bundle whose literal sits
++ * after two regex literals, and — with `--dist` — the pink name planted INSIDE the shipped entry
++ * chunk at four offsets; gate 2's the name arms' D20/D22, both halves of the light exemption and the
++ * ring arms by day and by night. One GREEN control (a consumer, a concatenated consumer, a comment,
++ * a script helper named `lab(…)` and a bundle's own sheet must not red gate 4, nor throw). `--sabotage-battery [--dist <dir>]` deletes every
++ * clause in turn, this file's and the library's it reads through, and the self-test must red each.
+  * A gate that cannot be shown failing is not a gate.
+  *
+  * RUN IT BARE. `node check-peer-tin.mjs | tail` prints RED and exits 0 — the pipe eats the
+@@ -51,20 +62,60 @@
+ import fs from "node:fs";
+ import path from "node:path";
+ import process from "node:process";
+-import { pathToFileURL } from "node:url";
+ 
+-/** THE SHAPE LAW'S ONE LIBRARY (LAWS P6 §F/§I): its colour parser (every CSS `<color>` syntax to
+- *  sRGB) and its string-aware strippers. This file keys the tin's rows on it and hand-rolls
+- *  neither. `SHAPE_CENSUS` points at another copy (a lane's scratch, the fold's final home). */
+-const SHAPE = await import(
+-  pathToFileURL(
+-    process.env.SHAPE_CENSUS ??
+-      path.join(
+-        import.meta.dirname,
+-        "../../../docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/instruments/shape-census.mjs",
+-      ),
+-  ).href
++/** THE SHAPE LAW'S ONE LIBRARY (LAWS P6 §F/§I, P7 §I; registry-v7 §2.4), at its PRODUCT HOME by
++ *  relative path: its colour parser (every CSS `<color>` syntax, relative colour syntax included, to
++ *  sRGB), its string- and regex-literal-aware strippers, its escape decoders and its literal folder.
++ *  This file keys the tin's rows on it and hand-rolls none of them. */
++import * as SHAPE from "./shape-census.mjs";
++
++/** THE CLAUSES (LAWS P7 §F (ii)): every finding site below is keyed by one id, and
++ *  `--sabotage-battery` deletes each in turn (`TIN_SABOTAGE=<id>`) — the self-test must RED every
++ *  time, or the clause has no plant. The library clauses gate 4 rests on are deleted the same way
++ *  through the library's own switch (`SHAPE_SABOTAGE`). */
++const TIN_CLAUSES = {
++  g1a: "GATE 1a the family law (degrees to a reserved ink)",
++  g1b: "GATE 1b the reader's law (ΔE to a cell ink, and the paper's ceiling ratio)",
++  "g2-stick": "GATE 2 the sticks at MIN_DE",
++  "g2-name": "GATE 2 the name arms (MIN_DE, or the alias exemption's floor)",
++  "g2-exempt": "GATE 2 the light-name exemption is conditional on the ring alias",
++  "g2-ring":
++    "GATE 2 the ring arms (dark at MIN_DE, light at RING_FLOOR with its argument)",
++  g3: "GATE 3 no stick IS an anchor; the tin is whole",
++  g3b: "GATE 3b a ring/name arm is its stick's hue",
++  "g4-light": "4b every ring/name arm at its lightness",
++  "g4-home": "4a index.css declares each token once per arm and no scalar",
++  "g4-holed": "4a a --color- name with a hole after the library's fold",
++  "g4-derived": "4a a colour derived from an arm or an indirection token",
++  "g4-tw": "4a a Tailwind palette utility within COPY_DE of an arm",
++  "g4-copy": "4a a colour literal within COPY_DE of an arm (after the fold)",
++  "g4-int": "4a a packed 24-bit int read as a colour",
++  "g4-triple": "4a a numeric byte triple read as a colour",
++  "g4-decl": "4a a peer token declared outside index.css",
++  "g4-lname": "4a a lightness-shaped name bound to a number",
++  "g4-band": "4a a band table under a ring/peer/hand name",
++  "g4-table": "4a a second tin (a table of ≥2 colours)",
++  "g4-dist": "--dist reads the BUILT bundle",
++};
++const TIN_OFF = new Set(
++  (process.env.TIN_SABOTAGE ?? "")
++    .split(",")
++    .map((x) => x.trim())
++    .filter(Boolean),
+ );
++const on = (id) => !TIN_OFF.has(id);
++/** The library clauses gate 4 reads through (deleted by the library's own switch). */
++const LIB_CLAUSES = [
++  "strip-regex",
++  "rel-color",
++  "decode",
++  "const-carried",
++  "fold-hole",
++  "fold-int",
++  "fold-text",
++  "tw-palette",
++  "channel-arity",
++];
+ 
+ const ROOT = path.join(import.meta.dirname, "..");
+ const INDEX_CSS = path.join(ROOT, "src", "assets", "index.css");
+@@ -73,6 +124,17 @@ const MIN_DE = 0.1; // OKLab, between two PLAYERS
+ /** the light name arms' floor while they ARE the ring arms (gate 2's exemption): the shipped
+  *  green–teal 0.0769 less the 8-bit slack of a low-chroma arm */
+ const EXEMPT_FLOOR = 0.075;
++/** THE LIGHT RING PAIR'S FLOOR (registry-v7 §2.13f: TIN's gate-2 row). The five light ring arms ARE
++ *  the light names, so they share the 0.0769 green–teal pair; unlike the names they paint AT ONCE,
++ *  one ring per peer on one board, so the tape's one-at-a-time argument does not cover them. Their
++ *  argument is their own: (1) the ring's lightness is the section's pair (§2.4, L 0.295 by day), the
++ *  lightness its painted core statistic is measured at, and at 0.295 sRGB cannot hold five hues 0.10
++ *  apart (the common L that can, ≥ 0.380, is printed every run) — so 0.10 by day moves the chair's
++ *  pair, not a TIN number; (2) a ring never carries identity alone: it rings the cell a peer is ON,
++ *  and that peer's digits on the board are the STICK (worst pair 0.1162 by day), their roster row
++ *  carries the tick, and the tape prints the slug. The floor is the shipped 0.0769 less the 8-bit
++ *  slack, so the pair may not drift closer; the dark rings are their own colour and hold MIN_DE. */
++const RING_FLOOR = 0.075;
+ /** ΔE to the nearest ink that paints in a CELL. Pinned from the prototype's own reading
+  *  (0.082 light / 0.100 dark) with the margin the band move bought, and never raised to pass. */
+ const ABS_FLOOR = 0.075;
+@@ -410,7 +472,7 @@ function run(css, label, sources = SOURCES) {
+       for (const r of arms[a].reserved) {
+         const d = gap(hueOf(s.hex), hueOf(r.hex));
+         near = Math.min(near, d);
+-        if (d < MIN_SEP)
++        if (d < MIN_SEP && on("g1a"))
+           c1a.push(
+             `  COLLISION peer-${s.i} (${a} ${s.hex}, h=${hueOf(s.hex).toFixed(1)}) vs --color-${r.name} ${r.hex} (h=${hueOf(r.hex).toFixed(1)}): ${d.toFixed(2)}deg < ${MIN_SEP}deg`,
+           );
+@@ -442,13 +504,13 @@ function run(css, label, sources = SOURCES) {
+         }
+       }
+       worstDe = Math.min(worstDe, m);
+-      if (m < ABS_FLOOR)
++      if (m < ABS_FLOOR && on("g1b"))
+         c1b.push(
+           `  UNREADABLE peer-${s.i} (${a} ${s.hex}) vs --color-${who}: ΔE ${m.toFixed(3)} < ${ABS_FLOOR}`,
+         );
+     }
+   const score = worstDe / ceil.floor;
+-  if (score < RATIO_FLOOR)
++  if (score < RATIO_FLOOR && on("g1b"))
+     c1b.push(
+       `  UNDER THE PAPER peer set scores ${score.toFixed(2)} of this sheet's own ceiling (ΔE ${ceil.floor.toFixed(3)}) < ${RATIO_FLOOR}`,
+     );
+@@ -486,32 +548,45 @@ function run(css, label, sources = SOURCES) {
+   const c2 = [];
+   let worstPair = Infinity;
+   const worstName = {};
++  const worstRing = {};
+   for (const a of A) {
+-    const aliased = arms[a].names.every((n) => {
+-      const r = arms[a].rings.find((q) => q.i === n.i);
+-      return r && n.hex === r.hex;
+-    });
++    const aliased =
++      !on("g2-exempt") ||
++      arms[a].names.every((n) => {
++        const r = arms[a].rings.find((q) => q.i === n.i);
++        return r && n.hex === r.hex;
++      });
+     for (const [kind, s, floor] of [
+       ["stick", arms[a].sticks, MIN_DE],
+       ["name", arms[a].names.filter((n) => n.hex), aliased ? EXEMPT_FLOOR : MIN_DE],
++      ["ring", arms[a].rings.filter((r) => r.hex), a === "light" ? RING_FLOOR : MIN_DE],
+     ]) {
++      if (!on(`g2-${kind}`)) continue;
+       for (let i = 0; i < s.length; i++)
+         for (let j = i + 1; j < s.length; j++) {
+           const e = dE(s[i].hex, s[j].hex);
+           if (kind === "stick") worstPair = Math.min(worstPair, e);
++          else if (kind === "ring")
++            worstRing[a] = Math.min(worstRing[a] ?? Infinity, e);
+           else worstName[a] = Math.min(worstName[a] ?? Infinity, e);
+           if (e < floor)
+             c2.push(
+               `  TOO CLOSE ${kind} peer-${s[i].i} ${s[i].hex} vs peer-${s[j].i} ${s[j].hex} (${a}): ΔE ${e.toFixed(3)} < ${floor}` +
+-                (floor === EXEMPT_FLOOR
++                (kind === "name" && floor === EXEMPT_FLOOR
+                   ? " (the ring-alias exemption's own floor)"
+-                  : ""),
++                  : kind === "ring" && floor === RING_FLOOR
++                    ? " (the light ring pair's floor)"
++                    : ""),
+             );
+         }
+       if (kind === "name")
+         console.log(
+           `  REPORT name arms (${a}): ${aliased ? `the ring arm by alias — EXEMPT from ${MIN_DE}, floored at ${EXEMPT_FLOOR}` : `their own colour — gated at ${MIN_DE}`} · worst pair ΔE ${worstName[a]?.toFixed(4)}`,
+         );
++      if (kind === "ring")
++        console.log(
++          `  REPORT ring arms (${a}): gated at ${floor}${a === "light" ? " (the light ring pair's floor, argued at RING_FLOOR)" : ""} · worst pair ΔE ${worstRing[a]?.toFixed(4)}`,
++        );
+     }
+   }
+   // the exemption's price, re-derived: the common lightness at which the five sticks' hues first
+@@ -529,7 +604,7 @@ function run(css, label, sources = SOURCES) {
+   );
+   if (c2.length) console.log(c2.join("\n"));
+   console.log(
+-    `GATE 2 THE SEPARATION LAW: ${c2.length ? `RED — ${c2.length} pairs under the floor` : "GREEN"} · worst stick pair ΔE ${worstPair.toFixed(3)} · worst name pair ΔE ${(worstName.light ?? NaN).toFixed(3)} light / ${(worstName.dark ?? NaN).toFixed(3)} dark`,
++    `GATE 2 THE SEPARATION LAW: ${c2.length ? `RED — ${c2.length} pairs under the floor` : "GREEN"} · worst stick pair ΔE ${worstPair.toFixed(3)} · worst name pair ΔE ${(worstName.light ?? NaN).toFixed(3)} light / ${(worstName.dark ?? NaN).toFixed(3)} dark · worst ring pair ΔE ${(worstRing.light ?? NaN).toFixed(4)} light (floor ${RING_FLOOR}) / ${(worstRing.dark ?? NaN).toFixed(4)} dark (floor ${MIN_DE})`,
+   );
+ 
+   // GATE 3 — a stick that IS an anchor, and a tin that is not WHOLE
+@@ -537,12 +612,12 @@ function run(css, label, sources = SOURCES) {
+   for (const a of A) {
+     const anchors = new Map(arms[a].reserved.map((r) => [r.hex, r.name]));
+     for (const s of [...arms[a].sticks, ...arms[a].rings])
+-      if (anchors.has(s.hex))
++      if (anchors.has(s.hex) && on("g3"))
+         c3.push(`  peer-${s.i} (${a}) ${s.hex} IS --color-${anchors.get(s.hex)}`);
+     // THE MISSING ARM. Every stick has a ring; an absent one does not fail loudly on the
+     // surface, it inherits the digit ink through `gameCell.css:230` and reads 2.28 again.
+     for (const st of arms[a].sticks)
+-      if (!arms[a].rings.some((r) => r.i === st.i))
++      if (!arms[a].rings.some((r) => r.i === st.i) && on("g3"))
+         c3.push(
+           `  peer-${st.i} (${a}) has no --color-peer-${st.i}-ring — the ring inherits the digit ink`,
+         );
+@@ -581,7 +656,7 @@ function run(css, label, sources = SOURCES) {
+         if (!r || !r.hex) continue; // gate 3 has it
+         const d = gap(hueOf(st.hex), hueOf(r.hex));
+         worstDh = Math.max(worstDh, d);
+-        if (d > RING_DH)
++        if (d > RING_DH && on("g3b"))
+           c3b.push(
+             `  NOT THE SAME PENCIL peer-${st.i} (${a}) stick ${st.hex} h ${hueOf(st.hex).toFixed(2)} vs ${kind} ${r.hex} h ${hueOf(r.hex).toFixed(2)}: ${d.toFixed(2)}deg > ${RING_DH}deg`,
+           );
+@@ -689,8 +764,6 @@ const NAME_PAIR = { light: 0.295, dark: 0.86 };
+ const SCALAR_EPS = 0.005; // the 8-bit round trip of an authored arm (worst measured 0.0015)
+ const COPY_DE = 0.03;
+ const PEER_TOKEN = /(--color-peer-\d+(?:-ring|-name)?|--peer-(?:ink|ring|name)-l)/;
+-/** a TEMPLATED peer token: `--color-peer-${i}-ring` mints a name no table lists */
+-const MINTED = /--color-peer-\$\{/;
+ /** a lightness-shaped identifier: RING_L, ringL, ring_l, peerInkL, ringLightness, TIN_L… */
+ const L_NAME =
+   /^(?:[A-Za-z]*?)(?:ring|peer|tin|stick|hand|band|name)(?:[-_]?ink)?(?:[-_]?(?:l|lightness|light|lightnesses))$/i;
+@@ -709,18 +782,6 @@ const uncomment = (text, rel = "x.ts") =>
+           ? text
+           : SHAPE.stripJs(text);
+ 
+-/** String concatenation of literals folded the way a bundler folds it: `"#ff" + "b4f3"` is the
+- *  literal `"#ffb4f3"` in the shipped bytes, so it is read as one here (pass-6 critique D6). */
+-const fold = (text) => {
+-  let t = text;
+-  for (let k = 0; k < 8; k++) {
+-    const n = t.replace(/(["'])([^"'\\\n]*)\1\s*\+\s*(["'])([^"'\\\n]*)\3/g, '"$2$4"');
+-    if (n === t) break;
+-    t = n;
+-  }
+-  return t;
+-};
+-
+ /** Every colour literal in a text, as `{ lit, lab }`, through the ONE parser: hex 3/4/6/8, rgb/rgba
+  *  (comma or space, `%`), hsl/hsla (deg/turn/rad/grad), hwb, lab, lch, oklab, oklch,
+  *  `color(srgb …)`, named colours and `color-mix` — plus a NUMERIC TRIPLE `[r, g, b]` of bytes,
+@@ -729,28 +790,81 @@ function colourLiterals(text) {
+   const out = [];
+   for (const c of SHAPE.colorLiterals(text))
+     if (c.a > 0 || !/^transparent$/i.test(c.text))
+-      out.push({ lit: c.text, lab: SHAPE.srgbToOklab(c.rgb) });
++      out.push({ lit: c.text, lab: SHAPE.srgbToOklab(c.rgb), kind: "g4-copy" });
++  // a colour PACKED as a 24-bit int (D23's body, read even when never printed in base 16)
++  for (const m of text.matchAll(/(?<![\w$.])0x([0-9a-f]{6})(?![\w$])/gi))
++    out.push({
++      lit: m[0],
++      lab: SHAPE.srgbToOklab(
++        [0, 2, 4].map((k) => parseInt(m[1].slice(k, k + 2), 16) / 255),
++      ),
++      kind: "g4-int",
++    });
+   for (const m of text.matchAll(/\[\s*(\d{1,3})\s*,\s*(\d{1,3})\s*,\s*(\d{1,3})\s*\]/g))
+     if ([m[1], m[2], m[3]].every((v) => +v <= 255))
+       out.push({
+         lit: m[0],
+         lab: SHAPE.srgbToOklab([+m[1] / 255, +m[2] / 255, +m[3] / 255]),
++        kind: "g4-triple",
+       });
+   return out;
+ }
+ 
+-/** A peer token NAMED by arithmetic — the prefix of `--color-peer-N[-ring|-name]` in a literal that
+- *  a `+` or a `${…}` completes — anywhere but inside `var(`: a declaration no table lists
+- *  (`setProperty("--color-peer-" + i + "-name")`, `{ ["--color-peer-" + i]: v }`, a template).
+- *  Inside `var(` it is a consumer reading a published arm, and stays quiet. */
+-const MINTED_ANY = [
+-  /(["'])(?:(?!\1)[^\n])*?(?<!var\(\s*)--color-peer-\d*-?(?:ring|name)?-?\1\s*\+/g,
+-  /`[^`]*?(?<!var\(\s*)--color-peer-\d*-?\$\{/g,
+-];
+ /** A colour DERIVED from a published arm outside the sheet — `color-mix(… var(--color-peer-5-ring)
+- *  …)`, a relative colour `oklch(from var(--color-peer-2) …)` — is an arm the gate never reads. */
+-const DERIVED =
+-  /\b(?:color-mix|(?:rgb|hsl|hwb|lab|lch|oklab|oklch|color)\(\s*from)\b[^;{}]*?var\(\s*--color-peer-\d/g;
++ *  …)`, a relative colour `oklch(from var(--color-peer-2) …)` — is an arm the gate never reads. So is
++ *  one derived through an INDIRECTION token that carries an arm into a cell (D32: `inkFor`'s own keys,
++ *  `--color-user-ink` and `--color-peer-cursor-ink`, any token a source binds to an arm, and every
++ *  name in the `--color-peer-` family whether or not this tree declares it — D48's `-name-ink`). */
++const derivedRe = (indirect) =>
++  new RegExp(
++    `\\b(?:color-mix|(?:rgb|hsl|hwb|lab|lch|oklab|oklch|color)\\(\\s*from)\\b[^;{}]*?var\\(\\s*(?:--color-peer-[\\w-]${indirect.map((t) => `|${t}(?![\\w-])`).join("")})`,
++    "gi",
++  );
++/** The indirection tokens: every custom property a source binds to an arm — an object key whose
++ *  value is a stick table (`"--color-user-ink": TIN[…]`) or a `var(--color-peer-N…)`, and a CSS
++ *  declaration `--x: var(--color-peer-N…)` — the sheet's own arm aliases excepted (they ARE arms). */
++function indirectTokens(files) {
++  const out = new Set(["--color-user-ink", "--color-peer-cursor-ink"]);
++  for (const f of files) {
++    if (f.bundle) continue;
++    for (const m of f.text.matchAll(
++      /["'`](--[\w-]+)["'`]\s*:\s*(?:TIN\w*\s*\[|["'`]var\(\s*--color-peer-\d)/g,
++    ))
++      out.add(m[1]);
++    for (const m of f.text.matchAll(/(--[\w-]+)\s*:\s*var\(\s*--color-peer-\d/g))
++      if (!/^--color-peer-\d/.test(m[1])) out.add(m[1]);
++  }
++  return [...out];
++}
++/** A NAME minted by arithmetic after the ONE library's fold (`foldText` keeps an unresolved leaf as
++ *  a hole): `setProperty(\`--color-${"peer"}-${i}-name\`)`, `"--color-peer-".concat(i, "-name")`,
++ *  `["--color-peer", i, "name"].join("-")` all read `--color-peer-⁇-name`. Any `--color-` name with a
++ *  hole outside `var(` is a token no table lists; inside `var(` it is a consumer and stays quiet. */
++const HOLE = "\u2047";
++const HOLED = new RegExp(
++  `(?<!var\\(\\s*)--color-[\\w${HOLE}-]*${HOLE}[\\w${HOLE}-]*`,
++  "g",
++);
++/** A Tailwind PALETTE utility names a colour the build ships (D30: `text` + `indigo-200` is ΔE 0.0111 from
++ *  the violet name) — resolved by the library (`tw-palette`), variants and `/alpha` included. */
++const TW_CANDIDATE =
++  /(?<![\w-])(?:[\w-]+:|!)*(?:text|bg|border(?:-[xytrbl]|-[se])?|fill|stroke|outline|ring|ring-offset|decoration|accent|caret|from|via|to|divide|placeholder|shadow|inset-shadow|inset-ring|drop-shadow)-(?:[a-z]+-\d{2,3}|black|white)(?:\/\d+)?(?![\w-])/g;
++const JSISH = /\.(vue|ts|mts|cts|tsx|js|mjs|cjs|jsx|html|svg)$/;
++/** What gate 4 reads of one file, through the ONE library, memoised on the bytes: comments out
++ *  (string- and regex-literal-aware), literal expressions FOLDED in place (`foldText`: templates,
++ *  `.join`, `.concat`, escapes, same-file consts, packed ints; holes kept), HTML entities decoded in
++ *  markup and CSS escapes in sheets (D29 `#ff\62 2f3`, D46 `&#35;ffb2f3`). */
++const SEEN = new Map();
++function analysed(f) {
++  const key = `${f.rel}\0${f.text}`;
++  if (SEEN.has(key)) return SEEN.get(key);
++  let t = uncomment(f.text, f.rel.replace(/^dist:/, ""));
++  if (/\.(vue|html|svg)$/.test(f.rel)) t = SHAPE.decodeEntities(t);
++  if (JSISH.test(f.rel)) t = SHAPE.foldText(t, { hole: HOLE });
++  if (/\.(css|pcss|postcss|vue|html|svg)$/.test(f.rel)) t = SHAPE.decodeCssEscapes(t);
++  SEEN.set(key, t);
++  return t;
++}
+ 
+ function gate4(css, arms, files) {
+   const findings = [];
+@@ -762,7 +876,7 @@ function gate4(css, arms, files) {
+       for (const r of set) {
+         if (!r.hex) continue; // gate 3 has it
+         const d = Math.abs(lOf(r.hex) - pair[a]);
+-        if (d > SCALAR_EPS)
++        if (d > SCALAR_EPS && on("g4-light"))
+           findings.push(
+             `4b: ${a} peer-${r.i}-${kind} ${r.hex} sits at L ${lOf(r.hex).toFixed(4)}, the ${kind} lightness is ` +
+               `${pair[a]} (off by ${d.toFixed(4)}, cap ${SCALAR_EPS})`,
+@@ -778,6 +892,7 @@ function gate4(css, arms, files) {
+     for (const m of block.matchAll(new RegExp(`${PEER_TOKEN.source}\\s*:`, "g")))
+       seen.set(m[1], (seen.get(m[1]) ?? 0) + 1);
+     for (const [name, n] of seen) {
++      if (!on("g4-home")) continue;
+       if (/^--peer-/.test(name))
+         findings.push(
+           `4a: index.css (${a}) declares ${name} — a table publishes no scalar`,
+@@ -800,39 +915,44 @@ function gate4(css, arms, files) {
+   };
+   let copies = 0;
+   let innocent = { d: Infinity, where: "none" };
++  const DERIVED = derivedRe(indirectTokens(files));
+   for (const f of files) {
+-    const text = fold(uncomment(f.text, f.rel));
+-    for (const re of MINTED_ANY)
+-      for (const m of text.matchAll(re))
+-        findings.push(
+-          `4a: ${f.rel} names a peer token by arithmetic \`${m[0].slice(0, 60)}\` — a token no table lists`,
+-        );
+-    if (!f.bundle)
++    const text = analysed(f);
++    for (const m of on("g4-holed") ? text.matchAll(HOLED) : [])
++      findings.push(
++        `4a: ${f.rel} mints a colour token by arithmetic \`${m[0].replaceAll(HOLE, "?").slice(0, 60)}\` — a name no table lists`,
++      );
++    if (!f.bundle && on("g4-derived"))
+       for (const m of text.matchAll(DERIVED))
+         findings.push(
+           `4a: ${f.rel} derives a colour from a published arm \`${m[0].slice(0, 70)}\` — an arm no gate reads`,
+         );
++    if (JSISH.test(f.rel.replace(/^dist:/, "")) && on("g4-tw"))
++      for (const m of text.matchAll(TW_CANDIDATE)) {
++        const tw = SHAPE.TAILWIND_ALL(m[0]).find(([p]) => p === "color");
++        const c = tw && SHAPE.parseColor(tw[1]);
++        if (!c) continue;
++        const n = nearest(SHAPE.srgbToOklab(c.rgb));
++        if (n.d < COPY_DE) {
++          copies++;
++          findings.push(
++            `4a: ${f.rel} writes the utility ${m[0]} = ${tw[1]}, ΔE ${n.d.toFixed(4)} from the published arm ${n.hex} — a copy of the tin`,
++          );
++        } else if (n.d < innocent.d)
++          innocent = { d: n.d, where: `${f.rel} ${m[0]} → ${n.hex}` };
++      }
+     for (const re of [
+       new RegExp(`${PEER_TOKEN.source}\\s*:`, "g"),
+       new RegExp(`["'\`]${PEER_TOKEN.source}["'\`]\\s*:`, "g"),
+       new RegExp(`setProperty\\(\\s*["'\`]${PEER_TOKEN.source}["'\`]`, "g"),
+     ])
+-      for (const m of text.matchAll(re))
++      for (const m of on("g4-decl") ? text.matchAll(re) : [])
+         findings.push(
+           `4a: ${f.rel} declares ${m[1]} — a second publisher of the tin index.css owns`,
+         );
+-    for (const m of text.matchAll(/setProperty\(\s*`([^`]*)`/g))
+-      if (MINTED.test(m[1]))
+-        findings.push(
+-          `4a: ${f.rel} sets a minted token \`${m[1]}\` — a peer token no table lists`,
+-        );
+-    // a minted KEY (`{ [`--color-peer-${i}-ring`]: v }`); a minted name in VALUE position
+-    // (`var(--color-peer-${k}-name)`) is a consumer and stays quiet
+-    for (const m of text.matchAll(/`(--color-peer-\$\{[^`]*)`\s*\]?\s*:/g))
+-      findings.push(`4a: ${f.rel} declares a minted token \`${m[1]}\``);
+     for (const c of colourLiterals(text)) {
+       const n = nearest(c.lab);
+-      if (n.d < COPY_DE) {
++      if (n.d < COPY_DE && on(c.kind)) {
+         copies++;
+         findings.push(
+           `4a: ${f.rel} spells ${c.lit}, ΔE ${n.d.toFixed(4)} from the published arm ${n.hex} — a copy of the tin`,
+@@ -845,7 +965,7 @@ function gate4(css, arms, files) {
+       /(?<![\w$])(?=([A-Za-z_$][\w$]*)["'`]?\s*(?::[^=;,{}()]*?)?[:=]\s*([[{][^\]}]*[\]}]|-?\d*\.\d+|\d+(?:\.\d+)?)(?![\w.]))/g,
+     )) {
+       const [, name, body] = m;
+-      if (L_NAME.test(name)) {
++      if (L_NAME.test(name) && on("g4-lname")) {
+         const nums = [...body.matchAll(/(?<![\w.#])(\d*\.\d+|[01])(?![\w.%])/g)]
+           .map((q) => +q[1])
+           .filter((v) => v > 0 && v <= 1);
+@@ -862,7 +982,7 @@ function gate4(css, arms, files) {
+         const nums = [...bare.matchAll(/(?<![\w.#])(0?\.\d+)(?![\w.])/g)].map(
+           (q) => +q[1],
+         );
+-        if (nums.length >= 2 && !L_NAME.test(name))
++        if (nums.length >= 2 && !L_NAME.test(name) && on("g4-band"))
+           findings.push(
+             `4a: ${f.rel}'s \`${name}\` carries ${nums.join(", ")} — a band table, and a second ` +
+               `publisher whether or not it agrees with the pair (${RING_PAIR.light} / ${RING_PAIR.dark})`,
+@@ -870,7 +990,7 @@ function gate4(css, arms, files) {
+       }
+       if (/peer|ring|hand|player|tin|stick/i.test(name) && /^[[{]/.test(body)) {
+         const lits = colourLiterals(body);
+-        if (lits.length >= 2)
++        if (lits.length >= 2 && on("g4-table"))
+           findings.push(
+             `4a: ${f.rel}'s \`${name}\` spells ${lits.length} colours — a second tin`,
+           );
+@@ -938,8 +1058,44 @@ function bundleFiles(dir) {
+ const distAt = process.argv.indexOf("--dist");
+ const DIST = distAt > 0 ? path.resolve(process.argv[distAt + 1] ?? "dist") : null;
+ 
++/** `--sabotage-battery [--dist <dir>]`: each clause deleted in turn (this file's through
++ *  `TIN_SABOTAGE`, the library's through `SHAPE_SABOTAGE`), the self-test run fresh each time — it
++ *  must exit non-zero, or the clause has no plant. `g4-dist` is read only with `--dist`. */
++if (process.argv.includes("--sabotage-battery")) {
++  const { spawnSync } = await import("node:child_process");
++  const extra = DIST ? ["--dist", DIST] : [];
++  const rows = [];
++  for (const [env, ids] of [
++    ["TIN_SABOTAGE", Object.keys(TIN_CLAUSES).filter((id) => DIST || id !== "g4-dist")],
++    ["SHAPE_SABOTAGE", LIB_CLAUSES],
++  ])
++    for (const id of ids) {
++      const r = spawnSync(
++        process.execPath,
++        [import.meta.filename, "--self-test", ...extra],
++        {
++          env: { ...process.env, [env]: id },
++          encoding: "utf8",
++          maxBuffer: 1 << 28,
++        },
++      );
++      const bit = r.status !== 0;
++      const why = (r.stderr.match(/SELF-TEST FAILED[^\n]*/) ??
++        r.stdout.match(/RED \(wrong\)[^\n]*/) ?? [""])[0];
++      rows.push(bit);
++      console.log(
++        `SABOTAGE ${env === "TIN_SABOTAGE" ? "gate" : "library"} ${id.padEnd(14)} → ${bit ? `BITES (exit ${r.status}) ${why.slice(0, 110)}` : "GREEN — the clause has no plant"}`,
++      );
++    }
++  const green = rows.filter((b) => !b).length;
++  console.log(
++    `SABOTAGE BATTERY: ${rows.length - green}/${rows.length} clauses red the self-test when deleted${DIST ? "" : " (g4-dist needs --dist)"}`,
++  );
++  process.exit(green ? 1 : 0);
++}
++
+ const css = fs.readFileSync(INDEX_CSS, "utf8");
+-const SOURCES = [...sourceFiles(), ...(DIST ? bundleFiles(DIST) : [])];
++const SOURCES = [...sourceFiles(), ...(DIST && on("g4-dist") ? bundleFiles(DIST) : [])];
+ if (DIST)
+   console.log(
+     `reading the BUILT bundle beside the source: ${DIST} (${SOURCES.filter((f) => f.bundle).length} files)`,
+@@ -990,6 +1146,64 @@ if (process.argv.includes("--self-test")) {
+   };
+   const at = (hex, hDeg) => paint(lOf(hex), chromaOf(hex), hDeg).hex;
+ 
++  /** The `--dist` in-chunk plants: [label, css, sources] with the entry chunk replaced by a copy
++   *  carrying one literal at one offset. Empty without `--dist` (the synthetic chunk stands in). */
++  const inChunkPlants = () => {
++    const entry = SOURCES.find(
++      (f) => f.bundle && /^dist:assets\/index-[\w-]+\.js$/.test(f.rel),
++    );
++    if (!entry) return [];
++    const t = entry.text;
++    const re1 =
++      /[(,=:]\s*\/(?![*/])(?:\\.|\[(?:\\.|[^\]\\\n])*\]|[^/\\\n[])+\/[dgimsuy]*/.exec(
++        t,
++      );
++    const semiAfter = (i) => {
++      const j = t.indexOf(";", i);
++      return j < 0 ? t.length : j + 1;
++    };
++    const nl = t.indexOf("\n");
++    const at = {
++      "after the first regex literal": re1
++        ? semiAfter(re1.index + re1[0].length)
++        : null,
++      "mid-chunk": semiAfter(t.length >> 1),
++      "before the first newline": nl < 0 ? null : nl,
++      "at the end": t.length,
++    };
++    const out = [];
++    for (const [where, i] of Object.entries(at))
++      if (i != null)
++        out.push([
++          `the SHIPPED entry chunk, the pink name ${where} (byte ${i} of ${t.length})`,
++          css,
++          SOURCES.map((f) =>
++            f === entry
++              ? { ...f, text: t.slice(0, i) + ';var __tin8="#ffb2f3";' + t.slice(i) }
++              : f,
++          ),
++        ]);
++    const mid = at["mid-chunk"];
++    out.push([
++      `the SHIPPED entry chunk, a folded \`.join\` of the pink name mid-chunk (byte ${mid})`,
++      css,
++      SOURCES.map((f) =>
++        f === entry
++          ? {
++              ...f,
++              text:
++                t.slice(0, mid) + ';var __tin8=["#ff","b2f3"].join("");' + t.slice(mid),
++            }
++          : f,
++      ),
++    ]);
++    return out;
++  };
++  // `--dist` given and nothing BUILT read is a gate reading only the source: RED (the g4-dist plant)
++  if (DIST && !SOURCES.some((f) => f.bundle)) {
++    console.error(`SELF-TEST FAILED: --dist ${DIST} read no built file`);
++    code = code || 3;
++  }
+   const controls = [
+     [
+       "1a",
+@@ -1058,6 +1272,18 @@ if (process.argv.includes("--self-test")) {
+         (_, k) => k + at(arms.dark.names[3].hex, hueOf(arms.dark.names[3].hex) + 4),
+       ),
+     ],
++    [
++      "2 (the ring arms, dark)",
++      "g2",
++      "the dark teal ring moved onto the violet ring (#a8b6fe): two rings one board paints at once",
++      swapRing(css, "dark", 3, "#a8b6fe"),
++    ],
++    [
++      "2 (the ring arms, light, under RING_FLOOR)",
++      "g2",
++      "the light teal ring moved within 0.075 of the light green ring (#263502)",
++      css.replace(/(--color-peer-3-ring:\s*)#[0-9a-fA-F]{6}/, "$1#263502"),
++    ],
+     [
+       "2 (the name arms, D22)",
+       "g2",
+@@ -1073,8 +1299,8 @@ if (process.argv.includes("--self-test")) {
+     [
+       "2 (a light name leaves the alias)",
+       "g2",
+-      "the light green name spelled as its own colour beside teal — gated at 0.10, not exempt",
+-      css.replace(/(--color-peer-2-name:\s*)var\(--color-peer-2-ring\)/, "$1#1f3a10"),
++      "the light green name spelled as its own colour 0.0777 from teal — inside the exemption's 0.075, under 0.10: red only because it left the alias",
++      css.replace(/(--color-peer-2-name:\s*)var\(--color-peer-2-ring\)/, "$1#253300"),
+     ],
+     [
+       "2 (the exemption's own floor)",
+@@ -1326,6 +1552,145 @@ if (process.argv.includes("--self-test")) {
+       css,
+       plant("public/404.html", '<body style="color:#ffc1a1"></body>\n'),
+     ],
++    [
++      "D23 · a packed int printed in base 16",
++      css,
++      plant(G, 'export const x = "#" + (0xffb2f3).toString(16);\n'),
++    ],
++    [
++      "D23b · a packed int never printed (a 24-bit literal)",
++      css,
++      plant(G, "export const PINK = 0xffb2f3;\n"),
++    ],
++    [
++      "D24 · an array .join",
++      css,
++      plant(G, 'export const x = ["#ff", "b2f3"].join("");\n'),
++    ],
++    [
++      "D25 · a template with a literal substitution",
++      css,
++      plant(G, 'export const x = `#ff${"b2f3"}`;\n'),
++    ],
++    ["D28 · a \x23 escape", css, plant(G, 'export const x = "\\x23ffb2f3";\n')],
++    [
++      "D29 · a CSS escape in a sheet",
++      css,
++      plant("src/games/shared/gameCell.css", ".x { color: #ff\\62 2f3; }\n"),
++    ],
++    // the class names are SPLIT in this file's bytes: Tailwind scans scripts/ and would ship them (T9-R6)
++    [
++      "D30a · Tailwind text + indigo-200 (ΔE 0.0111 from the violet name)",
++      css,
++      plant(
++        "src/games/shared/Tw.vue",
++        '<template><span class="text-' + 'indigo-200">x</span></template>\n',
++      ),
++    ],
++    [
++      "D30b · Tailwind text + teal-800 (ΔE 0.0158 from the teal stick)",
++      css,
++      plant(
++        "src/games/shared/Tw.vue",
++        '<template><span class="text-' + 'teal-800">x</span></template>\n',
++      ),
++    ],
++    [
++      "D32 · color-mix through the cell's indirection token",
++      css,
++      plant(
++        "src/games/shared/gameCell.css",
++        ".x { color: color-mix(in oklch, var(--color-peer-cursor-ink) 60%, white); }\n",
++      ),
++    ],
++    [
++      "D33 · a minted name by a split template",
++      css,
++      plant(G, 'el.style.setProperty(`--color-${"peer"}-${i}-name`, "#000");\n'),
++    ],
++    [
++      "D34 · a minted name by .concat",
++      css,
++      plant(
++        G,
++        'el.style.setProperty("--color-peer-".concat(String(i), "-name"), "#000");\n',
++      ),
++    ],
++    [
++      "D35 · a minted name by .join",
++      css,
++      plant(
++        G,
++        'el.style.setProperty(["--color-peer", i, "name"].join("-"), "#000");\n',
++      ),
++    ],
++    [
++      "D36 · relative colour syntax with literal channels",
++      css,
++      plant(G, 'export const x = "oklch(from #000 0.856 0.121 332.4)";\n'),
++    ],
++    [
++      "D39 · a same-file const concatenated",
++      css,
++      plant(G, 'const P = "b2f3";\nexport const x = "#ff" + P;\n'),
++    ],
++    [
++      "D41 · a packed DECIMAL int printed in base 16",
++      css,
++      plant(G, 'export const x = "#" + (16757491).toString(16);\n'),
++    ],
++    [
++      "D42 · a template over a const",
++      css,
++      plant(G, 'const P = "b2f3";\nexport const x = `#ff${P}`;\n'),
++    ],
++    [
++      "D44 · a Tailwind variant with /alpha",
++      css,
++      plant(
++        "src/games/shared/Tw.vue",
++        '<template><span class="hover:text-' + 'indigo-200/50">x</span></template>\n',
++      ),
++    ],
++    [
++      "D45 · a Tailwind class in a TS string",
++      css,
++      plant(G, 'export const cls = "px-2 text-' + 'indigo-200";\n'),
++    ],
++    [
++      "D46 · an HTML entity in a style attribute",
++      css,
++      plant(
++        "src/games/shared/Tw.vue",
++        '<template><span style="color: &#35;ffb2f3">x</span></template>\n',
++      ),
++    ],
++    [
++      "D47 · relative colour from the indirection token",
++      css,
++      plant(
++        "src/games/shared/gameCell.css",
++        ".x { color: oklch(from var(--color-user-ink) l c h); }\n",
++      ),
++    ],
++    [
++      "D48 · color-mix of an undeclared peer-family token",
++      css,
++      plant(
++        G,
++        'el.style.color = "color-mix(in oklch, var(--color-peer-name-ink) 70%, black)";\n',
++      ),
++    ],
++    [
++      "D50 · a declarator list of consts",
++      css,
++      plant(G, 'const H = "#ff", T = "b2f3";\nexport const x = H + T;\n'),
++    ],
++    [
++      "D51 · a four-way .join",
++      css,
++      plant(G, 'export const x = ["#", "ff", "b2", "f3"].join("");\n'),
++    ],
+     [
+       "the BUILT bundle: a literal the bundler folded, read as shipped",
+       css,
+@@ -1338,6 +1703,22 @@ if (process.argv.includes("--self-test")) {
+         },
+       ],
+     ],
++    [
++      "the BUILT bundle: a literal AFTER regex literals on one line (the pass-7 stripper blanked from `/\\//g`)",
++      css,
++      [
++        ...SOURCES,
++        {
++          rel: "dist:assets/index-synthetic.js",
++          bundle: true,
++          text: 'a=s.replace(/\\//g,"_"),b=x.replace(/\\/\\*[^]*?\\*\\//g,"");var t="#b2e705";',
++        },
++      ],
++    ],
++    // THE REAL CHUNK (`--dist`): the pink name planted INSIDE the shipped entry chunk at four
++    // offsets — after its first regex literal, mid-chunk, before its first newline, at its end —
++    // and the folded `.join` shape mid-chunk. Each must red wherever it sits.
++    ...inChunkPlants(),
+   ])
+     controls.push([`4 (${label})`, "g4", label, text, sources]);
+   // …and what must NOT red: a consumer, and a comment quoting a band.
+@@ -1354,7 +1735,10 @@ if (process.argv.includes("--self-test")) {
+           'el.style.setProperty("--color-user-ink", `var(--color-peer-${n}-name)`);\n' +
+           // a consumer built by concatenation is still a consumer, and the bundle's own sheet is the
+           // publisher (its declarations are cut before the read)
+-          'probe.style.color = "var(--color-peer-" + k + "-name)";\n',
++          'probe.style.color = "var(--color-peer-" + k + "-name)";\n' +
++          // a script's own helper named like a colour function is no colour (and no throw):
++          // peer-tin.spec.ts's `lab(want)` crashed the pass-8 gate before channel-arity
++          "const d = dE(lab(name.rgb), lab(want)) + hsl(h);\n",
+       ).concat(
+         [
+           {
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb30..2468a715 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -56,6 +56,7 @@
+ import { readFileSync, readdirSync, statSync, existsSync } from "node:fs";
+ import { join, relative, dirname, resolve as resolvePath } from "node:path";
+ import { fileURLToPath } from "node:url";
++import { createRequire } from "node:module";
+ import process from "node:process";
+ 
+ // -------------------------------------------------------------------------------------- clauses
+@@ -77,6 +78,15 @@ export const CLAUSES = {
+   "r1-dark-arm": "GRAPHITE · R1's second path (a chromatic token with no dark arm)",
+   "strip-regex": "TIN · the JS stripper is regex-literal aware",
+   "rel-color": "TIN · relative colour syntax with literal channels",
++  "fold-hole":
++    "TIN · foldConcat({hole}) keeps an unresolved leaf as a HOLE (a minted `--x-?-y` stays readable)",
++  "fold-int": "TIN · a packed int `(0xffb2f3).toString(16)` folds to its digits",
++  "fold-text":
++    "TIN · foldText: every literal expression in a JS text replaced by its folded string",
++  "tw-palette":
++    "TIN · a Tailwind palette utility (text + indigo-200, a variant, an /alpha) resolves to its colour",
++  "channel-arity":
++    "TIN · a colour function with too few or non-numeric channels (`lab(want)` in a script) is no colour, never a throw",
+   masked: "LIVE · maskedDefaults (case-insensitive var(, stems, concatenation)",
+   "is-where-arms":
+     "VERB · a tail holds under :is()/:where() only when every arm carries it",
+@@ -754,21 +764,32 @@ export function constBindings(js) {
+     for (const m of s.matchAll(
+       /\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)(?:\s*:\s*[\w<>[\]|'" ]+)?\s*=\s*([^;\n]+)/g,
+     )) {
+-      if (map.has(m[1])) continue;
+-      const v = foldConcat(m[2].replace(/\s+as\s+const\s*$/, ""), map);
+-      if (v != null) map.set(m[1], v);
++      // TIN (fold-text): a DECLARATOR LIST `const H = "#ff", T = "b2f3"` binds every name in it
++      const list = on("fold-text")
++        ? splitTop(`${m[1]} = ${m[2]}`, /,/).map((d) =>
++            /^([A-Za-z_$][\w$]*)(?:\s*:\s*[\w<>[\]|'" ]+)?\s*=\s*([\s\S]+)$/.exec(d),
++          )
++        : [m];
++      for (const d of list) {
++        if (!d || map.has(d[1])) continue;
++        const v = foldConcat(d[2].replace(/\s+as\s+const\s*$/, ""), map);
++        if (v != null) map.set(d[1], v);
++      }
+     }
+   return map;
+ }
+ /** Fold a JS expression of literals into its string, or null: `"a" + "b"`, `` `a${"b"}` ``,
+  *  `["a", "b"].join("-")`, `"a".concat("b", "c")`, `String("a")`, a same-file const, and a
+  *  `"\x23"`/`"#"` escape. Anything else (a call, a member, an argument) is null → UNRESOLVED. */
+-export function foldConcat(expr, consts = new Map()) {
++export function foldConcat(expr, consts = new Map(), opts = {}) {
++  // TIN (fold-hole): with `{ hole: "?" }` an unresolved leaf folds to the hole instead of null, so
++  // `"--color-peer-" + i + "-name"` reads `--color-peer-?-name` — a minted name, not UNRESOLVED
++  const hole = on("fold-hole") && opts.hole != null ? opts.hole : null;
+   const e = String(expr).trim();
+-  if (!e) return null;
++  if (!e) return hole;
+   const parts = splitTop(e.replace(/\s+as\s+[\w<>[\]|'" ]+$/, ""), /\+/);
+   if (parts.length > 1) {
+-    const f = parts.map((p) => foldConcat(p, consts));
++    const f = parts.map((p) => foldConcat(p, consts, opts));
+     return f.every((x) => x != null) ? f.join("") : null;
+   }
+   const p = parts[0] ?? "";
+@@ -777,27 +798,34 @@ export function foldConcat(expr, consts = new Map()) {
+   if ((m = /^`([^`]*)`$/.exec(p))) {
+     let ok = true;
+     const out = m[1].replace(/\$\{([^}]*)\}/g, (x, inner) => {
+-      const v = foldConcat(inner, consts);
++      const v = foldConcat(inner, consts, opts);
+       if (v == null) ok = false;
+       return v ?? "";
+     });
+     return ok ? unescapeJs(out) : null;
+   }
+-  if ((m = /^\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts);
+-  if ((m = /^String\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts);
++  // TIN (fold-int): a colour PACKED as an int and printed in base 16 — `(0xffb2f3).toString(16)`,
++  // `(16757491).toString(16)` — folds to the digits the bundler would ship
++  if (
++    on("fold-int") &&
++    (m = /^\(?\s*(0x[0-9a-f]+|\d+)\s*\)?\s*\.\s*toString\(\s*16\s*\)$/i.exec(p))
++  )
++    return Number(m[1]).toString(16);
++  if ((m = /^\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts, opts);
++  if ((m = /^String\(([\s\S]*)\)$/.exec(p))) return foldConcat(m[1], consts, opts);
+   if ((m = /^\[([\s\S]*)\]\s*\.\s*join\(\s*([\s\S]*?)\s*\)$/.exec(p))) {
+-    const items = splitTop(m[1], /,/).map((x) => foldConcat(x, consts));
+-    const sep = m[2] ? foldConcat(m[2], consts) : ",";
++    const items = splitTop(m[1], /,/).map((x) => foldConcat(x, consts, opts));
++    const sep = m[2] ? foldConcat(m[2], consts, opts) : ",";
+     return items.every((x) => x != null) && sep != null ? items.join(sep) : null;
+   }
+   if ((m = /^([\s\S]+?)\s*\.\s*concat\(([\s\S]*)\)$/.exec(p))) {
+-    const head = foldConcat(m[1], consts);
+-    const rest = splitTop(m[2], /,/).map((x) => foldConcat(x, consts));
++    const head = foldConcat(m[1], consts, opts);
++    const rest = splitTop(m[2], /,/).map((x) => foldConcat(x, consts, opts));
+     return head != null && rest.every((x) => x != null) ? head + rest.join("") : null;
+   }
+   if (/^-?\d+(\.\d+)?$/.test(p)) return p;
+   if (/^[A-Za-z_$][\w$]*$/.test(p) && consts.has(p)) return consts.get(p);
+-  return null;
++  return hole;
+ }
+ const unescapeJs = (s) =>
+   s
+@@ -807,6 +835,202 @@ const unescapeJs = (s) =>
+     )
+     .replace(/\\(.)/g, "$1");
+ 
++/** TIN (fold-text): every LITERAL EXPRESSION in a JS text (comments already stripped) replaced by
++ *  the string it folds to — what a bundler ships, so a reader keyed on literals sees it: `"#ff" + P`
++ *  with a same-file `const P`, `` `#ff${"b2f3"}` ``, `["#ff", "b2f3"].join("")`, `"a".concat(…)`,
++ *  `"\x23ffb2f3"`, `"#" + (0xffb2f3).toString(16)`. An expression is a chain of atoms (a string, a
++ *  template, an array with `.join(…)`, a paren group, a same-file const, a packed int) joined by `+`,
++ *  each atom with `.join`/`.concat`/`.toString(16)` postfixes. Unresolved leaves fold to `hole`
++ *  (default `?`), so a minted `--color-peer-?-name` is readable. Regex literals are skipped whole.
++ *  Only a span that MOVES (an operator, a template, an escape, a postfix) is replaced. */
++export function foldText(js, { consts = null, hole = "?" } = {}) {
++  if (!on("fold-text")) return js;
++  const K = consts ?? constBindings(js);
++  const n = js.length;
++  const skipWs = (i) => {
++    while (i < n && /\s/.test(js[i])) i++;
++    return i;
++  };
++  const strEnd = (i) => {
++    const q = js[i];
++    let j = i + 1;
++    if (q === "`") {
++      let d = 0;
++      while (j < n) {
++        const c = js[j];
++        if (c === "\\") j += 2;
++        else if (d === 0 && c === "`") return j + 1;
++        else if (c === "$" && js[j + 1] === "{") {
++          d++;
++          j += 2;
++        } else if (d > 0 && c === "}") {
++          d--;
++          j++;
++        } else if (d > 0 && (c === '"' || c === "'" || c === "`")) j = strEnd(j);
++        else j++;
++      }
++      return -1;
++    }
++    while (j < n && js[j] !== "\n") {
++      if (js[j] === "\\") j += 2;
++      else if (js[j] === q) return j + 1;
++      else j++;
++    }
++    return -1;
++  };
++  const groupEnd = (i) => {
++    const open = js[i],
++      close = open === "(" ? ")" : open === "[" ? "]" : "}";
++    let d = 0,
++      j = i;
++    while (j < n) {
++      const c = js[j];
++      if (c === '"' || c === "'" || c === "`") {
++        const e = strEnd(j);
++        if (e < 0) return -1;
++        j = e;
++        continue;
++      }
++      if (c === "(" || c === "[" || c === "{") d++;
++      else if (c === ")" || c === "]" || c === "}") {
++        d--;
++        if (d === 0) return c === close ? j + 1 : -1;
++      }
++      j++;
++    }
++    return -1;
++  };
++  const POST = /^\s*\.\s*(join|concat|toString)\s*\(/;
++  // one atom (+ postfixes) from i → [end, moved] or null
++  const atom = (i) => {
++    let e,
++      moved = false;
++    const c = js[i];
++    if (c === '"' || c === "'" || c === "`") {
++      e = strEnd(i);
++      if (e < 0) return null;
++      const body = js.slice(i + 1, e - 1);
++      if (c === "`" || body.includes("\\")) moved = true;
++    } else if (c === "[" || c === "(") {
++      // a `(` or `[` after a name, `)` or `]` is a CALL or a MEMBER access, never a literal group
++      let b = i - 1;
++      while (b >= 0 && /\s/.test(js[b])) b--;
++      if (b >= 0 && /[\w$)\]]/.test(js[b])) return null;
++      e = groupEnd(i);
++      if (e < 0) return null;
++      if (c === "[" && !POST.test(js.slice(e, e + 40))) return null;
++      if (c === "(" && !POST.test(js.slice(e, e + 40)) && js[skipWs(e)] !== "+")
++        return null;
++    } else {
++      const m = /^[A-Za-z_$][\w$]*/.exec(js.slice(i, i + 64));
++      if (!m || (i > 0 && /[\w$.]/.test(js[i - 1]))) return null;
++      e = i + m[0].length;
++      if (m[0] === "String" && js[skipWs(e)] === "(") {
++        e = groupEnd(skipWs(e));
++        if (e < 0) return null;
++        moved = true;
++      }
++    }
++    for (;;) {
++      const pm = POST.exec(js.slice(e, e + 40));
++      if (!pm) break;
++      const g = groupEnd(e + pm[0].length - 1);
++      if (g < 0) break;
++      e = g;
++      moved = true;
++    }
++    return [e, moved];
++  };
++  const reps = [];
++  let i = 0;
++  while (i < n) {
++    const c = js[i];
++    if (
++      c === "/" &&
++      i + 1 < n &&
++      js[i + 1] !== "/" &&
++      js[i + 1] !== "*" &&
++      regexStart(js.slice(Math.max(0, i - 64), i))
++    ) {
++      let j = i + 1,
++        cls = false;
++      while (j < n && js[j] !== "\n") {
++        const d = js[j];
++        if (d === "\\") {
++          j += 2;
++          continue;
++        }
++        if (cls) {
++          if (d === "]") cls = false;
++        } else if (d === "[") cls = true;
++        else if (d === "/") break;
++        j++;
++      }
++      i = js[j] === "/" ? j + 1 : i + 1;
++      continue;
++    }
++    const lit =
++      c === '"' ||
++      c === "'" ||
++      c === "`" ||
++      c === "[" ||
++      c === "(" ||
++      /[A-Za-z_$]/.test(c);
++    if (!lit) {
++      i++;
++      continue;
++    }
++    const first = atom(i);
++    if (!first) {
++      if (c === '"' || c === "'" || c === "`") {
++        const e = strEnd(i);
++        i = e > i ? e : i + 1;
++      } else i++;
++      continue;
++    }
++    const strish = (a, b) =>
++      /["'`]/.test(js.slice(a, b)) ||
++      (/^[A-Za-z_$][\w$]*$/.test(js.slice(a, b)) &&
++        typeof K.get(js.slice(a, b)) === "string");
++    let [end, moved] = first,
++      hasStr = strish(i, end);
++    for (;;) {
++      const k = skipWs(end);
++      if (js[k] !== "+" || js[k + 1] === "+" || js[k + 1] === "=") break;
++      const a = atom(skipWs(k + 1));
++      if (!a) break;
++      hasStr ||= strish(skipWs(k + 1), a[0]);
++      end = a[0];
++      moved = true;
++    }
++    const step = () =>
++      c === '"' || c === "'" || c === "`"
++        ? Math.max(strEnd(i), i + 1)
++        : /[A-Za-z_$]/.test(c)
++          ? i + (/^[\w$]+/.exec(js.slice(i, i + 64))?.[0].length ?? 1)
++          : i + 1;
++    if (!moved || (!hasStr && !/toString\s*\(\s*16/.test(js.slice(i, end)))) {
++      i = step();
++      continue;
++    }
++    const v = foldConcat(js.slice(i, end), K, { hole });
++    if (v == null || typeof v !== "string") {
++      i = step();
++      continue;
++    }
++    reps.push([i, end, JSON.stringify(v).replace(/\n/g, "\\n")]);
++    i = end;
++  }
++  if (!reps.length) return js;
++  let out = "",
++    at = 0;
++  for (const [a, b, v] of reps) {
++    out += js.slice(at, a) + v;
++    at = b;
++  }
++  return out + js.slice(at);
++}
++
+ // ------------------------------------------------------------------------------------ Tailwind
+ const TW_PX = (n) =>
+   n === "0" ? "0px" : /^\d+(\.\d+)?$/.test(n) ? `${+n * 0.25}rem` : n;
+@@ -822,6 +1046,27 @@ function stripVariants(t) {
+   }
+   return t.slice(cut);
+ }
++/** TIN (tw-palette): Tailwind's default palette, `name-shade` → its `<color>` (`indigo-200` →
++ *  `oklch(87% 0.065 274.039)`), read from the installed `tailwindcss/theme.css` — the bytes the
++ *  build ships for a palette utility. Empty (never a throw) where the package is absent. */
++let TW_PALETTE = null;
++export function twPalette() {
++  if (TW_PALETTE) return TW_PALETTE;
++  TW_PALETTE = new Map();
++  try {
++    const css = readFileSync(
++      createRequire(import.meta.url).resolve("tailwindcss/theme.css"),
++      "utf8",
++    );
++    for (const m of css.matchAll(/--color-([a-z]+(?:-\d{2,3})?):\s*([^;]+);/g))
++      TW_PALETTE.set(m[1], m[2].trim());
++  } catch {
++    /* no tailwindcss installed: the palette reads empty */
++  }
++  return TW_PALETTE;
++}
++const TW_COLOR_UTIL =
++  /^(?:text|bg|border(?:-[xytrbl]|-[se])?|fill|stroke|outline|ring|ring-offset|decoration|accent|caret|from|via|to|divide|placeholder|shadow|inset-shadow|inset-ring|drop-shadow)-([a-z]+-\d{2,3}|black|white)(?:\/(?:\d+|\[[^\]]+\]))?$/;
+ /** Every (prop, value) a Tailwind candidate writes (the estate's gates key on these); [] if unknown. */
+ export function TAILWIND_ALL(tw) {
+   const t = on("tw-split")
+@@ -846,6 +1091,8 @@ export function TAILWIND_ALL(tw) {
+       ))
+   )
+     out.push(["color-literal", m[1]]);
++  else if (on("tw-palette") && (m = TW_COLOR_UTIL.exec(t)) && twPalette().has(m[1]))
++    out.push(["color", twPalette().get(m[1])]);
+   else if (on("tw-utility")) {
+     // TAPE S8a–e: utilities on an element that move or erase its paint
+     if ((m = /^opacity-(\d+|\[.+\])$/.exec(t)))
+@@ -2738,8 +2985,18 @@ function hslToRgb(h, s, l) {
+   };
+   return [f(0), f(8), f(4)];
+ }
+-/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated. */
++/** Any CSS <color> → {rgb: [0..1]×3, a} or null. `color-mix(in srgb|oklab, A p%, B)` is evaluated.
++ *  TIN (channel-arity): a call that names a colour function over identifiers (`lab(want)`, a script's
++ *  own helper) reads as null: too few channels, or any channel that does not come out a number. */
+ export function parseColor(str) {
++  const c = parseColorAny(str);
++  return on("channel-arity") &&
++    c &&
++    !(c.rgb.length === 3 && [...c.rgb, c.a].every(Number.isFinite))
++    ? null
++    : c;
++}
++function parseColorAny(str) {
+   const s = String(str).trim().toLowerCase();
+   if (s === "transparent") return { rgb: [0, 0, 0], a: 0 };
+   if (NAMED_MAP.has(s)) return parseColor("#" + NAMED_MAP.get(s));
+@@ -2794,6 +3051,7 @@ export function parseColor(str) {
+     }
+     const [body, alpha] = rel.split("/").map((x) => x?.trim());
+     const t = body.split(/[\s,]+/).filter(Boolean);
++    if (on("channel-arity") && t.length < (fn === "color" ? 4 : 3)) return null;
+     const a = alpha != null ? num(alpha) : t.length === 4 ? num(t[3]) : 1;
+     if (fn === "rgb" || fn === "rgba")
+       return { rgb: t.slice(0, 3).map((x) => num(x, 255) / 255), a };
+@@ -3483,6 +3741,81 @@ const TESTS = [
+       return !!a && !!c && L.deltaE(a, b) < 0.5 && L.deltaE(c, d) < 0.5;
+     },
+   ],
++  [
++    "fold-hole",
++    "TIN",
++    'D11/D35 a minted name keeps its hole: `"--color-peer-" + i + "-name"` → `--color-peer-?-name`',
++    (L) =>
++      L.foldConcat('"--color-peer-" + i + "-name"', new Map(), { hole: "?" }) ===
++        "--color-peer-?-name" &&
++      L.foldConcat('["--color-peer", i, "name"].join("-")', new Map(), {
++        hole: "?",
++      }) === "--color-peer-?-name" &&
++      L.foldConcat('"a" + i') === null,
++  ],
++  [
++    "fold-int",
++    "TIN",
++    "D23 a packed int `(0xffb2f3).toString(16)` folds to its digits (decimal too)",
++    (L) =>
++      L.foldConcat('"#" + (0xffb2f3).toString(16)') === "#ffb2f3" &&
++      L.foldConcat('"#" + (16757491).toString(16)') === "#ffb2f3",
++  ],
++  [
++    "fold-text",
++    "TIN",
++    "D24/D25/D28/D33/D34/D39/D50 fold in place; a regex literal and a call's arguments are not touched",
++    (L) => {
++      const f = (t) => L.foldText(t);
++      return (
++        f('export const x = ["#ff", "b2f3"].join("");').includes('"#ffb2f3"') &&
++        f('export const x = `#ff${"b2f3"}`;').includes('"#ffb2f3"') &&
++        f('export const x = "\\x23ffb2f3";').includes('"#ffb2f3"') &&
++        f('el.style.setProperty(`--color-${"peer"}-${i}-name`, v);').includes(
++          '"--color-peer-?-name"',
++        ) &&
++        f(
++          'el.style.setProperty("--color-peer-".concat(String(i), "-name"), v);',
++        ).includes('"--color-peer-?-name"') &&
++        f('const P = "b2f3"; export const x = "#ff" + P;').includes('"#ffb2f3"') &&
++        f('const H = "#ff", T = "b2f3"; export const x = H + T;').includes(
++          '"#ffb2f3"',
++        ) &&
++        f('s.replace(/"/g, "_") + "#ff" + "b2f3"') ===
++          's.replace(/"/g, "_") + "#ffb2f3"' &&
++        f('g(a, "b")') === 'g(a, "b")'
++      );
++    },
++  ],
++  [
++    "tw-palette",
++    "TIN",
++    "D30 a palette utility resolves to its colour (variant, alpha); a spacing utility does not",
++    (L) => {
++      const c = (t) => (L.TAILWIND_ALL(t).find(([p]) => p === "color") ?? [])[1];
++      // split in the bytes: Tailwind scans scripts/ and would ship the classes (T9-R6)
++      const a = c("text-" + "indigo-200"),
++        b = c("hover:bg-" + "pink-200/50");
++      return (
++        !!a &&
++        !!b &&
++        L.deltaE(L.parseColor(a), L.parseColor("oklch(87% 0.065 274.039)")) < 0.01 &&
++        c("px-2") === undefined
++      );
++    },
++  ],
++  [
++    "channel-arity",
++    "TIN",
++    "a script's `lab(want)` / `hsl(x)` / `rgb(1)` is no colour and never throws; `lab(50 20 -30)` still is",
++    (L) =>
++      L.parseColor("lab(want)") === null &&
++      L.parseColor("hsl(10)") === null &&
++      L.parseColor("rgb(1)") === null &&
++      L.parseColor("oklch(a b c)") === null &&
++      L.colorLiterals("const x = lab(want) + lab(name.rgb);").length === 0 &&
++      !!L.parseColor("lab(50 20 -30)"),
++  ],
+   // --- LIVE
+   [
+     "masked",
+@@ -4358,6 +4691,8 @@ const LIB = {
+   sets,
+   constBindings,
+   foldConcat,
++  foldText,
++  twPalette,
+   TAILWIND,
+   TAILWIND_ALL,
+   candidates,
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 966989f0..ea3689e2 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -675,6 +675,9 @@ export const SELF_TAKES_A_HAND: boolean = true;
+  *
+  * The switch is an ARGUMENT whose default is the const, so one unit runs both of F1's arms on one
+  * room and each is the other's control; every call site passes nothing and so reads the const.
++ *
++ * @public — exported for that unit alone, which reads it through the module's dynamic import
++ *   (`useSession.test.ts`), an edge knip's graph cannot see.
+  */
+ export function withSelfInk(
+   next: Record<string, Omit<Player, "self">>,

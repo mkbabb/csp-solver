@@ -1,0 +1,46 @@
+--- a/shape-census.mjs	2026-09-25 12:56:15
++++ b/shape-census.mjs	2026-09-25 12:56:15
+@@ -92,6 +92,7 @@
+   "pin-binds": "SIX · a pin carries its bind set",
+   csstext: "WALK · concatenated cssText and setAttribute('style') writes",
+   "style-computed-key": "WALK · a computed :style key is a `?` site",
++  "literal-nothrow": "WALK · a colour-function call with non-literal channels is no literal, never a throw",
+   "import-chain": "WALK · @import chains followed wherever they lead",
+   "collect-walk": "LADDER · index.html and public/** walked",
+   longhand: "LADDER · a longhand answers for its shorthand",
+@@ -2861,7 +2862,14 @@
+     /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)|\b[a-zA-Z]+\b/g;
+   for (const m of value.matchAll(re)) {
+     if (/^[a-zA-Z]+$/.test(m[0]) && !NAMED_MAP.has(m[0].toLowerCase())) continue;
+-    const c = parseColor(m[0]);
++    let c = null;
++    if (on("literal-nothrow"))
++      try {
++        c = parseColor(m[0]);
++      } catch {
++        c = null; // `oklab(rgb)`, `oklch()`: a helper's call or prose, not a colour
++      }
++    else c = parseColor(m[0]);
+     if (c) out.push({ text: m[0], ...c });
+   }
+   return out;
+@@ -3671,6 +3679,19 @@
+     },
+   ],
+   [
++    "literal-nothrow",
++    "WALK",
++    "a TS helper `oklab(rgb)` beside a real hex: the hex is read, the call is not, nothing throws",
++    (L) => {
++      try {
++        const out = L.colorLiterals("const [, A, B] = oklab(rgb); const x = '#2a3900';");
++        return out.length === 1 && out[0].text === "#2a3900";
++      } catch {
++        return false;
++      }
++    },
++  ],
++  [
+     "style-computed-key",
+     "WALK",
+     "A4: a computed :style key is a `?` site",

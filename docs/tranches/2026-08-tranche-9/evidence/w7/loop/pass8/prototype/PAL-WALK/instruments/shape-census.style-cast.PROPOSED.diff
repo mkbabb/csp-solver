@@ -1,0 +1,38 @@
+--- a/shape-census.mjs	2026-09-25 12:55:40
++++ b/shape-census.mjs	2026-09-25 12:55:40
+@@ -92,6 +92,7 @@
+   "pin-binds": "SIX · a pin carries its bind set",
+   csstext: "WALK · concatenated cssText and setAttribute('style') writes",
+   "style-computed-key": "WALK · a computed :style key is a `?` site",
++  "style-cast": "WALK · a computed key through a cast `(el.style as T)[k] =` is a `?` write",
+   "import-chain": "WALK · @import chains followed wherever they lead",
+   "collect-walk": "LADDER · index.html and public/** walked",
+   longhand: "LADDER · a longhand answers for its shorthand",
+@@ -1087,7 +1088,10 @@
+   ))
+     if (kebab(m[2]) === prop)
+       out.push({ kind: "script-write", prop, value: carry(m[3]), line: L(m.index) });
+-  for (const m of s.matchAll(/\.style\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g)) {
++  const castKey = on("style-cast")
++    ? /\.style(?:\s+as\s+[\w<>, ]+\))?\s*\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g
++    : /\.style\[\s*([^\]'"`]+)\s*\]\s*=(?!=)\s*([^;\n]+)/g;
++  for (const m of s.matchAll(castKey)) {
+     const k = on("const-carried") ? foldConcat(m[1], consts) : null;
+     if (k != null) {
+       if (kebab(k) === prop)
+@@ -3671,6 +3675,15 @@
+     },
+   ],
+   [
++    "style-cast",
++    "WALK",
++    "S3b (PAL-WALK pass 8): `(el.style as any)[k] = v` is an UNRESOLVED write, like `el.style[k] = v`",
++    (L) =>
++      L.scriptWrites("export const f = (el, k, v) => { (el.style as any)[k] = v; };\n", "--color-peer-name-ink").some(
++        (w) => w.unresolved,
++      ),
++  ],
++  [
+     "style-computed-key",
+     "WALK",
+     "A4: a computed :style key is a `?` site",

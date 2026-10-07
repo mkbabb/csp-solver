@@ -1,0 +1,65 @@
+--- a/web/frontend/e2e/lib/postpaint.mjs
++++ b/web/frontend/e2e/lib/postpaint.mjs
+@@ -41,7 +41,7 @@
+ //   node e2e/lib/postpaint.mjs --url <u> --sel <mover> [--key g | --click <sel>] [--ready <sel>]
+ //        [--plant skip|f2] [--cells desk,phone] [--reps 2] [--scheme dark]
+ //   node e2e/lib/postpaint.mjs --recorder --url <u> [--trigger key:<k>|click:<sel>|load] [--roi <sel>]
+-//        [--subject <sel>|css:<sel>:<prop>|ruled:<sel>|len:<sel>] [--eps 0.35] [--window 1200]
++//        [--subject <sel>|css:<sel>:<prop>|ruled:<sel>|len:<sel>|range:<sel>] [--eps 0.35] [--window 1200]
+ //        [--plant busy:<ms>@<delay>] [--held 50] [--runs 1] [--ladder K] [--out <json>] [--selftest-only]
+ // Exit (sampler): 0 GREEN · 1 RED · 3 a plant GREEN (a hole) · 4 both. Exit (recorder): 0 GREEN ·
+ // 1 RED (a held interval ≥ --held, or an EMPTY motion window) · 2 the self-test clock < 55.
+@@ -309,6 +309,18 @@
+         s += Number.isFinite(dash) && dash > 0 ? L * Math.max(0, Math.min(1, 1 - off / dash)) : L;
+       }
+       return { x: +s.toFixed(2), y: els.length, w: 0, h: 0, ct: null };
++    }
++    if (sel.startsWith("range:")) {
++      // ACC-SIX pass 8 (PROPOSED → the ONE copy): the TEXT RANGE of the first match — the rect its
++      // text paints, never its box. A line laid in a zero-height box (the strip's yielding meta)
++      // reads h 0 as a selector at every pose; its text can still paint a row below (LAWS P7 §E:
++      // a painted-text gate on a 0 px box clips to the Range).
++      const el = document.querySelector(sel.slice(6));
++      if (!el) return null;
++      const rg = document.createRange();
++      rg.selectNodeContents(el);
++      const b = rg.getBoundingClientRect();
++      return { x: +b.left.toFixed(2), y: +b.top.toFixed(2), w: +b.width.toFixed(2), h: +b.height.toFixed(2), ct: null };
+     }
+     if (sel.startsWith("css:")) {
+       const i = sel.lastIndexOf(":");
+@@ -666,7 +678,8 @@
+  *  EPS (chromium: photographs are its primary track): a 2 px stroke growing 3 px per frame across a
+  *  640 × 360 ROI; at eps 0.35 the window is EMPTY, at `--eps 0.001` it is seen, and a 150 ms busy plant
+  *  inside it reds the held clause.
+- *  LEN (ACC-FIVE pass 8, PROPOSED): `#grow` is cut as geometry; `len:#grow` sees it, `ruled:#grow` is EMPTY. */
++ *  LEN (ACC-FIVE pass 8, PROPOSED): `#grow` is cut as geometry; `len:#grow` sees it, `ruled:#grow` is EMPTY.
++ *  RANGE (ACC-SIX pass 8, PROPOSED): a zero-height box's text wraps; `range:#m` sees it, `#m` is EMPTY. */
+ const RULED = `<!doctype html><html><head><style>body{margin:0;background:#fbf8f1}svg{position:absolute;left:20px;top:20px}</style></head><body>
+ <svg width="640" height="360" id="roi">${Array.from({ length: 21 }, (_, i) => `<line class="rl" x1="10" x2="630" y1="${12 + i * 16}" y2="${12 + i * 16}" stroke="#3b3833" stroke-width="2" style="stroke-dasharray: 620; stroke-dashoffset: 620"/>`).join("")}
+ <line id="grow" x1="10" x2="10" y1="350" y2="350" stroke="#3b3833" stroke-width="2"/></svg>
+@@ -686,6 +699,10 @@
+   });
+ </script></body></html>`;
+ 
++const RANGE = `<!doctype html><html><head><style>body{margin:0;background:#fbf8f1;font:16px/20px sans-serif}#w{width:600px;margin:20px}#m{height:0}</style></head><body>
++<div id="w"><p id="m">one two three four five six seven eight nine ten</p></div>
++<script>addEventListener("keydown", (e) => { if (e.key === "w") setTimeout(() => (document.getElementById("m").style.wordSpacing = "60px"), 150); });</script></body></html>`;
++
+ export async function recorderSelfTest(browser, engine) {
+   const rows = [];
+   let hole = false;
+@@ -700,6 +717,13 @@
+   const lenRuled = await record(browser, engine, { ...base, trigger: "key:g", subject: "ruled:#grow" });
+   if (len.subjectMovedFrames < 10 || lenRuled.subjectMovedFrames >= 1) hole = true;
+   rows.push(`RECORDER self-test ${engine} LEN len:#grow moved ${len.subjectMovedFrames} frames over ${len.motionMs} ms ${len.subjectMovedFrames >= 10 ? "SEEN" : "NOT SEEN ← a hole"} | ruled:#grow moved ${lenRuled.subjectMovedFrames} ${lenRuled.subjectMovedFrames < 1 ? "EMPTY ← the hole len: closes" : "(seen ← the fixture no longer cuts by geometry)"}`);
++  // RANGE (ACC-SIX pass 8, PROPOSED): a line in a ZERO-HEIGHT box wraps to a second row on 'w';
++  // `range:#m` must see its text move, the selector `#m` (the box: same x, y, w and h 0 at both poses)
++  // reads EMPTY.
++  const rng = await record(browser, engine, { ...base, html: RANGE, trigger: "key:w", subject: "range:#m" });
++  const rngBox = await record(browser, engine, { ...base, html: RANGE, trigger: "key:w", subject: "#m" });
++  if (rng.subjectMovedFrames < 1 || rngBox.subjectMovedFrames >= 1) hole = true;
++  rows.push(`RECORDER self-test ${engine} RANGE range:#m moved ${rng.subjectMovedFrames} frames ${rng.subjectMovedFrames >= 1 ? "SEEN" : "NOT SEEN ← a hole"} | #m moved ${rngBox.subjectMovedFrames} ${rngBox.subjectMovedFrames < 1 ? "EMPTY ← the hole range: closes" : "(seen ← the fixture's box moves)"}`);
+   if (engine === "chromium") {
+     const e35 = await record(browser, engine, { ...base, trigger: "key:g", roi: "#roi" });
+     const e1 = await record(browser, engine, { ...base, trigger: "key:g", roi: "#roi", eps: 0.001 });

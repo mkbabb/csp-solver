@@ -1,0 +1,31 @@
+
+ RUN  v4.1.11 /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/tape8/arch-m1/web/frontend
+
+ ❯ src/games/shared/GameControlPanel.test.ts (38 tests | 1 failed) 1065ms
+     × …and a reader dropped to <body> (WebKit's Tab path) home too — `lapseAsk`'s body branch 26ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameControlPanel.test.ts > GameControlPanel — the destructive set asks on every pointer (T9-M12, pass 8) > …and a reader dropped to <body> (WebKit's Tab path) home too — `lapseAsk`'s body branch
+AssertionError: the body branch: a reader on <body> is still in the question: expected 'BODY' to be 'Clear the board' // Object.is equality
+
+Expected: "Clear the board"
+Received: "BODY"
+
+ ❯ src/games/shared/GameControlPanel.test.ts:277:91
+    275|     vi.advanceTimersByTime(5000);
+    276|     await settle();
+    277|     expect(focusedName(), "the body branch: a reader on <body> is stil…
+       |                                                                                           ^
+    278|     w.unmount();
+    279|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  1 failed | 37 passed (38)
+   Start at  19:14:23
+   Duration  3.19s (transform 1.03s, setup 22ms, import 1.16s, tests 1.07s, environment 719ms)
+
+EXIT 1

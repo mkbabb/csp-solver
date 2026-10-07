@@ -1,0 +1,44 @@
+FIN-A start 15:03:59 load { 551.03 497.49 380.94 }
+base commit 74a2b5d9317e7795cee6bf63e861bd44f54ae80e tree 5fd59288dbc938b32dad1e87bac899676abdf863 scratch-base tree 5fd59288dbc938b32dad1e87bac899676abdf863
+HEAD before: 141268f1 (refs/heads/master)
+HEAD now: 74a2b5d9
+d6dab68408153eb29a8952840c0997dd66ff199d  scripts/census.stamp.json
+PW PROJECT MATRIX — 3 configs, 11 projects, 47 manifest specs, 6 declared holdouts (3 single-engine at file scope, 2 engine row + 1 env-gated row), 0 declared quarantines (T5-W1 1.10 / CH-56 · T7-W6 · T9-W5 §5.2 · T9-W3+W6 seal)
+  floors stamped: 74a2b5d9 · 2026-09-26 · platform darwin · T9-W7 §13 pass 8 (MOT-VERB): boot-hand + frame-halfstroke specs
+  floors read from scripts/census.stamp.json; band = 85% of max(stamped census, live)
+
+RESTAMP — floors re-derived: >10 live tests keep ~10% churn room, ≤10 sit exact, never under the 85% band.
+  Quarantines are subtracted at their DECLARED platform, not the running one.
+  Ratchet: max(banked, derived), so an unmoved tree moves nothing.
+  chromium                  listed 392  live 391  derived 351  floor 235 → 351
+  webkit                    listed 392  live 389  derived 350  floor 234 → 350
+  (default)                 listed   4  live   4  derived   4  floor   4 →   4   ·
+  throttled-void            listed   1  live   1  derived   1  floor   1 →   1   ·
+  filter-census-chromium    listed   8  live   8  derived   8  floor   6 →   8
+  filter-census-webkit      listed   8  live   8  derived   8  floor   6 →   8
+  wordmark-webkit           listed   6  live   6  derived   6  floor   6 →   6   ·
+  theme-bake-chromium       listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-bake-webkit         listed  10  live  10  derived  10  floor  10 →  10   ·
+  theme-quadrants-chromium  listed  14  live  14  derived  12  floor  14 →  14   ·
+  theme-quadrants-webkit    listed  14  live  14  derived  12  floor  14 →  14   ·
+  4 floor(s) move, 7 unmoved  ·  74a2b5d9 · 2026-10-06 · platform darwin · T9-W7 pass 8 WAVE (s13-s7-s3 then s10): the union's 47 specs on one tree  ·  live census 855 of 859 listed
+
+written -> scripts/census.stamp.json (pw)
+RESTAMP EXIT 0
+e5956eff990da0f5881d468ced4c55c06451c43b  scripts/census.stamp.json
+CHECK8 EXIT 0
+  ✓ 7 QUARANTINES CLOSED
+  ✓ 8 FLOOR BAND
+
+OK — 47 specs, 859 resolved tests, every spec in both engines except the 6 recorded holdouts, and every row live in both except the 2 engine-skipped and 1 env-gated rows the record names.
+Checking formatting...
+All matched files use Prettier code style!
+PRETTIER STAMP EXIT 0
+FINAL TREE acb9c08e60fecd936d1e2fe247baab62029ce3a5
+DIFF EXIT 0 bytes  2257707 sha1 0dc4fd850883abec8be9ba2d08a1bb4110b0e654
+ 132 files changed, 39419 insertions(+), 1585 deletions(-)
+APPLY --cached EXIT 0
+REPLAY TREE acb9c08e60fecd936d1e2fe247baab62029ce3a5
+ARCHIVE EXIT 0
+APPLY --check (fresh archive, outside any repo) EXIT 0
+FIN-A DONE 15:21:50 load { 501.04 489.65 380.83 }

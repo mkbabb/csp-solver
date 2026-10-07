@@ -1,0 +1,88 @@
+CLEAN exit 0 ::  Tests 35 passed (35)
+PLANT plus1u exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 7 failed | 28 passed (35)
+     × 60 Hz, whole-ms stamps (a Safari panel): floor, ceiling and A.6 hold 3ms
+     × 120 Hz, whole-ms stamps (ProMotion): floor, ceiling and A.6 hold 1ms
+     × 125 Hz, fine stamps (the driven clock, vsync-exact): floor, ceiling and A.6 hold 1ms
+     × 128 Hz, fine stamps (this box's chromium panel): floor, ceiling and A.6 hold 1ms
+     × 1000 Hz, fine stamps (the ceiling under load): floor, ceiling and A.6 hold 1ms
+     × a pump that runs 0–1.5 ms late keeps the ceiling and A.6; its rate is A.6's, not the gate's 1ms
+     × a 60 Hz whole-ms stream keeps EVERY frame: ≥ 59/s (the pass-7 +1 re-cut 40.2/s on 17/33 ms) 2ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 60 Hz, whole-ms stamps (a Safari panel): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 120 Hz, whole-ms stamps (ProMotion): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 125 Hz, fine stamps (the driven clock, vsync-exact): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 128 Hz, fine stamps (this box's chromium panel): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 1000 Hz, fine stamps (the ceiling under load): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > a pump that runs 0–1.5 ms late keeps the ceiling and A.6; its rate is A.6's, not the gate's
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > a 60 Hz whole-ms stream keeps EVERY frame: ≥ 59/s (the pass-7 +1 re-cut 40.2/s on 17/33 ms)
+PLANT warm1 exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 2 failed | 33 passed (35)
+     × a 30 Hz panel is not a stall: a 240 ms tween ends on its 10th frame, and a lost frame still pauses 5ms
+     × a stall on the page's FIRST tween ticks is still a stall (the panel is unknown until five ticks) 2ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — the displacement clause (T9-M20 D10) > a 30 Hz panel is not a stall: a 240 ms tween ends on its 10th frame, and a lost frame still pauses
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — the displacement clause (T9-M20 D10) > a stall on the page's FIRST tween ticks is still a stall (the panel is unknown until five ticks)
+PLANT slow49 exit 1 :: ⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 15 failed | 20 passed (35)
+     × the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s 3ms
+     × a fine clock: a 15 ms gap is swallowed and a 16 ms gap commits 3ms
+     × a whole-millisecond WALL clock: a reading of 16 is swallowed (it may be 15.01 ms), 17 commits 1ms
+     × a forced end inside the window is owed, and lands at the window's end, never inside it 2ms
+     × a write while an end is owed replaces it; a re-arm drops it and the window holds across runs 1ms
+     × an owed end waits for the last re-cut to LAND, not for its request 1ms
+     × two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran 1ms
+     × a tween's end written inside a frame is timed on that frame, and owed when it is early 1ms
+     × 30 Hz, whole-ms stamps: floor, ceiling and A.6 hold 0ms
+     × 30 Hz, fine stamps: floor, ceiling and A.6 hold 0ms
+     × 125 Hz, fine stamps (the driven clock, vsync-exact): floor, ceiling and A.6 hold 0ms
+     × 128 Hz, fine stamps (this box's chromium panel): floor, ceiling and A.6 hold 0ms
+     × a pump that runs 0–1.5 ms late keeps the ceiling and A.6; its rate is A.6's, not the gate's 0ms
+     × a 60 Hz whole-ms stream keeps EVERY frame: ≥ 59/s (the pass-7 +1 re-cut 40.2/s on 17/33 ms) 0ms
+PLANT ablate exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 9 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 9 failed | 26 passed (35)
+     × the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s 3ms
+     × a fine clock: a 15 ms gap is swallowed and a 16 ms gap commits 3ms
+     × a whole-millisecond WALL clock: a reading of 16 is swallowed (it may be 15.01 ms), 17 commits 1ms
+     × a forced end inside the window is owed, and lands at the window's end, never inside it 1ms
+     × a write while an end is owed replaces it; a re-arm drops it and the window holds across runs 1ms
+     × an owed end waits for the last re-cut to LAND, not for its request 0ms
+     × two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran 0ms
+     × a tween's end written inside a frame is timed on that frame, and owed when it is early 0ms
+     × a stall banks no credit: the commit after a 150 ms pause restarts the grid 1ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > a fine clock: a 15 ms gap is swallowed and a 16 ms gap commits
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > a whole-millisecond WALL clock: a reading of 16 is swallowed (it may be 15.01 ms), 17 commits
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > a forced end inside the window is owed, and lands at the window's end, never inside it
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > a write while an end is owed replaces it; a re-arm drops it and the window holds across runs
+PLANT gap8 exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 7 failed | 28 passed (35)
+     × an owed end waits for the last re-cut to LAND, not for its request 5ms
+     × 75 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold 1ms
+     × 90 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold 1ms
+     × 100 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold 1ms
+     × 144 Hz, fine stamps (A.6 caps it: every third frame): floor, ceiling and A.6 hold 1ms
+     × 165 Hz, fine stamps (A.6 caps it: every third frame): floor, ceiling and A.6 hold 1ms
+     × a stall banks no credit: the commit after a 150 ms pause restarts the grid 1ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — a forced write is timed from the landing (pass 7) > an owed end waits for the last re-cut to LAND, not for its request
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 75 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 90 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 100 Hz, fine stamps (A.6 caps it: every second frame): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 144 Hz, fine stamps (A.6 caps it: every third frame): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > 165 Hz, fine stamps (A.6 caps it: every third frame): floor, ceiling and A.6 hold
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > a stall banks no credit: the commit after a 150 ms pause restarts the grid
+PLANT ceil155 exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 5 failed | 30 passed (35)
+     × the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s 5ms
+     × a forced end inside the window is owed, and lands at the window's end, never inside it 2ms
+     × two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran 1ms
+     × a tween's end written inside a frame is timed on that frame, and owed when it is early 1ms
+     × a stall banks no credit: the commit after a 150 ms pause restarts the grid 1ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > the budget is the hand's displacement clause less one millisecond: ≤62.5 re-cuts/s
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the front's rate budget (A.6: the end included, on the clock's own grain) > a forced end inside the window is owed, and lands at the window's end, never inside it
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — a frame's write is timed on its frame (pass 7) > two frames 15.6 ms apart are one re-cut, however far apart their callbacks ran
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — a frame's write is timed on its frame (pass 7) > a tween's end written inside a frame is timed on that frame, and owed when it is early
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontGate — the cadence at every refresh rate (pass 8: a rate floor, not only a ceiling) > a stall banks no credit: the commit after a 150 ms pause restarts the grid
+PLANT tick1 exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+ Tests 1 failed | 34 passed (35)
+     × sixty-one fronts in one frame are ONE panel reading: a stall is not uncapped by its own repetition 6ms
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — the displacement clause (T9-M20 D10) > sixty-one fronts in one frame are ONE panel reading: a stall is not uncapped by its own repetition
+DONE

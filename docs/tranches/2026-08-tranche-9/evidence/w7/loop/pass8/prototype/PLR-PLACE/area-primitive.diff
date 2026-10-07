@@ -1,0 +1,45 @@
+PLR-PLACE -> PLR-SELF · THE AREA PRIMITIVE (registry-v7 §3.3, §2.12a) · pass 8
+Applies to: web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue at PLR-SELF's pass-7 bytes
+(sha1 25b082fd57e1d94255dffdd8437c91dc8e55f1f5 = 74a2b5d9 + pass7/prototype/PLR-SELF/pass7.diff);
+`git apply --check` exit 0 there. It deletes the one-axis disjunct `board.left <= tall.rowsStart`
+and keys the row budget on the overlap's AREA, both axes: take the cheaper pose, and the dearer one
+only where it adds no board. SELF's pass-8 key (`UNDER_BOARD = 0.7`) is this primitive plus a
+fitted allowance; at UNDER_BOARD = 0 it reduces to this (SELF's own plant K4). `git apply` ignores
+this header.
+
+THE TABLE IT HELD ON (the yield, the same primitive: the list decides, the chart is drawn only if
+covered(dressed) <= covered(pose)). `yield lapped <= list lapped` on every cell, both engines:
+ - pass 7 (lane): 16 cells x 2 engines, 9x9 (390x664/800/844/860, 360x800, 390x844 n5, 430x932
+   n2/n5, 768x1024, 844x390 n2/n7, 812x375, 1280x800, 1440x900, 1536x864, 1920x1080).
+ - pass 7 (critic): 6 cells x 2 engines, 16x16 (390x664, 390x844, 430x932, 812x375, 1280x800,
+   1920x1080).
+ - pass 8 (this lane, re-read on the merged tree): 27 cells x 2 engines, 4x4 / 9x9 / 16x16,
+   readings/census-table.md: 27/27 yield == list wherever the chart would lap, and == chart
+   (lap 0) at 9x9 390x860, 430x932, 1920x1080 and 16x16 1920x1080.
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 55e7a69..6723cd3 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -245,6 +245,12 @@ const budget = computed(() => (cramped.value ? ROWS.short : ROWS.tall));
+ 
+ const laps = (a: DOMRect, b: DOMRect) =>
+   a.left < b.right && a.right > b.left && a.top < b.bottom && a.bottom > b.top;
++/** THE AREA PRIMITIVE (PLR-PLACE's yield, registry-v7 §3.3): what a pose costs the board is the
++ *  overlap's AREA, both axes, never one edge against another. Decide on the cheaper pose, and take
++ *  the dearer one only where it adds no board to what the cheaper already covers. */
++const covered = (a: DOMRect, b: DOMRect) =>
++  Math.max(0, Math.min(a.right, b.right) - Math.max(a.left, b.left)) *
++  Math.max(0, Math.min(a.bottom, b.bottom) - Math.max(a.top, b.top));
+ 
+ async function drawn(short: boolean) {
+   cramped.value = short;
+@@ -281,8 +287,7 @@ async function fit(again = false): Promise<void> {
+   if (run !== fits) return;
+   cramped.value =
+     !NAMES_OVER_CELLS ||
+-    board.left <= tall.rowsStart ||
+-    (!!short && !laps(short.box, board));
++    (!!short && covered(short.box, board) < covered(tall.box, board));
+ }
+ watch([isOpen, () => people.value.length], ([open]) => {
+   if (open) void fit();

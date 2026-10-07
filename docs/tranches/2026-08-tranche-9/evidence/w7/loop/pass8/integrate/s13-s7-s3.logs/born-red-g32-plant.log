@@ -1,0 +1,39 @@
+
+Running 1 test using 1 worker
+
+[1/1] [filter-census-chromium] › e2e/filter-census.spec.ts:542:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly
+  1) [filter-census-chromium] › e2e/filter-census.spec.ts:542:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly 
+
+    Error: authored forwards/both fill sites vs FILL_ALLOWLIST
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 0
+    + Received  + 1
+
+    @@ -1,9 +1,10 @@
+      Array [
+        "src/assets/index.css::pencil-draw-on ×1",
+        "src/pencil/celestial/DarkModeToggle.vue::plush-land ×1",
+        "src/pencil/celestial/DarkModeToggle.vue::toggle-squash ×1",
+    +   "src/pencil/chrome/MarginNote.vue::none ×1",
+        "src/pencil/chrome/icons/DiceIcon.vue::diceRoll ×1",
+        "src/pencil/chrome/icons/DiceIcon.vue::pipPop ×1",
+        "src/pencil/chrome/icons/FillForcedIcon.vue::markDraw ×1",
+        "src/pencil/chrome/icons/SolveIcon.vue::drawIn ×1",
+        "src/pencil/chrome/icons/SolveIcon.vue::sparkleGrow ×1",
+
+      567 |     (r) => `${r.file}::${r.animation} ×${r.count}`,
+      568 |   ).sort();
+    > 569 |   expect(actual, "authored forwards/both fill sites vs FILL_ALLOWLIST").toEqual(
+          |                                                                         ^
+      570 |     expected,
+      571 |   );
+      572 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/s13i8r/plantJ/web/frontend/e2e/filter-census.spec.ts:569:73
+
+    Error Context: ../../../pw-out-plant/filter-census-G3-2-·-sourc-09803-qual-FILL-ALLOWLIST-exactly-filter-census-chromium/error-context.md
+
+
+  1 failed
+    [filter-census-chromium] › e2e/filter-census.spec.ts:542:1 › G3.2 · source `forwards|both` fill sites equal FILL_ALLOWLIST exactly 

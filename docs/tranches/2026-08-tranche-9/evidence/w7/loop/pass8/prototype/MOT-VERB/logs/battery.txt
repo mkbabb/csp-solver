@@ -1,0 +1,94 @@
+### postpaint self-test (ONE copy + PROPOSED key)
+PP-SELFTEST chromium EXIT 0
+PP-SELFTEST webkit EXIT 0
+DONE
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 357 kPaint 0 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 → GREEN
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | CI k2 ct 154/tlΔ 4 off 150 ; k3 ct 166/tlΔ 16 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 HEAVY-mover CLEAN io 229 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 32 c 0 dw 0 GREEN | CI k2 ct 32/tlΔ 32 off 0 ; k3 ct 37/tlΔ 37 off 0 GREEN | dropped 0 → GREEN | rAF-TIME KEY F1 k0 ct 32 c 0 dw 0 GREEN | CI k2 ct 32/tlΔ 32 off 0 ; k3 ct 37/tlΔ 37 off 0 GREEN | dropped 0 → GREEN (not contaminated this run)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 237 kPaint 1 | POST (keyed) F1 k1 ct 4 c 30 dw 0 RED | CI k2 ct 16/tlΔ 12 off 4 ; k3 ct 26/tlΔ 22 off 4 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → GREEN ← the pass-7 hole: frame 1 was a read the frame never painted
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 225 kPaint 0 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 → GREEN
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | CI k2 ct 159/tlΔ 9 off 150 ; k3 ct 169/tlΔ 19 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 168/tlΔ 18 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 HEAVY-mover CLEAN io 226 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 31 c 0 dw 0 GREEN | CI k2 ct 31/tlΔ 31 off 0 ; k3 ct 38/tlΔ 38 off 0 GREEN | dropped 0 → GREEN | rAF-TIME KEY F1 k0 ct 31 c 0 dw 0 GREEN | CI k2 ct 31/tlΔ 31 off 0 ; k3 ct 38/tlΔ 38 off 0 GREEN | dropped 0 → GREEN (not contaminated this run)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 236 kPaint 1 | POST (keyed) F1 k1 ct 7 c 48 dw 0 RED | CI k2 ct 17/tlΔ 10 off 7 ; k3 ct 29/tlΔ 22 off 7 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 → GREEN ← the pass-7 hole: frame 1 was a read the frame never painted
+webkit RECORDER clock photos/s 21 rAF/s 99 clock 99 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 62 frames over 633 ms (subject max interval 16 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+LOAD 22.43 24.76 18.21
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 262.9 kPaint 0 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 17.2/tlΔ 17.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 17.2/tlΔ 17.2 off 0 GREEN | dropped 0 → GREEN
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | CI k2 ct 159.6/tlΔ 9.6 off 150 ; k3 ct 166.6/tlΔ 16.6 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 164.3/tlΔ 14.3 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 HEAVY-mover CLEAN io 290 kPaint 0 (rAF-time key 1) | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 29/tlΔ 29 off 0 ; k3 ct 35.6/tlΔ 35.6 off 0 GREEN | dropped 0 → GREEN | rAF-TIME KEY F1 k1 ct 29 c 174 dw 0 RED | CI k2 ct 35.6/tlΔ 6.6 off 29 ; k3 ct 44.4/tlΔ 15.4 off 29 RED | dropped 1 → RED ← the homes' hole: frame 1 dropped
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 266.3 kPaint 2 | POST (keyed) F1 k2 ct 7.4 c 44.4 dw 0 RED | CI k2 ct 15.1/tlΔ 7.7 off 7.4 ; k3 ct 24/tlΔ 16.6 off 7.4 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k1 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.4/tlΔ 7.4 off 0 ; k3 ct 15.1/tlΔ 15.1 off 0 GREEN | dropped 0 → GREEN ← the pass-7 hole: frame 1 was a read the frame never painted
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 258.6 kPaint 0 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 15.2/tlΔ 15.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 15.2/tlΔ 15.2 off 0 GREEN | dropped 0 → GREEN
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | CI k2 ct 158.6/tlΔ 8.6 off 150 ; k3 ct 166.1/tlΔ 16.1 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 5.6/tlΔ 5.6 off 0 ; k3 ct 163.2/tlΔ 13.2 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 HEAVY-mover CLEAN io 286 kPaint 0 (rAF-time key 1) | POST F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 27.9/tlΔ 27.9 off 0 ; k3 ct 36.5/tlΔ 36.5 off 0 GREEN | dropped 0 → GREEN | rAF-TIME KEY F1 k1 ct 27.9 c 167.4 dw 0 RED | CI k2 ct 36.5/tlΔ 8.6 off 27.9 ; k3 ct 42.8/tlΔ 14.9 off 27.9 RED | dropped 1 → RED ← the homes' hole: frame 1 dropped
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 272.1 kPaint 1 | POST (keyed) F1 k1 ct 8.5 c 51 dw 0 RED | CI k2 ct 17.3/tlΔ 8.8 off 8.5 ; k3 ct 23.9/tlΔ 15.4 off 8.5 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | CI k2 ct 8.5/tlΔ 8.5 off 0 ; k3 ct 17.3/tlΔ 17.3 off 0 GREEN | dropped 0 → GREEN ← the pass-7 hole: frame 1 was a read the frame never painted
+chromium RECORDER clock photos/s 96 rAF/s 128 clock 96 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 80 frames over 637.2 ms (subject max interval 10.9 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/95 (Δ median 0.0037) → RED EMPTY ← the legacy threshold | eps 0.001: changed 95/96 maxHeld 16.9 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 126.5 ms plant seen photo NO → RED
+LOAD 23.48 25.07 18.21
+### browserless
+ROW lint:bands self-test 0
+ROW sabotage hinge-derive 1
+ROW sabotage hinge-curve 1
+ROW sabotage hinge-present 1
+ROW shape-census --self-test 0
+ROW shape-census --sabotage-battery 0
+BL-DONE
+### vitest
+VT src/pencil EXIT 0
+VT src/games/shared EXIT 0
+VT src/games EXIT 0
+VT src/composables EXIT 0
+VT src/lib EXIT 1
+VT-DONE
+      Tests  741 passed (741)
+      Tests  16 passed (16)
+      Tests  429 passed (429)
+      Tests  16 passed (16)
+      Tests  96 passed (96)
+      Tests  16 passed (16)
+vue-tsc -b tree-archive 0
+typecheck:e2e tree-archive 0
+vitest union verb rows 0
+vue-tsc -b union 0
+TSC-DONE
+### pre-return tree | control
+lint-lanes	0	lint-lanes	0
+lint-theme-tokens	0	lint-theme-tokens	0
+lint-sleep	0	lint-sleep	0
+lint-bands	0	lint-bands	1
+lint-verbs	0	lint-verbs	1
+lint-motion	0	lint-motion	0
+lint-copy	0	lint-copy	0
+lint-ink	0	lint-ink	0
+test-e2e-projects	0	test-e2e-projects	0
+check-pw-projects	0	check-pw-projects	0
+propblock-source	0	propblock-source	0
+propblock-served	0	propblock-served	0
+shape-census-selftest	0	shape-census-selftest	1
+npm-lint	0	npm-lint	0
+eslint	0	eslint	0
+knip	0	knip	0
+DONE	DONE
+### builds
+WRITE-TREE 31586472d1056ac452a69f2d3674e96d271335a9
+BUILD-TREE 0
+BUILD-CLEAN 0
+DIST-DIFF 0
+index-DHs860g5jK_C.css
+index-paO7tVLM_11M.js
+AnswerKeyLaminate-CbZq7IXzl1ib.css @property 0
+CageOverlay-CxJWuhZARm9B.css @property 0
+FutoshikiPoster-DZUvzwTKUpND.css @property 0
+PosterBoard-C25fZcEKH9UF.css @property 0
+ThermoTube-pAIHdX-6oKC9.css @property 0
+index-DHs860g5jK_C.css @property 49
+spec-B7T6LNVJOIWK.css @property 0
+PLANT bypass BUILD 0 index-CF_WlNn9mMJ7.js
+PLANT hold0 BUILD 0 index-Cw-ouLgHSicY.js
+PLANT stacks0 BUILD 0 index-C3fqReV-GNq9.js
+PLANT p7clock BUILD 0 index-CWRMvl13SmhU.js
+PLANTS-DONE

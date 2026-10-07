@@ -1,0 +1,236 @@
+START 17:19:09 LOAD { 253.35 117.63 82.18 } PM 25b082fd57e1
+
+Running 8 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes (9.8s)
+  ✘  2 [chromium] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes (6.6s)
+  ✘  3 [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes (9.6s)
+  ✘  4 [chromium] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes (6.8s)
+  ✘  5 [webkit] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes (11.6s)
+  ✘  6 [webkit] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes (4.9s)
+  ✘  7 [webkit] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes (11.5s)
+  ✘  8 [webkit] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes (4.4s)
+
+
+  1) [chromium] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+
+    Error: 712x800 coarse
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 4,
+    -   "rows": 1,
+    +   "lapped": 8,
+    +   "rows": 4,
+      }
+
+      627 |     await crowd(page, 6, `key-${w}x${h}`);
+      628 |     const r = await drawSheet(page);
+    > 629 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
+          |                                                          ^
+      630 |     await ctx.close();
+      631 |   }
+      632 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/critic-cells.spec.ts:629:58
+
+    Error Context: ../../../pw-out/critic-cells-the-row-budge-ac7a7-over-the-board-on-both-axes-chromium/error-context.md
+
+  2) [chromium] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+
+    Error: withheld true
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "false",
+        "true",
+    -   "false",
+      ]
+
+      884 |     await mark(page).evaluate((el) => (el as HTMLElement).click());
+      885 |     await stable(states);
+    > 886 |     expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true', 'false']);
+          |                                                    ^
+      887 |     await ctx.close();
+      888 |   }
+      889 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/critic-cells.spec.ts:886:52
+
+    Error Context: ../../../pw-out/critic-cells-a-click-with--7762e-gles-once-whenever-it-comes-chromium/error-context.md
+
+  3) [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+
+    Error: 712x800 coarse
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 4,
+    -   "rows": 1,
+    +   "lapped": 8,
+    +   "rows": 4,
+      }
+
+      627 |     await crowd(page, 6, `key-${w}x${h}`);
+      628 |     const r = await drawSheet(page);
+    > 629 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
+          |                                                          ^
+      630 |     await ctx.close();
+      631 |   }
+      632 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:629:58
+
+    Error Context: ../../../pw-out/player-mark-the-row-budget-5f118-over-the-board-on-both-axes-chromium/error-context.md
+
+  4) [chromium] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+
+    Error: withheld true
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "false",
+        "true",
+    -   "false",
+      ]
+
+      884 |     await mark(page).evaluate((el) => (el as HTMLElement).click());
+      885 |     await stable(states);
+    > 886 |     expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true', 'false']);
+          |                                                    ^
+      887 |     await ctx.close();
+      888 |   }
+      889 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:886:52
+
+    Error Context: ../../../pw-out/player-mark-a-click-with-n-7f916-gles-once-whenever-it-comes-chromium/error-context.md
+
+  5) [webkit] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+
+    Error: 712x800 coarse
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 4,
+    -   "rows": 1,
+    +   "lapped": 8,
+    +   "rows": 4,
+      }
+
+      627 |     await crowd(page, 6, `key-${w}x${h}`);
+      628 |     const r = await drawSheet(page);
+    > 629 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
+          |                                                          ^
+      630 |     await ctx.close();
+      631 |   }
+      632 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/critic-cells.spec.ts:629:58
+
+    Error Context: ../../../pw-out/critic-cells-the-row-budge-ac7a7-over-the-board-on-both-axes-webkit/error-context.md
+
+  6) [webkit] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+
+    Error: withheld false
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "false",
+        "true",
+    -   "false",
+      ]
+
+      884 |     await mark(page).evaluate((el) => (el as HTMLElement).click());
+      885 |     await stable(states);
+    > 886 |     expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true', 'false']);
+          |                                                    ^
+      887 |     await ctx.close();
+      888 |   }
+      889 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/critic-cells.spec.ts:886:52
+
+    Error Context: ../../../pw-out/critic-cells-a-click-with--7762e-gles-once-whenever-it-comes-webkit/error-context.md
+
+  7) [webkit] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+
+    Error: 712x800 coarse
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 4,
+    -   "rows": 1,
+    +   "lapped": 8,
+    +   "rows": 4,
+      }
+
+      627 |     await crowd(page, 6, `key-${w}x${h}`);
+      628 |     const r = await drawSheet(page);
+    > 629 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'}`).toMatchObject({ rows, lapped });
+          |                                                          ^
+      630 |     await ctx.close();
+      631 |   }
+      632 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:629:58
+
+    Error Context: ../../../pw-out/player-mark-the-row-budget-5f118-over-the-board-on-both-axes-webkit/error-context.md
+
+  8) [webkit] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+
+    Error: withheld false
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "false",
+        "true",
+    -   "false",
+      ]
+
+      884 |     await mark(page).evaluate((el) => (el as HTMLElement).click());
+      885 |     await stable(states);
+    > 886 |     expect(await states(), `withheld ${withheld}`).toEqual(['false', 'true', 'false']);
+          |                                                    ^
+      887 |     await ctx.close();
+      888 |   }
+      889 | });
+        at /private/tmp/claude-504/-Users-mkbabb-Programming-csc411-CSC411-HW2-ProgrammingQuestion/b26a5145-f034-45a7-a7f0-2781da45a9b3/scratchpad/critic-plrself8/ct/web/frontend/e2e/player-mark.spec.ts:886:52
+
+    Error Context: ../../../pw-out/player-mark-a-click-with-n-7f916-gles-once-whenever-it-comes-webkit/error-context.md
+
+  8 failed
+    [chromium] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+    [chromium] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+    [chromium] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+    [chromium] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+    [webkit] › e2e/critic-cells.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+    [webkit] › e2e/critic-cells.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+    [webkit] › e2e/player-mark.spec.ts:608:1 › the row budget flips where the three more rows would cover the board, on both axes 
+    [webkit] › e2e/player-mark.spec.ts:854:1 › a click with no press after a tap toggles once, whenever it comes 
+EXIT 1 17:20:23 LOAD { 168.91 123.02 87.32 }

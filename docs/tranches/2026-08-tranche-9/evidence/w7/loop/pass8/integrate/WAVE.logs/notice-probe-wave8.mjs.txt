@@ -1,0 +1,41 @@
+// notice-probe-wave8.mjs — WAVE integrator's scratch probe. A corrupt ?board= link: is the margin's one sentence ever painted?
+// The margin's text is sampled every animation frame from navigation for 6 s; dists served from disk through context.route.
+// usage: node notice-probe-wave8.mjs <corrupt payload> <label>=<dist dir> ...
+import { chromium } from "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/web/frontend/node_modules/playwright/index.mjs";
+import { readFileSync, existsSync } from "node:fs";
+import { join, extname } from "node:path";
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".wasm": "application/wasm", ".woff2": "font/woff2", ".svg": "image/svg+xml", ".json": "application/json", ".png": "image/png" };
+const [, , CORRUPT, ...arms] = process.argv;
+const b = await chromium.launch();
+for (const arg of arms) for (const q of [`?board=${CORRUPT}`, `?game=futoshiki&board=${CORRUPT}`]) {
+  const [label, dist] = arg.split("=");
+  const ctx = await b.newContext({ viewport: { width: 1280, height: 800 } });
+  await ctx.route("http://wave8.local/**", (route) => {
+    let p = new URL(route.request().url()).pathname; if (p === "/") p = "/index.html";
+    const f = join(dist, p);
+    if (!existsSync(f)) return route.fulfill({ status: 404, body: "" });
+    route.fulfill({ status: 200, contentType: TYPES[extname(f)] ?? "application/octet-stream", body: readFileSync(f) });
+  });
+  const page = await ctx.newPage();
+  await page.addInitScript(() => {
+    const w = window; w.__n = { frames: 0, said: 0, first: -1, last: -1, texts: {} };
+    const t0 = performance.now();
+    const tick = () => {
+      const el = document.querySelector(".margin-note"); const s = el ? (el.textContent || "").trim() : "(no .margin-note)";
+      w.__n.frames++; w.__n.texts[s] = (w.__n.texts[s] || 0) + 1;
+      if (/couldn't be read/.test(s)) { w.__n.said++; const t = Math.round(performance.now() - t0); if (w.__n.first < 0) w.__n.first = t; w.__n.last = t; }
+      if (performance.now() - t0 < 6000) requestAnimationFrame(tick);
+    };
+    requestAnimationFrame(tick);
+  });
+  try {
+    await page.goto("http://wave8.local/" + q, { timeout: 600000 });
+    await page.waitForSelector(".sudoku-cell, .futoshiki-cell", { timeout: 600000 });
+    await page.waitForTimeout(6500);
+    const n = await page.evaluate(() => window.__n);
+    const live = await page.evaluate(() => [...document.querySelectorAll('[role="status"], [aria-live]')].map((e) => (e.textContent || "").trim()).filter(Boolean).join(" ¦ ").slice(0, 160));
+    console.log(`${label} ${q.split("&")[0].replace("?", "")} · frames ${n.frames} · the sentence painted in ${n.said} (first ${n.first} ms, last ${n.last} ms) · texts ${JSON.stringify(n.texts)} · live regions at rest: "${live}"`);
+  } catch (e) { console.log(`${label} UNREAD: ${String(e).split("\n")[0]}`); }
+  await ctx.close();
+}
+await b.close();

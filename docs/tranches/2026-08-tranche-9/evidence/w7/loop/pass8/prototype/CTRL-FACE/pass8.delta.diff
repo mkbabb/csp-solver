@@ -1,0 +1,1946 @@
+diff --git a/web/frontend/config-node.d.ts b/web/frontend/config-node.d.ts
+index b65bb51..75b50e9 100644
+--- a/web/frontend/config-node.d.ts
++++ b/web/frontend/config-node.d.ts
+@@ -27,8 +27,19 @@ declare module "node:fs" {
+   export function existsSync(path: string): boolean;
+   export function readdirSync(path: string): string[];
+   export function statSync(path: string): { isDirectory(): boolean };
++  /** `.face-engine/` for the build's `face-stamp` sidecar (T9-W7 CTRL-FACE). */
++  export function mkdirSync(path: string, options: { recursive: true }): void;
+ }
+ 
++/** `face-stamp`'s digest over the build's module graph (T9-W7 CTRL-FACE). */
++declare module "node:crypto" {
++  export function createHash(algorithm: "sha1"): {
++    update(data: string): { digest(encoding: "hex"): string };
++    digest(encoding: "hex"): string;
++  };
++}
++
++
+ declare module "node:path" {
+   export function join(...parts: string[]): string;
+   export function resolve(...parts: string[]): string;
+diff --git a/web/frontend/e2e/face-law.spec.ts b/web/frontend/e2e/face-law.spec.ts
+index 0f97ad7..6210a82 100644
+--- a/web/frontend/e2e/face-law.spec.ts
++++ b/web/frontend/e2e/face-law.spec.ts
+@@ -2,7 +2,8 @@ import { test, expect, devices, type Locator, type Page } from "@playwright/test
+ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+ import { join } from "node:path";
+ import { fileURLToPath } from "node:url";
+-import { createHash } from "node:crypto";
++import { fourBands, EDGE_PLANTS, type FourBands as Bands } from "./lib/edge-bands.mjs";
++import { onOff } from "./lib/paint-lib.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto (loadCard, below)
+ //
+@@ -47,20 +48,16 @@ import { createHash } from "node:crypto";
+    REPORT and never reaches disk, so the gate would depend on which reporter the caller picked.
+    `e2e/node.d.ts` gains the two write forms with that reason written where the shim is. */
+ const ENGINE_DIR = join(fileURLToPath(new URL("../.face-engine", import.meta.url)));
+-/* PASS 5 — the census is STAMPED with the files it describes (the gate's `STAMP_FILES`, parsed
+-   from the gate so the list is spelled once) and lives OUTSIDE `test-results/`, which every
+-   Playwright run wipes. The digest is the gate's: sha1 over `<rel>\n<utf8 bytes>\n` per file. */
++/* PASS 5 — the census is STAMPED; PASS 8 — with the digest the last BUILD wrote over its own
++   module graph (`.face-engine/dist-stamp.json`, vite.config.ts `face-stamp`; LAWS P7 §F: never a
++   hand list). The gate re-hashes that graph from disk, so a census taken before an edit to ANY file
++   the build read reds. The census lives OUTSIDE `test-results/`, which every Playwright run wipes. */
+ const ENGINE_STAMP = (() => {
+-  const gate = readFileSync(
+-    fileURLToPath(new URL("../scripts/check-face-engine-identity.mjs", import.meta.url)),
+-    "utf8",
+-  );
+-  const list = /const STAMP_FILES = \[([\s\S]*?)\];/.exec(gate);
+-  if (!list) throw new Error("STAMP_FILES not found in check-face-engine-identity.mjs");
+-  const h = createHash("sha1");
+-  for (const m of list[1].matchAll(/"([^"]+)"/g))
+-    h.update(`${m[1]}\n${readFileSync(fileURLToPath(new URL(`../${m[1]}`, import.meta.url)), "utf8")}\n`);
+-  return h.digest("hex");
++  try {
++    return JSON.parse(readFileSync(join(ENGINE_DIR, "dist-stamp.json"), "utf8")).stamp ?? null;
++  } catch {
++    return null; // no build: the gate reds "no build graph"
++  }
+ })();
+ 
+ const CARD = ".controls-card";
+@@ -753,12 +750,32 @@ test.describe("the written chips", () => {
+     });
+   });
+ 
+-  /** Is the action strip (the sticky bar in the card, or the §10 foot) stacked over the element's centre? */
++  /** Is the action strip (the sticky bar in the card, or the §10 foot) STACKED OVER the element's
++   *  centre and PAINTING there? Pass 8 (charter row 12): pass 7 read geometric containment only —
++   *  `elementsFromPoint(...).some(strip)` is true for a strip BEHIND the tape and for a strip at
++   *  opacity 0. Now: the strip's first hit must come before the tape's in the hit stack (topmost
++   *  first), its opacity chain must hold ≥ 0.5, it must be visible, and it (or its hit child) must
++   *  carry an opaque ground (background alpha ≥ 0.5). Both plants below red the old reading. */
+   const underTheStrip = (el: Element) => {
+     const r = el.getBoundingClientRect();
+-    return document
+-      .elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2)
+-      .some((e) => !!e.closest(".action-bar, #card-foot"));
++    const stack = document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2);
++    const si = stack.findIndex((e) => !!e.closest(".action-bar, #card-foot"));
++    if (si < 0) return false;
++    const ti = stack.findIndex((e) => e === el || el.contains(e));
++    if (ti >= 0 && ti < si) return false;
++    const strip = stack[si].closest(".action-bar, #card-foot")!;
++    let alpha = 1;
++    for (let q: Element | null = stack[si]; q; q = q.parentElement) alpha *= +getComputedStyle(q).opacity;
++    const groundAlpha = (e: Element) => {
++      const c = getComputedStyle(e).backgroundColor;
++      if (!c || c === "transparent") return 0;
++      const slash = /\/\s*([\d.]+%?)\s*\)$/.exec(c);
++      if (slash) return slash[1].endsWith("%") ? parseFloat(slash[1]) / 100 : +slash[1];
++      const rgba = /^rgba\(([^)]+)\)$/.exec(c);
++      return rgba ? +(rgba[1].split(",")[3] ?? 1) : 1;
++    };
++    const ground = Math.max(groundAlpha(stack[si]), groundAlpha(strip));
++    return alpha >= 0.5 && ground >= 0.5 && getComputedStyle(strip).visibility !== "hidden";
+   };
+ 
+   test("a tape's paper covers its own PAINTED word, per word", async ({ page }) => {
+@@ -837,11 +854,13 @@ test.describe("the written chips", () => {
+     // does not cover. The attribute alone would have excused it; the painted stack refuses it.
+     const plant = tapes.first();
+     await plant.scrollIntoViewIfNeeded();
+-    await plant.evaluate((el) => {
++    // Set and read in ONE task: the scroll above re-renders the card after it settles, and Vue's
++    // patch strips an attribute it does not own (WebKit read the flag gone, pass 8 run fl-wk-1).
++    const flagSays = await plant.evaluate((el) => {
+       el.setAttribute("data-under-bar", "");
+       el.style.setProperty("opacity", "0", "important");
++      return !!el.closest("[data-under-bar]");
+     });
+-    const flagSays = await plant.evaluate((el) => !!el.closest("[data-under-bar]"));
+     const paintSays = await plant.evaluate(underTheStrip);
+     await plant.evaluate((el) => {
+       el.removeAttribute("data-under-bar");
+@@ -850,6 +869,63 @@ test.describe("the written chips", () => {
+     expect(flagSays, "the plant carries the old flag").toBe(true);
+     expect(paintSays, "the plant: a flagged tape nothing covers is NOT excused").toBe(false);
+ 
++    // PASS 8 — THE STACK AND THE PAINT, planted on a tape the strip really covers (every plant a
++    // stylesheet, never a write into a Vue-owned node): the strip BEHIND the tape, and the strip
++    // at opacity 0. The pass-7 reader (containment alone) excuses both; this one refuses both.
++    const containment = (el: Element) => {
++      const r = el.getBoundingClientRect();
++      return document.elementsFromPoint(r.left + r.width / 2, r.top + r.height / 2).some((e) => !!e.closest(".action-bar, #card-foot"));
++    };
++    // The subject is FOUND, not assumed: at scrollTop 0 no tape sits under the strip on this tree
++    // (both engines, pass 8 run fl3), so the card is walked down in 8 px steps to the first pose
++    // where one does. A card on which no tape is ever under the strip has no subject: that is
++    // recorded, and the containment reader is then asserted to excuse nothing either.
++    const poseTo = (y: number) =>
++      page.evaluate(
++        ({ card, y }) => {
++          const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length) as HTMLElement;
++          root.scrollTop = y;
++          return new Promise<number>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r(root.scrollTop))));
++        },
++        { card: CARD, y },
++      );
++    // At 1280×800 the M17 zone keeps every tape clear of the strip at every pose (0–70 px of
++    // range, both engines); a 1280×560 rail makes the card scroll a tape under it.
++    await page.setViewportSize({ width: 1280, height: 560 });
++    await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++    const maxY = await page.evaluate((card) => {
++      const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length) as HTMLElement;
++      return root.scrollHeight - root.clientHeight;
++    }, CARD);
++    let covered = -1,
++      pose = 0;
++    for (let y = 0; y <= maxY && covered < 0; y += 8) {
++      pose = await poseTo(y);
++      for (let i = 0; i < n && covered < 0; i++) if (await tapes.nth(i).evaluate(underTheStrip)) covered = i;
++    }
++    test.info().annotations.push({
++      type: "strip-stack",
++      description: covered < 0 ? `no tape under the strip at any pose 0–${maxY} (the plants have no subject on this card)` : `tape ${covered} under the strip at scrollTop ${pose}`,
++    });
++    if (covered < 0) {
++      for (let i = 0; i < n; i++) expect(await tapes.nth(i).evaluate(containment), `tape ${i}: nothing is under the strip, so nothing is excused`).toBe(false);
++    } else {
++      const t = tapes.nth(covered);
++      for (const [name, css] of [
++        ["the strip BEHIND the tape", ".tray-well .washi-tag { z-index: 2147483000 !important; }"],
++        ["the strip at opacity 0", ".action-bar, #card-foot { opacity: 0 !important; }"],
++      ] as const) {
++        const h = await page.addStyleTag({ content: css });
++        await page.evaluate(() => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r))));
++        const old = await t.evaluate(containment);
++        const now = await t.evaluate(underTheStrip);
++        await h.evaluate((e) => (e as Element).remove());
++        test.info().annotations.push({ type: "strip-stack-plant", description: `${name}: containment ${old} · stack+paint ${now}` });
++        expect(old, `${name}: the pass-7 containment read still excuses it (the plant reaches the old hole)`).toBe(true);
++        expect(now, `${name}: the stack+paint read refuses it`).toBe(false);
++      }
++    }
++
+     for (const { text, top, bottom } of painted) {
+       // PER WORD, NOT ONE CONSTANT: an ascender-only word and a word with a descender measure
+       // different depths on the same face at the same rung, so a single band across the four
+@@ -860,7 +936,7 @@ test.describe("the written chips", () => {
+       // GATE. `pencils` measures −0.02 chromium / −0.04 webkit: at the display leading (1.05)
+       // its `p` descender lands exactly ON the tape's bottom edge, and a third of a device
+       // pixel at dpr 3 is the whole of the difference. The floor sits where the bitmap can
+-      // still tell an antialiased edge from a word hanging out of its paper — the sweep that
++      // still tell an anti-aliased edge from a word hanging out of its paper — the sweep that
+       // priced this rung read −0.59 at leading 0.95, a real overhang, and that reds here. The
+       // zero headroom under that one word is REPORTED, not tuned away.
+       expect(top, `"${text}" has paper above its ink`).toBeGreaterThan(0);
+@@ -1260,7 +1336,7 @@ test.describe("the case-wide occlusion gate", () => {
+           //     paints a STROKE at the edges and is transparent everywhere else, so counting its
+           //     rect read "100% covered" on all eight names at once. The predicate is therefore
+           //     a painted ground — a non-transparent `background-color`, a `background-image`, a
+-          //     `box-shadow` or a `backdrop-filter`. This is a real narrowing and it is stated
++          //     `box-shadow` or a backdrop filter. This is a real narrowing and it is stated
+           //     rather than hidden: an SVG that FILLS its box would be exempted wrongly, and the
+           //     estate ships none (checked: every `HandDrawnOutline` path is `fill: none`).
+           //   · A NAME DOES NOT OCCLUDE ITSELF. A tag tape is `span.washi-label.washi-tag` — one
+@@ -1747,7 +1823,7 @@ for (const [label, use] of [
+       page,
+     }) => {
+       await loadCard(page);
+-      const read = await page.evaluate((cardSel) => {
++      const read = await page.evaluate(async (cardSel) => {
+         const card = [...document.querySelectorAll<HTMLElement>(cardSel)].find(
+           (c) => c.getClientRects().length,
+         )!;
+@@ -1768,13 +1844,19 @@ for (const [label, use] of [
+           if (inline) card.style.setProperty(n, inline);
+           return { n, published, inline, without, restored: v(card, n) };
+         };
+-        const zone = (() => {
++        // PASS 8 — the struck read waits two rendering updates: WebKit read the stylesheet's strike
++        // un-applied once in a synchronous read (13.6px, 1280 fine, run fl-wk-1; coarse green in the
++        // same run). The clause is unchanged: struck, the name reads its registered initial.
++        const frames = () => new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++        const zone = await (async () => {
+           const before = v(card, "--zone-step");
+           const s = document.createElement("style");
+           s.textContent = ":root { --zone-step: initial !important; }";
+           document.head.appendChild(s);
++          await frames();
+           const without = v(card, "--zone-step");
+           s.remove();
++          await frames();
+           return { n: "--zone-step", published: before, without, restored: v(card, "--zone-step") };
+         })();
+         // PASS 7 (charter row 5) — the row reads names that have a reader on the merged page:
+@@ -1822,15 +1904,9 @@ for (const [label, use] of [
+ 
+ /* ══ 12 · BOTH RING SITES, BY KEYBOARD, AND THE CHIP SNAPS UNDER `reduce` ═══════════════════ */
+ 
+-/** The chair's four-band edge probe (pass7/instruments), with the PROPOSED `off`/`window` options this
+- *  family's evidence copy carries. Its product home is the fold's; until then the row reads it here. */
+-const EDGE_BANDS =
+-  process.env.T9_EDGE_BANDS ??
+-  "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/prototype/CTRL-FACE/instruments/edge-bands.mjs";
+-
+ /**
+  * PASS 5 — charter rows 8 and 9. The two rings this family landed (`.mobile-heading-btn` and the
+- * card's `.ctrl-btn`, `outline: 2px dashed var(--ring-ink)`) had no e2e row at all.
++ * card's `.ctrl-btn`, `outline: 2px solid var(--ring-ink)` since pass 8) had no e2e row at all.
+  *
+  * THE ROUTE. Chromium walks to a chip by Tab and the row asserts it does. PLAYWRIGHT WEBKIT DOES
+  * NOT PUT A `<button>` IN THE TAB ORDER (the critic's 80 presses at 390×844 never landed on a
+@@ -1848,6 +1924,66 @@ const EDGE_BANDS =
+  * template's `transition-colors duration-150` includes `outline-color`, so the ring faded in over
+  * 150 ms under reduce until OptionSelector's PRM rule; the break-test is deleting that rule.
+  */
++const RP = "[data-ring-probe]";
++const flushRing = (page: Page) =>
++  page.evaluate(() => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))));
++/** Focus the first rendered `sel` in the card by the keyboard's road and read its outline. */
++const ringAt = async (page: Page, sel: string) => {
++  // A NON-MODIFIER KEY: WebKit does not count a bare Shift as a keyboard interaction, so after
++  // the dock's tab TAP the modality stayed "pointer" and `focus()` matched no :focus-visible
++  // (measured: `.mobile-heading-btn` read `none 3px` at 390×844 webkit). Tab flips it in both.
++  await page.keyboard.press("Tab");
++  await page.evaluate(
++    ({ card, sel }) => {
++      const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++      const el = [...root.querySelectorAll<HTMLElement>(sel)].find((e) => e.getClientRects().length)!;
++      document.querySelectorAll("[data-ring-probe]").forEach((e) => e.removeAttribute("data-ring-probe"));
++      el.setAttribute("data-ring-probe", "");
++      el.focus();
++    },
++    { card: CARD, sel },
++  );
++  await flushRing(page);
++  return page.evaluate(() => {
++    const el = document.activeElement as HTMLElement;
++    const cs = getComputedStyle(el);
++    return {
++      fv: el.matches(":focus-visible"),
++      style: cs.outlineStyle,
++      color: cs.outlineColor,
++      width: cs.outlineWidth,
++      dur: cs.transitionDuration,
++    };
++  });
++};
++// PASS 7 (charter row 1; chair A.5.3, LAWS P6 §E) — THE RING IS READ AS PAINT, ring-ON against
++// ring-OFF (`outline-color: transparent`, every other pixel identical) on ALL FOUR bands.
++// PASS 8 (charter row 5; LAWS P7 §E, CHAIR-RULINGS §2.7) — through the ONE edge probe at its
++// product home (`./lib/edge-bands.mjs`, never a fork): B2 contrast, B3 THICKNESS (≥ 2 css px
++// painted per band; the 1 px ring read 4.289 GREEN without it), B4 STATION 1 (every painted
++// pixel is a station — the pass-7 dash read 28–32 % holes and is now a PLANT that must red),
++// each regime the row does not emulate (both themes × `reduce`/`no-preference`/`more`), and the
++// plants in every regime. One test per regime: the six in one test ran 57 s on chromium at
++// 390×844 (load 55) and past 60 s on WebKit, twice the product config's 30 s budget.
++const RING_OPTS = { subject: RP, edge: RP, out: 8, inn: 0, off: `${RP} { outline-color: transparent !important; }` };
++const sayBands = (r: Bands) =>
++  r.bands ? Object.entries(r.bands).map(([k, b]) => `${k} ${b.coreMedian}/d${b.thickness}/h${b.holeFrac}`).join(" · ") : r.why.join("; ");
++const RING_PLANTS = [
++  ["X1 opacity 0", `${RP} { opacity: 0 !important; }`],
++  ["FAINT15 ring ink", `${RP} { outline-color: color-mix(in srgb, var(--ring-ink) 15%, transparent) !important; }`],
++  ["THIN 1px", EDGE_PLANTS(RP).THIN_1PX],
++  ["the pass-7 DASH", `${RP} { outline-style: dashed !important; }`],
++  ["X6 bottom erased", EDGE_PLANTS(RP).X6_bottom_erased],
++] as const;
++const RING_REGIMES = [
++  { colorScheme: "light", reducedMotion: "reduce", contrast: "no-preference" },
++  { colorScheme: "dark", reducedMotion: "reduce", contrast: "no-preference" },
++  { colorScheme: "light", reducedMotion: "no-preference", contrast: "no-preference" },
++  { colorScheme: "dark", reducedMotion: "no-preference", contrast: "no-preference" },
++  { colorScheme: "light", reducedMotion: "reduce", contrast: "more" },
++  { colorScheme: "dark", reducedMotion: "reduce", contrast: "more" },
++] as const;
++
+ for (const [label, use, sites] of [
+   ["390×844 coarse", coarse(390, 844), [".mobile-heading-btn", ".tray-well .ctrl-btn"]],
+   ["1280 fine", {}, [".tray-well .ctrl-btn"]],
+@@ -1855,15 +1991,13 @@ for (const [label, use, sites] of [
+   test.describe(`the rings, by keyboard — ${label}`, () => {
+     test.use(use);
+ 
+-    test("each ring site shows a dashed --ring-ink ring on :focus-visible; a stranded focusable shows none", async ({
++    test("each ring site shows a solid --ring-ink ring on :focus-visible; a stranded focusable shows none", async ({
+       page,
+       browserName,
+     }) => {
+       await loadCard(page);
+-      const flush = () =>
+-        page.evaluate(
+-          () => new Promise<void>((r) => requestAnimationFrame(() => requestAnimationFrame(() => r()))),
+-        );
++      const flush = () => flushRing(page);
++      const readAt = (sel: string) => ringAt(page, sel);
+       const ringInk = await page.evaluate(() => {
+         const d = document.createElement("div");
+         d.style.color = "var(--ring-ink)";
+@@ -1872,77 +2006,16 @@ for (const [label, use, sites] of [
+         d.remove();
+         return c;
+       });
+-
+-      const readAt = async (sel: string) => {
+-        // A NON-MODIFIER KEY: WebKit does not count a bare Shift as a keyboard interaction, so after
+-        // the dock's tab TAP the modality stayed "pointer" and `focus()` matched no :focus-visible
+-        // (measured: `.mobile-heading-btn` read `none 3px` at 390×844 webkit). Tab flips it in both.
+-        await page.keyboard.press("Tab");
+-        await page.evaluate(
+-          ({ card, sel }) => {
+-            const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
+-            const el = [...root.querySelectorAll<HTMLElement>(sel)].find((e) => e.getClientRects().length)!;
+-            document.querySelectorAll("[data-ring-probe]").forEach((e) => e.removeAttribute("data-ring-probe"));
+-            el.setAttribute("data-ring-probe", "");
+-            el.focus();
+-          },
+-          { card: CARD, sel },
+-        );
+-        await flush();
+-        return page.evaluate(() => {
+-          const el = document.activeElement as HTMLElement;
+-          const cs = getComputedStyle(el);
+-          return {
+-            fv: el.matches(":focus-visible"),
+-            style: cs.outlineStyle,
+-            color: cs.outlineColor,
+-            width: cs.outlineWidth,
+-            dur: cs.transitionDuration,
+-          };
+-        });
+-      };
+-
+-      // PASS 7 (charter row 1; chair A.5.3, LAWS P6 §E) — THE RING IS READ AS PAINT. The computed
+-      // reads below are existence: pass 6's critic painted 0 ring pixels under `opacity: 0` (X1) and
+-      // a 15 % ink, and both stayed GREEN. Each site is now photographed ring-ON against ring-OFF
+-      // (`outline-color: transparent`, every other pixel identical) on ALL FOUR bands with the chair's
+-      // `fourBands` (per-band core median ≥ 3.0, an empty band RED), and X1 and FAINT15 red in the
+-      // same run. A station is the max over a run of 4·DPR+1 columns, because the ring is DASHED and
+-      // a gap between two dashes is its drawing, not a dropped station (declared, `window`).
+-      const { fourBands } = (await import(EDGE_BANDS)) as {
+-        fourBands: (p: Page, o: Record<string, unknown>) => Promise<{ red: boolean; why: string[]; bands: Record<string, { coreMedian: number }> | null }>;
+-      };
+       const dpr = await page.evaluate(() => devicePixelRatio);
+-      const RP = "[data-ring-probe]";
+-      const bands = () =>
+-        fourBands(page, { subject: RP, edge: RP, out: 8, inn: 0, off: `${RP} { outline-color: transparent !important; }`, window: 4 * dpr + 1 });
+-      const say = (r: Awaited<ReturnType<typeof bands>>) =>
+-        r.bands ? Object.entries(r.bands).map(([k, b]) => `${k} ${b.coreMedian}`).join(" · ") : r.why.join("; ");
+ 
+       for (const sel of sites) {
+         const r = await readAt(sel);
+-        const painted = await bands();
+-        const planted: string[] = [];
+-        for (const [name, css] of [
+-          ["X1 opacity 0", `${RP} { opacity: 0 !important; }`],
+-          ["FAINT15 ring ink", `${RP} { outline-color: color-mix(in srgb, var(--ring-ink) 15%, transparent) !important; }`],
+-        ] as const) {
+-          const t = await page.addStyleTag({ content: css });
+-          await flush();
+-          const p = await bands();
+-          await t.evaluate((e) => e.remove());
+-          await flush();
+-          planted.push(`${name}: ${p.red ? "RED" : "GREEN"} (${say(p)})`);
+-          expect(p.red, `${sel}: the plant ${name} reds the painted ring (${say(p)})`).toBe(true);
+-        }
+-        test.info().annotations.push({ type: "ring-paint", description: `${sel}: ${say(painted)} · ${planted.join(" · ")}` });
+-        expect(painted.red, `${sel}: the ring PAINTS on all four bands (${say(painted)}; ${painted.why.join("; ")})`).toBe(false);
+         test.info().annotations.push({
+           type: "ring",
+           description: `${sel}: :focus-visible ${r.fv} · ${r.style} ${r.width} ${r.color} (ink ${ringInk}) · transition ${r.dur}`,
+         });
+         expect(r.fv, `${sel} reached :focus-visible by the keyboard route`).toBe(true);
+-        expect(r.style, `${sel} draws a ring (outlineStyle)`).toBe("dashed");
++        expect(r.style, `${sel} draws a ring (outlineStyle)`).toBe("solid");
+         expect(r.color, `${sel}'s ring is --ring-ink`).toBe(ringInk);
+         if (sel.includes("ctrl-btn"))
+           expect(
+@@ -1951,6 +2024,33 @@ for (const [label, use, sites] of [
+           ).toBe(true);
+       }
+ 
++      // FORCED COLOURS COUNT PAINTED PIXELS (LAWS P7 §E iii): a `clip-path: inset(0)` keeps every
++      // computed outline property green while painting 0 px. ON vs `outline-style: none`, pixels
++      // that differ by ≥ 24 in any channel; the floor is half the ring's device perimeter.
++      {
++        await page.emulateMedia({ forcedColors: "active" });
++        await readAt(sites[sites.length - 1]);
++        const count = async () => {
++          const b = (await page.locator(RP).first().boundingBox())!;
++          const clip = { x: Math.max(0, Math.floor(b.x - 8)), y: Math.max(0, Math.floor(b.y - 8)), width: Math.ceil(b.width + 16), height: Math.ceil(b.height + 16) };
++          const { on, off } = await onOff(page, clip, `${RP} { outline-style: none !important; }`);
++          let n = 0;
++          for (let i = 0; i < on.data.length; i += 3)
++            if (Math.max(Math.abs(on.data[i] - off.data[i]), Math.abs(on.data[i + 1] - off.data[i + 1]), Math.abs(on.data[i + 2] - off.data[i + 2])) >= 24) n++;
++          return { n, floor: Math.round((b.width + b.height) * dpr) };
++        };
++        const fc = await count();
++        const t = await page.addStyleTag({ content: `${RP} { clip-path: inset(0) !important; }` });
++        await flush();
++        const clipped = await count();
++        await t.evaluate((e) => (e as Element).remove());
++        await page.emulateMedia({ forcedColors: "none" });
++        await flush();
++        test.info().annotations.push({ type: "ring-forced-colors", description: `painted ${fc.n} px (floor ${fc.floor}) · PLANT clip-path inset(0) ${clipped.n} px` });
++        expect(clipped.n, `forced colours: the clip-path plant paints under the floor (${clipped.n} < ${clipped.floor})`).toBeLessThan(clipped.floor);
++        expect(fc.n, `forced colours: the ring PAINTS ${fc.n} px ≥ ${fc.floor}`).toBeGreaterThanOrEqual(fc.floor);
++      }
++
+       // THE STRANDED CONTROL, same walk: a focusable with no indicator must read `none`.
+       await page.evaluate((card) => {
+         const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
+@@ -1978,6 +2078,38 @@ for (const [label, use, sites] of [
+         expect(reached, `a Tab walk reaches ${sites[sites.length - 1]} on chromium`).toBe(true);
+       }
+     });
++
++    for (const [ri, rg] of RING_REGIMES.entries()) {
++      const rlabel = `${rg.colorScheme} ${rg.reducedMotion} contrast-${rg.contrast}`;
++      test(`the ring PAINTS on four bands — ${rlabel}${ri === 0 ? ", every plant reds" : ", X1 and the dash red"}`, async ({ page }) => {
++        await page.emulateMedia(rg);
++        await loadCard(page);
++        const dpr = await page.evaluate(() => devicePixelRatio);
++        const bands = () => fourBands(page, RING_OPTS);
++        for (const sel of sites) {
++          await ringAt(page, sel);
++          // `no-preference` runs the chip's 150 ms colour transition: read the ring at rest
++          await page.waitForTimeout(rg.reducedMotion === "reduce" ? 0 : 400);
++          const dark = await page.evaluate(() => document.documentElement.classList.contains("dark"));
++          expect(dark, `the page follows ${rg.colorScheme} (the regime is real, not vacuous)`).toBe(rg.colorScheme === "dark");
++          const at = `${sel} ${rlabel} dpr${dpr}`;
++          const painted = await bands();
++          const planted: string[] = [];
++          // every plant in the base regime; X1 and the dash in each regime the row does not emulate
++          for (const [name, css] of ri === 0 ? RING_PLANTS : RING_PLANTS.filter(([n]) => /X1|DASH/.test(n))) {
++            const t = await page.addStyleTag({ content: css });
++            await flushRing(page);
++            const p = await bands();
++            await t.evaluate((e) => (e as Element).remove());
++            await flushRing(page);
++            planted.push(`${name}: ${p.red ? "RED" : "GREEN"} (${sayBands(p)})`);
++            expect(p.red, `${at}: the plant ${name} reds the painted ring (${sayBands(p)})`).toBe(true);
++          }
++          test.info().annotations.push({ type: "ring-paint", description: `${at}: ${sayBands(painted)} · ${planted.join(" · ")}` });
++          expect(painted.red, `${at}: the ring PAINTS on all four bands (${sayBands(painted)}; ${painted.why.join("; ")})`).toBe(false);
++        }
++      });
++    }
+   });
+ }
+ 
+@@ -2095,8 +2227,19 @@ for (const vp of [
+       );
+       const plants: [string, string, boolean][] = [
+         ["G3's own", ".new-game-zone .deal-row { margin-top: 200px !important }", true],
+-        ["the sideways range given back", ".controls-card { overflow-x: auto !important }", browserName === "webkit" && vp.width === 1280 && barInCard],
++        // PASS 8 (charter row 11) — the range is gone at its ROOT: the two notes are capped at their
++        // row, so `overflow-x: auto` alone mints no range (read below). The plant gives back the
++        // pass-6 shape WHOLE: the overhang (the notes' 15rem uncapped) AND the sideways scrollport.
++        [
++          "the overhang given back",
++          ".tray-well .zone-hint, .action-bar .washi-label { max-width: 15rem !important } .controls-card { overflow-x: auto !important }",
++          browserName === "webkit" && vp.width === 1280 && barInCard,
++        ],
+       ];
++      const range = await page.evaluate((card) => {
++        const c = [...document.querySelectorAll(card)].find((x) => x.getClientRects().length) as HTMLElement;
++        return { sw: c.scrollWidth, cw: c.clientWidth, ox: getComputedStyle(c).overflowX };
++      }, CARD);
+       const got: string[] = [];
+       for (const [name, css, mustRed] of plants) {
+         const h = await page.addStyleTag({ content: css });
+@@ -2109,8 +2252,9 @@ for (const vp of [
+       }
+       test.info().annotations.push({
+         type: "m17-g3-coarse",
+-        description: `clean Deal ${clean.dealBottom} vs fade ${clean.fadeTop} (clear ${(clean.fadeTop - clean.dealBottom).toFixed(2)}) · ${got.join(" · ")}`,
++        description: `clean Deal ${clean.dealBottom} vs fade ${clean.fadeTop} (clear ${(clean.fadeTop - clean.dealBottom).toFixed(2)}) · range ${range.sw}/${range.cw} overflow-x ${range.ox} · ${got.join(" · ")}`,
+       });
++      expect(range.sw, "the card has no sideways range: its content is no wider than its box").toBeLessThanOrEqual(range.cw);
+       expect(clean.dealBottom, "G3: Deal's bottom clears the fade at scrollTop 0 on the coarse rail").toBeLessThanOrEqual(clean.fadeTop);
+     });
+   });
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+new file mode 100644
+index 0000000..389d474
+--- /dev/null
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -0,0 +1,52 @@
++// Types for the ONE four-band edge probe (`edge-bands.mjs`), as the TypeScript specs call it
++// (T9-W7 CTRL-FACE pass 8, PROPOSED to the homes: `tsconfig.e2e.json` has no `allowJs`, so a spec
++// that imports the home by relative path needs its declaration beside it). Narrow on purpose:
++// what a spec calls, in the shapes it calls them.
++import type { Page } from "@playwright/test";
++
++export interface Band {
++  stations: number;
++  coreMedian: number;
++  fracUnder: number;
++  dropped: number;
++  holeFrac: number;
++  holeRuns: number;
++  longestHole: number;
++  thickness: number;
++  ink: "computed" | "p99";
++  occluder: string | null;
++}
++export interface FourBands {
++  red: boolean;
++  why: string[];
++  bands: Record<"top" | "right" | "bottom" | "left", Band> | null;
++  edgeCount: number;
++  topOnly?: "GREEN" | "RED";
++  station8?: "GREEN" | "RED";
++}
++export interface FourBandsOptions {
++  subject: string;
++  edge: string;
++  off?: string | null;
++  out?: number;
++  inn?: number;
++  span?: [number, number];
++  floor?: number;
++  thick?: number;
++  thickTol?: number;
++  holes?: number;
++  above?: number | null;
++}
++export const EDGE_CLAUSES: string[];
++export function fourBands(page: Page, options: FourBandsOptions): Promise<FourBands>;
++export function EDGE_PLANTS(edge: string): Record<
++  | "X6_bottom_erased"
++  | "X4_opacity_015"
++  | "STROKE_OPACITY015"
++  | "PATH_OPACITY015"
++  | "FILTER_OPACITY015"
++  | "THIN_1PX"
++  | "DASH_1IN8"
++  | "INFO_X5_opacity_04",
++  string
++> & { FADE15_desc: { fade: number } };
+diff --git a/web/frontend/e2e/lib/paint-lib.d.mts b/web/frontend/e2e/lib/paint-lib.d.mts
+new file mode 100644
+index 0000000..3b39216
+--- /dev/null
++++ b/web/frontend/e2e/lib/paint-lib.d.mts
+@@ -0,0 +1,15 @@
++// Types for the ONE painted-byte library (`paint-lib.mjs`), as the TypeScript specs call it
++// (T9-W7 CTRL-FACE pass 8, PROPOSED to the homes; see edge-bands.d.mts). Narrow on purpose.
++import type { Page } from "@playwright/test";
++
++export interface Raw {
++  w: number;
++  h: number;
++  data: Uint8Array;
++}
++export function onOff(
++  page: Page,
++  clip: { x: number; y: number; width: number; height: number },
++  offCss: string,
++): Promise<{ on: Raw; off: Raw }>;
++export function settle(page: Page): Promise<void>;
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index daafef3..84f8d27 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -767,6 +767,21 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
+     "negative control: the collapsed seam must fall under the floor",
+   ).toBeLessThan(FLOOR);
+   expect(colGap).toBeGreaterThan(worst);
++  // PASS 8 (charter row 6) — the negative's reading is RECORDED, per group, with each parent's
++  // computed gap: a negative that reads the normal seam (7.19, WebKit 2/7 whole-file, pass 7)
++  // says here whether the plant had not landed (computed gap 7.2px) or a group escaped it.
++  test.info().annotations.push({
++    type: "chip-separation",
++    description:
++      `rail column ${colGap} · collapsed worst ${worst} · ` +
++      (await page.evaluate(() =>
++        [...document.querySelectorAll(".controls-card .control-panel-wrap .ctrl-options")]
++          .filter((o) => o.getClientRects().length)
++          .map((o) => `${o.className.replace(/\s+/g, ".")} gap ${getComputedStyle(o).rowGap}/${getComputedStyle(o).columnGap}`)
++          .join(" · "),
++      )) +
++      ` · groups ${collapsed.map((g) => `${g.first}:${g.gap}`).join(" ")}`,
++  });
+ 
+   // ── the coarse row (a phone: the other axis, where a thumb is the instrument) ──
+   const ctx = await browser.newContext({
+@@ -798,13 +813,34 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
+ 
+ // ── Test 10: the iPad coarse card against the P1 seal ────────────────
+ 
+-/** The rail panel's own box at the cell that owns the price. */
+-const PANEL_H = () => {
+-  const panel = document.querySelector(
+-    // pass 6: one card at every width — `.mobile-board-width` was the deleted twin's name.
+-    ".controls-card .control-panel-wrap",
+-  );
+-  return panel ? +panel.getBoundingClientRect().height.toFixed(2) : null;
++/** The rail panel's own box at the cell that owns the price (pass 6: one card at every width —
++ *  `.mobile-board-width` was the deleted twin's name), READ AT REST (T9-W7 CTRL-FACE pass 8,
++ *  registry-v7 §2.9). The seal's ablation clause raced:
++ *  5 of ≈45 union runs read the shipped card EARLY at 922.13, before a later layout added 6.00, and
++ *  `shipped − handRung` fell to 25.25 under the clause's 28. The read now waits for the fonts and
++ *  for ten consecutive frames with the same height and no animation running in the card; a card
++ *  that never rests in 5 s returns what it has with `rested: false`, and the row asserts on it. */
++const PANEL_H_AT_REST = async () => {
++  await document.fonts.ready;
++  const panel = document.querySelector<HTMLElement>(".controls-card .control-panel-wrap");
++  if (!panel) return { h: null, rested: false, frames: 0 };
++  const card = panel.closest<HTMLElement>(".controls-card")!;
++  let last = -1,
++    same = 0,
++    frames = 0;
++  const t0 = performance.now();
++  while (same < 10 && performance.now() - t0 < 5000) {
++    await new Promise<void>((r) => requestAnimationFrame(() => r()));
++    frames++;
++    const h = +panel.getBoundingClientRect().height.toFixed(2);
++    const moving = card.getAnimations({ subtree: true }).some((a) => a.playState === "running");
++    if (h === last && !moving) same++;
++    else {
++      same = 0;
++      last = h;
++    }
++  }
++  return { h: last, rested: same >= 10, frames };
+ };
+ 
+ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", async ({
+@@ -887,7 +923,9 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+       rail: true,
+     });
+ 
+-    const shipped = await p.evaluate(PANEL_H);
++    const rest = await p.evaluate(PANEL_H_AT_REST);
++    expect(rest.rested, `the shipped card came to rest (${rest.frames} frames)`).toBe(true);
++    const shipped = rest.h;
+     expect(
+       shipped,
+       `iPad coarse card is ${shipped}px against the P1 seal ${SEAL}px`,
+@@ -907,10 +945,12 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+         ".zone-row-label { font-size: var(--type-tag) !important; line-height: 1.1 !important }";
+       document.head.appendChild(s);
+     }, ABLATE);
+-    await p.waitForTimeout(120);
+-    const handRung = await p.evaluate(PANEL_H);
++    const handRung = (await p.evaluate(PANEL_H_AT_REST)).h;
+     await p.evaluate((id) => document.getElementById(id)?.remove(), ABLATE);
+-    await p.waitForTimeout(120);
++    expect(
++      (await p.evaluate(PANEL_H_AT_REST)).h,
++      "the ablation is undone: the card returns to its shipped height at rest",
++    ).toBe(shipped);
+     expect(
+       shipped! - handRung!,
+       "what the seal bought: the two row captions at the printed rung",
+@@ -929,13 +969,16 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+                 .deal-row > .deal-btn { grid-area: 1 / 1 !important; justify-self: center !important }
+                 .peek-hold-surface { margin-block: 0.5rem !important }`,
+     });
+-    await p.waitForTimeout(120);
+-    const reverted = await p.evaluate(PANEL_H);
++    const reverted = (await p.evaluate(PANEL_H_AT_REST)).h;
+     expect(
+       reverted,
+       "negative control: the unpaid layout must break the seal",
+     ).toBeGreaterThan(SEAL);
+     expect(reverted! - shipped!).toBeGreaterThan(30);
++    test.info().annotations.push({
++      type: "seal",
++      description: `shipped ${shipped} (rest after ${rest.frames} frames) · handRung ${handRung} (bought ${(shipped! - handRung!).toFixed(2)}) · reverted ${reverted} · SEAL ${SEAL}`,
++    });
+   } finally {
+     await ctx.close();
+   }
+diff --git a/web/frontend/scripts/check-face-engine-identity.mjs b/web/frontend/scripts/check-face-engine-identity.mjs
+index 68d435a..57580d9 100644
+--- a/web/frontend/scripts/check-face-engine-identity.mjs
++++ b/web/frontend/scripts/check-face-engine-identity.mjs
+@@ -30,7 +30,7 @@
+  *   2 THE PAINT ±3 DEVICE pixels, and the unit is the point. The painted width comes from
+  *               `paintedExtent()`: two crops of one chip differenced, and a column counts as
+  *               painted when the two bitmaps disagree there at all. That threshold sits on an
+- *               antialiased edge, and the two engines do not tail their AA identically — the
++ *               anti-aliased edge, and the two engines do not tail their AA identically — the
+  *               0.67px spread IS 2 device columns at dpr 3 (mark cols [24,121] chromium against
+  *               [24,119] webkit), on a mark whose two LAYOUT inputs are identical to 0.000. So
+  *               the band is the instrument's resolution: one column of slack on each edge plus
+@@ -66,29 +66,40 @@ const FRONTEND = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+ const DIR = dirArg >= 0 ? args[dirArg + 1] : path.join(FRONTEND, ".face-engine");
+ 
+ /* PASS 5 — THE CENSUS IS STAMPED WITH THE FILES IT DESCRIBES, and a stamp that no longer
+-   matches the tree is a RED. Pass 4 compared two JSON files and nothing bound them to the tree:
+-   the critic re-priced the mark to `6ch` (`background-size: 53.76px` painted) under a census
+-   recording 32.667 / 32.000 and this gate printed PASS. These are the files whose bytes decide a
+-   chip's word and its mark; `e2e/face-law.spec.ts` PARSES this literal and writes the same
+-   digest into each census, so the list is spelled once. */
+-const STAMP_FILES = [
+-  "src/pencil/chrome/OptionSelector/OptionSelector.vue",
+-  "src/games/shared/GameControlPanel.vue",
+-  "src/assets/typography.css",
+-  "src/assets/index.css",
+-  "src/assets/fonts/patrickhand-subset.woff2",
+-  "src/assets/fonts/firacode-subset.woff2",
+-  // pass 6: the crib's max-content sizes the rail the chips sit in (the critic's omission)
+-  "src/pencil/chrome/KeyboardLegend.vue",
+-];
+-/** sha1 over each file read as utf8 (the spec's one read form), path-prefixed, in list order. */
+-function treeStamp(root = FRONTEND) {
++   matches the tree is a RED (pass 4 compared two JSON files and nothing bound them to the tree).
++   PASS 8 — THE FILES ARE THE BUILD'S MODULE GRAPH, NEVER A HAND LIST (LAWS P7 §F). Pass 7 hashed
++   seven hand-picked files and a `scene.css` plant with its mtime restored exited 0 — the file that
++   pass edited. The build's `face-stamp` plugin (vite.config.ts) writes every module and watched
++   file it read under this package into `.face-engine/dist-stamp.json` (`files`), with the digest
++   of their bytes; this gate re-hashes that list from disk NOW, and `face-law.spec.ts` stamps each
++   census with the sidecar's digest at the time it ran. A file the build read that changed since,
++   or went missing, reds; no sidecar reds (build first). */
++const SIDECAR_REL = path.join(".face-engine", "dist-stamp.json");
++function sidecar(root = FRONTEND) {
++  try {
++    return JSON.parse(fs.readFileSync(path.join(root, SIDECAR_REL), "utf8"));
++  } catch {
++    return null;
++  }
++}
++/** sha1 over `<rel>\n<utf8>\n` for each file of the build's graph, in the sidecar's (sorted)
++ *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file. */
++function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p, "utf8")) {
++  if (!Array.isArray(files) || files.length === 0) return null;
+   const h = crypto.createHash("sha1");
+-  for (const rel of STAMP_FILES)
+-    h.update(`${rel}\n${fs.readFileSync(path.join(root, rel), "utf8")}\n`);
++  for (const rel of files) {
++    let text;
++    try {
++      text = read(path.join(root, rel));
++    } catch {
++      text = `\u0000MISSING ${rel}`;
++    }
++    h.update(`${rel}\n${text}\n`);
++  }
+   return h.digest("hex");
+ }
+-const TREE_STAMP = treeStamp();
++const GRAPH = sidecar()?.files ?? null;
++const TREE_STAMP = graphStamp(GRAPH);
+ 
+ /* PASS 6 — A DIGEST OF `src/` IS NOT THE ARTIFACT A DIST RUN MEASURED. The critic planted `6ch`
+    in `src/`, re-ran face-law against the UNREBUILT dist, and the spec wrote the planted src's
+@@ -111,19 +122,10 @@ function distFacts(dist = DIST, root = FRONTEND) {
+   }
+   const js = /\/assets\/index-[^"'/]+\.js/.exec(html)?.[0] ?? null;
+   const css = /\/assets\/index-[^"'/]+\.css/.exec(html)?.[0] ?? null;
+-  // PASS 7 — CONTENT, NOT MTIME (the pass-6 critic's `cp -p` plant: new bytes under the old mtime
+-  // read fresh). The build's `face-stamp` plugin (vite.config.ts) writes `{ js, stamp }` from the
+-  // STAMP_FILES it was built from; the dist is this tree only if that js is the one dist/index.html
+-  // names AND that stamp is the tree's digest now.
+-  let built = null;
+-  try {
+-    built = JSON.parse(
+-      fs.readFileSync(path.join(root, ".face-engine", "dist-stamp.json"), "utf8"),
+-    );
+-  } catch {
+-    /* absent: read below as "a dist with no build stamp" */
+-  }
+-  return { js, css, built };
++  // PASS 7 — CONTENT, NOT MTIME (the pass-6 critic's `cp -p` plant); PASS 8 — over the build's
++  // module graph: the dist is this tree only if the sidecar's js is the one dist/index.html names
++  // AND the sidecar's digest is the digest of the same files on disk now.
++  return { js, css, built: sidecar(root) };
+ }
+ const ENGINES = ["chromium", "webkit"];
+ 
+@@ -159,7 +161,7 @@ function load(dir) {
+   return out;
+ }
+ 
+-function run(censuses, facts = distFacts()) {
++function run(censuses, facts = distFacts(), treeStamp = TREE_STAMP) {
+   const result = {
+     "both engines reported": [],
+     "each census describes THIS tree": [],
+@@ -188,11 +190,15 @@ function run(censuses, facts = distFacts()) {
+   const [a, b] = ENGINES.map((e) => censuses[e]);
+ 
+   // 0 · THE STAMP. A census taken over other bytes describes a card that is not on disk.
++  if (!treeStamp)
++    result["each census describes THIS tree"].push(
++      `no build graph at ${SIDECAR_REL} (or an empty one) — build, then re-run face-law.spec.ts`,
++    );
+   for (const c of [a, b])
+-    if (c.stamp !== TREE_STAMP)
++    if (treeStamp && c.stamp !== treeStamp)
+       result["each census describes THIS tree"].push(
+-        `${c.engine}: census stamp ${c.stamp ?? "(none)"} ≠ the tree's ${TREE_STAMP} — one of ` +
+-          `${STAMP_FILES.length} files changed since the census was written; re-run face-law.spec.ts`,
++        `${c.engine}: census stamp ${c.stamp ?? "(none)"} ≠ the tree's ${treeStamp} — one of the ` +
++          `${GRAPH?.length ?? 0} files the build read changed since the census was written; rebuild and re-run face-law.spec.ts`,
+       );
+ 
+   // 0b · THE ARTIFACT. What the page served, bound to what is on disk.
+@@ -216,10 +222,10 @@ function run(censuses, facts = distFacts()) {
+           result["each census describes THIS tree"].push(
+             `${c.engine}: ${DIST} carries no build stamp for ${facts.js} (the sidecar names ${facts.built?.js ?? "nothing"}) — rebuild`,
+           );
+-        else if (facts.built.stamp !== TREE_STAMP)
++        else if (facts.built.stamp !== treeStamp)
+           result["each census describes THIS tree"].push(
+             `${c.engine}: the served dist was built from other bytes (build stamp ${facts.built.stamp} ≠ the tree's ` +
+-              `${TREE_STAMP}) — rebuild, re-serve and re-run; a stale dist is not this tree`,
++              `${treeStamp}) — rebuild, re-serve and re-run; a stale dist is not this tree`,
+           );
+       }
+     }
+@@ -267,10 +273,10 @@ function run(censuses, facts = distFacts()) {
+ 
+ function selfTest(censuses) {
+   let blind = 0;
+-  const plant = (label, mutate, facts) => {
++  const plant = (label, mutate, facts, treeStamp) => {
+     const copy = JSON.parse(JSON.stringify(censuses));
+     mutate(copy);
+-    const r = run(copy, facts);
++    const r = run(copy, facts, treeStamp);
+     const red = Object.values(r).some((rows) => rows.length > 0);
+     console.log(`  ${red ? "bites" : "BLIND"}  ${label}`);
+     if (!red) blind++;
+@@ -325,6 +331,38 @@ function selfTest(censuses) {
+     built: { js: "/assets/index-OTHER.js", stamp: TREE_STAMP },
+   });
+   plant("a dist with no build stamp", withServed, { ...f0, built: null });
++  // pass 8 — the pass-7 critic's plant: a file OUTSIDE the old hand list, in the build's graph
++  // (`scene.css`), edited after the build with its mtime restored. Overlaid in memory: the tree's
++  // digest moves, the build's does not.
++  const scene = "src/games/shared/scene.css";
++  if (!GRAPH?.includes(scene)) {
++    console.log(
++      `  BLIND  ${scene} is not in the build's graph — the graph read is short`,
++    );
++    blind++;
++  }
++  const utf8 = (p) => fs.readFileSync(p, "utf8");
++  const sceneStamp = graphStamp(GRAPH, FRONTEND, (p) =>
++    p.endsWith(scene)
++      ? `${utf8(p)}\n.controls-card { letter-spacing: 1px }\n`
++      : utf8(p),
++  );
++  plant(
++    "scene.css edited after the build (letter-spacing on the card; a file the hand list missed)",
++    withServed,
++    f0,
++    sceneStamp,
++  );
++  plant(
++    "a file the build read has gone missing",
++    withServed,
++    f0,
++    graphStamp(GRAPH, FRONTEND, (p) => {
++      if (p.endsWith(GRAPH[0])) throw new Error("gone");
++      return utf8(p);
++    }),
++  );
++  plant("no build graph at all", withServed, f0, null);
+   plant("a chip renamed on one engine", (c) => {
+     c.webkit.words[0].text += "-renamed";
+   });
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index e73f67d..f8e62bb 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -69,7 +69,7 @@
+  *
+  *   node scripts/check-font-coverage.mjs
+  */
+-import { readFileSync, readdirSync } from "node:fs";
++import { readFileSync, readdirSync, existsSync } from "node:fs";
+ import { fileURLToPath } from "node:url";
+ import { join } from "node:path";
+ import { brotliDecompressSync } from "node:zlib";
+@@ -912,35 +912,60 @@ const FACE_SITES = {
+   }
+ }
+ 
+-/* ── CHECK 7 · EVERY `font-family` IN THE TREE READS A TOKEN (pass 5; re-cut on the SHAPE law, pass 7) ──
+-   CHECK 6 holds the sites FACE_SITES names; this one reads EVERY site a family can be set from: every
+-   `<style>` block (scoped or not, a second block too), every stylesheet under src/, public/** and
+-   index.html, Tailwind `@utility` bodies, template `style=` and `:style` objects/strings, Tailwind
+-   candidates (named `font-sans|serif|mono|hand|display` and arbitrary `font-[…]`), and script writes
+-   (`.style.fontFamily`, `setProperty("font-family", …)`, computed keys reported, never dropped). The
+-   READER is the chair's shape-census library (pass7/instruments, the ONE copy; LAWS P6 §F/§I) — pass 6's
+-   hand-rolled parser passed a var-led `font:` shorthand, `style=`, `:style` and `font-serif` (the pass-6
+-   critic's four holes, §2.2). The LAW: a family's first item is a CSS-wide keyword, or a `var()` naming a
+-   `--face-*`/`--font-*` token the ESTATE declares; any other token is resolved and read again; a literal
+-   reaches no voice and reds. A `font:` shorthand's family is its trailing list (from the item holding the
+-   first top-level comma, else its last item) — a `var()` in front of the size never hides it. An
+-   `@font-face` `font-family` is a descriptor, not a site. The plants run first, in-process, at EVERY
+-   site kind; a plant that reads green reds the check itself. */
++/* ── CHECK 7 · EVERY `font-family` IN THE TREE RESOLVES TO A VOICE AT ITS CONSUMER (pass 5; SHAPE law p7;
++   the voice set CLOSED and resolved at the consumer, pass 8) ──
++   CHECK 6 holds the sites FACE_SITES names; this one reads EVERY site a family can be set from, through
++   the ONE shape-census library at its product home (`./shape-census.mjs`; LAWS P7 §C/§I, registry-v7
++   §2.4): every top-level `<style>` block, every stylesheet under src/, public/** and index.html,
++   `@utility` bodies, CSS text inside script strings (a `<style>` in a JS string is read as CSS, never
++   as the SFC's stylesheet), template `style=`/`:style`, SVG presentation attributes, Tailwind
++   candidates (the named `font- sans|serif|mono|hand|display`, `font-[ … ]`, v4's `font-( --x )`), and script writes
++   (`.style.fontFamily`, `.style.font`, `setProperty`, `cssText`, `setAttribute('style')`, style
++   objects in TS; a computed key is a `?` site, never dropped).
++   THE LAW, four clauses (each switched off in turn by `--sabotage`, which must red a plant):
++     V1 the voice set is CLOSED: the only `--face-*`/`--font-*` names are VOICES below; a minted one reds.
++     V2 each voice has ONE declaration, at its home (`:root` of its file, no media context): a scoped
++        shadow, a second `:root` or a script/inline write of a voice reds — so a voice read anywhere
++        resolves, AT THE CONSUMER, to the one value its home declares.
++     C1 a family's first item is a CSS-wide keyword or a `var()` of a voice; any other `var()` is
++        resolved over EVERY declaration of that name the estate carries (all must reach a voice, and
++        at least one must exist), so a shadow of an alias is read wherever it sits, never by walk order.
++     K1 a script site's value is JS unless the site is CSS text (`cssText`, `setAttribute('style')`,
++        a CSS string): JS must be a literal, CSS is read as CSS.
++   ADMITTED literals are keyed by file AND exact value, each with its reason: a changed value reds. */
+ {
+-  const LIB =
+-    process.env.T9_SHAPE_CENSUS ??
+-    "/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/docs/tranches/2026-08-tranche-9/evidence/w7/loop/pass7/prototype/CTRL-FACE/instruments/shape-census.mjs";
+   let SC = null;
+   try {
+-    SC = await import(LIB);
+-  } catch {
++    SC = await import("./shape-census.mjs");
++  } catch (e) {
+     problems.push(
+-      `check 7: the shape-census library is not at ${LIB}; the check cannot read, so it reds`,
++      `check 7: the shape-census library (scripts/shape-census.mjs) did not load (${e}); the check cannot read, so it reds`,
+     );
+   }
+   if (SC) {
++    const J = (...a) => a.join(""); // plant tokens assembled at run time: Tailwind scans this file (T9-R6)
+     const KEYWORD = /^(inherit|initial|unset|revert|revert-layer)$/i;
+-    // top-level split (parens and quotes respected)
++    const VOICE_RE = /^--(face|font)-/;
++    /** The closed voice set: name → its home (file, prelude). */
++    const VOICES = new Map([
++      ["--font-text", "src/assets/index.css :root"],
++      ["--font-display", "src/assets/index.css :root"],
++      ["--font-mono", "src/assets/index.css :root"],
++      ["--font-hand", "src/assets/index.css :root"],
++      ["--face-printed", "src/assets/typography.css :root"],
++      ["--face-written", "src/assets/typography.css :root"],
++      ["--face-mono", "src/assets/typography.css :root"],
++    ]);
++    /** Literal families admitted by file + exact value (a changed value reds). */
++    const ADMITTED_LITERALS = new Map([
++      [
++        "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue 'FrauncesBake',Georgia,serif",
++        "the bake's detached SVG blob is rasterised through an <img>, which reads no document token; " +
++          "'FrauncesBake' is the @font-face the same string mints from the embedded subset",
++      ],
++    ]);
++    // Computed-key script writes the law cannot resolve are ADMITTED by file and key, never dropped.
++    const ADMITTED_COMPUTED = new Set(["src/games/shared/GameControlPanel.vue ?name"]);
+     const split = (v, sep) => {
+       const out = [];
+       let d = 0,
+@@ -971,24 +996,118 @@ const FACE_SITES = {
+       const k = t.findIndex((x) => split(x, /,/).length > 1 || /,$/.test(x));
+       return (k < 0 ? t.slice(-1) : t.slice(k)).join(" ");
+     };
+-    const lawful = (family, map, depth = 0) => {
+-      const first = split(family, /,/)[0] ?? "";
+-      if (KEYWORD.test(first)) return true;
+-      const m = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(first);
+-      if (!m) return false;
+-      if (/^--(face|font)-/.test(m[1]) && map.has(m[1])) return true;
+-      if (map.has(m[1]) && depth < 8)
+-        return lawful(shorthandFamily(map.get(m[1])), map, depth + 1);
+-      return false; // a token the estate never declares (Tailwind's default `--font-serif`) reaches no voice
+-    };
+     const unquote = (v) => v.trim().replace(/^(['"`])([\s\S]*)\1$/, "$2");
+-    // Computed-key script writes the law cannot resolve are ADMITTED by file and key, never dropped:
+-    // a new one reds until it is read and admitted here.
+-    const ADMITTED_COMPUTED = new Set(["src/games/shared/GameControlPanel.vue ?name"]);
+-    const judge = (fe, opts) => {
+-      const { map } = SC.tokens(fe, opts);
++    const CSS_KINDS = /^script-(css|cssText)/; // K1: CSS text inside script, read as CSS
++
++    // The library reads one file at a time here, cached on the file's text: a plant re-reads only
++    // the file it overlays (the tree is read once, not once per plant).
++    const CACHE = new Map();
++    const FILES = SC.sources(ROOT);
++    const readOne = (fe, f, rd) => {
++      const text = rd(f);
++      const key = `${f}\u0000${text}`;
++      if (CACHE.has(key)) return CACHE.get(key);
++      const o = {
++        files: [f],
++        read: (g) => (g === f ? text : rd(g)),
++        exists: existsSync,
++      };
++      const got = {
++        all: SC.tokens(fe, o).all,
++        font: SC.census(fe, "*", "font-family", o),
++        voice: [...VOICES.keys()].flatMap((n) => SC.census(fe, "*", n, o)),
++      };
++      CACHE.set(key, got);
++      return got;
++    };
++    const gather = (fe, opts) => {
++      const rd = opts.read ?? ((f) => readFileSync(f, "utf8"));
++      const out = { all: [], font: [], voice: [] };
++      const seen = new Set();
++      for (const f of [...FILES, ...(opts.extra ?? [])]) {
++        const got = readOne(fe, f, rd);
++        for (const k of ["all", "font", "voice"])
++          for (const x of got[k]) {
++            // an @import pulls a sheet into its importer's read: count every site once
++            const id = `${k}|${x.file}|${x.line}|${x.prop}|${x.value}|${x.prelude}`;
++            if (seen.has(id)) continue;
++            seen.add(id);
++            out[k].push(x);
++          }
++      }
++      return out;
++    };
++    function check7(fe, opts = {}, off = new Set()) {
+       const bad = [];
+-      for (const s of SC.census(fe, "*", "font-family", opts)) {
++      const G = gather(fe, opts);
++      const all = G.all;
++      const declsOf = new Map();
++      for (const t of all) {
++        if (!declsOf.has(t.prop)) declsOf.set(t.prop, []);
++        declsOf.get(t.prop).push(t);
++      }
++      // V1 + V2: the voice set closed, one declaration per voice at its home
++      const voiceSites = [];
++      for (const t of all) if (VOICE_RE.test(t.prop)) voiceSites.push(t);
++      for (const w of G.voice) {
++        if (w.unresolved) {
++          // a computed write could name a voice: admitted by file and key, or it reds
++          if (!ADMITTED_COMPUTED.has(`${w.file} ${w.prop}`))
++            bad.push(`${w.file}:${w.line} ${w.prop} — an unresolved computed write`);
++          continue;
++        }
++        if (
++          !/^(stylesheet|sfc-style|sfc-style-scoped|public-css|index-html)$/.test(
++            w.kind,
++          )
++        )
++          voiceSites.push(w); // inline, template and script writes (CSS blocks come through tokens)
++      }
++      const seen = new Set();
++      const homeCount = new Map();
++      for (const t of voiceSites) {
++        const key = `${t.file}:${t.line}:${t.prop}:${t.value}`;
++        if (seen.has(key)) continue;
++        seen.add(key);
++        const at = `${t.file}:${t.line} ${String(t.prelude).slice(0, 40)} ${t.prop}: ${t.value}`;
++        if (!VOICES.has(t.prop)) {
++          if (!off.has("V1"))
++            bad.push(
++              `${at} — a minted voice (the set is closed: ${[...VOICES.keys()].join(" ")})`,
++            );
++          continue;
++        }
++        const home = `${t.file} ${t.prelude}` === VOICES.get(t.prop) && !t.ctx;
++        if (home) homeCount.set(t.prop, (homeCount.get(t.prop) ?? 0) + 1);
++        if (!off.has("V2") && (!home || homeCount.get(t.prop) > 1))
++          bad.push(
++            `${at} — a voice re-declared off its one home (${VOICES.get(t.prop)}): its consumers no longer read the voice`,
++          );
++      }
++      for (const name of VOICES.keys())
++        if (!homeCount.get(name))
++          bad.push(`${name} — no declaration at its home ${VOICES.get(name)}`);
++      // C1: resolve at the consumer
++      const lawful = (family, depth = 0) => {
++        const first = split(family, /,/)[0] ?? "";
++        if (KEYWORD.test(first)) return true;
++        const m = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(first);
++        if (!m) return false;
++        if (VOICES.has(m[1])) return true;
++        if (off.has("C1"))
++          return (
++            declsOf.has(m[1]) &&
++            depth < 8 &&
++            lawful(shorthandFamily(declsOf.get(m[1]).at(-1).value), depth + 1)
++          );
++        const ds = declsOf.get(m[1]) ?? [];
++        return (
++          ds.length > 0 &&
++          depth < 8 &&
++          ds.every((d) => lawful(shorthandFamily(String(d.value)), depth + 1))
++        );
++      };
++      for (const s of G.font) {
+         if (/@font-face$/.test(s.prelude) || /@font-face/.test(s.ctx ?? "")) continue;
+         const at = `${s.file}:${s.line} [${s.kind}] ${String(s.prelude).slice(0, 60)}: ${s.prop} ${s.value}`;
+         if (s.unresolved) {
+@@ -998,140 +1117,291 @@ const FACE_SITES = {
+         }
+         let family;
+         if (s.kind === "tailwind") {
+-          if (/^\d+$/.test(s.value)) continue; // `font-[600]` is a weight
++          if (/^\d+$/.test(s.value)) continue;
+           family = /^(sans|serif|mono|hand|display)$/.test(s.value)
+             ? `var(--font-${s.value})`
+-            : s.value.replace(/^family-name:/, "").replace(/_/g, " ");
+-        } else if (/^script/.test(s.kind)) {
++            : s.value.replace(/_/g, " ");
++        } else if (
++          /^script/.test(s.kind) &&
++          (off.has("K1") || !CSS_KINDS.test(s.kind))
++        ) {
+           const v = s.value.trim();
+           if (!/^(['"`])[\s\S]*\1$/.test(v)) {
+             bad.push(`${at} — a script write whose value is not a literal`);
+             continue;
+           }
+           family = unquote(v);
++          if (s.prop === "font") family = shorthandFamily(family);
+         } else family = s.prop === "font" ? shorthandFamily(s.value) : s.value;
+-        if (!lawful(family.trim(), map)) bad.push(at);
++        family = family.trim();
++        if (lawful(family)) continue;
++        const why = ADMITTED_LITERALS.get(`${s.file} ${family}`);
++        if (why) continue;
++        bad.push(at);
+       }
+       return bad;
+-    };
+-    // THE PLANTS — one per site kind the pass-6 critic and the SHAPE law name, each an in-memory overlay
+-    // on one real file (never written): each must add a finding at the planted file.
++    }
++
++    // THE PLANTS — in-memory overlays on real files (never written); each must add a finding.
+     const fe = ROOT;
+     const host = join(fe, "src/pencil/chrome/OptionSelector/OptionSelector.vue");
+     const hostText = readFileSync(host, "utf8");
++    const tsHost = join(fe, "src/__check7-plant.ts");
++    const logo = join(fe, "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue");
+     const inTemplate = (tag) =>
+       hostText.replace(/<\/template>\s*(?=<script|<style|$)/, `${tag}\n</template>\n`);
++    const inScript = (js) => hostText.replace(/<script([^>]*)>/, `<script$1>\n${js}`);
++    const block = (css, attrs = "") =>
++      `${hostText}\n<style${attrs}>\n${css}\n</style>\n`;
++    const CS = '"Comic Sans MS"';
+     const PLANTS = {
+-      "font-family literal":
+-        hostText +
+-        '\n<style scoped>\n.ctrl-word { font-family: "Comic Sans MS", cursive; }\n</style>\n',
+-      "font: shorthand":
+-        hostText +
+-        '\n<style scoped>\n.ctrl-word { font: 400 1rem "Comic Sans MS", cursive; }\n</style>\n',
+-      "font: VAR-LED shorthand":
+-        hostText +
+-        '\n<style scoped>\n.ctrl-word { font: var(--w, 400) 1rem "Comic Sans MS", cursive; }\n</style>\n',
+-      "font: var(--x) to a literal":
+-        hostText +
+-        '\n<style>\n:root { --plant-font: 400 1rem "Comic Sans MS"; }\n.ctrl-word { font: var(--plant-font); }\n</style>\n',
+-      "a token alias to a literal":
+-        hostText +
+-        '\n<style>\n:root { --plant-face: "Comic Sans MS"; }\n.ctrl-word { font-family: var(--plant-face); }\n</style>\n',
+-      "@utility body":
+-        hostText +
+-        '\n<style>\n@utility plant-face { font-family: "Comic Sans MS"; }\n</style>\n',
+-      "!important in a media block":
+-        hostText +
+-        "\n<style scoped>\n@media (max-width: 600px) { .ctrl-word { font-family: serif !important; } }\n</style>\n",
+-      "template style=": inTemplate(
+-        '<span class="ctrl-word" style="font-family: Comic Sans MS">x</span>',
+-      ),
+-      ":style object": inTemplate(
+-        `<span class="ctrl-word" :style="{ fontFamily: 'Comic Sans MS' }">x</span>`,
+-      ),
+-      ":style quoted key": inTemplate(
+-        `<span class="ctrl-word" :style="{ 'font-family': 'Comic Sans MS' }">x</span>`,
+-      ),
+-      "Tailwind font-serif": inTemplate('<span class="font-serif ctrl-word">x</span>'),
+-      "Tailwind font-[…]": inTemplate(
+-        '<span class="font-[Comic_Sans_MS] ctrl-word">x</span>',
+-      ),
+-      "script .style.fontFamily": hostText.replace(
+-        /<script([^>]*)>/,
+-        '<script$1>\ndocument.body.style.fontFamily = "Comic Sans MS";',
+-      ),
+-      "script setProperty": hostText.replace(
+-        /<script([^>]*)>/,
+-        '<script$1>\ndocument.body.style.setProperty("font-family", "Comic Sans MS");',
+-      ),
+-      "script computed key": hostText.replace(
+-        /<script([^>]*)>/,
+-        '<script$1>\nconst k = "font-family"; document.body.style.setProperty(k, "x");',
+-      ),
++      // pass 5–7
++      "font-family literal": {
++        vue: block(`.ctrl-word { font-family: ${CS}, cursive; }`, " scoped"),
++      },
++      "font: shorthand": {
++        vue: block(`.ctrl-word { font: 400 1rem ${CS}, cursive; }`, " scoped"),
++      },
++      "font: VAR-LED shorthand": {
++        vue: block(
++          `.ctrl-word { font: var(--w, 400) 1rem ${CS}, cursive; }`,
++          " scoped",
++        ),
++      },
++      "font: var(--x) to a literal": {
++        vue: block(
++          `:root { --plant-font: 400 1rem ${CS}; }\n.ctrl-word { font: var(--plant-font); }`,
++        ),
++      },
++      "a token alias to a literal": {
++        vue: block(
++          `:root { --plant-face: ${CS}; }\n.ctrl-word { font-family: var(--plant-face); }`,
++        ),
++      },
++      "@utility body": { vue: block(`@utility plant-face { font-family: ${CS}; }`) },
++      "!important in a media block": {
++        vue: block(
++          "@media (max-width: 600px) { .ctrl-word { font-family: serif !important; } }",
++          " scoped",
++        ),
++      },
++      "template style=": {
++        vue: inTemplate(
++          `<span class="ctrl-word" style="font-family: Comic Sans MS">x</span>`,
++        ),
++      },
++      ":style object": {
++        vue: inTemplate(
++          `<span class="ctrl-word" :style="{ fontFamily: 'Comic Sans MS' }">x</span>`,
++        ),
++      },
++      ":style quoted key": {
++        vue: inTemplate(
++          `<span class="ctrl-word" :style="{ 'font-family': 'Comic Sans MS' }">x</span>`,
++        ),
++      },
++      "Tailwind font- serif (a Tailwind default)": {
++        vue: inTemplate(`<span class="${J("font-", "serif")} ctrl-word">x</span>`),
++      },
++      "Tailwind font-[ … ] literal": {
++        vue: inTemplate(
++          `<span class="${J("font-", "[Comic_Sans_MS]")} ctrl-word">x</span>`,
++        ),
++      },
++      "script .style.fontFamily": {
++        vue: inScript(`document.body.style.fontFamily = ${CS};`),
++      },
++      "script setProperty": {
++        vue: inScript(`document.body.style.setProperty("font-family", ${CS});`),
++      },
++      "script computed key": {
++        vue: inScript(
++          'const k = "font-family"; document.body.style.setProperty(k, "x");',
++        ),
++      },
++      // pass 8 — the pass-7 critic's eleven shapes (critique §2.1)
++      "E1 a scoped SHADOW of a voice": {
++        vue: block(`.ctrl-word { --face-printed: ${CS}; }`, " scoped"),
++      },
++      "a minted --face-plant": {
++        vue: block(
++          `.ctrl-word { --face-plant: ${CS}; font-family: var(--face-plant); }`,
++          " scoped",
++        ),
++      },
++      "a later :root override": { vue: block(`:root { --font-display: ${CS}; }`) },
++      "script cssText": {
++        vue: inScript(`document.body.style.cssText = "font-family: Comic Sans MS";`),
++      },
++      "script setAttribute('style')": {
++        vue: inScript(
++          `document.body.setAttribute("style", "font-family: Comic Sans MS");`,
++        ),
++      },
++      "script style.font": {
++        vue: inScript(`document.body.style.font = "16px Comic Sans MS";`),
++      },
++      "a TS style object": {
++        ts: `export const plant = { style: { fontFamily: ${CS} } };\n`,
++      },
++      "an SVG font-family= attribute": {
++        vue: inTemplate(`<svg><text font-family="Comic Sans MS">x</text></svg>`),
++      },
++      "Tailwind font-( --x ) to a literal": {
++        vue: block(`:root { --plant-lit: ${CS}; }`).replace(
++          /<\/template>\s*(?=<script|<style|$)/,
++          `<span class="${J("font-", "(--plant-lit)")}">x</span>\n</template>\n`,
++        ),
++      },
++      "a <style> in a script string (.vue)": {
++        vue: inScript(`const pose = \`<style>text{font-family:${CS}}</style>\`;`),
++      },
++      "a <style> in a script string (.ts)": {
++        ts: `export const pose = \`<style>text{font-family:${CS}}</style>\`;\n`,
++      },
++      "a minted --face-* ALIAS of a voice (V1 alone)": {
++        vue: block(
++          ".ctrl-word { --face-plant: var(--face-written); font-family: var(--face-plant); }",
++          " scoped",
++        ),
++      },
++      "a shadow of an ALIAS that walk order hides (C1 alone)": {
++        vue:
++          block(
++            `.ctrl-word { --plant-alias: ${CS}; font-family: var(--plant-alias); }`,
++            " scoped",
++          ) + "\n<style>\n:root { --plant-alias: var(--face-mono); }\n</style>\n",
++      },
++      // the admission is keyed on the exact value
++      "the admitted logo literal changed": {
++        logo: (t) =>
++          t.replace(
++            "text{font-family:'FrauncesBake',Georgia,serif;",
++            "text{font-family:'Comic Sans MS',Georgia,serif;",
++          ),
++      },
++    };
++    const LAWFUL = {
++      "font: inherit": { vue: block(".ctrl-word { font: inherit; }") },
++      "font: size + token": {
++        vue: block(".ctrl-word { font: 400 1rem var(--face-printed); }"),
++      },
++      "a var-led shorthand to a token": {
++        vue: block(".ctrl-word { font: var(--w, 400) 1rem var(--face-written); }"),
++      },
++      "Tailwind weight + token": {
++        vue: inTemplate(
++          `<b class="${J("font-", "[600]")} ${J("font-", "[family-name", ":var(--face-written)]")} ${J("font-", "mono")}">x</b>`,
++        ),
++      },
++      "Tailwind font-( --voice )": {
++        vue: inTemplate(`<b class="${J("font-", "(--face-written)")}">x</b>`),
++      },
++      "@font-face descriptor": {
++        vue: block('@font-face { font-family: "Plant"; src: local("x"); }'),
++      },
++      "a scoped alias of a voice": {
++        vue: block(
++          ".ctrl-word { --plant-alias: var(--face-mono); font-family: var(--plant-alias); }",
++          " scoped",
++        ),
++      },
++      "a TS style object reading a voice": {
++        ts: 'export const ok = { style: { fontFamily: "var(--face-printed)" } };\n',
++      },
++    };
++    const optsFor = (pl) => {
++      const extra = pl.ts ? [tsHost] : [];
++      return {
++        extra,
++        read: (f) =>
++          f === host && pl.vue
++            ? pl.vue
++            : f === tsHost
++              ? pl.ts
++              : f === logo && pl.logo
++                ? pl.logo(readFileSync(f, "utf8"))
++                : readFileSync(f, "utf8"),
++      };
++    };
++    const battery = (off) => {
++      const clean = check7(fe, {}, off);
++      const out = { clean, green: [], lawfulRed: [] };
++      for (const [name, pl] of Object.entries(PLANTS))
++        if (check7(fe, optsFor(pl), off).length <= clean.length) out.green.push(name);
++      for (const [name, pl] of Object.entries(LAWFUL)) {
++        const got = check7(fe, optsFor(pl), off);
++        if (got.length !== clean.length)
++          out.lawfulRed.push(`${name}: ${got.slice(-1)}`);
++      }
++      return out;
+     };
+-    const clean = judge(fe);
+-    for (const [name, text] of Object.entries(PLANTS)) {
+-      const got = judge(fe, {
+-        read: (f) => (f === host ? text : readFileSync(f, "utf8")),
+-      });
+-      if (got.length <= clean.length)
+-        problems.push(
+-          `check 7's plant "${name}" did not red — the law cannot fail on that shape`,
+-        );
+-    }
+     // public/** and index.html are sources too
+     const pubPlant = join(fe, "public/__check7-plant.css");
+-    if (
+-      judge(fe, {
+-        extra: [pubPlant],
+-        read: (f) =>
+-          f === pubPlant
+-            ? '.x { font-family: "Comic Sans MS"; }'
+-            : readFileSync(f, "utf8"),
+-      }).length <= clean.length
+-    )
+-      problems.push(`check 7's plant "public/ stylesheet" did not red`);
+     const html = join(fe, "index.html");
+-    if (
+-      judge(fe, {
+-        read: (f) =>
+-          f === html
+-            ? readFileSync(f, "utf8").replace(
+-                "</head>",
+-                "<style>.x{font-family:Papyrus}</style></head>",
+-              )
+-            : readFileSync(f, "utf8"),
+-      }).length <= clean.length
+-    )
+-      problems.push(`check 7's plant "index.html <style>" did not red`);
+-    // the lawful forms stay green (a law that reds everything is not a law either)
+-    for (const [name, text] of Object.entries({
+-      "font: inherit":
+-        hostText + "\n<style>\n.ctrl-word { font: inherit; }\n</style>\n",
+-      "font: size + token":
+-        hostText +
+-        "\n<style>\n.ctrl-word { font: 400 1rem var(--face-printed); }\n</style>\n",
+-      "a var-led shorthand to a token":
+-        hostText +
+-        "\n<style>\n.ctrl-word { font: var(--w, 400) 1rem var(--face-written); }\n</style>\n",
+-      "Tailwind weight + token": inTemplate(
+-        '<b class="font-[600] font-[var(--face-written)] font-mono">x</b>',
+-      ),
+-      "@font-face descriptor":
+-        hostText +
+-        '\n<style>\n@font-face { font-family: "Plant"; src: local("x"); }\n</style>\n',
+-    })) {
+-      const got = judge(fe, {
+-        read: (f) => (f === host ? text : readFileSync(f, "utf8")),
+-      });
+-      if (got.length !== clean.length)
+-        problems.push(
+-          `check 7 reds a LAWFUL form (${name}) — the law is wrong: ${got.slice(-1)}`,
++    const extraPlants = (off, cleanLen) => {
++      const g = [];
++      if (
++        check7(
++          fe,
++          {
++            extra: [pubPlant],
++            read: (f) =>
++              f === pubPlant ? `.x { font-family: ${CS}; }` : readFileSync(f, "utf8"),
++          },
++          off,
++        ).length <= cleanLen
++      )
++        g.push("public/ stylesheet");
++      if (
++        check7(
++          fe,
++          {
++            read: (f) =>
++              f === html
++                ? readFileSync(f, "utf8").replace(
++                    "</head>",
++                    "<style>.x{font-family:Papyrus}</style></head>",
++                  )
++                : readFileSync(f, "utf8"),
++          },
++          off,
++        ).length <= cleanLen
++      )
++        g.push("index.html <style>");
++      return g;
++    };
++    const CLAUSES7 = ["V1", "V2", "C1", "K1"];
++    if (process.argv.includes("--sabotage")) {
++      // LAWS P7 §F (ii): each clause off in turn must red the plant battery
++      let holes = 0;
++      for (const id of CLAUSES7) {
++        const b = battery(new Set([id]));
++        const bit = b.green.length > 0 || b.lawfulRed.length > 0 || b.clean.length > 0;
++        if (!bit) holes++;
++        console.log(
++          `CHECK 7 SABOTAGE ${id} → ${bit ? `RED (green plants: ${b.green.join(" | ") || "—"}; clean findings ${b.clean.length})` : "GREEN — the clause has no plant"}`,
+         );
++      }
++      console.log(
++        `CHECK 7 SABOTAGE: ${CLAUSES7.length - holes}/${CLAUSES7.length} clauses red when deleted`,
++      );
++      process.exit(holes ? 1 : 0);
+     }
+-    for (const d of clean)
++    const b = battery(new Set());
++    for (const name of [...b.green, ...extraPlants(new Set(), b.clean.length)])
+       problems.push(
+-        `the face law (check 7): ${d}. A literal family reaches no voice; read a \`--face-*\` token.`,
++        `check 7's plant "${name}" did not red — the law cannot fail on that shape`,
++      );
++    for (const l of b.lawfulRed)
++      problems.push(`check 7 reds a LAWFUL form (${l}) — the law is wrong`);
++    for (const d of b.clean)
++      problems.push(
++        `the face law (check 7): ${d}. A family reaches a voice or it reds; read a \`--face-*\` token.`,
++      );
++    if (process.argv.includes("--print-7"))
++      console.log(
++        `check 7: ${Object.keys(PLANTS).length + 2} plants red, ${Object.keys(LAWFUL).length} lawful forms green, ${b.clean.length} findings`,
+       );
+   }
+ }
+diff --git a/web/frontend/scripts/shape-census.d.mts b/web/frontend/scripts/shape-census.d.mts
+new file mode 100644
+index 0000000..d3a524c
+--- /dev/null
++++ b/web/frontend/scripts/shape-census.d.mts
+@@ -0,0 +1,5 @@
++// The narrow surface `vite.config.ts` (face-stamp) reads off the ONE shape-census library
++// (registry-v7 §2.4). An ambient `declare module` cannot name a relative path, so the declaration
++// sits beside the module, as `e2e/lib/*.d.mts` do.
++/** The files `files` pull in through CSS `@import` chains, the inputs included. */
++export function followImports(files: string[]): string[];
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 0cf8cb3..39b360d 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -69,6 +69,14 @@ export const CLAUSES = {
+   "tw-split": "FACE · Tailwind arbitrary values kept whole (font-[ … ])",
+   "tpl-file": "FACE · template sites attributed to their file",
+   "script-css": "FACE · CSS text inside script strings",
++  "script-shorthand":
++    "FACE p8 · a script write of a SHORTHAND (`.style.font =`) is a site of its longhands",
++  "script-style-object":
++    "FACE p8 · a script STYLE OBJECT key (`{ fontFamily: … }`, `style: { font: … }`) is a site",
++  "svg-presentation":
++    "FACE p8 · an SVG presentation attribute (`font-family=`, `:font-family=`) is a site",
++  "tw-var-shorthand":
++    "FACE p8 · Tailwind v4 `font-( --x )` is `font-family: var(--x)`; `font-[ var() ]` is a WEIGHT",
+   "tok-sites": "GRAPHITE · tokenSites: every publisher of a custom property",
+   "tw-arbitrary":
+     "GRAPHITE · Tailwind arbitrary properties [ --tok:v ] as declaration sites",
+@@ -816,8 +824,8 @@ function stripVariants(t) {
+   let d = 0,
+     cut = 0;
+   for (let i = 0; i < t.length; i++) {
+-    if (t[i] === "[") d++;
+-    else if (t[i] === "]") d--;
++    if (t[i] === "[" || (t[i] === "(" && on("tw-var-shorthand"))) d++;
++    else if (t[i] === "]" || (t[i] === ")" && on("tw-var-shorthand"))) d--;
+     else if (t[i] === ":" && d === 0) cut = i + 1;
+   }
+   return t.slice(cut);
+@@ -836,7 +844,18 @@ export function TAILWIND_ALL(tw) {
+     out.push(["min-height", m[1] === "0" ? "0px" : m[1].replace(/^\[|\]$/g, "")]);
+   else if ((m = /^font-(sans|serif|mono|hand|display)$/.exec(t)))
+     out.push(["font-family", m[1]]);
+-  else if ((m = /^font-\[(.+)\]$/.exec(t))) out.push(["font-family", arb(m[1])]);
++  else if (
++    on("tw-var-shorthand") &&
++    (m = /^font-\((?:family-name:)?(--[\w-]+)\)$/.exec(t))
++  )
++    out.push(["font-family", `var(${m[1]})`]);
++  else if (
++    on("tw-var-shorthand") &&
++    (m = /^font-\[(?!family-name:)(var\(.+\)|\d+)\]$/.exec(t))
++  )
++    out.push(["font-weight", arb(m[1])]); // Tailwind v4 infers a bare var()/number as a weight
++  else if ((m = /^font-\[(.+)\]$/.exec(t)))
++    out.push(["font-family", arb(m[1]).replace(/^family-name:/, "")]);
+   else if ((m = /^overflow-(hidden|clip|visible|auto|scroll)$/.exec(t)))
+     out.push(["overflow", m[1]]);
+   else if (
+@@ -969,6 +988,32 @@ export function templateSites(tpl, cls, baseLine = 1) {
+           for (const d of decls(str[2], line)) out.push({ kind: "style-string", ...d });
+       }
+     }
++    if (on("svg-presentation"))
++      for (const a of attrsOf(attrs)) {
++        const nm = a.name.replace(/^(?::|v-bind:)/, "");
++        if (!/^font-(family|size|weight|style)$/.test(nm) || a.value == null) continue;
++        const bound = nm !== a.name;
++        const lit = bound ? /^\s*(['"`])([\s\S]*)\1\s*$/.exec(a.value) : null;
++        out.push(
++          bound && !lit && nm === "font-family"
++            ? {
++                kind: "presentation-attr-computed",
++                prop: `?${nm}`,
++                value: a.value,
++                line,
++                unresolved: true,
++              }
++            : bound && !lit
++              ? null
++              : {
++                  kind: "presentation-attr",
++                  prop: nm,
++                  value: lit ? lit[2] : a.value,
++                  line,
++                },
++        );
++        if (out.at(-1) === null) out.pop();
++      }
+     for (const tw of candidates(classes))
+       for (const [prop, value] of TAILWIND_ALL(tw))
+         out.push({
+@@ -1082,6 +1127,17 @@ export function scriptWrites(text, prop, baseLine = 1) {
+   for (const m of s.matchAll(/\.style\.([a-zA-Z]+)\s*=(?!=)\s*([^;\n]+)/g))
+     if (m[1] === camel)
+       out.push({ kind: "script-write", prop, value: carry(m[2]), line: L(m.index) });
++    else if (
++      on("script-shorthand") &&
++      m[1] !== "cssText" &&
++      SHORTHANDS[kebab(m[1])]?.includes(prop)
++    )
++      out.push({
++        kind: "script-write",
++        prop: kebab(m[1]),
++        value: carry(m[2]),
++        line: L(m.index),
++      });
+   for (const m of s.matchAll(
+     /\.style\[\s*(['"`])([^'"`]+)\1\s*\]\s*=(?!=)\s*([^;\n]+)/g,
+   ))
+@@ -1133,6 +1189,34 @@ export function scriptWrites(text, prop, baseLine = 1) {
+           value: carry(kv[3]),
+           line: L(m.index),
+         });
++  if (on("script-style-object")) {
++    // any object key spelling `prop` (camel or kebab, quoted or not), and inside a `style: {…}`
++    // object any key that is a SHORTHAND of `prop`; type annotations (`fontFamily: string`) skipped
++    const seen = new Set(out.map((o) => `${o.line}|${o.value}`));
++    // a key INSIDE a string literal is CSS text (script-css's), never an object key
++    const strs = [...s.matchAll(/(["'`])(?:\\.|(?!\1)[^\\])*\1/g)].map((m) => [
++      m.index,
++      m.index + m[0].length,
++    ]);
++    const inStr = (i) => strs.some(([a, b]) => i > a && i < b);
++    const push = (k, v, i) => {
++      const value = carry(v);
++      if (/^(string|number|boolean|undefined|null|unknown|any)\b/.test(value)) return;
++      const line = L(i);
++      if (seen.has(`${line}|${value}`)) return;
++      seen.add(`${line}|${value}`);
++      out.push({ kind: "script-object", prop: kebab(k), value, line });
++    };
++    for (const m of s.matchAll(
++      /(?:^|[{,(\s])(['"]?)([a-zA-Z][\w-]*)\1\s*:\s*([^,{}\n;]+)/g,
++    ))
++      if (kebab(m[2]) === prop && !inStr(m.index + m[0].indexOf(m[2])))
++        push(m[2], m[3], m.index);
++    for (const o of s.matchAll(/\bstyle\s*:\s*\{([^{}]*)\}/g))
++      if (!inStr(o.index))
++        for (const kv of o[1].matchAll(/(['"]?)([a-zA-Z][\w-]*)\1\s*:\s*([^,}]+)/g))
++          if (SHORTHANDS[kebab(kv[2])]?.includes(prop)) push(kv[2], kv[3], o.index);
++  }
+   if (on("csstext"))
+     for (const m of s.matchAll(
+       /(?:\.style\s*\.\s*cssText\s*\+?=(?!=)|setAttribute\(\s*(["'`])style\1\s*,)\s*([^;\n]+)/g,
+@@ -3351,6 +3435,62 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "script-shorthand",
++    "FACE",
++    "p8: `el.style.font = '16px X'` is a font-family site (a shorthand write)",
++    (L) => {
++      const f = fixture({ "src/w.ts": 'el.style.font = "16px Comic Sans MS";\n' });
++      return L.census(f.fe, "*", "font-family", f).some(
++        (s) => s.prop === "font" && /Comic/.test(s.value),
++      );
++    },
++  ],
++  [
++    "script-style-object",
++    "FACE",
++    "p8: a TS style object `{ style: { fontFamily } }` and `style: { font }` are sites",
++    (L) => {
++      const f = fixture({
++        "src/o.ts":
++          'export const a = { style: { fontFamily: "Comic Sans MS" } };\nexport const b = h("p", { style: { font: "12px Papyrus" } });\ntype T = { fontFamily: string };\n',
++      });
++      const s = L.census(f.fe, "*", "font-family", f);
++      return s.length === 2 && s.some((x) => /Papyrus/.test(x.value));
++    },
++  ],
++  [
++    "svg-presentation",
++    "FACE",
++    "p8: an SVG `font-family=` / `:font-family=` presentation attribute is a site",
++    (L) => {
++      const f = fixture({
++        "src/S.vue":
++          '<template><svg><text font-family="Comic Sans MS">a</text><text :font-family="\'Papyrus\'">b</text><text :font-family="fam">c</text></svg></template>\n',
++      });
++      const s = L.census(f.fe, "*", "font-family", f);
++      return (
++        s.filter((x) => x.kind === "presentation-attr").length === 2 &&
++        s.some((x) => x.unresolved)
++      );
++    },
++  ],
++  [
++    "tw-var-shorthand",
++    "FACE",
++    "p8: Tailwind `font-( --x )` is a var() family; `font-[ var() ]` is a weight",
++    (L) => {
++      const a = L.TAILWIND_ALL(J("font-", "(--plant-lit)"));
++      const b = L.TAILWIND_ALL(J("md:font-", "(family-name:--plant-lit)"));
++      const c = L.TAILWIND_ALL(J("font-", "[var(--face-written)]"));
++      return (
++        a[0]?.[0] === "font-family" &&
++        a[0]?.[1] === "var(--plant-lit)" &&
++        b[0]?.[1] === "var(--plant-lit)" &&
++        c[0]?.[0] === "font-weight"
++      );
++    },
++  ],
+   // --- GRAPHITE
+   [
+     "tok-sites",
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index 5ef649f..ef92f3c 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -196,27 +196,12 @@
+        registering the name makes the fallback unreachable. TAPE ablated it (14.384px → 14px,
+        the deck's tape 65.39×19.63 → 64.00×19.63 chromium, 65.40×20.10 → 63.99×19.58 webkit) —
+        a π break on a surface this wave does not claim. DEFENDED, like `--vv-height`'s. */
+-@property --masthead-foot {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+-@property --case-offset {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+ /* derived, not published — registered so a gate reads px rather than token text */
+ @property --sheet-chrome {
+   syntax: "<length>";
+   inherits: true;
+   initial-value: 0px;
+ }
+-@property --card-foot-h {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+ @property --card-pad-t {
+   syntax: "<length>";
+   inherits: true;
+@@ -227,25 +212,11 @@
+   inherits: true;
+   initial-value: 0px;
+ }
+-@property --pin-band {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+-/* The three the chair's §6.8 names by their consumers' cites, registered here rather than
+-   re-minted in three trees: `--fold-tools-h` (CTRL-COST), `--strip-len` (CTRL-TABS),
+-   `--head-rule` (PLR-SELF — `0px` and NOT the `12px` that re-created its struck fallback,
+-   clause 3). */
+-@property --fold-tools-h {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
+-@property --strip-len {
+-  syntax: "<length>";
+-  inherits: true;
+-  initial-value: 0px;
+-}
++/* `--head-rule` (PLR-SELF — `0px` and NOT the `12px` that re-created its struck fallback,
++   clause 3). STRUCK at pass 8, each with 0 readers and 0 writers on this tree: `--masthead-foot`,
++   `--case-offset`, `--card-foot-h` and `--pin-band` (CTRL-TAPE's foot names — registered where
++   their readers are, on the section's fold), `--fold-tools-h` (CTRL-COST, retired) and
++   `--strip-len` (CTRL-TABS, banked). A registration with no consumer is a promise nobody keeps. */
+ @property --head-rule {
+   syntax: "<length>";
+   inherits: true;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index f6c91ea..d5284db 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -1828,6 +1828,11 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   margin-bottom: 0;
+   transform: rotate(var(--washi-tilt));
+   transform-origin: left top;
++  /* THE NOTE FITS ITS ROW (T9-W7 CTRL-FACE pass 8, INTAKE row 11's root). `.washi-wide`'s 15rem
++     hung 21–64 px past the rail card's right edge at the coarse rail, where the card clipped the
++     words and grew a sideways range the page then hid. Capped at its containing row, less its
++     own inset, the note wraps a line sooner and every word is on the paper. */
++  max-width: min(15rem, calc(100% - 0.85rem));
+ }
+ 
+ /* `> .zone-hint` on the well, not a descendant: tabbing into the pencils compartment reveals
+@@ -2429,6 +2434,9 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+   bottom: auto;
+   margin-top: 0.1rem;
+   margin-bottom: 0;
++  /* the bar is the note's berth, so the bar's width is its cap: a 15rem note centred in a
++     218 px bar hung 8–14 px past both of the card's edges (pass 8, INTAKE row 11's root) */
++  max-width: min(15rem, 100%);
+ }
+ 
+ /* The berthed note's seam. `.group:hover` is a DESCENDANT relation and this note is not a
+@@ -2740,15 +2748,18 @@ const ribbonCovered = computed(() => portraitDock.value && !drawerInert.value);
+    into `index.css` cited (registry-v3 §2.9). IT IS CONSUMED BARE. The `, currentColor` this
+    line shipped in pass 3 is STRUCK — a static design token declared in `index.css` is always
+    present, so the fallback could only ever mask a rename, and CTRL-TAPE measured the masked
+-   case computing "". Dashed, because a solid ring on a chip that can also wear a scribble is
+-   two solid marks 8px apart. */
++   case computing "". SOLID (pass 8): the estate reads a ring at every painted pixel (the chair's
++   station-1 ruling), and the pass-7 dash left 28–32 % of each band unpainted and the left band
++   1.73 px deep — a ring with holes, under WCAG 2.4.13's 2 px perimeter where the gaps fell. The
++   dash's reason (a scribbled chip wearing two solid marks 8px apart) is the cost, named in the
++   B-FACE-RING row for the owner. */
+ .mobile-heading-btn:focus-visible {
+-  outline: 2px dashed var(--ring-ink);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+ .tray-well :deep(.ctrl-btn:focus-visible) {
+-  outline: 2px dashed var(--ring-ink);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+diff --git a/web/frontend/src/games/shared/scene.css b/web/frontend/src/games/shared/scene.css
+index ac0a55c..9bc2074 100644
+--- a/web/frontend/src/games/shared/scene.css
++++ b/web/frontend/src/games/shared/scene.css
+@@ -652,16 +652,3 @@
+     opacity: 1;
+   }
+ }
+-
+-/* T9-W7 CTRL-FACE pass 7 (INTAKE row 11) — THE RAIL CARD TAKES NO SIDEWAYS RANGE. `overflow-y: auto`
+-   computes `overflow-x` to auto too, and the hover notes (`.washi-wide`, 15rem, centred over a verb at
+-   the card's right edge) overhang its 218 px content box by 64 px on every arm, the control included:
+-   the card grew a sideways range (282 ≠ 218) and, where the scrollbar is classic, a 17 px bar that
+-   lifted the fade over Deal (WebKit coarse rail −9.81 px on pass 6). The notes were already clipped at
+-   the card's edge; this takes the range and its bar away. Its own rule at the file's end, so the
+-   §10 fold's re-cut of the cap above never collides with it. */
+-@media (min-width: 1024px) {
+-  .controls-card {
+-    overflow-x: hidden;
+-  }
+-}
+diff --git a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+index d0ec153..14d908d 100644
+--- a/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
++++ b/web/frontend/src/pencil/chrome/OptionSelector/OptionSelector.vue
+@@ -135,7 +135,7 @@ function scribbleSeed(val: string | number): number {
+   font-size: var(--type-option);
+ }
+ 
+-/* The word's own box, and the only thing the marks hang off. `display: inline-block` makes it
++/* The word's own box, and the only thing the marks hang off. an inline block display makes it
+    shrink to the rendered advance; the 6px that used to pad the BUTTON pads this instead, so the
+    chip's outer height is what it always was. */
+ .ctrl-word {
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 10d7ad0..4253e14 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -25,28 +25,36 @@ import { defineConfig, type Plugin } from 'vite'
+  * app typecheck.
+  */
+ /**
+- * `face-stamp` (T9-W7 CTRL-FACE pass 7) — THE BUILD RECORDS WHAT IT WAS BUILT FROM, BY CONTENT.
+- * `scripts/check-face-engine-identity.mjs` bound a dist census to its build by MTIME, and a file
+- * restored with `cp -p` (new bytes, the old mtime) walked past it (the pass-6 critic's plant). The
+- * build hashes the gate's own `STAMP_FILES` (parsed from the gate, so the list is spelled once) and
+- * writes `{ js, stamp }` beside the census, OUTSIDE `dist/` — nothing ships. The gate compares the
+- * served js AND the content digest; a dist whose sidecar names another js, or none, is not this tree.
++ * `face-stamp` (T9-W7 CTRL-FACE pass 7; pass 8 keyed on the MODULE GRAPH) — THE BUILD RECORDS WHAT
++ * IT WAS BUILT FROM, BY CONTENT. `scripts/check-face-engine-identity.mjs` binds a dist census to its
++ * build: pass 7 hashed a hand list of seven files and missed `scene.css`, the file that pass edited
++ * (LAWS P7 §F: a stamp keys on the build's module graph, never a hand list). The build now lists
++ * every module it read under this package (node_modules and dist aside) plus each sheet an `@import`
++ * pulls in, hashes each `<rel>\n<bytes>\n` in sorted order, and writes `{ js, stamp, files }` beside
++ * the census OUTSIDE `dist/` — nothing ships. The gate re-hashes the same list from disk.
+  */
+ function faceStamp(): Plugin {
+   return {
+     name: 'face-stamp',
+     apply: 'build',
+-    writeBundle(_opts, bundle) {
+-      const gate = readFileSync(resolve(__dirname, 'scripts/check-face-engine-identity.mjs'), 'utf8')
+-      const list = /const STAMP_FILES = \[([\s\S]*?)\];/.exec(gate)
+-      if (!list) return this.error('face-stamp: STAMP_FILES not found in the gate')
++    async writeBundle(_opts, bundle) {
++      const root = resolve(__dirname)
++      const mine = (p: string) => p.startsWith(root + '/') && !/\/(node_modules|dist)\//.test(p)
++      const mods = new Set<string>()
++      for (const id of this.getModuleIds()) {
++        const abs = id.replace(/^\0/, '').replace(/\?.*$/, '')
++        if (mine(abs) && existsSync(abs) && !statSync(abs).isDirectory()) mods.add(abs)
++      }
++      // a sheet an `@import` pulls in (Tailwind inlines `typography.css` into `index.css`) is read
++      // by the build but is no module of its own: the ONE shape-census library follows the chain
++      const { followImports } = await import('./scripts/shape-census.mjs')
++      const list = [...new Set(followImports([...mods]).filter(mine).map((p) => p.slice(root.length + 1)))].sort()
+       const h = createHash('sha1')
+-      for (const rel of [...list[1].matchAll(/"([^"]+)"/g)].map((m) => m[1]))
+-        h.update(`${rel}\n${readFileSync(resolve(__dirname, rel), 'utf8')}\n`)
++      for (const rel of list) h.update(`${rel}\n${readFileSync(join(root, rel), 'utf8')}\n`)
+       const js = Object.keys(bundle).find((k) => /^assets\/index-[^/]+\.js$/.test(k))
+       const dir = resolve(__dirname, '.face-engine')
+       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+-      writeFileSync(join(dir, 'dist-stamp.json'), JSON.stringify({ js: js ? `/${js}` : null, stamp: h.digest('hex') }))
++      writeFileSync(join(dir, 'dist-stamp.json'), JSON.stringify({ js: js ? `/${js}` : null, stamp: h.digest('hex'), files: list }))
+     },
+   }
+ }
