@@ -73,9 +73,9 @@
     "@vueuse/core": "^14.3.0",
     "tailwindcss": "^4.3.2",
     "unique-names-generator": "^4.7.1",
-    "vue": "^3.5.39"
+    "vue": "^3.5.43"
   },
-  "//devDependencies": "esbuild is listed DIRECTLY with no direct import, and that is the answer to T7-W6's dead-dependency row rather than an oversight: vite and wrangler each depend on it, and npm dedupes them to ONE copy only while the range they both resolve to is pinned here (`npm ls esbuild` \u2014 0.28.1, deduped under vite 8 and wrangler 4). Unpinned, wrangler's exact-version dependency splits the tree into two installs of a multi-megabyte platform binary and lets the build and the deploy disagree about the same syntax. Knip sees no importer for it by design; the pin is the consumer.",
+  "//devDependencies": "esbuild is listed DIRECTLY with no direct import, and that is the answer to T7-W6's dead-dependency row rather than an oversight: vite and wrangler each depend on it, and npm dedupes them to ONE copy only while the range they both resolve to is pinned here (`npm ls esbuild` — 0.28.1, deduped under vite 8 and wrangler 4). Unpinned, wrangler's exact-version dependency splits the tree into two installs of a multi-megabyte platform binary and lets the build and the deploy disagree about the same syntax. Knip sees no importer for it by design; the pin is the consumer.",
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@playwright/test": "^1.61.1",
@@ -99,6 +99,7 @@
     "wrangler": "~4.134.0"
   },
   "overrides": {
-    "undici": "^7.29.0"
+    "undici": "^7.29.1",
+    "sharp": "^0.35.5"
   }
 }
