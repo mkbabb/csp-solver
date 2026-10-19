@@ -1,0 +1,22 @@
+== arm tree load 49.07 51.05 57.32
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > a SECOND front 12 frames after a partial-start front still runs at the panel's frame
+      Tests  6 failed | 42 passed (48)
+exit 1
+== arm p8 load 49.07 51.05 57.32
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 8ms
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 6ms
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels 6ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+      Tests  4 failed | 44 passed (48)
+exit 1
+RESTORED-BYTE-EQUAL

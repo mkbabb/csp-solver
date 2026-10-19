@@ -1,0 +1,26 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-28
+base 74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+pass9.diff (cumulative, --binary, temporary index, product paths only)
+  tree d3a9e60f236a68cdf5290a8b7800b857bbf89429
+  bytes 820057 sha1 38c952dc29683fc028a67223e45ea71a3870b834
+  shortstat 47 files changed, 13473 insertions(+), 1235 deletions(-)
+pass9.delta.diff (this lane's own pass-9 move on 74a2b5d9 + pass8.diff; the homes v1 -> v2 swap and knip.json excluded, they are the chair's)
+  bytes 51313 sha1 45b611b02cd5668df545c6f6921daffd340c5155
+  shortstat 4 files changed, 381 insertions(+), 72 deletions(-)
+pass9.delta.on-WAVE.diff (on acb9c08e + homes.on-WAVE.diff)
+  bytes 32247 sha1 0dba2dfcd3399845a4ebad885c6c0f41d23f9c89
+  shortstat 1 file changed, 282 insertions(+), 49 deletions(-)
+pass9.delta.on-s10.diff (on 7d2b1fdc)
+  bytes 31711 sha1 01b1d73d385712a788a3917c12eff7223462090b
+  shortstat 1 file changed, 282 insertions(+), 48 deletions(-)
+apply --check (git apply --check --binary -v, exit captured before any other command, fresh git-archive trees):
+  check pass9.diff on 74a2b5d9 exit 0 paths 47 refused 0
+  (the homes-inclusive delta, NOT banked: exit 0, 16 paths on 74a2b5d9+pass8.diff)
+  check pass9.delta.on-s10.diff on s10 (7d2b1fdc) exit 0 paths 1 refused 0
+  check pass9.diff on s10 (7d2b1fdc) exit 1 paths 47 refused 33 (expected: B13's incompatible route; the centre does not travel)
+  check pass9.delta.on-WAVE.diff on WAVE (acb9c08e) exit 0 paths 1 refused 0
+  check pass9.delta.on-WAVE.diff on WAVE+homes.on-WAVE exit 0 paths 1 refused 0
+  check pass9.diff on WAVE (acb9c08e) exit 1 paths 47 refused 34 (expected: as on s10)
+  check pass9.delta.diff on 74a2b5d9+pass8.diff exit 0 paths 4 refused 0
+  check instruments/shape-census.logical-sides.PROPOSED.diff on 74a2b5d9+homes.diff (v2) exit 0 paths 1 refused 0
+grep (scratchpad|/private/tmp|/tmp/|.claude/t9-scratch|+++ dot-path): 0 hits in each of the four banks

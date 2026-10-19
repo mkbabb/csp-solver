@@ -1,0 +1,66 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 647faf12..98c2d655 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -125,6 +125,8 @@ export const CLAUSES = {
+   "import-chain": "WALK · @import chains followed wherever they lead",
+   "collect-walk": "LADDER · index.html and public/** walked",
+   longhand: "LADDER · a longhand answers for its shorthand",
++  "logical-sides":
++    "RULE p9 · a logical side (`padding-block-end`, `padding-block`, `margin-block(-end)`, `inset-block(-end)`) is a site of its physical side (horizontal-tb)",
+   "semicolon-less": "LADDER · a semicolon-less declaration before a nested rule",
+   "clock-arith":
+     "LADDER · Math.min/max, bracket and bitwise clock reads are arithmetic",
+@@ -848,6 +850,22 @@ const SHORTHANDS = {
+   background: ["background-color", "background-image"],
+ };
+ export { SHORTHANDS };
++/** RULE (pass 9; the pass-8 critic's K13b / K14): the block-axis LOGICAL properties, read as
++ *  sites of the physical side they set in the estate's one writing mode (horizontal-tb). A reader
++ *  of `padding-bottom` that never asks for `padding-block-end` passed a logical longhand that
++ *  threw the inset away; CSSOM's `getPropertyValue('padding-bottom')` is blind to it as well. */
++const LOGICAL_SIDES = {
++  "padding-block": ["padding-top", "padding-bottom"],
++  "padding-block-start": ["padding-top"],
++  "padding-block-end": ["padding-bottom"],
++  "margin-block": ["margin-top", "margin-bottom"],
++  "margin-block-start": ["margin-top"],
++  "margin-block-end": ["margin-bottom"],
++  "inset-block": ["top", "bottom"],
++  "inset-block-start": ["top"],
++  "inset-block-end": ["bottom"],
++};
++export { LOGICAL_SIDES };
+ /** Does declaration `d` set `prop` — directly, via its shorthand (a var()-led shorthand is a literal
+  *  hit), or (LADDER) as a LONGHAND of the shorthand `prop` asks about? */
+ export function sets(d, prop) {
+@@ -856,6 +874,7 @@ export function sets(d, prop) {
+   if (lh && lh.includes(prop)) return true;
+   if (d.prop === "min-block-size" && prop === "min-height") return true;
+   if (on("longhand") && SHORTHANDS[prop]?.includes(d.prop)) return true;
++  if (on("logical-sides") && LOGICAL_SIDES[d.prop]?.includes(prop)) return true;
+   return false;
+ }
+ const kebab = (k) => {
+@@ -5054,6 +5073,21 @@ const TESTS = [
+       return L.census(f.fe, "r", "animation", f).length === 1;
+     },
+   ],
++  [
++    "logical-sides",
++    "RULE",
++    "RULE p9 (K13b / K14): a logical longhand and the logical block shorthand are sites of padding-bottom",
++    (L) => {
++      const f = fixture({
++        "src/a.css": ".r { padding-block-end: 0.15rem; }\n.s { padding-block: 0 0.15rem; }\n.t { padding-inline-end: 1px; }\n",
++      });
++      return (
++        L.census(f.fe, "r", "padding-bottom", f).length === 1 &&
++        L.census(f.fe, "s", "padding-bottom", f).length === 1 &&
++        L.census(f.fe, "t", "padding-bottom", f).length === 0
++      );
++    },
++  ],
+   [
+     "semicolon-less",
+     "LADDER",

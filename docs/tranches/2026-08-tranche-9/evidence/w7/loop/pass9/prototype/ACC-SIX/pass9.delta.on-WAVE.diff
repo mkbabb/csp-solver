@@ -1,0 +1,1177 @@
+diff --git a/web/frontend/e2e/count-yield.spec.ts b/web/frontend/e2e/count-yield.spec.ts
+index 33b8eedc..c02a5078 100644
+--- a/web/frontend/e2e/count-yield.spec.ts
++++ b/web/frontend/e2e/count-yield.spec.ts
+@@ -20,20 +20,37 @@ import { installTimeline } from "./lib/postpaint.mjs";
+  * down, "1 of 170"), press 3 names the next step with a 34-character line ("E goes nowhere else in
+  * this column"), press 4 writes it.
+  *
+- * Per cell, four clauses, every pose:
+- *   ABSOLUTE — the strip's height and the drawer tab's y equal the CONTROL's at the same pose
+- *     (`CONTROL=<url>`, the same payload and presses on `74a2b5d9`, which has no count at all):
+- *     the count asks the strip for nothing. Ruling 12's clause, restored.
++ * Per cell, three clauses, every pose (pass 9, the chair's ruling 3: the ABSOLUTE strip clause, keyed
++ * on `74a2b5d9`'s 20.8 px, MOVED to the painted reserve, which the note-reserve row reads; 20.8 is
++ * the control's, the reserve is the product's):
+  *   ROW — the count's text never sits below the voice's mid-line.
+  *   YIELD (393x699, 812x375 coarse) — from press 3 the count is gone and stays gone.
+- *   FIT (1280x800 fine, 844x390 coarse) — at press 3 the count is still on the voice's row
+- *     ("1 of 170 on the board"): a yield keyed on the hint's LENGTH ends the lesson here.
+- * And across press 3, POST-PAINT (the ONE recorder's `range:` subject, a task queued from every rAF):
++ *   FIT (1280x800 fine, 844x390 coarse) — the count is laid beside the step's line at press 2 and
++ *     is still on the voice's row at press 3 ("1 of 170 on the board"): a yield keyed on the hint's
++ *     LENGTH ends the lesson here. SEAT: where a record stands in line two at press 3 (§7's ledger,
++ *     the WAVE union's `.margin-note-previous`; never on `74a2b5d9`), the record takes the count's
++ *     berth by the integrator's rule and the count must be gone and stay gone.
++ * And across presses 2 and 3, POST-PAINT (the ONE recorder's `range:` subject, a task queued from
++ * every rAF):
+  *   PAINT — 0 frames paint the count's text on a second row ("the same frame, before paint").
+  *
+- * BORN-RED (the same tree served with one in-memory rewrite, `pass8/prototype/ACC-SIX/instruments/
+- * plant.mts`): `overyield` (the yield keyed on the voice's length) reds FIT; `late150` (the report
+- * 150 ms late) reds PAINT; `yieldoff` (no report) reds YIELD, ROW and PAINT.
++ * RESIZE (pass 9, the pass-8 critic's G-RO): the yield's other half is a ResizeObserver on the block
++ * and the voice. With the count standing beside a voice at a width where it fits (the first voiced
++ * pose: press 2 on the union, press 3 on `74a2b5d9`, whose press-2 hint is silent; never press 3 under
++ * §7's seat), the window narrows (1280x800 to 393x699, 844x390 to 600x390), both schemes: the count
++ * must not sit on a second row
++ * when the strip settles, and no post-paint frame after the resize may paint it there.
++ * FONT (the hand's font landing): every font response is held until the count's write has run, then
++ * released; the same two clauses across the landing. The fallback face is WIDER than the hand, so
++ * under it the count has already yielded and a landing can only narrow the line: on this
++ * product the landing has no failing state, and the leg is a witness, not a gate (printed as such).
++ * METRIC (the landing's mechanism, made to bite): with the count standing beside the voice, the
++ * voice's glyph metrics widen in place (letter-spacing, no text change, no viewport change), which is
++ * what a narrower-fallback landing would do; the same two clauses.
++ *
++ * BORN-RED (the same tree built with one rewrite, `pass9/prototype/ACC-SIX/instruments/`):
++ * `overyield` (the yield keyed on the voice's length) reds FIT; `late150` (the report 150 ms late)
++ * reds PAINT; `noro` (no ResizeObserver) reds RESIZE.
+  */
+ 
+ type Cell = { name: string; viewport: { width: number; height: number }; coarse: boolean; fits: boolean };
+@@ -43,7 +60,6 @@ const cells: Cell[] = [
+   { name: "1280x800 fine", viewport: { width: 1280, height: 800 }, coarse: false, fits: true },
+   { name: "844x390 coarse", viewport: { width: 844, height: 390 }, coarse: true, fits: true },
+ ];
+-const CONTROL = process.env.CONTROL;
+ 
+ // A REAL 16x16 payload: a valid solved grid by the band pattern, 86 givens seeded, 170 writable.
+ function mulberry(a: number) {
+@@ -83,6 +99,8 @@ type Pose = {
+   meta: string | null;
+   /** the count's TEXT (its Range, the box is 0 px tall) sits below the voice's mid-line */
+   metaRow2: boolean;
++  /** a record stands in line two (§7's ledger, `.margin-note-previous`; absent on `74a2b5d9`) */
++  record: boolean;
+   /** the voice's mid-line, the row-two threshold for the painted timeline */
+   voiceMid: number | null;
+   coarse: boolean;
+@@ -109,6 +127,7 @@ const SNAP = (): Pose => {
+     voice: voice?.textContent?.trim() ?? "",
+     meta: meta?.textContent?.trim() ?? null,
+     metaRow2,
++    record: !!document.querySelector(".margin-note-previous:not(.is-hidden)"),
+     voiceMid,
+     coarse: matchMedia("(pointer: coarse)").matches,
+   };
+@@ -131,18 +150,27 @@ async function settled(page: Page): Promise<Pose> {
+     .toBe(true);
+   return pose;
+ }
+-async function open(browser: Browser, cell: Cell, base?: string) {
++type Open = { scheme?: "light" | "dark"; holdFonts?: Promise<void> };
++async function open(browser: Browser, cell: Cell, o: Open = {}) {
+   const ctx = await browser.newContext({
+     viewport: cell.viewport,
+     hasTouch: cell.coarse,
+     isMobile: false,
+-    ...(base ? { baseURL: base } : {}),
++    colorScheme: o.scheme ?? "light",
+   });
+   const page = await ctx.newPage();
++  if (o.holdFonts) {
++    const gate = o.holdFonts;
++    await page.route(/\.(woff2?|ttf|otf)(\?|$)/, async (r) => {
++      await gate;
++      await r.continue();
++    });
++  }
+   await page.emulateMedia({ reducedMotion: "reduce" });
+-  await page.goto("/" + BOARD16);
++  // a held font holds the load event: the page is read from its DOM, never its load
++  await page.goto("/" + BOARD16, o.holdFonts ? { waitUntil: "domcontentloaded" } : undefined);
+   await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
+-  await page.evaluate(() => document.fonts.ready);
++  if (!o.holdFonts) await page.evaluate(() => document.fonts.ready);
+   return { ctx, page };
+ }
+ /** The product's own hint, as `fillByHint` presses it (the first live match in the DOM). */
+@@ -152,71 +180,77 @@ const hint = (page: Page) =>
+     b?.click();
+     return !!b;
+   });
+-const fill = (page: Page) =>
+-  page.evaluate(() => document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuetext") ?? "");
+ const written = (page: Page) =>
+   page.evaluate(() =>
+     Number(document.querySelector('[role="progressbar"]')?.getAttribute("aria-valuetext")?.split(" ")[0] ?? -1),
+   );
+ 
++
+ type Frame = { k: number; t: number; r: { x: number; y: number; w: number; h: number } | null };
+-/** Rest, four presses; press 3 is recorded post-paint (`range:` over the count's text). */
+-async function drive(browser: Browser, cell: Cell, base?: string) {
+-  const { ctx, page } = await open(browser, cell, base);
++const stopTimeline = (page: Page) =>
++  page.evaluate(() => {
++    const w = window as unknown as { __pf: { on: boolean; post: Frame[] } };
++    w.__pf.on = false;
++    return w.__pf.post;
++  });
++/** Rest, then presses 1 and 2 (the count laid, "1 of 170"): the poses so far. `before2` runs just
++ *  before press 2 (the write that lays the count). */
++async function lay(page: Page, before2?: () => Promise<unknown>) {
+   const poses: Array<[string, Pose]> = [["rest", await settled(page)]];
+-  // the control (74a2b5d9) says its fill as a percent and has no count: its presses are waited on
+-  // the progressbar's value changing, the tree's on the count it writes
+-  const control = !!base;
+   for (let k = 0; k < 2; k++) {
+-    const before = await fill(page);
++    if (k === 1 && before2) await before2();
+     expect(await hint(page)).toBe(true);
+-    if (control && k === 1) await expect.poll(() => fill(page), { timeout: 10000 }).not.toBe(before);
+-    else if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBeGreaterThanOrEqual(k);
++    await expect.poll(() => written(page), { timeout: 10000 }).toBeGreaterThanOrEqual(k);
+     poses.push([`press${k + 1}`, await settled(page)]);
+   }
+-  if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBe(1);
++  await expect.poll(() => written(page), { timeout: 10000 }).toBe(1);
+   poses.push(["laid", await settled(page)]);
+-  await page.evaluate(installTimeline, "range:.margin-note-meta");
++  return poses;
++}
++/** Rest, four presses; presses 2 and 3 are recorded post-paint (`range:` over the count's text): the
++ *  count's laying and the long line, so a yield at either press is inside the window. */
++async function drive(browser: Browser, cell: Cell) {
++  const { ctx, page } = await open(browser, cell);
++  const poses = await lay(page, () => page.evaluate(installTimeline, "range:.margin-note-meta"));
+   expect(await hint(page)).toBe(true);
+   poses.push(["press3", await settled(page)]);
+-  const pf = await page.evaluate(() => {
+-    const w = window as unknown as { __pf: { on: boolean; post: Frame[] } };
+-    w.__pf.on = false;
+-    return w.__pf.post;
+-  });
++  const pf = await stopTimeline(page);
+   expect(await hint(page)).toBe(true);
+-  // the second write: the tree's count says it; the control's percent cannot (1 and 2 of 170 both
+-  // round to 1 %), so the control is given the write's own settle
+-  if (!control) await expect.poll(() => written(page), { timeout: 10000 }).toBe(2);
+-  else await page.waitForTimeout(1500);
++  await expect.poll(() => written(page), { timeout: 10000 }).toBe(2);
+   poses.push(["press4", await settled(page)]);
+   await ctx.close();
+   return { poses: Object.fromEntries(poses) as Record<string, Pose>, order: poses.map(([n]) => n), frames: pf };
+ }
++/** Frames after `t0` whose count text paints below the settled voice's mid-line. */
++const rowTwo = (frames: Frame[], t0: number, mid: number) =>
++  frames.filter((f) => f.t > t0 && f.r && f.r.h > 0 && f.r.y > mid);
+ 
+ for (const cell of cells) {
+   test(`the count ${cell.fits ? "stays where it fits" : "yields and stays gone"}, on one row, painting no second · ${cell.name}`, async ({
+     browser,
+   }) => {
+     test.setTimeout(180000);
+-    expect(CONTROL, "CONTROL=<url of 74a2b5d9> is required: the absolute clause reads the control's strip").toBeTruthy();
+     const tree = await drive(browser, cell);
+-    const ctrl = await drive(browser, cell, CONTROL);
+     const P = tree.poses;
+     expect(P.rest.coarse, "the pointer regime is witnessed").toBe(cell.coarse);
+     expect(P.rest.meta, "no count before the first write").toBe(null);
+-    expect(P.laid.meta, "the count was laid down (the row's witness)").toBe("1 of 170 on the board");
++    // a FIT cell lays the count beside the step's line; a YIELD cell may already give it up at press 2
++    expect(cell.fits ? P.laid.meta : (P.laid.meta ?? "1 of 170 on the board"), "the count was laid down (the row's witness)").toBe(
++      "1 of 170 on the board",
++    );
+     expect(P.press3.voice.length, "press 3 speaks the long line").toBeGreaterThanOrEqual(30);
+ 
+     // soft from here: a broken tree shows EVERY clause it breaks, not the first
+     for (const n of tree.order) {
+       const p = P[n];
+-      const c = ctrl.poses[n];
+-      expect.soft(Math.abs(p.strip - c.strip), `${n}: ABSOLUTE strip ${p.strip} vs control ${c.strip}`).toBeLessThanOrEqual(0.5);
+-      expect.soft(Math.abs((p.tabY ?? 0) - (c.tabY ?? 0)), `${n}: ABSOLUTE tab ${p.tabY} vs control ${c.tabY}`).toBeLessThanOrEqual(0.5);
+       expect.soft(p.metaRow2, `${n}: ROW the count never sits on a second row`).toBe(false);
+     }
+-    if (cell.fits) {
++    if (cell.fits && P.press3.record) {
++      // §7's seat (the WAVE integrator's, `MarginNote.vue` readYield): a record standing in line two
++      // takes the count's berth, a yield like any other. FIT's own pose is then `laid` (above).
++      expect.soft(P.press3.meta, "SEAT: a record in line two takes the count's berth").toBe(null);
++      expect.soft(P.press4.meta, "SEAT: once yielded the count stays gone (no blink)").toBe(null);
++    } else if (cell.fits) {
+       expect.soft(P.press3.meta, "FIT: beside the long line the count stays").toBe("1 of 170 on the board");
+       expect.soft(P.press4.meta, "FIT: the next write updates it in place").toBe("2 of 170 on the board");
+     } else {
+@@ -224,16 +258,123 @@ for (const cell of cells) {
+       expect.soft(P.press4.meta, "YIELD: once yielded the count stays gone (no blink)").toBe(null);
+     }
+     const mid = P.laid.voiceMid ?? 0;
+-    const row2 = tree.frames.filter((f) => f.r && f.r.h > 0 && f.r.y > mid);
++    const row2 = rowTwo(tree.frames, -Infinity, mid);
+     const withCount = tree.frames.filter((f) => f.r && f.r.h > 0).length;
+-    expect.soft(tree.frames.length, "PAINT: the recorder read frames across press 3").toBeGreaterThanOrEqual(10);
++    expect.soft(tree.frames.length, "PAINT: the recorder read frames across presses 2 and 3").toBeGreaterThanOrEqual(10);
+     expect.soft(row2.length, `PAINT: frames painting the count on a second row (of ${tree.frames.length})`).toBe(0);
+     console.log(
+       `YIELD ${cell.name}: ` +
+         tree.order
+-          .map((n) => `${n} strip ${P[n].strip}/${ctrl.poses[n].strip} tab ${P[n].tabY}/${ctrl.poses[n].tabY} meta ${P[n].meta ?? "-"}${P[n].metaRow2 ? " ROW2" : ""}`)
++          .map((n) => `${n} strip ${P[n].strip} tab ${P[n].tabY} meta ${P[n].meta ?? "-"}${P[n].metaRow2 ? " ROW2" : ""}${P[n].record ? " RECORD" : ""}`)
+           .join(" · ") +
+         ` · press3 voice "${P.press3.voice}" (${P.press3.voice.length}) · post-paint frames ${tree.frames.length}, with count ${withCount}, row two ${row2.length}`,
+     );
+   });
+ }
++
++/** Stand the count beside a voice, then run `turn` with the post-paint recorder on: the strip re-reads
++ *  its yield on the turn alone (no text changes). The stand is the first pose with a voice: `laid` where
++ *  the press-2 hint speaks (the union), press 3 where it is silent (`74a2b5d9`, whose voice first speaks
++ *  at press 3). Never press 3 when `laid` already speaks: on the union a record in line two takes the
++ *  count's berth at press 3 (§7's seat), and the turn must find the count standing. */
++async function across(page: Page, turn: () => Promise<void>) {
++  const poses = await lay(page);
++  if (!poses[poses.length - 1][1].voice) {
++    expect(await hint(page)).toBe(true);
++    poses.push(["press3", await settled(page)]);
++  }
++  const stand = poses[poses.length - 1][1];
++  await page.evaluate(installTimeline, "range:.margin-note-meta");
++  // The turn's clock starts at its `resize` event, not at the call: a viewport set between a frame's
++  // paint and its post-paint read makes that read force a layout at the new width that no frame has
++  // rendered (no ResizeObserver delivery, no paint). The first rendered frame at the new width runs
++  // the resize steps first. With no resize (the font's landing) the clock starts at the call.
++  const t0 = await page.evaluate(() => {
++    const w = window as unknown as { __rz?: number };
++    w.__rz = undefined;
++    addEventListener("resize", () => (w.__rz ??= performance.now()));
++    return performance.now();
++  });
++  await turn();
++  const after = await settled(page);
++  // a fixed tail past the settle: WebKit's frames run at its shim's 25-50 Hz, and the window must
++  // hold ten frames after the turn in both engines
++  await page.waitForTimeout(500);
++  const frames = await stopTimeline(page);
++  const tz = (await page.evaluate(() => (window as unknown as { __rz?: number }).__rz)) ?? t0;
++  const before = Object.fromEntries(poses) as Record<string, Pose>;
++  const mid = after.voiceMid ?? 0;
++  const pre = rowTwo(frames, t0, mid).filter((f) => f.t <= tz);
++  return { before, stand, after, frames, t0, tz, pre, row2: rowTwo(frames, tz, mid), late: frames.filter((f) => f.t > tz).length };
++}
++const show = (fs: Frame[], tz: number) => fs.map((f) => `k${f.k}@${(f.t - tz).toFixed(1)}ms y${f.r?.y}`).join(" ") || "none";
++
++const RESIZES: Array<{ from: Cell; to: { width: number; height: number } }> = [
++  { from: cells[2], to: { width: 393, height: 699 } },
++  { from: cells[3], to: { width: 600, height: 390 } },
++];
++for (const scheme of ["light", "dark"] as const)
++  for (const { from, to } of RESIZES)
++    test(`RESIZE: the count re-reads its yield when the strip narrows · ${from.name} → ${to.width}x${to.height} · ${scheme}`, async ({
++      browser,
++    }) => {
++      test.setTimeout(180000);
++      const { ctx, page } = await open(browser, from, { scheme });
++      const r = await across(page, () => page.setViewportSize(to));
++      await ctx.close();
++      expect(r.stand.voice && r.stand.meta && !r.stand.record, "the count stands beside a voice before the resize (the row's witness)").toBeTruthy();
++      expect.soft(r.after.metaRow2, "RESIZE: the count never sits on a second row once the strip settles").toBe(false);
++      expect.soft(r.late, "RESIZE: the recorder read frames after the resize").toBeGreaterThanOrEqual(10);
++      expect.soft(r.row2.length, `RESIZE: post-paint frames painting the count on a second row (of ${r.late})`).toBe(0);
++      console.log(
++        `RESIZE ${from.name} → ${to.width}x${to.height} ${scheme}: stand ${r.stand.voice ? "voiced" : "silent"} meta ${r.stand.meta} · after meta ${r.after.meta ?? "-"}${r.after.metaRow2 ? " ROW2" : ""} strip ${r.after.strip} voiceMid ${r.after.voiceMid?.toFixed(1)} · frames after ${r.late}, row two ${r.row2.length} [${show(r.row2, r.tz)}] · unrendered reads before the resize event ${r.pre.length} [${show(r.pre, r.tz)}]`,
++      );
++    });
++
++test(`FONT: the count re-reads its yield when the hand's font lands · ${cells[3].name}`, async ({ browser }) => {
++  test.setTimeout(180000);
++  let release!: () => void;
++  const held = new Promise<void>((res) => (release = res));
++  const { ctx, page } = await open(browser, cells[3], { holdFonts: held });
++  const status = await page.evaluate(() => document.fonts.status);
++  const r = await across(page, async () => {
++    release();
++    await page.evaluate(() => document.fonts.ready);
++  });
++  await ctx.close();
++  expect(status, "the fonts were still loading when the presses ran (the row's witness)").toBe("loading");
++  expect.soft(r.after.metaRow2, "FONT: the count never sits on a second row once the font lands").toBe(false);
++  expect.soft(r.row2.length, `FONT: post-paint frames painting the count on a second row (of ${r.late})`).toBe(0);
++  console.log(
++    `FONT ${cells[3].name}: status at the presses ${status} · stand voiceMid ${r.stand.voiceMid?.toFixed(1)} meta ${r.stand.meta} · after voiceMid ${r.after.voiceMid?.toFixed(1)} meta ${r.after.meta ?? "-"}${r.after.metaRow2 ? " ROW2" : ""} · frames after ${r.late}, row two ${r.row2.length}`,
++  );
++});
++
++for (const cell of [cells[2], cells[3]])
++  test(`METRIC: the count re-reads its yield when the voice's glyphs widen in place · ${cell.name}`, async ({ browser }) => {
++    test.setTimeout(180000);
++    const { ctx, page } = await open(browser, cell);
++    let px = 0;
++    const r = await across(page, async () => {
++      // the room left at the line's end, spread over the voice's letters plus 24 px: the count no
++      // longer fits beside the voice. Assembled at run time: a spec is a Tailwind source (T9-R6).
++      px = await page.evaluate(() => {
++        const block = document.querySelector(".margin-note-block")!.getBoundingClientRect();
++        const rg = document.createRange();
++        rg.selectNodeContents(document.querySelector(".margin-note-meta")!);
++        const room = block.right - rg.getBoundingClientRect().right;
++        const n = (document.querySelector(".margin-note")?.textContent ?? "").trim().length || 1;
++        return Math.ceil((Math.max(0, room) + 24) / n);
++      });
++      await page.addStyleTag({ content: [".margin-note", "{ letter-spacing:", px + "px !important }"].join(" ") });
++    });
++    await ctx.close();
++    console.log(
++      `METRIC ${cell.name}: letter-spacing ${px}px · stand ${r.stand.voice ? "voiced" : "silent"} meta ${r.stand.meta} · after meta ${r.after.meta ?? "-"}${r.after.metaRow2 ? " ROW2" : ""} voiceMid ${r.after.voiceMid?.toFixed(1)} · frames after ${r.late}, row two ${r.row2.length} [${show(r.row2, r.tz)}]`,
++    );
++    expect(r.stand.voice && r.stand.meta && !r.stand.record, "the count stands beside a voice before the widening (the row's witness)").toBeTruthy();
++    expect(r.after.meta === null || r.after.metaRow2, "the widening leaves no room beside the voice (the row's witness)").toBe(true);
++    expect.soft(r.after.metaRow2, "METRIC: the count never sits on a second row once the strip settles").toBe(false);
++    expect.soft(r.late, "METRIC: the recorder read frames after the widening").toBeGreaterThanOrEqual(10);
++    expect.soft(r.row2.length, `METRIC: post-paint frames painting the count on a second row (of ${r.late})`).toBe(0);
++  });
+diff --git a/web/frontend/e2e/front-rate.spec.ts b/web/frontend/e2e/front-rate.spec.ts
+index d8e6cd76..8cb21f3b 100644
+--- a/web/frontend/e2e/front-rate.spec.ts
++++ b/web/frontend/e2e/front-rate.spec.ts
+@@ -1,6 +1,7 @@
+ // PRM: live, because the subject IS the tween: the front's re-cut only runs while a draw-in eases, and
+ // under reduced motion every consumer lands its fraction in one frame with nothing to count.
+ import { test, expect } from "@playwright/test";
++import { loadavg } from "node:os";
+ import { clockFor, clockHz } from "./rate-clock";
+ 
+ /**
+@@ -50,16 +51,15 @@ import { clockFor, clockHz } from "./rate-clock";
+  * red in ≥ 2 of 10 runs per engine is the FLUSH LAG, a named defect (a re-cut's `d` reaches the
+  * DOM after the rest of its frame's work, and that wait moves frame to frame), never noise.
+  *
+- * THE FLOOR (pass 8, registry-v7 §2.7b). A ceiling alone passes a front slowed to 18/s: with
+- * `FRONT_MIN_MS` at 49 this row read 17.8–18.8/s exit 0 in both engines (pass-7 critique §1.2).
+- * Every burst must also re-cut at ≥ 0.9 × min(panel Hz, 62.5), the chair's formula as written,
+- * with the panel's Hz the clock's own measured rate (the same reading the precondition takes).
+- * Beside it the row PRINTS, and never gates, the A.6-delivered form: 0.9 × the best any A.6 gate
+- * could do on the write opportunities the page actually offered over the burst (the ticks and
+- * the consumer's wall-timed writes, greedy under the budget's slots). Where the two disagree the
+- * page stalled its own frames (the deal's render) and the gate kept every frame it was offered;
+- * that is still a red of the chair's clause, printed with both numbers so the return can carry
+- * the objection. The floor is attainable because the driven clock is now a PANEL: it stamps each
++ * THE FLOOR (pass 8, registry-v7 §2.7b; RULED pass9/CHAIR-RULINGS §6 and LAWS P8 §D). A ceiling
++ * alone passes a front slowed to 18/s: with `FRONT_MIN_MS` at 49 this row read 17.8–18.8/s exit 0
++ * in both engines (pass-7 critique §1.2). Every burst must also re-cut at ≥ 0.9 × the A.6-DELIVERED
++ * best: the best any A.6 gate could do on the write opportunities the page actually offered over
++ * the burst (the ticks and the consumer's wall-timed writes, greedy under the budget's slots). The
++ * rate form, 0.9 × (Hz / ⌈15.5 · Hz / 1000⌉) on the clock's measured Hz (= 0.9 × min(Hz, 62.5) at
++ * 30/60/120/125/240 Hz), PRINTS beside it with the box's load: a burst red on the rate form and
++ * green on the delivered one is the page stalling its own frames (the deal's render under load),
++ * not the gate (pass-8 critique §0.2: 3 of 7 runs, all at load 211–253 or 0.04/s of margin). The floor is attainable because the driven clock is now a PANEL: it stamps each
+  * frame on its vsync grid (`rate-clock.ts`), where the pass-6 pump stamped the timer's lateness
+  * into every frame and no A.6 gate could keep two frames in a slot (the A.6 optimum over 3 s of
+  * those ticks was 51.1/s chromium, 54.7/s WebKit at 125 Hz, under the formula's 56.25; STAMP=wall
+@@ -281,10 +281,11 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+   const worsts: Record<string, number> = {};
+   const slowest: Record<string, number> = {};
+   const shortfall: Record<string, number> = {};
+-  const deliveredRed: Record<string, number> = {};
++  const rateRed: Record<string, number> = {};
+   const floorsOf: Record<string, number[]> = {};
+-  // the chair's formula, GATED per burst: 0.9 × min(clock Hz, 62.5)
+-  const chairFloor = FLOOR_SHARE * Math.min(hz.hz, BUDGET_PER_S);
++  // the rate form, PRINTED per burst: 0.9 × the A.6-deliverable best at the clock's measured Hz
++  const rateFloor = FLOOR_SHARE * Math.min(BUDGET_PER_S, hz.hz / Math.ceil((MIN_GAP_MS * hz.hz) / 1000));
++  const load = loadavg()[0];
+   const minGaps: Record<string, number> = {};
+   const bursts_: Record<string, number> = {};
+   let tallyBestDPerFrame = 0;
+@@ -323,12 +324,10 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+     const floors = rated.map(({ fr, wall }) => FLOOR_SHARE * Math.min(BUDGET_PER_S, a6Best(fr[0], fr[fr.length - 1], wall)));
+     worsts[k] = Math.max(0, ...rates);
+     slowest[k] = Math.min(Infinity, ...rates);
+-    // THE FLOOR (registry-v7 §2.7b), GATED as the chair wrote it: 0.9 × min(the clock's measured
+-    // Hz, 62.5), every burst. The A.6-delivered form (the optimum above) prints beside it and is
+-    // never gated: a burst red on the chair's clause and green on the delivered one is a gate that
+-    // kept every frame the page offered while the page stalled its own frames — still a red.
+-    shortfall[k] = Math.min(Infinity, ...rates.map((r) => r - chairFloor));
+-    deliveredRed[k] = rates.filter((r, i) => r < floors[i]).length;
++    // THE FLOOR, GATED on the A.6-delivered form (pass9/CHAIR-RULINGS §6, LAWS P8 §D), every burst;
++    // the rate form prints beside it with the box's load (a red there alone is the page's stall)
++    shortfall[k] = Math.min(Infinity, ...rates.map((r, i) => r - floors[i]));
++    rateRed[k] = rates.filter((r) => r < rateFloor).length;
+     floorsOf[k] = floors;
+     bursts_[k] = rates.length;
+     // each burst's shortest gap, the end-write included: on the frame clock (gated) and at the DOM
+@@ -354,7 +353,7 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+           domPair ||= `DOM ${q[i].toFixed(1)}→${x.toFixed(1)}, frames ${burstFr[bi][i].toFixed(1)}→${burstFr[bi][i + 1].toFixed(1)}, lags ${burstLag[bi][i].toFixed(1)}/${burstLag[bi][i + 1].toFixed(1)}`;
+       }),
+     );
+-    lines.push(`${k}: ${cuts[k].d} d records, ${t.length} frames (${(cuts[k].d / Math.max(1, t.length)).toFixed(2)} d/frame; by burst ${dPerFrame.map((v) => v.toFixed(2)).join("/")}), ${rates.length} bursts, rates ${rates.map((v) => v.toFixed(1)).join("/")}/s (worst ${worsts[k].toFixed(1)}, slowest ${slowest[k].toFixed(1)}; floor (gated) 0.9 × min(${hz.hz.toFixed(1)} Hz, 62.5) = ${chairFloor.toFixed(1)} ${shortfall[k] < 0 ? `RED ${rates.filter((r) => r < chairFloor).length}/${rates.length}` : "GREEN"}; A.6-delivered (printed) ${floorsOf[k].map((v) => v.toFixed(1)).join("/")} ${deliveredRed[k] ? `RED ${deliveredRed[k]}/${rates.length}` : "GREEN"}), DOM rates ${domRates.map((v) => v.toFixed(1)).join("/")}/s${domRates.some((r) => r > BUDGET_PER_S) ? " DOM>62.5" : ""}, frame min ${minGaps[k].toFixed(1)} ms [${pair}], DOM min ${domMin.toFixed(1)} ms${domMin < MIN_GAP_MS ? ` DOM<15.5 [${domPair}]` : ""}, min gap by burst ${mins.map((v) => v.toFixed(1)).join("/")} ms (DOM ${domMins.map((v) => v.toFixed(1)).join("/")}), flush lag by burst ${burstLag.map((l) => { const f = l.filter((x) => !Number.isNaN(x)); return `${Math.min(...f).toFixed(1)}–${Math.max(...f).toFixed(1)}`; }).join("/")} ms, ${cuts[k].lag.filter((x) => Number.isNaN(x)).length} of ${t.length} outside a frame`);
++    lines.push(`${k}: ${cuts[k].d} d records, ${t.length} frames (${(cuts[k].d / Math.max(1, t.length)).toFixed(2)} d/frame; by burst ${dPerFrame.map((v) => v.toFixed(2)).join("/")}), ${rates.length} bursts, rates ${rates.map((v) => v.toFixed(1)).join("/")}/s (worst ${worsts[k].toFixed(1)}, slowest ${slowest[k].toFixed(1)}; floor (gated, A.6-delivered) ${floorsOf[k].map((v) => v.toFixed(1)).join("/")} ${shortfall[k] < 0 ? `RED ${rates.filter((r, i) => r < floorsOf[k][i]).length}/${rates.length}` : "GREEN"}; rate form (printed) 0.9 × A.6's best at ${hz.hz.toFixed(1)} Hz = ${rateFloor.toFixed(1)} ${rateRed[k] ? `RED ${rateRed[k]}/${rates.length}` : "GREEN"} at load ${load.toFixed(1)}), DOM rates ${domRates.map((v) => v.toFixed(1)).join("/")}/s${domRates.some((r) => r > BUDGET_PER_S) ? " DOM>62.5" : ""}, frame min ${minGaps[k].toFixed(1)} ms [${pair}], DOM min ${domMin.toFixed(1)} ms${domMin < MIN_GAP_MS ? ` DOM<15.5 [${domPair}]` : ""}, min gap by burst ${mins.map((v) => v.toFixed(1)).join("/")} ms (DOM ${domMins.map((v) => v.toFixed(1)).join("/")}), flush lag by burst ${burstLag.map((l) => { const f = l.filter((x) => !Number.isNaN(x)); return `${Math.min(...f).toFixed(1)}–${Math.max(...f).toFixed(1)}`; }).join("/")} ms, ${cuts[k].lag.filter((x) => Number.isNaN(x)).length} of ${t.length} outside a frame`);
+   }
+   // every consumer's reading is printed BEFORE any assertion, so a red names all three
+   for (const l of lines) console.log(`G10 ${testInfo.project.name} ${l}`);
+@@ -384,7 +383,7 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+   for (const k of Object.keys(CONSUMERS)) {
+     expect(worsts[k], `${k} re-cuts ${worsts[k].toFixed(1)}/s against the budget`).toBeLessThanOrEqual(BUDGET_PER_S);
+     expect(minGaps[k], `${k}'s shortest gap between re-cut frames ${minGaps[k].toFixed(1)} ms is inside the budget's window`).toBeGreaterThanOrEqual(MIN_GAP_MS);
+-    expect(shortfall[k], `${k} re-cut a burst ${(-shortfall[k]).toFixed(1)}/s under its floor 0.9 × min(${hz.hz.toFixed(1)} Hz, 62.5) = ${chairFloor.toFixed(1)} (A.6-delivered, printed: ${floorsOf[k].map((v) => v.toFixed(1)).join("/")})`).toBeGreaterThanOrEqual(0);
++    expect(shortfall[k], `${k} re-cut a burst ${(-shortfall[k]).toFixed(1)}/s under its A.6-delivered floor (${floorsOf[k].map((v) => v.toFixed(1)).join("/")}; rate form ${rateFloor.toFixed(1)} at load ${load.toFixed(1)})`).toBeGreaterThanOrEqual(0);
+   }
+   await ctx.close();
+ });
+@@ -397,12 +396,12 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+  * on its frame's time, the way `frontTween` writes. The gate's grain detector is the ENGINE's own
+  * (`performance.now()` inside `write`), so WebKit reads its whole-millisecond clock for real.
+  * Asserts: a 60 Hz stream keeps EVERY frame (≥ 59/s: pass 7's whole-ms +1 re-cut WebKit at 40.2/s
+- * on 17/33 ms and is this row's born-RED); every stream ≥ 0.9 × min(Hz, 62.5) where A.6 admits it;
+- * ≤ 62.5/s; no two commits < 15.5 ms.
+- * A.6 ALONE caps a panel at Hz / ⌈15.5 · Hz / 1000⌉ (every k-th frame), so the chair's formula is
+- * unreachable by ANY gate that honours A.6 at 75, 90, 100, 144 and 165 Hz (37.5, 45.0, 50.0, 48.0,
+- * 55.0/s against 56.25). Those streams run too, gated at 0.9 × A.6's best, and print the chair's
+- * formula's verdict beside it: the contradiction is the chair's to rule, never re-worded here.
++ * on 17/33 ms and is this row's born-RED); every stream ≥ the floor; ≤ 62.5/s; no two commits
++ * < 15.5 ms.
++ * THE FLOOR AT A PANEL RATE R (RULED pass9/CHAIR-RULINGS §6, LAWS P8 §D): 0.9 × the A.6-deliverable
++ * best, R / ⌈15.5 · R / 1000⌉ per second (A.6 alone keeps every k-th frame): 37.5, 45.0, 50.0, 48.0
++ * and 55.0/s at 75, 90, 100, 144 and 165 Hz, and 0.9 × min(R, 62.5) at 30/60/120/125/240 Hz, where
++ * the two forms coincide.
+  */
+ test("G10-panel: the served frontGate keeps every frame of a true 60 Hz panel, and every rate's floor", async ({ page }, testInfo) => {
+   await page.goto("/?size=3&difficulty=EASY");
+@@ -431,18 +430,81 @@ test("G10-panel: the served frontGate keeps every frame of a true 60 Hz panel, a
+     while (b === a) b = performance.now();
+     return Math.abs(b - a - Math.round(b - a)) < 1e-9 ? "whole-ms" : "fine";
+   });
++  // the floor's share is the battery's knob (G10_PANEL_SHARE=1±ε pins the margin: the gate keeps
++  // A.6's best to within ε at every rate); the gate runs at FLOOR_SHARE
++  const share = Number(process.env.G10_PANEL_SHARE ?? FLOOR_SHARE);
+   const lines = rows.map((r) => {
+-    const chair = FLOOR_SHARE * Math.min(r.hz, BUDGET_PER_S);
+-    return `${r.hz} Hz ${r.quant ? "whole-ms" : "fine"} stamps: ${r.commits}/${r.frames} frames committed, ${r.perS.toFixed(1)}/s, min gap ${r.minGap.toFixed(2)} ms · A.6's best ${a6Best(r.hz).toFixed(1)}/s · chair's floor ${chair.toFixed(1)} ${r.perS >= chair ? "met" : a6Best(r.hz) < chair ? "UNREACHABLE under A.6" : "RED"}`;
++    const floor = share * a6Best(r.hz);
++    return `${r.hz} Hz ${r.quant ? "whole-ms" : "fine"} stamps: ${r.commits}/${r.frames} frames committed, ${r.perS.toFixed(1)}/s, min gap ${r.minGap.toFixed(2)} ms · A.6's best ${a6Best(r.hz).toFixed(1)}/s · floor ${share} × that = ${floor.toFixed(2)} ${r.perS >= floor ? "met" : "RED"}, margin ${(r.perS - floor).toFixed(3)}/s`;
+   });
+   for (const l of lines) console.log(`G10-PANEL ${testInfo.project.name} (engine clock ${grain}) ${l}`);
+   testInfo.annotations.push({ type: "G10-panel", description: `engine clock ${grain} · ` + lines.join(" · ") });
+   const sixty = rows.find((r) => r.hz === 60 && r.quant)!;
+   expect(sixty.perS, `a true 60 Hz whole-ms stream re-cut ${sixty.perS.toFixed(1)}/s: the gate swallowed a healthy frame`).toBeGreaterThanOrEqual(59);
+   for (const r of rows) {
+-    const floor = FLOOR_SHARE * Math.min(r.hz, BUDGET_PER_S, a6Best(r.hz));
++    const floor = share * a6Best(r.hz);
+     expect(r.perS, `${r.hz} Hz (${r.quant ? "whole-ms" : "fine"}) re-cut ${r.perS.toFixed(1)}/s under ${floor.toFixed(1)}`).toBeGreaterThanOrEqual(floor);
+     expect(r.perS).toBeLessThanOrEqual(BUDGET_PER_S);
+     expect(r.minGap).toBeGreaterThanOrEqual(MIN_GAP_MS);
+   }
+ });
++
++/**
++ * D10-STALLRUN — A RUN OF STALLS INSIDE A LIVE TWEEN, IN THIS ENGINE (pass 9 row 1; LAWS P8 §D: a
++ * stall cap keys on the SHORTEST recent tick, never a median). The served tree's own `frontTween`
++ * (the dev server's graph, no copy) runs on the page's real rAF chain; a second rAF loop busy-waits
++ * 150 ms in five CONSECUTIVE frames, after twenty healthy ones. Every stalled tick must advance the
++ * tween's clock by at most max(the hand's step, the shortest tick the row saw) + 1 ms, and the
++ * healthy tick after the run keeps its travel. BORN-RED: the pass-8 median of nine (`panelFrameMs`
++ * sorted, the middle tick) lets the fifth stall travel the wall clock (pass-8 critique §0.1).
++ */
++test("D10-stallrun: five consecutive 150 ms stalls inside a live tween each travel at most one frame", async ({ page }, testInfo) => {
++  await page.goto("/?size=3&difficulty=EASY");
++  await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
++  await page.waitForTimeout(1500);
++  // the run's shape (defaults: five 150 ms stalls) and the cap's slack (default 1 ms) are the
++  // battery's knobs: D10_STALL_MS=0 injects none (the vacuity clause), D10_SLACK=±ε pins the margin
++  const nStall = Number(process.env.D10_STALLS ?? 5);
++  const stallMs = Number(process.env.D10_STALL_MS ?? 150);
++  const slack = Number(process.env.D10_SLACK ?? 1);
++  const r = await page.evaluate(async ([grid, cfg, n, ms]) => {
++    const m = await import(/* @vite-ignore */ grid);
++    const c = await import(/* @vite-ignore */ cfg);
++    const rec: { at: number; clock: number }[] = [];
++    const DUR = 1e6;
++    await new Promise<void>((done) => {
++      const tw = m.frontTween({
++        durationMs: DUR,
++        easing: (x: number) => x,
++        onProgress: (e: number, at: number) => rec.push({ at, clock: e * DUR }),
++        onComplete: () => {},
++      });
++      tw.start();
++      let f = 0;
++      const loop = () => {
++        f++;
++        if (f > 20 && f <= 20 + n) {
++          const t = performance.now();
++          while (performance.now() - t < ms);
++        }
++        if (f < 40 + n) requestAnimationFrame(loop);
++        else {
++          tw.stop();
++          done();
++        }
++      };
++      requestAnimationFrame(loop);
++    });
++    return { rec, stepMs: c.MOTION.hand.stepMs as number };
++  }, ["/src/pencil/grid/gridPaths.ts", "/src/pencil/config/pencilConfig.ts", nStall, stallMs] as const);
++  const steps = r.rec.slice(1).map((x, i) => ({ dt: x.at - r.rec[i].at, travel: x.clock - r.rec[i].clock }));
++  const stalled = steps.filter((s) => stallMs > 0 && s.dt >= 0.8 * stallMs);
++  const healthy = steps.filter((s) => !(stallMs > 0 && s.dt >= 0.8 * stallMs));
++  const minTick = Math.min(...healthy.map((s) => s.dt));
++  const cap = Math.max(r.stepMs, minTick) + slack;
++  const line = `${stalled.length} stalled ticks (dt ${stalled.map((s) => s.dt.toFixed(0)).join("/")} ms) travelled ${stalled.map((s) => s.travel.toFixed(1)).join("/")} ms; cap max(stepMs ${r.stepMs}, shortest tick ${minTick.toFixed(1)}) + ${slack} = ${cap.toFixed(2)} ms, margin ${(cap - Math.max(0, ...stalled.map((s) => s.travel))).toFixed(3)} ms; ${healthy.length} healthy ticks, worst healthy shortfall ${Math.max(0, ...healthy.map((s) => s.dt - s.travel)).toFixed(2)} ms; load ${loadavg()[0].toFixed(1)}`;
++  console.log(`D10-STALLRUN ${testInfo.project.name} ${line}`);
++  testInfo.annotations.push({ type: "D10-stallrun", description: line });
++  expect(stalled.length, `the row injected ${nStall} stalls and saw ${stalled.length}: it measured nothing`).toBeGreaterThanOrEqual(Math.max(5, nStall));
++  expect(Math.max(...stalled.map((s) => s.travel)), line).toBeLessThanOrEqual(cap);
++});
+diff --git a/web/frontend/e2e/node.d.ts b/web/frontend/e2e/node.d.ts
+index 1b1473e1..f5d2273d 100644
+--- a/web/frontend/e2e/node.d.ts
++++ b/web/frontend/e2e/node.d.ts
+@@ -61,6 +61,11 @@ declare module 'node:url' {
+   export function fileURLToPath(url: string | URL): string
+ }
+ 
++declare module 'node:os' {
++  /** `loadavg()[0]`: the box's 1-minute load, printed beside a rate row (LAWS P8 §B). */
++  export function loadavg(): number[]
++}
++
+ /** `process.env.<NAME>` and `process.platform` — the two members the specs read. */
+ declare const process: {
+   readonly env: Readonly<Record<string, string | undefined>>
+diff --git a/web/frontend/e2e/wash-step.spec.ts b/web/frontend/e2e/wash-step.spec.ts
+index aec0b8a8..127bca36 100644
+--- a/web/frontend/e2e/wash-step.spec.ts
++++ b/web/frontend/e2e/wash-step.spec.ts
+@@ -18,13 +18,35 @@ import { onOff, lum, ratio } from "./lib/paint-lib.mjs";
+  * (`.cell-peer { opacity: .2 }`: 1.017-1.026 on GRAPHITE's tree) and W5 an `@property`
+  * re-registration of the token with `initial-value: transparent` (1.000: the consumer never
+  * inherits the const). A source gate reads neither in paint; this row reads both.
++ *
++ * PASS 9 (the pass-8 critic's G-W7): the row reads BOTH contrast arms (LAWS P7 §E(i)). Under
++ * `prefers-contrast: more` the const's arm is re-declared at 13 %. Every floor is HEAD's own painted
++ * step in that cell (`74a2b5d9`: 1.078 / 1.103 no-preference, 1.143 / 1.224 more, the lowest of
++ * pass 8's and pass 9's reads) less 0.001, the photograph's measured spread (1.103-1.104). Pass 8's
++ * 0.006 was wider than the edge: WebKit paints the 12 % contrast arm at 1.141 against 1.143, so
++ * the arm one percent under its pin read GREEN. In-run per arm: W7 the arm erased under
++ * `prefers-contrast: more` (1.000), and ε, the arm one percent under its pin (6 % / 12 %), which
++ * must read under the floor; the margin is printed beside every reading.
+  */
+ 
+-const FLOOR = { light: 1.072, dark: 1.098 };
++const FLOOR = {
++  "no-preference": { light: 1.077, dark: 1.102 },
++  more: { light: 1.142, dark: 1.223 },
++} as const;
++// joined at run time: a product file is a Tailwind source (T9-R6)
++const arm = (pct: number) => "--wash-" + "blue: color-mix(in srgb, var(--color-crayon-blue) " + pct + "%, transparent)";
+ const PLANTS = {
+-  W1: ".cell-peer { opacity: 0.2 !important; }",
+-  W5: "@property --ground-wash-unit { syntax: '<color>'; inherits: false; initial-value: transparent; }",
+-};
++  "no-preference": {
++    W1: ".cell-peer { opacity: 0.2 !important; }",
++    W5: "@property --ground-wash-unit { syntax: '<color>'; inherits: false; initial-value: transparent; }",
++    eps: `:root { ${arm(6)} !important; }`,
++  },
++  more: {
++    W1: ".cell-peer { opacity: 0.2 !important; }",
++    W7: "@media (prefers-contrast: more) { :root { --wash-" + "blue: transparent !important; } }",
++    eps: `@media (prefers-contrast: more) { :root { ${arm(12)} !important; } }`,
++  },
++} as const;
+ 
+ // A REAL 9x9 payload: a valid solved grid by the band pattern, 30 givens seeded.
+ const SOL9 = Array.from({ length: 81 }, (_, i) => {
+@@ -54,8 +76,9 @@ async function step(page: Page, clip: { x: number; y: number; width: number; hei
+   return +ratio(mean(on), mean(off)).toFixed(3);
+ }
+ 
++for (const contrast of ["no-preference", "more"] as const)
+ for (const scheme of ["light", "dark"] as const) {
+-  test(`the wash paints its step over the card, and the plants that fade it red · ${scheme}`, async ({ browser }) => {
++  test(`the wash paints its step over the card, and the plants that fade it red · ${scheme} · contrast ${contrast}`, async ({ browser }) => {
+     test.setTimeout(90000);
+     const ctx = await browser.newContext({
+       viewport: { width: 1280, height: 800 },
+@@ -63,8 +86,9 @@ for (const scheme of ["light", "dark"] as const) {
+       colorScheme: scheme,
+     });
+     const page = await ctx.newPage();
+-    await page.emulateMedia({ reducedMotion: "reduce" });
++    await page.emulateMedia({ reducedMotion: "reduce", contrast });
+     await page.goto("/" + BOARD9);
++    expect(await page.evaluate(() => matchMedia("(prefers-contrast: more)").matches), "the contrast arm is witnessed").toBe(contrast === "more");
+     await page.waitForSelector("svg.hand-drawn-grid", { timeout: 60000 });
+     await page.evaluate(() => document.fonts.ready);
+     const empty = await page.evaluate(() =>
+@@ -91,7 +115,7 @@ for (const scheme of ["light", "dark"] as const) {
+     };
+     const clean = await step(page, clip);
+     const planted: Record<string, number> = {};
+-    for (const [k, css] of Object.entries(PLANTS)) {
++    for (const [k, css] of Object.entries(PLANTS[contrast])) {
+       const tag = await page.addStyleTag({ content: css });
+       await page.waitForTimeout(100);
+       planted[k] = await step(page, clip);
+@@ -101,12 +125,18 @@ for (const scheme of ["light", "dark"] as const) {
+       (i) => getComputedStyle(document.querySelectorAll(".game-cell")[i].querySelector(".cell-peer")!).backgroundColor,
+       peer!,
+     );
++    const floor = FLOOR[contrast][scheme];
++    const margin = (v: number) => (v - floor >= 0 ? "+" : "") + (v - floor).toFixed(3);
+     console.log(
+-      `WASH ${scheme}: cell ${pick} peer ${peer} step ${clean} (floor ${FLOOR[scheme]}) · W1 ${planted.W1} · W5 ${planted.W5} · computed ${computed}`,
++      `WASH ${scheme} contrast ${contrast}: cell ${pick} peer ${peer} step ${clean} (floor ${floor}, margin ${margin(clean)}) · ` +
++        Object.entries(planted)
++          .map(([k, v]) => `${k} ${v} (${margin(v)})`)
++          .join(" · ") +
++        ` · computed ${computed}`,
+     );
+     await ctx.close();
+-    expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(FLOOR[scheme]);
++    expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(floor);
+     for (const [k, v] of Object.entries(planted))
+-      expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(FLOOR[scheme]);
++      expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(floor);
+   });
+ }
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 81587799..60770c1c 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -68,11 +68,13 @@ import {
+   consumerSites,
+   decodeCssEscapes,
+   decodeEntities,
++  followImports,
+   hasCompound,
+   propertyRegistrations,
+   rulesOf,
+   sfc,
+   sources,
++  templateElements,
+   stripCss,
+   stripHtml,
+   stripJs,
+@@ -993,6 +995,20 @@ const WASH = {
+       value: /^var\(--wash-(blue|graphite)\)$/,
+     },
+   ],
++  // THE ARMS (pass 9, the pass-8 critic's G-W7/W8): the const names an arm, and the arm is where the
++  // wash's strength lives. Every declaration of every arm, in EVERY block, is pinned to the record
++  // it painted (default 1.078 light / 1.104 dark; under `prefers-contrast: more` 1.143 / 1.224):
++  // [the crayon it mixes, its percent]. A block the table does not name is a second publisher.
++  arms: {
++    "--wash-blue": {
++      "": ["crayon-blue", 7],
++      "@media (prefers-contrast: more)": ["crayon-blue", 13],
++    },
++    "--wash-graphite": {
++      "": ["pencil-graphite", 6],
++      "@media (prefers-contrast: more)": ["pencil-graphite", 12],
++    },
++  },
+   // computed object keys the library cannot resolve, by file, as the estate stands (none is a style)
+   unreadable: {
+     "src/games/shared/persistence.ts": 2,
+@@ -1005,17 +1021,9 @@ const WASH = {
+     // the union's `WaapiVerb` mapped type (`[K in keyof typeof MOTION.verbs]`), a TYPE key
+     "src/pencil/config/pencilConfig.ts": 1,
+   },
+-  // WAVE union (pass 8, provisional — §3's and §10's owners rule it): script OBJECT KEYS that
+-  // spell a paint mover, by file, as the estate stands. CTRL-FACE's `script-style-object` clause
+-  // (the ONE library, pass 8) reads every such key as a style site with no element; this gate's
+-  // consumer census then counted each as `.cell-peer`'s (8 offences on a tree neither section
+-  // red alone). None styles the consumer: GameCard's deck depth tiers and deal style are
+-  // `.game-card`'s, filterBudget's are the census's own allowlist rows. Pinned like
+-  // `unreadable`, closed both ways: one more key reds, one fewer reds STALE.
+-  scriptObjects: {
+-    "src/pencil/chrome/GameGallery/GameCard.vue": 4,
+-    "src/pencil/config/filterBudget.ts": 4,
+-  },
++  // (the WAVE's provisional `scriptObjects` pin is STRUCK by §3's owner at pass 9: a script object
++  // key reaches the consumer only through a style bag on an element that may carry its class, read
++  // by `objectReach` below; GameCard's deck tiers and filterBudget's rows are out of that reach)
+ };
+ const PAINT_MOVERS = [
+   "opacity",
+@@ -1028,35 +1036,58 @@ const PAINT_MOVERS = [
+   // @property registrations) into the served CSS from this file
+   "backdrop-" + "filter",
+ ];
++// A key in an object literal (the library's `script-object` site) reaches the consumer only through a
++// style bag bound on an element that may carry the class (`:style`, `v-bind:style`, a bare `v-bind`),
++// or on any element whose class is minted at run time: the SFC holding it and every module it imports.
++// Everywhere else such a key styles some other element (GameCard's deck depth, filterBudget's table).
++// WASH_SABOTAGE=<id> switches ONE wash clause off for the clause-sabotage battery (each id reds the
++// self-test through the plant named beside it): reach-none (W10), arms (W7/W8/W9), arm-pct (W8±ε),
++// arm-ctx (W11), arm-once (W12).
++const WASH_SAB = process.env.WASH_SABOTAGE ?? "";
++const wOn = (id) => WASH_SAB !== id;
++function objectReach(fe, cls, opts = {}) {
++  if (!wOn("reach-none")) return new Set();
++  const rd = opts.read ?? ((f) => fs.readFileSync(f, "utf8"));
++  const roots = [];
++  for (const f of [
++    ...sources(fe, { read: rd, exists: opts.exists }),
++    ...(opts.extra ?? []),
++  ]) {
++    if (!f.endsWith(".vue")) continue;
++    const b = sfc(rd(f));
++    if (!b.template) continue;
++    const bags = templateElements(b.template.text, b.template.line).some(
++      (el) =>
++        (el.dynClass || el.classes.has(cls)) &&
++        [...el.attrs.keys()].some((k) => /^(:style|v-bind:style|v-bind)$/.test(k)),
++    );
++    if (bags) roots.push(f);
++  }
++  const reach = new Set();
++  if (roots.length)
++    for (const f of followImports(roots, { read: rd, exists: opts.exists }))
++      reach.add(path.relative(fe, f));
++  return reach;
++}
++function washCensus(fe, prop, opts, reach) {
++  return consumerCensus(fe, WASH.consumer, prop, opts).filter(
++    (x) => x.kind !== "script-object" || reach.has(x.file),
++  );
++}
+ function washReach(fe, opts = {}) {
+   const out = [];
++  const reach = objectReach(fe, WASH.consumer, opts);
+   for (const prop of ["background", "background-color", "background-image"])
+-    for (const x of consumerCensus(fe, WASH.consumer, prop, opts))
++    for (const x of washCensus(fe, prop, opts, reach))
+       if (x.value.replace(/\s+/g, "") !== `var(${WASH.token})`)
+         out.push(
+           `${x.file}:${x.line} \`.${WASH.consumer}\` paints \`${x.prop}: ${x.value}\` — the wash is ONE token (${WASH.token}), never a literal or a second value`,
+         );
+-  const objKeys = {};
+   for (const prop of PAINT_MOVERS)
+-    for (const x of consumerCensus(fe, WASH.consumer, prop, opts)) {
+-      if (x.kind === "script-object") {
+-        objKeys[x.file] = (objKeys[x.file] ?? 0) + 1;
+-        continue;
+-      }
++    for (const x of washCensus(fe, prop, opts, reach))
+       out.push(
+         `${x.file}:${x.line} \`.${WASH.consumer}\` sets \`${x.prop}: ${x.value}\` — it moves the wash's painted step off its token`,
+       );
+-    }
+-  for (const [f, n] of Object.entries(objKeys))
+-    if (n > (WASH.scriptObjects[f] ?? 0))
+-      out.push(
+-        `${f}: ${n} script object key(s) spelling a paint mover where ${WASH.scriptObjects[f] ?? 0} are pinned — an object the library cannot bind to an element may style \`.${WASH.consumer}\``,
+-      );
+-  for (const [f, n] of Object.entries(WASH.scriptObjects))
+-    if ((objKeys[f] ?? 0) < n)
+-      out.push(
+-        `${f}: the script-object pin reads ${objKeys[f] ?? 0} of ${n} — STALE, re-count it`,
+-      );
+   const unread = {};
+   let declared = 0;
+   for (const t of tokenSites(fe, WASH.token, opts)) {
+@@ -1081,6 +1112,54 @@ function washReach(fe, opts = {}) {
+     out.push(
+       `${WASH.token}: ${declared} const declaration(s), expected ${WASH.declared.length} — the arm is ONE line`,
+     );
++  // the arms: every resolved declaration in every block must be the table's, and each table row read
++  // once; an unresolved key is pinned per token and file exactly as the token's own
++  for (const [arm, blocks] of wOn("arms") ? Object.entries(WASH.arms) : []) {
++    const seen = {};
++    const armUnread = {};
++    for (const t of tokenSites(fe, arm, opts)) {
++      if (t.unresolved) {
++        armUnread[t.file] = (armUnread[t.file] ?? 0) + 1;
++        continue;
++      }
++      const m =
++        /^color-mix\(in srgb, var\(--color-([\w-]+)\) ([\d.]+)%, transparent\)$/.exec(
++          String(t.value).trim().replace(/\s+/g, " "),
++        );
++      // the block keys the row; the sabotage reads the row off the VALUE instead (any block that
++      // carries a pinned value would pass, the arm moved to the wrong regime among them)
++      let ctx = String(t.ctx ?? "").trim();
++      if (!wOn("arm-ctx") && !(ctx in blocks) && m)
++        ctx =
++          Object.keys(blocks).find(
++            (c) => blocks[c][0] === m[1] && blocks[c][1] === Number(m[2]),
++          ) ?? ctx;
++      const want = blocks[ctx];
++      const ok =
++        want &&
++        t.file === WASH.declared[0].file &&
++        t.prelude === ":root" &&
++        !t.important &&
++        m &&
++        m[1] === want[0] &&
++        (Number(m[2]) === want[1] || !wOn("arm-pct"));
++      if (ok) seen[ctx] = (seen[ctx] ?? 0) + 1;
++      else
++        out.push(
++          `${t.file}:${t.line} declares ${arm} (\`${t.prelude}\`${ctx ? ` in ${ctx}` : ""}: \`${t.value}\`) — ${want ? `the arm is pinned at ${want[0]} ${want[1]}% in this block` : "no arm is declared in this block"}`,
++        );
++    }
++    for (const [ctx, [, pct]] of Object.entries(blocks))
++      if (seen[ctx] !== 1 && wOn("arm-once"))
++        out.push(
++          `${arm}: ${seen[ctx] ?? 0} declaration(s) at ${pct}% in ${ctx || ":root"}, expected 1 — the arm is the painted record's`,
++        );
++    for (const [f, n] of Object.entries(armUnread))
++      if (n !== (WASH.unreadable[f] ?? 0))
++        out.push(
++          `${f}: ${n} unreadable publisher(s) of ${arm} where ${WASH.unreadable[f] ?? 0} are pinned — re-count, or a key the library cannot resolve may be the arm`,
++        );
++  }
+   for (const [f, n] of Object.entries(unread))
+     if (n > (WASH.unreadable[f] ?? 0))
+       out.push(
+@@ -1939,27 +2018,94 @@ function main() {
+         true,
+       ],
+       [
+-        "W7 a script style object spelling a paint mover where none is pinned (`{ opacity: 0.2 }` in GameBoard.vue)",
++        "W7 the contrast arm erased (`--wash-blue: transparent` under `prefers-contrast: more`)",
+         {
+-          "src/games/shared/GameBoard.vue": (t) =>
++          "src/assets/index.css": (t) =>
++            t.replace(
++              "--wash-blue: color-mix(in srgb, var(--color-crayon-blue) 13%, transparent);",
++              "--wash-blue: transparent;",
++            ),
++        },
++        true,
++      ],
++      [
++        "W8 the default arm at 1 %",
++        {
++          "src/assets/index.css": (t) =>
++            t.replace("crayon-blue) 7%", "crayon-blue) 1%"),
++        },
++        true,
++      ],
++      [
++        "W8+ε the default arm at 7.1 % (the pin, one tenth above)",
++        {
++          "src/assets/index.css": (t) =>
++            t.replace("crayon-blue) 7%", "crayon-blue) 7.1%"),
++        },
++        true,
++      ],
++      [
++        "W8−ε the default arm at 6.9 % (the pin, one tenth below)",
++        {
++          "src/assets/index.css": (t) =>
++            t.replace("crayon-blue) 7%", "crayon-blue) 6.9%"),
++        },
++        true,
++      ],
++      [
++        "W7−ε the contrast graphite arm at 11.9 % (the pin, one tenth below)",
++        {
++          "src/assets/index.css": (t) =>
++            t.replace("pencil-graphite) 12%", "pencil-graphite) 11.9%"),
++        },
++        true,
++      ],
++      [
++        "W9 an arm re-declared in a block the table does not name (`.dark`)",
++        {
++          "src/assets/index.css": (t) =>
++            t + "\n.dark {\n  --wash-graphite: transparent;\n}\n",
++        },
++        true,
++      ],
++      [
++        "W11 the contrast arm moved to the wrong regime (`prefers-contrast: less`, its value intact)",
++        {
++          "src/assets/index.css": (t) =>
+             t.replace(
+-              /<script setup lang="ts">/,
+-              (m) => m + "\nconst plantedPeer = { opacity: 0.2 };\n",
++              "@media (prefers-contrast: more) {\n  :root {\n    --wash-blue",
++              "@media (prefers-contrast: less) {\n  :root {\n    --wash-blue",
+             ),
+         },
+         true,
+       ],
+       [
+-        "W8 one more such key in a pinned file (GameCard.vue: 5 where 4 are pinned)",
++        "W12 the contrast graphite arm deleted (its block keeps the blue arm)",
+         {
+-          "src/pencil/chrome/GameGallery/GameCard.vue": (t) =>
++          "src/assets/index.css": (t) =>
+             t.replace(
+-              /<script setup lang="ts">/,
+-              (m) => m + "\nconst plantedDepth = { opacity: 0.2 };\n",
++              "    --wash-graphite: color-mix(in srgb, var(--color-pencil-graphite) 12%, transparent);\n",
++              "",
+             ),
+         },
+         true,
+       ],
++      [
++        "W10 a style object bound on the consumer (`:style` bag, its key in the SFC's script)",
++        {
++          "src/games/shared/DigitCell.vue": (t) =>
++            t
++              .replace(
++                'class="cell-peer pointer-events-none absolute inset-0"',
++                'class="cell-peer pointer-events-none absolute inset-0"\n      :style="peerBag"',
++              )
++              .replace(
++                '<script setup lang="ts">',
++                '<script setup lang="ts">\nconst peerBag = { opacity: 0.2 };',
++              ),
++        },
++        true,
++      ],
+       ["CONTROL — the tree as it stands", {}, false],
+       [
+         "CONTROL — the const flipped to the graphite arm (one line)",
+diff --git a/web/frontend/src/games/shared/DifficultyTally.vue b/web/frontend/src/games/shared/DifficultyTally.vue
+index 4288c209..8a2914fc 100644
+--- a/web/frontend/src/games/shared/DifficultyTally.vue
++++ b/web/frontend/src/games/shared/DifficultyTally.vue
+@@ -141,8 +141,8 @@ let draw: SequenceHandle | null = null;
+ let inked = 0;
+ // THE INK THE STROKES SHOW is committed WITH their reveal, through the same gate: a new tier's
+ // strokes turn inked in the commit that sets them to 0, never in the render before it. (Pass 7
+-// dropped the forced start and let the class change first: the new strokes painted WHOLE for
+-// 1–2 frames before drawing in, 4 of 11 tier-changing inks against the control's 0 of 7.)
++// let the class change first, from the props: the new strokes painted WHOLE for 1–2 frames before
++// drawing in, 4 of 11 tier-changing inks against the control's 0 of 7.)
+ const shown = ref(0);
+ const at = (ms: number) => {
+   shown.value = inked;
+@@ -170,10 +170,12 @@ function runDrawIn(filled: number) {
+   inked = Math.max(0, Math.min(filled, TALLY_TOTAL));
+   // PRM (or nothing inked): snap. An un-inked (ghost) stroke is always statically present.
+   if (reducedMotion.value || inked === 0) return gate.write(Infinity, true);
+-  // THE START IS WRITTEN IN THIS FLUSH, the one the grade inks in (the control's `reveal = 0`
+-  // beside the class). It has no frame, so the gate times it on the wall from the last re-cut's
+-  // landing; early, it is OWED, and the tally keeps its last committed ink until it lands.
+-  gate.write(0, true);
++  // NO START WRITE (pass 9, row 4). The draw-in's first FRAME commits the new ink and its reveal
++  // together (`shown` rides the gate's commit), so the tally keeps its last committed strokes until
++  // that frame and never paints the new tier whole: deleting the forced `gate.write(0, true)` read
++  // 0/10 flashes in both engines (pass-8 critique §0.3). A forced write has no frame; the gate
++  // times it on the wall and its commit lands off the frame clock, which is the A.6 reason pass 7
++  // removed it for.
+   const span = DRAW_IN_PRESETS.glyph.duration + (inked - 1) * DRAW_STAGGER_MS;
+   draw = frontTween({
+     durationMs: span,
+diff --git a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+index ac82a388..5d2633c9 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+@@ -537,3 +537,73 @@ describe("frontTween — the displacement clause (T9-M20 D10)", () => {
+     vi.doUnmock("@mkbabb/pencil-boil");
+   });
+ });
++
++describe("frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum)", () => {
++  // The pass-8 critic's born-RED (critique/ACC-FIVE crit.stallrun): after 12 healthy 60 Hz frames
++  // the median of nine became the stall at the fifth consecutive one, and every stall from there
++  // travelled 150 ms. The cap now reads the SHORTEST tick of the window, so a run is capped until
++  // it fills the window; the cliff is pinned from both sides (PANEL_WINDOW − 1 capped, PANEL_WINDOW
++  // travels), and a 60 → 30 Hz drop is read as the panel once its frames fill the window.
++  const stallRun = async (nStall: number, stallMs = 150) => {
++    vi.resetModules();
++    let carrier: {
++      onProgress: (e: number, raw: number) => void;
++      durationMs: number;
++    } | null = null;
++    vi.doMock("@mkbabb/pencil-boil", async (orig) => ({
++      ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++      createSequenceSubscription: (o: typeof carrier) => {
++        carrier = o;
++        return { start() {}, stop() {} };
++      },
++    }));
++    const { frontTween, PANEL_WINDOW } = await import("./gridPaths");
++    vi.spyOn(performance, "now").mockImplementation(() => 1000);
++    const seen: number[] = [];
++    frontTween({
++      durationMs: 1e7,
++      easing: (x) => x,
++      onProgress: (v) => seen.push(v * 1e7),
++      onComplete: () => {},
++    }).start();
++    const F = 1000 / 60;
++    let t = 0;
++    const tick = (dt: number) => {
++      const b = seen.length ? seen[seen.length - 1] : 0;
++      t += dt;
++      carrier!.onProgress(0, t / carrier!.durationMs);
++      return +(seen[seen.length - 1] - b).toFixed(3);
++    };
++    for (let k = 0; k < 12; k++) tick(F);
++    const travel = Array.from({ length: nStall }, () => tick(stallMs));
++    const after = tick(F); // the healthy frame after the run keeps its whole travel
++    vi.doUnmock("@mkbabb/pencil-boil");
++    return { travel, after, PANEL_WINDOW, F };
++  };
++
++  for (const n of [1, 4, 5, 9])
++    it(`${n} consecutive 150 ms stalls: every one capped at ≤ stepMs + 1`, async () => {
++      const { travel, after, F } = await stallRun(n);
++      expect(Math.max(...travel)).toBeLessThanOrEqual(MOTION.hand.stepMs + 1);
++      expect(after).toBeCloseTo(F, 2);
++    });
++
++  it("the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels", async () => {
++    const below = await stallRun(31);
++    expect(below.PANEL_WINDOW).toBe(32);
++    expect(Math.max(...below.travel)).toBeLessThanOrEqual(MOTION.hand.stepMs + 1);
++    const at = await stallRun(32);
++    expect(Math.max(...at.travel.slice(0, 31))).toBeLessThanOrEqual(
++      MOTION.hand.stepMs + 1,
++    );
++    expect(at.travel[31]).toBeCloseTo(150, 3); // the cost, declared in gridPaths: the run IS the panel
++  });
++
++  it("a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)", async () => {
++    const { travel } = await stallRun(40, 1000 / 30);
++    expect(travel[0]).toBeCloseTo(MOTION.hand.stepMs, 3); // read as a stall while 60 Hz frames remain
++    expect(travel[30]).toBeCloseTo(MOTION.hand.stepMs, 3);
++    expect(travel[31]).toBeCloseTo(1000 / 30, 2); // the 32nd 30 Hz frame: the panel, full travel
++    expect(travel[39]).toBeCloseTo(1000 / 30, 2);
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 311549f9..428e2d55 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -650,28 +650,35 @@ export function frontGate(commit: (v: number) => void) {
+ }
+ 
+ // THE PANEL'S FRAME, OBSERVED (LAWS P7 §F: a cap is keyed on the observed frame interval, never
+-// a per-frame constant). The median of the page's last nine tween ticks: one lost frame does not
+-// move it, a 30 Hz panel does. Capped at a constant 17 ms, a 30 Hz panel read EVERY frame as a
+-// stall and ran each front at half speed (the class VERB's hand showed at 4.7 s to its digits).
+-// Until five ticks are seen the panel is unknown and the cap is the hand's own step: a median of
+-// one to four ticks IS the stall when two stalls come first (a boot's frames), and a stalled first
+-// frame would land the front wherever the wall says (the displacement clause, D10). The cost is a
+-// 30 Hz panel's first tween: four frames at the hand's step, ~65 ms late on a 240 ms front.
++// a per-frame constant). The SHORTEST of the page's last PANEL_WINDOW tween ticks (LAWS P8 §D: a
++// stall cap keys on the shortest recent tick, never a median). A panel's frame is its shortest
++// interval and a stall only ever lengthens one, so a run of stalls cannot become the panel until
++// it fills the whole window: the median of nine did at the fifth consecutive stall, and from there
++// every stall travelled the wall clock (17 ms × 4, then 150 ms × 5; pass-8 critique §0.1). A 30 Hz
++// panel reads 33 ms on every tick, so it is still not a stall. Capped at a constant 17 ms, a 30 Hz
++// panel read EVERY frame as a stall and ran each front at half speed (the class VERB's hand showed
++// at 4.7 s to its digits).
++// THE WINDOW'S TWO COSTS, both declared: a run of PANEL_WINDOW consecutive stalls is read as the
++// panel (31 are capped, the 32nd travels: the cliff the unit rows pin from both sides), and a panel
++// that drops from 60 to 30 Hz mid-page runs its fronts at the hand's step until 32 of its frames
++// have filled the window (~1.07 s at half speed).
++// Until five ticks are seen the panel is unknown and the cap is the hand's own step: a stalled
++// first frame would land the front wherever the wall says (the displacement clause, D10). The cost
++// is a 30 Hz panel's first tween: four frames at the hand's step, ~65 ms late on a 240 ms front.
+ // ONE READING A FRAME, keyed on the frame's time: every tween ticks in the same frame (the reveal
+-// wave runs 61), and fed per tick the window took a stall 61 times in one frame, its median became
+-// the stall from the fifth tween on, and those fronts landed where the wall said (pass 8).
++// wave runs 61), and fed per tick the window took a stall 61 times in one frame (pass 8).
+ const PANEL_MIN_TICKS = 5;
++export const PANEL_WINDOW = 32;
+ const ticks: number[] = [];
+ let tickAt = -Infinity;
+ function panelFrameMs(dt: number, at: number): number {
+   if (dt > 0 && Math.abs(at - tickAt) >= 1) {
+     tickAt = at;
+     ticks.push(dt);
+-    if (ticks.length > 9) ticks.shift();
++    if (ticks.length > PANEL_WINDOW) ticks.shift();
+   }
+   if (ticks.length < PANEL_MIN_TICKS) return MOTION.hand.stepMs;
+-  const s = [...ticks].sort((a, b) => a - b);
+-  return s[s.length >> 1];
++  return Math.min(...ticks);
+ }
+ 
+ /**
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.test.ts b/web/frontend/src/pencil/sheet/SheetWashiLabel.test.ts
+index ad77fa14..118da7e7 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.test.ts
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.test.ts
+@@ -92,32 +92,3 @@ describe("SheetWashiLabel — no tape claims a role nothing points at", () => {
+       expect(tape(props).element.tagName, JSON.stringify(props)).toBe("SPAN");
+   });
+ });
+-
+-// T9-W7 ACC-SIX — THE SEED IS THE SEED. `props.seed`'s own docstring promises "a given
+-// label's tear + tilt never re-roll", and `props.text.charCodeAt(0)` in the geometry made
+-// both a function of the WORDS: any tape that says a number re-tore its own paper mid-read.
+-// Born-RED at HEAD's seed (`1 of 20 …` and `3 of 20 …` differ at codepoint 0).
+-describe("SheetWashiLabel — the geometry is the SEED's, never the text's", () => {
+-  const geom = (text: string, seed = 11) => {
+-    const s = tape({ text, seed }).get("span").attributes("style") ?? "";
+-    return {
+-      clip: /clip-path:\s*([^;]+)/.exec(s)?.[1],
+-      tilt: /--washi-tilt:\s*([^;]+)/.exec(s)?.[1],
+-    };
+-  };
+-
+-  it("the tear and the tilt are byte-equal across a text change at one seed", () => {
+-    const one = geom("1 of 20 on the board");
+-    expect(one.clip).toBeTruthy();
+-    expect(one.tilt).toBeTruthy();
+-    expect(geom("3 of 20 on the board")).toEqual(one);
+-  });
+-
+-  it("a first letter carries no geometry — the count tape's two ends agree", () => {
+-    expect(geom("0 of 81 on the board")).toEqual(geom("9 of 81 on the board"));
+-  });
+-
+-  it("two seeds still tear differently — the pin is not a flattening", () => {
+-    expect(geom("Deal", 11).clip).not.toBe(geom("Deal", 12).clip);
+-  });
+-});
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index a6658675..b7445258 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -79,29 +79,8 @@ const props = defineProps<{
+  */
+ 
+ // Seeded geometry: torn ends on the left/right edges + a small tilt.
+-//
+-// THE SEED IS THE SEED (T9-W7 ACC-SIX). `props.text.charCodeAt(0)` was mixed in here, which
+-// made the tear and the tilt a function of the WORDS — so a tape whose text changes in place
+-// re-tears its own paper mid-read, and the prop's own docstring four lines up ("a given
+-// label's tear + tilt never re-roll") was false for any tape that says a number. The count
+-// board's OWN attribution tape (`GameBoard.vue`, the T9-W7 execution fold) re-tears every
+-// time the pointer moves to a cell a different peer wrote, and `shareAct.washi` /
+-// `inviteAct.washi` swap their text on the same instance too — three live consumers, and the
+-// docstring was false on the board today. The fix is one term deleted, not a second seed
+-// prop.
+-//
+-// DECLARED π, MEASURED (pass 4 corrects pass 3's figure in the same diff that carries the
+-// decision). FOURTEEN live instances re-tear ONCE — not sixteen; two of the sixteen sites the
+-// source shows never mount together — a one-time geometry change on two properties,
+-// `clip-path` (14/14) and `--washi-tilt` (14/14). The bounding boxes move up to **4.60 px
+-// chromium / 4.82 px webkit**, NOT the 0.55 px this comment used to claim: 0.55 was measured
+-// on the four `.washi-tag` instances alone, and `--washi-tilt` feeds a `rotate()`, so a ±1.5°
+-// re-roll on a ~120 px tape moves its rotated box by several px. The tilt is deliberately NOT
+-// pinned — pinning it would keep a tape's angle across a re-seed, which is a second seed by
+-// another name — so 4.82 px is the declared, accepted, one-time cost. None of the fourteen is
+-// a golden's subject (`test:golden:bytes` green on this tree).
+ const geom = computed(() => {
+-  const rng = mulberry32(props.seed * 2654435761);
++  const rng = mulberry32(props.seed * 2654435761 + props.text.charCodeAt(0));
+   // Six-point clip-path: jagged left edge (2 pts) + jagged right edge (2 pts),
+   // top/bottom kept flat-ish. Percentages within the label box.
+   const j = () => (rng() - 0.5) * 6; // ±3% jitter

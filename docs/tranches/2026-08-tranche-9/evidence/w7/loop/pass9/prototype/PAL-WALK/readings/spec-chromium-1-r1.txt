@@ -1,0 +1,58 @@
+# peer-walk.spec.ts chromium-1-r1: exit=1; load start 19:10:12 { 48.69 55.85 46.12 } end 19:11:32 { 46.97 52.74 45.75 } 
+ 1 failed
+ 2 passed (1.3m)
+[chromium/light] dpr 1 EDGE i=6 clean GREEN 
+[chromium/light] dpr 1 EDGE i=6 plant THIN_1PX RED
+[chromium/light] dpr 1 EDGE i=6 plant STROKE_OPACITY015 RED
+[chromium/dark] dpr 1 EDGE i=86 clean GREEN 
+[chromium/dark] dpr 1 EDGE i=86 plant THIN_1PX RED
+[chromium/dark] dpr 1 EDGE i=86 plant STROKE_OPACITY015 RED
+## plants: name total RED holes worst-G3-margin
+PLANT COMB_a25 8 8 0 0.081
+PLANT EMPTY_hidden 8 8 0 0.102
+PLANT FADE65_fill 24 24 0 0.102
+PLANT FADE65v_fill 24 24 0 0.102
+PLANT FADE80_fill 8 8 0 0.043
+PLANT FADE80v_fill 8 8 0 0.043
+PLANT FAINT30_fill 8 8 0 0.102
+PLANT FAINT30v_fill 8 8 0 0.102
+PLANT HEAD12_a25 8 8 0 -0.031
+PLANT MID20_a25 8 8 0 -0.030
+PLANT TAIL12_a25 8 8 0 -0.036
+PLANT TAIL35_a25 8 8 0 0.000
+READING PAPER 8 5 0 -0.043
+## name vs HEAD same-index (median / frac<4.5) per subject-cell
+dark Aa0a0a c16 name 3.126/0.649 HEAD 2.666/0.743
+dark Aa0a0a c22 name 3.126/0.649 HEAD 2.666/0.743
+dark B2e c11 name 3.594/0.578 HEAD 3.146/0.642
+dark B2e c12 name 3.594/0.579 HEAD 3.146/0.642
+dark B2e c14 name 3.583/0.578 HEAD 3.138/0.646
+dark B2e c8 name 3.148/0.68 HEAD 2.818/0.748
+dark Bb0b0b c11 name 4/0.554 HEAD 3.499/0.638
+dark Bb0b0b c12 name 4/0.554 HEAD 3.499/0.638
+dark Bb0b0b c14 name 4/0.554 HEAD 3.499/0.638
+dark Bb0b0b c8 name 3.077/0.692 HEAD 2.735/0.833
+light Aa0a0a c16 name 2.264/0.7 HEAD 2.021/0.816
+light Aa0a0a c22 name 2.264/0.7 HEAD 2.021/0.816
+light B2e c11 name 2.068/0.719 HEAD 1.818/0.863
+light B2e c12 name 2.068/0.719 HEAD 1.818/0.862
+light B2e c14 name 2.068/0.719 HEAD 1.818/0.863
+light B2e c8 name 2.017/0.777 HEAD 1.772/0.959
+light Bb0b0b c11 name 2.337/0.716 HEAD 1.984/0.872
+light Bb0b0b c12 name 2.337/0.716 HEAD 1.984/0.872
+light Bb0b0b c14 name 2.337/0.716 HEAD 1.984/0.872
+light Bb0b0b c8 name 2.086/0.848 HEAD 1.796/0.974
+## failing assertions
+   2 Error: the name, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 16
+   2 Error: the name, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 22
+   1 Error: the name, B p-00000000002e, dark cell 12
+   1 Error: the name, B p-00000000002e, dark cell 8
+   1 Error: the name, B p-00000000002e, light cell 11
+   1 Error: the name, B p-00000000002e, light cell 12
+   1 Error: the name, B p-00000000002e, light cell 14
+   1 Error: the name, B p-00000000002e, light cell 8
+   1 Error: the name, B p-0000000b0b0b, dark cell 8
+   1 Error: the name, B p-0000000b0b0b, light cell 11
+   1 Error: the name, B p-0000000b0b0b, light cell 12
+   1 Error: the name, B p-0000000b0b0b, light cell 14
+   1 Error: the name, B p-0000000b0b0b, light cell 8

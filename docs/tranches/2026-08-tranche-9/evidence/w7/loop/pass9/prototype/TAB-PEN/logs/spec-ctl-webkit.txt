@@ -1,0 +1,89 @@
+# exit 1
+11:34  up 21:02, 2 users, load averages: 39.01 46.10 65.38
+11:35  up 21:02, 2 users, load averages: 54.51 48.75 65.55
+Running 1 test using 1 worker
+tab-pen (http://127.0.0.1:4256, webkit):
+  RED    clean light
+         path: icon: resolves to /favicon.svg
+         sha: icon: sha256 fc667540027f, not the sidecar's
+         count: 0 live apple-touch-icon links
+  RED    clean dark
+         path: icon: resolves to /favicon.svg
+         sha: icon: sha256 fc667540027f, not the sidecar's
+         count: 0 live apple-touch-icon links
+  FAILED       E1 the icon link scoped to dark, read light: red [count media path sha], want [media]
+  FAILED       E2 the icon link typed text/plain: red [count path sha type], want [type]
+  FAILED       E3 both links inside a template: the plant changed nothing, want [count]
+  FAILED       E4 both links inside a noscript: the plant changed nothing, want [count]
+  FAILED       E5 both links kept only as a script string: the plant changed nothing, want [count]
+  AS REQUIRED  E6 a base href to a foreign origin: red [base count ctype origin path sha], want >= [base origin]
+  AS REQUIRED  E7 a script re-points the icon after load: red [count mutation path sha], want >= [mutation path sha]
+  FAILED       P-base a same-origin base (resolution unchanged): red [base count path sha], want [base]
+  FAILED       P-allow a sizes ladder on the touch icon: the plant changed nothing, want [allow]
+  FAILED       P-origin the icon's bytes served off-origin: the plant changed nothing, want [origin]
+  FAILED       P-path the icon's bytes at another path: the plant changed nothing, want [path]
+  FAILED       P-ctype the icon served as text/plain: red [count path sha], want [ctype]
+  FAILED       P-sha the icon served with other bytes: red [count path sha], want [sha]
+  FAILED       P-mutation a re-point undone 50 ms later: red [count mutation path sha], want [mutation]
+  FAILED       NN1 the links' attributes reordered: the plant changed nothing, want []
+  FAILED       NN2 media=all on the icon (true in both schemes): red [count path sha], want []
+  FAILED       NN3 E1 read dark (its query holds): red [count path sha], want []
+  HOLE  count off: E3 E4 E5
+  HOLE  allow off: P-allow
+  HOLE  media off: E1
+  HOLE  type off: E2
+  HOLE  origin off: P-origin
+  HOLE  path off: P-path
+  HOLE  base off: P-base
+  HOLE  ctype off: P-ctype
+  HOLE  sha off: P-sha
+  HOLE  mutation off: P-mutation
+  ✘  1 [webkit] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery (35.6s)
+  1) [webkit] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery 
+    Error:   RED    clean light
+             path: icon: resolves to /favicon.svg
+             sha: icon: sha256 fc667540027f, not the sidecar's
+             count: 0 live apple-touch-icon links
+      RED    clean dark
+             path: icon: resolves to /favicon.svg
+             sha: icon: sha256 fc667540027f, not the sidecar's
+             count: 0 live apple-touch-icon links
+      FAILED       E1 the icon link scoped to dark, read light: red [count media path sha], want [media]
+      FAILED       E2 the icon link typed text/plain: red [count path sha type], want [type]
+      FAILED       E3 both links inside a template: the plant changed nothing, want [count]
+      FAILED       E4 both links inside a noscript: the plant changed nothing, want [count]
+      FAILED       E5 both links kept only as a script string: the plant changed nothing, want [count]
+      AS REQUIRED  E6 a base href to a foreign origin: red [base count ctype origin path sha], want >= [base origin]
+      AS REQUIRED  E7 a script re-points the icon after load: red [count mutation path sha], want >= [mutation path sha]
+      FAILED       P-base a same-origin base (resolution unchanged): red [base count path sha], want [base]
+      FAILED       P-allow a sizes ladder on the touch icon: the plant changed nothing, want [allow]
+      FAILED       P-origin the icon's bytes served off-origin: the plant changed nothing, want [origin]
+      FAILED       P-path the icon's bytes at another path: the plant changed nothing, want [path]
+      FAILED       P-ctype the icon served as text/plain: red [count path sha], want [ctype]
+      FAILED       P-sha the icon served with other bytes: red [count path sha], want [sha]
+      FAILED       P-mutation a re-point undone 50 ms later: red [count mutation path sha], want [mutation]
+      FAILED       NN1 the links' attributes reordered: the plant changed nothing, want []
+      FAILED       NN2 media=all on the icon (true in both schemes): red [count path sha], want []
+      FAILED       NN3 E1 read dark (its query holds): red [count path sha], want []
+      HOLE  count off: E3 E4 E5
+      HOLE  allow off: P-allow
+      HOLE  media off: E1
+      HOLE  type off: E2
+      HOLE  origin off: P-origin
+      HOLE  path off: P-path
+      HOLE  base off: P-base
+      HOLE  ctype off: P-ctype
+      HOLE  sha off: P-sha
+      HOLE  mutation off: P-mutation
+    expect(received).toBe(expected) // Object.is equality
+    Expected: true
+    Received: false
+      281 |   }
+      282 |   console.log(`tab-pen (${origin}, ${test.info().project.name}):\n${rows.join("\n")}`);
+    > 283 |   expect(ok, rows.join("\n")).toBe(true);
+          |                               ^
+      284 | });
+      285 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_b6676cd9-8c6-17/web/frontend/e2e/tab-pen.spec.ts:283:31
+    Error Context: <lane playwright output>/tab-pen-the-tab-s-pen-as-t-5b081-ves-it-clean-plants-battery-webkit/error-context.md
+  1 failed

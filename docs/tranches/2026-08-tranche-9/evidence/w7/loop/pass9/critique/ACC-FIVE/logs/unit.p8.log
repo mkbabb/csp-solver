@@ -1,0 +1,61 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass9/crit-ACC-FIVE/tree/web/frontend
+
+ ❯ src/pencil/grid/gridPaths.poseFronts.test.ts (41 tests | 4 failed) 99ms
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 8ms
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 6ms
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels 6ms
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost) 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+AssertionError: expected 150 to be less than or equal to 18
+ ❯ src/pencil/grid/gridPaths.poseFronts.test.ts:587:35
+    585|     it(`${n} consecutive 150 ms stalls: every one capped at ≤ stepMs +…
+    586|       const { travel, after, F } = await stallRun(n);
+    587|       expect(Math.max(...travel)).toBeLessThanOrEqual(MOTION.hand.step…
+       |                                   ^
+    588|       expect(after).toBeCloseTo(F, 2);
+    589|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+AssertionError: expected undefined to be 32 // Object.is equality
+
+- Expected:
+32
+
++ Received:
+undefined
+
+ ❯ src/pencil/grid/gridPaths.poseFronts.test.ts:593:32
+    591|   it("the window's cliff, read from both sides: PANEL_WINDOW − 1 stall…
+    592|     const below = await stallRun(31);
+    593|     expect(below.PANEL_WINDOW).toBe(32);
+       |                                ^
+    594|     expect(Math.max(...below.travel)).toBeLessThanOrEqual(MOTION.hand.…
+    595|     const at = await stallRun(32);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+AssertionError: expected 33.333 to be close to 17, received difference is 16.333, but expected 0.0005
+ ❯ src/pencil/grid/gridPaths.poseFronts.test.ts:605:24
+    603|     const { travel } = await stallRun(40, 1000 / 30);
+    604|     expect(travel[0]).toBeCloseTo(MOTION.hand.stepMs, 3); // read as a…
+    605|     expect(travel[30]).toBeCloseTo(MOTION.hand.stepMs, 3);
+       |                        ^
+    606|     expect(travel[31]).toBeCloseTo(1000 / 30, 2); // the 32nd 30 Hz fr…
+    607|     expect(travel[39]).toBeCloseTo(1000 / 30, 2);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  4 failed | 44 passed (48)
+   Start at  12:01:36
+   Duration  940ms (transform 179ms, setup 55ms, import 247ms, tests 150ms, environment 979ms)
+

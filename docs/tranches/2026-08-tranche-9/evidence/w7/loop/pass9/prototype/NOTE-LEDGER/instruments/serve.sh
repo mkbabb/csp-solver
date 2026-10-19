@@ -1,0 +1,25 @@
+#!/bin/bash
+# serve.sh up <port> <cwd> <config> <outDir> <expected index js> | down <port>
+# up never frees a held port; down kills only the recorded listener (cwd + wrapper ancestry + identity checked)
+SP=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass9/NOTE-LEDGER
+REC=$SP/logs/servers.txt
+cwdof() { lsof -a -p $1 -d cwd -Fn 2>/dev/null | grep ^n | cut -c2-; }
+if [ "$1" = up ]; then
+  PT=$2; C=$3; CFG=$4; OUT=$5; ID=$6
+  H=$(lsof -nP -iTCP:$PT -sTCP:LISTEN -t 2>/dev/null | head -1)
+  if [ -n "$H" ]; then echo "HELD :$PT by pid $H cwd $(cwdof $H) — not freed" | tee -a $REC; exit 3; fi
+  (cd $C && exec npx vite preview --config $CFG --outDir $OUT --host 127.0.0.1 --port $PT --strictPort > $SP/logs/serve-$PT.log 2>&1) &
+  WR=$!
+  for i in $(seq 1 120); do L=$(lsof -nP -iTCP:$PT -sTCP:LISTEN -t 2>/dev/null | head -1); [ -n "$L" ] && break; sleep 0.5; done
+  GOT=$(curl -s http://127.0.0.1:$PT/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
+  echo "up :$PT wrapper $WR listener $L cwd $(cwdof $L) serves $GOT want $ID $(date +%T)" | tee -a $REC
+  [ "$GOT" = "$ID" ] || { echo "IDENTITY MISMATCH"; exit 4; }
+elif [ "$1" = down ]; then
+  PT=$2; LINE=$(grep "^up :$PT " $REC | tail -1)
+  WR=$(echo "$LINE" | awk '{print $4}'); L=$(echo "$LINE" | awk '{print $6}'); C=$(echo "$LINE" | awk '{print $8}'); ID=$(echo "$LINE" | awk '{print $10}')
+  NOW=$(lsof -nP -iTCP:$PT -sTCP:LISTEN -t 2>/dev/null | head -1); NC=$(cwdof $NOW)
+  GOT=$(curl -s http://127.0.0.1:$PT/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)
+  A=$NOW; ANC=no; for i in 1 2 3 4 5 6; do A=$(ps -o ppid= -p $A 2>/dev/null | tr -d ' '); [ -z "$A" ] && break; [ "$A" = "$WR" ] && { ANC=yes; break; }; done
+  if [ -n "$NOW" ] && [ "$NOW" = "$L" ] && [ "$NC" = "$C" ] && [ "$GOT" = "$ID" ] && [ $ANC = yes ]; then kill $L; kill $WR 2>/dev/null; sleep 1; echo "down :$PT killed listener $L wrapper $WR $(date +%T)" | tee -a $REC
+  else echo "REFUSED down :$PT — now '$NOW' cwd '$NC' serves '$GOT' ancestry $ANC; recorded '$L' '$C' '$ID'" | tee -a $REC; fi
+fi

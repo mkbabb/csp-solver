@@ -1,0 +1,45 @@
+live: 0 fails
+K RED  8 THE CLIP              K1 overflow:hidden on .action-bar
+K RED  8 THE CLIP              K2 contain: paint on .action-bar
+K RED  8 THE CLIP              K3 filter: opacity(0.15) on .action-bar
+K RED  3 THE PEN               K4 :deep(.outline-svg) display none
+K RED  3 THE PEN|8 THE CLIP    K5 :first-child hidden
+K RED  1 THE INSET             K6 #card-foot pad 0
+K RED  1 THE INSET             K7 padding-block-end 0
+K RED  1 THE INSET             K8 padding 0
+K RED  8 THE CLIP              K9 .card-foot overflow clip
+K RED  8 THE CLIP              K11 clip-path bar
+K RED  8 THE CLIP              K12 mask-image bar
+K RED  2 THE LAYER             K13 #card-foot z 0
+K RED  1 THE INSET             K14 .drawer-case .card-foot pad 0
+K RED  1 THE INSET             K15 calc(pad+env-pad)
+N RED  9 THE COLUMN            F1 revert the column: .drawer-case { display: block }
+N RED  9 THE COLUMN            F2 .controls-card { flex-shrink: 0 } (card never yields to the cap)
+N RED  9 THE COLUMN            F3 .card-foot { flex: 1 1 0; min-height: 0 } (foot yields)
+N RED  9 THE COLUMN            F4 .drawer-case { flex-direction: row }
+N RED  8 THE CLIP              S1 alias class on the foot element + .foot-x { overflow: clip }
+N RED  8 THE CLIP|9 THE COLUMN S2 .drawer-case > div:last-of-type { overflow: clip }
+N RED  1 THE INSET             S3 .drawer-case > div:last-of-type { padding-bottom: 0 }
+N RED  1 THE INSET             S4 [id="card-foot"] { padding-bottom: 0 }
+N RED  8 THE CLIP              S5 [class~="action-bar"] { overflow: hidden }
+N RED  8 THE CLIP              S6 :where(.action-bar) { overflow: hidden }
+N RED  8 THE CLIP              S7 nested .drawer-case { & > .card-foot { overflow: clip } }
+N RED  8 THE CLIP              S8a utility opacity-[0.15] on bar el
+N RED  8 THE CLIP|9 THE COLUMN|10 THE SEAT S8b utility sr-only on bar el
+N RED  8 THE CLIP              S8c utility blur-sm on bar el
+N RED  8 THE CLIP              S8d utility contain-[paint] on bar el
+N RED  10 THE SEAT             S8e utility translate-y-12 on bar el
+N RED  8 THE SCRIPT            S9a script bar.style.filter = opacity(0.1)
+N RED  8 THE SCRIPT            S9b script bar.style.cssText overflow hidden
+N RED  8 THE SCRIPT            S9c script setAttribute style
+N RED  8 THE SCRIPT            S9d script classList.add overflow-hidden
+N RED  8 THE SCRIPT            S9e App.vue writes #card-foot overflow
+N RED  3 THE PEN               S10 .bar-frame { inset: 0 0 100% 0 } (whitelisted layout collapses the frame)
+N RED  3 THE PEN               S10b .bar-frame { position: static }
+N RED  8 THE CLIP              S11 overflow: var(--nope, hidden) on bar
+N RED  1 THE INSET             S12 calc(pad + env() * 0)
+N RED  10 THE SEAT             S13 .card-foot { translate: 0 2.875rem } (bar pushed into the inset band)
+N RED  10 THE SEAT             S14 .action-bar { top: 2.875rem } (the bar is position:relative)
+N RED  10 THE SEAT             S15 .card-foot { margin-bottom: -2.875rem }
+N RED  10 THE SEAT             S16 .action-bar { transform: scaleY(0) }
+pass-6 plants GREEN 0/14; new breaks GREEN 0/29

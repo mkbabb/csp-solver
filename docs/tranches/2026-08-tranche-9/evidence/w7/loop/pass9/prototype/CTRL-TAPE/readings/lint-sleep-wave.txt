@@ -1,0 +1,4 @@
+  • keys-crib.spec.ts:333 — a fixed 300ms sleep sits inside `arm()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant t
+  • keys-crib.spec.ts:337 — a fixed 300ms sleep sits inside `arm()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant t
+--- cured:
+OK — no fixed-duration wait precedes a one-shot assertion on a live surface across 47 specs.

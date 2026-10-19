@@ -1,0 +1,36 @@
+# exit 0
+11:33  up 21:01, 2 users, load averages: 41.61 48.15 67.70
+11:34  up 21:01, 2 users, load averages: 40.94 47.25 66.58
+Running 1 test using 1 worker
+tab-pen (http://127.0.0.1:4233, webkit):
+  GREEN  clean light
+  GREEN  clean dark
+  AS REQUIRED  E1 the icon link scoped to dark, read light: red [media], want [media]
+  AS REQUIRED  E2 the icon link typed text/plain: red [type], want [type]
+  AS REQUIRED  E3 both links inside a template: red [count], want [count]
+  AS REQUIRED  E4 both links inside a noscript: red [count], want [count]
+  AS REQUIRED  E5 both links kept only as a script string: red [count], want [count]
+  AS REQUIRED  E6 a base href to a foreign origin: red [base ctype origin sha], want >= [base origin]
+  AS REQUIRED  E7 a script re-points the icon after load: red [mutation path sha], want >= [mutation path sha]
+  AS REQUIRED  P-base a same-origin base (resolution unchanged): red [base], want [base]
+  AS REQUIRED  P-allow a sizes ladder on the touch icon: red [allow], want [allow]
+  AS REQUIRED  P-origin the icon's bytes served off-origin: red [origin], want [origin]
+  AS REQUIRED  P-path the icon's bytes at another path: red [path], want [path]
+  AS REQUIRED  P-ctype the icon served as text/plain: red [ctype], want [ctype]
+  AS REQUIRED  P-sha the icon served with other bytes: red [sha], want [sha]
+  AS REQUIRED  P-mutation a re-point undone 50 ms later: red [mutation], want [mutation]
+  AS REQUIRED  NN1 the links' attributes reordered: red [], want []
+  AS REQUIRED  NN2 media=all on the icon (true in both schemes): red [], want []
+  AS REQUIRED  NN3 E1 read dark (its query holds): red [], want []
+  BITE  count off: E3 E4 E5
+  BITE  allow off: P-allow
+  BITE  media off: E1
+  BITE  type off: E2
+  BITE  origin off: P-origin
+  BITE  path off: P-path
+  BITE  base off: P-base
+  BITE  ctype off: P-ctype
+  BITE  sha off: P-sha
+  BITE  mutation off: P-mutation
+  ✓  1 [webkit] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery (31.9s)
+  1 passed (32.8s)

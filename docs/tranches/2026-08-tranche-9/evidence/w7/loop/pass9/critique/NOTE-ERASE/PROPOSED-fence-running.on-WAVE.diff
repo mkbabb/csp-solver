@@ -1,0 +1,15 @@
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -231,7 +231,11 @@
+ // `getAnimations` (none this site supports) writes 0s too: no proof of a verb, no clock.
+ function stopTheClock(el: Element): void {
+   const style = (el as HTMLElement).style;
+-  const runs = el.getAnimations?.().some((a) => "animationName" in a) ?? false;
++  const runs =
++    el
++      .getAnimations?.()
++      .some((a) => "animationName" in a && a.playState === "running" && a.timeline === document.timeline) ??
++    false;
+   style.setProperty(
+     "animation-duration",
+     runs ? `${MOTION.rungs.whisper}ms` : "0s",

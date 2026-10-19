@@ -1,0 +1,43 @@
+// lane scratch probe (never banked): charter row 5 — one deeper rung on the margin names.
+import { test, expect, type Page } from "@playwright/test";
+import { glyphGate, fmt } from "./lib/glyph-pop.mjs";
+const INKS: [string, string | null][] = [
+  ["shipped muted", null],
+  ["graphite full (one deeper rung)", ".rp-name { color: var(--color-pencil-graphite) !important; }"],
+];
+const open = async (page: Page, theme: string) => {
+  await page.emulateMedia({ colorScheme: theme as "light" | "dark", reducedMotion: "reduce" });
+  await page.addInitScript((t) => { try { localStorage.setItem("sudoku-color-scheme", t); } catch { /* */ } }, theme);
+  await page.goto("./?size=3&difficulty=EASY");
+  await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
+  await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+  await expect.poll(() => page.locator(".sudoku-cell .glyph-svg").count(), { timeout: 20000 }).toBeGreaterThan(0);
+  await page.evaluate(() => document.fonts.ready);
+  if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").click();
+  await page.waitForTimeout(1500);
+};
+for (const cell of [
+  { name: "390x844c dpr2", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 2 } },
+  { name: "1280x800f dpr1", use: { viewport: { width: 1280, height: 800 }, deviceScaleFactor: 1 } },
+]) {
+  test.describe(cell.name, () => {
+    test.use(cell.use);
+    for (const theme of ["light", "dark"]) {
+      test(`${theme}`, async ({ page, browserName }) => {
+        test.setTimeout(240_000);
+        await open(page, theme);
+        const names = await page.evaluate(() =>
+          [...document.querySelectorAll(".rp-name")].map((e) => ({ id: e.id, t: (e.textContent ?? "").trim(), r: e.getBoundingClientRect() }))
+            .filter((n) => n.r.top >= 0 && n.r.bottom <= innerHeight && n.r.width > 0).slice(0, 3).map(({ id, t }) => ({ id, t })));
+        for (const [ink, css] of INKS) {
+          const tag = css ? await page.addStyleTag({ content: css }) : null;
+          for (const n of names) {
+            const g = await glyphGate(page, { subject: `[id="${n.id}"]`, payload: `names-rung ${cell.name} ${theme} '${n.t}' ${ink}` });
+            console.log(`[RULE names-rung] ${browserName} ${cell.name} ${theme} '${n.t}' ${ink}: red ${g.clean.red} ${fmt(g.clean)}`);
+          }
+          if (tag) await tag.evaluate((x) => (x as Element).remove());
+        }
+      });
+    }
+  });
+}

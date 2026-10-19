@@ -1,0 +1,40 @@
+# the pass-8 critic's crit-plants.c8.mjs, unedited, against the final gate; driver exit 0
+11:40  up 21:07, 2 users, load averages: 83.61 74.43 73.52
+11:41  up 21:09, 2 users, load averages: 86.46 78.24 75.10
+RED   exit 1 red[e]  E1 the svg link scoped to dark only: media=(prefers-color-scheme: dark) (a light tab shows no s)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 1 uncommented rel~=icon link(s) (/icon.svg); exactly one, to /icon.svg, wanted
+RED   exit 1 red[e]  E2 the svg link typed text/plain (a UA skips an unsupported icon type)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 1 uncommented rel~=icon link(s) (/icon.svg); exactly one, to /icon.svg, wanted
+RED   exit 1 red[e]  E3 both links inside <template> (inert content, no icon)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 0 uncommented rel~=icon link(s) (); exactly one, to /icon.svg, wanted | e.link-touch: index.html carries 0 uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted
+RED   exit 1 red[e]  E4 both links inside <noscript> (raw text in head with scripting on, no icon)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 0 uncommented rel~=icon link(s) (); exactly one, to /icon.svg, wanted | e.link-touch: index.html carries 0 uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted
+RED   exit 1 red[e]  E5 links removed, their text kept in a head <script> string
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 0 uncommented rel~=icon link(s) (); exactly one, to /icon.svg, wanted | e.link-touch: index.html carries 0 uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted
+RED   exit 1 red[e]  E6 a <base href> to a foreign origin before the links (the icon loads off-site)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.link-icon: index.html carries 1 uncommented rel~=icon link(s) (/icon.svg); exactly one, to /icon.svg, wanted | e.link-touch: index.html carries 1 uncommented apple-touch-icon link(s); exactly one, to /apple-touch-icon.png, wanted
+GREEN exit 0 red[-]  E7 src/main.ts re-points the icon to main's thick s at runtime
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+RED   exit 1 red[e]  E8 the touch icon with a 12x12 ink square in its paper (a mark that isn't the s)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0054 IoU 0.9754 blob 144 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.png-blob: the touch icon's largest mark the path does not explain (px) 144, outside [-Infinity, 16]
+RED   exit 1 red[e]  E9 the touch icon with a 16x16 ink square in its paper
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0089 IoU 0.9612 blob 256 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.png-tie: the touch icon vs the path: IoU 0.9612, outside [0.97, Infinity] | e.png-blob: the touch icon's largest mark the path does not explain (px) 256, outside [-Infinity, 16]
+RED   exit 1 red[e]  E10 the touch icon with a 20x20 ink square in its paper
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0133 IoU 0.9436 blob 400 px · unresolved non-setProperty sites 44 (printed, not red)
+      e.png-tie: the touch icon vs the path: IoU 0.9436, outside [0.97, Infinity] | e.png-blob: the touch icon's largest mark the path does not explain (px) 400, outside [-Infinity, 16]
+RED   exit 1 red[d]  T1 the arm table itself edited: PEN.W = a Z, svg+png re-made by the real icons.mjs (sharp)
+      readings: arm W width 4 · mass 0.2105 · png tie mean |Δ| 0.0007 IoU 0.9841 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      d.pin: the arm table's W / WIDTH 4 is not a pinned ballot arm (ARM_PIN; a re-cut is a stated edit)
+RED   exit 1 red[d]  T2 the arm table edited: PEN.W = a 2-line zigzag 'N' at the s's box
+      readings: arm W width 4 · mass 0.2452 · png tie mean |Δ| 0.0012 IoU 0.9968 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+      d.pin: the arm table's W / WIDTH 4 is not a pinned ballot arm (ARM_PIN; a re-cut is a stated edit) | d.extent: ink width of the tile 0.5313, outside [0.55, 0.8]
+GREEN exit 0 red[-]  NN-a the shipped bytes (negative control)
+      readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)

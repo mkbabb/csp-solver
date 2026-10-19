@@ -1,0 +1,96 @@
+start 11:57  up 21:25, 2 users, load averages: 70.06 53.81 60.04
+
+Running 1 test using 1 worker
+
+tab-pen (http://127.0.0.1:4233, chromium):
+  RED    clean light
+         path: icon: resolves to /thick.svg
+         sha: icon: sha256 fc667540027f, not the sidecar's
+  RED    clean dark
+         path: icon: resolves to /thick.svg
+         sha: icon: sha256 fc667540027f, not the sidecar's
+  FAILED       E1 the icon link scoped to dark, read light: red [media path sha], want [media]
+  FAILED       E2 the icon link typed text/plain: red [path sha type], want [type]
+  AS REQUIRED  E3 both links inside a template: red [count], want [count]
+  AS REQUIRED  E4 both links inside a noscript: red [count], want [count]
+  AS REQUIRED  E5 both links kept only as a script string: red [count], want [count]
+  AS REQUIRED  E6 a base href to a foreign origin: red [base ctype origin sha], want >= [base origin]
+  AS REQUIRED  E7 a script re-points the icon after load: red [mutation path sha], want >= [mutation path sha]
+  FAILED       P-base a same-origin base (resolution unchanged): red [base path sha], want [base]
+  FAILED       P-allow a sizes ladder on the touch icon: red [allow path sha], want [allow]
+  FAILED       P-origin the icon's bytes served off-origin: red [path sha], want [origin]
+  FAILED       P-path the icon's bytes at another path: red [path sha], want [path]
+  FAILED       P-ctype the icon served as text/plain: red [path sha], want [ctype]
+  FAILED       P-sha the icon served with other bytes: red [path sha], want [sha]
+  FAILED       P-mutation a re-point undone 50 ms later: red [mutation path sha], want [mutation]
+  FAILED       NN1 the links' attributes reordered: red [path sha], want []
+  FAILED       NN2 media=all on the icon (true in both schemes): red [path sha], want []
+  FAILED       NN3 E1 read dark (its query holds): red [path sha], want []
+  BITE  count off: E3 E4 E5
+  HOLE  allow off: P-allow
+  HOLE  media off: E1
+  HOLE  type off: E2
+  HOLE  origin off: P-origin
+  HOLE  path off: P-path
+  HOLE  base off: P-base
+  HOLE  ctype off: P-ctype
+  HOLE  sha off: P-sha
+  HOLE  mutation off: P-mutation
+  ✘  1 [chromium] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery (27.5s)
+
+
+  1) [chromium] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery 
+
+    Error:   RED    clean light
+             path: icon: resolves to /thick.svg
+             sha: icon: sha256 fc667540027f, not the sidecar's
+      RED    clean dark
+             path: icon: resolves to /thick.svg
+             sha: icon: sha256 fc667540027f, not the sidecar's
+      FAILED       E1 the icon link scoped to dark, read light: red [media path sha], want [media]
+      FAILED       E2 the icon link typed text/plain: red [path sha type], want [type]
+      AS REQUIRED  E3 both links inside a template: red [count], want [count]
+      AS REQUIRED  E4 both links inside a noscript: red [count], want [count]
+      AS REQUIRED  E5 both links kept only as a script string: red [count], want [count]
+      AS REQUIRED  E6 a base href to a foreign origin: red [base ctype origin sha], want >= [base origin]
+      AS REQUIRED  E7 a script re-points the icon after load: red [mutation path sha], want >= [mutation path sha]
+      FAILED       P-base a same-origin base (resolution unchanged): red [base path sha], want [base]
+      FAILED       P-allow a sizes ladder on the touch icon: red [allow path sha], want [allow]
+      FAILED       P-origin the icon's bytes served off-origin: red [path sha], want [origin]
+      FAILED       P-path the icon's bytes at another path: red [path sha], want [path]
+      FAILED       P-ctype the icon served as text/plain: red [path sha], want [ctype]
+      FAILED       P-sha the icon served with other bytes: red [path sha], want [sha]
+      FAILED       P-mutation a re-point undone 50 ms later: red [mutation path sha], want [mutation]
+      FAILED       NN1 the links' attributes reordered: red [path sha], want []
+      FAILED       NN2 media=all on the icon (true in both schemes): red [path sha], want []
+      FAILED       NN3 E1 read dark (its query holds): red [path sha], want []
+      BITE  count off: E3 E4 E5
+      HOLE  allow off: P-allow
+      HOLE  media off: E1
+      HOLE  type off: E2
+      HOLE  origin off: P-origin
+      HOLE  path off: P-path
+      HOLE  base off: P-base
+      HOLE  ctype off: P-ctype
+      HOLE  sha off: P-sha
+      HOLE  mutation off: P-mutation
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      281 |   }
+      282 |   console.log(`tab-pen (${origin}, ${test.info().project.name}):\n${rows.join("\n")}`);
+    > 283 |   expect(ok, rows.join("\n")).toBe(true);
+          |                               ^
+      284 | });
+      285 |
+        at <crit-scratch>/tree/web/frontend/e2e/tab-pen.spec.ts:283:31
+
+    Error Context: ../../../pw-out/tab-pen-the-tab-s-pen-as-t-5b081-ves-it-clean-plants-battery-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/tab-pen.spec.ts:230:1 › the tab's pen as the built page serves it: clean, plants, battery 
+exit 1
+end 11:58  up 21:25, 2 users, load averages: 59.30 52.69 59.41

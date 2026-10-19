@@ -1,0 +1,126 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 647faf12..140fd6f0 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -184,6 +184,8 @@ export const CLAUSES = {
+     "LEDGER N7 (chair p9) · a seat must match the voice's TEMPLATE element (attribute selectors read certain under :not())",
+   "r4-element":
+     "LEDGER N4/N19 (chair p9) · R4's voice font/line sites ELEMENT-keyed, the largest live candidate read",
++  "r4-unresolved":
++    "LEDGER row 4 (PROPOSED p9) · a font or line with no site reads UNRESOLVED (null) and reds R4, never a typed 16 / 1.2×",
+   "html-inert":
+     "TAB-PEN E3–E5 (chair p9) · <template>/<noscript>/<script>/<style> contents dropped before links are matched",
+   "link-allow":
+@@ -4289,7 +4291,7 @@ const DESKS = ["desk-1280x800", "desk-1440x900"];
+  *  demands): one voice site (class-keyed census ∪ element-keyed sites), resolving to `inherit`,
+  *  seated in EVERY phone regime and no desk regime (EVALUATED), no `!important`; the block's
+  *  reserve at each phone regime ≥ the voice's line, both resolved at their consumers. */
+-function reserveReading(L, fx, file = "src/MarginNote.vue") {
++export function reserveReading(L, fx, file = "src/MarginNote.vue") {
+   const o = { files: fx.files, read: fx.read, exists: fx.exists };
+   const fails = [];
+   const { map } = L.tokens(fx.fe, o);
+@@ -4332,16 +4334,20 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+       fails.push(`R3 seated in ${rg}`);
+   }
+   const block = L.census(fx.fe, "margin-note-block", "min-height", o);
++  // LEDGER row 4 (r4-unresolved): no site is UNRESOLVED (null), never the typed 16 / 1.2×
++  const masked = (v) => (on("r4-unresolved") ? null : v);
+   const fsOf = (cls, rg) => {
+     const e = L.effectiveAt(L.census(fx.fe, cls, "font-size", o), rg);
+-    return e ? L.lengthPx(e.value, {}, map) : 16;
++    return e ? L.lengthPx(e.value, {}, map) : masked(16);
+   };
+   const lhOf = (cls, rg, fs) => {
+     const e = L.effectiveAt(L.census(fx.fe, cls, "line-height", o), rg);
+-    if (!e) return fs * 1.2;
++    if (!e) return masked(fs == null ? null : fs * 1.2);
+     const n = /^[\d.]+$/.test(L.resolve(e.value, map).trim())
+-      ? +L.resolve(e.value, map) * fs
+-      : L.lengthPx(e.value, { fontSize: fs }, map);
++      ? fs == null
++        ? null
++        : +L.resolve(e.value, map) * fs
++      : L.lengthPx(e.value, fs == null ? {} : { fontSize: fs }, map);
+     return n;
+   };
+   for (const rg of PHONES) {
+@@ -4351,7 +4357,10 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+     const reserve = eff
+       ? L.lengthPx(
+           eff.value,
+-          { fontSize: bfs, lineHeight: lhOf("margin-note-block", rg, bfs) },
++          {
++            ...(bfs == null ? {} : { fontSize: bfs }),
++            lineHeight: lhOf("margin-note-block", rg, bfs) ?? undefined,
++          },
+           map,
+         )
+       : null;
+@@ -4366,17 +4375,15 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+       const fsC = at(["font-size"])
+         .map((s) => L.lengthPx(s.value, {}, map))
+         .filter((x) => x != null);
+-      const efs = Math.max(vfs, ...fsC);
++      const fsAll = [vfs, ...fsC].filter((x) => x != null);
++      const efs = fsAll.length ? Math.max(...fsAll) : null;
+       const lhC = at(["line-height"]).map((s) => {
+         const r = L.resolve(s.value, map).trim();
+-        return /^[\d.]+$/.test(r)
+-          ? +r * efs
+-          : L.lengthPx(s.value, { fontSize: efs }, map);
++        if (/^[\d.]+$/.test(r)) return efs == null ? null : +r * efs;
++        return L.lengthPx(s.value, efs == null ? {} : { fontSize: efs }, map);
+       });
+-      line = Math.max(
+-        lhOf("margin-note", rg, efs) ?? 0,
+-        ...lhC.filter((x) => x != null),
+-      );
++      const lhAll = [lhOf("margin-note", rg, efs), ...lhC].filter((x) => x != null);
++      line = lhAll.length ? Math.max(...lhAll) : null;
+     }
+     if (reserve == null || line == null || reserve < line - 0.5)
+       fails.push(`R4 ${rg}: reserve ${reserve} < the voice's line ${line}`);
+@@ -5641,6 +5648,24 @@ const TESTS = [
+         }),
+       ).length > 0,
+   ],
++  [
++    "r4-unresolved",
++    "LEDGER",
++    "row 4: the voice's line-height deleted, then its font-size deleted, each RED R4 as UNRESOLVED (never 1.2× / 16); the clean fixture GREEN",
++    (L) => {
++      const VOICE =
++        "  font-size: var(--type-body);\n  line-height: var(--type-leading-caption);\n";
++      const noLine = plantedFixture({ _swap: [VOICE, "  font-size: var(--type-body);\n"] });
++      const noFont = plantedFixture({
++        _swap: [VOICE, "  line-height: var(--type-leading-caption);\n"],
++      });
++      return (
++        reserveReading(L, plantedFixture({})).length === 0 &&
++        reserveReading(L, noLine).some((f) => /R4 .*null/.test(f)) &&
++        reserveReading(L, noFont).some((f) => /R4 .*null/.test(f))
++      );
++    },
++  ],
+   // --- LIVE (pass 8's critic X11/X12; the chair's pass-9 cure)
+   [
+     "masked-const",
+diff --git a/web/frontend/scripts/shape-census.d.mts b/web/frontend/scripts/shape-census.d.mts
+index 68d9550c..d40e7a2f 100644
+--- a/web/frontend/scripts/shape-census.d.mts
++++ b/web/frontend/scripts/shape-census.d.mts
+@@ -311,6 +311,13 @@ export function darkArmCensus(
+ 
+ // ── the self-test ───────────────────────────────────────────────────────────────────────────────
+ export function fixture(tree: Record<string, string>, root?: string): Fixture;
++/** THE §7 reserve law (R1–R4), the ONE reader (LEDGER row 3, PROPOSED p9): read over a virtual
++ *  fixture or a real tree (`{fe, files, read, exists}`); returns the failures, empty when the law holds. */
++export function reserveReading(
++  L: Record<string, unknown>,
++  fx: Pick<Fixture, "fe" | "files" | "read" | "exists">,
++  file?: string,
++): string[];
+ export function selfTest(L: Record<string, unknown>): {
+   rows: {
+     clause: string | null;

@@ -1,0 +1,74 @@
+gate sha1 d05491a3 · library sha1 2b465df8 · load 27.72 27.71 30.75
+clean0 exit 0 · 0 findings · baseline
+--- the pass-7 critic's set (run FIRST)
+D23-packed-int exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#" + (0xffb2f3).toString(16);
+D24-array-join exit 1 · 1 findings · src/games/shared/p.ts: export const x = ["#ff", "b2f3"].join("");
+D25-template-const exit 1 · 1 findings · src/games/shared/p.ts: export const x = `#ff${"b2f3"}`;
+D26-display-p3 exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(display-p3 0.9554 0.7109 0.9383)";
+D27a-hsl-rad exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(5.4rad 100% 84.9%)";
+D27b-hsl-grad exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hsl(343.8grad 100% 84.9%)";
+D28-escaped-hash exit 1 · 1 findings · src/games/shared/p.ts: export const x = "\x23ffb2f3";
+D29-css-escape-hash exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: #ff\62 2f3; }
+D30a-tw-indigo-200 exit 1 · 1 findings · src/games/shared/Tw.vue: <template><span class="text-indigo-200">x</span></template>
+D30b-tw-teal-800 exit 1 · 1 findings · src/games/shared/Tw.vue: <template><span class="text-teal-800">x</span></template>
+D31-rgb-slash-alpha exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(255 178 243 / 50%)";
+D32-derived-via-indirection exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: color-mix(in oklch, var(--color-peer-cursor-ink) 60%, white); }
+D33-minted-split-template exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty(`--color-${"peer"}-${i}-name`, "#000");
+D34-minted-concat-method exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty("--color-peer-".concat(String(i), "-name"), "#000");
+D35-minted-join exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement, i: number; el.style.setProperty(["--color-peer", i, "name"].join("-"), "#000");
+D36-relative-from-literal exit 1 · 1 findings · src/games/shared/p.ts: export const x = "oklch(from #000 0.856 0.121 332.4)";
+D37-cie-lab exit 1 · 1 findings · src/games/shared/p.ts: export const x = "lab(80.2 28.6 -17.4)";
+D38-oklch-alpha exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: oklch(0.856 0.121 332.4 / 0.5); }
+D39-const-ident-concat exit 1 · 1 findings · src/games/shared/p.ts: const P = "b2f3"; export const x = "#ff" + P;
+D40-mixed-case exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#FfB2F3".toLowerCase();
+--- the pass-8 critic's fresh set
+C1-division-after-brace-then-url exit 1 · 1 findings · src/games/shared/p.ts: export const u = [function () {} / 2, "x/", "http://a.b", "#ffb2f3"];
+C2-regex-after-paren-with-slashes exit 1 · 1 findings · src/games/shared/p.ts: export function f(e: boolean, t: string) { if (e) /\/\//.test(t); return "#ffb2f3"; }
+C3-unicode-escape-hash exit 1 · 1 findings · src/games/shared/p.ts: export const x = "\u0023ffb2f3";
+C4-unicode-brace-escape exit 1 · 1 findings · src/games/shared/p.ts: export const x = "\u{23}ffb2f3";
+C5-hex-entity exit 1 · 1 findings · src/games/shared/Tw.vue: <template><span style="color: &#x23;ffb2f3">x</span></template>
+C6-css-escape-6digit exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: #ff\0000622f3; }
+C7a-pcss-redeclares-arm exit 1 · 1 findings · src/games/shared/tin.pcss: :root.dark { --color-peer-5-name: #ff00ff; }
+C7b-pcss-copy exit 1 · 1 findings · src/games/shared/tin.pcss: .x { color: #ffb2f3; }
+C8-property-initial exit 1 · 1 findings · src/games/shared/gameCell.css += @property --tin-x { syntax: "<color>"; inherits: false; initial-value: #ffb2f3; }
+C9-fromCharCode exit 1 · 1 findings · src/games/shared/p.ts: export const x = String.fromCharCode(35) + "ffb2f3";
+C10-short-packed exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#ff" + (0xb2f3).toString(16);
+C12-rgba-byte-quad exit 1 · 1 findings · src/games/shared/p.ts: export const px = [255, 178, 243, 255];
+C13-float-triple exit 1 · 1 findings · src/games/shared/p.ts: export const gl = [1, 0.698, 0.953];
+C14-bare-hex-table-indexed exit 1 · 2 findings · src/games/shared/p.ts: const T = ["ffb2f3", "ffc1a1"]; export const x = (i: number) => "#" + T[i];
+C15a-named-darkmagenta-vs-light-pink exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: darkmagenta; }
+C15b-named-in-ts exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.color = "lightsalmon";
+C16a-color-xyz-d65 exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: color(xyz-d65 0.7333 0.5957 0.9243); }
+C16b-color-xyz exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(xyz 0.7333 0.5957 0.9243)";
+C17-short-hex-near exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#fbf";
+C18a-drifted-table-into-user-ink exit 1 · 1 findings · src/games/shared/p.ts: export const inkOf = (i: number) => ({ "--color-user-ink": ["#9a3d00", "#3f6a00", "#006e73"][i] });
+C18b-drifted-scalar-into-user-ink exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("--color-user-ink", "#9a3d00");
+C19-tw-arbitrary-property-redeclare exit 1 · 1 findings · src/games/shared/Tw.vue: <template><span class="[--color-peer-5-name:#ff00ff]">x</span></template>
+C20-light-dark exit 1 · 1 findings · src/games/shared/gameCell.css += .x { color: light-dark(#ffb2f3, #000); }
+C22-public-svg exit 1 · 1 findings · public/tin.svg: <svg xmlns="http://www.w3.org/2000/svg"><rect fill="#ffb2f3"/></svg>
+C23-sheet-outside-src-NOT-YET-IMPORTED exit 0 · 0 findings · theme/tin.css: :root.dark { --color-peer-5-name: #ff00ff; } .y { color: #ffb2f3; }
+C23-import-chain-outside-src exit 1 · 2 findings · src/assets/index.css += @import "../../theme/tin.css";
+clean1 exit 0 · 0 findings · after
+restored byte-equal
+DONE
+
+== od -c of the escape plants (the trash copies the script keeps)
+-- D28-escaped-hash
+0000000    e   x   p   o   r   t       c   o   n   s   t       x       =
+0000020        "   \   x   2   3   f   f   b   2   f   3   "   ;  \n    
+0000037
+-- C3-unicode-escape-hash
+0000000    e   x   p   o   r   t       c   o   n   s   t       x       =
+0000020        "   \   u   0   0   2   3   f   f   b   2   f   3   "   ;
+0000040   \n                                                            
+0000041
+-- C4-unicode-brace-escape
+0000000    e   x   p   o   r   t       c   o   n   s   t       x       =
+0000020        "   \   u   {   2   3   }   f   f   b   2   f   3   "   ;
+0000040   \n                                                            
+0000041
+-- C2-regex-after-paren-with-slashes
+0000000    e   x   p   o   r   t       f   u   n   c   t   i   o   n    
+0000020    f   (   e   :       b   o   o   l   e   a   n   ,       t   :
+0000040        s   t   r   i   n   g   )       {       i   f       (   e
+0000060    )       /   \   /   \   /   /   .   t   e   s   t   (   t   )

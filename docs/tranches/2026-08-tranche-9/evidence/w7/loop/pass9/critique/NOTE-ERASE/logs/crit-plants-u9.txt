@@ -1,0 +1,8 @@
+exit 1 | clean | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT .call: CSS.registerProperty.call(CSS, {...}) | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT optional call: CSS.registerProperty?.({...}) | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT Reflect.apply(CSS.registerProperty, CSS, [{...}]) | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT comma call (0, CSS.registerProperty)({...}) | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT computed key const k = 'registerProperty'; CSS[k]({...}) | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT assigned alias let r; r = CSS.registerProperty.bind(CSS); r({...}) | ladder registration: 7 rungs, 0 breaches
+exit 0

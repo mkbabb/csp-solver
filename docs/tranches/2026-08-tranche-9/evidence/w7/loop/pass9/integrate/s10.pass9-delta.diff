@@ -1,0 +1,2400 @@
+diff --git a/web/frontend/config-node.d.ts b/web/frontend/config-node.d.ts
+index 75b50e9..604a92c 100644
+--- a/web/frontend/config-node.d.ts
++++ b/web/frontend/config-node.d.ts
+@@ -21,8 +21,9 @@
+ // at all until someone declares what they meant.
+ 
+ declare module "node:fs" {
+-  /** `readFileSync(abs, 'utf8')` — the only form the configs call. */
++  /** `readFileSync(abs, 'utf8')`, and the bare form for `face-stamp`'s BYTES (CTRL-FACE pass 9). */
+   export function readFileSync(path: string, encoding: "utf8"): string;
++  export function readFileSync(path: string): Uint8Array;
+   export function writeFileSync(path: string, data: string): void;
+   export function existsSync(path: string): boolean;
+   export function readdirSync(path: string): string[];
+@@ -33,13 +34,13 @@ declare module "node:fs" {
+ 
+ /** `face-stamp`'s digest over the build's module graph (T9-W7 CTRL-FACE). */
+ declare module "node:crypto" {
+-  export function createHash(algorithm: "sha1"): {
+-    update(data: string): { digest(encoding: "hex"): string };
++  interface Hash {
++    update(data: string | Uint8Array): Hash;
+     digest(encoding: "hex"): string;
+-  };
++  }
++  export function createHash(algorithm: "sha1"): Hash;
+ }
+ 
+-
+ declare module "node:path" {
+   export function join(...parts: string[]): string;
+   export function resolve(...parts: string[]): string;
+diff --git a/web/frontend/e2e/face-law.spec.ts b/web/frontend/e2e/face-law.spec.ts
+index d07fa67..d65196a 100644
+--- a/web/frontend/e2e/face-law.spec.ts
++++ b/web/frontend/e2e/face-law.spec.ts
+@@ -3,7 +3,6 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "n
+ import { join } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { fourBands, EDGE_PLANTS, type FourBands as Bands } from "./lib/edge-bands.mjs";
+-import { onOff } from "./lib/paint-lib.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto (loadCard, below)
+ //
+@@ -1251,6 +1250,97 @@ for (const [label, route, use] of [
+ 
+ /* ══ 9 · THE CASE-WIDE OCCLUSION GATE (§10's leader; every §10 lane runs this) ══════════════ */
+ 
++/* ══ 8b · THE NAME PAINTS THE SUBSET'S FACE (pass 9, charter row 2) ══════════════════════════
++   The rendered row above reads computed `font-family`, which is a NAME: an `@font-face` or a
++   `FontFace` that re-binds "Patrick Hand" to another face leaves it identical. So each voice is
++   read as GLYPHS: the voice's whole cut (every codepoint its home rule's `unicode-range` names),
++   set in the voice, against the same string in a reference face loaded from the subset file the
++   home rule names under a fresh name, so no binding of the voice's name can reach it. The advance
++   must agree to 0.5 px at 48 px. Two re-bindings red in the same run: a CSS
++   `@font-face` and a script `FontFace` for "Patrick Hand", each pointed at a system face. */
++const VOICE_GLYPHS = [
++  ["--face-written", "patrickhand-subset"],
++  ["--face-printed", "fraunces-subset"],
++  ["--face-mono", "firacode-subset"],
++] as const;
++test.describe("the name paints the subset's face — the card · 1280 fine", () => {
++  test("each voice's word is the subset's advance, and a re-binding of the name reds", async ({ page }) => {
++    await loadCard(page);
++    const read = () =>
++      page.evaluate(async (rows) => {
++        const out: { voice: string; file: string; n: number; voiceW: number; refW: number; d: number; src: string | null }[] = [];
++        const rules = [...document.styleSheets].flatMap((s) => {
++          try {
++            return [...s.cssRules];
++          } catch {
++            return [];
++          }
++        });
++        for (const [voice, file] of rows) {
++          const rule = rules.find((r) => r instanceof CSSFontFaceRule && r.style.getPropertyValue("src").includes(file)) as CSSFontFaceRule | undefined;
++          const src = rule ? rule.style.getPropertyValue("src") : null;
++          const url = src ? /url\(["']?([^"')]+)["']?\)/.exec(src)?.[1] ?? null : null;
++          // THE WORD IS THE CUT: every codepoint the home rule's `unicode-range` declares, so no
++          // letter of it can fall back in either span and the read is the subset's whole advance.
++          const range = rule ? rule.style.getPropertyValue("unicode-range") : "";
++          const word = [...range.matchAll(/U\+([0-9A-F]+)(?:-([0-9A-F]+))?/gi)]
++            .flatMap((m) => {
++              const lo = parseInt(m[1], 16);
++              const hi = m[2] ? parseInt(m[2], 16) : lo;
++              return Array.from({ length: hi - lo + 1 }, (_, i) => String.fromCodePoint(lo + i));
++            })
++            .join("");
++          const name = `ref-${file}`;
++          if (url && ![...document.fonts].some((f) => f.family === name)) {
++            const d = (k: string) => rule!.style.getPropertyValue(k) || undefined;
++            const ff = new FontFace(name, `url(${new URL(url, rule!.parentStyleSheet?.href ?? location.href).href})`, {
++              weight: d("font-weight"),
++              style: d("font-style"),
++              stretch: d("font-stretch"),
++              unicodeRange: d("unicode-range"),
++            });
++            document.fonts.add(await ff.load());
++          }
++          const span = (fam: string) => {
++            const s = document.createElement("span");
++            s.style.cssText = `position:absolute;left:0;top:0;white-space:pre;font-size:48px;font-weight:400;font-style:normal;font-family:${fam}`;
++            s.textContent = word;
++            document.body.appendChild(s);
++            return s;
++          };
++          const a = span(`var(${voice})`);
++          const b = span(`"${name}", monospace`);
++          await document.fonts.ready;
++          const voiceW = a.getBoundingClientRect().width;
++          const refW = b.getBoundingClientRect().width;
++          a.remove();
++          b.remove();
++          out.push({ voice, file, n: [...word].length, voiceW: Math.round(voiceW * 100) / 100, refW: Math.round(refW * 100) / 100, d: Math.round(Math.abs(voiceW - refW) * 100) / 100, src });
++        }
++        return out;
++      }, VOICE_GLYPHS);
++    const say = (r: Awaited<ReturnType<typeof read>>) => r.map((x) => `${x.voice} n${x.n} ${x.voiceW}/${x.refW} Δ${x.d}`).join(" · ");
++    const clean = await read();
++    const t1 = await page.addStyleTag({ content: '@font-face { font-family: "Patrick Hand"; src: local("Courier New"), local("Courier"); }' });
++    const css = await read();
++    await t1.evaluate((e) => (e as Element).remove());
++    const js = await page.evaluate(async () => {
++      const ff = new FontFace("Patrick Hand", "local('Courier New'), local('Courier')");
++      document.fonts.add(await ff.load());
++      return true;
++    });
++    const scr = await read();
++    test.info().annotations.push({ type: "face-glyphs", description: `clean ${say(clean)} | @font-face plant ${say(css)} | FontFace plant (${js}) ${say(scr)}` });
++    for (const x of clean) {
++      expect(x.src, `${x.voice}: a home @font-face names ${x.file}`).not.toBeNull();
++      expect(x.n, `${x.voice}: the home rule's unicode-range gives the word`).toBeGreaterThan(8);
++      expect(x.d, `${x.voice} paints its subset (${x.voiceW} vs the reference ${x.refW})`).toBeLessThanOrEqual(0.5);
++    }
++    expect(css[0].d, `the @font-face re-binding reds (${say(css)})`).toBeGreaterThan(0.5);
++    expect(scr[0].d, `the FontFace re-binding reds (${say(scr)})`).toBeGreaterThan(0.5);
++  });
++});
++
+ /**
+  * THIRD OCCURRENCE OF ONE CLASS, so it becomes a law with a home rather than a third finding:
+  * CTRL-RULE arm (a)'s sticky pin covered 38.8 % of the name it pinned, W2's hover notes 68.4 %,
+@@ -2032,31 +2122,39 @@ for (const [label, use, sites] of [
+           ).toBe(true);
+       }
+ 
+-      // FORCED COLOURS COUNT PAINTED PIXELS (LAWS P7 §E iii): a `clip-path: inset(0)` keeps every
+-      // computed outline property green while painting 0 px. ON vs `outline-style: none`, pixels
+-      // that differ by ≥ 24 in any channel; the floor is half the ring's device perimeter.
++      // FORCED COLOURS, PER BAND WITH THICKNESS (pass 9, charter row 4; LAWS P8 §E). Pass 8 summed the
++      // painted pixels against half the device perimeter, and two rings that are not a ring passed it:
++      // the bottom band alone (`clip-path: inset(0 0 -8px 0)`, 109/87) and a 1 px ring (218/87). The
++      // read is now the ONE edge probe's four bands under `forced-colors: active`, ON against
++      // `outline-style: none` (the forced palette overrides any colour plant): each band floors its
++      // own depth (B3, 2 css px), its holes (B4) and its share of the deepest band (B6). Every site;
++      // the three plants red in the same run, the clean ring GREEN.
+       {
++        const FC_OPTS = { ...RING_OPTS, off: `${RP} { outline-style: none !important; }` };
++        const FC_PLANTS = [
++          ["CLIP0 clip-path inset(0)", `${RP} { clip-path: inset(0) !important; }`],
++          ["BOTTOM band only", `${RP} { clip-path: inset(0 0 -8px 0) !important; }`],
++          ["THIN 1px", `${RP} { outline-width: 1px !important; }`],
++        ] as const;
+         await page.emulateMedia({ forcedColors: "active" });
+-        await readAt(sites[sites.length - 1]);
+-        const count = async () => {
+-          const b = (await page.locator(RP).first().boundingBox())!;
+-          const clip = { x: Math.max(0, Math.floor(b.x - 8)), y: Math.max(0, Math.floor(b.y - 8)), width: Math.ceil(b.width + 16), height: Math.ceil(b.height + 16) };
+-          const { on, off } = await onOff(page, clip, `${RP} { outline-style: none !important; }`);
+-          let n = 0;
+-          for (let i = 0; i < on.data.length; i += 3)
+-            if (Math.max(Math.abs(on.data[i] - off.data[i]), Math.abs(on.data[i + 1] - off.data[i + 1]), Math.abs(on.data[i + 2] - off.data[i + 2])) >= 24) n++;
+-          return { n, floor: Math.round((b.width + b.height) * dpr) };
+-        };
+-        const fc = await count();
+-        const t = await page.addStyleTag({ content: `${RP} { clip-path: inset(0) !important; }` });
+-        await flush();
+-        const clipped = await count();
+-        await t.evaluate((e) => (e as Element).remove());
++        for (const sel of sites) {
++          await readAt(sel);
++          const fc = await fourBands(page, FC_OPTS);
++          const planted: string[] = [];
++          for (const [name, css] of FC_PLANTS) {
++            const t = await page.addStyleTag({ content: css });
++            await flush();
++            const p = await fourBands(page, FC_OPTS);
++            await t.evaluate((e) => (e as Element).remove());
++            await flush();
++            planted.push(`${name}: ${p.red ? "RED" : "GREEN"} (${sayBands(p)})`);
++            expect(p.red, `forced colours ${sel}: the plant ${name} reds a band (${sayBands(p)})`).toBe(true);
++          }
++          test.info().annotations.push({ type: "ring-forced-colors", description: `${sel} dpr${dpr}: ${sayBands(fc)} · ${planted.join(" · ")}` });
++          expect(fc.red, `forced colours ${sel}: the ring paints on all four bands (${sayBands(fc)}; ${fc.why.join("; ")})`).toBe(false);
++        }
+         await page.emulateMedia({ forcedColors: "none" });
+         await flush();
+-        test.info().annotations.push({ type: "ring-forced-colors", description: `painted ${fc.n} px (floor ${fc.floor}) · PLANT clip-path inset(0) ${clipped.n} px` });
+-        expect(clipped.n, `forced colours: the clip-path plant paints under the floor (${clipped.n} < ${clipped.floor})`).toBeLessThan(clipped.floor);
+-        expect(fc.n, `forced colours: the ring PAINTS ${fc.n} px ≥ ${fc.floor}`).toBeGreaterThanOrEqual(fc.floor);
+       }
+ 
+       // THE STRANDED CONTROL, same walk: a focusable with no indicator must read `none`.
+@@ -2121,6 +2219,142 @@ for (const [label, use, sites] of [
+   });
+ }
+ 
++/* ══ 12b · ONE RING ON EVERY CARD CONTROL (pass 9, charter row 5; CHAIR-RULINGS §5) ══════════
++   The ring row above reads two sites. The card renders every button, tab and tab stop its children
++   carry, and the fold shipped a second, dashed form on all of those (s10's generic rule) beside
++   DrawerTab's dashed `currentColor`: a reader of two sites cannot see either. So the census walks
++   EVERY focusable the visible card renders, plus the drawer's tab, by the keyboard's road, and
++   each must read the ONE form (solid, 2px, `--ring-ink`) AND paint it on four bands, off the hole
++   ledger below (each entry still red on its named band somewhere, or the row reds). The negative
++   in the same run: a control given a second form (a dashed `currentColor` ring) reds the census. */
++const RING_FOCUSABLE = 'button, [role="tab"], [tabindex="0"]';
++/** THE HOLE LEDGER: a band the ONE ring cannot paint for a reason this family does not own, named
++ *  with its owner and its band. It is CONTROL-ANCHORED, never an excuse: each entry must still hold
++ *  (red on a listed band) on at least one control it names, so a cure reds the row until the entry
++ *  is struck, and a red on any other band reds at once. Off the ledger, every band paints. */
++const RING_HOLES: readonly { at: string; bands: readonly string[]; owner: string; cells?: readonly string[] }[] = [
++  // On the union the case's `#card-foot` lays the bar outside the scrollport: the verbs' clip is
++  // gone (four bands whole at 390×844), and at 1280 a verb's own note, revealed by the same
++  // `:focus-visible`, hangs over the ring's bottom band from the foot's berth.
++  {
++    at: "#card-foot .action-verbs button",
++    bands: ["bottom"],
++    owner: "the verb's own note, hung in the foot's berth (CTRL-TAPE's berth)",
++    cells: ["1280 fine"],
++  },
++  {
++    at: ".drawer-tab",
++    bands: ["left", "bottom"],
++    owner: "the drawer's tongue is tucked 0.5rem under the board's paper (T9-W2 §2.7)",
++  },
++];
++for (const [label, use] of [
++  ["390×844 coarse", coarse(390, 844)],
++  ["1280 fine", {}],
++] as const) {
++  test.describe(`one ring on every card control — ${label}`, () => {
++    test.use(use);
++    // Two rows on one census: the FORM (CHAIR-RULINGS §5: one ring form per card) and the PAINT
++    // (station 1, off the hole ledger), so a paint hole never hides the form's verdict or the reverse.
++    for (const clause of ["form", "paint"] as const)
++    test(`every focusable in the card, and the drawer's tab, ${clause === "form" ? "wears" : "paints"} the ONE ring; a second form reds`, async ({ page }) => {
++      test.setTimeout(150_000);
++      // `reduce`: the chips' 150 ms colour transition carries `outline-color` and snaps under it
++      // (row 9); a read inside the fade is the transition's, not the ring's
++      await page.emulateMedia({ reducedMotion: "reduce" });
++      await loadCard(page);
++      const ringInk = await page.evaluate(() => {
++        const d = document.createElement("div");
++        d.style.color = "var(--ring-ink)";
++        document.body.appendChild(d);
++        const c = getComputedStyle(d).color;
++        d.remove();
++        return c;
++      });
++      const tag = () =>
++        page.evaluate(
++          ({ card, sel }) => {
++            const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++            const live = (e: Element) => e.getClientRects().length > 0 && !e.closest("[inert]") && !(e as HTMLButtonElement).disabled;
++            // the card, its foot (the case's `#card-foot`, where the bar is laid outside the scrollport
++            // once the foot lands) and the drawer's tab: every control the card's face answers for
++            const foot = document.querySelector("#card-foot");
++            const els = [...root.querySelectorAll(sel), ...(foot ? foot.querySelectorAll(sel) : []), ...document.querySelectorAll(".drawer-tab")].filter(live);
++            document.querySelectorAll("[data-ring-census]").forEach((e) => e.removeAttribute("data-ring-census"));
++            els.forEach((e, i) => e.setAttribute("data-ring-census", String(i)));
++            return els.map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].slice(0, 2).join(".")}`);
++          },
++          { card: CARD, sel: RING_FOCUSABLE },
++        );
++      const census = async () => {
++        const names = await tag();
++        const out: { name: string; fv: boolean; form: string; ok: boolean; bands: string; red: boolean; occ: string | null; whole: string | null }[] = [];
++        for (const [i, name] of names.entries()) {
++          await page.keyboard.press("Shift");
++          await page.keyboard.press("Tab");
++          await page.evaluate((i) => {
++            document.querySelectorAll("[data-ring-probe]").forEach((e) => e.removeAttribute("data-ring-probe"));
++            const el = document.querySelector<HTMLElement>(`[data-ring-census="${i}"]`)!;
++            el.setAttribute("data-ring-probe", "");
++            el.focus();
++          }, i);
++          await flushRing(page);
++          const r = await page.evaluate(() => {
++            const el = document.activeElement as HTMLElement;
++            const cs = getComputedStyle(el);
++            return { fv: el.matches(":focus-visible") && el.hasAttribute("data-ring-probe"), style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
++          });
++          const b = await fourBands(page, RING_OPTS);
++          const ok = r.fv && r.style === "solid" && r.width === "2px" && r.color === ringInk;
++          // an entry scoped to named cells (`cells`) applies only there
++          const hole = await page.evaluate(
++            (list) => list.findIndex((o) => o.on && document.querySelector("[data-ring-probe]")!.matches(o.at)),
++            RING_HOLES.map((h) => ({ at: h.at, on: !h.cells || h.cells.includes(label) })),
++          );
++          const thinnest = b.bands ? (Object.entries(b.bands).sort((x, y) => x[1].thickness - y[1].thickness)[0][0] as string) : null;
++          // on the ledger: the hole must still be there, on a listed band; off it: every band paints
++          const occ = hole >= 0 ? RING_HOLES[hole].owner : null;
++          const held = hole >= 0 && b.red && !!thinnest && RING_HOLES[hole].bands.includes(thinnest);
++          // on a ledger control a green read is no offence (one note may clear its verb where its
++          // sibling's does not); a red read off the listed bands is; the ENTRY must hold somewhere
++          const offLedger = hole >= 0 && b.red && !held;
++          out.push({ name, fv: r.fv, form: `${r.style} ${r.width} ${r.color}`, ok, bands: sayBands(b), red: hole >= 0 ? offLedger : b.red, occ, whole: hole >= 0 ? (held ? `held on ${thinnest}` : b.red ? `RED OFF THE LEDGER on ${thinnest}` : "whole") : null });
++        }
++        return out;
++      };
++      const clean = await census();
++      const off = (c: { ok: boolean; red: boolean }) => (clause === "form" ? !c.ok : c.red);
++      const bad = clean.filter(off);
++      test.info().annotations.push({
++        type: "ring-census",
++        description: `${clean.length} controls, ${clean.length - bad.length} on the ONE ring · ink ${ringInk} · ${clean.map((c) => `${c.name}: ${c.form}${c.red ? " BANDS RED " + c.bands : ""}`).join(" | ")}`,
++      });
++      const named = clean.filter((c) => c.occ);
++      // a ledger entry no control matches is stale: strike it or it hides the next hole
++      if (clause === "paint")
++        for (const h of RING_HOLES.filter((x) => !x.cells || x.cells.includes(label)))
++          expect(
++            clean.some((c) => c.occ === h.owner && /^held/.test(c.whole ?? "")),
++            `the hole ledger's entry for ${h.at} still holds on a control (else strike it)`,
++          ).toBe(true);
++      test.info().annotations.push({
++        type: "ring-census-ledger",
++        description: named.length ? named.map((c) => `${c.name}: ${c.bands} · ledger ${c.whole} · ${c.occ}`).join(" | ") : "none",
++      });
++      expect(clean.length, "the census found the card's controls").toBeGreaterThan(5);
++      expect(clean.some((c) => /drawer-tab/.test(c.name)), "the drawer's tab is in the census").toBe(true);
++      // THE NEGATIVE, same run: a second form on one control (the shape the fold shipped)
++      const t = await page.addStyleTag({ content: '[data-ring-census="0"]:focus-visible { outline: 2px dashed currentColor !important; }' });
++      const planted = await census();
++      await t.evaluate((e) => (e as Element).remove());
++      const caught = planted.filter(off).length;
++      test.info().annotations.push({ type: "ring-census-plant", description: `a second form on control 0: ${caught} control(s) off the ONE ring` });
++      expect(caught, "the planted second form reds the census").toBeGreaterThan(0);
++      expect(bad.map((c) => `${c.name}: ${c.form} fv ${c.fv}${c.red ? " · " + c.bands : ""}`), `every card control ${clause === "form" ? "wears" : "paints"} the ONE ring`).toEqual([]);
++    });
++  });
++}
++
+ /* ══ 12 · M17 SHIPS WITH ITS GATES (T9-M17, INTAKE rows 7, 8, 13 — pass 6) ════════════════════
+    Pass 5 cured the owner's "poor usage of space" and left every number in an evidence
+    instrument (`gpanel.mjs`): the column could come back and this file would read the same. The
+diff --git a/web/frontend/e2e/keys-crib.spec.ts b/web/frontend/e2e/keys-crib.spec.ts
+index 55bb2b5..8f8bc01 100644
+--- a/web/frontend/e2e/keys-crib.spec.ts
++++ b/web/frontend/e2e/keys-crib.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, type Page } from "@playwright/test";
+ import { installSampler, type PP, type PPRead } from "./lib/postpaint.mjs";
++import { atRest } from "./lib/rest-probes.mjs";
+ 
+ // PRM: live, because the owner's T9-M16 defect IS the fold's 200 ms transition: under reduce the old scroll landed and the crib showed
+ //
+@@ -33,12 +34,36 @@ const CARD = ".controls-card";
+ // and the card is still the scrollport the press must not move.
+ const CASE = ".drawer-case";
+ 
+-async function load(page: Page, w: number, h: number) {
++async function load(page: Page, w: number, h: number, { crib = true } = {}) {
+   await page.setViewportSize({ width: w, height: h });
+   await page.goto("./?size=3&difficulty=EASY");
+   await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
+   await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+-  await expect(page.locator(`${CASE} .action-bar .info-btn`).first()).toBeVisible({ timeout: 20000 });
++  if (crib) await expect(page.locator(`${CASE} .action-bar .info-btn`).first()).toBeVisible({ timeout: 20000 });
++  else await expect(page.locator("#card-foot .action-bar")).toHaveCount(1, { timeout: 20000 });
++}
++
++/** PASS 9 · the crib's pose has settled (`lint:sleep`'s cure for the two fixed 300 ms waits): no
++ *  running animation inside the case, and the verbs' box unmoved across two painted frames. */
++async function poseSettled(page: Page) {
++  await expect
++    .poll(
++      () =>
++        page.evaluate(async () => {
++          const c = document.querySelector(".drawer-case")!;
++          const v = () => document.querySelector("#card-foot .action-verbs")?.getBoundingClientRect().bottom ?? 0;
++          const moving = () =>
++            document.getAnimations().some((a) => {
++              const t = (a.effect as KeyframeEffect | null)?.target;
++              return a.playState === "running" && !!t && c.contains(t);
++            });
++          const first = [moving(), v()] as const;
++          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++          return !first[0] && !moving() && Math.abs(first[1] - v()) < 0.01;
++        }),
++      { timeout: 8000 },
++    )
++    .toBe(true);
+ }
+ 
+ /**
+@@ -307,21 +332,30 @@ for (const arm of ["cure", "PLANT: a rung that never ends"] as const) {
+  * home (`sampleVerbs` above). At 844×390 the crib exists only where the pointer is fine and the
+  * layout is not the phone's (`!mobile`); where the `i` is absent the cell is NAMED absent, never
+  * read green.
++ * PASS 9 (the pass-8 critic's G6): the 844×390 cell's `load(...).catch(() => undefined)` turned ANY
++ * load failure into "NAMED absent" (20.4 s, both engines, counted green). The load is no longer
++ * swallowed: under 1024 it waits for the bar, not the `i`, then asserts the phone layout holds and
++ * the `i` is absent before it SKIPS with its reason. A page that fails to load reds the cell.
+  */
+ for (const cell of [
+   { name: "1440×900 fine", w: 1440, h: 900 },
+   { name: "844×390 fine", w: 844, h: 390 },
+ ] as const) {
+   test(`G3 — the verbs hold while the crib opens and closes; the F1 plant moves them — ${cell.name}`, async ({ page }) => {
+-    await load(page, cell.w, cell.h).catch(() => undefined);
+-    const hasI = await page.evaluate(
+-      () => !![...document.querySelectorAll(".action-bar .info-btn")].find((x) => x.getClientRects().length),
+-    );
+-    test.info().annotations.push({ type: "crib-present", description: String(hasI) });
+-    if (!hasI) {
+-      test.info().annotations.push({ type: "G3", description: `${cell.name}: the \`i\` is not laid (the crib does not exist here) — NAMED absent` });
+-      return;
++    const phoneCell = cell.w < 1024;
++    await load(page, cell.w, cell.h, { crib: !phoneCell });
++    const at = await page.evaluate(() => ({
++      phone: !matchMedia("(min-width: 1024px)").matches,
++      i: !![...document.querySelectorAll(".action-bar .info-btn")].find((x) => x.getClientRects().length),
++    }));
++    test.info().annotations.push({ type: "crib-present", description: String(at.i) });
++    if (phoneCell) {
++      expect(at.phone, "the cell is the phone layout (`mobile`)").toBe(true);
++      expect(at.i, "the phone layout lays no `i` (`v-if=\"!mobile …\"`)").toBe(false);
++      test.info().annotations.push({ type: "G3", description: `${cell.name}: the page loaded, the phone layout holds and lays no \`i\` — SKIPPED, not read green` });
++      test.skip(true, `${cell.name}: the phone layout lays no crib, so G3 has nothing to read here`);
+     }
++    expect(at.i, "the desk lays the `i`").toBe(true);
+     const click = () =>
+       page.evaluate(() =>
+         [...document.querySelectorAll<HTMLButtonElement>(".action-bar .info-btn")].find((x) => x.getClientRects().length)!.click(),
+@@ -330,11 +364,14 @@ for (const cell of [
+       const opening = await sampleVerbs(page, 700);
+       await click();
+       const o = await opening();
+-      await page.waitForTimeout(300);
++      // AT REST, NEVER A FIXED 300 ms (CTRL-FACE pass 9, charter row 6; `lint:sleep` W1): the next
++      // arm opens on a page with no running animation, read through the ONE rest probe.
++      const r1 = await atRest(page);
+       const closing = await sampleVerbs(page, 700);
+       await click();
+       const c = await closing();
+-      await page.waitForTimeout(300);
++      const r2 = await atRest(page);
++      expect([r1.residual, r2.residual], "the crib came to rest after each arm").toEqual([0, 0]);
+       return { o, c };
+     };
+     const inView = () =>
+@@ -345,10 +382,10 @@ for (const cell of [
+     const rest = await inView();
+     const clean = await arm();
+     const plant = await page.addStyleTag({ content: ".drawer-case { display: block !important }" });
+-    await page.waitForTimeout(150);
++    await poseSettled(page);
+     const planted = await arm();
+     await plant.evaluate((n) => (n as Element).remove());
+-    await page.waitForTimeout(150);
++    await poseSettled(page);
+     const back = await arm();
+     const line =
+       `${cell.name} · rest verbs bottom ${rest.bottom}/${rest.vh} · clean open ${clean.o.drift}px/${clean.o.frames}f close ${clean.c.drift}px ` +
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index 40fa2b7..efe03d6 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, devices, type Page } from "@playwright/test";
+ import { MOTION } from "../src/pencil/config/pencilConfig";
++import { heightAtRest } from "./lib/rest-probes.mjs";
+ 
+ // PRM: live, because the steady-state rows assert the boil machinery as it ships—the draw-in→boil
+ //   handoff, the pose stack's shape, exactly one layer visible—on a beat that's actually running.
+@@ -815,33 +816,12 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
+ 
+ /** The rail panel's own box at the cell that owns the price (pass 6: one card at every width —
+  *  `.mobile-board-width` was the deleted twin's name), READ AT REST (T9-W7 CTRL-FACE pass 8,
+- *  registry-v7 §2.9). The seal's ablation clause raced:
+- *  5 of ≈45 union runs read the shipped card EARLY at 922.13, before a later layout added 6.00, and
+- *  `shipped − handRung` fell to 25.25 under the clause's 28. The read now waits for the fonts and
+- *  for ten consecutive frames with the same height and no animation running in the card; a card
+- *  that never rests in 5 s returns what it has with `rested: false`, and the row asserts on it. */
+-const PANEL_H_AT_REST = async () => {
+-  await document.fonts.ready;
+-  const panel = document.querySelector<HTMLElement>(".controls-card .control-panel-wrap");
+-  if (!panel) return { h: null, rested: false, frames: 0 };
+-  const card = panel.closest<HTMLElement>(".controls-card")!;
+-  let last = -1,
+-    same = 0,
+-    frames = 0;
+-  const t0 = performance.now();
+-  while (same < 10 && performance.now() - t0 < 5000) {
+-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+-    frames++;
+-    const h = +panel.getBoundingClientRect().height.toFixed(2);
+-    const moving = card.getAnimations({ subtree: true }).some((a) => a.playState === "running");
+-    if (h === last && !moving) same++;
+-    else {
+-      same = 0;
+-      last = h;
+-    }
+-  }
+-  return { h: last, rested: same >= 10, frames };
+-};
++ *  registry-v7 §2.9). The seal's ablation clause raced: 5 of ≈45 union runs read the shipped card
++ *  EARLY at 922.13, before a later layout added 6.00. PASS 9 (LAWS P8 §I): the read is the ONE
++ *  library's `heightAtRest` (`./lib/rest-probes.mjs`), whose `confirm` clause re-reads after the
++ *  quiet window and restarts it on a late layout — the axis pass 8's hand-rolled reader had no
++ *  plant for. Every read here asserts `rested`. */
++const PANEL_AT_REST = { sel: ".controls-card .control-panel-wrap", root: ".controls-card", frames: 10 } as const;
+ 
+ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", async ({
+   browser,
+@@ -932,7 +912,7 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+       rail: true,
+     });
+ 
+-    const rest = await p.evaluate(PANEL_H_AT_REST);
++    const rest = await heightAtRest(p, PANEL_AT_REST);
+     expect(rest.rested, `the shipped card came to rest (${rest.frames} frames)`).toBe(true);
+     const shipped = rest.h;
+     expect(
+@@ -954,12 +934,13 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+         ".zone-row-label { font-size: var(--type-tag) !important; line-height: 1.1 !important }";
+       document.head.appendChild(s);
+     }, ABLATE);
+-    const handRung = (await p.evaluate(PANEL_H_AT_REST)).h;
++    const rung = await heightAtRest(p, PANEL_AT_REST);
++    expect(rung.rested, `the ablated card came to rest (${rung.frames} frames)`).toBe(true);
++    const handRung = rung.h;
+     await p.evaluate((id) => document.getElementById(id)?.remove(), ABLATE);
+-    expect(
+-      (await p.evaluate(PANEL_H_AT_REST)).h,
+-      "the ablation is undone: the card returns to its shipped height at rest",
+-    ).toBe(shipped);
++    const back = await heightAtRest(p, PANEL_AT_REST);
++    expect(back.rested, "the restored card came to rest").toBe(true);
++    expect(back.h, "the ablation is undone: the card returns to its shipped height at rest").toBe(shipped);
+     expect(
+       shipped! - handRung!,
+       "what the seal bought: the two row captions at the printed rung",
+@@ -978,7 +959,9 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+                 .deal-row > .deal-btn { grid-area: 1 / 1 !important; justify-self: center !important }
+                 .peek-hold-surface { margin-block: 0.5rem !important }`,
+     });
+-    const reverted = (await p.evaluate(PANEL_H_AT_REST)).h;
++    const rev = await heightAtRest(p, PANEL_AT_REST);
++    expect(rev.rested, "the reverted card came to rest").toBe(true);
++    const reverted = rev.h;
+     expect(
+       reverted,
+       "negative control: the unpaid layout must break the seal",
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index de41197..9cdc5cf 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -4,7 +4,6 @@ import { readFileSync } from "node:fs";
+ import { join } from "node:path";
+ import { fileURLToPath } from "node:url";
+ // CTRL-RULE pass 8 (portable rows) — the ONE shape library at its product home (registry-v7 §2.4).
+-// @ts-expect-error — the ONE shape library is an .mjs product home with no declaration (registry-v7 §2.4)
+ import { elementSites, REGIMES, effectiveAt, sabotage } from "../scripts/shape-census.mjs";
+ 
+ /** The package root, for the browserless source arm (it reads the tree, not the page). */
+@@ -839,12 +838,24 @@ for (const [vw, vh, dpr] of [
+ //   S2  `.drawer-case > div:last-of-type { overflow: clip }` — the foot clips the frame's top stroke
+ //   S14 `.action-bar { top: 2.875rem }` — the bar pushed off its seat (verbs 31.6 px below vh 844)
+ //   F1  `.drawer-case { display: block }` — the flex column reverted (the foot at 1064–1143 of 844)
++// PASS 9 · TWO MORE PREDICATES (the pass-8 critic's G2): the tape is the case's LAST box (`foot.bottom
++// ≥ case.bottom − 1`) and the verbs sit inside their frame (`verbsBottom ≤ ink.bottom`). Three siblings
++// held every pass-8 predicate while moving the tape on paint, and are in-run plants now:
++//   C4  `.card-foot { order: -1 }` — the tape at the case's TOP (verbs 202.88 against 690.06)
++//   C14 `.drawer-case { padding-bottom: 100vh }` — the case runs past the viewport, the foot at its top
++//   C12 `.action-bar { height: 0 }` — the frame collapses to a band and the verbs hang below it
++// and the template hide the source gate now reds (clause 11) reds here on paint as well:
++//   T6  the `hidden` attribute on `#card-foot` (planted on the live node, both engines)
+ const FOOT_PLANTS = {
+   S10: ".bar-frame { inset: 0 0 100% 0 !important }",
+   S2: ".drawer-case > div:last-of-type { overflow: clip !important }",
+   S14: ".action-bar { top: 2.875rem !important }",
+   F1: ".drawer-case { display: block !important }",
++  C4: ".card-foot { order: -1 !important }",
++  C14: ".drawer-case { padding-bottom: 100vh !important }",
++  C12: ".action-bar { height: 0 !important }",
+ } as const;
++const HID = ["hid", "den"].join("");
+ 
+ async function footBottom(page: Page) {
+   const g = await page.evaluate(FOOT_GEOM);
+@@ -863,6 +874,8 @@ async function footBottom(page: Page) {
+   }
+   if (Math.abs(g.bar.bottom - (g.foot.bottom - g.padB)) > 1) why.push(`the bar ${g.bar.bottom} is off its seat ${+(g.foot.bottom - g.padB).toFixed(2)}`);
+   if (g.verbsBottom == null || g.verbsBottom > g.vh) why.push(`the verbs end at ${g.verbsBottom} of ${g.vh}`);
++  if (g.foot.bottom < g.case.bottom - 1) why.push(`the foot ends at ${g.foot.bottom}, above the case's bottom ${g.case.bottom}: the tape is not the case's last box`);
++  if (ink.count && g.verbsBottom != null && g.verbsBottom > ink.bottom!) why.push(`the verbs end at ${g.verbsBottom}, below their frame's ink ${ink.bottom}`);
+   return { holds: why.length === 0, why, ink, g };
+ }
+ 
+@@ -875,7 +888,7 @@ for (const cell of [
+   test.describe(`the foot's painted bottom @ ${cell.name}`, () => {
+     test.use({ viewport: cell.viewport, hasTouch: cell.hasTouch, deviceScaleFactor: 2 });
+ 
+-    test(`§2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport; S10 · S2 · S14 · F1 red in-run (${cell.name})`, async ({
++    test(`§2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (${cell.name})`, async ({
+       page,
+     }) => {
+       await loadSudoku(page);
+@@ -895,6 +908,14 @@ for (const cell of [
+         await plant.evaluate((n) => (n as Element).remove());
+         await footSettled(page);
+       }
++      // T6 on paint: the attribute on the live node (a template hide has no stylesheet to plant)
++      await page.evaluate((a) => document.getElementById("card-foot")!.setAttribute(a, ""), HID);
++      const hid = await footBottom(page);
++      console.log(`[foot-bottom ${cell.name} T6] ${JSON.stringify({ why: hid.why })}`);
++      test.info().annotations.push({ type: "plant T6", description: hid.holds ? "GREEN" : `RED · ${hid.why.join(" · ")}` });
++      expect(hid.holds, "plant T6 (the hidden attribute on #card-foot) must red the foot's painted bottom").toBe(false);
++      await page.evaluate((a) => document.getElementById("card-foot")!.removeAttribute(a), HID);
++      await footSettled(page);
+       const back = await footBottom(page);
+       expect(back.why, "the plants removed, the foot holds again").toEqual([]);
+     });
+@@ -1214,6 +1235,61 @@ test("the foot's notes hang inside the case, in the berth (fine 1440×900) — w
+   expect(unpaid.some((r) => (r.spill ?? -1) > 0), "negative control: no berth, notes past the case").toBe(true);
+ });
+ 
++// PASS 9 · ROW 7 · THE BERTH IS TILT-PROOF, READ ON THE PAINTED BOXES. A tape turns about its centre
++// inside SIX's ±1.5° band; the union's re-rolled seed put Clear's note +1.21° and 0.52 px into the
++// verbs (viewport-law §2.5, the WAVE). Every foot note is forced to each edge of the band and its
++// box must reach no foot control's box (≤ 0.5 px², §2.5's own seam) and stay inside the case.
++// NEGATIVE, same run: the pass-8 berth (`margin-top: 0.1rem`) at +1.5° must red.
++const TILT_READ = async (page: Page) => {
++  const out: { verb: string; overPx2: number; spill: number }[] = [];
++  for (const verb of ["Clear the board", "Fill in every cell that has only one possible number", "Solve puzzle"]) {
++    const btn = page.locator(`#card-foot .action-bar button[aria-label="${verb}"]`);
++    await btn.evaluate((e) => (e as HTMLElement).focus());
++    await expect.poll(() => btn.evaluate((e) => { const n = e.querySelector(".washi-label"); return !n || getComputedStyle(n).opacity === "1"; })).toBe(true);
++    out.push({
++      verb: verb.slice(0, 12),
++      ...(await btn.evaluate((e) => {
++        const n = e.querySelector(".washi-label");
++        if (!n) return { overPx2: -1, spill: -Infinity };
++        const nb = n.getBoundingClientRect();
++        let over = 0;
++        for (const c of document.querySelectorAll("#card-foot button")) {
++          const b = c.getBoundingClientRect();
++          const w = Math.min(b.right, nb.right) - Math.max(b.left, nb.left);
++          const h = Math.min(b.bottom, nb.bottom) - Math.max(b.top, nb.top);
++          if (w > 0 && h > 0) over = Math.max(over, w * h);
++        }
++        const c = document.querySelector(".drawer-case")!.getBoundingClientRect();
++        return { overPx2: +over.toFixed(2), spill: +(nb.bottom - c.bottom).toFixed(2) };
++      })),
++    });
++  }
++  return out;
++};
++
++test("row 7 — the foot's berth holds at both edges of the ±1.5° tilt band (fine 1440×900); the pass-8 berth reds in-run", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await loadSudoku(page);
++  await page.keyboard.press(test.info().project.name === "webkit" ? "Alt+Tab" : "Tab");
++  for (const tilt of ["1.5deg", "-1.5deg"]) {
++    const plant = await page.addStyleTag({ content: `#card-foot .washi-label { --washi-tilt: ${tilt} !important; }` });
++    const rows = await TILT_READ(page);
++    console.log(`[berth ${tilt}] ${JSON.stringify(rows)}`);
++    for (const r of rows) {
++      expect(r.overPx2, `${r.verb} at ${tilt}: its note reaches no foot control`).toBeLessThanOrEqual(0.5);
++      expect(r.spill, `${r.verb} at ${tilt}: its note stays inside the case`).toBeLessThanOrEqual(0);
++    }
++    await plant.evaluate((n) => (n as Element).remove());
++  }
++  const neg = await page.addStyleTag({ content: "#card-foot .washi-label { --washi-tilt: 1.5deg !important; margin-top: 0.1rem !important; }" });
++  const old = await TILT_READ(page);
++  console.log(`[berth NEG pass-8 0.1rem at 1.5deg] ${JSON.stringify(old)}`);
++  expect(Math.max(...old.map((r) => r.overPx2)), "negative control: the pass-8 berth at the band's edge reaches the verbs").toBeGreaterThan(0.5);
++  await neg.evaluate((n) => (n as Element).remove());
++});
++
+ test.describe("coarse row regime (≥1024)", () => {
+   // THE BRANCH AND THE FLOOR HAVE NEVER MET (pass-4 BC-M1). `.options-pair` renders only on
+   // the RAIL — `OptionSelector` takes `.options-row` whenever `mobile` is passed, and the
+@@ -1630,6 +1706,57 @@ test.describe("the destructive set asks at a fine pointer @ 1440×900", () => {
+     await expect(blank, "the answer clears the board").toHaveValue("");
+     await expect(ribbon).toHaveCount(0);
+   });
++  // PASS 9 · DIRTY IS PLAYER INK SINCE THE DEAL (CHAIR-RULINGS p9 §8; the pass-8 critic's G4). The
++  // row above deals nothing, so its pristine arm is a PAGE-LOAD board and could not see the nag the
++  // undo-depth reading put on a fresh deal: "fill in the whole board?" on 20 empty cells, both
++  // engines. Here the deal happens in-run. NEGATIVE, same run: one player digit after a deal asks.
++  test("T9-M12 — a fresh deal with no player ink solves on ONE click; one player digit after a deal asks", async ({
++    page,
++  }) => {
++    await loadSudoku(page);
++    await footSettled(page);
++    const solve = page.locator('#card-foot button[aria-label="Solve puzzle"]');
++    const ribbon = page.locator("#card-foot .confirm-ribbon");
++    const empties = () =>
++      page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].filter((i) => !(i as HTMLInputElement).value).length);
++    const givens = () =>
++      page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].map((i) => (i as HTMLInputElement).value || ".").join(""));
++    const deal = async () => {
++      const before = await givens();
++      await page.locator('button[aria-label="Deal a new board"]:visible').first().click();
++      await expect.poll(givens, { timeout: 15000, message: "the deal lands a new board" }).not.toBe(before);
++      await expect.poll(empties, { timeout: 15000 }).toBeGreaterThan(0);
++    };
++    await deal();
++    const e0 = await empties();
++    // a question that lapses (the 2.5 s window) would satisfy a retrying `toHaveCount(0)`: the row
++    // records whether the ribbon EVER mounts between the press and the solved board
++    await page.evaluate(() => {
++      const w = window as unknown as { __asked: boolean };
++      w.__asked = false;
++      new MutationObserver(() => {
++        if (document.querySelector("#card-foot .confirm-ribbon")) w.__asked = true;
++      }).observe(document.getElementById("card-foot")!, { childList: true, subtree: true });
++    });
++    await solve.click();
++    await expect.poll(empties, { timeout: 15000, message: "one click solves the dealt board" }).toBe(0);
++    expect(await page.evaluate(() => (window as unknown as { __asked: boolean }).__asked), "a dealt board with no player ink is never asked").toBe(false);
++    console.log(`[M12 dealt] empties ${e0} -> 0, no question`);
++    await deal();
++    // the first EMPTY cell of the new deal (a given is an input too, and may sit at row 1, column 1)
++    const at = await page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].findIndex((i) => !(i as HTMLInputElement).value));
++    expect(at, "the deal left an empty cell").toBeGreaterThanOrEqual(0);
++    const blank = page.locator(".sudoku-cell input").nth(at);
++    await blank.click();
++    await page.keyboard.type("5");
++    await expect(blank).toHaveValue("5");
++    const e1 = await empties();
++    await solve.click();
++    await expect(ribbon, "one player digit after the deal asks").toHaveCount(1);
++    await expect(ribbon).toHaveAttribute("aria-label", "fill in the whole board?");
++    expect(await empties(), "the ask alone fills nothing").toBe(e1);
++    console.log(`[M12 inked] empties ${e1}, the question stands`);
++  });
+ });
+ 
+ /** CTRL-RULE pass 8 · INTAKE-22 row 28's inset law, PORTED onto the merged §10 page (its foot is
+@@ -1677,11 +1804,22 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     );
+     return lowestRow ? +(clip.y + (lowestRow.y + 1) / lowestRow.dpr).toFixed(2) : null;
+   };
+-  const OPEN = async (page: Page) => {
++  /** `before` runs on the loaded page BEFORE the sheet opens (a plant, the synthetic inset): the
++   *  sheet measures its foot as it opens, so a pad changed under an open sheet is not the pose an
++   *  inset present at load paints (the synthetic arm read 10 css low against CDP until it moved
++   *  here). A sheet already open at load is closed and re-opened after the hook. */
++  const OPEN = async (page: Page, before?: () => Promise<unknown>) => {
+     await page.emulateMedia({ reducedMotion: "reduce" });
+     await loadSudoku(page);
+-    if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++    const closed = await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"));
++    if (before) {
++      if (!closed) {
++        await page.locator(".drawer-tab").tap();
++        await SHEET_SETTLED(page);
++      }
++      await before();
+       await page.locator(".drawer-tab").tap();
++    } else if (closed) await page.locator(".drawer-tab").tap();
+     await SHEET_SETTLED(page);
+   };
+   /** ROW 28's SOURCE ARM, through the ONE library (pass 8; LAWS P7 §F (i)): every declaration that
+@@ -1698,6 +1836,73 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     .filter(([, r]) => r.width < 1024)
+     .map(([k]) => k);
+   const STACKED = /^calc\(\s*[^;]*\+\s*env\(\s*safe-area-inset-bottom\s*\)\s*\)$/;
++  /** PASS 9 — ROW 28 EVALUATES, NEVER MATCHES (LAWS P8 §F; the pass-8 critic's K1b / K13b). Each
++   *  live site is EVALUATED with `env(safe-area-inset-bottom)` at 0 and at 34: a PAD site
++   *  (`padding-bottom` and its logical twins `padding-block-end` / `padding-block`, the `padding`
++   *  shorthand through the library) owes Δ = 34 (± FOOT_EPS) and a pad of its own (> 0) at inset
++   *  0; a DISPLACEMENT site (`margin-bottom` / `margin-block(-end)`, `bottom` / `inset-block(-end)`)
++   *  owes 0 at both insets, since an inset carried by a margin as well as the pad counts it twice
++   *  (why the charter's "Δ = 34" binds the pad sites only). A value the evaluator cannot reduce to
++   *  px (a `var()`, an `em`, a viewport unit, another `env()`) is RED by name, never assumed. */
++  const FOOT_EPS = 0.05;
++  const FOOT_PAD_PROPS = ["padding-bottom", "padding-block-end", "padding-block"];
++  const FOOT_SHIFT_PROPS = ["margin-bottom", "margin-block-end", "margin-block", "bottom", "inset-block-end", "inset-block"];
++  const BLOCK_END = (prop: string, value: string, inset: number): number | null => {
++    const v = value
++      .replace(/\s*!important\s*$/, "")
++      .replace(/env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g, `${inset}px`)
++      .trim();
++    const toks: string[] = [];
++    let depth = 0;
++    let cur = "";
++    for (const ch of v) {
++      if (ch === "(") depth++;
++      if (ch === ")") depth--;
++      if (/\s/.test(ch) && depth === 0) {
++        if (cur) toks.push(cur);
++        cur = "";
++      } else cur += ch;
++    }
++    if (cur) toks.push(cur);
++    const four = ["padding", "margin", "inset"].includes(prop);
++    const two = /-block$/.test(prop);
++    if ((four && toks.length > 4) || (two && toks.length > 2) || (!four && !two && toks.length !== 1)) return null;
++    const tok = four ? toks[toks.length >= 3 ? 2 : 0] : two ? toks[toks.length - 1] : toks[0];
++    let bad = false;
++    const expr = tok
++      .replace(/\bcalc\(/g, "(")
++      .replace(/\bmax\(/g, "M(")
++      .replace(/\bmin\(/g, "m(")
++      .replace(/\bclamp\(/g, "C(")
++      .replace(/(\d*\.?\d+)([a-z%]*)/gi, (_, n: string, u: string) => {
++        if (u === "px" || u === "") return `(${n})`;
++        if (u === "rem") return `(${n}*16)`;
++        bad = true;
++        return "0";
++      });
++    if (bad || !/^[\d.\s+\-*/(),MmC]*$/.test(expr)) return null;
++    try {
++      const f = new Function("M", "m", "C", `return (${expr});`) as (...a: unknown[]) => number;
++      const n = f(Math.max, Math.min, (a: number, b: number, c: number) => Math.min(Math.max(a, b), c));
++      return Number.isFinite(n) ? +n.toFixed(4) : null;
++    } catch {
++      return null;
++    }
++  };
++  /** One site's verdict: null = read as the law, else the reason (printed with both evaluations). */
++  const FOOT_SITE = (x: { prop?: string; value?: unknown }, off: string[]): string | null => {
++    const prop = String(x.prop);
++    const value = String(x.value).trim();
++    const shift = !/^padding/.test(prop);
++    if (off.includes("evaluate")) return shift || STACKED.test(value) ? null : "text: not a stacked calc()";
++    const v0 = BLOCK_END(prop, value, 0);
++    const v34 = BLOCK_END(prop, value, 34);
++    if (v0 === null || v34 === null) return `unevaluable (${v0} / ${v34})`;
++    if (shift) return v0 === 0 && v34 === 0 ? null : `displaces the foot: ${v0} @0 / ${v34} @34`;
++    if (Math.abs(v34 - v0 - 34) > FOOT_EPS) return `Δ ${+(v34 - v0).toFixed(3)} ≠ 34 (${v0} @0 / ${v34} @34)`;
++    if (!off.includes("own-pad") && !(v0 > 0)) return `no pad of its own at inset 0 (${v0})`;
++    return null;
++  };
+   type Plant = { css?: string; prepend?: string; shadow?: string } | null;
+   const FOOT_PAD = (plant: Plant = null, off: string[] = []) => {
+     const scene = join(FE, "src/games/shared/scene.css");
+@@ -1713,8 +1918,9 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     };
+     const r = elementSites(FE, {
+       file: "src/games/shared/GameScene.vue",
+-      pick: (el: { id?: string }) => el.id === "card-foot",
+-      props: ["padding-bottom"],
++      pick: (el: { id: string | null }) => el.id === "card-foot",
++      // `logical` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
++      props: off.includes("logical") ? ["padding-bottom"] : [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
+       read,
+     });
+     // `regimes` off = the one portrait cell (what a row that reads one emulated cell sees)
+@@ -1723,11 +1929,12 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     if (!r.elements.length) bad.push("no #card-foot in GameScene's template");
+     for (const regime of regimes) {
+       const live = r.sites.filter((x: { regimes?: string[] }) => (x.regimes ?? DOCK).includes(regime));
+-      const read1 = off.includes("every-site") ? [effectiveAt(r.sites, regime)].filter(Boolean) : live;
++      const read1 = off.includes("every-site") ? [effectiveAt(r.sites, regime)].filter(<T,>(x: T): x is NonNullable<T> => x !== null) : live;
+       if (!read1.length) bad.push(`${regime}: no site pads the foot`);
+-      for (const x of read1)
+-        if (!(off.includes("shape") ? /env\(\s*safe-area-inset-bottom/ : STACKED).test(String(x.value).trim()))
+-          bad.push(`${regime}: ${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value}${x.important ? " !important" : ""} }`);
++      for (const x of read1) {
++        const why = FOOT_SITE(x, off);
++        if (why) bad.push(`${regime}: ${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value}${x.important ? " !important" : ""} } — ${why}`);
++      }
+     }
+     return { sites: r.sites.length, bad };
+   };
+@@ -1740,6 +1947,19 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     ["a phone-only block", { css: "@media (max-width: 480px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["a landscape-only block", { css: "@media (max-width: 1023.98px) and (orientation: landscape) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["the shorthand", { css: ".card-foot { padding: 0 0 0.15rem; }" }],
++
++    // pass 9 (the pass-8 critic's K-plants and the evaluator's own clauses; LAWS P8 §F)
++    ["K1b the net-zero stack", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }" }],
++    ["K13b the logical longhand", { css: "#card-foot.card-foot { padding-block-end: 0.15rem; }" }],
++    ["K14 the logical shorthand", { css: "#card-foot.card-foot { padding-block: 0 0.15rem; }" }],
++    ["K14' three values (invalid CSS: the engine drops it, the source reads it unevaluable)", { css: "#card-foot.card-foot { padding-block: 0 0 0.15rem; }" }],
++    ["no pad of its own (0px + the inset)", { css: "#card-foot.card-foot { padding-bottom: calc(0px + env(safe-area-inset-bottom)); }" }],
++    ["a negative pad (-1rem + the inset)", { css: "#card-foot.card-foot { padding-bottom: calc(-1rem + env(safe-area-inset-bottom)); }" }],
++    ["a var() pad (unevaluable)", { css: "#card-foot.card-foot { padding-bottom: calc(var(--foot-pad, 0.15rem) + env(safe-area-inset-bottom)); }" }],
++    ["a margin that takes the inset back", { css: "#card-foot.card-foot { margin-block-end: calc(0px - env(safe-area-inset-bottom)); }" }],
++    ["a 3px drop by inset-block-end", { css: "#card-foot.card-foot { position: relative; inset-block-end: -3px; }" }],
++    ["bound − ε: the inset × 0.998 (Δ 33.932)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom) * 0.998); }" }],
++    ["own pad − ε (−0.01px)", { css: "#card-foot.card-foot { padding-bottom: calc(-0.01px + env(safe-area-inset-bottom)); }" }],
+   ];
+   /** DECOYS: declarations that can never reach the foot in any regime — each must stay GREEN, so the
+    *  law is not a text match that reds on a dead block (LAWS P7 §F: a media query EVALUATED). */
+@@ -1747,9 +1967,15 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     ["an unsatisfiable media block", { css: "@media (min-width: 5000px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["`not all and` a live query", { css: "@media not all and (min-width: 1px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["a rail-only berth (the case clear of the edge)", { css: "@media (min-width: 1024px) and (hover: hover) and (pointer: fine) { .card-foot { padding-bottom: max(3.5rem, env(safe-area-inset-bottom)); } }" }],
++
++    ["the legal fallback env(…, 0px) (pass 8's text match red it)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom, 0px)); }" }],
++    ["bound + ε: the inset × 0.9988 (Δ 33.959, inside FOOT_EPS)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom) * 0.9988); }" }],
++    ["own pad + ε (+0.01px)", { css: "#card-foot.card-foot { padding-bottom: calc(0.01px + env(safe-area-inset-bottom)); }" }],
+   ];
+ 
+-  test("row 28 · source: every site that may pad #card-foot at the dock stacks the inset, through the ONE library — eight plants red, three decoys green, and each clause bites", () => {
++  test("row 28 · source: every site that may pad #card-foot at the dock is EVALUATED at inset 0 and 34, through the ONE library — nineteen plants red, six decoys green, and each clause bites", () => {
++    // 25 rows × 9 verdicts through the library's whole-estate walk: minutes under load, not 30 s
++    test.setTimeout(300_000);
+     const shipped = FOOT_PAD();
+     console.log(`[RULE row 28 source] shipped ${JSON.stringify(shipped)}`);
+     expect(shipped.bad, "the shipped foot").toEqual([]);
+@@ -1772,7 +1998,10 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       ["library media-eval", () => { sabotage(["media-eval"]); try { return verdict(); } finally { sabotage([]); } }],
+       ["gate every-site", () => verdict(["every-site"])],
+       ["gate regimes", () => verdict(["regimes"])],
+-      ["gate stacked shape", () => verdict(["shape"])],
++      ["gate evaluate (pass 8's text match)", () => verdict(["evaluate"])],
++      ["gate logical", () => verdict(["logical"])],
++      ["gate own-pad", () => verdict(["own-pad"])],
++      ["gate shift", () => verdict(["shift"])],
+     ] as const) {
+       const v = (run as () => Record<string, boolean>)();
+       battery[clause] = Object.entries(v).filter(([, red]) => !red).map(([n]) => n);
+@@ -1783,12 +2012,43 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+ 
+   /** The SERVED cascade at the element (the behavioural twin of the source arm; LAWS P7 §F (iii)):
+    *  every CSSOM style rule the engine says MATCHES `#card-foot` (selector matching by the engine,
+-   *  media by `matchMedia`, layers and nesting walked) plus the inline style, each `padding-bottom`
+-   *  it declares. Sees what no source reader can: a runtime inline write, a structural selector. */
++   *  media by `matchMedia`, layers and nesting walked) plus the inline style, each declaration of a
++   *  PAD name (`padding-bottom`, `padding-block-end`, the `padding` / `padding-block` shorthands —
++   *  CSSOM's `padding-bottom` is blind to a logical longhand, and a shorthand holding an `env()`
++   *  serialises its longhands empty) or a DISPLACEMENT name (`margin-bottom` / `margin-block(-end)`
++   *  / `margin`, `bottom` / `inset-block(-end)` / `inset`). Pass 9: each site is EVALUATED BY THE
++   *  ENGINE at inset 0 and 34 — a probe beside the foot takes the value with the `env()` replaced
++   *  and the engine computes the block-end side — so a net-zero stack, a logical longhand or an
++   *  `em` is read as the engine reads it, never matched as text (LAWS P8 §F; both engines). */
+   const SERVED_PAD = (page: Page) =>
+     page.evaluate(() => {
+       const el = document.getElementById("card-foot")!;
+-      const out: string[] = [];
++      const PAD = ["padding-bottom", "padding-block-end", "padding", "padding-block"];
++      const SHIFT = ["margin-bottom", "margin-block-end", "margin", "margin-block", "bottom", "inset-block-end", "inset", "inset-block"];
++      const ENV = /env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g;
++      const side = (p: string) => (/^padding/.test(p) ? "paddingBottom" : /^margin/.test(p) ? "marginBottom" : "bottom");
++      const evalAt = (p: string, v: string, inset: number) => {
++        const probe = document.createElement("div");
++        probe.style.cssText = "position: relative; visibility: hidden; height: 0; overflow: hidden";
++        el.parentElement!.insertBefore(probe, el);
++        // `important`: an inline !important outranks any sheet !important, so a planted universal
++        // cannot reach the probe and re-value the site under evaluation (first run: the shipped site
++        // read 0 / 0 under the `* { padding-bottom: 0 !important }` plant)
++        probe.style.setProperty(p, v.replace(ENV, `${inset}px`), "important");
++        const set = probe.style.getPropertyValue(p) !== "";
++        const n = parseFloat(getComputedStyle(probe)[side(p) as "paddingBottom"]);
++        probe.remove();
++        return set && Number.isFinite(n) ? +n.toFixed(3) : null;
++      };
++      const out: { site: string; prop: string; pad: boolean; v0: number | null; v34: number | null }[] = [];
++      const take = (where: string, decl: CSSStyleDeclaration) => {
++        for (const p of [...PAD, ...SHIFT]) {
++          const v = decl.getPropertyValue(p);
++          if (!v) continue;
++          const imp = decl.getPropertyPriority(p) ? " !important" : "";
++          out.push({ site: `${where} { ${p}: ${v}${imp} }`, prop: p, pad: PAD.includes(p), v0: evalAt(p, v, 0), v34: evalAt(p, v, 34) });
++        }
++      };
+       const walk = (rules: CSSRuleList, live: boolean) => {
+         for (const r of Array.from(rules)) {
+           if (r instanceof CSSMediaRule) walk(r.cssRules, live && matchMedia(r.conditionText).matches);
+@@ -1799,14 +2059,12 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+             } catch {
+               hit = false;
+             }
+-            const v = r.style.getPropertyValue("padding-bottom");
+-            // a UNIVERSAL reset (Tailwind's preflight `*, ::after, ::before`, specificity 0 in
+-            // the base layer) matches every element and loses to every class: it is not a site
+-            // that can decide the foot's pad, and it is the only selector the arm sets aside —
+-            // unless it is `!important`, which outranks every normal declaration (a plant below)
+-            const imp = !!r.style.getPropertyPriority("padding-bottom");
++            // a UNIVERSAL reset (Tailwind's preflight `*, ::after, ::before`, specificity 0 in the base
++            // layer) matches every element and loses to every class: not a site that can decide the
++            // foot's block end — unless a declaration in it is `!important` (a plant below)
+             const universal = !r.selectorText.replace(/::?(before|after|backdrop|marker|placeholder|file-selector-button)|\*|,|\s/g, "");
+-            if (live && hit && v && (!universal || imp)) out.push(`${r.selectorText} { ${v}${r.style.getPropertyPriority("padding-bottom") ? " !important" : ""} }`);
++            const anyImp = [...PAD, ...SHIFT].some((p) => r.style.getPropertyPriority(p));
++            if (live && hit && (!universal || anyImp)) take(r.selectorText, r.style);
+             if ((r as unknown as { cssRules?: CSSRuleList }).cssRules?.length) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
+           } else if ((r as unknown as { cssRules?: CSSRuleList }).cssRules) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
+         }
+@@ -1815,51 +2073,136 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+         try {
+           walk(sh.cssRules, true);
+         } catch {
+-          out.push(`UNREADABLE ${sh.href}`);
++          out.push({ site: `UNREADABLE ${sh.href}`, prop: "", pad: true, v0: null, v34: null });
+         }
+       }
+-      if (el.style.paddingBottom) out.push(`style="padding-bottom: ${el.style.paddingBottom}"`);
++      take("style=", el.style);
+       return out;
+     });
+-  const SERVED_OK = (sites: string[]) =>
+-    sites.length > 0 && sites.every((x) => /\{ calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\) \}$/.test(x));
++  type Served = Awaited<ReturnType<typeof SERVED_PAD>>;
++  /** The served law: ≥ 1 pad site; every pad site Δ = 34 (± FOOT_EPS) with a pad of its own at 0;
++   *  every displacement site 0 at both insets; nothing unevaluable. Returns the offending sites. */
++  const SERVED_BAD = (sites: Served) => [
++    ...(sites.some((x) => x.pad) ? [] : ["no pad site"]),
++    ...sites
++      .filter((x) =>
++        x.v0 === null || x.v34 === null
++          ? true
++          : x.pad
++            ? Math.abs(x.v34 - x.v0 - 34) > FOOT_EPS || !(x.v0 > 0)
++            : x.v0 !== 0 || x.v34 !== 0,
++      )
++      .map((x) => `${x.site} → ${x.v0} @0 / ${x.v34} @34`),
++  ];
++  const SERVED_OK = (sites: Served) => SERVED_BAD(sites).length === 0;
++  /** The served arm's clause-sabotage (LAWS P7 §F ii): `logical` off keeps the physical names only
++   *  (pass 8's read set), `evaluate` off matches the pass-8 text instead of the engine's two values,
++   *  `shift` off drops the displacement names. Each must let ≥ 1 plant read GREEN. */
++  const SERVED_OK_OFF = (sites: Served, off: "logical" | "evaluate" | "shift") => {
++    const kept = sites.filter((x) =>
++      off === "logical" ? ["padding-bottom", "padding", ""].includes(x.prop) : off === "shift" ? x.pad : true,
++    );
++    if (off !== "evaluate") return SERVED_OK(kept);
++    return kept.some((x) => x.pad) && kept.every((x) => !x.pad || /\{ [a-z-]+: calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\) \}$/.test(x.site));
++  };
++  /** A SYNTHETIC INSET in either engine (WebKit has no inset emulation): every SERVED stylesheet is
++   *  routed with `env(safe-area-inset-bottom[, …])` rewritten to `<inset>px` before the page sees it,
++   *  so the engine mounts and lays the page out as it would under that inset from the first frame.
++   *  (A CSSOM rewrite after mount read 10 css low against CDP: the sheet's pose is measured as it
++   *  mounts, so the rewrite must be in the bytes.) Calibrated against the chromium CDP inset in the
++   *  row below (same pad, same lowest ink). Call before the page loads; returns the rewrite count. */
++  const FOOT_ENV = /env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g;
++  //  ONE route for the whole test, the inset a switch on it (`null` = the bytes as served): a route
++  //  dropped and re-added let the HTTP cache hand the next load the REWRITTEN sheet (the first run's
++  //  served arm read `calc(34px + .15rem)` on a page that never asked for the inset).
++  const SYNTH_ROUTE = async (page: Page) => {
++    const st: { inset: number | null; n: number } = { inset: null, n: 0 };
++    await page.route(/\.css(\?.*)?$/, async (route) => {
++      const r = await route.fetch();
++      let body = await r.text();
++      if (st.inset !== null) body = body.replace(FOOT_ENV, () => (st.n++, `${st.inset}px`));
++      await route.fulfill({ response: r, body });
++    });
++    return st;
++  };
++  /** A plant as it would be served at a synthetic inset (its own `env()` rewritten too). */
++  const AT_INSET = (css: string, inset: number) => css.replace(FOOT_ENV, `${inset}px`);
++
++  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a synthetic 34]. */
++  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean][] = [
++    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true],
++    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true],
++    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
++    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true],
++    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true],
++    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true],
++    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true],
++    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true],
++  ];
++  const FOOT_READ = async (page: Page, inset: number) => {
++    const pad = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("card-foot")!).paddingBottom));
++    const ink = await LOWEST_INK(page);
++    return { pad, ink, clears: ink === null ? null : +(844 - inset - ink).toFixed(2) };
++  };
+ 
+-  test("row 28 · behaviour, both engines on the FLAT phone (inset 0 — WebKit has no inset emulation): the served cascade stacks and the lowest ink clears the screen's edge", async ({
++  test("row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line", async ({
+     page,
+     browserName,
+   }) => {
++    // eighteen page loads (a fresh page per plant, flat and synthetic): the default 30 s is one
++    // WebKit load's budget under a box load of 60–70 (the first WAVE run timed out at plant 4)
++    test.setTimeout(240_000);
++    const st = await SYNTH_ROUTE(page);
+     await OPEN(page);
+     const served = await SERVED_PAD(page);
+     console.log(`[RULE row 28 served] ${browserName} ${JSON.stringify(served)}`);
+-    expect(SERVED_OK(served), `served padding-bottom sites ${JSON.stringify(served)}`).toBe(true);
+-    const padB = await page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
+-    const ink = await LOWEST_INK(page);
+-    const clears = ink === null ? null : +(844 - ink).toFixed(2);
+-    console.log(`[RULE row 28 flat] ${browserName} inset 0 pad ${padB} lowest ink ${ink} clears ${clears}`);
+-    expect(parseFloat(padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
+-    expect(clears, "the lowest ink clears the screen's edge by ≥ 2 css").toBeGreaterThanOrEqual(2);
+-    // NEGATIVE CONTROLS, same page — the served arm reds on each; the paint arm on the ones that move ink.
+-    for (const [name, css, paints] of [
+-      ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false],
+-      ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false],
+-      ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false],
+-      ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true],
+-      ["an !important universal", "* { padding-bottom: 0 !important; }", true],
+-    ] as const) {
+-      const tag = await page.addStyleTag({ content: css });
+-      await SHEET_SETTLED(page);
++    expect(SERVED_BAD(served), "served sites evaluated at 0 and 34").toEqual([]);
++    const f0 = await FOOT_READ(page, 0);
++    console.log(`[RULE row 28 flat] ${browserName} inset 0 ${JSON.stringify(f0)}`);
++    expect(f0.pad, "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
++    expect(f0.clears, "the lowest ink clears the screen's edge by ≥ 2 css").toBeGreaterThanOrEqual(2);
++    st.inset = 34;
++    await OPEN(page);
++    st.inset = null;
++    const n = st.n;
++    const f34 = await FOOT_READ(page, 34);
++    console.log(`[RULE row 28 synth] ${browserName} inset 34 (${n} declarations rewritten) ${JSON.stringify(f34)}`);
++    expect(n, "the synthetic inset rewrote the served env()").toBeGreaterThan(0);
++    expect(f34.pad - f0.pad, `the inset STACKS on the pad (${f0.pad} → ${f34.pad})`).toBeCloseTo(34, 1);
++    expect(f34.clears, "the lowest ink clears the inset line by ≥ 2 css").toBeGreaterThanOrEqual(2);
++    const greens: Record<string, string[]> = { logical: [], evaluate: [], shift: [] };
++    // NEGATIVE CONTROLS, each on a fresh page: the served arm reds on every plant, the flat paint on
++    // the ones that move ink at inset 0, and the synthetic 34 on every one that gives the inset away.
++    for (const [name, css, paints0, paints34] of FOOT_BEHAVIOUR_PLANTS) {
++      await OPEN(page, () => page.addStyleTag({ content: css }));
+       const s = await SERVED_PAD(page);
+-      const low = paints ? await LOWEST_INK(page) : null;
+-      console.log(`[RULE row 28 flat] ${browserName} plant ${name}: served ${JSON.stringify(s)}${paints ? ` clears ${low === null ? null : +(844 - low).toFixed(2)}` : ""}`);
+-      expect(SERVED_OK(s), `negative control ${name}`).toBe(false);
+-      if (paints) expect(low === null ? 0 : 844 - low, `negative control ${name} on paint`).toBeLessThan(2);
+-      await tag.evaluate((n) => (n as Element).remove());
++      const p0 = paints0 ? await FOOT_READ(page, 0) : null;
++      if (paints34) {
++        st.inset = 34;
++        await OPEN(page, () => page.addStyleTag({ content: AT_INSET(css, 34) }));
++        st.inset = null;
++      }
++      const p34 = paints34 ? await FOOT_READ(page, 34) : null;
++      console.log(`[RULE row 28 plant] ${browserName} ${name}: served ${JSON.stringify(SERVED_BAD(s))}${p0 ? ` flat ${JSON.stringify(p0)}` : ""}${p34 ? ` synth34 ${JSON.stringify(p34)}` : ""}`);
++      expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
++      for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      if (p0) expect(p0.clears ?? 0, `negative control ${name} (flat paint)`).toBeLessThan(2);
++      if (p34) expect(p34.clears ?? 0, `negative control ${name} (synthetic 34 paint)`).toBeLessThan(2);
+     }
+     // the runtime write no source reader sees
++    await OPEN(page);
+     await page.evaluate(() => (document.getElementById("card-foot")!.style.paddingBottom = "0px"));
+     const inline = await SERVED_PAD(page);
+-    console.log(`[RULE row 28 flat] ${browserName} plant inline write: served ${JSON.stringify(inline)}`);
++    console.log(`[RULE row 28 plant] ${browserName} inline write: served ${JSON.stringify(SERVED_BAD(inline))}`);
+     expect(SERVED_OK(inline), "negative control: an inline write").toBe(false);
++    // the served arm's own displacement plant (a margin that takes the inset back), then the battery
++    await OPEN(page, () => page.addStyleTag({ content: "#card-foot.card-foot { margin-block-end: calc(0px - env(safe-area-inset-bottom)); }" }));
++    const shift = await SERVED_PAD(page);
++    console.log(`[RULE row 28 plant] ${browserName} margin-block-end takes the inset back: served ${JSON.stringify(SERVED_BAD(shift))}`);
++    expect(SERVED_OK(shift), "negative control: a displacement site").toBe(false);
++    for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(shift, off)) greens[off].push("margin-block-end");
++    console.log(`[RULE row 28 served] ${browserName} sabotage → plants read GREEN ${JSON.stringify(greens)}`);
++    for (const [off, g] of Object.entries(greens)) expect(g.length, `served clause ${off} bites`).toBeGreaterThan(0);
+   });
+ 
+   test("row 28 · paint under a real inset (chromium CDP): the lowest ink clears the inset line by ≥ 2 css, and max() reds it", async ({
+@@ -1890,7 +2233,25 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     console.log(`[RULE row 28] inset 34, max() planted: clears ${red}`);
+     expect(red, "negative control: max() gives the band away").toBeLessThan(2);
+     await tag.evaluate((n) => (n as Element).remove());
++    // pass 9: the pass-8 critic's K-plants under the REAL inset (each reds here, as on the synthetic arm)
++    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^K1/.test(n))) {
++      const k = await page.addStyleTag({ content: css });
++      await SHEET_SETTLED(page);
++      const r = await FOOT_READ(page, 34);
++      console.log(`[RULE row 28] inset 34, ${name}: ${JSON.stringify(r)}`);
++      expect(r.clears ?? 0, `negative control ${name} under CDP 34`).toBeLessThan(2);
++      await k.evaluate((n) => (n as Element).remove());
++    }
+     const i0 = await at(0);
++    // CALIBRATION of the synthetic arm (the one WebKit reads): at CDP 0, the CSSOM rewrite to 34 lands
++    // the same pad and the same lowest ink as the real 34 above (|Δpad| ≤ 0.01, |Δink| ≤ 0.5 css).
++    const st = await SYNTH_ROUTE(page);
++    st.inset = 34;
++    await OPEN(page);
++    const s34 = await FOOT_READ(page, 34);
++    console.log(`[RULE row 28] synthetic 34 at CDP 0 ${JSON.stringify(s34)} against CDP 34 ${JSON.stringify(i34)}`);
++    expect(Math.abs(s34.pad - parseFloat(i34.padB)), "synthetic pad = CDP pad").toBeLessThanOrEqual(0.01);
++    expect(Math.abs((s34.ink ?? 0) - (i34.ink ?? 0)), "synthetic lowest ink = CDP lowest ink").toBeLessThanOrEqual(0.5);
+     console.log(`[RULE row 28] inset 0 ${JSON.stringify(i0)}`);
+     expect(parseFloat(i0.padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
+     expect(parseFloat(i34.padB) - parseFloat(i0.padB), `the inset STACKS on the pad (${i0.padB} → ${i34.padB})`).toBeCloseTo(34, 1);
+diff --git a/web/frontend/scripts/check-face-engine-identity.mjs b/web/frontend/scripts/check-face-engine-identity.mjs
+index 57580d9..8508144 100644
+--- a/web/frontend/scripts/check-face-engine-identity.mjs
++++ b/web/frontend/scripts/check-face-engine-identity.mjs
+@@ -82,22 +82,31 @@ function sidecar(root = FRONTEND) {
+     return null;
+   }
+ }
+-/** sha1 over `<rel>\n<utf8>\n` for each file of the build's graph, in the sidecar's (sorted)
+- *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file. */
+-function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p, "utf8")) {
++/** sha1 over `<rel>\n` + BYTES + `\n` for each file of the build's graph, in the sidecar's (sorted)
++ *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file.
++ *  PASS 9 — BYTES, never utf8 (a woff2 decoded as text folds invalid sequences to U+FFFD: the
++ *  pass-8 critic's flipped Fraunces byte kept the digest), and the graph carries every EMITTED
++ *  asset's source, the CSS `url()` fonts first among them (the plugin writes it). */
++function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p)) {
+   if (!Array.isArray(files) || files.length === 0) return null;
+   const h = crypto.createHash("sha1");
+   for (const rel of files) {
+-    let text;
++    let bytes;
+     try {
+-      text = read(path.join(root, rel));
++      bytes = read(path.join(root, rel));
+     } catch {
+-      text = `\u0000MISSING ${rel}`;
++      bytes = `\u0000MISSING ${rel}`;
+     }
+-    h.update(`${rel}\n${text}\n`);
++    h.update(`${rel}\n`).update(bytes).update("\n");
+   }
+   return h.digest("hex");
+ }
++/** The faces the census measures, reached by `url()` from the sheets: each must be in the graph. */
++const FACE_ASSETS = [
++  "src/assets/fonts/patrickhand-subset.woff2",
++  "src/assets/fonts/firacode-subset.woff2",
++  "src/assets/fonts/fraunces-subset.woff2",
++];
+ const GRAPH = sidecar()?.files ?? null;
+ const TREE_STAMP = graphStamp(GRAPH);
+ 
+@@ -341,11 +350,14 @@ function selfTest(censuses) {
+     );
+     blind++;
+   }
+-  const utf8 = (p) => fs.readFileSync(p, "utf8");
++  const bytes = (p) => fs.readFileSync(p);
+   const sceneStamp = graphStamp(GRAPH, FRONTEND, (p) =>
+     p.endsWith(scene)
+-      ? `${utf8(p)}\n.controls-card { letter-spacing: 1px }\n`
+-      : utf8(p),
++      ? Buffer.concat([
++          bytes(p),
++          Buffer.from("\n.controls-card { letter-spacing: 1px }\n"),
++        ])
++      : bytes(p),
+   );
+   plant(
+     "scene.css edited after the build (letter-spacing on the card; a file the hand list missed)",
+@@ -353,13 +365,42 @@ function selfTest(censuses) {
+     f0,
+     sceneStamp,
+   );
++  // pass 9 — the pass-8 critic's three font plants, overlaid in memory (the CLI battery plants
++  // them on disk with the mtime restored): a byte appended, a face replaced by another face's
++  // bytes, one byte flipped where utf8 decoding hid it. Each face must be IN the graph first.
++  for (const f of FACE_ASSETS)
++    if (!GRAPH?.includes(f)) {
++      console.log(
++        `  BLIND  ${f} is not in the build's graph — a url() asset the stamp cannot see`,
++      );
++      blind++;
++    }
++  const [ph, fc, fr] = FACE_ASSETS;
++  const overlay = (name, fn) =>
++    plant(
++      name,
++      withServed,
++      f0,
++      graphStamp(GRAPH, FRONTEND, (p) =>
++        p.endsWith(name.split(" ")[0]) ? fn(bytes(p)) : bytes(p),
++      ),
++    );
++  overlay(`${ph} one byte appended`, (b) => Buffer.concat([b, Buffer.from([0])]));
++  overlay(`${fc} replaced whole by the Fraunces bytes`, () =>
++    bytes(path.join(FRONTEND, fr)),
++  );
++  overlay(`${fr} offset 127 flipped`, (b) => {
++    const c = Buffer.from(b);
++    c[127] ^= 0x01;
++    return c;
++  });
+   plant(
+     "a file the build read has gone missing",
+     withServed,
+     f0,
+     graphStamp(GRAPH, FRONTEND, (p) => {
+       if (p.endsWith(GRAPH[0])) throw new Error("gone");
+-      return utf8(p);
++      return bytes(p);
+     }),
+   );
+   plant("no build graph at all", withServed, f0, null);
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 9bd9754..17cdf72 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -1002,8 +1002,23 @@ const FACE_SITES = {
+           "'FrauncesBake' is the @font-face the same string mints from the embedded subset",
+       ],
+     ]);
+-    // Computed-key script writes the law cannot resolve are ADMITTED by file and key, never dropped.
+-    const ADMITTED_COMPUTED = new Set(["src/games/shared/GameControlPanel.vue ?name"]);
++    // Computed-key script writes the law cannot resolve are ADMITTED BY SITE (pass 9, charter row 3):
++    // file + key + the site's own source line, each admitted once (a count pin). Pass 8 keyed file +
++    // key, so a second `setProperty(name, "Comic Sans MS")` in the same file rode the first one's
++    // admission. The roster is EMPTY at pass 9: the one site it held (GameControlPanel.vue's
++    // `card.style.setProperty(name, v)`) is resolved by the library's `param-carried` clause (homes
++    // v2), so nothing computed is admitted and every unresolved write reds.
++    const ADMITTED_COMPUTED = new Map(); // `${file} ${key} ${line text}` → reason
++    const GENERIC =
++      /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[\w-]+|math|emoji|fangsong)$/i;
++    /** The ONE binding of each family a voice paints (pass 9, charter row 2): file + family + src. */
++    const HOME_FACES = new Set([
++      'src/assets/index.css Fraunces url("./fonts/fraunces-subset.woff2") format("woff2")',
++      'src/assets/index.css Fira Code url("./fonts/firacode-subset.woff2") format("woff2")',
++      'src/assets/index.css Patrick Hand url("./fonts/patrickhand-subset.woff2") format("woff2")',
++      // the bake's face, minted from the embedded subset through a template hole (the library's NUL)
++      "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue FrauncesBake url('\u0000') format('woff2')",
++    ]);
+     const split = (v, sep) => {
+       const out = [];
+       let d = 0,
+@@ -1051,6 +1066,7 @@ const FACE_SITES = {
+         exists: existsSync,
+       };
+       const got = {
++        faces: SC.fontFaces(fe, o),
+         all: SC.tokens(fe, o).all,
+         font: SC.census(fe, "*", "font-family", o),
+         voice: [...VOICES.keys()].flatMap((n) => SC.census(fe, "*", n, o)),
+@@ -1060,14 +1076,14 @@ const FACE_SITES = {
+     };
+     const gather = (fe, opts) => {
+       const rd = opts.read ?? ((f) => readFileSync(f, "utf8"));
+-      const out = { all: [], font: [], voice: [] };
++      const out = { all: [], font: [], voice: [], faces: [] };
+       const seen = new Set();
+       for (const f of [...FILES, ...(opts.extra ?? [])]) {
+         const got = readOne(fe, f, rd);
+-        for (const k of ["all", "font", "voice"])
++        for (const k of ["all", "font", "voice", "faces"])
+           for (const x of got[k]) {
+             // an @import pulls a sheet into its importer's read: count every site once
+-            const id = `${k}|${x.file}|${x.line}|${x.prop}|${x.value}|${x.prelude}`;
++            const id = `${k}|${x.file}|${x.line}|${x.prop}|${x.value}|${x.prelude}|${x.family}|${x.src}`;
+             if (seen.has(id)) continue;
+             seen.add(id);
+             out[k].push(x);
+@@ -1078,6 +1094,16 @@ const FACE_SITES = {
+     function check7(fe, opts = {}, off = new Set()) {
+       const bad = [];
+       const G = gather(fe, opts);
++      const rd = opts.read ?? ((f) => readFileSync(f, "utf8"));
++      const admits = new Map();
++      const admitted = (w) => {
++        const lines = String(rd(join(fe, w.file))).split("\n");
++        const line = lines[w.line - 1]?.trim() ?? "";
++        const key = `${w.file} ${w.prop} ${line}`;
++        if (!admits.has(key)) admits.set(key, new Set());
++        admits.get(key).add(`${w.line}|${w.value}`); // one site, read by two censuses, counts once
++        return ADMITTED_COMPUTED.has(key) && admits.get(key).size === 1;
++      };
+       const all = G.all;
+       const declsOf = new Map();
+       for (const t of all) {
+@@ -1090,7 +1116,7 @@ const FACE_SITES = {
+       for (const w of G.voice) {
+         if (w.unresolved) {
+           // a computed write could name a voice: admitted by file and key, or it reds
+-          if (!ADMITTED_COMPUTED.has(`${w.file} ${w.prop}`))
++          if (!admitted(w))
+             bad.push(`${w.file}:${w.line} ${w.prop} — an unresolved computed write`);
+           continue;
+         }
+@@ -1149,8 +1175,7 @@ const FACE_SITES = {
+         if (/@font-face$/.test(s.prelude) || /@font-face/.test(s.ctx ?? "")) continue;
+         const at = `${s.file}:${s.line} [${s.kind}] ${String(s.prelude).slice(0, 60)}: ${s.prop} ${s.value}`;
+         if (s.unresolved) {
+-          if (!ADMITTED_COMPUTED.has(`${s.file} ${s.prop}`))
+-            bad.push(`${at} — an unresolved computed write`);
++          if (!admitted(s)) bad.push(`${at} — an unresolved computed write`);
+           continue;
+         }
+         let family;
+@@ -1177,6 +1202,51 @@ const FACE_SITES = {
+         if (why) continue;
+         bad.push(at);
+       }
++      // B1: THE NAME IS BOUND TO ONE FACE (pass 9, charter row 2). A voice resolves to a NAME; the
++      // face that name paints is an `@font-face` or a `FontFace`, and C1 never read either (an
++      // `@font-face{font-family:"Patrick Hand";src:local(…)}` and `document.fonts.add(new FontFace(
++      // "Patrick Hand", …))` both exited 0). Every family a voice or an admitted literal paints
++      // (generics aside) is bound once, at its home in HOME_FACES; a binding elsewhere, a second
++      // one, another src, or a family the law cannot read reds. A name nothing paints is inert.
++      // three disjuncts, each its own sabotage id and its own plant (LAWS P8 §F): B1u the name is
++      // unreadable · B1h the binding is off its home · B1n the home binding is written twice.
++      {
++        const painted = new Set();
++        const famsOf = (v, depth = 0) => {
++          for (const it of split(String(v), /,/)) {
++            const m = /^var\(\s*(--[\w-]+)/.exec(it.trim());
++            if (m) {
++              if (depth < 8)
++                for (const d of declsOf.get(m[1]) ?? [])
++                  famsOf(shorthandFamily(String(d.value)), depth + 1);
++            } else if (!GENERIC.test(unquote(it)) && !KEYWORD.test(unquote(it)))
++              painted.add(unquote(it).toLowerCase());
++          }
++        };
++        for (const v of VOICES.keys())
++          for (const d of declsOf.get(v) ?? []) famsOf(d.value);
++        for (const k of ADMITTED_LITERALS.keys()) famsOf(k.slice(k.indexOf(" ") + 1));
++        const bound = new Map();
++        for (const f of G.faces) {
++          const at = `${f.file}:${f.line} [${f.kind}] ${f.family} ← ${f.src}`;
++          if (f.unresolved) {
++            if (!off.has("B1u"))
++              bad.push(`${at} — a face bound under a name the law cannot read`);
++            continue;
++          }
++          if (!painted.has(String(f.family).toLowerCase())) continue;
++          const key = `${f.file} ${f.family} ${f.src}`;
++          bound.set(key, (bound.get(key) ?? 0) + 1);
++          if (!HOME_FACES.has(key) && !off.has("B1h"))
++            bad.push(
++              `${at} — a painted family bound off its one home (the name paints another face)`,
++            );
++          if (HOME_FACES.has(key) && bound.get(key) > 1 && !off.has("B1n"))
++            bad.push(
++              `${at} — the home binding written twice (the later one is the face)`,
++            );
++        }
++      }
+       return bad;
+     }
+ 
+@@ -1186,6 +1256,8 @@ const FACE_SITES = {
+     const hostText = readFileSync(host, "utf8");
+     const tsHost = join(fe, "src/__check7-plant.ts");
+     const logo = join(fe, "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue");
++    const gcp = join(fe, "src/games/shared/GameControlPanel.vue");
++    const ix = join(fe, "src/assets/index.css");
+     const inTemplate = (tag) =>
+       hostText.replace(/<\/template>\s*(?=<script|<style|$)/, `${tag}\n</template>\n`);
+     const inScript = (js) => hostText.replace(/<script([^>]*)>/, `<script$1>\n${js}`);
+@@ -1310,6 +1382,32 @@ const FACE_SITES = {
+             " scoped",
+           ) + "\n<style>\n:root { --plant-alias: var(--face-mono); }\n</style>\n",
+       },
++      // pass 9 — the binding (B1) and the site-keyed admission (charter rows 2 and 3)
++      "an @font-face re-binding a voice's name": {
++        vue: block(`@font-face { font-family: "Patrick Hand"; src: local(${CS}); }`),
++      },
++      "a FontFace re-binding a voice's name": {
++        ts: `document.fonts.add(new FontFace("Patrick Hand", "local('Comic Sans MS')"));\n`,
++      },
++      "a FontFace under a computed name": {
++        ts: `export const bind = (n: string) => document.fonts.add(new FontFace(n, "local('x')"));\n`,
++      },
++      "a fallback name re-bound (Georgia)": {
++        vue: block(`@font-face { font-family: Georgia; src: local(${CS}); }`),
++      },
++      "the home binding written twice (B1n alone)": {
++        ix: (t) => {
++          const m = /@font-face\s*\{[^}]*patrickhand-subset[^}]*\}/.exec(t);
++          return m ? `${t}\n${m[0]}\n` : t;
++        },
++      },
++      "a second computed setProperty in GameControlPanel.vue": {
++        gcp: (t) =>
++          t.replace(
++            '<script setup lang="ts">',
++            `<script setup lang="ts">\nfunction plantFace3(el: HTMLElement, name: string) { el.style.setProperty(name, ${CS}); }`,
++          ),
++      },
+       // the admission is keyed on the exact value
+       "the admitted logo literal changed": {
+         logo: (t) =>
+@@ -1359,7 +1457,11 @@ const FACE_SITES = {
+               ? pl.ts
+               : f === logo && pl.logo
+                 ? pl.logo(readFileSync(f, "utf8"))
+-                : readFileSync(f, "utf8"),
++                : f === gcp && pl.gcp
++                  ? pl.gcp(readFileSync(f, "utf8"))
++                  : f === ix && pl.ix
++                    ? pl.ix(readFileSync(f, "utf8"))
++                    : readFileSync(f, "utf8"),
+       };
+     };
+     const battery = (off) => {
+@@ -1409,7 +1511,7 @@ const FACE_SITES = {
+         g.push("index.html <style>");
+       return g;
+     };
+-    const CLAUSES7 = ["V1", "V2", "C1", "K1"];
++    const CLAUSES7 = ["V1", "V2", "C1", "K1", "B1u", "B1h", "B1n"];
+     if (process.argv.includes("--sabotage")) {
+       // LAWS P7 §F (ii): each clause off in turn must red the plant battery
+       let holes = 0;
+diff --git a/web/frontend/scripts/check-tape-foot.mjs b/web/frontend/scripts/check-tape-foot.mjs
+index cfdcd8b..760723c 100644
+--- a/web/frontend/scripts/check-tape-foot.mjs
++++ b/web/frontend/scripts/check-tape-foot.mjs
+@@ -45,8 +45,14 @@
+  *   9 THE COLUMN  (pass 7's seam, CI-held from pass 8) the case is `display: flex;
+  *                 flex-direction: column` with a `max-height` cap in every regime; the card may
+  *                 shrink (no `flex-shrink: 0`, no `flex: none`, no min/max height of its own); the
+- *                 foot is `flex: none` in every regime and nothing makes it yield.
+- *  10 THE SEAT    nothing moves the bar or the foot off its layout box: no `top`/`bottom`/`inset`,
++ *                 foot is `flex: none` in every regime and nothing makes it yield. PASS 9 keys
++ *                 the PRECONDITIONS: the card is a scrollport (`overflow-y` auto|scroll) in every
++ *                 regime, the case's cap bounds at or under the viewport (`bounds()`), no `order`
++ *                 on the card or the foot, no band above the foot, the case's bottom pad ≤ 32 px,
++ *                 the foot and the bar no height of their own, and no `@apply` sets a watched prop.
++ *  11 THE MOUNT   (pass 9) no `v-show`/`v-if`/`hidden` on the chain, and the bar's Teleport goes to
++ *                 `#card-foot`, disabled only on an expression that names something.
++ *  10 THE SEAT   nothing moves the bar or the foot off its layout box: no `top`/`bottom`/`inset`,
+  *                 `translate`, `transform`, `scale`, `rotate`, `zoom`, no negative bottom margin on
+  *                 the foot, and the bar stays `position: relative`.
+  *
+@@ -383,6 +389,117 @@ const isBerth = (id) =>
+ const floorOf = (id) =>
+   regime(id).width < 1024 && regime(id).width > regime(id).height ? 1.125 : 0.75;
+ 
++/** PASS 9 · A LENGTH'S BOUNDS AT A REGIME, in css px: `[lo, hi]` of a value whose tokens were
++ *  already resolved through the token map. Viewport units take the regime's own box; `%` of the
++ *  case's block is read against the viewport height (the case sits in a viewport-capped column);
++ *  `env()` is [0, ∞); a var() nothing publishes is (−∞, ∞), so it can only LOOSEN a bound; calc
++ *  sums, products and quotients by numbers, `min`/`max`/`clamp` exactly. A cap whose `hi` exceeds
++ *  the viewport caps nothing (the pass-8 critic's C6, `max-height: 999rem`). */
++export function bounds(value, r) {
++  const INF = Infinity;
++  const src = String(value).trim();
++  let i = 0;
++  const ws = () => {
++    while (i < src.length && /\s/.test(src[i])) i++;
++  };
++  const unit = (n, u) => {
++    u = (u ?? "").toLowerCase();
++    const v = /^(px|)$/.test(u)
++      ? n
++      : /^(rem|em)$/.test(u)
++        ? n * 16
++        : /^[dsl]?vh$/.test(u) || u === "%"
++          ? (n * r.height) / 100
++          : /^[dsl]?vw$/.test(u)
++            ? (n * r.width) / 100
++            : /^[dsl]?vmin$/.test(u)
++              ? (n * Math.min(r.width, r.height)) / 100
++              : /^[dsl]?vmax$/.test(u)
++                ? (n * Math.max(r.width, r.height)) / 100
++                : NaN;
++    return [v, v];
++  };
++  const args = () => {
++    const out = [];
++    for (;;) {
++      out.push(sum());
++      ws();
++      if (src[i] === ",") {
++        i++;
++        continue;
++      }
++      if (src[i] === ")") i++;
++      return out;
++    }
++  };
++  const atom = () => {
++    ws();
++    let m = /^(calc|min|max|clamp|env|var)\(/i.exec(src.slice(i));
++    if (m) {
++      i += m[0].length;
++      const fn = m[1].toLowerCase();
++      if (fn === "env" || fn === "var") {
++        let d = 1;
++        while (i < src.length && d) d += src[i] === "(" ? 1 : src[i++] === ")" ? -1 : 0;
++        return fn === "env" ? [0, INF] : [-INF, INF];
++      }
++      const a = args();
++      if (fn === "calc") return a[0];
++      const lo = a.map((x) => x[0]),
++        hi = a.map((x) => x[1]);
++      if (fn === "min") return [Math.min(...lo), Math.min(...hi)];
++      if (fn === "max") return [Math.max(...lo), Math.max(...hi)];
++      return [
++        Math.max(lo[0], Math.min(lo[1], lo[2])),
++        Math.max(hi[0], Math.min(hi[1], hi[2])),
++      ];
++    }
++    if (src[i] === "(") {
++      i++;
++      const v = sum();
++      ws();
++      if (src[i] === ")") i++;
++      return v;
++    }
++    m = /^(-?\d*\.?\d+(?:e-?\d+)?)([a-z%]*)/i.exec(src.slice(i));
++    if (!m) {
++      i = src.length;
++      return [NaN, NaN];
++    }
++    i += m[0].length;
++    return m[2] ? unit(+m[1], m[2]) : [+m[1], +m[1], true];
++  };
++  const product = () => {
++    let a = atom();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "*" && op !== "/") return a;
++      i++;
++      const b = atom();
++      const k = a[2] ? a[0] : b[0];
++      const x = a[2] ? b : a;
++      if (op === "/" && !b[2]) return [NaN, NaN];
++      const f = op === "*" ? k : 1 / b[0];
++      const p = [x[0] * f, x[1] * f].sort((m, n) => m - n);
++      a = a[2] && b[2] ? [p[0], p[1], true] : p;
++    }
++  };
++  const sum = () => {
++    let a = product();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "+" && op !== "-") return a;
++      i++;
++      const b = product();
++      a = op === "+" ? [a[0] + b[0], a[1] + b[1]] : [a[0] - b[1], a[1] - b[0]];
++    }
++  };
++  const v = sum();
++  return [v[0], v[1]];
++}
++
+ // ------------------------------------------------------------------------------ props
+ const CLIP = (p, v) =>
+   /^overflow(-[xy]|-block|-inline)?$/.test(p)
+@@ -471,8 +588,9 @@ const WATCHED = {
+ export function check(overlay = {}) {
+   const t = tree(overlay);
+   const fails = [];
+-  const fail = (clause, msg) => {
+-    if (!OFF.has(String(clause))) fails.push(`${clause} ${msg}`);
++  const fail = (clause, msg, sub) => {
++    if (!OFF.has(String(clause)) && !(sub && OFF.has(sub)))
++      fails.push(`${clause} ${msg}`);
+   };
+   const ch = chain(t);
+   for (const n of ["CASE", "CARD", "FOOT", "BAR", "VERBS", "FRAME", "WELL"])
+@@ -618,6 +736,25 @@ export function check(overlay = {}) {
+       if (UTIL_EDGE.test(c))
+         fail(4, `ONE HAND: the ${n.toLowerCase()}'s element carries \`${c}\``);
+   }
++  // PASS 9 · the voice the verbs inherit is not collapsed above them (the critic's P7): a size
++  // on the bar or the foot under 10 px at the desk takes every inheriting label with it
++  for (const n of ["BAR", "FOOT"])
++    for (const s of own(n).filter((s) => s.prop === "font-size" || s.prop === "font")) {
++      const size =
++        s.prop === "font-size"
++          ? val(s)
++          : (
++              topSplit(val(s)).find((x) => /^(-?\d|calc|min|max|clamp|var)/.test(x)) ??
++              ""
++            ).split("/")[0];
++      const [lo] = bounds(size || "NaN", regime("desk-1280x800"));
++      if (!(lo >= 10))
++        fail(
++          4,
++          `ONE HAND: ${where(s)} { ${s.prop}: ${val(s)} } collapses the voice the verbs inherit`,
++          "4a",
++        );
++    }
+ 
+   // 8 · THE CLIP (rules, inline, utilities)
+   for (const n of ["FRAME", "BAR", "FOOT", "CASE"])
+@@ -825,6 +962,172 @@ export function check(overlay = {}) {
+         `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } — the foot is its content`,
+       );
+ 
++  // 9 (PASS 9) · THE PRECONDITIONS, NOT THE PROPERTIES (LAWS P8 §F; the pass-8 critic's G1–G3).
++  // `flex-shrink` on the card is not what lets it yield: a SCROLLPORT's automatic minimum is 0, and
++  // a cap that caps nothing hands the case its content. `overflow-y: visible | clip` on the card, a
++  // `max-height: 999rem` on the case, a viewport-sized top margin on the foot each put the verbs
++  // 243–597 px below the viewport with every pass-8 clause GREEN.
++  const overflowY = (s) =>
++    s.prop === "overflow" ? (topSplit(val(s))[1] ?? topSplit(val(s))[0]) : val(s);
++  for (const id of ALL_REGIMES()) {
++    const ov = effectiveAt(
++      own("CARD").filter((s) => /^overflow(-y|-block)?$/.test(s.prop)),
++      id,
++    );
++    const oy = ov ? overflowY(ov) : "visible";
++    if (!/^(auto|scroll)$/.test(oy))
++      fail(
++        9,
++        `THE COLUMN: at ${id} the card is no scrollport (overflow-y: ${oy}${ov ? `, ${where(ov)}` : ""}): its automatic minimum is its content`,
++        "9a",
++      );
++    const cap = effectiveAt(
++      caseOwn.filter((s) => /^max-(height|block-size)$/.test(s.prop)),
++      id,
++    );
++    if (cap && !/^(none|auto)$/.test(val(cap))) {
++      const [, hi] = bounds(val(cap), regime(id));
++      if (!(hi <= regime(id).height))
++        fail(
++          9,
++          `THE COLUMN: at ${id} the case's cap ${where(cap)} \`${val(cap)}\` bounds at ${hi} px, past the viewport's ${regime(id).height}`,
++          "9b",
++        );
++    }
++  }
++  // the tape is the case's LAST box: no `order` on the card or the foot, nothing above the foot,
++  // and nothing below the foot inside the case (the case's own bottom pad holds no length a
++  // viewport can size); the foot and the bar are their content (no height of their own)
++  for (const n of ["CARD", "FOOT"])
++    for (const s of own(n).filter((s) => s.prop === "order"))
++      if (!/^0$/.test(val(s)))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { order: ${val(s)} } moves the ${n.toLowerCase()} in the column`,
++          "9c",
++        );
++  const sideOf = (prop, value, side) => {
++    const p = topSplit(value);
++    if (
++      prop.endsWith(`-${side}`) ||
++      prop.endsWith(`-block-${side === "top" ? "start" : "end"}`)
++    )
++      return value;
++    if (/-block$/.test(prop)) return side === "top" ? p[0] : (p[1] ?? p[0]);
++    if (/^(margin|padding)$/.test(prop)) return side === "top" ? p[0] : (p[2] ?? p[0]);
++    return null;
++  };
++  for (const s of own("FOOT").filter((s) =>
++    /^(margin|padding)(-top|-block|-block-start)?$/.test(s.prop),
++  )) {
++    const v = sideOf(s.prop, val(s), "top");
++    if (v != null && !/^(0|0px|0rem)$/.test(v.trim()))
++      fail(
++        9,
++        `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } puts a band above the tape`,
++        "9d",
++      );
++  }
++  for (const s of caseOwn.filter((s) =>
++    /^padding(-bottom|-block|-block-end)?$/.test(s.prop),
++  )) {
++    const v = sideOf(s.prop, val(s), "bottom");
++    if (v == null) continue;
++    for (const id of s.regimes) {
++      const [, hi] = bounds(v, regime(id));
++      if (!(hi <= 32))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } at ${id} lays ${hi} px under the tape`,
++          "9e",
++        );
++    }
++  }
++  for (const n of ["FOOT", "BAR"])
++    for (const s of own(n).filter((s) =>
++      /^(height|block-size|max-height|max-block-size)$/.test(s.prop),
++    ))
++      if (!/^(auto|none)$/.test(val(s)))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } — the ${n.toLowerCase()} is its content`,
++          "9f",
++        );
++  // `@apply` is a site the declaration reader cannot key to an element, so it is read everywhere:
++  // any utility an `@apply` in the estate expands to may not set a watched property
++  for (const f of t.files) {
++    const rel = t.rel(f);
++    if (!/\.(css|pcss|vue)$/.test(rel)) continue;
++    const css = (
++      rel.endsWith(".vue")
++        ? sfc(t.read(f))
++            .styles.map((x) => x.text)
++            .join("\n")
++        : t.read(f)
++    ).replace(/\/\*[\s\S]*?\*\//g, "");
++    for (const m of css.matchAll(/@apply\s+([^;}]+)/g))
++      for (const c of m[1].trim().split(/\s+/))
++        for (const [p] of TAILWIND_ALL(c.replace(/^!|!$/g, ""))) {
++          const clause = Object.entries(WATCHED).find(([, ps]) => ps.includes(p))?.[0];
++          if (clause)
++            fail(
++              clause,
++              `THE APPLY: ${rel} \`@apply ${c}\` sets \`${p}\`, a watched property, where the gate cannot key it`,
++              "apply",
++            );
++        }
++  }
++
++  // 11 · THE MOUNT (PASS 9; the critic's G3). A template-level hide is no declaration: `v-show`,
++  // `hidden` or a `v-if` on the chain, or a Teleport that never moves the bar into the foot.
++  for (const n of ["CASE", "CARD", "FOOT", "BAR", "FRAME", "VERBS"]) {
++    const el = ch[n];
++    for (const [a, v] of el.attrs) {
++      const name = a.replace(/^(?::|v-bind:)/, "");
++      if (n === "VERBS" && a === "v-else") continue; // the ribbon's twin: `v-if="barAsking"` / `v-else`
++      if (/^(v-show|v-if|v-else-if|v-else|hidden)$/.test(name))
++        fail(
++          11,
++          `THE MOUNT: the ${n.toLowerCase()} carries \`${a}${v != null ? `="${v}"` : ""}\` (${[...el.from][0]}:${el.line})`,
++          "11a",
++        );
++    }
++  }
++  {
++    const list = elementsOf(t, PANEL);
++    const bar = list.find((e) => e.classes.has("action-bar"));
++    const tp = bar && list.find((e) => e.i === bar.parent);
++    if (!tp || !/^teleport$/i.test(tp.tag))
++      fail(11, "THE MOUNT: the bar is not a Teleport's child", "11b");
++    else {
++      const to = tp.attrs.get("to");
++      if (to !== "#card-foot")
++        fail(
++          11,
++          `THE MOUNT: the bar's Teleport goes to \`${to ?? tp.attrs.get(":to")}\`, not \`#card-foot\``,
++          "11b",
++        );
++      for (const a of ["v-if", "v-show", "v-else", "v-else-if"])
++        if (tp.attrs.has(a))
++          fail(11, `THE MOUNT: the bar's Teleport carries \`${a}\``, "11b");
++      if (tp.attrs.has("disabled"))
++        fail(11, "THE MOUNT: the bar's Teleport is `disabled` outright", "11b");
++      const d = tp.attrs.get(":disabled") ?? tp.attrs.get("v-bind:disabled");
++      if (d != null) {
++        const bare = String(d).replace(
++          /\b(true|false|null|undefined|NaN|Infinity)\b|\d+|["'`][^"'`]*["'`]/g,
++          "",
++        );
++        if (!/[A-Za-z_$]/.test(bare))
++          fail(
++            11,
++            `THE MOUNT: the bar's Teleport is \`:disabled="${d}"\`, a constant: the bar never reaches the foot`,
++            "11b",
++          );
++      }
++    }
++  }
++
+   // 10 · THE SEAT
+   for (const n of ["BAR", "FOOT"])
+     for (const s of own(n)) {
+@@ -1487,6 +1790,165 @@ function plants() {
+       "C10 a well-less path rule under the foot",
+       addScene("#card-foot path { stroke-width: 0; }"),
+     ],
++    ...pass9Plants({ live, once, P, addScene, bar }),
++  ];
++}
++
++/** PASS 9 · the pass-8 critic's escapes (C1 C4 C6 C7 C9–C12 C14 P7 P9 T4–T6) as plants, each
++ *  sub-clause's siblings beside them, and a BOUNDARY pair per numeric bound: the `green` arm passes
++ *  by ε and must stay GREEN on its clause, the other reds by ε (LAWS P8 §F, threshold sabotage). */
++function pass9Plants({ live, once, P, addScene, bar }) {
++  const desk = (rule) => addScene(`@media (min-width: 1024px) { ${rule} }`);
++  const dockQ = (rule) => addScene(`@media (max-width: 1023.98px) { ${rule} }`);
++  const foot = (attr) => ({
++    [SCENE_SFC]: once(
++      live.gsfc,
++      'class="card-foot"',
++      `class="card-foot"\n          ${attr}`,
++    ),
++  });
++  const tp = (a, b) => P(once(live.panel, a, b));
++  const HID = J("hid", "den");
++  return [
++    [
++      "9",
++      "C1 the card not a scrollport (overflow-y: visible)",
++      desk(".controls-card { overflow-y: visible; }"),
++    ],
++    [
++      "9",
++      "C7 overflow-y: clip is no scrollport",
++      desk(".controls-card { overflow-y: clip; }"),
++    ],
++    [
++      "9",
++      "the shorthand's y arm hidden",
++      desk(".controls-card { overflow: auto hidden; }"),
++    ],
++    ["9", "the dock's card visible", dockQ(".controls-card { overflow-y: visible; }")],
++    ["9", "C6 a vacuous cap (999rem)", desk(".drawer-case { max-height: 999rem; }")],
++    [
++      "9",
++      "the cap past the viewport by 1px",
++      desk(".drawer-case { max-height: calc(100dvh + 1px); }"),
++    ],
++    [
++      "9",
++      "the cap exactly the viewport (100dvh)",
++      desk(".drawer-case { max-height: 100dvh; }"),
++      "green",
++    ],
++    [
++      "9",
++      "the dock's cap past the viewport by 1px",
++      dockQ(".drawer-case { max-height: calc(100dvh + 1px); }"),
++    ],
++    [
++      "9",
++      "the cap on a length nothing publishes",
++      desk(".drawer-case { max-height: calc(100dvh + var(--nobody-publishes)); }"),
++    ],
++    [
++      "9",
++      "C4 the foot above the card (order: -1)",
++      addScene(".card-foot { order: -1; }"),
++    ],
++    [
++      "9",
++      "the card below the foot (order: 2)",
++      addScene(".controls-card { order: 2; }"),
++    ],
++    ["9", "order: 0 on the foot", addScene(".card-foot { order: 0; }"), "green"],
++    [
++      "9",
++      "C9 margin-top: 100vh on the foot",
++      addScene(".card-foot { margin-top: 100vh; }"),
++    ],
++    [
++      "9",
++      "C10 padding-top: 100vh on the foot",
++      addScene(".card-foot { padding-top: 100vh; }"),
++    ],
++    [
++      "9",
++      "margin-block 1px above the foot",
++      addScene(".card-foot { margin-block: 1px 0; }"),
++    ],
++    [
++      "9",
++      "padding-block-start 1px on the foot",
++      addScene(".card-foot { padding-block-start: 1px; }"),
++    ],
++    [
++      "9",
++      "margin-top: 0 on the foot",
++      addScene(".card-foot { margin-top: 0; }"),
++      "green",
++    ],
++    [
++      "9",
++      "C14 padding-bottom: 100vh on the case",
++      addScene(".drawer-case { padding-bottom: 100vh; }"),
++    ],
++    [
++      "9",
++      "the case's bottom pad 33px",
++      addScene(".drawer-case { padding-bottom: 33px; }"),
++    ],
++    [
++      "9",
++      "the case's bottom pad 32px",
++      addScene(".drawer-case { padding-bottom: 32px; }"),
++      "green",
++    ],
++    [
++      "9",
++      "the case's padding-block end 50vh",
++      addScene(".drawer-case { padding-block: 0 50vh; }"),
++    ],
++    ["9", "C11 height: 0 on the foot", addScene(".card-foot { height: 0; }")],
++    ["9", "C12 height: 0 on the bar", bar("height: 0")],
++    ["9", "max-block-size on the bar", bar("max-block-size: 2rem")],
++    ["4", "P7 font-size: 0 on the bar", bar("font-size: 0")],
++    ["4", "font-size 9.9px on the bar", bar("font-size: 9.9px")],
++    ["4", "font-size 10px on the bar", bar("font-size: 10px"), "green"],
++    [
++      "4",
++      "the font shorthand at 0 on the foot",
++      addScene(".card-foot { font: 0/1 serif; }"),
++    ],
++    [
++      "8",
++      "P9 @apply a clip on the foot",
++      addScene(`.card-foot { @apply ${J("overflow", "-hidden")}; }`),
++    ],
++    [
++      "8",
++      "@apply a fade anywhere",
++      addScene(`.drawer-case > * { @apply ${J("opacity", "-0")}; }`),
++    ],
++    ["11", "T4 v-show=false on the foot", foot('v-show="false"')],
++    ["11", "T6 the hidden attribute on the foot", foot(HID)],
++    ["11", "a bound hidden on the foot", foot(`:${HID}="true"`)],
++    ["11", "v-if on the foot", foot('v-if="false"')],
++    [
++      "11",
++      "T5 the bar's Teleport disabled always",
++      tp(':disabled="!footBerth"', ':disabled="true"'),
++    ],
++    [
++      "11",
++      "the Teleport disabled on a literal expression",
++      tp(':disabled="!footBerth"', ':disabled="!false"'),
++    ],
++    ["11", "the Teleport's bare disabled", tp(':disabled="!footBerth"', "disabled")],
++    ["11", "the Teleport sent elsewhere", tp('to="#card-foot"', 'to="#drawer-handle"')],
++    [
++      "11",
++      "the Teleport disabled on a name",
++      tp(':disabled="!footBerth"', ':disabled="!footBerth || false"'),
++      "green",
++    ],
+   ];
+ }
+ 
+@@ -1501,7 +1963,7 @@ function selfTest({ quiet = false } = {}) {
+     bad++;
+   }
+   const list = plants();
+-  for (const [clause, name, patch] of list) {
++  for (const [clause, name, patch, expect] of list) {
+     if (Object.values(patch).some((v) => v === null)) {
+       say(`self-test: plant "${name}" did not apply (the live shape moved)`);
+       bad++;
+@@ -1509,6 +1971,15 @@ function selfTest({ quiet = false } = {}) {
+     }
+     const f = check(patch);
+     const hit = f.find((x) => x.startsWith(`${clause} `));
++    if (expect === "green") {
++      // a BOUNDARY control: it passes its bound by ε and must not red its clause
++      if (hit) {
++        say(`self-test: boundary "${name}" REDS clause ${clause} (${hit})`);
++        bad++;
++      } else if (!quiet && process.argv.includes("--verbose"))
++        console.log(`  GREEN ${name.padEnd(55)} (boundary)`);
++      continue;
++    }
+     if (!hit) {
+       say(
+         `self-test: plant "${name}" stayed GREEN on clause ${clause}${f.length ? ` (red elsewhere: ${f[0]})` : ""}`,
+@@ -1521,14 +1992,36 @@ function selfTest({ quiet = false } = {}) {
+     console.log(
+       bad
+         ? `check-tape-foot self-test: ${bad} FAILED`
+-        : `check-tape-foot self-test: ${list.length} plants red, live green`,
++        : `check-tape-foot self-test: ${list.filter((x) => x[3] !== "green").length} plants red, ${list.filter((x) => x[3] === "green").length} boundaries green, live green`,
+     );
+   return bad;
+ }
+ 
+ /** Delete each clause in turn; the self-test must red (a clause no plant needs is a dead clause). */
+ function sabotageBattery() {
+-  const ids = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
++  const ids = [
++    "1",
++    "2",
++    "3",
++    "4",
++    "5",
++    "6",
++    "7",
++    "8",
++    "9",
++    "10",
++    "11",
++    "9a",
++    "9b",
++    "9c",
++    "9d",
++    "9e",
++    "9f",
++    "4a",
++    "apply",
++    "11a",
++    "11b",
++  ];
+   let dead = 0;
+   for (const id of ids) {
+     OFF.clear();
+@@ -1557,6 +2050,6 @@ if (process.argv[1] === import.meta.filename) {
+   if (process.argv.includes("--sabotage-battery")) bad += sabotageBattery();
+   const fails = check();
+   for (const f of fails) console.error(`check-tape-foot: ${f}`);
+-  if (!fails.length) console.log("check-tape-foot: 10 clauses hold");
++  if (!fails.length) console.log("check-tape-foot: 11 clauses hold");
+   process.exit(bad || fails.length ? 1 : 0);
+ }
+diff --git a/web/frontend/src/games/shared/ConfirmRibbon.vue b/web/frontend/src/games/shared/ConfirmRibbon.vue
+index d68b97b..36db254 100644
+--- a/web/frontend/src/games/shared/ConfirmRibbon.vue
++++ b/web/frontend/src/games/shared/ConfirmRibbon.vue
+@@ -152,7 +152,7 @@ onMounted(() => {
+ 
+ /* AND THE FRAME NEEDS ITS BOX, which the first cut forgot and the probe caught: a
+    `HandDrawnOutline` with no children draws into its own `.outline-container`, and an
+-   `inline-flex` button gives that container no size, so BOTH frames measured `stroke-width:
++   inline flex button (a `display` this file sets) gives that container no size, so BOTH frames measured `stroke-width:
+    null` / `pathLen: null` — the weight ladder, which is this face's only non-colour channel,
+    was not on the page at all. Laid at `inset: 0` it takes the button's box, which is the
+    estate's own idiom (`.bar-frame`, `.deal-box`) and the one the comment above already named. */
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index cf3628b..28fcc7f 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -245,7 +245,8 @@ defineExpose({
+ }
+ 
+ .drawer-tab:focus-visible {
+-  outline: 2px dashed currentColor;
++  /* the card's ONE ring (CHAIR-RULINGS §5, pass 9): solid, in the ring ink */
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 237a353..234e044 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -121,8 +121,9 @@ const props = defineProps<{
+   // the mobile tab-toggle (n ≥ 2 only), and the OptionSelectors from these.
+   sections: ControlSection[];
+   loading: boolean;
+-  // T4-WU/U3 — the board's dirty state (the composable's `isDirty` = undo-depth non-empty).
+-  // Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a pristine board acts instantly.
++  // T4-WU/U3 — the board's dirty state, which gates the ask: a DIRTY Deal / Clear / Fill / Solve
++  // arms first, a pristine board acts instantly. PASS 9 (CHAIR-RULINGS p9 §8): dirty is PLAYER
++  // INK SINCE THE DEAL (the composable's `inkSinceDeal`), not undo-depth, which counts the deal.
+   isDirty: boolean;
+   mobile?: boolean;
+   // T4-W8 ROW 2 — the error-check mode (off/on-demand/live). LEFT a manual prop+emit (§1a):
+@@ -558,7 +559,7 @@ const { animating: dealAnimating, trigger: triggerDeal } = useButtonAnimation(50
+ const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400);
+ 
+ // T4-WU/U3 — the conditional confirm, generalized from the shipped Clear two-tap to Deal and
+-// dirty-gated. On a coarse pointer a DIRTY board (undo-depth non-empty) arms first — the sublabel
++// dirty-gated. On a coarse pointer a DIRTY board (player ink since the deal, pass 9) arms first — the sublabel
+ // asks "sure?" in the teacher's rose, the aria-label swaps, a 2.5s lapse re-arms — and a second tap
+ // within the window deals; a PRISTINE board deals instantly (no nag by construction). [Pass 8: the
+ // fine-pointer exception that stood here — one-click Deal + the Cmd/Ctrl+Z backstop, coarse-only —
+@@ -681,7 +682,8 @@ function useTwoTap(name: AskableAct, act: () => void) {
+     // W1 §1.5 reads it as "a dirty board arms". T4-WU/U3's `isCoarse &&` survived that ruling, so
+     // a dirty board at a fine pointer still cleared, dealt, filled and solved on ONE click
+     // (1440×900, the pass-5 critic). The dirty gate stays: a pristine board has nothing to ask
+-    // about, and that nag is the defect T4-WU/U3 was born to remove.
++    // about, and that nag is the defect T4-WU/U3 was born to remove. A DEALT board with no player
++    // ink is pristine too (pass 9): `isDirty` arrives as `inkSinceDeal`, so it solves on one click.
+     if (props.isDirty && !armed.value) {
+       arm(
+         name,
+@@ -723,7 +725,7 @@ const { press: onFillForced } = useTwoTap("fill", () => {
+ // routine, the act takes two taps: the first arms (the sublabel asks "sure?" in the hand, rose),
+ // the second within 2.5s clears; the window lapsing disarms quietly. T4-WU/U3 — DIRTY-GATED: the
+ // arm now requires `props.isDirty` (born-RED at base: Clear armed unconditionally, even on a blank
+-// board — the same undo-depth gate that arms Deal fixes it), so a pristine board clears instantly.
++// board — the same dirty gate that arms Deal fixes it), so a pristine board clears instantly.
+ // [Pass 8: every pointer asks now — `press()` below; the confirm is the ribbon, no dialog machinery.]
+ const { press: onClear } = useTwoTap("clear", () => {
+   triggerClear();
+@@ -2599,14 +2601,28 @@ const quickBerth = computed(() =>
+    so a fallback here can only hide a rename (registry §2.9 supersedes v2 §2.4's form).
+    PAINTED, both engines, both themes, sampled off the rendered bytes at the ring's own
+    stroke — the four grounds a §10 control's ring actually lands on are in
+-   `evidence/w7/loop/pass4/prototype/CTRL-TAPE/readings/r4-ring.json`. */
++   `evidence/w7/loop/pass4/prototype/CTRL-TAPE/readings/r4-ring.json`.
++   PASS 9 · ONE RING FORM ON THE CARD, SOLID (CHAIR-RULINGS p9 §5). The dash was this family's
++   pass-4 choice, not the estate's: it left 28–32 % of each band unpainted and the left band 1.73 px
++   deep at station 1. It goes to the owner as B-FACE-RING's arm (b); the card wears CTRL-FACE's
++   solid 2 px at every control. */
+ :deep(button:focus-visible),
+ :deep([role="tab"]:focus-visible),
+ :deep([tabindex="0"]:focus-visible) {
+-  outline: 2px dashed var(--ring-ink);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
++/* THE FOCUSED CONTROL IS NEVER UNDER ITS OWN NOTE (CTRL-FACE pass 9). A well's hint tape reveals on
++   `:has(:focus-visible)` at z 50, and it hung across the very chip the keyboard had just reached:
++   the checking row's three chips read 1.24:1 under it and the invite verb lost a band to the
++   well's drawn frame. Lifted above the tape, in place (no offset: nothing moves). The bar's verbs
++   stay static, because their notes take the bar as their containing block. */
++.tray-well :deep(button:focus-visible) {
++  position: relative;
++  z-index: 51;
++}
++
+ .icon-btn:disabled {
+   opacity: 0.4;
+   pointer-events: none;
+@@ -2766,7 +2782,13 @@ const quickBerth = computed(() =>
+ .action-bar .washi-label {
+   top: 100%;
+   bottom: auto;
+-  margin-top: 0.1rem;
++  /* PASS 9 · THE BERTH IS TILT-PROOF (charter row 7). A tape turns about its centre, so its box
++     rises by half its width × sin(tilt) at the high corner. The tilt band is ±1.5° (the seeded
++     tilt in `SheetWashiLabel`, CHAIR-RULINGS p9 §4) and the widest note is `.washi-wide`'s 15rem,
++     so the drop is 7.5rem × sin(1.5°) = 3.14 px, plus 0.5 px of air. The 0.1rem it replaces held
++     no tilt: a +1.21° re-roll on the union put Clear's note 0.52 px into the verbs (24 px²), and
++     the band's edge puts the widest note 1.54 px into them (71 px²). */
++  margin-top: calc(7.5rem * sin(1.5deg) + 0.5px);
+   margin-bottom: 0;
+   /* the bar is the note's berth, so the bar's width is its cap: a 15rem note centred in a
+      218 px bar hung 8–14 px past both of the card's edges (pass 8, INTAKE row 11's root) */
+@@ -3052,16 +3074,9 @@ const quickBerth = computed(() =>
+    station-1 ruling), and the pass-7 dash left 28–32 % of each band unpainted and the left band
+    1.73 px deep — a ring with holes, under WCAG 2.4.13's 2 px perimeter where the gaps fell. The
+    dash's reason (a scribbled chip wearing two solid marks 8px apart) is the cost, named in the
+-   B-FACE-RING row for the owner. */
+-.mobile-heading-btn:focus-visible {
+-  outline: 2px solid var(--ring-ink);
+-  outline-offset: 3px;
+-}
+-
+-.tray-well :deep(.ctrl-btn:focus-visible) {
+-  outline: 2px solid var(--ring-ink);
+-  outline-offset: 3px;
+-}
++   B-FACE-RING row for the owner. ONE FORM ON EVERY CONTROL (pass 9, CHAIR-RULINGS §5): the two
++   sites are struck into the card's generic `:deep()` rule above, which is solid now, so every
++   button, tab and tab stop the card renders, its children's included, wears the one ring. */
+ 
+ /* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+    pressure graphite. Deliberately quiet: it names what's closed without competing with
+diff --git a/web/frontend/src/games/shared/GameShell.vue b/web/frontend/src/games/shared/GameShell.vue
+index 3d4d586..7a9607d 100644
+--- a/web/frontend/src/games/shared/GameShell.vue
++++ b/web/frontend/src/games/shared/GameShell.vue
+@@ -168,7 +168,7 @@ function onCandidatePeekEnd() {
+       <GameControlPanel
+         :sections="sections"
+         :loading="model.loading.value"
+-        :is-dirty="model.isDirty.value"
++        :is-dirty="model.inkSinceDeal.value"
+         :pencil-mode="model.pencilMode.value"
+         :error-check-mode="model.errorCheckMode.value"
+         :candidates-pinned="model.candidatesPinned.value"
+diff --git a/web/frontend/src/games/shared/defineGame.ts b/web/frontend/src/games/shared/defineGame.ts
+index 8c53da6..b54cf18 100644
+--- a/web/frontend/src/games/shared/defineGame.ts
++++ b/web/frontend/src/games/shared/defineGame.ts
+@@ -72,6 +72,9 @@ export interface GameModel {
+   errorCode: ReadRef<string>;
+   linkError: ReadRef<boolean>;
+   isDirty: ReadRef<boolean>;
++  /** player ink since the deal: the destructive ask's signal (T9-M12; `isDirty` stays the
++   *  gallery guard's undo-depth reading). */
++  inkSinceDeal: ReadRef<boolean>;
+   hintReasoning: ReadRef<HintResult | null>;
+   gradeTally: ReadRef<TallyDescriptor>;
+   pencilMarks: ReadRef<Record<string, number[]>>;
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+index b59e6e7..2d80c9e 100644
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -288,6 +288,7 @@ export function useGameState<
+     canUndo,
+     canRedo,
+     undoDepth,
++    inkSinceDeal,
+   } = useUndoHistory<BoardBlob, MarksBlob>({
+     // T6.2 — a replay is a write. Undo/redo pops the log rather than pushing it, so `onEntry`
+     // below never fires for a replay; each effect announces its own board change or the room
+@@ -1185,6 +1186,7 @@ export function useGameState<
+     canRedo,
+     undoDepth,
+     isDirty,
++    inkSinceDeal,
+     hintCell,
+     hintReasoning,
+     hardestTechnique,
+diff --git a/web/frontend/src/games/shared/useUndoHistory.test.ts b/web/frontend/src/games/shared/useUndoHistory.test.ts
+index ba38fa0..7d673f3 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.test.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.test.ts
+@@ -395,6 +395,71 @@ describe("canUndo / canRedo / undoDepth — the signals a dirty gate reads", ()
+   });
+ });
+ 
++// PASS 9 · THE ASK'S DIRTY SIGNAL IS PLAYER INK SINCE THE DEAL (CHAIR-RULINGS p9 §8; T9-M12).
++// Born RED: the panel read `undoDepth > 0`, which is 1 after a deal with no ink (row D1), so a
++// fine pointer was asked "fill in the whole board?" on a board nobody had written on.
++describe("inkSinceDeal — the destructive ask's signal", () => {
++  const deal = (h: ReturnType<typeof harness>, tag: string) =>
++    h.recordBoard(board("prev"), board(tag), emptyMarks(), emptyMarks(), "deal");
++  it("D1 a deal alone is not ink, though it is undo depth", () => {
++    const h = harness();
++    deal(h, "b1");
++    expect(h.undoDepth.value).toBe(1);
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D2 one player digit after the deal is ink; undoing it is not", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    expect(h.inkSinceDeal.value).toBe(true);
++    h.undo();
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.redo();
++    expect(h.inkSinceDeal.value).toBe(true);
++  });
++  it("D3 a mark, a fill sweep and hint ink each count as ink", () => {
++    for (const write of [
++      (h: ReturnType<typeof harness>) =>
++        h.recordMark(2, { corner: { prev: [], next: [3] } }),
++      (h: ReturnType<typeof harness>) => h.recordBatch([{ pos: 1, prev: 0, next: 5 }]),
++      (h: ReturnType<typeof harness>) => h.recordHintInk(3, 0, 9),
++    ]) {
++      const h = harness();
++      deal(h, "b1");
++      write(h);
++      expect(h.inkSinceDeal.value).toBe(true);
++    }
++  });
++  it("D4 a new deal ends the epoch; a clear or a solve does not", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    h.recordBoard(board("b1"), board("blank"), emptyMarks(), emptyMarks(), "clear");
++    expect(h.inkSinceDeal.value).toBe(true);
++    h.recordBoard(board("blank"), board("solved"), emptyMarks(), emptyMarks(), "solve");
++    expect(h.inkSinceDeal.value).toBe(true);
++    deal(h, "b2");
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.recordBoard(board("b2"), board("b3"), emptyMarks(), emptyMarks(), "resize");
++    h.recordEdit(0, 0, 1);
++    h.undo();
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D6 a resize is a deal: ink before it is not ink after it", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    h.recordBoard(board("b1"), board("b4x4"), emptyMarks(), emptyMarks(), "resize");
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D5 a log with no deal in it (the mount deal is off-log) reads its own writes", () => {
++    const h = harness();
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.recordEdit(0, 0, 1);
++    expect(h.inkSinceDeal.value).toBe(true);
++  });
++});
++
+ // ── T6 mark 13 — the log as the PER-PLAYER ledger ────────────────────────────────
+ 
+ describe("onEntry — the one seam the local op stream leaves by", () => {
+diff --git a/web/frontend/src/games/shared/useUndoHistory.ts b/web/frontend/src/games/shared/useUndoHistory.ts
+index 11a7c7b..997946c 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.ts
+@@ -320,6 +320,20 @@ export function useUndoHistory<B, M>(effects: UndoEffects<B, M>) {
+     canRedo: computed(() => undoIndex.value < undoStack.value.length),
+     /** Depth of the undo portion — the honest signal an `isDirty` gate reads (E9 r2 §6). */
+     undoDepth: computed(() => undoIndex.value),
++    /** PLAYER INK SINCE THE DEAL — what the destructive ask reads (T9-M12's precondition: "input
++     *  a value … then attempt a destructive action"). `undoDepth > 0` counts the deal itself, so a
++     *  fine pointer was asked "fill in the whole board?" on a board nobody had written on. Walk
++     *  the undo portion back from its top: any value, fill or mark entry before the last deal
++     *  (or resize) is ink; a clear or a solve between them does not end the walk, since neither
++     *  is a deal. An undone write sits above `undoIndex` and is not counted. */
++    inkSinceDeal: computed(() => {
++      for (let i = undoIndex.value - 1; i >= 0; i--) {
++        const e = undoStack.value[i];
++        if (e.kind !== "board") return true;
++        if (e.op === "deal" || e.op === "resize") return false;
++      }
++      return false;
++    }),
+     /** Test/measurement handles — the pool's live blob count + total entry count. */
+     _poolSize: () => pool.size,
+     _historyLength: () => undoStack.value.length,
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 4253e14..92e9df6 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -32,6 +32,8 @@ import { defineConfig, type Plugin } from 'vite'
+  * every module it read under this package (node_modules and dist aside) plus each sheet an `@import`
+  * pulls in, hashes each `<rel>\n<bytes>\n` in sorted order, and writes `{ js, stamp, files }` beside
+  * the census OUTSIDE `dist/` — nothing ships. The gate re-hashes the same list from disk.
++ * PASS 9 — the list adds every EMITTED asset's source (CSS `url()` fonts and images) and every file is
++ * hashed as BYTES (`<rel>\n` + bytes + `\n`).
+  */
+ function faceStamp(): Plugin {
+   return {
+@@ -48,9 +50,17 @@ function faceStamp(): Plugin {
+       // a sheet an `@import` pulls in (Tailwind inlines `typography.css` into `index.css`) is read
+       // by the build but is no module of its own: the ONE shape-census library follows the chain
+       const { followImports } = await import('./scripts/shape-census.mjs')
+-      const list = [...new Set(followImports([...mods]).filter(mine).map((p) => p.slice(root.length + 1)))].sort()
++      const srcs = new Set(followImports([...mods]).filter(mine))
++      // PASS 9 — THE EMITTED ASSETS' SOURCES. A file CSS reaches by `url()` (the three woff2 subsets,
++      // avatar.png) is emitted, never a module: `getModuleIds()` does not name it. Every emitted asset
++      // carries the files it was made from (`originalFileNames`); each joins the list.
++      for (const out of Object.values(bundle))
++        if (out.type === 'asset') for (const o of out.originalFileNames ?? []) srcs.add(resolve(root, o))
++      const list = [...srcs].filter((p) => mine(p) && existsSync(p)).map((p) => p.slice(root.length + 1)).sort()
++      // BYTES, never utf8: a woff2 decoded as text maps every invalid sequence to U+FFFD, so a flipped
++      // byte in a font kept the digest (pass 8, fraunces offset 127 0xfe→0xff).
+       const h = createHash('sha1')
+-      for (const rel of list) h.update(`${rel}\n${readFileSync(join(root, rel), 'utf8')}\n`)
++      for (const rel of list) h.update(`${rel}\n`).update(readFileSync(join(root, rel))).update('\n')
+       const js = Object.keys(bundle).find((k) => /^assets\/index-[^/]+\.js$/.test(k))
+       const dir = resolve(__dirname, '.face-engine')
+       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })

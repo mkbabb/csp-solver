@@ -1,0 +1,603 @@
+diff --git a/web/frontend/e2e/affordances.spec.ts b/web/frontend/e2e/affordances.spec.ts
+index 085b7b42..b1403289 100644
+--- a/web/frontend/e2e/affordances.spec.ts
++++ b/web/frontend/e2e/affordances.spec.ts
+@@ -421,26 +421,38 @@ for (const adversary of DROP_CLOCK_ADVERSARIES) {
+ // read is made to answer a running verb, so it writes the rung on every leave, which is the
+ // pass-7 hook) holds the node for the rung and more frames than the bound.
+ 
+-/** The in-run negative. Every computed style read off a node wearing a leave class answers a
+- *  running rub-out for `animation-name`; every other property is the real one, so Vue's own
+- *  clock read (duration and delay) is untouched. Only the hook's key is lied to. */
+-const BLIND_THE_FENCE = `(() => {
+-  const real = window.getComputedStyle;
+-  window.getComputedStyle = function (el, pseudo) {
+-    const cs = real.call(window, el, pseudo);
+-    if (!(el instanceof Element) || !/-leave-active/.test(String(el.getAttribute('class')))) return cs;
+-    return new Proxy(cs, {
+-      get: (t, k) => (k === 'animationName' ? 'ink-rub-out' : typeof t[k] === 'function' ? t[k].bind(t) : t[k]),
+-    });
++/** The in-run negatives. The hook's one key is `getAnimations()` on the leaving node (pass 9,
++ *  LAWS P8 §D); each negative lies to that read only, on nodes wearing a leave class, so Vue's own
++ *  clock read (the computed duration and delay) is untouched.
++ *  BLIND: every leave answers a running rub-out, so the hook writes the rung on every leave (the
++ *  pass-7 hook).
++ *  NAME_KEY: a leave answers a running animation whenever its COMPUTED name is not `none` (the
++ *  pass-8 hook, keyed on the proxy): a name that no `@keyframes` defines writes the rung. */
++const fakeAnimations = (mode: 'blind' | 'name') => `(() => {
++  const real = Element.prototype.getAnimations;
++  Element.prototype.getAnimations = function (o) {
++    if (!/-leave-active/.test(String(this.getAttribute('class')))) return real.call(this, o);
++    const n = getComputedStyle(this).animationName;
++    const still = n.split(',').every((x) => x.trim() === 'none');
++    return '${mode}' === 'blind' || !still ? [{ animationName: n, playState: 'running' }] : [];
+   };
+ })();`;
++const BLIND_THE_FENCE = fakeAnimations('blind');
++const NAME_KEY = fakeAnimations('name');
++
++/** The pass-8 critic's plant (LAWS P8 §D): a leave whose computed name no `@keyframes` defines.
++ *  Assembled at run time, never spelled: a spelled plant is a Tailwind source (T9-R6). */
++const GHOST = ['erase', 'ghost'].join('-');
+ 
+-type PaintedTrack = { post: { k: number; r: unknown }[]; on: boolean };
++type PaintedTrack = { post: { k: number; r: { x: unknown } | null }[]; on: boolean };
+ 
+ /** Watch the next leave of `leaving` (a selector matched once its leave class is on): the node's
+- *  DOM lifetime, its computed clock, and the frames it was painted, read post-paint. */
++ *  DOM lifetime, its computed clock, and per frame, read post-paint, whether it was CONNECTED and
++ *  whether it was VISIBLE (its computed opacity > 0.05, LAWS P8 §D: a node at `opacity: 0` on the
++ *  page is not a double paint; pass 8's tree negative counted 18-19 connected frames, of which it
++ *  was visible on one). */
+ async function watchLeave(page: Page, leaving: string) {
+-  await page.evaluate(installTimeline, leaving);
++  await page.evaluate(installTimeline, `css:${leaving}:opacity`);
+   await page.evaluate((sel) => {
+     const rec: LeaveRecord = {};
+     (window as unknown as { __leave: LeaveRecord }).__leave = rec;
+@@ -481,6 +493,7 @@ async function watchLeave(page: Page, leaving: string) {
+         animationName: r.animationName!,
+         animationDuration: r.animationDuration!,
+         painted: w.__pf.post.filter((p) => p.r !== null).length,
++        visible: w.__pf.post.filter((p) => p.r !== null && parseFloat(String(p.r.x)) > 0.05).length,
+       };
+     });
+   };
+@@ -502,13 +515,15 @@ async function redLineLeaves(page: Page, arm?: (page: Page) => Promise<void>) {
+   return done();
+ }
+ 
+-const STILL_LEAVES: { name: string; arm: (page: Page) => Promise<void> }[] = [
++const STILL_LEAVES: { name: string; computed: string; arm: (page: Page) => Promise<void> }[] = [
+   {
+     name: "the site's PRM arm",
++    computed: 'none',
+     arm: (page) => page.emulateMedia({ reducedMotion: 'reduce' }),
+   },
+   {
+     name: 'animation-name: none !important on the leave class',
++    computed: 'none',
+     arm: (page) =>
+       page
+         .addStyleTag({
+@@ -516,17 +531,31 @@ const STILL_LEAVES: { name: string; arm: (page: Page) => Promise<void> }[] = [
+         })
+         .then(() => undefined),
+   },
++  {
++    // Pass 9 (LAWS P8 §D): NAMED but not RUNNING. The pass-8 hook keyed on this name.
++    name: 'a computed name no @keyframes defines (the ghost name)',
++    computed: GHOST,
++    arm: (page) =>
++      page
++        .addStyleTag({
++          content: `.margin-note-ink.note-leave-active { animation-name: ${GHOST} !important; }`,
++        })
++        .then(() => undefined),
++  },
+ ];
+ 
+ for (const still of STILL_LEAVES) {
+   test(`drop clock: a leave with no animation has no clock — ${still.name}`, async ({ page }) => {
+     const leave = await redLineLeaves(page, still.arm);
+-    expect(leave.animationName).toBe('none');
++    expect(leave.animationName).toBe(still.computed);
+     expect(leave.animationDuration).toBe('0s');
+-    // A zero-length leave: gone inside one whisper, painted on at most two frames.
++    // A zero-length leave: gone inside one whisper, connected (and so visible) on at most two frames.
+     expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+     expect(leave.painted).toBeLessThanOrEqual(2);
+-    console.log(`still leave ${still.name}: ${leave.ms} ms, ${leave.painted} painted frames`);
++    expect(leave.visible).toBeLessThanOrEqual(leave.painted);
++    console.log(
++      `still leave ${still.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
+   });
+ }
+ 
+@@ -540,7 +569,31 @@ test('drop clock (negative, in-run): the fence blinded holds a still leave for t
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+   expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
+   expect(leave.painted).toBeGreaterThan(2);
+-  console.log(`drop-clock negative: held ${leave.ms} ms over ${leave.painted} painted frames`);
++  // On the tree the held node is VISIBLE on one frame: `.note-leave-to` is `opacity: 0` from frame
++  // two. Its harm is the next line's write-in held for the rung (out-in), not a double paint.
++  console.log(
++    `drop-clock negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
++});
++
++test('drop clock (negative, in-run): the pass-8 name key holds a GHOST leave for the rung', async ({
++  page,
++}) => {
++  await page.addInitScript(NAME_KEY);
++  const leave = await redLineLeaves(page, (p) =>
++    p
++      .addStyleTag({
++        content: `.margin-note-ink.note-leave-active { animation-name: ${GHOST} !important; }`,
++      })
++      .then(() => undefined),
++  );
++  expect(leave.animationName).toBe(GHOST);
++  expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  expect(leave.painted).toBeGreaterThan(2);
++  console.log(
++    `ghost negative (name key): held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
+ });
+ 
+ // ── 2a″. The union's two lines: the SWAP and line two's own rub-out (pass 8, §7's fence) ─
+@@ -615,11 +668,24 @@ async function holdDeal(page: Page, scheme: 'light' | 'dark', arm?: (page: Page)
+ const LINE_ONE_LEAVING = '.margin-note .margin-note-ink[class*="leave-active"]';
+ const LINE_TWO_LEAVING = '.margin-note-previous[class*="leave-active"]';
+ 
+-for (const scheme of ['light', 'dark'] as const) {
+-  test(`drop clock, the SWAP: a pushed record's old line leaves in a frame or two — ${scheme}`, async ({
++/** The swap's arms: as shipped, and the ghost name on the swap's leave class (pass 9, LAWS P8 §D). */
++const GHOST_SWAP = (page: Page) =>
++  page
++    .addStyleTag({
++      content: `.margin-note-ink.note-swap-leave-active { animation-name: ${GHOST} !important; }`,
++    })
++    .then(() => undefined);
++const SWAP_ARMS: { name: string; computed: string; arm?: (page: Page) => Promise<void> }[] = [
++  { name: 'as shipped', computed: 'none' },
++  { name: 'the ghost name', computed: GHOST, arm: GHOST_SWAP },
++];
++
++for (const scheme of ['light', 'dark'] as const)
++for (const sw of SWAP_ARMS) {
++  test(`drop clock, the SWAP: a pushed record's old line leaves in a frame or two — ${scheme}, ${sw.name}`, async ({
+     page,
+   }) => {
+-    await holdDeal(page, scheme);
++    await holdDeal(page, scheme, sw.arm);
+     const held = await lineOne(page);
+     const done = await watchLeave(page, LINE_ONE_LEAVING);
+     await ask(page);
+@@ -627,13 +693,16 @@ for (const scheme of ['light', 'dark'] as const) {
+     // The push happened: line two holds the displaced record, line one the new hint.
+     await expect.poll(() => lineTwo(page)).toBe(held);
+     expect(await lineOne(page)).not.toBe(held);
+-    expect(leave.animationName).toBe('none');
++    expect(leave.animationName).toBe(sw.computed);
+     expect(leave.animationDuration).toBe('0s');
+     expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+-    // Every frame the old node is painted, line two already paints its sentence: these ARE the
+-    // both-line frames.
++    // Every frame the old node is VISIBLE, line two already paints its sentence: these ARE the
++    // both-line frames (no `-leave-to` on the swap, so connected and visible agree).
++    expect(leave.visible).toBeLessThanOrEqual(2);
+     expect(leave.painted).toBeLessThanOrEqual(2);
+-    console.log(`swap ${scheme}: ${leave.ms} ms, ${leave.painted} painted frames`);
++    console.log(
++      `swap ${scheme} ${sw.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
+   });
+ }
+ 
+@@ -648,15 +717,35 @@ test('drop clock, the SWAP (negative, in-run): the fence blinded holds the swap
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+   expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
+   expect(leave.painted).toBeGreaterThan(2);
+-  console.log(`swap negative: held ${leave.ms} ms over ${leave.painted} painted frames`);
++  console.log(
++    `swap negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
+ });
+ 
++for (const scheme of ['light', 'dark'] as const)
++  test(`drop clock, the SWAP (negative, in-run): the pass-8 name key holds a GHOST swap — ${scheme}`, async ({
++    page,
++  }) => {
++    await page.addInitScript(NAME_KEY);
++    await holdDeal(page, scheme, GHOST_SWAP);
++    const done = await watchLeave(page, LINE_ONE_LEAVING);
++    await ask(page);
++    const leave = await done();
++    expect(leave.animationName).toBe(GHOST);
++    expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++    expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++    expect(leave.visible).toBeGreaterThan(2);
++    console.log(
++      `swap ghost negative ${scheme}: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
++  });
++
+ // Line two's own leave: the third record retires the first from line two, through the eraser.
+ // The four adversaries pass 7's critic found beyond the author's own (a layered `!important`, the
+ // shorthand with a delay, the rung `!important` on :root, an iteration count) plus the verb
+ // switched off (`animation-name: none !important`, a zero-length leave).
+ const TWO = '.margin-note-previous.note-previous-leave-active';
+-const LINE_TWO_ADVERSARIES: { name: string; css: string; still?: boolean }[] = [
++const LINE_TWO_ADVERSARIES: { name: string; css: string; still?: string }[] = [
+   { name: 'none', css: '' },
+   {
+     name: '@layer duration + delay !important',
+@@ -671,7 +760,13 @@ const LINE_TWO_ADVERSARIES: { name: string; css: string; still?: boolean }[] = [
+   {
+     name: 'animation-name: none !important',
+     css: `${TWO} { animation-name: none !important; }`,
+-    still: true,
++    still: 'none',
++  },
++  {
++    // Pass 9 (LAWS P8 §D): NAMED but not RUNNING; the pass-8 hook wrote the rung on it.
++    name: 'a computed name no @keyframes defines (the ghost name)',
++    css: `${TWO} { animation-name: ${GHOST} !important; }`,
++    still: GHOST,
+   },
+ ];
+ 
+@@ -684,8 +779,8 @@ const PASS_SIX_HOOK = `(() => {
+   };
+ })();`;
+ 
+-async function lineTwoLeaves(page: Page, css: string) {
+-  await holdDeal(page, 'light', css ? (p) => p.addStyleTag({ content: css }).then(() => undefined) : undefined);
++async function lineTwoLeaves(page: Page, css: string, scheme: 'light' | 'dark' = 'light') {
++  await holdDeal(page, scheme, css ? (p) => p.addStyleTag({ content: css }).then(() => undefined) : undefined);
+   await ask(page); // the push: line two = the first record
+   await answer(page);
+   await page.waitForTimeout(MOTION.rungs.note * 2);
+@@ -703,7 +798,7 @@ for (const adv of LINE_TWO_ADVERSARIES) {
+   }) => {
+     const leave = await lineTwoLeaves(page, adv.css);
+     if (adv.still) {
+-      expect(leave.animationName).toBe('none');
++      expect(leave.animationName).toBe(adv.still);
+       expect(leave.animationDuration).toBe('0s');
+       expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+       expect(leave.painted).toBeLessThanOrEqual(2);
+@@ -713,10 +808,50 @@ for (const adv of LINE_TWO_ADVERSARIES) {
+         expect(Math.round(parseFloat(d) * 1000)).toBe(MOTION.rungs.whisper);
+       expect(leave.ms).toBeLessThan(MOTION.rungs.note);
+     }
+-    console.log(`line two ${adv.name}: ${leave.ms} ms, ${leave.painted} painted frames`);
++    console.log(
++      `line two ${adv.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
+   });
+ }
+ 
++test('drop clock, line two (negative, in-run): the pass-8 name key holds a GHOST rub-out', async ({
++  page,
++}) => {
++  await page.addInitScript(NAME_KEY);
++  const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`);
++  expect(leave.animationName).toBe(GHOST);
++  expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  console.log(
++    `line two ghost negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
++});
++
++// Line two's ghost arm and its in-run negative in the DARK theme as well (the arms above read light).
++test('drop clock, line two: the ghost name is a zero-length leave — dark', async ({ page }) => {
++  const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`, 'dark');
++  expect(leave.animationName).toBe(GHOST);
++  expect(leave.animationDuration).toBe('0s');
++  expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
++  expect(leave.painted).toBeLessThanOrEqual(2);
++  console.log(
++    `line two dark ghost: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
++});
++
++test('drop clock, line two (negative, in-run): the pass-8 name key holds a GHOST rub-out — dark', async ({
++  page,
++}) => {
++  await page.addInitScript(NAME_KEY);
++  const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`, 'dark');
++  expect(leave.animationName).toBe(GHOST);
++  expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  console.log(
++    `line two dark ghost negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++  );
++});
++
+ for (const adv of LINE_TWO_ADVERSARIES.filter((a) => /layer|shorthand|:root/.test(a.name)))
+   test(`drop clock, line two (negative, in-run): pass 6's hook is held by ${adv.name}`, async ({
+     page,
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 81587799..c518a2ac 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -1185,6 +1185,9 @@ function main() {
+     };
+     const REG = /@property\s+--motion-[\w-]+\s*\{[^}]*\}/g;
+     const home = real(HOME);
++    const BS = String.fromCharCode(92);
++    const JSREG =
++      '{ name: "--motion-whisper", syntax: "<time>", inherits: false, initialValue: "0ms" }';
+     const dup =
+       '@property --motion-whisper { syntax: "<time>"; inherits: false; initial-value: 0ms; }';
+     const plants = [
+@@ -1323,14 +1326,86 @@ function main() {
+         "the home's own copy after a CSS string holding /*",
+         plantFile(HOME, `${home}\n.x::before { content: "/*"; }\n${dup}\n/* */`),
+       ],
++      // Pass 9, row 2 (the pass-8 critic's eight, LAWS P8 §F's shape law): each shipped
++      // `inherits: false` on a rung into the running page with the row at 0 under homes v1. The
++      // ONE library (homes v2) reads them; these rows prove the ROW reds through it. A backslash
++      // is assembled (`BS`), never typed: the tool layer decodes escapes (LAWS P8 §B).
++      [
++        "an escaped @property head (--\\6d otion-whisper)",
++        plantFile("src/assets/plant.css", dup.replace("--motion", `--${BS}6d otion`)),
++        "src/main.ts",
++        real("src/main.ts") + '\nimport "./assets/plant.css";\n',
++      ],
++      [
++        "a sheet OUTSIDE src/ imported from main.ts",
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") + '\nimport "../plant-x/x.css";\n',
++        ),
++        "plant-x/x.css",
++        dup,
++        // Reached ONLY through main.ts's import (never handed to the library in `files`), so the
++        // row is GREEN on this plant with the module-graph clause off (SHAPE_SABOTAGE=module-graph).
++        "graph",
++      ],
++      [
++        "registerProperty(def), a non-literal argument",
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") + `\nconst def = ${JSREG};\nCSS.registerProperty(def);\n`,
++        ),
++      ],
++      [
++        'a bracket call CSS["registerProperty"]({…})',
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") + `\nCSS["registerProperty"](${JSREG});\n`,
++        ),
++      ],
++      [
++        "a bound alias (const reg = CSS.registerProperty.bind(CSS); reg({…}))",
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") +
++            `\nconst reg = CSS.registerProperty.bind(CSS);\nreg(${JSREG});\n`,
++        ),
++      ],
++      [
++        'concatenated "@prop" + "erty …" text appended as a <style>',
++        plantFile(
++          "src/main.ts",
++          real("src/main.ts") +
++            `\ndocument.head.append(Object.assign(document.createElement("style"), { textContent: "@prop" + "erty --motion-whisper { syntax: '<time>'; inherits: false; initial-value: 0ms; }" }));\n`,
++        ),
++      ],
++      [
++        '<style lang="postcss"> in a .vue',
++        plantFile(
++          "src/pencil/chrome/MarginNote.vue",
++          real("src/pencil/chrome/MarginNote.vue") +
++            `\n<style lang="postcss">\n${dup}\n</style>\n`,
++        ),
++      ],
++      [
++        "a registration inside @layer in the home (depth)",
++        plantFile(
++          HOME,
++          home.replace(/@property\s+--motion-note\s*\{[^}]*\}/, "") +
++            '\n@layer plant { @property --motion-note { syntax: "<time>"; inherits: true; initial-value: 0ms; } }\n',
++        ),
++      ],
+     ];
+-    for (const [label, opts, rel2, text2] of plants) {
+-      // a two-file plant: the second file rides the first's read
++    for (const [label, opts, rel2, text2, reach] of plants) {
++      // a two-file plant: the second file rides the first's read (and, unless `reach` is "graph",
++      // is handed to the library in `files` as well)
+       const o = rel2
+         ? (() => {
+             const abs2 = path.join(ROOT, rel2);
+             return {
+-              files: opts.files.includes(abs2) ? opts.files : [...opts.files, abs2],
++              files:
++                reach === "graph" || opts.files.includes(abs2)
++                  ? opts.files
++                  : [...opts.files, abs2],
+               read: (f) => (f === abs2 ? text2 : opts.read(f)),
+               exists: (f) => f === abs2 || opts.exists(f),
+             };
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index e2f84e4e..67e183b2 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -211,21 +211,30 @@ onUnmounted(() => {
+ // `getTransitionInfo`, `:318-346`), so a rung written onto a leave whose computed name is `none`
+ // holds a node for 150 ms on an animation that never runs: the pass-7 hook did exactly that to
+ // `note-swap` (NOTE-LEDGER found it; the sentence on both lines for 16-20 frames). The fence is
+-// keyed on the COMPUTED name, never on the transition's name string: `none` is a zero-length
+-// leave, and the length written is 0s. That one read carries the swap (`animation: none`), the
+-// site's PRM arm (`animation: none`) and an author `animation-name: none`, on either line, and a
+-// later rule that gives the swap a real verb gets the rung. The read runs on `@leave`, not
+-// `@before-leave`: Vue calls `before-leave` before it puts the leave's classes on the node
++// keyed on the leave's RUNNING animation (pass 9, below), never a name string: `none` is a
++// zero-length leave, and the length written is 0s. That one read carries the swap (`animation:
++// none`), the site's PRM arm (`animation: none`) and an author `animation-name: none`, on either
++// line, and a later rule that gives the swap a real verb gets the rung. The read runs on `@leave`,
++// not `@before-leave`: Vue calls `before-leave` before it puts the leave's classes on the node
+ // (`runtime-dom` `:212-233`), so a name read there is the resting ink's. `@leave` runs after
+ // `*-leave-active` is on and before Vue's next frame reads the clock. ONE parameter: a hook that
+ // declares `done` takes the clock away from Vue (`hasExplicitCallback`).
++//
++// THE KEY IS A RUNNING ANIMATION, NOT A NAME (pass 9, LAWS P8 §D). A computed name is a proxy: a
++// name that no `@keyframes` defines (a typo, a sheet that never loaded) still computes, so the
++// pass-8 read wrote the rung and the old line sat on the page 156-167 ms with nothing running (the
++// pass-8 critic's plant, in chromium and in WebKit). The key now is `getAnimations()`, which
++// flushes style first: read on `@leave` it returns the leave's own CSS animation when, and only
++// when, one runs. A CSS animation is the only kind that carries `animationName`; a script's own
++// `animate()` and a fenced transition do not, and Vue's clock reads neither. `none`, the PRM arm
++// and a name with no keyframes all run nothing, so each writes 0s. An engine without
++// `getAnimations` (none this site supports) writes 0s too: no proof of a verb, no clock.
+ function stopTheClock(el: Element): void {
+   const style = (el as HTMLElement).style;
+-  const name = getComputedStyle(el).animationName;
+-  const still = !name || name.split(",").every((n) => n.trim() === "none");
++  const runs = el.getAnimations?.().some((a) => "animationName" in a) ?? false;
+   style.setProperty(
+     "animation-duration",
+-    still ? "0s" : `${MOTION.rungs.whisper}ms`,
++    runs ? `${MOTION.rungs.whisper}ms` : "0s",
+     "important",
+   );
+   style.setProperty("animation-delay", "0s", "important");
+diff --git a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+index 9b922e09..c82d204f 100644
+--- a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
++++ b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+@@ -78,7 +78,10 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     expect(MARGIN_NOTE_SRC).not.toMatch(/@before-leave="stopTheClock"/);
+     // ONE declared parameter: a hook that declares `done` takes the clock from Vue.
+     expect(MARGIN_NOTE_SRC).toMatch(/function stopTheClock\(el: Element\): void/);
+-    expect(MARGIN_NOTE_SRC).toMatch(/getComputedStyle\(el\)\.animationName/);
++    // Pass 9 (LAWS P8 §D): the key is a RUNNING animation, never the computed name, which a name
++    // with no `@keyframes` satisfies while nothing runs.
++    expect(MARGIN_NOTE_SRC).toMatch(/el\.getAnimations\?\.\(\)/);
++    expect(MARGIN_NOTE_SRC).not.toMatch(/getComputedStyle\(el\)\.animationName/);
+     expect(MARGIN_NOTE_SRC).toContain(
+       'style.setProperty("transition", "none", "important")',
+     );
+@@ -93,11 +96,37 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+ 
+   /** Mount, replace the line, and return the LEAVING node's inline clock as `value|priority`.
+    *  vitest loads no SFC styles, so `sheet` stands in for the leave class's computed name; jsdom
+-   *  cascades the `animation-name` LONGHAND (never the shorthand), so the stand-in is a longhand. */
+-  async function leaveClock(sheet: string) {
++   *  cascades the `animation-name` LONGHAND (never the shorthand), so the stand-in is a longhand.
++   *  jsdom runs no animation and has no `getAnimations`, so `engine` stands in for one: `keyframes`
++   *  are the names a sheet defines, and the stub answers a CSS animation (it carries
++   *  `animationName`) for each computed name among them, as a browser does; `extra` adds what a
++   *  script's `animate()` leaves on the node. `engine: false` is an engine with no
++   *  `getAnimations` at all. */
++  async function leaveClock(
++    sheet: string,
++    engine: { keyframes: string[]; extra?: object[] } | false = {
++      keyframes: ["ink-rub-out", "ink-rub-out-fade"],
++    },
++  ) {
+     const st = document.createElement("style");
+     st.textContent = sheet;
+     document.head.append(st);
++    const proto = Element.prototype as unknown as { getAnimations?: () => object[] };
++    const had = Object.prototype.hasOwnProperty.call(proto, "getAnimations");
++    const real = proto.getAnimations;
++    if (engine)
++      proto.getAnimations = function (this: Element) {
++        const names = getComputedStyle(this)
++          .animationName.split(",")
++          .map((n) => n.trim());
++        return [
++          ...names
++            .filter((n) => engine.keyframes.includes(n))
++            .map((animationName) => ({ animationName })),
++          ...(engine.extra ?? []),
++        ];
++      };
++    else delete proto.getAnimations;
+     try {
+       const w = mount(MarginNote, {
+         props: { text: "one", seq: 1 },
+@@ -127,6 +156,8 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+       return out;
+     } finally {
+       st.remove();
++      if (had) proto.getAnimations = real;
++      else delete proto.getAnimations;
+     }
+   }
+ 
+@@ -167,6 +198,41 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     }
+   });
+ 
++  it("G16 (CI half): a leave NAMED but not RUNNING is a zero-length leave (pass 9)", async () => {
++    // The pass-8 critic's plant (LAWS P8 §D): a computed name that no `@keyframes` defines runs
++    // nothing, so Vue's fallback timer would hold the node for whatever length the hook wrote.
++    // The pass-8 hook keyed on the name and wrote the rung (156-167 ms on both lines, both
++    // engines). The name is assembled here, never spelled: a spelled plant is a Tailwind source.
++    const ghost = ["erase", "ghost"].join("-");
++    const clock = await leaveClock(`.note-leave-active { animation-name: ${ghost}; }`);
++    expect(clock.name).toBe(ghost);
++    expect(clock.duration).toBe("0s|important");
++    expect(clock.delay).toBe("0s|important");
++    expect(clock.transition).toBe("none|important");
++    // One defined name beside one ghost: the defined one runs, so the rung is written.
++    const half = await leaveClock(
++      `.note-leave-active { animation-name: ${ghost}, ink-rub-out; }`,
++    );
++    expect(half.duration).toBe(`${MOTION.rungs.whisper}ms|important`);
++  });
++
++  it("G16 (CI half): only a CSS animation keys the clock; no getAnimations writes 0s", async () => {
++    // A script's own `animate()` on the leaving node carries no `animationName` and Vue's clock
++    // never reads it: the rub-out's name is off (`none`) and the script's animation is present.
++    const scripted = await leaveClock(".note-leave-active { animation-name: none; }", {
++      keyframes: ["ink-rub-out"],
++      extra: [{ playState: "running" }],
++    });
++    expect(scripted.duration).toBe("0s|important");
++    // An engine with no `getAnimations`: no proof of a running verb, so no clock.
++    const bare = await leaveClock(
++      ".note-leave-active { animation-name: ink-rub-out, ink-rub-out-fade; }",
++      false,
++    );
++    expect(bare.duration).toBe("0s|important");
++    expect(bare.transition).toBe("none|important");
++  });
++
+   it("G16 (CI half, the union): a PUSH's swap leave is zero-length; line two's rub-out keeps the rung", async () => {
+     // HOLD's default path: a record displaced by the next write leaves line one as `note-swap`
+     // (`animation: none`) while line two takes it. The swap must not hold the node (pass-7
+@@ -180,6 +246,16 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     const realAnimate = Element.prototype.animate;
+     Element.prototype.animate =
+       (() => ({})) as unknown as typeof Element.prototype.animate;
++    // Pass 9: the hook keys on `getAnimations()`, which jsdom lacks; the stand-in answers a CSS
++    // animation for each computed name a sheet defines, as a browser does (`leaveClock` above).
++    const gproto = Element.prototype as unknown as { getAnimations?: () => object[] };
++    gproto.getAnimations = function (this: Element) {
++      return getComputedStyle(this)
++        .animationName.split(",")
++        .map((n) => n.trim())
++        .filter((n) => n === "ink-rub-out" || n === "ink-rub-out-fade")
++        .map((animationName) => ({ animationName }));
++    };
+     try {
+       const w = mount(MarginNote, {
+         props: { text: "only 5 fits here", seq: 1, kind: "record" },
+@@ -226,6 +302,7 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     } finally {
+       st.remove();
+       Element.prototype.animate = realAnimate;
++      delete gproto.getAnimations;
+     }
+   });
+ 

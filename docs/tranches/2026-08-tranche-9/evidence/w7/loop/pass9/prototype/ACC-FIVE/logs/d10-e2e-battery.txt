@@ -1,0 +1,67 @@
+RUN d10-tree chromium 1 exit 0 load 37.55-36.87 base http://127.0.0.1:4236 env: 
+D10-STALLRUN chromium 5 stalled ticks (dt 150/150/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.6) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 36.9
+  1 passed (4.0s)
+RUN d10-tree webkit 1 exit 0 load 36.87-37.52 base http://127.0.0.1:4236 env: 
+D10-STALLRUN webkit 5 stalled ticks (dt 152/157/161/153/155 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.0) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 37.5
+  1 passed (5.0s)
+DONE d10-tree 11:18:17
+RUN d10-tree9 chromium 1 exit 0 load 37.52-39.00 base http://127.0.0.1:4236 env: D10_STALLS=9
+D10-STALLRUN chromium 9 stalled ticks (dt 151/149/151/150/150/150/157/151/150 ms) travelled 17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.5) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 39.0
+  1 passed (4.4s)
+RUN d10-tree9 webkit 1 exit 0 load 39.00-41.16 base http://127.0.0.1:4236 env: D10_STALLS=9
+D10-STALLRUN webkit 9 stalled ticks (dt 150/159/157/155/154/154/155/155/156 ms) travelled 17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 6.0) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 41.2
+  1 passed (5.1s)
+DONE d10-tree9 11:18:29
+RUN d10-ctl chromium 1 exit 1 load 41.16-41.23 base http://127.0.0.1:4258 env: 
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4258/src/pencil/grid/gridPaths.ts
+  1 failed
+RUN d10-ctl webkit 1 exit 1 load 41.23-43.61 base http://127.0.0.1:4258 env: 
+    Error: page.evaluate: TypeError: Importing a module script failed.
+  1 failed
+DONE d10-ctl 11:18:36
+RUN d10-vacuous chromium 1 exit 1 load 43.61-43.24 base http://127.0.0.1:4236 env: D10_STALL_MS=0
+D10-STALLRUN chromium 0 stalled ticks (dt  ms) travelled  ms; cap max(stepMs 17, shortest tick 7.6) + 1 = 18.00 ms, margin 18.000 ms; 44 healthy ticks, worst healthy shortfall 0.00 ms; load 43.2
+    Error: the row injected 5 stalls and saw 0: it measured nothing
+      500 |   console.log(`D10-STALLRUN ${testInfo.project.name} ${line}`);
+  1 failed
+RUN d10-vacuous webkit 1 exit 1 load 43.24-45.38 base http://127.0.0.1:4236 env: D10_STALL_MS=0
+D10-STALLRUN webkit 0 stalled ticks (dt  ms) travelled  ms; cap max(stepMs 17, shortest tick 9.0) + 1 = 18.00 ms, margin 18.000 ms; 44 healthy ticks, worst healthy shortfall 0.00 ms; load 45.4
+    Error: the row injected 5 stalls and saw 0: it measured nothing
+      500 |   console.log(`D10-STALLRUN ${testInfo.project.name} ${line}`);
+  1 failed
+DONE d10-vacuous 11:18:47
+RUN d10-slack+e chromium 1 exit 0 load 40.98-43.38 base http://127.0.0.1:4236 env: D10_SLACK=0.1
+D10-STALLRUN chromium 5 stalled ticks (dt 151/150/150/149/151 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 6.4) + 0.1 = 17.10 ms, margin 0.100 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 43.4
+  1 passed (4.4s)
+DONE d10-slack+e 11:19:50
+RUN d10-slack+e webkit 1 exit 0 load 43.38-46.79 base http://127.0.0.1:4236 env: D10_SLACK=0.1
+D10-STALLRUN webkit 5 stalled ticks (dt 150/158/154/154/156 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 3.0) + 0.1 = 17.10 ms, margin 0.100 ms; 39 healthy ticks, worst healthy shortfall 3.00 ms; load 46.8
+  1 passed (5.4s)
+DONE d10-slack+e 11:19:57
+RUN d10-slack-e chromium 1 exit 1 load 46.79-47.84 base http://127.0.0.1:4236 env: D10_SLACK=-0.1
+D10-STALLRUN chromium 5 stalled ticks (dt 149/149/150/151/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 6.6) + -0.1 = 16.90 ms, margin -0.100 ms; 38 healthy ticks, worst healthy shortfall 0.00 ms; load 47.8
+    Error: 5 stalled ticks (dt 149/149/150/151/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 6.6) + -0.1 = 16.90 ms, margin -0.100 ms; 38 healthy ticks, worst healthy shortfall 0.00 ms; load 47.8
+  1 failed
+DONE d10-slack-e 11:20:03
+RUN d10-slack-e webkit 1 exit 1 load 47.84-46.97 base http://127.0.0.1:4236 env: D10_SLACK=-0.1
+D10-STALLRUN webkit 5 stalled ticks (dt 152/162/165/153/154 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 1.0) + -0.1 = 16.90 ms, margin -0.100 ms; 39 healthy ticks, worst healthy shortfall 9.00 ms; load 47.0
+    Error: 5 stalled ticks (dt 152/162/165/153/154 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 1.0) + -0.1 = 16.90 ms, margin -0.100 ms; 39 healthy ticks, worst healthy shortfall 9.00 ms; load 47.0
+  1 failed
+DONE d10-slack-e 11:20:09
+RUN d10-p8file chromium 1 exit 1 load 40.06-37.90 base http://127.0.0.1:4236 env: 
+D10-STALLRUN chromium 5 stalled ticks (dt 150/150/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/149.9 ms; cap max(stepMs 17, shortest tick 7.4) + 1 = 18.00 ms, margin -131.900 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 37.9
+    Error: 5 stalled ticks (dt 150/150/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/149.9 ms; cap max(stepMs 17, shortest tick 7.4) + 1 = 18.00 ms, margin -131.900 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 37.9
+  1 failed
+RUN d10-p8file webkit 1 exit 1 load 37.90-35.98 base http://127.0.0.1:4236 env: 
+D10-STALLRUN webkit 5 stalled ticks (dt 150/154/156/151/153 ms) travelled 17.0/17.0/17.0/17.0/150.0 ms; cap max(stepMs 17, shortest tick 5.0) + 1 = 18.00 ms, margin -132.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 36.0
+    Error: 5 stalled ticks (dt 150/154/156/151/153 ms) travelled 17.0/17.0/17.0/17.0/150.0 ms; cap max(stepMs 17, shortest tick 5.0) + 1 = 18.00 ms, margin -132.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 36.0
+  1 failed
+DONE d10-p8file 11:19:21
+RUN d10-p8file9 chromium 1 exit 1 load 35.98-34.86 base http://127.0.0.1:4236 env: D10_STALLS=9
+    Error: page.evaluate: Execution context was destroyed, most likely because of a navigation.
+  1 failed
+RUN d10-p8file9 webkit 1 exit 1 load 34.86-37.52 base http://127.0.0.1:4236 env: D10_STALLS=9
+D10-STALLRUN webkit 9 stalled ticks (dt 151/159/157/153/158/154/153/153/154 ms) travelled 17.0/17.0/17.0/17.0/151.0/153.0/153.0/153.0/154.0 ms; cap max(stepMs 17, shortest tick 7.0) + 1 = 18.00 ms, margin -136.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 37.5
+    Error: 9 stalled ticks (dt 151/159/157/153/158/154/153/153/154 ms) travelled 17.0/17.0/17.0/17.0/151.0/153.0/153.0/153.0/154.0 ms; cap max(stepMs 17, shortest tick 7.0) + 1 = 18.00 ms, margin -136.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 37.5
+  1 failed
+DONE d10-p8file9 11:19:31

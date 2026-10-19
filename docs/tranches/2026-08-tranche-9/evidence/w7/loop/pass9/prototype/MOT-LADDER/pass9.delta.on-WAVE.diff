@@ -1,0 +1,867 @@
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 0d08914fe5b554a5a847b1e0d7b261c90ca99670..6c41da2a7b28e6af97bc696ad2cb2c1dc455740b 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -71,6 +71,8 @@ import {
+   compoundClasses,
+   cssBlocks as shapeBlocks,
+   cssRules,
++  lengthPx,
++  mayMatch,
+   scriptWrites,
+   sfc,
+   sources,
+@@ -78,6 +80,7 @@ import {
+   stripHtml,
+   stripJs,
+   subjectCompound,
++  templateElements,
+   tokenSites,
+ } from "./shape-census.mjs";
+ 
+@@ -473,6 +476,14 @@ const SELF_TEST = process.argv.includes("--self-test");
+ const GATE_CLAUSES = {
+   "subject-reach":
+     "B6 · a new site whose SUBJECT COMPOUND reaches a banked subject may not ship shorter",
++  "element-reach":
++    "B6 · a new site that may land on a TEMPLATE ELEMENT a banked subject lands on may not ship shorter",
++  "css-arith":
++    "B6 · calc()/min()/max()/clamp() over a rung is valued at its lower bound, never at the rung",
++  "script-durations":
++    "B6 · a script write of a duration (style, :style object) carrying a length or a rung is a site",
++  "rung-publishers":
++    "B3 · every write of a --motion-<rung> token outside the one publisher is a second home",
+   "collect-sources":
+     "B6 · collect() walks the library's sources (index.html, public/**, every CSS language)",
+   "lib-decls":
+@@ -532,6 +543,44 @@ const BARE_EASE =
+ 
+ const toMs = (n, unit) => (unit === "s" ? Number(n) * 1000 : Number(n));
+ 
++/** The OUTERMOST calc()/min()/max()/clamp() around offset `at` of `body`, or null. */
++function mathAround(body, at) {
++  let found = null;
++  let depth = 0;
++  for (let i = at - 1; i >= 0; i--) {
++    const c = body[i];
++    if (c === ")") depth++;
++    else if (c === "(") {
++      if (depth > 0) {
++        depth--;
++        continue;
++      }
++      const fn = /(?:calc|min|max|clamp)$/i.exec(body.slice(0, i));
++      if (fn) {
++        let d = 0;
++        let j = i;
++        for (; j < body.length; j++) {
++          if (body[j] === "(") d++;
++          else if (body[j] === ")" && --d === 0) break;
++        }
++        found = body.slice(fn.index, j + 1);
++      }
++    }
++  }
++  return found;
++}
++
++/** A CSS math expression over rungs, valued as R4 values a length: its LOWER BOUND, read by the ONE
++ *  library's `lengthPx` (times carried as px, `s` scaled to ms). null where no bound exists. */
++function arithMs(expr, byName) {
++  const map = new Map([...byName].map(([k, v]) => [`--motion-${k}`, `${v}px`]));
++  const v = expr
++    .replace(/(\d*\.?\d+)ms\b/g, "$1px")
++    .replace(/(\d*\.?\d+)s\b/g, (_m, n) => `${Number(n) * 1000}px`);
++  const ms = lengthPx(v, {}, map);
++  return typeof ms === "number" && Number.isFinite(ms) ? ms : null;
++}
++
+ /**
+  * Position-aware read of one declaration body. Returns the ordered time positions per
+  * comma-separated clause, each tagged duration|delay and named|literal.
+@@ -545,8 +594,16 @@ function positions(prop, body) {
+   // 1 · MASK FIRST — a var()'s own comma is not a clause boundary. Rung reads become
+   //     opaque tokens so their fallback text is never mistaken for a bare literal.
+   const toks = [];
+-  let masked = body.replace(RUNG_VAR, (_m, name, fb) => {
+-    toks.push({ kind: "rung", rung: name, fallback: fb ?? null });
++  let masked = body.replace(RUNG_VAR, (_m, name, fb, at) => {
++    // PASS 9 (charter row 4): a rung read inside calc()/min()/max()/clamp() is the FUNCTION's value,
++    // never the rung's — `calc(var(--motion-leave) / 4)` shipped 50 ms on a site banked at 200.
++    const arith = mon("css-arith") ? mathAround(body, at) : null;
++    toks.push({
++      kind: "rung",
++      rung: name,
++      fallback: fb ?? null,
++      ...(arith ? { arith } : {}),
++    });
+     return `«${toks.length - 1}»`;
+   });
+   // 2 · a house curve read becomes its own token (B8 reads it); any OTHER var() with a
+@@ -632,7 +689,7 @@ function positions(prop, body) {
+  * into the template. What text can still move the key — a real selector rewrite — is caught
+  * by B6's ORPHAN clause instead, because a key that vanishes is a key that was edited.
+  */
+-function selectorOf(text, at) {
++function selectorOf(text, at, max = 80) {
+   const before = text.slice(0, at);
+   const open = before.lastIndexOf("{");
+   if (open < 0) return "—";
+@@ -651,10 +708,17 @@ function selectorOf(text, at) {
+       .replace(/\/\*[^]*?\*\//g, " ")
+       .replace(/\s+/g, " ")
+       .trim()
+-      .slice(0, 80) || "—"
++      .slice(0, max) || "—"
+   );
+ }
+ 
++/** Is offset `at` inside a `<style scoped>` block (Vue scopes it to its own template's elements)? */
++function scopedAt(text, at) {
++  const open = text.lastIndexOf("<style", at);
++  if (open < 0 || text.lastIndexOf("</style", at) > open) return false;
++  return /^<style\b[^>]*\bscoped\b/.test(text.slice(open, text.indexOf(">", open) + 1));
++}
++
+ function collectText(text, rel) {
+   const decls = [];
+   // PROSE IS NOT CODE. Comments are masked to spaces — offsets preserved, so every window
+@@ -677,7 +741,10 @@ function collectText(text, rel) {
+       file: rel,
+       line,
+       rel: `${rel}:${line}`,
++      scoped: scopedAt(text, m.index),
+       selector: selectorOf(scan, m.index),
++      // the WHOLE selector, for the element reach (the key's 80-char cut ends mid-compound)
++      fullSelector: selectorOf(scan, m.index, Infinity),
+       prop,
+       body: body.replace(/\s+/g, " ").trim().slice(0, 120),
+       whole: normBody(body),
+@@ -745,13 +812,15 @@ function libraryOnly(file, text, rel, found) {
+         const pos = positions(d.prop, d.value);
+         if (!pos.length) continue;
+         const at = offsetOf(d.line);
+-        const selector =
+-          (r.as ?? r.prelude).replace(/\s+/g, " ").trim().slice(0, 80) || "—";
++        const fullSelector = (r.as ?? r.prelude).replace(/\s+/g, " ").trim() || "—";
++        const selector = fullSelector.slice(0, 80);
+         out.push({
+           file: rel,
+           line: d.line,
+           rel: `${rel}:${d.line}`,
++          scoped: scopedAt(text, at),
+           selector,
++          fullSelector,
+           prop: d.prop,
+           body: normBody(d.value).slice(0, 120),
+           pos: termed(d.prop, pos),
+@@ -1046,6 +1115,129 @@ function fitOneWriter(files = null) {
+   return bad;
+ }
+ 
++/** PASS 9 (charter row 3; pass-8 critique §3.2, K15): a rung has ONE publisher — the generated
++ *  `<style data-motion-rungs>` node — and ONE registration (index.css `@property`). Every other
++ *  write of `--motion-<rung>` the ONE library's `tokenSites` reads (a script `setProperty`, a
++ *  `:style` object key, a Typed-OM write, a declaration in any sheet or SFC) is a second home: one
++ *  `setProperty("--motion-leave", "10ms")` in main.ts beat the publisher and moved every consumer to
++ *  10 ms in both engines. A computed-key write is UNRESOLVED and printed, never counted a publisher. */
++const RP_MEMO = new Map();
++function rungPublishers(rungs, files = null) {
++  if (!mon("rung-publishers")) return { bad: [], unresolved: 0 };
++  const memo = files ? null : rungs.map((r) => r.key).join(",");
++  if (memo !== null && RP_MEMO.has(memo)) return RP_MEMO.get(memo);
++  const res = rungPublishersRead(rungs, files);
++  if (memo !== null) RP_MEMO.set(memo, res);
++  return res;
++}
++function rungPublishersRead(rungs, files) {
++  const opt = files
++    ? (() => {
++        const m = new Map(files.map(([rel, text]) => [join(ROOT, rel), text]));
++        return {
++          files: [...m.keys()],
++          read: (f) => (m.has(f) ? m.get(f) : readFileSync(f, "utf8")),
++          exists: (f) => m.has(f) || existsSync(f),
++        };
++      })()
++    : {};
++  const bad = [];
++  let unresolved = 0;
++  for (const r of rungs) {
++    const token = `--motion-${r.key}`;
++    for (const x of tokenSites(ROOT, token, opt)) {
++      if (x.unresolved) {
++        unresolved++;
++        continue;
++      }
++      if (x.kind === "at-property" && x.file === "src/assets/index.css") continue; // the registration
++      bad.push(
++        `${x.file}:${x.line}  ${x.kind} ${x.prelude ?? ""} → ${token}: ${String(x.value).slice(0, 40)} — a SECOND home of a rung (the publisher is the one node; a script or sheet write outranks it and moves every consumer).`,
++      );
++    }
++  }
++  return { bad, unresolved };
++}
++
++/** PASS 9 (charter row 2; pass-8 critique §3.2, K1): a SCRIPT write of a duration — `el.style.x`,
++ *  `setProperty`, a `:style` object, Typed OM, cssText, every shape the ONE library's `scriptWrites`
++ *  reads — is a site the ratchet cannot key (no selector, no bank row): `vars["animation-duration"]
++ *  = "50ms"` shipped the reveal at 50 ms in both engines with every gate at 0. A script duration that
++ *  carries a length (unadmitted), a rung, or a computed hole reds; one that names only keyframes, a
++ *  curve or a LOCAL token (`var(--refuse-dur)`, valued at its own CSS site) holds. */
++const SCRIPT_DURATION_PROPS = [
++  "animation-duration",
++  "transition-duration",
++  "animation",
++  "transition",
++];
++function scriptDurations(files = null, ledger = LEDGER) {
++  if (!mon("script-durations")) return [];
++  const texts =
++    files ??
++    sources(ROOT)
++      .map((f) => [relative(ROOT, f), f])
++      .filter(
++        ([rel]) =>
++          /\.(ts|tsx|js|vue)$/.test(rel) &&
++          !/\.(test|spec)\.[jt]sx?$/.test(rel) &&
++          !rel.includes("/pencil/dev/"),
++      )
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  const bad = [];
++  for (const [rel, text] of texts) {
++    const code = rel.endsWith(".vue")
++      ? sfc(text)
++          .scripts.map((s) => s.text)
++          .join("\n")
++      : text;
++    for (const prop of SCRIPT_DURATION_PROPS)
++      for (const w of scriptWrites(code, prop)) {
++        if (w.unresolved) continue; // a computed NAME: the library prints it; it is not this prop
++        const v = String(w.value).trim();
++        const where = `${rel}:${w.line}  ${w.kind} ${w.prop}: ${v.slice(0, 60)}`;
++        // the value's string pieces; a template hole that is a BARE clock read is the TS consumer
++        // roster's (ratcheted by its count and, with clock-context, its value) — anything else in a
++        // hole, or a value with no string at all, is a computed duration no gate can value
++        const bareRead = new RegExp(
++          `^\\s*(?:${CLOCK_ROOTS.map(reEsc).join("|")})(?:\\.\\w+)+\\s*$`,
++        );
++        const lits = [...v.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)];
++        if (!lits.length && !bareRead.test(v)) {
++          bad.push(
++            `${where} — a COMPUTED script duration; the ratchet cannot value it.`,
++          );
++          continue;
++        }
++        for (const [, q, body] of lits) {
++          const holes = q === "`" ? [...body.matchAll(/\$\{([^}]*)\}/g)] : [];
++          if (holes.some((h) => !bareRead.test(h[1]))) {
++            bad.push(
++              `${where} — a COMPUTED script duration; the ratchet cannot value it.`,
++            );
++            continue;
++          }
++          if (holes.length) continue; // a bare clock read: the roster's
++          for (const pq of positions(w.prop, body)) {
++            if (pq.role !== "duration") continue;
++            if (pq.kind === "rung")
++              bad.push(
++                `${where} — a script write of a RUNG duration: the ratchet keys CSS sites, so this clock has no floor. Move it to the cascade.`,
++              );
++            else if (
++              pq.kind === "literal" &&
++              !admits({ file: rel, window: code }, pq.ms, ledger)
++            )
++              bad.push(
++                `${where} — a script duration of ${pq.ms}ms, unadmitted and unratcheted.`,
++              );
++          }
++        }
++      }
++  }
++  return bad;
++}
++
+ function published(cfg) {
+   const theme = readFileSync(THEME, "utf8");
+   // INTAKE-23 row 19 (one home, one publisher): the toggle's `--storybook-*` clocks are the
+@@ -1294,6 +1486,7 @@ function b3Mirror({ rungs }, p, decls) {
+     );
+   for (const c of p.componentPublishers)
+     bad.push(`${c.token} published from ${c.where} — one publisher, one node.`);
++  bad.push(...(p.rungPublishers ?? rungPublishers(rungs)).bad);
+   // NO FALLBACK (chair §6.5). A fallback is what made the ladder able to lie: research row B
+   // measured a DELETED publisher as invisible in both engines, so the one row that proves
+   // the publisher matters could never fire. The registration replaces it.
+@@ -1387,9 +1580,21 @@ function inventoryRows(decls, { rungs }) {
+     if (d.dev) continue;
+     for (const q of d.pos) {
+       if (q.role !== "duration") continue;
++      // a rung under CSS math is the function's lower bound (an unvaluable one reads 0: no bound
++      // is never a pass)
++      const ms =
++        q.kind === "rung"
++          ? q.arith
++            ? (arithMs(q.arith, byName) ?? 0)
++            : (byName.get(q.rung) ?? 0)
++          : q.ms;
+       rows.push({
+         key: `${d.file} :: ${d.selector} :: ${q.term}`,
+-        ms: q.kind === "rung" ? (byName.get(q.rung) ?? 0) : q.ms,
++        ms,
++        ...(q.arith ? { arith: q.arith } : {}),
++        scoped: !!d.scoped,
++        file: d.file,
++        sel: d.fullSelector ?? d.selector,
+         clause: q.clause,
+         fam: /^animation/.test(d.prop) ? "animation" : "transition",
+         term: q.term,
+@@ -1459,6 +1664,55 @@ function reaches(rs, ks) {
+   );
+ }
+ 
++/** PASS 9 (charter row 1; LAWS P7 §F, the SHAPE law's element keying — TAPE's clause in the ONE
++ *  library): the estate's TEMPLATE ELEMENTS, `[{file, els}]`, every shipped SFC's template read by
++ *  `templateElements`. A class reach asks whether one selector names every class of another; the
++ *  cascade asks whether both land on ONE element — `.game-cell` and `.cell-reveal-animated` are
++ *  disjoint class sets and DigitCell's root carries both (K7r: the reveal at 150 ms, both engines). */
++let ESTATE_ELS = null;
++function estateElements() {
++  if (ESTATE_ELS) return ESTATE_ELS;
++  ESTATE_ELS = [];
++  for (const f of sources(ROOT)) {
++    const rel = relative(ROOT, f);
++    if (!rel.endsWith(".vue") || rel.includes("/pencil/dev/")) continue;
++    const b = sfc(readFileSync(f, "utf8"));
++    if (b.template)
++      ESTATE_ELS.push({
++        file: rel,
++        els: templateElements(b.template.text, b.template.line),
++      });
++  }
++  return ESTATE_ELS;
++}
++/** The element as its CLASSES are carried: the static `class=` and every literal a `:class` names.
++ *  An opaque `:class`/`v-bind` (it MAY carry any class) does not make every rule in the estate land
++ *  on it here — the subject's own match keeps the library's conservative reading for its ancestors. */
++const carried = (el) => ({
++  ...el,
++  dynClass: false,
++  attrs: new Map([...el.attrs].filter(([k]) => k !== "v-bind")),
++});
++const selOf = (key) => key.split(" :: ")[1].replace(/^<style[^>]*>\s*/, "");
++/** Every element the live row `r` may land on: `[{file, el}]` (a scoped rule, its own file only). */
++function landsOn(r, universe) {
++  const out = [];
++  const sel = (r.sel ?? selOf(r.key)).replace(/^<style[^>]*>\s*/, "");
++  for (const { file, els } of universe) {
++    if (r.scoped && r.file !== file) continue;
++    for (const el of els) {
++      let hit;
++      try {
++        hit = mayMatch(sel, carried(el), els);
++      } catch {
++        hit = true; // a selector the library cannot read may land anywhere
++      }
++      if (hit) out.push({ file, el });
++    }
++  }
++  return out;
++}
++
+ /** The document shapes a RETUNE's `why` may cite. */
+ const RETUNE_CITE =
+   /CHAIR-RULINGS|INTAKE-?\d*|census\/|critique|registry-v\d|DISPOSITIONS|T9-B\d+/;
+@@ -1544,22 +1798,43 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   //     replaces the element's animation whole, or a longhand, which sets every term) may not ship
+   //     below the banked length. A class-less subject (`*`, a tag, an attribute) reaches every
+   //     subject. The escape is a RETUNE keyed on the NEW site, with its value and its cite.
+-  if (mon("subject-reach")) {
+-    const live = new Map();
+-    for (const r of rows) if (r.key in sites && !live.has(r.key)) live.set(r.key, r);
+-    for (const r of rows) {
+-      if (r.key in sites || siteTo.has(r.key)) continue;
+-      const rs = subjectSets(r.key.split(" :: ")[1]);
+-      for (const [k, was] of Object.entries(sites)) {
+-        if (r.ms >= was) continue;
+-        const kr = live.get(k);
+-        if (!kr || kr.fam !== r.fam) continue;
+-        if (!(r.longhand || r.fam === "animation" || kr.term === r.term)) continue;
+-        if (!reaches(rs, subjectSets(k.split(" :: ")[1]))) continue;
++  const live = new Map();
++  for (const r of rows) if (r.key in sites && !live.has(r.key)) live.set(r.key, r);
++  // 2c · THE ELEMENT (pass 9, charter row 1): a new site that may land on a template element a
++  //      banked subject lands on — read by the ONE library's `templateElements` + `mayMatch` — is
++  //      the same element's clock, whatever its class set. Scoped rules land in their own file.
++  const universe = ctx.elements ?? (mon("element-reach") ? estateElements() : []);
++  const landed = new Map();
++  const on = (r) => {
++    if (!landed.has(r.key)) landed.set(r.key, landsOn(r, universe));
++    return landed.get(r.key);
++  };
++  const sameElement = (r, kr) => {
++    if (!mon("element-reach")) return null;
++    const mine = on(r);
++    if (!mine.length) return null;
++    for (const t of on(kr)) if (mine.some((x) => x.el === t.el)) return t;
++    return null;
++  };
++  for (const r of rows) {
++    if (r.key in sites || siteTo.has(r.key)) continue;
++    const rs = subjectSets(r.key.split(" :: ")[1]);
++    for (const [k, was] of Object.entries(sites)) {
++      if (r.ms >= was) continue;
++      const kr = live.get(k);
++      if (!kr || kr.fam !== r.fam) continue;
++      if (!(r.longhand || r.fam === "animation" || kr.term === r.term)) continue;
++      if (mon("subject-reach") && reaches(rs, subjectSets(k.split(" :: ")[1]))) {
+         bad.push(
+           `${r.key}  ships ${r.ms}ms and its SUBJECT reaches ${k}, banked at ${was}ms — a compound override on a banked subject is a shortening, not a new position. A RETUNE keyed on this site with a cite and \`to: ${r.ms}\`, or ship it at ≥ ${was}ms.  ${r.clause}`,
+         );
++        continue;
+       }
++      const t = sameElement(r, kr);
++      if (t)
++        bad.push(
++          `${r.key}  ships ${r.ms}ms and lands on ${t.file}:${t.el.line} <${t.el.tag} class="${[...t.el.classes].join(" ")}">, the ELEMENT ${k} (banked at ${was}ms) lands on — the cascade keys elements, not class sets. A RETUNE keyed on this site with a cite and \`to: ${r.ms}\`, or ship it at ≥ ${was}ms.  ${r.clause}`,
++        );
+     }
+   }
+   // 3 · THE ORPHAN CLAUSE (pass-4, the other half of §2.1's cure). Masking the selector shut
+@@ -2098,19 +2373,84 @@ const UA_KEYWORD =
+  * admission awaiting the chair's row or its strike; the verdict line counts them aloud, so a
+  * self-admitted alias can never read as a ruled one.
+  */
++/**
++ * THE MOTION LADDER'S OWN RUNG LEDGER (pass 9; CHAIR-RULINGS §11: "LADDER mints its KEYWORD_TWINS
++ * and fallback rows in the motion ladder's own rung ledger, not docs/tranches/LEDGER.md"). Each row
++ * is A.3-shaped — subject, value, ruling, why, re-trigger — and is BOUND: a KT row names a
++ * KEYWORD_TWINS token at its points and keeps its ceiling (a minted twin may shrink, never spread);
++ * FIT-1 names the measured fit's one writer and its registration (FIT_WRITERS, B3's fit-one-writer).
++ */
++const RUNG_LEDGER = [
++  {
++    id: "KT-1",
++    subject: "--ease-starTuck",
++    value: "ease-in (0.42,0,1,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the Bloom's star tuck, kept verbatim under T9-M15",
++    retrigger: "a re-curve of the tuck, or a read past its ceiling 2",
++  },
++  {
++    id: "KT-2",
++    subject: "--ease-starFade",
++    value: "ease-out (0,0,0.58,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the star's crest fade (T3-W13)",
++    retrigger: "a re-curve of the crest fade, or a read past its ceiling 1",
++  },
++  {
++    id: "KT-3",
++    subject: "--ease-prmLinear",
++    value: "linear (0,0,1,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the laminate's PRM fade, a same-frame fallback",
++    retrigger: "the laminate's PRM arm re-cut, or a read past its ceiling 1",
++  },
++  {
++    id: "KT-4",
++    subject: "--verb-dusk-ease",
++    value: "ease (0.25,0.1,0.25,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the dusk's `ease`, published as a verb (T3-W10)",
++    retrigger: "MOT-VERB re-curves the dusk, or a read past its ceiling 2",
++  },
++  {
++    id: "FIT-1",
++    subject: "--live-fit",
++    value:
++      "<number>, initial 0, one writer App.vue `mount.style.setProperty`, read bare as scale(var(--live-fit))",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "row 9's fallback: any fallback, declared default or second writer reds B3; GC1 reads the ablation at desk 1440x900 and phone 390x844, both engines",
++    retrigger: "a second writer, a fallback, or a declared default of --live-fit",
++  },
++];
++
++/** The rung ledger is CLOSED both ways (pass 9): a KT row names a twin that carries its id. */
++function ledgerBound(twins, ledger = RUNG_LEDGER) {
++  if (!mon("twin-ratchet")) return [];
++  return ledger
++    .filter((x) => /^KT-/.test(x.id))
++    .filter((x) => !twins.some((r) => r.row === x.id && r.token === x.subject))
++    .map(
++      (x) =>
++        `RUNG_LEDGER ${x.id} (${x.subject}) names no KEYWORD_TWINS row carrying it — STALE.`,
++    );
++}
++
+ const KEYWORD_TWINS = [
+   {
+     token: "--ease-starTuck",
++    row: "KT-1",
+     points: UA_POINTS["ease-in"],
+     since: "T3-W13 (the Bloom's star tuck, kept verbatim under T9-M15)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 2,
+   },
+   {
+     token: "--ease-starFade",
++    row: "KT-2",
+     points: UA_POINTS["ease-out"],
+     since: "T3-W13 (the star's crest fade)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 1,
+   },
+   {
+@@ -2121,16 +2461,18 @@ const KEYWORD_TWINS = [
+   },
+   {
+     token: "--ease-prmLinear",
++    row: "KT-3",
+     points: UA_POINTS.linear,
+     since: "the laminate's PRM fade (a same-frame fallback)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 1,
+   },
+   {
+     token: "--verb-dusk-ease",
++    row: "KT-4",
+     points: UA_POINTS.ease,
+     since: "T3-W10 — the dusk's `ease`, published as a verb",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 2,
+   },
+ ];
+@@ -2404,8 +2746,12 @@ function b8Curve(
+   // more clause than its ceiling, reds; the chair's row (`chair: "<ruling>"`) is the only door.
+   if (mon("twin-ratchet"))
+     for (const r of twins) {
+-      if (r.chair) continue;
+-      if (!LANE_TWINS.has(r.token))
++      // a twin MINTED in the rung ledger keeps its ceiling (pass 9): the mint names it, never frees it
++      const minted =
++        r.row && RUNG_LEDGER.some((x) => x.id === r.row && x.subject === r.token);
++      if (r.chair && !minted) continue;
++      if (r.chair && minted && typeof r.ceiling !== "number") continue;
++      if (!minted && !LANE_TWINS.has(r.token))
+         bad.push(
+           `KEYWORD_TWINS ${r.token} is a NEW lane-admitted twin (chair: null) — a lane may not admit a keyword by value; the chair's row or none.`,
+         );
+@@ -2418,6 +2764,7 @@ function b8Curve(
+           `KEYWORD_TWINS ${r.token} is read by ${twinReads.get(r)} shipped transition clauses, above its ceiling ${r.ceiling} — a lane-admitted keyword SPREAD.`,
+         );
+     }
++  if (twins === KEYWORD_TWINS) bad.push(...ledgerBound(twins));
+   return bad;
+ }
+ 
+@@ -2599,7 +2946,39 @@ function b11KindFence() {
+  * own numbers, the file's own literal consts) must equal the row's `ms` (`null` where it reads
+  * a runtime value). A sum only ever lengthens and is not read. Closed both ways.
+  */
++/** Does the ONE library carry the PROPOSED `clock-context` field (pass 9, charter row 5)? Until the
++ *  chair folds it, a `ctx: true` admission below is DORMANT (it admits a site no reader yet sees) and
++ *  is exempt from the STALE clause; once folded, it is live and STALE-checked like every row. */
++const LIB_CTX = clockReads("x && MOTION.y")[0]?.ctx !== undefined;
+ const ADMITTED_ARITH = [
++  {
++    file: "src/pencil/chrome/MarginNote.vue",
++    expr: "reduced ? 0 : MOTION.rungs.note",
++    ms: null,
++    ctx: true,
++    why: "PRM IS A VALUE OF THE NOTE'S CLOCK — 0 under reduce, else the note rung (pass 9, charter row 5: a ternary read is the consumer's value; the union's line)",
++  },
++  {
++    file: "src/pencil/grid/gridPaths.ts",
++    expr: "slot = now >= slot + FRONT_MIN_MS ? now + FRONT_MIN_MS : slot + FRONT_MIN_MS",
++    ms: null,
++    ctx: true,
++    why: "THE FRONT'S SLOT — the next commit is one floor after now or after the last slot, whichever is later (ACC-FIVE's cap; pass 9, charter row 5; the union's line)",
++  },
++  {
++    file: "src/games/shared/useFlipGlide.ts",
++    expr: "(ms: number) => options.settleGuardMs ?? ms + MOTION.settleGuardMs",
++    ms: null,
++    ctx: true,
++    why: "A CALLER'S OPTION OVERRIDES THE GUARD — `??` picks the caller's settle guard, else the glide plus MOTION's guard (pass 9, charter row 5: a logical read is the consumer's value)",
++  },
++  {
++    file: "src/pencil/glyph/HandwrittenGlyph.vue",
++    expr: "props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay",
++    ms: null,
++    ctx: true,
++    why: "A PROP OVERRIDES THE PRESET — a glyph's own noise delay, else the draw-in preset's base delay (pass 9, charter row 5)",
++  },
+   {
+     file: "src/pencil/composables/bootHand.ts",
+     expr: "Math.min(sorted[sorted.length >> 1], MOTION.hand.maxStepMs)",
+@@ -2845,10 +3224,16 @@ function arithSites(files = null) {
+       libNames.some(([n, bare]) =>
+         clockReads(line, n, { bare }).some(
+           (r) =>
+-            r.arith &&
+-            (r.how === "math" ||
+-              (r.how === "bracket" && numericGroup(r.expr)) ||
+-              (r.how === "operator" && r.op !== "+")),
++            // PASS 9 (charter row 5; pass-8 critique §3.4): the consumer's VALUE, not its read — a
++            // read the library places in a value-choosing context (`&&`/`||`/`??`, a ternary, a
++            // comma operator, an indexed array literal, `Math.*.call/apply`) is B13's subject.
++            // `ctx` is the PROPOSED `clock-context` field (pass9/prototype/MOT-LADDER); absent, it
++            // reads nothing and the five K plants stay open.
++            !!r.ctx ||
++            (r.arith &&
++              (r.how === "math" ||
++                (r.how === "bracket" && numericGroup(r.expr)) ||
++                (r.how === "operator" && r.op !== "+"))),
+         ),
+       );
+     code.split("\n").forEach((line, i) => {
+@@ -3048,7 +3433,7 @@ function b13Arith(lad, sites = arithSites(), admitted = ADMITTED_ARITH) {
+       );
+   }
+   for (const r of admitted)
+-    if (!used.has(r))
++    if (!used.has(r) && !(r.ctx && !LIB_CTX))
+       bad.push(`ADMITTED_ARITH ${r.file} :: ${r.expr} admits nothing — STALE.`);
+   return bad;
+ }
+@@ -3480,6 +3865,7 @@ const checks = (ledger = LEDGER) => [
+       ...b6Floor(bank, () => deriveBase(decls, lad)),
+       ...b6NoShorten(rows, bank, lad, ledger),
+       ...consumerRatchet(bank, consumerRoster(null, lad), ledger),
++      ...scriptDurations(null, ledger),
+     ],
+   ],
+   ["B7 TAILWIND", () => b7Tailwind()],
+@@ -4843,6 +5229,212 @@ if (SELF_TEST) {
+           ],
+         ]),
+     ],
++    // ══ PASS 9 · the pass-8 critic's plants (K7r K7s K3 K1-shape K15), each through its clause ═══
++    ...(() => {
++      const f = "src/assets/index.css";
++      const dc = "src/games/shared/DigitCell.vue";
++      const banked = `.cell-reveal-animated {\n  animation: cell-reveal 0.3s var(--ease-anticipatePop);\n}\n`;
++      const bank = {
++        rungs: {},
++        sites: { [`${f} :: .cell-reveal-animated :: cell-reveal`]: 300 },
++      };
++      const rowsOf = (text, file = f) => {
++        const found = collectText(text, file);
++        return inventoryRows(
++          [...found, ...libraryOnly(join(ROOT, file), text, file, found)],
++          lad,
++        );
++      };
++      const els = (tpl, file = dc) => [{ file, els: templateElements(tpl, 1) }];
++      const cell = `<div class="game-cell" :class="{ 'cell-reveal-animated': armed }"></div>`;
++      const apart = `<div><div class="game-cell"></div><span class="cell-reveal-animated"></span></div>`;
++      const reach = (css, tpl = cell, file = f) =>
++        b6NoShorten(
++          [...rowsOf(banked), ...rowsOf(css, file)],
++          bank,
++          { rungs: [] },
++          [],
++          {
++            elements: els(tpl),
++          },
++        );
++      const k7r = ".game-cell {\n  animation-duration: var(--motion-whisper);\n}\n";
++      // K3's site, banked at the leave rung; a calc over it is valued at its lower bound
++      const fade = (v) =>
++        b6NoShorten(
++          rowsOf(
++            `.fade-leave-active {\n  transition: opacity ${v} var(--ease-standard);\n}\n`,
++          ),
++          { rungs: {}, sites: { [`${f} :: .fade-leave-active :: opacity`]: leaveMs } },
++          { rungs: [] },
++          [],
++          { elements: [] },
++        );
++      const leaveMs = lad.rungs.find((r) => r.key === "leave")?.value ?? 200;
++      const script = (code, rel = "src/x.ts") => scriptDurations([[rel, code]], []);
++      const pubs = (rel, text) => rungPublishers(lad.rungs, [[rel, text]]).bad;
++      return [
++        [
++          "B6 RATCHET",
++          "K7r VERBATIM — `.game-cell { animation-duration: var(--motion-whisper) }`: disjoint class sets, ONE element (DigitCell's root carries both)",
++          () => reach(k7r),
++        ],
++        [
++          "B6 RATCHET",
++          "K7s VERBATIM — `.board-cells .game-cell` (a descendant reach onto the same element)",
++          () =>
++            reach(
++              ".board-cells .game-cell {\n  animation-duration: var(--motion-whisper);\n}\n",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r where `.game-cell` and the reveal sit on DIFFERENT elements",
++          () => reach(k7r, apart),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r in ANOTHER file's `<style scoped>` (it lands on that file's elements only)",
++          () =>
++            reach(
++              `<template><p class="x"></p></template>\n<style scoped>\n${k7r}</style>\n`,
++              cell,
++              "src/games/shared/Other.vue",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r at a LONGER rung (dusk ≥ the banked 300)",
++          () => reach(".game-cell {\n  animation-duration: var(--motion-dusk);\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "K7r bound−ε — `.game-cell { animation-duration: 299ms }` (one millisecond under the reveal's 300)",
++          () => reach(".game-cell {\n  animation-duration: 299ms;\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r at the bound: `.game-cell { animation-duration: 300ms }` (equal is not shorter)",
++          () => reach(".game-cell {\n  animation-duration: 300ms;\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 VERBATIM — `calc(var(--motion-leave) / 4)` on a banked site (200 → 50)",
++          () => fade("calc(var(--motion-leave) / 4)"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 bound−ε — `calc(var(--motion-leave) - 1ms)` (one millisecond under the bank)",
++          () => fade("calc(var(--motion-leave) - 1ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 min() — `min(var(--motion-leave), 199ms)`",
++          () => fade("min(var(--motion-leave), 199ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K3 at the bound: `calc(var(--motion-leave) + 0ms)`, `clamp(200ms, var(--motion-leave), 300ms)`, `max(…, 1ms)`",
++          () => [
++            ...fade("calc(var(--motion-leave) + 0ms)"),
++            ...fade("clamp(200ms, var(--motion-leave), 300ms)"),
++            ...fade("max(var(--motion-leave), 1ms)"),
++          ],
++        ],
++        [
++          "B6 RATCHET",
++          "K3 clamp() — `clamp(10ms, var(--motion-leave), 300ms)` is read at its FLOOR, as R4 reads a clamp",
++          () => fade("clamp(10ms, var(--motion-leave), 300ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K3 bound+ε: `calc(var(--motion-leave) + 1ms)`",
++          () => fade("calc(var(--motion-leave) + 1ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape — `el.style.animationDuration = "50ms"` (a script duration the ratchet cannot key)',
++          () => script('el.style.animationDuration = "50ms";\n'),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape — a `:style` object `{ animation: "cell-reveal var(--motion-whisper)" }` (a rung in script)',
++          () =>
++            script('const s = { animation: "cell-reveal var(--motion-whisper)" };\n'),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape bound−ε — `transition: "opacity 2ms"` (the smallest length the law reads)',
++          () => script('const s = { transition: "opacity 2ms" };\n'),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — script writes naming keyframes, a LOCAL token, or the PRM 1ms (not a length)",
++          () =>
++            script(
++              'const a = { animation: "refuse-shake var(--refuse-dur) linear" };\nconst b = { animation: "pencil-draw-on" };\nconst c = { transition: "opacity 1ms" };\n',
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          'K15 VERBATIM — main.ts `document.documentElement.style.setProperty("--motion-leave", "10ms")`',
++          () =>
++            pubs(
++              "src/main.ts",
++              'document.documentElement.style.setProperty("--motion-leave", "10ms");\n',
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "K15 sheet twin — an SFC `<style>` declaring `--motion-leave: 10ms` on a consumer",
++          () =>
++            pubs(
++              "src/x/X.vue",
++              "<template><p /></template>\n<style>\n.x {\n  --motion-leave: 10ms;\n}\n</style>\n",
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "NEGATIVE-NEGATIVE — main.ts READING a rung (`getPropertyValue`) and a consumer `var(--motion-leave)`",
++          () =>
++            pubs(
++              "src/main.ts",
++              'const v = getComputedStyle(document.documentElement).getPropertyValue("--motion-leave");\nconst css = ".x { transition: opacity var(--motion-leave) }";\n',
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape computed — `setProperty("animation-duration", `${MOTION.rungs.whisper / 3}ms`)` (a hole that is not a bare clock read)',
++          () =>
++            script(
++              'el.style.setProperty("animation-duration", `${MOTION.rungs.whisper / 3}ms`);\n',
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          'NEGATIVE-NEGATIVE — stopTheClock\'s shape: `still ? "0s" : `${MOTION.rungs.whisper}ms`` (a bare clock read the roster ratchets; 0s is not a length)',
++          () =>
++            script(
++              'style.setProperty(\n  "animation-duration",\n  still ? "0s" : `${MOTION.rungs.whisper}ms`,\n  "important",\n);\n',
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "the rung ledger: KT-1's twin loses its `row` (a minted row naming no twin)",
++          () =>
++            ledgerBound(
++              KEYWORD_TWINS.map((r) =>
++                r.row === "KT-1" ? { ...r, row: undefined } : r,
++              ),
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "NEGATIVE-NEGATIVE — the rung ledger as minted (KT-1..KT-4 each carried)",
++          () => ledgerBound(KEYWORD_TWINS),
++        ],
++      ];
++    })(),
+     // ══ PASS 8 · the pass-7 critic's plants, each through the clause that now reads it ══════════
+     // ── charter row 1 · B6 on the SUBJECT COMPOUND (L7a, L7b, L1–L3; the `:is()` arm, `*`)
+     ...(() => {
+@@ -5142,10 +5734,12 @@ if (SELF_TEST) {
+         ],
+         [
+           "B13 ARITHMETIC",
+-          "NEGATIVE-NEGATIVE — a fallback `x || MOTION.rungs.whisper` and a read of a string group (`MOTION.verbs[v].ease`) are not arithmetic",
++          "NEGATIVE-NEGATIVE — a fallback `x || MOTION.rungs.whisper` and a read of a string group (`MOTION.verbs[v].ease`) are not arithmetic (pass 9: once the library carries `clock-context`, the fallback is the consumer's VALUE — B13's, by an admission — and only the string group stays here)",
+           () =>
+             one(
+-              "const d = opts.d || MOTION.rungs.whisper;\nconst e = MOTION.verbs[v].ease;",
++              LIB_CTX
++                ? "const e = MOTION.verbs[v].ease;"
++                : "const d = opts.d || MOTION.rungs.whisper;\nconst e = MOTION.verbs[v].ease;",
+             ),
+         ],
+       ];

@@ -1,0 +1,66 @@
+OPEN 11:17:24 29.46 86.46 108.56
+PLANT clean exit 0 ::  Tests 13 passed | 35 skipped (48)
+PLANT p8file exit 1 ::  Tests 7 failed | 6 passed | 35 skipped (48)
+   × after 12 healthy 60 Hz frames, 5 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 6 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 9 consecutive 150 ms stalls: the last stall's travel
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+     20|     console.log(`CRIT-STALLRUN n=${nStall} travel per stall ${travel.j…
+CRIT-STALLRUN n=5 travel per stall 17/17/17/17/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=6 travel per stall 17/17/17/17/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=9 travel per stall 17/17/17/17/150/150/150/150/150 ms (cap stepMs 17)
+PLANT median9 exit 1 ::  Tests 7 failed | 6 passed | 35 skipped (48)
+   × after 12 healthy 60 Hz frames, 5 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 6 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 9 consecutive 150 ms stalls: the last stall's travel
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+     20|     console.log(`CRIT-STALLRUN n=${nStall} travel per stall ${travel.j…
+CRIT-STALLRUN n=5 travel per stall 17/17/17/17/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=6 travel per stall 17/17/17/17/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=9 travel per stall 17/17/17/17/150/150/150/150/150 ms (cap stepMs 17)
+PLANT min9 exit 1 ::  Tests 4 failed | 9 passed | 35 skipped (48)
+   × after 12 healthy 60 Hz frames, 9 consecutive 150 ms stalls: the last stall's travel
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+     20|     console.log(`CRIT-STALLRUN n=${nStall} travel per stall ${travel.j…
+CRIT-STALLRUN n=9 travel per stall 17/17/17/17/17/17/17/17/150 ms (cap stepMs 17)
+PLANT median32 exit 1 ::  Tests 2 failed | 11 passed | 35 skipped (48)
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+PLANT win31 exit 1 ::  Tests 2 failed | 11 passed | 35 skipped (48)
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+PLANT win33 exit 1 ::  Tests 2 failed | 11 passed | 35 skipped (48)
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+PLANT nocap exit 1 ::  Tests 13 failed | 35 skipped (48)
+   × after 12 healthy 60 Hz frames, 1 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 2 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 3 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 4 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 5 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 6 consecutive 150 ms stalls: the last stall's travel
+   × after 12 healthy 60 Hz frames, 9 consecutive 150 ms stalls: the last stall's travel
+     × 1 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × 4 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+     20|     console.log(`CRIT-STALLRUN n=${nStall} travel per stall ${travel.j…
+CRIT-STALLRUN n=1 travel per stall 150 ms (cap stepMs 17)
+CRIT-STALLRUN n=2 travel per stall 150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=3 travel per stall 150/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=4 travel per stall 150/150/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=5 travel per stall 150/150/150/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=6 travel per stall 150/150/150/150/150/150 ms (cap stepMs 17)
+CRIT-STALLRUN n=9 travel per stall 150/150/150/150/150/150/150/150/150 ms (cap stepMs 17)
+RESTORED byte-equal
+DONE 11:17:40 31.12 84.05 107.32

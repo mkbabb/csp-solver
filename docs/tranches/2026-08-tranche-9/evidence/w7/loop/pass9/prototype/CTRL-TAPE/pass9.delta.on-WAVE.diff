@@ -1,0 +1,1132 @@
+diff --git a/web/frontend/e2e/keys-crib.spec.ts b/web/frontend/e2e/keys-crib.spec.ts
+index 55bb2b53..c7acb59b 100644
+--- a/web/frontend/e2e/keys-crib.spec.ts
++++ b/web/frontend/e2e/keys-crib.spec.ts
+@@ -33,12 +33,36 @@ const CARD = ".controls-card";
+ // and the card is still the scrollport the press must not move.
+ const CASE = ".drawer-case";
+ 
+-async function load(page: Page, w: number, h: number) {
++async function load(page: Page, w: number, h: number, { crib = true } = {}) {
+   await page.setViewportSize({ width: w, height: h });
+   await page.goto("./?size=3&difficulty=EASY");
+   await page.waitForSelector("svg.handwritten-logo", { timeout: 20000 });
+   await page.addStyleTag({ content: ".tuner-toggle { display: none !important; }" });
+-  await expect(page.locator(`${CASE} .action-bar .info-btn`).first()).toBeVisible({ timeout: 20000 });
++  if (crib) await expect(page.locator(`${CASE} .action-bar .info-btn`).first()).toBeVisible({ timeout: 20000 });
++  else await expect(page.locator("#card-foot .action-bar")).toHaveCount(1, { timeout: 20000 });
++}
++
++/** PASS 9 · the crib's pose has settled (`lint:sleep`'s cure for the two fixed 300 ms waits): no
++ *  running animation inside the case, and the verbs' box unmoved across two painted frames. */
++async function poseSettled(page: Page) {
++  await expect
++    .poll(
++      () =>
++        page.evaluate(async () => {
++          const c = document.querySelector(".drawer-case")!;
++          const v = () => document.querySelector("#card-foot .action-verbs")?.getBoundingClientRect().bottom ?? 0;
++          const moving = () =>
++            document.getAnimations().some((a) => {
++              const t = (a.effect as KeyframeEffect | null)?.target;
++              return a.playState === "running" && !!t && c.contains(t);
++            });
++          const first = [moving(), v()] as const;
++          await new Promise((r) => requestAnimationFrame(() => requestAnimationFrame(r)));
++          return !first[0] && !moving() && Math.abs(first[1] - v()) < 0.01;
++        }),
++      { timeout: 8000 },
++    )
++    .toBe(true);
+ }
+ 
+ /**
+@@ -307,21 +331,30 @@ for (const arm of ["cure", "PLANT: a rung that never ends"] as const) {
+  * home (`sampleVerbs` above). At 844×390 the crib exists only where the pointer is fine and the
+  * layout is not the phone's (`!mobile`); where the `i` is absent the cell is NAMED absent, never
+  * read green.
++ * PASS 9 (the pass-8 critic's G6): the 844×390 cell's `load(...).catch(() => undefined)` turned ANY
++ * load failure into "NAMED absent" (20.4 s, both engines, counted green). The load is no longer
++ * swallowed: under 1024 it waits for the bar, not the `i`, then asserts the phone layout holds and
++ * the `i` is absent before it SKIPS with its reason. A page that fails to load reds the cell.
+  */
+ for (const cell of [
+   { name: "1440×900 fine", w: 1440, h: 900 },
+   { name: "844×390 fine", w: 844, h: 390 },
+ ] as const) {
+   test(`G3 — the verbs hold while the crib opens and closes; the F1 plant moves them — ${cell.name}`, async ({ page }) => {
+-    await load(page, cell.w, cell.h).catch(() => undefined);
+-    const hasI = await page.evaluate(
+-      () => !![...document.querySelectorAll(".action-bar .info-btn")].find((x) => x.getClientRects().length),
+-    );
+-    test.info().annotations.push({ type: "crib-present", description: String(hasI) });
+-    if (!hasI) {
+-      test.info().annotations.push({ type: "G3", description: `${cell.name}: the \`i\` is not laid (the crib does not exist here) — NAMED absent` });
+-      return;
++    const phoneCell = cell.w < 1024;
++    await load(page, cell.w, cell.h, { crib: !phoneCell });
++    const at = await page.evaluate(() => ({
++      phone: !matchMedia("(min-width: 1024px)").matches,
++      i: !![...document.querySelectorAll(".action-bar .info-btn")].find((x) => x.getClientRects().length),
++    }));
++    test.info().annotations.push({ type: "crib-present", description: String(at.i) });
++    if (phoneCell) {
++      expect(at.phone, "the cell is the phone layout (`mobile`)").toBe(true);
++      expect(at.i, "the phone layout lays no `i` (`v-if=\"!mobile …\"`)").toBe(false);
++      test.info().annotations.push({ type: "G3", description: `${cell.name}: the page loaded, the phone layout holds and lays no \`i\` — SKIPPED, not read green` });
++      test.skip(true, `${cell.name}: the phone layout lays no crib, so G3 has nothing to read here`);
+     }
++    expect(at.i, "the desk lays the `i`").toBe(true);
+     const click = () =>
+       page.evaluate(() =>
+         [...document.querySelectorAll<HTMLButtonElement>(".action-bar .info-btn")].find((x) => x.getClientRects().length)!.click(),
+@@ -330,11 +363,11 @@ for (const cell of [
+       const opening = await sampleVerbs(page, 700);
+       await click();
+       const o = await opening();
+-      await page.waitForTimeout(300);
++      await poseSettled(page);
+       const closing = await sampleVerbs(page, 700);
+       await click();
+       const c = await closing();
+-      await page.waitForTimeout(300);
++      await poseSettled(page);
+       return { o, c };
+     };
+     const inView = () =>
+@@ -345,10 +378,10 @@ for (const cell of [
+     const rest = await inView();
+     const clean = await arm();
+     const plant = await page.addStyleTag({ content: ".drawer-case { display: block !important }" });
+-    await page.waitForTimeout(150);
++    await poseSettled(page);
+     const planted = await arm();
+     await plant.evaluate((n) => (n as Element).remove());
+-    await page.waitForTimeout(150);
++    await poseSettled(page);
+     const back = await arm();
+     const line =
+       `${cell.name} · rest verbs bottom ${rest.bottom}/${rest.vh} · clean open ${clean.o.drift}px/${clean.o.frames}f close ${clean.c.drift}px ` +
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index de41197c..519a869f 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -839,12 +839,24 @@ for (const [vw, vh, dpr] of [
+ //   S2  `.drawer-case > div:last-of-type { overflow: clip }` — the foot clips the frame's top stroke
+ //   S14 `.action-bar { top: 2.875rem }` — the bar pushed off its seat (verbs 31.6 px below vh 844)
+ //   F1  `.drawer-case { display: block }` — the flex column reverted (the foot at 1064–1143 of 844)
++// PASS 9 · TWO MORE PREDICATES (the pass-8 critic's G2): the tape is the case's LAST box (`foot.bottom
++// ≥ case.bottom − 1`) and the verbs sit inside their frame (`verbsBottom ≤ ink.bottom`). Three siblings
++// held every pass-8 predicate while moving the tape on paint, and are in-run plants now:
++//   C4  `.card-foot { order: -1 }` — the tape at the case's TOP (verbs 202.88 against 690.06)
++//   C14 `.drawer-case { padding-bottom: 100vh }` — the case runs past the viewport, the foot at its top
++//   C12 `.action-bar { height: 0 }` — the frame collapses to a band and the verbs hang below it
++// and the template hide the source gate now reds (clause 11) reds here on paint as well:
++//   T6  the `hidden` attribute on `#card-foot` (planted on the live node, both engines)
+ const FOOT_PLANTS = {
+   S10: ".bar-frame { inset: 0 0 100% 0 !important }",
+   S2: ".drawer-case > div:last-of-type { overflow: clip !important }",
+   S14: ".action-bar { top: 2.875rem !important }",
+   F1: ".drawer-case { display: block !important }",
++  C4: ".card-foot { order: -1 !important }",
++  C14: ".drawer-case { padding-bottom: 100vh !important }",
++  C12: ".action-bar { height: 0 !important }",
+ } as const;
++const HID = ["hid", "den"].join("");
+ 
+ async function footBottom(page: Page) {
+   const g = await page.evaluate(FOOT_GEOM);
+@@ -863,6 +875,8 @@ async function footBottom(page: Page) {
+   }
+   if (Math.abs(g.bar.bottom - (g.foot.bottom - g.padB)) > 1) why.push(`the bar ${g.bar.bottom} is off its seat ${+(g.foot.bottom - g.padB).toFixed(2)}`);
+   if (g.verbsBottom == null || g.verbsBottom > g.vh) why.push(`the verbs end at ${g.verbsBottom} of ${g.vh}`);
++  if (g.foot.bottom < g.case.bottom - 1) why.push(`the foot ends at ${g.foot.bottom}, above the case's bottom ${g.case.bottom}: the tape is not the case's last box`);
++  if (ink.count && g.verbsBottom != null && g.verbsBottom > ink.bottom!) why.push(`the verbs end at ${g.verbsBottom}, below their frame's ink ${ink.bottom}`);
+   return { holds: why.length === 0, why, ink, g };
+ }
+ 
+@@ -875,7 +889,7 @@ for (const cell of [
+   test.describe(`the foot's painted bottom @ ${cell.name}`, () => {
+     test.use({ viewport: cell.viewport, hasTouch: cell.hasTouch, deviceScaleFactor: 2 });
+ 
+-    test(`§2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport; S10 · S2 · S14 · F1 red in-run (${cell.name})`, async ({
++    test(`§2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (${cell.name})`, async ({
+       page,
+     }) => {
+       await loadSudoku(page);
+@@ -895,6 +909,14 @@ for (const cell of [
+         await plant.evaluate((n) => (n as Element).remove());
+         await footSettled(page);
+       }
++      // T6 on paint: the attribute on the live node (a template hide has no stylesheet to plant)
++      await page.evaluate((a) => document.getElementById("card-foot")!.setAttribute(a, ""), HID);
++      const hid = await footBottom(page);
++      console.log(`[foot-bottom ${cell.name} T6] ${JSON.stringify({ why: hid.why })}`);
++      test.info().annotations.push({ type: "plant T6", description: hid.holds ? "GREEN" : `RED · ${hid.why.join(" · ")}` });
++      expect(hid.holds, "plant T6 (the hidden attribute on #card-foot) must red the foot's painted bottom").toBe(false);
++      await page.evaluate((a) => document.getElementById("card-foot")!.removeAttribute(a), HID);
++      await footSettled(page);
+       const back = await footBottom(page);
+       expect(back.why, "the plants removed, the foot holds again").toEqual([]);
+     });
+@@ -1214,6 +1236,61 @@ test("the foot's notes hang inside the case, in the berth (fine 1440×900) — w
+   expect(unpaid.some((r) => (r.spill ?? -1) > 0), "negative control: no berth, notes past the case").toBe(true);
+ });
+ 
++// PASS 9 · ROW 7 · THE BERTH IS TILT-PROOF, READ ON THE PAINTED BOXES. A tape turns about its centre
++// inside SIX's ±1.5° band; the union's re-rolled seed put Clear's note +1.21° and 0.52 px into the
++// verbs (viewport-law §2.5, the WAVE). Every foot note is forced to each edge of the band and its
++// box must reach no foot control's box (≤ 0.5 px², §2.5's own seam) and stay inside the case.
++// NEGATIVE, same run: the pass-8 berth (`margin-top: 0.1rem`) at +1.5° must red.
++const TILT_READ = async (page: Page) => {
++  const out: { verb: string; overPx2: number; spill: number }[] = [];
++  for (const verb of ["Clear the board", "Fill in every cell that has only one possible number", "Solve puzzle"]) {
++    const btn = page.locator(`#card-foot .action-bar button[aria-label="${verb}"]`);
++    await btn.evaluate((e) => (e as HTMLElement).focus());
++    await expect.poll(() => btn.evaluate((e) => { const n = e.querySelector(".washi-label"); return !n || getComputedStyle(n).opacity === "1"; })).toBe(true);
++    out.push({
++      verb: verb.slice(0, 12),
++      ...(await btn.evaluate((e) => {
++        const n = e.querySelector(".washi-label");
++        if (!n) return { overPx2: -1, spill: -Infinity };
++        const nb = n.getBoundingClientRect();
++        let over = 0;
++        for (const c of document.querySelectorAll("#card-foot button")) {
++          const b = c.getBoundingClientRect();
++          const w = Math.min(b.right, nb.right) - Math.max(b.left, nb.left);
++          const h = Math.min(b.bottom, nb.bottom) - Math.max(b.top, nb.top);
++          if (w > 0 && h > 0) over = Math.max(over, w * h);
++        }
++        const c = document.querySelector(".drawer-case")!.getBoundingClientRect();
++        return { overPx2: +over.toFixed(2), spill: +(nb.bottom - c.bottom).toFixed(2) };
++      })),
++    });
++  }
++  return out;
++};
++
++test("row 7 — the foot's berth holds at both edges of the ±1.5° tilt band (fine 1440×900); the pass-8 berth reds in-run", async ({
++  page,
++}) => {
++  await page.setViewportSize({ width: 1440, height: 900 });
++  await loadSudoku(page);
++  await page.keyboard.press(test.info().project.name === "webkit" ? "Alt+Tab" : "Tab");
++  for (const tilt of ["1.5deg", "-1.5deg"]) {
++    const plant = await page.addStyleTag({ content: `#card-foot .washi-label { --washi-tilt: ${tilt} !important; }` });
++    const rows = await TILT_READ(page);
++    console.log(`[berth ${tilt}] ${JSON.stringify(rows)}`);
++    for (const r of rows) {
++      expect(r.overPx2, `${r.verb} at ${tilt}: its note reaches no foot control`).toBeLessThanOrEqual(0.5);
++      expect(r.spill, `${r.verb} at ${tilt}: its note stays inside the case`).toBeLessThanOrEqual(0);
++    }
++    await plant.evaluate((n) => (n as Element).remove());
++  }
++  const neg = await page.addStyleTag({ content: "#card-foot .washi-label { --washi-tilt: 1.5deg !important; margin-top: 0.1rem !important; }" });
++  const old = await TILT_READ(page);
++  console.log(`[berth NEG pass-8 0.1rem at 1.5deg] ${JSON.stringify(old)}`);
++  expect(Math.max(...old.map((r) => r.overPx2)), "negative control: the pass-8 berth at the band's edge reaches the verbs").toBeGreaterThan(0.5);
++  await neg.evaluate((n) => (n as Element).remove());
++});
++
+ test.describe("coarse row regime (≥1024)", () => {
+   // THE BRANCH AND THE FLOOR HAVE NEVER MET (pass-4 BC-M1). `.options-pair` renders only on
+   // the RAIL — `OptionSelector` takes `.options-row` whenever `mobile` is passed, and the
+@@ -1630,6 +1707,57 @@ test.describe("the destructive set asks at a fine pointer @ 1440×900", () => {
+     await expect(blank, "the answer clears the board").toHaveValue("");
+     await expect(ribbon).toHaveCount(0);
+   });
++  // PASS 9 · DIRTY IS PLAYER INK SINCE THE DEAL (CHAIR-RULINGS p9 §8; the pass-8 critic's G4). The
++  // row above deals nothing, so its pristine arm is a PAGE-LOAD board and could not see the nag the
++  // undo-depth reading put on a fresh deal: "fill in the whole board?" on 20 empty cells, both
++  // engines. Here the deal happens in-run. NEGATIVE, same run: one player digit after a deal asks.
++  test("T9-M12 — a fresh deal with no player ink solves on ONE click; one player digit after a deal asks", async ({
++    page,
++  }) => {
++    await loadSudoku(page);
++    await footSettled(page);
++    const solve = page.locator('#card-foot button[aria-label="Solve puzzle"]');
++    const ribbon = page.locator("#card-foot .confirm-ribbon");
++    const empties = () =>
++      page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].filter((i) => !(i as HTMLInputElement).value).length);
++    const givens = () =>
++      page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].map((i) => (i as HTMLInputElement).value || ".").join(""));
++    const deal = async () => {
++      const before = await givens();
++      await page.locator('button[aria-label="Deal a new board"]:visible').first().click();
++      await expect.poll(givens, { timeout: 15000, message: "the deal lands a new board" }).not.toBe(before);
++      await expect.poll(empties, { timeout: 15000 }).toBeGreaterThan(0);
++    };
++    await deal();
++    const e0 = await empties();
++    // a question that lapses (the 2.5 s window) would satisfy a retrying `toHaveCount(0)`: the row
++    // records whether the ribbon EVER mounts between the press and the solved board
++    await page.evaluate(() => {
++      const w = window as unknown as { __asked: boolean };
++      w.__asked = false;
++      new MutationObserver(() => {
++        if (document.querySelector("#card-foot .confirm-ribbon")) w.__asked = true;
++      }).observe(document.getElementById("card-foot")!, { childList: true, subtree: true });
++    });
++    await solve.click();
++    await expect.poll(empties, { timeout: 15000, message: "one click solves the dealt board" }).toBe(0);
++    expect(await page.evaluate(() => (window as unknown as { __asked: boolean }).__asked), "a dealt board with no player ink is never asked").toBe(false);
++    console.log(`[M12 dealt] empties ${e0} -> 0, no question`);
++    await deal();
++    // the first EMPTY cell of the new deal (a given is an input too, and may sit at row 1, column 1)
++    const at = await page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].findIndex((i) => !(i as HTMLInputElement).value));
++    expect(at, "the deal left an empty cell").toBeGreaterThanOrEqual(0);
++    const blank = page.locator(".sudoku-cell input").nth(at);
++    await blank.click();
++    await page.keyboard.type("5");
++    await expect(blank).toHaveValue("5");
++    const e1 = await empties();
++    await solve.click();
++    await expect(ribbon, "one player digit after the deal asks").toHaveCount(1);
++    await expect(ribbon).toHaveAttribute("aria-label", "fill in the whole board?");
++    expect(await empties(), "the ask alone fills nothing").toBe(e1);
++    console.log(`[M12 inked] empties ${e1}, the question stands`);
++  });
+ });
+ 
+ /** CTRL-RULE pass 8 · INTAKE-22 row 28's inset law, PORTED onto the merged §10 page (its foot is
+diff --git a/web/frontend/scripts/check-tape-foot.mjs b/web/frontend/scripts/check-tape-foot.mjs
+index cfdcd8b0..760723cd 100644
+--- a/web/frontend/scripts/check-tape-foot.mjs
++++ b/web/frontend/scripts/check-tape-foot.mjs
+@@ -45,8 +45,14 @@
+  *   9 THE COLUMN  (pass 7's seam, CI-held from pass 8) the case is `display: flex;
+  *                 flex-direction: column` with a `max-height` cap in every regime; the card may
+  *                 shrink (no `flex-shrink: 0`, no `flex: none`, no min/max height of its own); the
+- *                 foot is `flex: none` in every regime and nothing makes it yield.
+- *  10 THE SEAT    nothing moves the bar or the foot off its layout box: no `top`/`bottom`/`inset`,
++ *                 foot is `flex: none` in every regime and nothing makes it yield. PASS 9 keys
++ *                 the PRECONDITIONS: the card is a scrollport (`overflow-y` auto|scroll) in every
++ *                 regime, the case's cap bounds at or under the viewport (`bounds()`), no `order`
++ *                 on the card or the foot, no band above the foot, the case's bottom pad ≤ 32 px,
++ *                 the foot and the bar no height of their own, and no `@apply` sets a watched prop.
++ *  11 THE MOUNT   (pass 9) no `v-show`/`v-if`/`hidden` on the chain, and the bar's Teleport goes to
++ *                 `#card-foot`, disabled only on an expression that names something.
++ *  10 THE SEAT   nothing moves the bar or the foot off its layout box: no `top`/`bottom`/`inset`,
+  *                 `translate`, `transform`, `scale`, `rotate`, `zoom`, no negative bottom margin on
+  *                 the foot, and the bar stays `position: relative`.
+  *
+@@ -383,6 +389,117 @@ const isBerth = (id) =>
+ const floorOf = (id) =>
+   regime(id).width < 1024 && regime(id).width > regime(id).height ? 1.125 : 0.75;
+ 
++/** PASS 9 · A LENGTH'S BOUNDS AT A REGIME, in css px: `[lo, hi]` of a value whose tokens were
++ *  already resolved through the token map. Viewport units take the regime's own box; `%` of the
++ *  case's block is read against the viewport height (the case sits in a viewport-capped column);
++ *  `env()` is [0, ∞); a var() nothing publishes is (−∞, ∞), so it can only LOOSEN a bound; calc
++ *  sums, products and quotients by numbers, `min`/`max`/`clamp` exactly. A cap whose `hi` exceeds
++ *  the viewport caps nothing (the pass-8 critic's C6, `max-height: 999rem`). */
++export function bounds(value, r) {
++  const INF = Infinity;
++  const src = String(value).trim();
++  let i = 0;
++  const ws = () => {
++    while (i < src.length && /\s/.test(src[i])) i++;
++  };
++  const unit = (n, u) => {
++    u = (u ?? "").toLowerCase();
++    const v = /^(px|)$/.test(u)
++      ? n
++      : /^(rem|em)$/.test(u)
++        ? n * 16
++        : /^[dsl]?vh$/.test(u) || u === "%"
++          ? (n * r.height) / 100
++          : /^[dsl]?vw$/.test(u)
++            ? (n * r.width) / 100
++            : /^[dsl]?vmin$/.test(u)
++              ? (n * Math.min(r.width, r.height)) / 100
++              : /^[dsl]?vmax$/.test(u)
++                ? (n * Math.max(r.width, r.height)) / 100
++                : NaN;
++    return [v, v];
++  };
++  const args = () => {
++    const out = [];
++    for (;;) {
++      out.push(sum());
++      ws();
++      if (src[i] === ",") {
++        i++;
++        continue;
++      }
++      if (src[i] === ")") i++;
++      return out;
++    }
++  };
++  const atom = () => {
++    ws();
++    let m = /^(calc|min|max|clamp|env|var)\(/i.exec(src.slice(i));
++    if (m) {
++      i += m[0].length;
++      const fn = m[1].toLowerCase();
++      if (fn === "env" || fn === "var") {
++        let d = 1;
++        while (i < src.length && d) d += src[i] === "(" ? 1 : src[i++] === ")" ? -1 : 0;
++        return fn === "env" ? [0, INF] : [-INF, INF];
++      }
++      const a = args();
++      if (fn === "calc") return a[0];
++      const lo = a.map((x) => x[0]),
++        hi = a.map((x) => x[1]);
++      if (fn === "min") return [Math.min(...lo), Math.min(...hi)];
++      if (fn === "max") return [Math.max(...lo), Math.max(...hi)];
++      return [
++        Math.max(lo[0], Math.min(lo[1], lo[2])),
++        Math.max(hi[0], Math.min(hi[1], hi[2])),
++      ];
++    }
++    if (src[i] === "(") {
++      i++;
++      const v = sum();
++      ws();
++      if (src[i] === ")") i++;
++      return v;
++    }
++    m = /^(-?\d*\.?\d+(?:e-?\d+)?)([a-z%]*)/i.exec(src.slice(i));
++    if (!m) {
++      i = src.length;
++      return [NaN, NaN];
++    }
++    i += m[0].length;
++    return m[2] ? unit(+m[1], m[2]) : [+m[1], +m[1], true];
++  };
++  const product = () => {
++    let a = atom();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "*" && op !== "/") return a;
++      i++;
++      const b = atom();
++      const k = a[2] ? a[0] : b[0];
++      const x = a[2] ? b : a;
++      if (op === "/" && !b[2]) return [NaN, NaN];
++      const f = op === "*" ? k : 1 / b[0];
++      const p = [x[0] * f, x[1] * f].sort((m, n) => m - n);
++      a = a[2] && b[2] ? [p[0], p[1], true] : p;
++    }
++  };
++  const sum = () => {
++    let a = product();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "+" && op !== "-") return a;
++      i++;
++      const b = product();
++      a = op === "+" ? [a[0] + b[0], a[1] + b[1]] : [a[0] - b[1], a[1] - b[0]];
++    }
++  };
++  const v = sum();
++  return [v[0], v[1]];
++}
++
+ // ------------------------------------------------------------------------------ props
+ const CLIP = (p, v) =>
+   /^overflow(-[xy]|-block|-inline)?$/.test(p)
+@@ -471,8 +588,9 @@ const WATCHED = {
+ export function check(overlay = {}) {
+   const t = tree(overlay);
+   const fails = [];
+-  const fail = (clause, msg) => {
+-    if (!OFF.has(String(clause))) fails.push(`${clause} ${msg}`);
++  const fail = (clause, msg, sub) => {
++    if (!OFF.has(String(clause)) && !(sub && OFF.has(sub)))
++      fails.push(`${clause} ${msg}`);
+   };
+   const ch = chain(t);
+   for (const n of ["CASE", "CARD", "FOOT", "BAR", "VERBS", "FRAME", "WELL"])
+@@ -618,6 +736,25 @@ export function check(overlay = {}) {
+       if (UTIL_EDGE.test(c))
+         fail(4, `ONE HAND: the ${n.toLowerCase()}'s element carries \`${c}\``);
+   }
++  // PASS 9 · the voice the verbs inherit is not collapsed above them (the critic's P7): a size
++  // on the bar or the foot under 10 px at the desk takes every inheriting label with it
++  for (const n of ["BAR", "FOOT"])
++    for (const s of own(n).filter((s) => s.prop === "font-size" || s.prop === "font")) {
++      const size =
++        s.prop === "font-size"
++          ? val(s)
++          : (
++              topSplit(val(s)).find((x) => /^(-?\d|calc|min|max|clamp|var)/.test(x)) ??
++              ""
++            ).split("/")[0];
++      const [lo] = bounds(size || "NaN", regime("desk-1280x800"));
++      if (!(lo >= 10))
++        fail(
++          4,
++          `ONE HAND: ${where(s)} { ${s.prop}: ${val(s)} } collapses the voice the verbs inherit`,
++          "4a",
++        );
++    }
+ 
+   // 8 · THE CLIP (rules, inline, utilities)
+   for (const n of ["FRAME", "BAR", "FOOT", "CASE"])
+@@ -825,6 +962,172 @@ export function check(overlay = {}) {
+         `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } — the foot is its content`,
+       );
+ 
++  // 9 (PASS 9) · THE PRECONDITIONS, NOT THE PROPERTIES (LAWS P8 §F; the pass-8 critic's G1–G3).
++  // `flex-shrink` on the card is not what lets it yield: a SCROLLPORT's automatic minimum is 0, and
++  // a cap that caps nothing hands the case its content. `overflow-y: visible | clip` on the card, a
++  // `max-height: 999rem` on the case, a viewport-sized top margin on the foot each put the verbs
++  // 243–597 px below the viewport with every pass-8 clause GREEN.
++  const overflowY = (s) =>
++    s.prop === "overflow" ? (topSplit(val(s))[1] ?? topSplit(val(s))[0]) : val(s);
++  for (const id of ALL_REGIMES()) {
++    const ov = effectiveAt(
++      own("CARD").filter((s) => /^overflow(-y|-block)?$/.test(s.prop)),
++      id,
++    );
++    const oy = ov ? overflowY(ov) : "visible";
++    if (!/^(auto|scroll)$/.test(oy))
++      fail(
++        9,
++        `THE COLUMN: at ${id} the card is no scrollport (overflow-y: ${oy}${ov ? `, ${where(ov)}` : ""}): its automatic minimum is its content`,
++        "9a",
++      );
++    const cap = effectiveAt(
++      caseOwn.filter((s) => /^max-(height|block-size)$/.test(s.prop)),
++      id,
++    );
++    if (cap && !/^(none|auto)$/.test(val(cap))) {
++      const [, hi] = bounds(val(cap), regime(id));
++      if (!(hi <= regime(id).height))
++        fail(
++          9,
++          `THE COLUMN: at ${id} the case's cap ${where(cap)} \`${val(cap)}\` bounds at ${hi} px, past the viewport's ${regime(id).height}`,
++          "9b",
++        );
++    }
++  }
++  // the tape is the case's LAST box: no `order` on the card or the foot, nothing above the foot,
++  // and nothing below the foot inside the case (the case's own bottom pad holds no length a
++  // viewport can size); the foot and the bar are their content (no height of their own)
++  for (const n of ["CARD", "FOOT"])
++    for (const s of own(n).filter((s) => s.prop === "order"))
++      if (!/^0$/.test(val(s)))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { order: ${val(s)} } moves the ${n.toLowerCase()} in the column`,
++          "9c",
++        );
++  const sideOf = (prop, value, side) => {
++    const p = topSplit(value);
++    if (
++      prop.endsWith(`-${side}`) ||
++      prop.endsWith(`-block-${side === "top" ? "start" : "end"}`)
++    )
++      return value;
++    if (/-block$/.test(prop)) return side === "top" ? p[0] : (p[1] ?? p[0]);
++    if (/^(margin|padding)$/.test(prop)) return side === "top" ? p[0] : (p[2] ?? p[0]);
++    return null;
++  };
++  for (const s of own("FOOT").filter((s) =>
++    /^(margin|padding)(-top|-block|-block-start)?$/.test(s.prop),
++  )) {
++    const v = sideOf(s.prop, val(s), "top");
++    if (v != null && !/^(0|0px|0rem)$/.test(v.trim()))
++      fail(
++        9,
++        `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } puts a band above the tape`,
++        "9d",
++      );
++  }
++  for (const s of caseOwn.filter((s) =>
++    /^padding(-bottom|-block|-block-end)?$/.test(s.prop),
++  )) {
++    const v = sideOf(s.prop, val(s), "bottom");
++    if (v == null) continue;
++    for (const id of s.regimes) {
++      const [, hi] = bounds(v, regime(id));
++      if (!(hi <= 32))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } at ${id} lays ${hi} px under the tape`,
++          "9e",
++        );
++    }
++  }
++  for (const n of ["FOOT", "BAR"])
++    for (const s of own(n).filter((s) =>
++      /^(height|block-size|max-height|max-block-size)$/.test(s.prop),
++    ))
++      if (!/^(auto|none)$/.test(val(s)))
++        fail(
++          9,
++          `THE COLUMN: ${where(s)} { ${s.prop}: ${val(s)} } — the ${n.toLowerCase()} is its content`,
++          "9f",
++        );
++  // `@apply` is a site the declaration reader cannot key to an element, so it is read everywhere:
++  // any utility an `@apply` in the estate expands to may not set a watched property
++  for (const f of t.files) {
++    const rel = t.rel(f);
++    if (!/\.(css|pcss|vue)$/.test(rel)) continue;
++    const css = (
++      rel.endsWith(".vue")
++        ? sfc(t.read(f))
++            .styles.map((x) => x.text)
++            .join("\n")
++        : t.read(f)
++    ).replace(/\/\*[\s\S]*?\*\//g, "");
++    for (const m of css.matchAll(/@apply\s+([^;}]+)/g))
++      for (const c of m[1].trim().split(/\s+/))
++        for (const [p] of TAILWIND_ALL(c.replace(/^!|!$/g, ""))) {
++          const clause = Object.entries(WATCHED).find(([, ps]) => ps.includes(p))?.[0];
++          if (clause)
++            fail(
++              clause,
++              `THE APPLY: ${rel} \`@apply ${c}\` sets \`${p}\`, a watched property, where the gate cannot key it`,
++              "apply",
++            );
++        }
++  }
++
++  // 11 · THE MOUNT (PASS 9; the critic's G3). A template-level hide is no declaration: `v-show`,
++  // `hidden` or a `v-if` on the chain, or a Teleport that never moves the bar into the foot.
++  for (const n of ["CASE", "CARD", "FOOT", "BAR", "FRAME", "VERBS"]) {
++    const el = ch[n];
++    for (const [a, v] of el.attrs) {
++      const name = a.replace(/^(?::|v-bind:)/, "");
++      if (n === "VERBS" && a === "v-else") continue; // the ribbon's twin: `v-if="barAsking"` / `v-else`
++      if (/^(v-show|v-if|v-else-if|v-else|hidden)$/.test(name))
++        fail(
++          11,
++          `THE MOUNT: the ${n.toLowerCase()} carries \`${a}${v != null ? `="${v}"` : ""}\` (${[...el.from][0]}:${el.line})`,
++          "11a",
++        );
++    }
++  }
++  {
++    const list = elementsOf(t, PANEL);
++    const bar = list.find((e) => e.classes.has("action-bar"));
++    const tp = bar && list.find((e) => e.i === bar.parent);
++    if (!tp || !/^teleport$/i.test(tp.tag))
++      fail(11, "THE MOUNT: the bar is not a Teleport's child", "11b");
++    else {
++      const to = tp.attrs.get("to");
++      if (to !== "#card-foot")
++        fail(
++          11,
++          `THE MOUNT: the bar's Teleport goes to \`${to ?? tp.attrs.get(":to")}\`, not \`#card-foot\``,
++          "11b",
++        );
++      for (const a of ["v-if", "v-show", "v-else", "v-else-if"])
++        if (tp.attrs.has(a))
++          fail(11, `THE MOUNT: the bar's Teleport carries \`${a}\``, "11b");
++      if (tp.attrs.has("disabled"))
++        fail(11, "THE MOUNT: the bar's Teleport is `disabled` outright", "11b");
++      const d = tp.attrs.get(":disabled") ?? tp.attrs.get("v-bind:disabled");
++      if (d != null) {
++        const bare = String(d).replace(
++          /\b(true|false|null|undefined|NaN|Infinity)\b|\d+|["'`][^"'`]*["'`]/g,
++          "",
++        );
++        if (!/[A-Za-z_$]/.test(bare))
++          fail(
++            11,
++            `THE MOUNT: the bar's Teleport is \`:disabled="${d}"\`, a constant: the bar never reaches the foot`,
++            "11b",
++          );
++      }
++    }
++  }
++
+   // 10 · THE SEAT
+   for (const n of ["BAR", "FOOT"])
+     for (const s of own(n)) {
+@@ -1487,6 +1790,165 @@ function plants() {
+       "C10 a well-less path rule under the foot",
+       addScene("#card-foot path { stroke-width: 0; }"),
+     ],
++    ...pass9Plants({ live, once, P, addScene, bar }),
++  ];
++}
++
++/** PASS 9 · the pass-8 critic's escapes (C1 C4 C6 C7 C9–C12 C14 P7 P9 T4–T6) as plants, each
++ *  sub-clause's siblings beside them, and a BOUNDARY pair per numeric bound: the `green` arm passes
++ *  by ε and must stay GREEN on its clause, the other reds by ε (LAWS P8 §F, threshold sabotage). */
++function pass9Plants({ live, once, P, addScene, bar }) {
++  const desk = (rule) => addScene(`@media (min-width: 1024px) { ${rule} }`);
++  const dockQ = (rule) => addScene(`@media (max-width: 1023.98px) { ${rule} }`);
++  const foot = (attr) => ({
++    [SCENE_SFC]: once(
++      live.gsfc,
++      'class="card-foot"',
++      `class="card-foot"\n          ${attr}`,
++    ),
++  });
++  const tp = (a, b) => P(once(live.panel, a, b));
++  const HID = J("hid", "den");
++  return [
++    [
++      "9",
++      "C1 the card not a scrollport (overflow-y: visible)",
++      desk(".controls-card { overflow-y: visible; }"),
++    ],
++    [
++      "9",
++      "C7 overflow-y: clip is no scrollport",
++      desk(".controls-card { overflow-y: clip; }"),
++    ],
++    [
++      "9",
++      "the shorthand's y arm hidden",
++      desk(".controls-card { overflow: auto hidden; }"),
++    ],
++    ["9", "the dock's card visible", dockQ(".controls-card { overflow-y: visible; }")],
++    ["9", "C6 a vacuous cap (999rem)", desk(".drawer-case { max-height: 999rem; }")],
++    [
++      "9",
++      "the cap past the viewport by 1px",
++      desk(".drawer-case { max-height: calc(100dvh + 1px); }"),
++    ],
++    [
++      "9",
++      "the cap exactly the viewport (100dvh)",
++      desk(".drawer-case { max-height: 100dvh; }"),
++      "green",
++    ],
++    [
++      "9",
++      "the dock's cap past the viewport by 1px",
++      dockQ(".drawer-case { max-height: calc(100dvh + 1px); }"),
++    ],
++    [
++      "9",
++      "the cap on a length nothing publishes",
++      desk(".drawer-case { max-height: calc(100dvh + var(--nobody-publishes)); }"),
++    ],
++    [
++      "9",
++      "C4 the foot above the card (order: -1)",
++      addScene(".card-foot { order: -1; }"),
++    ],
++    [
++      "9",
++      "the card below the foot (order: 2)",
++      addScene(".controls-card { order: 2; }"),
++    ],
++    ["9", "order: 0 on the foot", addScene(".card-foot { order: 0; }"), "green"],
++    [
++      "9",
++      "C9 margin-top: 100vh on the foot",
++      addScene(".card-foot { margin-top: 100vh; }"),
++    ],
++    [
++      "9",
++      "C10 padding-top: 100vh on the foot",
++      addScene(".card-foot { padding-top: 100vh; }"),
++    ],
++    [
++      "9",
++      "margin-block 1px above the foot",
++      addScene(".card-foot { margin-block: 1px 0; }"),
++    ],
++    [
++      "9",
++      "padding-block-start 1px on the foot",
++      addScene(".card-foot { padding-block-start: 1px; }"),
++    ],
++    [
++      "9",
++      "margin-top: 0 on the foot",
++      addScene(".card-foot { margin-top: 0; }"),
++      "green",
++    ],
++    [
++      "9",
++      "C14 padding-bottom: 100vh on the case",
++      addScene(".drawer-case { padding-bottom: 100vh; }"),
++    ],
++    [
++      "9",
++      "the case's bottom pad 33px",
++      addScene(".drawer-case { padding-bottom: 33px; }"),
++    ],
++    [
++      "9",
++      "the case's bottom pad 32px",
++      addScene(".drawer-case { padding-bottom: 32px; }"),
++      "green",
++    ],
++    [
++      "9",
++      "the case's padding-block end 50vh",
++      addScene(".drawer-case { padding-block: 0 50vh; }"),
++    ],
++    ["9", "C11 height: 0 on the foot", addScene(".card-foot { height: 0; }")],
++    ["9", "C12 height: 0 on the bar", bar("height: 0")],
++    ["9", "max-block-size on the bar", bar("max-block-size: 2rem")],
++    ["4", "P7 font-size: 0 on the bar", bar("font-size: 0")],
++    ["4", "font-size 9.9px on the bar", bar("font-size: 9.9px")],
++    ["4", "font-size 10px on the bar", bar("font-size: 10px"), "green"],
++    [
++      "4",
++      "the font shorthand at 0 on the foot",
++      addScene(".card-foot { font: 0/1 serif; }"),
++    ],
++    [
++      "8",
++      "P9 @apply a clip on the foot",
++      addScene(`.card-foot { @apply ${J("overflow", "-hidden")}; }`),
++    ],
++    [
++      "8",
++      "@apply a fade anywhere",
++      addScene(`.drawer-case > * { @apply ${J("opacity", "-0")}; }`),
++    ],
++    ["11", "T4 v-show=false on the foot", foot('v-show="false"')],
++    ["11", "T6 the hidden attribute on the foot", foot(HID)],
++    ["11", "a bound hidden on the foot", foot(`:${HID}="true"`)],
++    ["11", "v-if on the foot", foot('v-if="false"')],
++    [
++      "11",
++      "T5 the bar's Teleport disabled always",
++      tp(':disabled="!footBerth"', ':disabled="true"'),
++    ],
++    [
++      "11",
++      "the Teleport disabled on a literal expression",
++      tp(':disabled="!footBerth"', ':disabled="!false"'),
++    ],
++    ["11", "the Teleport's bare disabled", tp(':disabled="!footBerth"', "disabled")],
++    ["11", "the Teleport sent elsewhere", tp('to="#card-foot"', 'to="#drawer-handle"')],
++    [
++      "11",
++      "the Teleport disabled on a name",
++      tp(':disabled="!footBerth"', ':disabled="!footBerth || false"'),
++      "green",
++    ],
+   ];
+ }
+ 
+@@ -1501,7 +1963,7 @@ function selfTest({ quiet = false } = {}) {
+     bad++;
+   }
+   const list = plants();
+-  for (const [clause, name, patch] of list) {
++  for (const [clause, name, patch, expect] of list) {
+     if (Object.values(patch).some((v) => v === null)) {
+       say(`self-test: plant "${name}" did not apply (the live shape moved)`);
+       bad++;
+@@ -1509,6 +1971,15 @@ function selfTest({ quiet = false } = {}) {
+     }
+     const f = check(patch);
+     const hit = f.find((x) => x.startsWith(`${clause} `));
++    if (expect === "green") {
++      // a BOUNDARY control: it passes its bound by ε and must not red its clause
++      if (hit) {
++        say(`self-test: boundary "${name}" REDS clause ${clause} (${hit})`);
++        bad++;
++      } else if (!quiet && process.argv.includes("--verbose"))
++        console.log(`  GREEN ${name.padEnd(55)} (boundary)`);
++      continue;
++    }
+     if (!hit) {
+       say(
+         `self-test: plant "${name}" stayed GREEN on clause ${clause}${f.length ? ` (red elsewhere: ${f[0]})` : ""}`,
+@@ -1521,14 +1992,36 @@ function selfTest({ quiet = false } = {}) {
+     console.log(
+       bad
+         ? `check-tape-foot self-test: ${bad} FAILED`
+-        : `check-tape-foot self-test: ${list.length} plants red, live green`,
++        : `check-tape-foot self-test: ${list.filter((x) => x[3] !== "green").length} plants red, ${list.filter((x) => x[3] === "green").length} boundaries green, live green`,
+     );
+   return bad;
+ }
+ 
+ /** Delete each clause in turn; the self-test must red (a clause no plant needs is a dead clause). */
+ function sabotageBattery() {
+-  const ids = ["1", "2", "3", "4", "5", "6", "7", "8", "9", "10"];
++  const ids = [
++    "1",
++    "2",
++    "3",
++    "4",
++    "5",
++    "6",
++    "7",
++    "8",
++    "9",
++    "10",
++    "11",
++    "9a",
++    "9b",
++    "9c",
++    "9d",
++    "9e",
++    "9f",
++    "4a",
++    "apply",
++    "11a",
++    "11b",
++  ];
+   let dead = 0;
+   for (const id of ids) {
+     OFF.clear();
+@@ -1557,6 +2050,6 @@ if (process.argv[1] === import.meta.filename) {
+   if (process.argv.includes("--sabotage-battery")) bad += sabotageBattery();
+   const fails = check();
+   for (const f of fails) console.error(`check-tape-foot: ${f}`);
+-  if (!fails.length) console.log("check-tape-foot: 10 clauses hold");
++  if (!fails.length) console.log("check-tape-foot: 11 clauses hold");
+   process.exit(bad || fails.length ? 1 : 0);
+ }
+diff --git a/web/frontend/src/games/shared/ConfirmRibbon.vue b/web/frontend/src/games/shared/ConfirmRibbon.vue
+index d68b97b1..36db2544 100644
+--- a/web/frontend/src/games/shared/ConfirmRibbon.vue
++++ b/web/frontend/src/games/shared/ConfirmRibbon.vue
+@@ -152,7 +152,7 @@ onMounted(() => {
+ 
+ /* AND THE FRAME NEEDS ITS BOX, which the first cut forgot and the probe caught: a
+    `HandDrawnOutline` with no children draws into its own `.outline-container`, and an
+-   `inline-flex` button gives that container no size, so BOTH frames measured `stroke-width:
++   inline flex button (a `display` this file sets) gives that container no size, so BOTH frames measured `stroke-width:
+    null` / `pathLen: null` — the weight ladder, which is this face's only non-colour channel,
+    was not on the page at all. Laid at `inset: 0` it takes the button's box, which is the
+    estate's own idiom (`.bar-frame`, `.deal-box`) and the one the comment above already named. */
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index 31d3a9a2..c0320109 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -244,8 +244,9 @@ defineExpose({
+   transform: rotate(0deg);
+ }
+ 
++/* PASS 9 · the card's ONE ring form (CHAIR-RULINGS p9 §5): solid 2 px, the card's ring ink. */
+ .drawer-tab:focus-visible {
+-  outline: 2px dashed currentColor;
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index f8354d94..bcc933dc 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -121,8 +121,9 @@ const props = defineProps<{
+   // the mobile tab-toggle (n ≥ 2 only), and the OptionSelectors from these.
+   sections: ControlSection[];
+   loading: boolean;
+-  // T4-WU/U3 — the board's dirty state (the composable's `isDirty` = undo-depth non-empty).
+-  // Gates the coarse two-tap: a DIRTY Deal / Clear arms first, a pristine board acts instantly.
++  // T4-WU/U3 — the board's dirty state, which gates the ask: a DIRTY Deal / Clear / Fill / Solve
++  // arms first, a pristine board acts instantly. PASS 9 (CHAIR-RULINGS p9 §8): dirty is PLAYER
++  // INK SINCE THE DEAL (the composable's `inkSinceDeal`), not undo-depth, which counts the deal.
+   isDirty: boolean;
+   mobile?: boolean;
+   // T4-W8 ROW 2 — the error-check mode (off/on-demand/live). LEFT a manual prop+emit (§1a):
+@@ -558,7 +559,7 @@ const { animating: dealAnimating, trigger: triggerDeal } = useButtonAnimation(50
+ const { animating: clearAnimating, trigger: triggerClear } = useButtonAnimation(400);
+ 
+ // T4-WU/U3 — the conditional confirm, generalized from the shipped Clear two-tap to Deal and
+-// dirty-gated. On a coarse pointer a DIRTY board (undo-depth non-empty) arms first — the sublabel
++// dirty-gated. On a coarse pointer a DIRTY board (player ink since the deal, pass 9) arms first — the sublabel
+ // asks "sure?" in the teacher's rose, the aria-label swaps, a 2.5s lapse re-arms — and a second tap
+ // within the window deals; a PRISTINE board deals instantly (no nag by construction). [Pass 8: the
+ // fine-pointer exception that stood here — one-click Deal + the Cmd/Ctrl+Z backstop, coarse-only —
+@@ -681,7 +682,8 @@ function useTwoTap(name: AskableAct, act: () => void) {
+     // W1 §1.5 reads it as "a dirty board arms". T4-WU/U3's `isCoarse &&` survived that ruling, so
+     // a dirty board at a fine pointer still cleared, dealt, filled and solved on ONE click
+     // (1440×900, the pass-5 critic). The dirty gate stays: a pristine board has nothing to ask
+-    // about, and that nag is the defect T4-WU/U3 was born to remove.
++    // about, and that nag is the defect T4-WU/U3 was born to remove. A DEALT board with no player
++    // ink is pristine too (pass 9): `isDirty` arrives as `inkSinceDeal`, so it solves on one click.
+     if (props.isDirty && !armed.value) {
+       arm(
+         name,
+@@ -723,7 +725,7 @@ const { press: onFillForced } = useTwoTap("fill", () => {
+ // routine, the act takes two taps: the first arms (the sublabel asks "sure?" in the hand, rose),
+ // the second within 2.5s clears; the window lapsing disarms quietly. T4-WU/U3 — DIRTY-GATED: the
+ // arm now requires `props.isDirty` (born-RED at base: Clear armed unconditionally, even on a blank
+-// board — the same undo-depth gate that arms Deal fixes it), so a pristine board clears instantly.
++// board — the same dirty gate that arms Deal fixes it), so a pristine board clears instantly.
+ // [Pass 8: every pointer asks now — `press()` below; the confirm is the ribbon, no dialog machinery.]
+ const { press: onClear } = useTwoTap("clear", () => {
+   triggerClear();
+@@ -2606,11 +2608,15 @@ const quickBerth = computed(() =>
+    so a fallback here can only hide a rename (registry §2.9 supersedes v2 §2.4's form).
+    PAINTED, both engines, both themes, sampled off the rendered bytes at the ring's own
+    stroke — the four grounds a §10 control's ring actually lands on are in
+-   `evidence/w7/loop/pass4/prototype/CTRL-TAPE/readings/r4-ring.json`. */
++   `evidence/w7/loop/pass4/prototype/CTRL-TAPE/readings/r4-ring.json`.
++   PASS 9 · ONE RING FORM ON THE CARD, SOLID (CHAIR-RULINGS p9 §5). The dash was this family's
++   pass-4 choice, not the estate's: it left 28–32 % of each band unpainted and the left band 1.73 px
++   deep at station 1. It goes to the owner as B-FACE-RING's arm (b); the card wears CTRL-FACE's
++   solid 2 px at every control. */
+ :deep(button:focus-visible),
+ :deep([role="tab"]:focus-visible),
+ :deep([tabindex="0"]:focus-visible) {
+-  outline: 2px dashed var(--ring-ink);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+@@ -2780,7 +2786,13 @@ const quickBerth = computed(() =>
+ .action-bar .washi-label {
+   top: 100%;
+   bottom: auto;
+-  margin-top: 0.1rem;
++  /* PASS 9 · THE BERTH IS TILT-PROOF (charter row 7). A tape turns about its centre, so its box
++     rises by half its width × sin(tilt) at the high corner. The tilt band is ±1.5° (the seeded
++     tilt in `SheetWashiLabel`, CHAIR-RULINGS p9 §4) and the widest note is `.washi-wide`'s 15rem,
++     so the drop is 7.5rem × sin(1.5°) = 3.14 px, plus 0.5 px of air. The 0.1rem it replaces held
++     no tilt: a +1.21° re-roll on the union put Clear's note 0.52 px into the verbs (24 px²), and
++     the band's edge puts the widest note 1.54 px into them (71 px²). */
++  margin-top: calc(7.5rem * sin(1.5deg) + 0.5px);
+   margin-bottom: 0;
+   /* the bar is the note's berth, so the bar's width is its cap: a 15rem note centred in a
+      218 px bar hung 8–14 px past both of the card's edges (pass 8, INTAKE row 11's root) */
+diff --git a/web/frontend/src/games/shared/GameShell.vue b/web/frontend/src/games/shared/GameShell.vue
+index e0b7fc48..eb50ff6f 100644
+--- a/web/frontend/src/games/shared/GameShell.vue
++++ b/web/frontend/src/games/shared/GameShell.vue
+@@ -172,7 +172,7 @@ function onCandidatePeekEnd() {
+       <GameControlPanel
+         :sections="sections"
+         :loading="model.loading.value"
+-        :is-dirty="model.isDirty.value"
++        :is-dirty="model.inkSinceDeal.value"
+         :pencil-mode="model.pencilMode.value"
+         :error-check-mode="model.errorCheckMode.value"
+         :candidates-pinned="model.candidatesPinned.value"
+diff --git a/web/frontend/src/games/shared/defineGame.ts b/web/frontend/src/games/shared/defineGame.ts
+index 8c53da66..b54cf188 100644
+--- a/web/frontend/src/games/shared/defineGame.ts
++++ b/web/frontend/src/games/shared/defineGame.ts
+@@ -72,6 +72,9 @@ export interface GameModel {
+   errorCode: ReadRef<string>;
+   linkError: ReadRef<boolean>;
+   isDirty: ReadRef<boolean>;
++  /** player ink since the deal: the destructive ask's signal (T9-M12; `isDirty` stays the
++   *  gallery guard's undo-depth reading). */
++  inkSinceDeal: ReadRef<boolean>;
+   hintReasoning: ReadRef<HintResult | null>;
+   gradeTally: ReadRef<TallyDescriptor>;
+   pencilMarks: ReadRef<Record<string, number[]>>;
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+index 63e88ee4..1d68d5c3 100644
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -300,6 +300,7 @@ export function useGameState<
+     canUndo,
+     canRedo,
+     undoDepth,
++    inkSinceDeal,
+   } = useUndoHistory<BoardBlob, MarksBlob>({
+     // T6.2 — a replay is a write. Undo/redo pops the log rather than pushing it, so `onEntry`
+     // below never fires for a replay; each effect announces its own board change or the room
+@@ -1227,6 +1228,7 @@ export function useGameState<
+     canRedo,
+     undoDepth,
+     isDirty,
++    inkSinceDeal,
+     hintCell,
+     hintReasoning,
+     hardestTechnique,
+diff --git a/web/frontend/src/games/shared/useUndoHistory.test.ts b/web/frontend/src/games/shared/useUndoHistory.test.ts
+index ba38fa03..7d673f35 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.test.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.test.ts
+@@ -395,6 +395,71 @@ describe("canUndo / canRedo / undoDepth — the signals a dirty gate reads", ()
+   });
+ });
+ 
++// PASS 9 · THE ASK'S DIRTY SIGNAL IS PLAYER INK SINCE THE DEAL (CHAIR-RULINGS p9 §8; T9-M12).
++// Born RED: the panel read `undoDepth > 0`, which is 1 after a deal with no ink (row D1), so a
++// fine pointer was asked "fill in the whole board?" on a board nobody had written on.
++describe("inkSinceDeal — the destructive ask's signal", () => {
++  const deal = (h: ReturnType<typeof harness>, tag: string) =>
++    h.recordBoard(board("prev"), board(tag), emptyMarks(), emptyMarks(), "deal");
++  it("D1 a deal alone is not ink, though it is undo depth", () => {
++    const h = harness();
++    deal(h, "b1");
++    expect(h.undoDepth.value).toBe(1);
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D2 one player digit after the deal is ink; undoing it is not", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    expect(h.inkSinceDeal.value).toBe(true);
++    h.undo();
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.redo();
++    expect(h.inkSinceDeal.value).toBe(true);
++  });
++  it("D3 a mark, a fill sweep and hint ink each count as ink", () => {
++    for (const write of [
++      (h: ReturnType<typeof harness>) =>
++        h.recordMark(2, { corner: { prev: [], next: [3] } }),
++      (h: ReturnType<typeof harness>) => h.recordBatch([{ pos: 1, prev: 0, next: 5 }]),
++      (h: ReturnType<typeof harness>) => h.recordHintInk(3, 0, 9),
++    ]) {
++      const h = harness();
++      deal(h, "b1");
++      write(h);
++      expect(h.inkSinceDeal.value).toBe(true);
++    }
++  });
++  it("D4 a new deal ends the epoch; a clear or a solve does not", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    h.recordBoard(board("b1"), board("blank"), emptyMarks(), emptyMarks(), "clear");
++    expect(h.inkSinceDeal.value).toBe(true);
++    h.recordBoard(board("blank"), board("solved"), emptyMarks(), emptyMarks(), "solve");
++    expect(h.inkSinceDeal.value).toBe(true);
++    deal(h, "b2");
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.recordBoard(board("b2"), board("b3"), emptyMarks(), emptyMarks(), "resize");
++    h.recordEdit(0, 0, 1);
++    h.undo();
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D6 a resize is a deal: ink before it is not ink after it", () => {
++    const h = harness();
++    deal(h, "b1");
++    h.recordEdit(4, 0, 7);
++    h.recordBoard(board("b1"), board("b4x4"), emptyMarks(), emptyMarks(), "resize");
++    expect(h.inkSinceDeal.value).toBe(false);
++  });
++  it("D5 a log with no deal in it (the mount deal is off-log) reads its own writes", () => {
++    const h = harness();
++    expect(h.inkSinceDeal.value).toBe(false);
++    h.recordEdit(0, 0, 1);
++    expect(h.inkSinceDeal.value).toBe(true);
++  });
++});
++
+ // ── T6 mark 13 — the log as the PER-PLAYER ledger ────────────────────────────────
+ 
+ describe("onEntry — the one seam the local op stream leaves by", () => {
+diff --git a/web/frontend/src/games/shared/useUndoHistory.ts b/web/frontend/src/games/shared/useUndoHistory.ts
+index 11a7c7b3..997946c9 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.ts
+@@ -320,6 +320,20 @@ export function useUndoHistory<B, M>(effects: UndoEffects<B, M>) {
+     canRedo: computed(() => undoIndex.value < undoStack.value.length),
+     /** Depth of the undo portion — the honest signal an `isDirty` gate reads (E9 r2 §6). */
+     undoDepth: computed(() => undoIndex.value),
++    /** PLAYER INK SINCE THE DEAL — what the destructive ask reads (T9-M12's precondition: "input
++     *  a value … then attempt a destructive action"). `undoDepth > 0` counts the deal itself, so a
++     *  fine pointer was asked "fill in the whole board?" on a board nobody had written on. Walk
++     *  the undo portion back from its top: any value, fill or mark entry before the last deal
++     *  (or resize) is ink; a clear or a solve between them does not end the walk, since neither
++     *  is a deal. An undone write sits above `undoIndex` and is not counted. */
++    inkSinceDeal: computed(() => {
++      for (let i = undoIndex.value - 1; i >= 0; i--) {
++        const e = undoStack.value[i];
++        if (e.kind !== "board") return true;
++        if (e.op === "deal" || e.op === "resize") return false;
++      }
++      return false;
++    }),
+     /** Test/measurement handles — the pool's live blob count + total entry count. */
+     _poolSize: () => pool.size,
+     _historyLength: () => undoStack.value.length,

@@ -1,0 +1,75 @@
+load open { 48.71 55.55 59.46 } 16:49:56
+
+Running 2 tests using 2 workers
+
+[foot-bottom rail 1440×900 fine clean] {"why":[],"ink":{"count":5574,"top":686.75,"bottom":764.75,"left":933.75,"right":1234.25,"lowest":765,"dpr":2},"g":{"vw":1440,"vh":900,"foot":{"top":693.02,"bottom":814.17,"left":919,"right":1249},"bar":{"top":693.02,"bottom":758.17,"left":939,"right":1229},"case":{"top":174.17,"bottom":814.17,"left":919,"right":1249},"padB":56,"verbsBottom":755.78}}
+[foot-bottom rail 1440×900 fine clean] {"why":[],"ink":{"count":5574,"top":686.75,"bottom":764.75,"left":933.75,"right":1234.25,"lowest":765,"dpr":2},"g":{"vw":1440,"vh":900,"foot":{"top":693.02,"bottom":814.17,"left":919,"right":1249},"bar":{"top":693.02,"bottom":758.17,"left":939,"right":1229},"case":{"top":174.17,"bottom":814.17,"left":919,"right":1249},"padB":56,"verbsBottom":755.78}}
+[foot-bottom rail 1440×900 fine S10] {"why":["no frame ink in view"],"ink":{"count":0,"top":null,"bottom":null,"left":null,"right":null,"lowest":null,"dpr":2}}
+[foot-bottom rail 1440×900 fine S10] {"why":["no frame ink in view"],"ink":{"count":0,"top":null,"bottom":null,"left":null,"right":null,"lowest":null,"dpr":2}}
+[foot-bottom rail 1440×900 fine S2] {"why":["the frame's top ink 693.25 is not above the bar's top 693.02"],"ink":{"count":3275,"top":693.25,"bottom":764.75,"left":933.75,"right":1234.25,"lowest":765,"dpr":2}}
+[foot-bottom rail 1440×900 fine S2] {"why":["the frame's top ink 693.25 is not above the bar's top 693.02"],"ink":{"count":3275,"top":693.25,"bottom":764.75,"left":933.75,"right":1234.25,"lowest":765,"dpr":2}}
+[foot-bottom rail 1440×900 fine S14] {"why":["the bar 804.17 is off its seat 758.17"],"ink":{"count":5574,"top":732.75,"bottom":810.75,"left":933.75,"right":1234.25,"lowest":811,"dpr":2}}
+[foot-bottom rail 1440×900 fine S14] {"why":["the bar 804.17 is off its seat 758.17"],"ink":{"count":5574,"top":732.75,"bottom":810.75,"left":933.75,"right":1234.25,"lowest":811,"dpr":2}}
+[foot-bottom rail 1440×900 fine F1] {"why":["the frame's lowest ink 899.75 does not reach under the bar's bottom 943.81","the verbs end at 941.42 of 900"],"ink":{"count":2616,"top":872.75,"bottom":899.75,"left":933.75,"right":1233.75,"lowest":900,"dpr":2}}
+[foot-bottom rail 1440×900 fine F1] {"why":["the frame's lowest ink 899.75 does not reach under the bar's bottom 943.81","the verbs end at 941.42 of 900","the verbs end at 941.42, below their frame's ink 899.75"],"ink":{"count":2616,"top":872.75,"bottom":899.75,"left":933.75,"right":1233.75,"lowest":900,"dpr":2}}
+[foot-bottom rail 1440×900 fine C4] {"why":["the painted bottom 656.25 is past the foot 295.33","the foot ends at 295.33, above the case's bottom 814.17: the tape is not the case's last box"],"ink":{"count":5705,"top":167.75,"bottom":656.25,"left":933.75,"right":1234.25,"lowest":656.5,"dpr":2}}
+[foot-bottom rail 1440×900 fine C4] {"why":["the painted bottom 656.25 is past the foot 295.33"],"ink":{"count":5705,"top":167.75,"bottom":656.25,"left":933.75,"right":1234.25,"lowest":656.5,"dpr":2}}
+[foot-bottom rail 1440×900 fine C14] {"why":[],"ink":{"count":5058,"top":80.75,"bottom":158.75,"left":933.75,"right":1234.25,"lowest":159,"dpr":2}}
+[foot-bottom rail 1440×900 fine C14] {"why":["the foot ends at 207.72, above the case's bottom 944.17: the tape is not the case's last box"],"ink":{"count":5058,"top":80.75,"bottom":158.75,"left":933.75,"right":1234.25,"lowest":159,"dpr":2}}
+  ✘  2 [chromium] › e2e/zgsab9a.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) (4.1s)
+[foot-bottom rail 1440×900 fine C12] {"why":[],"ink":{"count":4710,"top":742.75,"bottom":764.25,"left":934.25,"right":1233.75,"lowest":764.5,"dpr":2}}
+  ✘  1 [chromium] › e2e/zgsab9b.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) (4.6s)
+
+
+  1) [chromium] › e2e/zgsab9a.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) 
+
+    Error: plant C14 (.drawer-case { padding-bottom: 100vh !important }) must red the foot's painted bottom
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      906 |         console.log(`[foot-bottom ${cell.name} ${name}] ${JSON.stringify({ why: r.why, ink: r.ink })}`);
+      907 |         test.info().annotations.push({ type: `plant ${name}`, description: r.holds ? "GREEN" : `RED · ${r.why.join(" · ")}` });
+    > 908 |         expect(r.holds, `plant ${name} (${css}) must red the foot's painted bottom`).toBe(false);
+          |                                                                                      ^
+      909 |         await plant.evaluate((n) => (n as Element).remove());
+      910 |         await footSettled(page);
+      911 |       }
+        at <critic-scratch>/wave/web/frontend/e2e/zgsab9a.spec.ts:908:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/sab/zgsab9a-the-foot-s-painted-142b5--in-run-rail-1440×900-fine--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/sab/zgsab9a-the-foot-s-painted-142b5--in-run-rail-1440×900-fine--chromium/error-context.md
+
+  2) [chromium] › e2e/zgsab9b.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) 
+
+    Error: plant C12 (.action-bar { height: 0 !important }) must red the foot's painted bottom
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      906 |         console.log(`[foot-bottom ${cell.name} ${name}] ${JSON.stringify({ why: r.why, ink: r.ink })}`);
+      907 |         test.info().annotations.push({ type: `plant ${name}`, description: r.holds ? "GREEN" : `RED · ${r.why.join(" · ")}` });
+    > 908 |         expect(r.holds, `plant ${name} (${css}) must red the foot's painted bottom`).toBe(false);
+          |                                                                                      ^
+      909 |         await plant.evaluate((n) => (n as Element).remove());
+      910 |         await footSettled(page);
+      911 |       }
+        at <critic-scratch>/wave/web/frontend/e2e/zgsab9b.spec.ts:908:86
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/sab/zgsab9b-the-foot-s-painted-83d82--in-run-rail-1440×900-fine--chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/sab/zgsab9b-the-foot-s-painted-83d82--in-run-rail-1440×900-fine--chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/zgsab9a.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) 
+    [chromium] › e2e/zgsab9b.spec.ts:892:5 › the foot's painted bottom @ rail 1440×900 fine › §2.5 (iii) — the frame painted, spanning the bar, its bottom inside the foot and the viewport, the tape the case's last box, the verbs inside their frame; S10 · S2 · S14 · F1 · C4 · C14 · C12 · T6 red in-run (rail 1440×900 fine) 
+load close { 47.30 55.02 59.23 } 16:50:04

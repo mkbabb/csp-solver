@@ -1,0 +1,91 @@
+load-ok 66.31 < 120 14:17:38
+
+Running 3 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/player-mark.spec.ts:628:1 › the row budget adds rows only where they grow nothing over the board, on both axes (7.2s)
+  ✘  2 [chromium] › e2e/player-mark.spec.ts:647:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides (30.4s)
+  ✘  3 [chromium] › e2e/player-mark.spec.ts:677:1 › the desk draws one row over two cells at rest, whatever the room's age (8.9s)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:628:1 › the row budget adds rows only where they grow nothing over the board, on both axes 
+
+    Error: 700x800 coarse 9x9
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "lapped": 4,
+    +   "lapped": 12,
+        "rows": 1,
+      }
+
+      635 |     await crowd(page, 6, `key-${w}x${h}-${size}`);
+      636 |     const r = await drawSheet(page);
+    > 637 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'} ${size * size}x${size * size}`).toMatchObject({ rows, lapped });
+          |                                                                                        ^
+      638 |     await ctx.close();
+      639 |   }
+      640 | });
+        at <lane-scratch>/placemix/web/frontend/e2e/player-mark.spec.ts:637:88
+
+    Error Context: ../../../pw-out-place/player-mark-the-row-budget-f422d-over-the-board-on-both-axes-chromium/error-context.md
+
+  2) [chromium] › e2e/player-mark.spec.ts:647:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides 
+
+    Error: [{"w":1024,"left":58.39,"rows":1,"lapped":6},{"w":1028,"left":60.39,"rows":1,"lapped":6},{"w":1032,"left":62.39,"rows":1,"lapped":6},{"w":1036,"left":64.39,"rows":1,"lapped":6},{"w":1040,"left":66.39,"rows":1,"lapped":6},{"w":1044,"left":68.39,"rows":1,"lapped":6},{"w":1048,"left":70.39,"rows":1,"lapped":6},{"w":1052,"left":72.39,"rows":1,"lapped":6},{"w":1056,"left":74.39,"rows":1,"lapped":6}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "lapped": 3,
+    +   "lapped": 6,
+        "rows": 1,
+      }
+
+      663 |   for (let i = 1; i < seen.length; i++) expect(seen[i].left, log).toBeGreaterThan(seen[i - 1].left);
+      664 |   // ...and the pose did not
+    > 665 |   for (const s of seen) expect({ rows: s.rows, lapped: s.lapped }, log).toEqual({ rows: 1, lapped: 3 });
+          |                                                                         ^
+      666 | });
+      667 |
+      668 | /**
+        at <lane-scratch>/placemix/web/frontend/e2e/player-mark.spec.ts:665:73
+
+    Error Context: ../../../pw-out-place/player-mark-the-row-budget-c5a2f-arse-while-the-board-slides-chromium/error-context.md
+
+  3) [chromium] › e2e/player-mark.spec.ts:677:1 › the desk draws one row over two cells at rest, whatever the room's age 
+
+    Error: [{"rows":1,"lapped":4,"top":124.453125},{"rows":1,"lapped":4,"top":124.453125},{"rows":1,"lapped":4,"top":124.453125}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+    -   "lapped": 2,
+    +   "lapped": 4,
+        "rows": 1,
+      }
+
+      694 |   }
+      695 |   for (const r of reads) {
+    > 696 |     expect({ rows: r.rows, lapped: r.lapped }, JSON.stringify(reads)).toEqual({ rows: 1, lapped: 2 });
+          |                                                                       ^
+      697 |     expect(Math.abs(r.top - 124.45), JSON.stringify(reads)).toBeLessThanOrEqual(0.5);
+      698 |   }
+      699 | });
+        at <lane-scratch>/placemix/web/frontend/e2e/player-mark.spec.ts:696:71
+
+    Error Context: ../../../pw-out-place/player-mark-the-desk-draws-5b907-est-whatever-the-room-s-age-chromium/error-context.md
+
+  3 failed
+    [chromium] › e2e/player-mark.spec.ts:628:1 › the row budget adds rows only where they grow nothing over the board, on both axes 
+    [chromium] › e2e/player-mark.spec.ts:647:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides 
+    [chromium] › e2e/player-mark.spec.ts:677:1 › the desk draws one row over two cells at rest, whatever the room's age 

@@ -1,0 +1,221 @@
+diff --git a/web/frontend/scripts/shape-census.d.mts b/web/frontend/scripts/shape-census.d.mts
+index 68d9550c..41be9f5d 100644
+--- a/web/frontend/scripts/shape-census.d.mts
++++ b/web/frontend/scripts/shape-census.d.mts
+@@ -244,6 +244,8 @@ export function clockReads(
+   how: "math" | "bracket" | "operator" | "read";
+   /** the arithmetic operator beside the read, or null */
+   op: string | null;
++  /** PROPOSED (LADDER pass 9, `clock-context`): the value-choosing context the read feeds, or null for a bare read */
++  ctx?: "logical" | "ternary" | "comma" | "indexed-literal" | "call-apply" | null;
+ }[];
+ export function urlRefs(
+   text: string,
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 647faf12..52ecb0f7 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -134,6 +134,10 @@ export const CLAUSES = {
+     "LADDER (pass 8) · a script write's value keeps its own parentheses (a cubic-bezier)",
+   "clock-alias":
+     "LADDER (pass 8) · a bare alias of a clock (`const W = MOTION.rungs.whisper`; `W >> 2`) is a clock read",
++  "clock-context":
++    "LADDER (pass 9, PROPOSED) · a clock read in a value-choosing context (`&&`/`||`/`??`, ternary, comma, indexed literal, `.call/.apply`) carries `ctx`",
++  "obj-bracket":
++    'LADDER (pass 9, PROPOSED) · a bracket write of a literal key on a style object (`vars["animation-duration"] = …`) is a write',
+   pcss: "ERASE · .pcss/.postcss sheets walked",
+   "register-split": "ERASE · a split-name registerProperty is resolved or UNRESOLVED",
+   "register-any":
+@@ -1508,6 +1512,19 @@ export function scriptWrites(text, prop, baseLine = 1) {
+   ))
+     if (kebab(m[2]) === prop)
+       out.push({ kind: "script-write", prop, value: carry(m[3]), line: L(m.index) });
++  // LADDER (pass 9, PROPOSED, K1): a literal-keyed bracket write on ANY object (a `:style` object
++  // built in script: `vars["animation-duration"] = "50ms"`) — `.style[…]` is the arm above
++  if (on("obj-bracket"))
++    for (const m of s.matchAll(
++      /([\w$)\]]+)\s*\[\s*(['"`])([^'"`$]+)\2\s*\]\s*=(?!=)\s*([^;\n]+)/g,
++    ))
++      if (!/(?:^|\.)style$/.test(m[1]) && kebab(m[3]) === prop)
++        out.push({
++          kind: "script-object-bracket",
++          prop,
++          value: carry(m[4]),
++          line: L(m.index),
++        });
+   // the chair p9 (typed-om; WALK's fork-parity, the shape law's fifth pass): Typed OM writes —
+   // `el.attributeStyleMap.set("--x", v)`, `.append(…)` — a literal name is a site, a computed one `?`
+   if (on("typed-om"))
+@@ -2616,6 +2633,107 @@ export function propertyRegistrations(fe, { files, read, exists } = {}) {
+   return out;
+ }
+ 
++// LADDER (pass 9, PROPOSED · clock-context): the VALUE a read feeds. A read that keeps its count and
++// lets the expression return another value (`leave && whisper`, `[leave, whisper][1]`, `c ? whisper :
++// leave`, `(leave, whisper)`, `Math.min.call(null, leave, 40)`) is the consumer's value, not its read
++// (pass-8 critique §3.4, K11 K16 K17 K12 K14). Returns the context's name, or null for a bare read.
++const OPEN = { "(": ")", "[": "]", "{": "}" };
++const CLOSE = { ")": "(", "]": "[", "}": "{" };
++function matchClose(s, i) {
++  let d = 0;
++  for (let j = i; j < s.length; j++) {
++    if (OPEN[s[j]]) d++;
++    else if (CLOSE[s[j]] && --d === 0) return j;
++  }
++  return s.length;
++}
++function depth0(span, re) {
++  let d = 0;
++  for (let i = 0; i < span.length; i++) {
++    const c = span[i];
++    if (OPEN[c]) d++;
++    else if (CLOSE[c]) d--;
++    else if (d === 0 && re.test(span.slice(i))) return true;
++  }
++  return false;
++}
++function valueContext(s, a, b) {
++  let d = 0;
++  let left = -1;
++  let opener = -1;
++  for (let i = a - 1; i >= 0; i--) {
++    const c = s[i];
++    if (CLOSE[c]) d++;
++    else if (OPEN[c]) {
++      if (d === 0) {
++        opener = i;
++        if (left < 0) left = i + 1;
++        break;
++      }
++      d--;
++    } else if (d === 0 && left < 0) {
++      if (c === "," || c === ";") left = i + 1;
++      else if (
++        c === "=" &&
++        !/[=!<>]/.test(s[i - 1] ?? "") &&
++        s[i + 1] !== "=" &&
++        s[i + 1] !== ">"
++      )
++        left = i + 1;
++      else if (
++        c === "\n" &&
++        !/(&&|\|\||\?\?|[?:]|[-+*/%&|^~!<>])\s*$/.test(s.slice(Math.max(0, i - 4), i))
++      )
++        left = i + 1;
++    }
++  }
++  if (left < 0) left = 0;
++  let right = s.length;
++  d = 0;
++  for (let j = b; j < s.length; j++) {
++    const c = s[j];
++    if (OPEN[c]) d++;
++    else if (CLOSE[c]) {
++      if (d === 0) {
++        right = j;
++        break;
++      }
++      d--;
++    } else if (d === 0 && (c === "," || c === ";")) {
++      right = j;
++      break;
++    } else if (
++      d === 0 &&
++      c === "\n" &&
++      !/^\s*(&&|\|\||\?\?|[?:.])/.test(s.slice(j + 1, j + 12))
++    ) {
++      right = j;
++      break;
++    }
++  }
++  const span = s.slice(left, right);
++  if (depth0(span, /^(&&|\|\||\?\?)/)) return "logical";
++  if (depth0(span, /^\?(?![.?])/)) return "ternary";
++  // a read in a ternary's arm: `c ? x : READ` — a `:` at depth 0 to the left with its `?` before it
++  if (depth0(span, /^:/) && /\?(?![.?])/.test(span)) return "ternary";
++  if (opener >= 0) {
++    const pre = s.slice(Math.max(0, opener - 40), opener);
++    if (s[opener] === "(") {
++      if (/\.\s*(?:call|apply)\s*$|\bReflect\s*\.\s*apply\s*$/.test(pre))
++        return "call-apply";
++      if (!/[\w$)\]]\s*$/.test(pre)) {
++        const inner = s.slice(opener + 1, matchClose(s, opener));
++        if (depth0(inner, /^,/)) return "comma";
++      }
++    } else if (s[opener] === "[" && !/[\w$)\]]\s*$/.test(pre)) {
++      const end = matchClose(s, opener);
++      if (/^\s*(?:\[|\.|\?\.)/.test(s.slice(end + 1, end + 8)))
++        return "indexed-literal";
++    }
++  }
++  return null;
++}
++
+ // ---------------------------------------------------------------------------- clock reads (LADDER)
+ /** Every read of the motion clock `root` (`MOTION.rungs.whisper`, `MOTION["rungs"].x`) with `arith`
+  *  true when it is ARITHMETIC: an operand of `* / % + - >> << >>> | & ^ ~`, an argument of a Math
+@@ -2654,6 +2772,9 @@ export function clockReads(text, root = "MOTION", { bare = false } = {}) {
+         : /[*/%-]\s*$/.test(before) || /^\s*[*/%-]/.test(after),
+       how: inMath ? "math" : bracket ? "bracket" : op ? "operator" : "read",
+       op: (opB ?? opA)?.[1] ?? null,
++      ...(on("clock-context")
++        ? { ctx: valueContext(s, m.index, m.index + m[0].length) }
++        : {}),
+     });
+   }
+   return out;
+@@ -5128,6 +5249,54 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "clock-context",
++    "LADDER",
++    "K11 `&&`, K16 an indexed literal, K17 a ternary, K12 a comma, K14 `Math.min.call` carry `ctx`; a bare read, a call argument, an object value and a sum carry none (pass 9, PROPOSED)",
++    (L) => {
++      const c = (t) => L.clockReads(t).map((r) => r.ctx ?? null);
++      const all = (t, v) => c(t).length > 0 && c(t).every((x) => x === v);
++      return (
++        all("  }, MOTION.rungs.leave && MOTION.rungs.whisper);", "logical") &&
++        all(
++          "  }, [MOTION.rungs.leave, MOTION.rungs.whisper][1]);",
++          "indexed-literal",
++        ) &&
++        all(
++          "  }, MOTION.rungs.leave ? MOTION.rungs.whisper : MOTION.rungs.leave);",
++          "ternary",
++        ) &&
++        all("  }, (MOTION.rungs.leave, MOTION.rungs.whisper));", "comma") &&
++        all("  }, Math.min.call(null, MOTION.rungs.leave, 40));", "call-apply") &&
++        all("const d = a ?? MOTION.rungs.leave;", "logical") &&
++        all("  }, MOTION.rungs.leave);", null) &&
++        all("animate(el, { duration: MOTION.rungs.leave, easing: e });", null) &&
++        all("const t = MOTION.rungs.leave + MOTION.rungs.whisper;", null) &&
++        all("const o = a?.b + MOTION.rungs.leave;", null) &&
++        all("foo(MOTION.rungs.leave, 3);", null)
++      );
++    },
++  ],
++  [
++    "obj-bracket",
++    "LADDER",
++    "K1: a literal-keyed bracket write on a script style object is a write; `.style[…]` stays one site, a computed key none (pass 9, PROPOSED)",
++    (L) => {
++      const w = (t) => L.scriptWrites(t, "animation-duration").map((x) => x.kind);
++      const k1 = w(
++        'const vars = {};\nif (armed) vars["animation-duration"] = "50ms";\n',
++      );
++      const st = w('el.style["animation-duration"] = "50ms";\n');
++      return (
++        k1.length === 1 &&
++        k1[0] === "script-object-bracket" &&
++        st.length === 1 &&
++        st[0] === "script-write" &&
++        w('vars["animation-delay"] = "50ms";\n').length === 0 &&
++        w('vars[k] = "50ms";\n').length === 0
++      );
++    },
++  ],
+   // --- ERASE
+   [
+     "pcss",

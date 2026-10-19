@@ -1,0 +1,58 @@
+LOAD start 14:58  up 1 day, 26 mins, 2 users, load averages: 56.09 51.01 51.12
+load-ok 56.09 < 120 14:58:34
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board
+  1) [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+
+    Error: expect(received).toMatch(expected)
+
+    Expected pattern: /^1 (none|matrix\(1, 0, 0, 1, 0, 0\))$/
+    Received string:  "0.985586 matrix(0.998559, 0, 0, 0.998559, 0, 0.11515)"
+
+    Call Log:
+    - Test timeout of 30000ms exceeded
+
+      141 |       }),
+      142 |     )
+    > 143 |     .toMatch(/^1 (none|matrix\(1, 0, 0, 1, 0, 0\))$/);
+          |      ^
+      144 |   await stable(() => lobby(page).evaluate((e) => JSON.stringify(e.getBoundingClientRect())));
+      145 | };
+      146 | const inCell = (page: Page) =>
+        at openSheet (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:143:6)
+        at drawSheet (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:497:3)
+        at cell (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:565:15)
+        at <critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:587:10
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-4.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #5: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-5.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #6: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/test-failed-6.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+LOAD end 14:59  up 1 day, 26 mins, 2 users, load averages: 53.52 50.90 51.08

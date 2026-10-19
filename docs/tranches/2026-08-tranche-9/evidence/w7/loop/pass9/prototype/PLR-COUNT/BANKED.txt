@@ -1,0 +1,30 @@
+PLR-COUNT · pass 9 · attempt 4 · banked 2026-10-18 17:17 (re-verified 17:29), never committed
+
+worktree   wf_f72f3b5a-83a-52 (the lane's)   HEAD 74a2b5d9 (pass-9 base)
+cut        temporary index (GIT_INDEX_FILE) + add web/frontend + write-tree; `git diff --binary 74a2b5d9 <tree>`; no commit, no stash
+tree       3d5f368ae81a8e10e22ea4c8d17d4757e8ebf587   (frontend subtree d4a6103a)
+
+pass9.diff                    sha1 f78f9cf1cfb39b5875660eebc2cbc76adbec162a   725,892 B
+                              40 files changed, 14552 insertions(+), 514 deletions(-)   product paths only (web/frontend/**)
+pass9.delta.on-WAVE.diff      sha1 de566d096f1159636e05ccf9f6f137136188132c   290,758 B
+                              28 files changed, 4822 insertions(+), 453 deletions(-)   no home path (homes.diff 1f70cfda stripped)
+                              base = acde977b (74a2b5d9 + WAVE.diff + homes.on-WAVE.diff) + PLR-SELF's pass-9 on-WAVE delta
+                              result frontend tree 2237e3d2
+
+grep (both diffs)             the law's scratch / tmp / dot-dir strings: 0 hits · non-product paths: 0
+
+git apply --check (GIT_CEILING_DIRECTORIES set; every target a `git archive` scratch tree, never main)
+  pass9.diff on 74a2b5d9                     exit 0
+  pass9.diff on s10 integration              exit 1   25 errors, every one "already exists" (the homes)
+  pass9.diff on s13-s7-s3 integration        exit 1   32 errors, "already exists" (the homes)
+  pass9.diff on bare WAVE acb9c08e           exit 1   37 errors, "already exists" (the homes)
+  pass9.diff on acde977b                     exit 1   39 errors, "already exists" (the homes)
+    (expected: §11 sits in no section integration, and the homes are already on every integrated tree; the on-WAVE
+     delta is the route there)
+  delta on acde977b (+ SELF's delta)         exit 0
+  delta on bare WAVE acb9c08e (+ SELF's)     exit 0
+
+applied for real (scratch copies)
+  74a2b5d9 + pass9.diff          -> frontend d4a6103a  (= the tree's)
+  acde977b + SELF + delta        -> frontend 2237e3d2  (= the union r5w/w2 every union gate read)
+  archive frontend trees         74a2b5d9 633f6b43 · acb9c08e 8d208243 · acde977b 60c111e9

@@ -1,0 +1,394 @@
+=== pp-self-chromium-1.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 278 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 18.3/tlΔ 18.3 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 18.3/tlΔ 18.3 off 0 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 265 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 16.9/tlΔ 16.9 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 16.9/tlΔ 16.9 off 
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 157.3/tlΔ 7.3 off 150 ; k3 ct 164.2/tlΔ 14.2 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.4/tlΔ 5.4 off 0 ; k3 ct 164.2/tlΔ 14.2 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k1 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8.4/tlΔ 8.4 off 0 ; k3 ct 16.8/tlΔ 16.8 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.3/tlΔ 7.3 off 16 ; k3 ct 32.3/tlΔ 16.3 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 287.6 kPaint 2 | POST (keyed) F1 k2 ct 7.2 c 43.2 dw 0 RED | stale 1 | CI k2 ct 16.3/tlΔ 9.1 off 7.2 ; k3 ct 22.3/tlΔ 15.1 off 7.2 RED | dropped 2 → RED | LEGACY (un-keyed) F1 k0 ct -7.7 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 c
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 279.5 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 14.6/tlΔ 14.6 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 14.6/tlΔ 14.6 off 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 267.6 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 8.7/tlΔ 8.7 off 0 ; k3 ct 16.2/tlΔ 16.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.7/tlΔ 8.7 off 0 ; k
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 159.6/tlΔ 9.6 off 150 ; k3 ct 167.4/tlΔ 17.4 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 164.2/tlΔ 14.2 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 4.7/tlΔ 4.7 off 0 ; k3 ct 12.3/tlΔ 12.3 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 26.1/tlΔ 10.1 off 16 ; k3 ct 33.2/tlΔ 17.2 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 270.4 kPaint 1 | POST (keyed) F1 k1 ct 7.3 c 43.8 dw 0 RED | stale 0 | CI k2 ct 17.3/tlΔ 10 off 7.3 ; k3 ct 25/tlΔ 17.7 off 7.3 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.3/tlΔ 7.3 off 0 ; k3 ct 17
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 272.6 kPaint 0 (rAF-time key 1) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.3/tlΔ 6.3 off 0 ; k3 ct 13.7/tlΔ 13.7 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.3/tlΔ 6.3 off 0 ; k3 ct 13.7/tlΔ 13.7 off 
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 277.2 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 13.8/tlΔ 13.8 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 13.8/tlΔ 13.8 of
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157.7/tlΔ 7.7 off 150 ; k3 ct 165.7/tlΔ 15.7 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 165.8/tlΔ 15.8 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 6.5/tlΔ 6.5 off 0 ; k3 ct 14.2/tlΔ 14.2 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24.2/tlΔ 8.2 off 16 ; k3 ct 31.1/tlΔ 15.1 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 276.9 kPaint 1 | POST (keyed) F1 k1 ct 9.8 c 58.8 dw 0 RED | stale 0 | CI k2 ct 17.6/tlΔ 7.8 off 9.8 ; k3 ct 22.7/tlΔ 12.9 off 9.8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.8/tlΔ 9.8 off 0 ; k3 ct
+chromium RECORDER clock photos/s 95 rAF/s 132 clock 95 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 83 frames over 627.8 ms (subject max interval 10.3 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 131 frames over 1001.7 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/95 (Δ median 0.0039) → RED EMPTY ← the legacy threshold | eps 0.001: changed 96/97 maxHeld 17.5 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 120.9 ms plant seen photo NO → RED
+=== pp-self-chromium-2.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 273.3 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.4/tlΔ 7.4 off 0 ; k3 ct 15.6/tlΔ 15.6 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.4/tlΔ 7.4 off 0 ; k3 ct 15.6/tlΔ 15.6 off 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 268.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct 15/tlΔ 15 off 0 GREE
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 1 | CI k2 ct 156.8/tlΔ 6.8 off 150 ; k3 ct 166.6/tlΔ 16.6 off 150 RED | dropped 1 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.2/tlΔ 7.2 off 0 ; k3 ct 164.5/tlΔ 14.5 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 13.9/tlΔ 13.9 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 22.3/tlΔ 6.3 off 16 ; k3 ct 32.1/tlΔ 16.1 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 268.8 kPaint 1 | POST (keyed) F1 k1 ct 9.2 c 55.2 dw 0 RED | stale 0 | CI k2 ct 15.8/tlΔ 6.6 off 9.2 ; k3 ct 23/tlΔ 13.8 off 9.2 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 264.8 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.1/tlΔ 9.1 off 0 ; k3 ct 14.7/tlΔ 14.7 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.1/tlΔ 9.1 off 0 ; k3 ct 14.7/tlΔ 14.7 off 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 269.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.6/tlΔ 9.6 off 0 ; k3 ct 16.4/tlΔ 16.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.6/tlΔ 9.6 off 0 ; k3 ct 16.4/tlΔ 16.4 of
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157.3/tlΔ 7.3 off 150 ; k3 ct 162.9/tlΔ 12.9 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.5/tlΔ 9.5 off 0 ; k3 ct 166.1/tlΔ 16.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k1 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 14.4/tlΔ 14.4 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 25.7/tlΔ 9.7 off 16 ; k3 ct 32.9/tlΔ 16.9 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 269.6 kPaint 1 | POST (keyed) F1 k1 ct 8.4 c 50.4 dw 0 RED | stale 0 | CI k2 ct 15.5/tlΔ 7.1 off 8.4 ; k3 ct 25.6/tlΔ 17.2 off 8.4 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.4/tlΔ 8.4 off 0 ; k3 ct
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 257.9 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 15.6/tlΔ 15.6 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 262.7 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10.1/tlΔ 10.1 off 0 ; k3 ct 15.1/tlΔ 15.1 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10.1/tlΔ 10.1 off 0 ; k3 ct 15.1/tlΔ 15.
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 158.3/tlΔ 8.3 off 150 ; k3 ct 164.4/tlΔ 14.4 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.3/tlΔ 7.3 off 0 ; k3 ct 164.2/tlΔ 14.2 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8.5/tlΔ 8.5 off 0 ; k3 ct 14.1/tlΔ 14.1 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.6/tlΔ 7.6 off 16 ; k3 ct 30.9/tlΔ 14.9 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 272.6 kPaint 1 | POST (keyed) F1 k1 ct 7.6 c 45.6 dw 0 RED | stale 0 | CI k2 ct 15.3/tlΔ 7.7 off 7.6 ; k3 ct 21.9/tlΔ 14.3 off 7.6 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct
+chromium RECORDER clock photos/s 96 rAF/s 130 clock 96 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 84 frames over 633 ms (subject max interval 10.3 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 134 frames over 1003.5 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/96 (Δ median 0.0037) → RED EMPTY ← the legacy threshold | eps 0.001: changed 94/95 maxHeld 18.6 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 151 ms plant seen photo YES → RED
+=== pp-self-chromium-3.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 281.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 16.5/tlΔ 16.5 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 16.5/tlΔ 16.5 off 0 GREEN 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 272 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN 
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 158.7/tlΔ 8.7 off 150 ; k3 ct 163.8/tlΔ 13.8 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 163.1/tlΔ 13.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 15.1/tlΔ 15.1 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24.7/tlΔ 8.7 off 16 ; k3 ct 32.5/tlΔ 16.5 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 274.9 kPaint 1 | POST (keyed) F1 k1 ct 5.9 c 35.4 dw 0 RED | stale 0 | CI k2 ct 14.3/tlΔ 8.4 off 5.9 ; k3 ct 21.9/tlΔ 16 off 5.9 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.9/tlΔ 5.9 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 288.3 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 6.7/tlΔ 6.7 off 0 ; k3 ct 14.4/tlΔ 14.4 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.7/tlΔ 6.7 off 0 ; k3 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 292.7 kPaint 0 (rAF-time key 1) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.6/tlΔ 5.6 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.6/tlΔ 5.6 off 0 ; k3 ct 13/tlΔ 13 off 0 GREE
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 155.7/tlΔ 5.7 off 150 ; k3 ct 163.3/tlΔ 13.3 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 166.5/tlΔ 16.5 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24.7/tlΔ 8.7 off 16 ; k3 ct 31.2/tlΔ 15.2 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 278.6 kPaint 1 | POST (keyed) F1 k1 ct 6.8 c 40.8 dw 0 RED | stale 0 | CI k2 ct 15.7/tlΔ 8.9 off 6.8 ; k3 ct 22.1/tlΔ 15.3 off 6.8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.8/tlΔ 6.8 off 0 ; k3 ct
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 262.7 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 6.8/tlΔ 6.8 off 0 ; k3 ct 14.1/tlΔ 14.1 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.8/tlΔ 6.8 off 0 ; k3 
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 268.2 kPaint 0 (rAF-time key 1) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.3/tlΔ 7.3 off 0 ; k3 ct 15.2/tlΔ 15.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.3/tlΔ 7.3 off 0 ; k3 ct 15.2/tlΔ 15.2 of
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 156.6/tlΔ 6.6 off 150 ; k3 ct 165.1/tlΔ 15.1 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 164.1/tlΔ 14.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 14.9/tlΔ 14.9 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.4/tlΔ 7.4 off 16 ; k3 ct 31.4/tlΔ 15.4 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 287.2 kPaint 1 | POST (keyed) F1 k1 ct 8 c 48 dw 0 RED | stale 0 | CI k2 ct 13.4/tlΔ 5.4 off 8 ; k3 ct 21.8/tlΔ 13.8 off 8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 13.4/tlΔ 13
+chromium RECORDER clock photos/s 95 rAF/s 132 clock 95 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 83 frames over 630.9 ms (subject max interval 11.7 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 131 frames over 1000.1 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/94 (Δ median 0.0038) → RED EMPTY ← the legacy threshold | eps 0.001: changed 96/97 maxHeld 16.5 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 155.9 ms plant seen photo YES → RED
+=== pp-self-chromium-4.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 282.5 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 15.3/tlΔ 15.3 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 15.3/tlΔ 15.3 off 0 GREEN 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 274 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4.8/tlΔ 4.8 off 0 ; k3 ct 12.9/tlΔ 12.9 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4.8/tlΔ 4.8 off 0 ; k3 ct 12.9/tlΔ 12.9 off 
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 156.4/tlΔ 6.4 off 150 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 165.9/tlΔ 15.9 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 13.9/tlΔ 13.9 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24.6/tlΔ 8.6 off 16 ; k3 ct 31.6/tlΔ 15.6 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 301.8 kPaint 1 | POST (keyed) F1 k1 ct 9.7 c 58.2 dw 0 RED | stale 0 | CI k2 ct 15/tlΔ 5.3 off 9.7 ; k3 ct 22.1/tlΔ 12.4 off 9.7 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.7/tlΔ 9.7 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 284.2 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 16.6/tlΔ 16.6 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 16.6/tlΔ 16.6 off 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 334.5 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 13.4/tlΔ 13.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 13.4/tlΔ 13.4 of
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 155.7/tlΔ 5.7 off 150 ; k3 ct 162.5/tlΔ 12.5 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 7.4/tlΔ 7.4 off 0 ; k3 ct 164.1/tlΔ 14.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 23.1/tlΔ 7.1 off 16 ; k3 ct 32.7/tlΔ 16.7 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 277 kPaint 1 | POST (keyed) F1 k1 ct 8.2 c 49.2 dw 0 RED | stale 0 | CI k2 ct 15.7/tlΔ 7.5 off 8.2 ; k3 ct 25.7/tlΔ 17.5 off 8.2 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 277.3 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 16.8/tlΔ 16.8 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 16.8/tlΔ 16.8 off 
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 270.2 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.2/tlΔ 5.2 off 0 ; k3 ct 13.1/tlΔ 13.1 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.2/tlΔ 5.2 off 0 ; k3 ct 13.1/tlΔ 13.1 of
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 157.9/tlΔ 7.9 off 150 ; k3 ct 166.2/tlΔ 16.2 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.5/tlΔ 8.5 off 0 ; k3 ct 165.1/tlΔ 15.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k3 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 12.7/tlΔ 12.7 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k2 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 25.1/tlΔ 9.1 off 16 ; k3 ct 32/tlΔ 16 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 282.5 kPaint 2 | POST (keyed) F1 k2 ct 7.5 c 45 dw 0 RED | stale 1 | CI k2 ct 15.5/tlΔ 8 off 7.5 ; k3 ct 20.8/tlΔ 13.3 off 7.5 RED | dropped 2 → RED | LEGACY (un-keyed) F1 k0 ct -8.8 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 0/
+chromium RECORDER clock photos/s 95 rAF/s 135 clock 95 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 86 frames over 635.3 ms (subject max interval 9.6 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 132 frames over 1002.1 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/97 (Δ median 0.0037) → RED EMPTY ← the legacy threshold | eps 0.001: changed 95/96 maxHeld 17.7 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 150.9 ms plant seen photo YES → RED
+=== pp-self-chromium-5.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 335.6 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 6.6/tlΔ 6.6 off 0 ; k3 ct 13.6/tlΔ 13.6 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.6/tlΔ 6.6 off 0 ; k3 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 280.9 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 1 | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 14.4/tlΔ 14.4 off 0 GREEN | dropped 1 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.1/tlΔ 7.1 off 0 ; k3 ct 14.4/tlΔ 14.4 of
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 158.4/tlΔ 8.4 off 150 ; k3 ct 166.7/tlΔ 16.7 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.8/tlΔ 6.8 off 0 ; k3 ct 166.2/tlΔ 16.2 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 16.7/tlΔ 16.7 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 22.7/tlΔ 6.7 off 16 ; k3 ct 32.3/tlΔ 16.3 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 270.3 kPaint 1 | POST (keyed) F1 k1 ct 9.2 c 55.2 dw 0 RED | stale 0 | CI k2 ct 17.1/tlΔ 7.9 off 9.2 ; k3 ct 25.4/tlΔ 16.2 off 9.2 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 279.3 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.7/tlΔ 9.7 off 0 ; k3 ct 18.4/tlΔ 18.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9.7/tlΔ 9.7 off 0 ; k3 ct 18.4/tlΔ 18.4 off 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 292 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.9/tlΔ 8.9 off 0 ; k3 ct 16.5/tlΔ 16.5 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.9/tlΔ 8.9 off 0 ; k3 ct 16.5/tlΔ 16.5 off 
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 158.9/tlΔ 8.9 off 150 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 167/tlΔ 17 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7.7/tlΔ 7.7 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.4/tlΔ 7.4 off 16 ; k3 ct 29.2/tlΔ 13.2 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 298.4 kPaint 1 | POST (keyed) F1 k1 ct 8.5 c 51 dw 0 RED | stale 0 | CI k2 ct 15.9/tlΔ 7.4 off 8.5 ; k3 ct 22.6/tlΔ 14.1 off 8.5 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.5/tlΔ 8.5 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 290.6 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 17.4/tlΔ 17.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.3/tlΔ 8.3 off 0 ; k3 ct 17.4/tlΔ 17.4 off 
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 270.8 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 7.8/tlΔ 7.8 off 0 ; k3 ct 14.5/tlΔ 14.5 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.8/tlΔ 7.8 off 0 ; k
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157.4/tlΔ 7.4 off 150 ; k3 ct 164.6/tlΔ 14.6 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.8/tlΔ 7.8 off 0 ; k3 ct 165.1/tlΔ 15.1 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 9.4/tlΔ 9.4 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 25.1/tlΔ 9.1 off 16 ; k3 ct 31/tlΔ 15 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 276.5 kPaint 1 | POST (keyed) F1 k1 ct 7.9 c 47.4 dw 0 RED | stale 0 | CI k2 ct 16/tlΔ 8.1 off 7.9 ; k3 ct 23.2/tlΔ 15.3 off 7.9 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 1
+chromium RECORDER clock photos/s 95 rAF/s 133 clock 95 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 83 frames over 629.3 ms (subject max interval 10.3 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 135 frames over 998.4 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/95 (Δ median 0.0037) → RED EMPTY ← the legacy threshold | eps 0.001: changed 95/96 maxHeld 17.6 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 153.2 ms plant seen photo YES → RED
+=== pp-self-chromium-6.log
+chromium POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+chromium POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+chromium POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+chromium POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+chromium POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 15
+chromium POSTPAINT self-test r1 RAF-mover CLEAN io 264.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 15.2/tlΔ 15.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.2/tlΔ 8.2 off 0 ; k3 ct 15.2/tlΔ 15.2 off 
+chromium POSTPAINT self-test r1 EASED-mover CLEAN io 282.7 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct 15.4/tlΔ 15.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k
+chromium POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 (stale post → inRAF) RED | stale 1 | CI k2 ct 157/tlΔ 7 off 150 ; k3 ct 164.9/tlΔ 14.9 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.5/tlΔ 7.5 off 0 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 10.3/tlΔ 10.3 off 0 ; k3 ct 18.2/tlΔ 18.2 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.6/tlΔ 7.6 off 16 ; k3 ct 31.4/tlΔ 15.4 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r1 TASK-mover BORN-RED io 279.7 kPaint 1 | POST (keyed) F1 k1 ct 8 c 48 dw 0 RED | stale 0 | CI k2 ct 16.5/tlΔ 8.5 off 8 ; k3 ct 22.4/tlΔ 14.4 off 8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 16.5/tlΔ 16
+chromium POSTPAINT self-test r2 RAF-mover CLEAN io 267.5 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.1/tlΔ 5.1 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.1/tlΔ 5.1 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN 
+chromium POSTPAINT self-test r2 EASED-mover CLEAN io 264.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 16.2/tlΔ 16.2 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8.1/tlΔ 8.1 off 0 ; k3 ct 16.2/tlΔ 16.2 of
+chromium POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157/tlΔ 7 off 150 ; k3 ct 165.1/tlΔ 15.1 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 167.4/tlΔ 17.4 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k1 ct 0 c 40 dw 0 RED | stale 1 | CI k2 ct 9.2/tlΔ 9.2 off 0 ; k3 ct 17.1/tlΔ 17.1 off 0 GREEN | dropped 1 → RED (f1pos only)
+chromium POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23.9/tlΔ 7.9 off 16 ; k3 ct 29.8/tlΔ 13.8 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r2 TASK-mover BORN-RED io 313.1 kPaint 1 | POST (keyed) F1 k1 ct 5.8 c 34.8 dw 0 RED | stale 0 | CI k2 ct 13.4/tlΔ 7.6 off 5.8 ; k3 ct 21.3/tlΔ 15.5 off 5.8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5.8/tlΔ 5.8 off 0 ; k3 ct
+chromium POSTPAINT self-test r3 RAF-mover CLEAN io 341.1 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 7.8/tlΔ 7.8 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.8/tlΔ 7.8 off 0 ; k3 ct 1
+chromium POSTPAINT self-test r3 EASED-mover CLEAN io 306.4 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct 15.4/tlΔ 15.4 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.6/tlΔ 7.6 off 0 ; k3 ct 15.4/tlΔ 15.4 of
+chromium POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157.7/tlΔ 7.7 off 150 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (f1red)
+chromium POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7.9/tlΔ 7.9 off 0 ; k3 ct 163.5/tlΔ 13.5 off 150 RED | dropped 0 → RED (ciRed)
+chromium POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8.9/tlΔ 8.9 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+chromium POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 23.1/tlΔ 7.1 off 16 ; k3 ct 32.5/tlΔ 16.5 off 16 RED | dropped 0 → RED (f1ct only)
+chromium POSTPAINT self-test r3 TASK-mover BORN-RED io 278.1 kPaint 1 | POST (keyed) F1 k1 ct 6.8 c 40.8 dw 0 RED | stale 0 | CI k2 ct 13.3/tlΔ 6.5 off 6.8 ; k3 ct 20.7/tlΔ 13.9 off 6.8 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6.8/tlΔ 6.8 off 0 ; k3 ct
+chromium RECORDER clock photos/s 96 rAF/s 133 clock 96 OK
+chromium RECORDER self-test chromium RULED ruled:.rl moved 85 frames over 631.7 ms (subject max interval 10 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+chromium RECORDER self-test chromium LEN len:#grow moved 132 frames over 999.2 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+chromium RECORDER self-test chromium RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+chromium RECORDER self-test chromium EPS eps 0.35: changed 0/97 (Δ median 0.0036) → RED EMPTY ← the legacy threshold | eps 0.001: changed 94/95 maxHeld 17 ms → GREEN | eps 0.001 + busy 150@300: maxHeld 153.5 ms plant seen photo YES → RED
+=== pp-self-webkit-1.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 327 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 13/tlΔ 13 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 13/tlΔ 13 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | droppe
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 232 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 157/tlΔ 7 off 150 ; k3 ct 168/tlΔ 18 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 167/tlΔ 17 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 1/tlΔ 1 off 0 ; k3 ct 10/tlΔ 10 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23/tlΔ 7 off 16 ; k3 ct 35/tlΔ 19 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 234 kPaint 1 | POST (keyed) F1 k1 ct 3 c 36 dw 0 RED | stale 0 | CI k2 ct 14/tlΔ 11 off 3 ; k3 ct 23/tlΔ 20 off 3 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN 
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 230 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 230 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 1 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 156/tlΔ 6 off 150 ; k3 ct 166/tlΔ 16 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k1 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 26/tlΔ 10 off 16 ; k3 ct 35/tlΔ 19 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 230 kPaint 1 | POST (keyed) F1 k1 ct 10 c 66 dw 0 RED | stale 0 | CI k2 ct 20/tlΔ 10 off 10 ; k3 ct 31/tlΔ 21 off 10 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 20/tlΔ 20 off 0 G
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 222 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 22/tlΔ 22 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 22/tlΔ 22 off 0 GREEN | droppe
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 217 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | drop
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 154/tlΔ 4 off 150 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 169/tlΔ 19 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 19/tlΔ 3 off 16 ; k3 ct 31/tlΔ 15 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 239 kPaint 2 | POST (keyed) F1 k2 ct 7 c 48 dw 0 RED | stale 0 | CI k2 ct 19/tlΔ 12 off 7 ; k3 ct 28/tlΔ 21 off 7 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN 
+webkit RECORDER clock photos/s 22 rAF/s 99 clock 99 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 62 frames over 632 ms (subject max interval 13 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 97 frames over 991 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-self-webkit-2.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 316 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 230 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 153/tlΔ 3 off 150 ; k3 ct 162/tlΔ 12 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23/tlΔ 7 off 16 ; k3 ct 33/tlΔ 17 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 246 kPaint 1 | POST (keyed) F1 k1 ct 7 c 48 dw 0 RED | stale 0 | CI k2 ct 18/tlΔ 11 off 7 ; k3 ct 27/tlΔ 20 off 7 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN 
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 226 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 1/tlΔ 1 off 0 ; k3 ct 11/tlΔ 11 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 1/tlΔ 1 off 0 ; k3 ct 11/tlΔ 11 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 226 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 160/tlΔ 10 off 150 ; k3 ct 172/tlΔ 22 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 20/tlΔ 4 off 16 ; k3 ct 32/tlΔ 16 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 231 kPaint 1 | POST (keyed) F1 k1 ct 2 c 12 dw 0 RED | stale 0 | CI k2 ct 12/tlΔ 10 off 2 ; k3 ct 22/tlΔ 20 off 2 GREEN | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 12/tlΔ 12 off 0 GREE
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 224 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 23/tlΔ 23 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 23/tlΔ 23 off 0 GREEN | droppe
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 220 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | drop
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 158/tlΔ 8 off 150 ; k3 ct 168/tlΔ 18 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 11/tlΔ 11 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k1 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 25/tlΔ 9 off 16 ; k3 ct 36/tlΔ 20 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 236 kPaint 1 | POST (keyed) F1 k1 ct 6 c 42 dw 0 RED | stale 0 | CI k2 ct 17/tlΔ 11 off 6 ; k3 ct 28/tlΔ 22 off 6 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN 
+webkit RECORDER clock photos/s 21 rAF/s 98 clock 98 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 62 frames over 632 ms (subject max interval 14 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 98 frames over 999 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-self-webkit-3.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 323 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 229 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | drop
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 153/tlΔ 3 off 150 ; k3 ct 162/tlΔ 12 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 172/tlΔ 22 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24/tlΔ 8 off 16 ; k3 ct 34/tlΔ 18 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 234 kPaint 1 | POST (keyed) F1 k1 ct 3 c 24 dw 0 RED | stale 0 | CI k2 ct 12/tlΔ 9 off 3 ; k3 ct 22/tlΔ 19 off 3 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 12/tlΔ 12 off 0 GREEN |
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 230 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 230 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 162/tlΔ 12 off 150 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 171/tlΔ 21 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 20/tlΔ 4 off 16 ; k3 ct 29/tlΔ 13 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 231 kPaint 1 | POST (keyed) F1 k1 ct 1 c 6 dw 0 RED | stale 0 | CI k2 ct 11/tlΔ 10 off 1 ; k3 ct 20/tlΔ 19 off 1 GREEN | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 1/tlΔ 1 off 0 ; k3 ct 11/tlΔ 11 off 0 GREEN
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 222 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | droppe
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 218 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | drop
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 156/tlΔ 6 off 150 ; k3 ct 168/tlΔ 18 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k1 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 23/tlΔ 7 off 16 ; k3 ct 34/tlΔ 18 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 233 kPaint 1 | POST (keyed) F1 k1 ct 2 c 12 dw 0 RED | stale 0 | CI k2 ct 13/tlΔ 11 off 2 ; k3 ct 22/tlΔ 20 off 2 GREEN | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 13/tlΔ 13 off 0 GREE
+webkit RECORDER clock photos/s 21 rAF/s 98 clock 98 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 61 frames over 623 ms (subject max interval 13 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 98 frames over 1000 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-self-webkit-4.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 325 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 228 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 153/tlΔ 3 off 150 ; k3 ct 163/tlΔ 13 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 24/tlΔ 8 off 16 ; k3 ct 36/tlΔ 20 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 236 kPaint 1 | POST (keyed) F1 k1 ct 6 c 36 dw 0 RED | stale 0 | CI k2 ct 15/tlΔ 9 off 6 ; k3 ct 26/tlΔ 20 off 6 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN |
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 229 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 229 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | drop
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 152/tlΔ 2 off 150 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 26/tlΔ 10 off 16 ; k3 ct 35/tlΔ 19 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 234 kPaint 1 | POST (keyed) F1 k1 ct 4 c 24 dw 0 RED | stale 0 | CI k2 ct 14/tlΔ 10 off 4 ; k3 ct 24/tlΔ 20 off 4 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 14/tlΔ 14 off 0 GREEN 
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 218 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | droppe
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 232 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 152/tlΔ 2 off 150 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 164/tlΔ 14 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 13/tlΔ 13 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 21/tlΔ 5 off 16 ; k3 ct 31/tlΔ 15 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 239 kPaint 1 | POST (keyed) F1 k1 ct 7 c 42 dw 0 RED | stale 0 | CI k2 ct 16/tlΔ 9 off 7 ; k3 ct 28/tlΔ 21 off 7 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN |
+webkit RECORDER clock photos/s 21 rAF/s 98 clock 98 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 62 frames over 631 ms (subject max interval 14 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 98 frames over 1000 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-self-webkit-5.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 340 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 222 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 13/tlΔ 13 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 13/tlΔ 13 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | drop
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 156/tlΔ 6 off 150 ; k3 ct 166/tlΔ 16 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 167/tlΔ 17 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 26/tlΔ 10 off 16 ; k3 ct 36/tlΔ 20 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 233 kPaint 1 | POST (keyed) F1 k1 ct 6 c 42 dw 0 RED | stale 0 | CI k2 ct 17/tlΔ 11 off 6 ; k3 ct 27/tlΔ 21 off 6 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN 
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 221 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | droppe
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 226 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | drop
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k1 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 160/tlΔ 10 off 150 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 165/tlΔ 15 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 12/tlΔ 12 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 20/tlΔ 4 off 16 ; k3 ct 32/tlΔ 16 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 234 kPaint 1 | POST (keyed) F1 k1 ct 6 c 42 dw 0 RED | stale 0 | CI k2 ct 17/tlΔ 11 off 6 ; k3 ct 26/tlΔ 20 off 6 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 6/tlΔ 6 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN 
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 238 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 230 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 154/tlΔ 4 off 150 ; k3 ct 166/tlΔ 16 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 163/tlΔ 13 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 25/tlΔ 9 off 16 ; k3 ct 36/tlΔ 20 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 229 kPaint 1 | POST (keyed) F1 k1 ct 2 c 12 dw 0 RED | stale 0 | CI k2 ct 14/tlΔ 12 off 2 ; k3 ct 23/tlΔ 21 off 2 GREEN | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 14/tlΔ 14 off 0 GREE
+webkit RECORDER clock photos/s 21 rAF/s 98 clock 98 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 61 frames over 622 ms (subject max interval 14 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 97 frames over 989 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-self-webkit-6.log
+webkit POSTPAINT unit U1 key-inraf: kPaint 1 (rAF-time key 2) OK
+webkit POSTPAINT unit U2 stale: F1 k0 ct -1 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 16/tlΔ 17 off -1 ; k3 ct 33/tlΔ 34 off -1 GREEN | dropped 0 → GREEN
+webkit POSTPAINT unit U3 F1ct: F1 k0 ct 16 c 0 dw 0 RED (ct) | stale 0 | CI k2 ct 32/tlΔ 17 off 15 ; k3 ct 48/tlΔ 34 off 14 RED | dropped 0 → RED (ct only)
+webkit POSTPAINT unit U4 bounds: ct 3.99 GREEN / 4.01 RED · dx 2.99 GREEN / 3.01 RED OK (margins ±0.01)
+webkit POSTPAINT unit U5 stale-rebase: clean F1 k0 ct 0 c 0 dw 0 (stale post → inRAF) GREEN | stale 1 | CI k2 ct 17/tlΔ 17 off 0 ; k3 ct 34/tlΔ 34 off 0 GREEN | dropped 0 · planted F1 k0 ct 150 c 0 dw 0 (stale post → inRAF) RED (ct) | stale 1 | CI k2 ct 167/tlΔ 17 off 150 ; k3 ct 184/tlΔ 34 off 150 
+webkit POSTPAINT self-test r1 RAF-mover CLEAN io 333 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 12/tlΔ 12 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | droppe
+webkit POSTPAINT self-test r1 EASED-mover CLEAN io 243 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 5/tlΔ 5 off 0 ; k3 ct 17/tlΔ 17 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r1 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 153/tlΔ 3 off 150 ; k3 ct 163/tlΔ 13 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r1 RAF-mover PLANT f2 | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 167/tlΔ 17 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r1 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 7/tlΔ 7 off 0 ; k3 ct 19/tlΔ 19 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r1 EASED-mover PLANT skip16 | POST F1 k1 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 25/tlΔ 9 off 16 ; k3 ct 37/tlΔ 21 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r1 TASK-mover BORN-RED io 234 kPaint 1 | POST (keyed) F1 k1 ct 2 c 18 dw 0 RED | stale 0 | CI k2 ct 13/tlΔ 11 off 2 ; k3 ct 21/tlΔ 19 off 2 GREEN | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 2/tlΔ 2 off 0 ; k3 ct 13/tlΔ 13 off 0 GREE
+webkit POSTPAINT self-test r2 RAF-mover CLEAN io 220 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 9/tlΔ 9 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 
+webkit POSTPAINT self-test r2 EASED-mover CLEAN io 250 kPaint 1 (rAF-time key 1) | POST F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 0 | inRAF F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 15/tlΔ 15 off 0 GREEN | dropped 
+webkit POSTPAINT self-test r2 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 163/tlΔ 13 off 150 ; k3 ct 170/tlΔ 20 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r2 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 169/tlΔ 19 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r2 RAF-mover PLANT from40 | POST F1 k0 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 12/tlΔ 12 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r2 EASED-mover PLANT skip16 | POST F1 k1 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 22/tlΔ 6 off 16 ; k3 ct 34/tlΔ 18 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r2 TASK-mover BORN-RED io 233 kPaint 1 | POST (keyed) F1 k1 ct 11 c 72 dw 0 RED | stale 0 | CI k2 ct 20/tlΔ 9 off 11 ; k3 ct 31/tlΔ 20 off 11 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 11/tlΔ 11 off 0 ; k3 ct 20/tlΔ 20 off 0 GR
+webkit POSTPAINT self-test r3 RAF-mover CLEAN io 226 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 21/tlΔ 21 off 0 GREEN | droppe
+webkit POSTPAINT self-test r3 EASED-mover CLEAN io 219 kPaint 0 (rAF-time key 0) | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | dropped 0 | inRAF F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 10/tlΔ 10 off 0 ; k3 ct 20/tlΔ 20 off 0 GREEN | drop
+webkit POSTPAINT self-test r3 RAF-mover PLANT skip | POST F1 k0 ct 150 c 900 dw 0 RED | stale 0 | CI k2 ct 161/tlΔ 11 off 150 ; k3 ct 171/tlΔ 21 off 150 RED | dropped 0 → RED (f1red)
+webkit POSTPAINT self-test r3 RAF-mover PLANT f2 | POST F1 k0 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 3/tlΔ 3 off 0 ; k3 ct 162/tlΔ 12 off 150 RED | dropped 0 → RED (ciRed)
+webkit POSTPAINT self-test r3 RAF-mover PLANT from40 | POST F1 k1 ct 0 c 40 dw 0 RED | stale 0 | CI k2 ct 8/tlΔ 8 off 0 ; k3 ct 18/tlΔ 18 off 0 GREEN | dropped 0 → RED (f1pos only)
+webkit POSTPAINT self-test r3 EASED-mover PLANT skip16 | POST F1 k0 ct 16 c 0.89 dw 0 RED (ct) | stale 0 | CI k2 ct 28/tlΔ 12 off 16 ; k3 ct 36/tlΔ 20 off 16 RED | dropped 0 → RED (f1ct only)
+webkit POSTPAINT self-test r3 TASK-mover BORN-RED io 238 kPaint 2 | POST (keyed) F1 k2 ct 4 c 36 dw 0 RED | stale 0 | CI k2 ct 16/tlΔ 12 off 4 ; k3 ct 25/tlΔ 21 off 4 RED | dropped 1 → RED | LEGACY (un-keyed) F1 k1 ct 0 c 0 dw 0 GREEN | stale 0 | CI k2 ct 4/tlΔ 4 off 0 ; k3 ct 16/tlΔ 16 off 0 GREEN 
+webkit RECORDER clock photos/s 21 rAF/s 98 clock 98 OK
+webkit RECORDER self-test webkit RULED ruled:.rl moved 62 frames over 633 ms (subject max interval 14 ms) SEEN | LEGACY .rl moved 0 EMPTY ← the hole ruled: closes
+webkit RECORDER self-test webkit LEN len:#grow moved 97 frames over 989 ms SEEN | ruled:#grow moved 0 EMPTY ← the hole len: closes
+webkit RECORDER self-test webkit RANGE range:#m moved 1 frames SEEN | #m moved 0 EMPTY ← the hole range: closes
+=== pp-sab-chromium.log
+SABOTAGE chromium F1         → exit 3 RED (2 row(s))
+SABOTAGE chromium F1ct       → exit 3 RED (4 row(s))
+SABOTAGE chromium CI         → exit 3 RED (1 row(s))
+SABOTAGE chromium key-inraf  → exit 3 RED (1 row(s))
+SABOTAGE chromium stale      → exit 3 RED (2 row(s))
+SABOTAGE chromium stale-rebase → exit 3 RED (1 row(s))
+POSTPAINT SABOTAGE BATTERY chromium: 6/6 clauses red the self-test when deleted · load 29.13 54.35 57.65
+=== pp-sab-webkit.log
+SABOTAGE webkit F1         → exit 3 RED (2 row(s))
+SABOTAGE webkit F1ct       → exit 3 RED (4 row(s))
+SABOTAGE webkit CI         → exit 3 RED (1 row(s))
+SABOTAGE webkit key-inraf  → exit 3 RED (1 row(s))
+SABOTAGE webkit stale      → exit 3 RED (2 row(s))
+SABOTAGE webkit stale-rebase → exit 3 RED (1 row(s))
+POSTPAINT SABOTAGE BATTERY webkit: 6/6 clauses red the self-test when deleted · load 19.75 36.11 48.90

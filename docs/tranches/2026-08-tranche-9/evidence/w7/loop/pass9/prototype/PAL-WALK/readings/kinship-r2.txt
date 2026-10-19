@@ -1,0 +1,21 @@
+# kinship r2 (r0 accent-kinship.probe.ts, OUT re-pointed to lane scratch; the r0 copy, not pass 6's name-keyed one), DPR 1, tree dev :4244 vs control preview :4232 (w7-control dist)
+== kin-tree-chromium exit=1  4 failed  1 passed (11.7s) 
+   1 Error: a focused control's ring must be drawn in --color-focus-sketch
+   2 Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+   1 Error: no interactive surface may paint a colour no token names
+== kin-tree-webkit exit=1  4 failed  1 passed (16.1s) 
+   2 Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+   1 Error: no control was reached by Tab in webkit — the row has no subject, it is not green
+   1 Error: no interactive surface may paint a colour no token names
+== kin-ctl-chromium exit=1  4 failed  1 passed (13.4s) 
+   1 Error: a focused control's ring must be drawn in --color-focus-sketch
+   2 Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+   1 Error: no interactive surface may paint a colour no token names
+== kin-ctl-webkit exit=1  4 failed  1 passed (14.9s) 
+   2 Error: every non-excepted interactive accent must sit within 5° of a crayon anchor
+   1 Error: no control was reached by Tab in webkit — the row has no subject, it is not green
+   1 Error: no interactive surface may paint a colour no token names
+## outputs, tree vs control, both engines
+kinship-{light,dark}.json and inline-literals.json: byte-identical, both engines
+focus-ring.json: differs only by the DEV-only "Toggle filter tuner" stop (the tree is served by vite dev, the control by its dist)
+exception-toll.json: differs only at peerWorst, tree 6.83 against control 5.36 (pass 8 read 7.27 / 5.36; this pass's tree is a dev server)

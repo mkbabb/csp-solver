@@ -1,0 +1,30 @@
+# ACC-FIVE · pass-10 charter (§3 · 80, the critic's; row 1 RE-OPENED by class)
+
+Status at v9: ALIVE · **80** (critic; v8 85 — the one fall in §3). Tree `wf_f72f3b5a-83a-41` at 74a2b5d9, uncommitted = pass9.diff (tree 2d13eaf1, sha1 ef3325cd, 637,487 B, 33 files +12864/−165; the fold's temporary-index cut reproduces 2d13eaf1). On-WAVE delta 2017beb6 (acde977b → ff4cac9f, 5 paths, check 0 on acb9c08e and f1c9c3fe). Lane port **4236**, control port **4251**. Base + π control 74a2b5d9. Read pass8/charters/LAWS.md (P8) and pass9/CHAIR-RULINGS.md first.
+
+## What pass 9 earned (the critic re-derived it in both engines)
+CHAIR §6's letter met: the D10 cap keyed on the window MINIMUM (`panelFrameMs` = Math.min over 32 ticks) with stall-run rows (5 and 9 stalls travel 17.0 × n, margin 1.000; born-RED c3a863f7 reds the 5th stall at 149.9/150.0 ms); G10-panel 13/13 streams at 0.9 × A.6's best (margins +2.995 to +6.250/s; share 1.01 reds 13/13); row 4 closed (start write deleted; tally flash 0/10 + 0/10, born-RED 6/10 + 4/10); M16 0, lint:motion 0; the bank reproduces exactly and the on-WAVE delta lands on ff4cac9f. The s13-s7-s3 tree reads G10-panel and D10 2/2 in both engines on the dev graph. The product delta is two bytes' worth: one statistic in gridPaths.ts, one deleted call in DifficultyTally.vue.
+
+## Why 80 and not more — the open gaps, in order (every one a pass-10 row)
+1. **ROW 1 RE-OPENED BY CLASS (LAWS P8 §J, the class cure).** The window-minimum cap halves a 30 Hz panel's fronts after any short tick: frontTween feeds panelFrameMs the tween's own first dt, pencil-boil 0.12.0 stamps startTime at start(), so a front started between frames has a partial first tick; one tick under stepMs pins Math.min at 17 for the next 32 front frames and idle never ages it out. Born-RED `critique/ACC-FIVE/instruments/crit.partial30.test.CRITIC.ts`: tree RED 6/6 (a 240 ms front ends on frame 15), pass-8 file GREEN 7/7; driven 30 Hz row: 5 of 6 tree arms travel 17.0–24.0 ms per 33 ms frame and end on frames 11/14/14/15 (pass-8 file: frame 10 in 4/4). The primitive rides SIX (s13-s7-s3, the WAVE) and GRAPHITE by sha with this regression aboard; VERB's bootHand and HandwrittenGlyph (T9-B26 b-prime, OFF) are further consumers with no stall-run or 30 Hz row.
+2. **No gated healthy-travel clause**: D10-stallrun PRINTS 'worst healthy shortfall'; the 30 Hz unit row feeds whole frames from t = 0; G10's 30 Hz rows count commits, not travel.
+3. **The driven G10 floor is blind to a product-side cost** (the control-anchored-bound class): plant heavy-commit (18 ms busy-wait per commit in frontGate.land) takes the tally to 40.2/40.7 per s (clean ~59) and drops 262/299 vsyncs, and G10 exits 0 with six clauses GREEN both engines; only the printed rate form reds.
+4. **FLOOR_SHARE = 0.9 has no ± ε pair and no knob** (LAWS P8 §F) on the row whose floor changed form this pass; CHAIR §6's at-R floor is gated on G10-panel only and printed on the driven row.
+5. **Rows 6/7/8/9/12, π vs 74a2b5d9, painted AA UNREAD for a second pass** (the pass-8 scratch drivers g5/g9/tg/pi/r21.mjs are lost): B-G5-DEPTH 25 % and G9 held by no gate; G5 unread in the four regimes; row 8's dark border 2.768 < 3 never re-derived; row 21's 0-encode on the union unread; row 20's upper edge exceeded on every driven read (56.6–60.2/s at 125 Hz, 58.8–60.0 at 60 Hz, against 49–52).
+6. The flush lag is unattributed (DOM min 3.9–14.5 ms against frame ≥ 15.5 ms, 20/20 both engines) — a cost line, not a cure.
+7. Check 8 on the WAVE unread by the lane (the WAVE restamped once at A11, 476/473).
+8. G10's WebKit ceiling clause cannot be isolated (stated, not planted); the minTick arm of the cap is unreachable headless (healthy ticks 1.0–9.0 ms < stepMs 17).
+9. The D10 row's control cannot host it (no /src in a preview dist; no frontTween at 74a2b5d9) — say so in the row, print the reason.
+10. One unattributed WebKit G10 red at 125 Hz (critic's incident; 3 re-reads GREEN) — the 5/5 reproduces as 3/4 until a fifth clean read.
+
+## Pass-10 rows (numbers first; each with its plant; the critic never the author)
+- R1 **the partial-tick cure at the primitive**: drop the first tick's dt from the window (or a quantile over the window with the partial-start plant beside the stall-run plant); crit.partial30 GREEN 7/7 AND the stall-run rows (5, 9 stalls) GREEN, the pass-8 median file RED on the stalls, the min-of-32 file RED on partial30 — both negatives in one run, both engines. The driven 30 Hz row ends on frame 10 in 6/6 arms. Until R1 lands, no consumer takes pass-10 blobs; SIX/GRAPHITE/VERB ship the partial-start unit row on their copies.
+- R2 a gated healthy-travel clause on D10 (travel ≥ stepMs − ε on a healthy tick) and on the 30 Hz unit row (partial first tick fed, not t = 0).
+- R3 a product-cost witness on the driven G10 (a bound on dropped vsyncs inside bursts, or the rate form gated under load 120), heavy-commit its born-RED both engines; FLOOR_SHARE a knob with 0.9 ± ε plants and the margin printed; CHAIR §6's at-R floor gated on the driven row.
+- R4 the lost drivers RE-BANKED under prototype/ACC-FIVE/instruments/ (g5, g9, tg, pi, r21) and rows 6/8/9/12/21 + π + AA read on this tree; B-G5-DEPTH 25 % and G9 behind a gate; G5 in the four regimes (LAWS P7 §E(i)).
+- R5 the flush lag attributed or its cost line captioned into INTAKE-23 row 20's record; row 20's upper edge reconciled (the 49–52 bar vs the delivered 59–60) with the chair.
+- R6 check 8 read on the WAVE; the WebKit 125 Hz G10 read ×5 clean.
+- Constraints: AA from painted bytes; π vs 74a2b5d9; filterBudget 9; M16 0; no filter/CSS/@property byte without the census re-run; every instrument by relative product path.
+
+## Return (LAWS P8 §K)
+Sha at bank, --shortstat, bytes, apply --check 0 on 74a2b5d9, on s13-s7-s3's pass-9 tree (2f11714f) AND on the pass-9 WAVE (954bbbab); born-RED transcript (both negatives of R1 in one run); the sabotage batteries; π/AA; box load per row; every crop by path; the control's exit beside every row. Earliest 100 for FIVE = pass 11 by the law; by the arithmetic of 10 rows, pass 12.

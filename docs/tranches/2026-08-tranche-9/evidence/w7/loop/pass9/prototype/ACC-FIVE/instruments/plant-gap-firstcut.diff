@@ -1,0 +1,10 @@
+546c546
+< export const FRONT_GAP_MS = FRONT_MIN_MS - 0.5;
+---
+> export const FRONT_GAP_MS = 7;
+593a594
+>   let alt = true;
+604c605
+<     slot = now >= slot + FRONT_MIN_MS ? now + FRONT_MIN_MS : slot + FRONT_MIN_MS;
+---
+>     slot = (alt = !alt) ? now + 8 : now + 24;

@@ -1,0 +1,51 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend
+
+ ❯ src/games/shared/GameBoard.notes.test.ts (18 tests | 2 failed) 100ms
+     × the first board's sentence survives the generation arm in the same flush 8ms
+     × the flush memory ends with its flush: a later re-deal is not silenced 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a link that would not parse is said, and a re-deal still empties (share-truth) > the first board's sentence survives the generation arm in the same flush
+AssertionError: expected '' to be 'this shared link couldn\'t be read' // Object.is equality
+
+- Expected
++ Received
+
+- this shared link couldn't be read
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:337:23
+    335|     await w.setProps({ givenCells: new Set(["5"]), boardGeneration: 2 …
+    336|     await nextTick();
+    337|     expect(margin(w)).toBe("this shared link couldn't be read");
+       |                       ^
+    338|     w.unmount();
+    339|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a link that would not parse is said, and a re-deal still empties (share-truth) > the flush memory ends with its flush: a later re-deal is not silenced
+AssertionError: expected '' to be 'this shared link couldn\'t be read' // Object.is equality
+
+- Expected
++ Received
+
+- this shared link couldn't be read
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:363:23
+    361|     await w.setProps({ givenCells: new Set(["5"]), boardGeneration: 2 …
+    362|     await nextTick();
+    363|     expect(margin(w)).toBe("this shared link couldn't be read");
+       |                       ^
+    364|     await w.setProps({ givenCells: new Set(["6"]), boardGeneration: 3 …
+    365|     await nextTick();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 16 passed (18)
+   Start at  12:41:35
+   Duration  2.65s (transform 793ms, setup 19ms, import 900ms, tests 100ms, environment 1.22s)
+

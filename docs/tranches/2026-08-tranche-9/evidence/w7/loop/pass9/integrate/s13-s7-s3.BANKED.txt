@@ -1,0 +1,31 @@
+s13-s7-s3 integration, pass 9 (registry-v8 §8.1 batch 6). One attempt; scratch under the repo's ignored durable scratch (the lane dir).
+
+bank           pass9/integrate/s13-s7-s3.diff
+form           git diff --binary 5fd59288 2f11714f   (5fd59288 = 74a2b5d9^{tree}, the docs/precepts gitlink 160000 8781ebb0 restored)
+base           74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+tree           2f11714fa68fcf6242acdfa9acac9c743852af3c
+bytes          1698791
+sha1           280bd910c351b115b960ec2bcf7086ad91eaabfb
+shortstat      108 files changed, 32760 insertions(+), 691 deletions(-)
+apply --check  0 on a FRESH git archive 74a2b5d9 (work tree), apply --index 0, replayed write-tree 2f11714f = the integrated tree (108 paths)
+               0 on 5fd59288 through a temporary index -> 2f11714f; 1 on f1c9c3fe / ff33165d / acb9c08e / acde977b (a full-base diff; expected)
+
+companion      pass9/integrate/s13-s7-s3.delta.on-p8.diff   (ff33165d -> 2f11714f: pass 8's integrated tree with homes v2 -> this tree)
+  bytes 195291 · sha1 4857d0560d34e70905e04c8541a8985e110f6847 · 26 files changed, 2141 insertions(+), 368 deletions(-)
+  apply --check 0 on ff33165d (-> 2f11714f) · 0 on bare f1c9c3fe, the section's pass-8 integrated tree (-> d90e5cc8) · 1 on the WAVE acb9c08e and on acde977b
+companion      pass9/integrate/s13-s7-s3.on-WAVE.diff       (acde977b -> 81e3be43: the five lanes' own on-WAVE cuts, replayed --3way, 0 conflicts)
+  bytes 197669 · sha1 e509ea215cbb897a3ad1aace6055aaca00f932ac · 25 files changed, 2144 insertions(+), 401 deletions(-)
+  apply --check 0 on acde977b (WAVE + homes.on-WAVE, -> 81e3be43) · 0 on the bare WAVE union acb9c08e (-> 59b72c80)
+
+route          f1c9c3fe (pass8 bank) -> homes v2 on the 13 home paths = ff33165d -> §13 raw (8c12b15c..2b9c277e) = 31d01a02
+               -> ERASE pass9.delta.on-WAVE (1a9c822a) = b38418ec -> LEDGER pass9.delta.on-WAVE (41138e29) = b6ad31da
+               -> FIVE raw (c3a863f7..2d13eaf1) = 4dff565b -> SIX raw (3fa7af64..84e1f198), R5 by hand = 2f11714f
+               (SIX's own pass9.delta.on-s13-s7-s3 on 4dff565b = 2f11714f exactly)
+arm trees      read live through temporary indexes, each = its pass-9 BANKED.txt: -59 2b9c277e · -47 8c4f72ab · -46 aa2a9b0d · -41 2d13eaf1 · -45 84e1f198
+homes          13/13 = homes v2 (homes.diff 1f70cfda, d17813ba); residual home edits in every arm: 0
+grep           scratchpad 0 · /private/tmp 0 · .claude/t9-scratch 0 · '/tmp/' 1 (check-motion-bands.mjs B6 self-test plant string "/tmp/lawful-copy",
+               inherited from VERB's pass-8 tree, on the WAVE too; a literal, never a write) · dot-dir +++ 1 (.github/workflows/ci.yml, a product path,
+               blob 5bc8c7e3 = pass 8's bank, unchanged this pass) · both companions 0/0/0/0/0
+dist           index-CRxwkhOcMfw1.js / index-B2NGnESZ_uuA.css
+seal / check 8 READ, never stamped (SEAL 1227.5 on this tree; check 8 FLOOR BAND x4)
+no commit, commit-tree, update-ref, stash or push; no rm; no /tmp write

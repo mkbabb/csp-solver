@@ -1,0 +1,18 @@
+RUN d10-slackP chromium 1 exit 1 load 45.38-44.71 base http://127.0.0.1:4236 env: D10_SLACK=-0.9
+D10-STALLRUN chromium 5 stalled ticks (dt 151/150/150/150/149 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.5) + -0.9 = 16.10 ms, margin -0.900 ms; 39 healthy ticks, worst healthy shortfall 0.20 ms; load 44.7
+    Error: 5 stalled ticks (dt 151/150/150/150/149 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.5) + -0.9 = 16.10 ms, margin -0.900 ms; 39 healthy ticks, worst healthy shortfall 0.20 ms; load 44.7
+  1 failed
+RUN d10-slackP webkit 1 exit 1 load 44.71-48.18 base http://127.0.0.1:4236 env: D10_SLACK=-0.9
+D10-STALLRUN webkit 5 stalled ticks (dt 150/156/158/152/153 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 2.0) + -0.9 = 16.10 ms, margin -0.900 ms; 39 healthy ticks, worst healthy shortfall 3.00 ms; load 48.2
+    Error: 5 stalled ticks (dt 150/156/158/152/153 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 2.0) + -0.9 = 16.10 ms, margin -0.900 ms; 39 healthy ticks, worst healthy shortfall 3.00 ms; load 48.2
+  1 failed
+DONE d10-slackP 11:18:58
+RUN d10-slackM chromium 1 exit 1 load 48.18-45.12 base http://127.0.0.1:4236 env: D10_SLACK=-1.1
+D10-STALLRUN chromium 5 stalled ticks (dt 142/158/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.6) + -1.1 = 15.90 ms, margin -1.100 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 45.1
+    Error: 5 stalled ticks (dt 142/158/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.6) + -1.1 = 15.90 ms, margin -1.100 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 45.1
+  1 failed
+RUN d10-slackM webkit 1 exit 1 load 45.12-43.03 base http://127.0.0.1:4236 env: D10_SLACK=-1.1
+D10-STALLRUN webkit 5 stalled ticks (dt 150/161/156/154/153 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 9.0) + -1.1 = 15.90 ms, margin -1.100 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 43.0
+    Error: 5 stalled ticks (dt 150/161/156/154/153 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 9.0) + -1.1 = 15.90 ms, margin -1.100 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms; load 43.0
+  1 failed
+DONE d10-slackM 11:19:07

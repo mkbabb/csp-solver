@@ -1,0 +1,93 @@
+
+ RUN  v4.1.11 <critic-scratch>/tree/web/frontend
+
+ ❯ src/games/shared/useUndoHistory.test.ts (32 tests | 4 failed) 46ms
+     × D1 a deal alone is not ink, though it is undo depth 9ms
+     × D2 one player digit after the deal is ink; undoing it is not 1ms
+     × D4 a new deal ends the epoch; a clear or a solve does not 1ms
+     × D6 a resize is a deal: ink before it is not ink after it 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useUndoHistory.test.ts > inkSinceDeal — the destructive ask's signal > D1 a deal alone is not ink, though it is undo depth
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/games/shared/useUndoHistory.test.ts:408:34
+    406|     deal(h, "b1");
+    407|     expect(h.undoDepth.value).toBe(1);
+    408|     expect(h.inkSinceDeal.value).toBe(false);
+       |                                  ^
+    409|   });
+    410|   it("D2 one player digit after the deal is ink; undoing it is not", (…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/games/shared/useUndoHistory.test.ts > inkSinceDeal — the destructive ask's signal > D2 one player digit after the deal is ink; undoing it is not
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/games/shared/useUndoHistory.test.ts:416:34
+    414|     expect(h.inkSinceDeal.value).toBe(true);
+    415|     h.undo();
+    416|     expect(h.inkSinceDeal.value).toBe(false);
+       |                                  ^
+    417|     h.redo();
+    418|     expect(h.inkSinceDeal.value).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/games/shared/useUndoHistory.test.ts > inkSinceDeal — the destructive ask's signal > D4 a new deal ends the epoch; a clear or a solve does not
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/games/shared/useUndoHistory.test.ts:442:34
+    440|     expect(h.inkSinceDeal.value).toBe(true);
+    441|     deal(h, "b2");
+    442|     expect(h.inkSinceDeal.value).toBe(false);
+       |                                  ^
+    443|     h.recordBoard(board("b2"), board("b3"), emptyMarks(), emptyMarks()…
+    444|     h.recordEdit(0, 0, 1);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/games/shared/useUndoHistory.test.ts > inkSinceDeal — the destructive ask's signal > D6 a resize is a deal: ink before it is not ink after it
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/games/shared/useUndoHistory.test.ts:453:34
+    451|     h.recordEdit(4, 0, 7);
+    452|     h.recordBoard(board("b1"), board("b4x4"), emptyMarks(), emptyMarks…
+    453|     expect(h.inkSinceDeal.value).toBe(false);
+       |                                  ^
+    454|   });
+    455|   it("D5 a log with no deal in it (the mount deal is off-log) reads it…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 28 passed (32)
+   Start at  16:39:45
+   Duration  1.10s (transform 57ms, setup 29ms, import 90ms, tests 46ms, environment 691ms)
+

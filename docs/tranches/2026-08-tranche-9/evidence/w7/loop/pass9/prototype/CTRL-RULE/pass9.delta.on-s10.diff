@@ -1,0 +1,439 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index de41197c..ace8a9c2 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -1677,11 +1677,22 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     );
+     return lowestRow ? +(clip.y + (lowestRow.y + 1) / lowestRow.dpr).toFixed(2) : null;
+   };
+-  const OPEN = async (page: Page) => {
++  /** `before` runs on the loaded page BEFORE the sheet opens (a plant, the synthetic inset): the
++   *  sheet measures its foot as it opens, so a pad changed under an open sheet is not the pose an
++   *  inset present at load paints (the synthetic arm read 10 css low against CDP until it moved
++   *  here). A sheet already open at load is closed and re-opened after the hook. */
++  const OPEN = async (page: Page, before?: () => Promise<unknown>) => {
+     await page.emulateMedia({ reducedMotion: "reduce" });
+     await loadSudoku(page);
+-    if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
++    const closed = await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"));
++    if (before) {
++      if (!closed) {
++        await page.locator(".drawer-tab").tap();
++        await SHEET_SETTLED(page);
++      }
++      await before();
+       await page.locator(".drawer-tab").tap();
++    } else if (closed) await page.locator(".drawer-tab").tap();
+     await SHEET_SETTLED(page);
+   };
+   /** ROW 28's SOURCE ARM, through the ONE library (pass 8; LAWS P7 §F (i)): every declaration that
+@@ -1698,6 +1709,73 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     .filter(([, r]) => r.width < 1024)
+     .map(([k]) => k);
+   const STACKED = /^calc\(\s*[^;]*\+\s*env\(\s*safe-area-inset-bottom\s*\)\s*\)$/;
++  /** PASS 9 — ROW 28 EVALUATES, NEVER MATCHES (LAWS P8 §F; the pass-8 critic's K1b / K13b). Each
++   *  live site is EVALUATED with `env(safe-area-inset-bottom)` at 0 and at 34: a PAD site
++   *  (`padding-bottom` and its logical twins `padding-block-end` / `padding-block`, the `padding`
++   *  shorthand through the library) owes Δ = 34 (± FOOT_EPS) and a pad of its own (> 0) at inset
++   *  0; a DISPLACEMENT site (`margin-bottom` / `margin-block(-end)`, `bottom` / `inset-block(-end)`)
++   *  owes 0 at both insets, since an inset carried by a margin as well as the pad counts it twice
++   *  (why the charter's "Δ = 34" binds the pad sites only). A value the evaluator cannot reduce to
++   *  px (a `var()`, an `em`, a viewport unit, another `env()`) is RED by name, never assumed. */
++  const FOOT_EPS = 0.05;
++  const FOOT_PAD_PROPS = ["padding-bottom", "padding-block-end", "padding-block"];
++  const FOOT_SHIFT_PROPS = ["margin-bottom", "margin-block-end", "margin-block", "bottom", "inset-block-end", "inset-block"];
++  const BLOCK_END = (prop: string, value: string, inset: number): number | null => {
++    const v = value
++      .replace(/\s*!important\s*$/, "")
++      .replace(/env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g, `${inset}px`)
++      .trim();
++    const toks: string[] = [];
++    let depth = 0;
++    let cur = "";
++    for (const ch of v) {
++      if (ch === "(") depth++;
++      if (ch === ")") depth--;
++      if (/\s/.test(ch) && depth === 0) {
++        if (cur) toks.push(cur);
++        cur = "";
++      } else cur += ch;
++    }
++    if (cur) toks.push(cur);
++    const four = ["padding", "margin", "inset"].includes(prop);
++    const two = /-block$/.test(prop);
++    if ((four && toks.length > 4) || (two && toks.length > 2) || (!four && !two && toks.length !== 1)) return null;
++    const tok = four ? toks[toks.length >= 3 ? 2 : 0] : two ? toks[toks.length - 1] : toks[0];
++    let bad = false;
++    const expr = tok
++      .replace(/\bcalc\(/g, "(")
++      .replace(/\bmax\(/g, "M(")
++      .replace(/\bmin\(/g, "m(")
++      .replace(/\bclamp\(/g, "C(")
++      .replace(/(\d*\.?\d+)([a-z%]*)/gi, (_, n: string, u: string) => {
++        if (u === "px" || u === "") return `(${n})`;
++        if (u === "rem") return `(${n}*16)`;
++        bad = true;
++        return "0";
++      });
++    if (bad || !/^[\d.\s+\-*/(),MmC]*$/.test(expr)) return null;
++    try {
++      const f = new Function("M", "m", "C", `return (${expr});`) as (...a: unknown[]) => number;
++      const n = f(Math.max, Math.min, (a: number, b: number, c: number) => Math.min(Math.max(a, b), c));
++      return Number.isFinite(n) ? +n.toFixed(4) : null;
++    } catch {
++      return null;
++    }
++  };
++  /** One site's verdict: null = read as the law, else the reason (printed with both evaluations). */
++  const FOOT_SITE = (x: { prop?: string; value?: unknown }, off: string[]): string | null => {
++    const prop = String(x.prop);
++    const value = String(x.value).trim();
++    const shift = !/^padding/.test(prop);
++    if (off.includes("evaluate")) return shift || STACKED.test(value) ? null : "text: not a stacked calc()";
++    const v0 = BLOCK_END(prop, value, 0);
++    const v34 = BLOCK_END(prop, value, 34);
++    if (v0 === null || v34 === null) return `unevaluable (${v0} / ${v34})`;
++    if (shift) return v0 === 0 && v34 === 0 ? null : `displaces the foot: ${v0} @0 / ${v34} @34`;
++    if (Math.abs(v34 - v0 - 34) > FOOT_EPS) return `Δ ${+(v34 - v0).toFixed(3)} ≠ 34 (${v0} @0 / ${v34} @34)`;
++    if (!off.includes("own-pad") && !(v0 > 0)) return `no pad of its own at inset 0 (${v0})`;
++    return null;
++  };
+   type Plant = { css?: string; prepend?: string; shadow?: string } | null;
+   const FOOT_PAD = (plant: Plant = null, off: string[] = []) => {
+     const scene = join(FE, "src/games/shared/scene.css");
+@@ -1713,8 +1791,9 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     };
+     const r = elementSites(FE, {
+       file: "src/games/shared/GameScene.vue",
+-      pick: (el: { id?: string }) => el.id === "card-foot",
+-      props: ["padding-bottom"],
++      pick: (el: { id: string | null }) => el.id === "card-foot",
++      // `logical` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
++      props: off.includes("logical") ? ["padding-bottom"] : [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
+       read,
+     });
+     // `regimes` off = the one portrait cell (what a row that reads one emulated cell sees)
+@@ -1723,11 +1802,12 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     if (!r.elements.length) bad.push("no #card-foot in GameScene's template");
+     for (const regime of regimes) {
+       const live = r.sites.filter((x: { regimes?: string[] }) => (x.regimes ?? DOCK).includes(regime));
+-      const read1 = off.includes("every-site") ? [effectiveAt(r.sites, regime)].filter(Boolean) : live;
++      const read1 = off.includes("every-site") ? [effectiveAt(r.sites, regime)].filter(<T,>(x: T): x is NonNullable<T> => x !== null) : live;
+       if (!read1.length) bad.push(`${regime}: no site pads the foot`);
+-      for (const x of read1)
+-        if (!(off.includes("shape") ? /env\(\s*safe-area-inset-bottom/ : STACKED).test(String(x.value).trim()))
+-          bad.push(`${regime}: ${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value}${x.important ? " !important" : ""} }`);
++      for (const x of read1) {
++        const why = FOOT_SITE(x, off);
++        if (why) bad.push(`${regime}: ${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value}${x.important ? " !important" : ""} } — ${why}`);
++      }
+     }
+     return { sites: r.sites.length, bad };
+   };
+@@ -1740,6 +1820,19 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     ["a phone-only block", { css: "@media (max-width: 480px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["a landscape-only block", { css: "@media (max-width: 1023.98px) and (orientation: landscape) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["the shorthand", { css: ".card-foot { padding: 0 0 0.15rem; }" }],
++
++    // pass 9 (the pass-8 critic's K-plants and the evaluator's own clauses; LAWS P8 §F)
++    ["K1b the net-zero stack", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }" }],
++    ["K13b the logical longhand", { css: "#card-foot.card-foot { padding-block-end: 0.15rem; }" }],
++    ["K14 the logical shorthand", { css: "#card-foot.card-foot { padding-block: 0 0.15rem; }" }],
++    ["K14' three values (invalid CSS: the engine drops it, the source reads it unevaluable)", { css: "#card-foot.card-foot { padding-block: 0 0 0.15rem; }" }],
++    ["no pad of its own (0px + the inset)", { css: "#card-foot.card-foot { padding-bottom: calc(0px + env(safe-area-inset-bottom)); }" }],
++    ["a negative pad (-1rem + the inset)", { css: "#card-foot.card-foot { padding-bottom: calc(-1rem + env(safe-area-inset-bottom)); }" }],
++    ["a var() pad (unevaluable)", { css: "#card-foot.card-foot { padding-bottom: calc(var(--foot-pad, 0.15rem) + env(safe-area-inset-bottom)); }" }],
++    ["a margin that takes the inset back", { css: "#card-foot.card-foot { margin-block-end: calc(0px - env(safe-area-inset-bottom)); }" }],
++    ["a 3px drop by inset-block-end", { css: "#card-foot.card-foot { position: relative; inset-block-end: -3px; }" }],
++    ["bound − ε: the inset × 0.998 (Δ 33.932)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom) * 0.998); }" }],
++    ["own pad − ε (−0.01px)", { css: "#card-foot.card-foot { padding-bottom: calc(-0.01px + env(safe-area-inset-bottom)); }" }],
+   ];
+   /** DECOYS: declarations that can never reach the foot in any regime — each must stay GREEN, so the
+    *  law is not a text match that reds on a dead block (LAWS P7 §F: a media query EVALUATED). */
+@@ -1747,9 +1840,15 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     ["an unsatisfiable media block", { css: "@media (min-width: 5000px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["`not all and` a live query", { css: "@media not all and (min-width: 1px) { .card-foot { padding-bottom: 0.15rem; } }" }],
+     ["a rail-only berth (the case clear of the edge)", { css: "@media (min-width: 1024px) and (hover: hover) and (pointer: fine) { .card-foot { padding-bottom: max(3.5rem, env(safe-area-inset-bottom)); } }" }],
++
++    ["the legal fallback env(…, 0px) (pass 8's text match red it)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom, 0px)); }" }],
++    ["bound + ε: the inset × 0.9988 (Δ 33.959, inside FOOT_EPS)", { css: "#card-foot.card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom) * 0.9988); }" }],
++    ["own pad + ε (+0.01px)", { css: "#card-foot.card-foot { padding-bottom: calc(0.01px + env(safe-area-inset-bottom)); }" }],
+   ];
+ 
+-  test("row 28 · source: every site that may pad #card-foot at the dock stacks the inset, through the ONE library — eight plants red, three decoys green, and each clause bites", () => {
++  test("row 28 · source: every site that may pad #card-foot at the dock is EVALUATED at inset 0 and 34, through the ONE library — nineteen plants red, six decoys green, and each clause bites", () => {
++    // 25 rows × 9 verdicts through the library's whole-estate walk: minutes under load, not 30 s
++    test.setTimeout(300_000);
+     const shipped = FOOT_PAD();
+     console.log(`[RULE row 28 source] shipped ${JSON.stringify(shipped)}`);
+     expect(shipped.bad, "the shipped foot").toEqual([]);
+@@ -1772,7 +1871,10 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       ["library media-eval", () => { sabotage(["media-eval"]); try { return verdict(); } finally { sabotage([]); } }],
+       ["gate every-site", () => verdict(["every-site"])],
+       ["gate regimes", () => verdict(["regimes"])],
+-      ["gate stacked shape", () => verdict(["shape"])],
++      ["gate evaluate (pass 8's text match)", () => verdict(["evaluate"])],
++      ["gate logical", () => verdict(["logical"])],
++      ["gate own-pad", () => verdict(["own-pad"])],
++      ["gate shift", () => verdict(["shift"])],
+     ] as const) {
+       const v = (run as () => Record<string, boolean>)();
+       battery[clause] = Object.entries(v).filter(([, red]) => !red).map(([n]) => n);
+@@ -1783,12 +1885,43 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+ 
+   /** The SERVED cascade at the element (the behavioural twin of the source arm; LAWS P7 §F (iii)):
+    *  every CSSOM style rule the engine says MATCHES `#card-foot` (selector matching by the engine,
+-   *  media by `matchMedia`, layers and nesting walked) plus the inline style, each `padding-bottom`
+-   *  it declares. Sees what no source reader can: a runtime inline write, a structural selector. */
++   *  media by `matchMedia`, layers and nesting walked) plus the inline style, each declaration of a
++   *  PAD name (`padding-bottom`, `padding-block-end`, the `padding` / `padding-block` shorthands —
++   *  CSSOM's `padding-bottom` is blind to a logical longhand, and a shorthand holding an `env()`
++   *  serialises its longhands empty) or a DISPLACEMENT name (`margin-bottom` / `margin-block(-end)`
++   *  / `margin`, `bottom` / `inset-block(-end)` / `inset`). Pass 9: each site is EVALUATED BY THE
++   *  ENGINE at inset 0 and 34 — a probe beside the foot takes the value with the `env()` replaced
++   *  and the engine computes the block-end side — so a net-zero stack, a logical longhand or an
++   *  `em` is read as the engine reads it, never matched as text (LAWS P8 §F; both engines). */
+   const SERVED_PAD = (page: Page) =>
+     page.evaluate(() => {
+       const el = document.getElementById("card-foot")!;
+-      const out: string[] = [];
++      const PAD = ["padding-bottom", "padding-block-end", "padding", "padding-block"];
++      const SHIFT = ["margin-bottom", "margin-block-end", "margin", "margin-block", "bottom", "inset-block-end", "inset", "inset-block"];
++      const ENV = /env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g;
++      const side = (p: string) => (/^padding/.test(p) ? "paddingBottom" : /^margin/.test(p) ? "marginBottom" : "bottom");
++      const evalAt = (p: string, v: string, inset: number) => {
++        const probe = document.createElement("div");
++        probe.style.cssText = "position: relative; visibility: hidden; height: 0; overflow: hidden";
++        el.parentElement!.insertBefore(probe, el);
++        // `important`: an inline !important outranks any sheet !important, so a planted universal
++        // cannot reach the probe and re-value the site under evaluation (first run: the shipped site
++        // read 0 / 0 under the `* { padding-bottom: 0 !important }` plant)
++        probe.style.setProperty(p, v.replace(ENV, `${inset}px`), "important");
++        const set = probe.style.getPropertyValue(p) !== "";
++        const n = parseFloat(getComputedStyle(probe)[side(p) as "paddingBottom"]);
++        probe.remove();
++        return set && Number.isFinite(n) ? +n.toFixed(3) : null;
++      };
++      const out: { site: string; prop: string; pad: boolean; v0: number | null; v34: number | null }[] = [];
++      const take = (where: string, decl: CSSStyleDeclaration) => {
++        for (const p of [...PAD, ...SHIFT]) {
++          const v = decl.getPropertyValue(p);
++          if (!v) continue;
++          const imp = decl.getPropertyPriority(p) ? " !important" : "";
++          out.push({ site: `${where} { ${p}: ${v}${imp} }`, prop: p, pad: PAD.includes(p), v0: evalAt(p, v, 0), v34: evalAt(p, v, 34) });
++        }
++      };
+       const walk = (rules: CSSRuleList, live: boolean) => {
+         for (const r of Array.from(rules)) {
+           if (r instanceof CSSMediaRule) walk(r.cssRules, live && matchMedia(r.conditionText).matches);
+@@ -1799,14 +1932,12 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+             } catch {
+               hit = false;
+             }
+-            const v = r.style.getPropertyValue("padding-bottom");
+-            // a UNIVERSAL reset (Tailwind's preflight `*, ::after, ::before`, specificity 0 in
+-            // the base layer) matches every element and loses to every class: it is not a site
+-            // that can decide the foot's pad, and it is the only selector the arm sets aside —
+-            // unless it is `!important`, which outranks every normal declaration (a plant below)
+-            const imp = !!r.style.getPropertyPriority("padding-bottom");
++            // a UNIVERSAL reset (Tailwind's preflight `*, ::after, ::before`, specificity 0 in the base
++            // layer) matches every element and loses to every class: not a site that can decide the
++            // foot's block end — unless a declaration in it is `!important` (a plant below)
+             const universal = !r.selectorText.replace(/::?(before|after|backdrop|marker|placeholder|file-selector-button)|\*|,|\s/g, "");
+-            if (live && hit && v && (!universal || imp)) out.push(`${r.selectorText} { ${v}${r.style.getPropertyPriority("padding-bottom") ? " !important" : ""} }`);
++            const anyImp = [...PAD, ...SHIFT].some((p) => r.style.getPropertyPriority(p));
++            if (live && hit && (!universal || anyImp)) take(r.selectorText, r.style);
+             if ((r as unknown as { cssRules?: CSSRuleList }).cssRules?.length) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
+           } else if ((r as unknown as { cssRules?: CSSRuleList }).cssRules) walk((r as unknown as { cssRules: CSSRuleList }).cssRules, live);
+         }
+@@ -1815,51 +1946,136 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+         try {
+           walk(sh.cssRules, true);
+         } catch {
+-          out.push(`UNREADABLE ${sh.href}`);
++          out.push({ site: `UNREADABLE ${sh.href}`, prop: "", pad: true, v0: null, v34: null });
+         }
+       }
+-      if (el.style.paddingBottom) out.push(`style="padding-bottom: ${el.style.paddingBottom}"`);
++      take("style=", el.style);
+       return out;
+     });
+-  const SERVED_OK = (sites: string[]) =>
+-    sites.length > 0 && sites.every((x) => /\{ calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\) \}$/.test(x));
++  type Served = Awaited<ReturnType<typeof SERVED_PAD>>;
++  /** The served law: ≥ 1 pad site; every pad site Δ = 34 (± FOOT_EPS) with a pad of its own at 0;
++   *  every displacement site 0 at both insets; nothing unevaluable. Returns the offending sites. */
++  const SERVED_BAD = (sites: Served) => [
++    ...(sites.some((x) => x.pad) ? [] : ["no pad site"]),
++    ...sites
++      .filter((x) =>
++        x.v0 === null || x.v34 === null
++          ? true
++          : x.pad
++            ? Math.abs(x.v34 - x.v0 - 34) > FOOT_EPS || !(x.v0 > 0)
++            : x.v0 !== 0 || x.v34 !== 0,
++      )
++      .map((x) => `${x.site} → ${x.v0} @0 / ${x.v34} @34`),
++  ];
++  const SERVED_OK = (sites: Served) => SERVED_BAD(sites).length === 0;
++  /** The served arm's clause-sabotage (LAWS P7 §F ii): `logical` off keeps the physical names only
++   *  (pass 8's read set), `evaluate` off matches the pass-8 text instead of the engine's two values,
++   *  `shift` off drops the displacement names. Each must let ≥ 1 plant read GREEN. */
++  const SERVED_OK_OFF = (sites: Served, off: "logical" | "evaluate" | "shift") => {
++    const kept = sites.filter((x) =>
++      off === "logical" ? ["padding-bottom", "padding", ""].includes(x.prop) : off === "shift" ? x.pad : true,
++    );
++    if (off !== "evaluate") return SERVED_OK(kept);
++    return kept.some((x) => x.pad) && kept.every((x) => !x.pad || /\{ [a-z-]+: calc\([^;]*\+\s*env\(safe-area-inset-bottom\)\) \}$/.test(x.site));
++  };
++  /** A SYNTHETIC INSET in either engine (WebKit has no inset emulation): every SERVED stylesheet is
++   *  routed with `env(safe-area-inset-bottom[, …])` rewritten to `<inset>px` before the page sees it,
++   *  so the engine mounts and lays the page out as it would under that inset from the first frame.
++   *  (A CSSOM rewrite after mount read 10 css low against CDP: the sheet's pose is measured as it
++   *  mounts, so the rewrite must be in the bytes.) Calibrated against the chromium CDP inset in the
++   *  row below (same pad, same lowest ink). Call before the page loads; returns the rewrite count. */
++  const FOOT_ENV = /env\(\s*safe-area-inset-bottom\s*(?:,[^()]*(?:\([^()]*\)[^()]*)*)?\)/g;
++  //  ONE route for the whole test, the inset a switch on it (`null` = the bytes as served): a route
++  //  dropped and re-added let the HTTP cache hand the next load the REWRITTEN sheet (the first run's
++  //  served arm read `calc(34px + .15rem)` on a page that never asked for the inset).
++  const SYNTH_ROUTE = async (page: Page) => {
++    const st: { inset: number | null; n: number } = { inset: null, n: 0 };
++    await page.route(/\.css(\?.*)?$/, async (route) => {
++      const r = await route.fetch();
++      let body = await r.text();
++      if (st.inset !== null) body = body.replace(FOOT_ENV, () => (st.n++, `${st.inset}px`));
++      await route.fulfill({ response: r, body });
++    });
++    return st;
++  };
++  /** A plant as it would be served at a synthetic inset (its own `env()` rewritten too). */
++  const AT_INSET = (css: string, inset: number) => css.replace(FOOT_ENV, `${inset}px`);
++
++  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a synthetic 34]. */
++  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean][] = [
++    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true],
++    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true],
++    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
++    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true],
++    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true],
++    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true],
++    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true],
++    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true],
++  ];
++  const FOOT_READ = async (page: Page, inset: number) => {
++    const pad = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("card-foot")!).paddingBottom));
++    const ink = await LOWEST_INK(page);
++    return { pad, ink, clears: ink === null ? null : +(844 - inset - ink).toFixed(2) };
++  };
+ 
+-  test("row 28 · behaviour, both engines on the FLAT phone (inset 0 — WebKit has no inset emulation): the served cascade stacks and the lowest ink clears the screen's edge", async ({
++  test("row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line", async ({
+     page,
+     browserName,
+   }) => {
++    // eighteen page loads (a fresh page per plant, flat and synthetic): the default 30 s is one
++    // WebKit load's budget under a box load of 60–70 (the first WAVE run timed out at plant 4)
++    test.setTimeout(240_000);
++    const st = await SYNTH_ROUTE(page);
+     await OPEN(page);
+     const served = await SERVED_PAD(page);
+     console.log(`[RULE row 28 served] ${browserName} ${JSON.stringify(served)}`);
+-    expect(SERVED_OK(served), `served padding-bottom sites ${JSON.stringify(served)}`).toBe(true);
+-    const padB = await page.evaluate(() => getComputedStyle(document.getElementById("card-foot")!).paddingBottom);
+-    const ink = await LOWEST_INK(page);
+-    const clears = ink === null ? null : +(844 - ink).toFixed(2);
+-    console.log(`[RULE row 28 flat] ${browserName} inset 0 pad ${padB} lowest ink ${ink} clears ${clears}`);
+-    expect(parseFloat(padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
+-    expect(clears, "the lowest ink clears the screen's edge by ≥ 2 css").toBeGreaterThanOrEqual(2);
+-    // NEGATIVE CONTROLS, same page — the served arm reds on each; the paint arm on the ones that move ink.
+-    for (const [name, css, paints] of [
+-      ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false],
+-      ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false],
+-      ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false],
+-      ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true],
+-      ["an !important universal", "* { padding-bottom: 0 !important; }", true],
+-    ] as const) {
+-      const tag = await page.addStyleTag({ content: css });
+-      await SHEET_SETTLED(page);
++    expect(SERVED_BAD(served), "served sites evaluated at 0 and 34").toEqual([]);
++    const f0 = await FOOT_READ(page, 0);
++    console.log(`[RULE row 28 flat] ${browserName} inset 0 ${JSON.stringify(f0)}`);
++    expect(f0.pad, "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
++    expect(f0.clears, "the lowest ink clears the screen's edge by ≥ 2 css").toBeGreaterThanOrEqual(2);
++    st.inset = 34;
++    await OPEN(page);
++    st.inset = null;
++    const n = st.n;
++    const f34 = await FOOT_READ(page, 34);
++    console.log(`[RULE row 28 synth] ${browserName} inset 34 (${n} declarations rewritten) ${JSON.stringify(f34)}`);
++    expect(n, "the synthetic inset rewrote the served env()").toBeGreaterThan(0);
++    expect(f34.pad - f0.pad, `the inset STACKS on the pad (${f0.pad} → ${f34.pad})`).toBeCloseTo(34, 1);
++    expect(f34.clears, "the lowest ink clears the inset line by ≥ 2 css").toBeGreaterThanOrEqual(2);
++    const greens: Record<string, string[]> = { logical: [], evaluate: [], shift: [] };
++    // NEGATIVE CONTROLS, each on a fresh page: the served arm reds on every plant, the flat paint on
++    // the ones that move ink at inset 0, and the synthetic 34 on every one that gives the inset away.
++    for (const [name, css, paints0, paints34] of FOOT_BEHAVIOUR_PLANTS) {
++      await OPEN(page, () => page.addStyleTag({ content: css }));
+       const s = await SERVED_PAD(page);
+-      const low = paints ? await LOWEST_INK(page) : null;
+-      console.log(`[RULE row 28 flat] ${browserName} plant ${name}: served ${JSON.stringify(s)}${paints ? ` clears ${low === null ? null : +(844 - low).toFixed(2)}` : ""}`);
+-      expect(SERVED_OK(s), `negative control ${name}`).toBe(false);
+-      if (paints) expect(low === null ? 0 : 844 - low, `negative control ${name} on paint`).toBeLessThan(2);
+-      await tag.evaluate((n) => (n as Element).remove());
++      const p0 = paints0 ? await FOOT_READ(page, 0) : null;
++      if (paints34) {
++        st.inset = 34;
++        await OPEN(page, () => page.addStyleTag({ content: AT_INSET(css, 34) }));
++        st.inset = null;
++      }
++      const p34 = paints34 ? await FOOT_READ(page, 34) : null;
++      console.log(`[RULE row 28 plant] ${browserName} ${name}: served ${JSON.stringify(SERVED_BAD(s))}${p0 ? ` flat ${JSON.stringify(p0)}` : ""}${p34 ? ` synth34 ${JSON.stringify(p34)}` : ""}`);
++      expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
++      for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      if (p0) expect(p0.clears ?? 0, `negative control ${name} (flat paint)`).toBeLessThan(2);
++      if (p34) expect(p34.clears ?? 0, `negative control ${name} (synthetic 34 paint)`).toBeLessThan(2);
+     }
+     // the runtime write no source reader sees
++    await OPEN(page);
+     await page.evaluate(() => (document.getElementById("card-foot")!.style.paddingBottom = "0px"));
+     const inline = await SERVED_PAD(page);
+-    console.log(`[RULE row 28 flat] ${browserName} plant inline write: served ${JSON.stringify(inline)}`);
++    console.log(`[RULE row 28 plant] ${browserName} inline write: served ${JSON.stringify(SERVED_BAD(inline))}`);
+     expect(SERVED_OK(inline), "negative control: an inline write").toBe(false);
++    // the served arm's own displacement plant (a margin that takes the inset back), then the battery
++    await OPEN(page, () => page.addStyleTag({ content: "#card-foot.card-foot { margin-block-end: calc(0px - env(safe-area-inset-bottom)); }" }));
++    const shift = await SERVED_PAD(page);
++    console.log(`[RULE row 28 plant] ${browserName} margin-block-end takes the inset back: served ${JSON.stringify(SERVED_BAD(shift))}`);
++    expect(SERVED_OK(shift), "negative control: a displacement site").toBe(false);
++    for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(shift, off)) greens[off].push("margin-block-end");
++    console.log(`[RULE row 28 served] ${browserName} sabotage → plants read GREEN ${JSON.stringify(greens)}`);
++    for (const [off, g] of Object.entries(greens)) expect(g.length, `served clause ${off} bites`).toBeGreaterThan(0);
+   });
+ 
+   test("row 28 · paint under a real inset (chromium CDP): the lowest ink clears the inset line by ≥ 2 css, and max() reds it", async ({
+@@ -1890,7 +2106,25 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     console.log(`[RULE row 28] inset 34, max() planted: clears ${red}`);
+     expect(red, "negative control: max() gives the band away").toBeLessThan(2);
+     await tag.evaluate((n) => (n as Element).remove());
++    // pass 9: the pass-8 critic's K-plants under the REAL inset (each reds here, as on the synthetic arm)
++    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^K1/.test(n))) {
++      const k = await page.addStyleTag({ content: css });
++      await SHEET_SETTLED(page);
++      const r = await FOOT_READ(page, 34);
++      console.log(`[RULE row 28] inset 34, ${name}: ${JSON.stringify(r)}`);
++      expect(r.clears ?? 0, `negative control ${name} under CDP 34`).toBeLessThan(2);
++      await k.evaluate((n) => (n as Element).remove());
++    }
+     const i0 = await at(0);
++    // CALIBRATION of the synthetic arm (the one WebKit reads): at CDP 0, the CSSOM rewrite to 34 lands
++    // the same pad and the same lowest ink as the real 34 above (|Δpad| ≤ 0.01, |Δink| ≤ 0.5 css).
++    const st = await SYNTH_ROUTE(page);
++    st.inset = 34;
++    await OPEN(page);
++    const s34 = await FOOT_READ(page, 34);
++    console.log(`[RULE row 28] synthetic 34 at CDP 0 ${JSON.stringify(s34)} against CDP 34 ${JSON.stringify(i34)}`);
++    expect(Math.abs(s34.pad - parseFloat(i34.padB)), "synthetic pad = CDP pad").toBeLessThanOrEqual(0.01);
++    expect(Math.abs((s34.ink ?? 0) - (i34.ink ?? 0)), "synthetic lowest ink = CDP lowest ink").toBeLessThanOrEqual(0.5);
+     console.log(`[RULE row 28] inset 0 ${JSON.stringify(i0)}`);
+     expect(parseFloat(i0.padB), "no inset: the foot keeps a pad of its own").toBeGreaterThan(0);
+     expect(parseFloat(i34.padB) - parseFloat(i0.padB), `the inset STACKS on the pad (${i0.padB} → ${i34.padB})`).toBeCloseTo(34, 1);

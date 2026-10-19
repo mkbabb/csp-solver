@@ -1,0 +1,62 @@
+worktree .claude/worktrees/wf_308fa864-c94-1
+base 74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+tree 6ae9ae16993024dc906e01dd32e640808b3e17d7
+pass9.diff bytes 668210
+pass9.diff sha1 3d60f1fc74262c29d9dd3e853b4554f6b86dd1d8
+shortstat  31 files changed, 14018 insertions(+), 90 deletions(-)
+on-WAVE base acde977b (74a2b5d9 + pass8/integrate/WAVE.diff = acb9c08e, + pass9/instruments/homes.on-WAVE.diff)
+on-WAVE tree 3e70ad48361d167b083814f004299fe6dbfae90d
+pass9.delta.on-WAVE.diff bytes 230529
+pass9.delta.on-WAVE.diff sha1 b4c5d8bb4f12cb13460b67cc7044709f2c5a4656
+on-WAVE shortstat  18 files changed, 4208 insertions(+), 92 deletions(-)
+stripped dot paths: 4 (web/frontend/.pw-walk9.mts web/frontend/.vite-walk9.mts web/frontend/.pw-walk9.mts web/frontend/.vite-wave.mts )
+git apply --check --binary, each on a fresh git archive of its base (exits read bare):
+  tree base=74a2b5d9 diff=pass9.diff check=0 numstat_paths=31 errors=0
+    s10 rebuilt (74a2b5d9 + pass8/integrate/s10.diff; 7d2b1fdc is not in this object store): apply=0
+  s10 base=s10 diff=pass9.diff check=1 numstat_paths=31 errors=12
+      error: web/frontend/e2e/lib/edge-bands.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/edge-bands.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/glyph-pop.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/rest-probes.mjs: already exists in working directory
+      error: patch failed: web/frontend/knip.json:84
+      error: web/frontend/knip.json: patch does not apply
+      error: web/frontend/scripts/shape-census.d.mts: already exists in working directory
+      error: web/frontend/scripts/shape-census.mjs: already exists in working directory
+  s13 base=f1c9c3fe diff=pass9.diff check=1 numstat_paths=31 errors=18
+      error: web/frontend/e2e/lib/edge-bands.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/glyph-pop.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/rest-probes.mjs: already exists in working directory
+      error: patch failed: web/frontend/knip.json:84
+      error: web/frontend/knip.json: patch does not apply
+      error: patch failed: web/frontend/scripts/check-pw-projects.mjs:246
+      error: web/frontend/scripts/check-pw-projects.mjs: patch does not apply
+      error: web/frontend/scripts/shape-census.mjs: already exists in working directory
+  wave base=acb9c08e diff=pass9.diff check=1 numstat_paths=31 errors=20
+      error: web/frontend/e2e/lib/edge-bands.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/edge-bands.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/glyph-pop.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/paint-lib.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.d.mts: already exists in working directory
+      error: web/frontend/e2e/lib/postpaint.mjs: already exists in working directory
+      error: web/frontend/e2e/lib/rest-probes.mjs: already exists in working directory
+      error: patch failed: web/frontend/knip.json:84
+      error: web/frontend/knip.json: patch does not apply
+      error: patch failed: web/frontend/scripts/check-pw-projects.mjs:246
+      error: web/frontend/scripts/check-pw-projects.mjs: patch does not apply
+  ow base=acde977b diff=pass9.delta.on-WAVE.diff check=0 numstat_paths=18 errors=0
+  owwave base=acb9c08e diff=pass9.delta.on-WAVE.diff check=0 numstat_paths=18 errors=0
+  done
+  the overlaps, homes aside (the homes v2 files already exist on those bases by design):
+    s10 non-home: knip.json 
+    s13 non-home: knip.json scripts/check-pw-projects.mjs src/assets/index.css src/games/shared/useGameState.ts src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue 
+    wave non-home: knip.json scripts/check-pw-projects.mjs src/assets/index.css src/games/shared/useGameState.ts src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue 
+the only dot path in either diff is .github/workflows/ci.yml (product, carried since pass 8); grep of both diffs for the four scratch markers the charter names: 0 each

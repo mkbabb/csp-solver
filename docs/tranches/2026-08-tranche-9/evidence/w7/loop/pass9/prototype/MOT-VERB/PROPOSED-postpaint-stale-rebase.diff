@@ -1,0 +1,75 @@
+diff --git a/web/frontend/e2e/lib/postpaint.d.mts b/web/frontend/e2e/lib/postpaint.d.mts
+index f5778ce6..7d7388aa 100644
+--- a/web/frontend/e2e/lib/postpaint.d.mts
++++ b/web/frontend/e2e/lib/postpaint.d.mts
+@@ -13,10 +13,14 @@ export interface PPRead {
+   tlNow?: number;
+   ct: number | null;
+   ps: string | null;
++  /** the animation's playbackRate at the read (MOT-VERB pass 9 PROPOSED, stale-rebase) */
++  pr?: number | null;
+   x: number;
+   y: number;
+   w: number;
+   stale?: boolean;
++  /** a stale RUNNING post read whose clock was carried back to its own frame (stale-rebase) */
++  rebased?: boolean;
+ }
+ /** `window.__pp` after `installSampler`. */
+ export interface PP {
+diff --git a/web/frontend/e2e/lib/postpaint.mjs b/web/frontend/e2e/lib/postpaint.mjs
+index 7629992e..b2dade32 100644
+--- a/web/frontend/e2e/lib/postpaint.mjs
++++ b/web/frontend/e2e/lib/postpaint.mjs
+@@ -81,7 +81,7 @@ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = tru
+     const r = b.getBoundingClientRect();
+     // tlNow: the timeline AT the read. A post read whose task ran after the NEXT frame's timeline
+     // update reads that frame's clock (WebKit #5 under load: post k0 ct 16 beside inRAF k0 ct 0) — STALE
+-    return { k, tl, tlNow: Number(document.timeline.currentTime ?? 0), ct: a ? Number(a.currentTime ?? 0) : null, ps: a ? a.playState : null, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
++    return { k, tl, tlNow: Number(document.timeline.currentTime ?? 0), ct: a ? Number(a.currentTime ?? 0) : null, ps: a ? a.playState : null, pr: a ? a.playbackRate : null, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
+   };
+   const mc = new MessageChannel();
+   const q = [];
+@@ -117,7 +117,7 @@ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = tru
+ }
+ 
+ /** Clause switches for the postpaint sabotage battery (POSTPAINT_SABOTAGE=a,b; LAWS P7 §F (ii)). */
+-export const PP_CLAUSES = ["F1", "F1ct", "CI", "key-inraf", "stale"];
++export const PP_CLAUSES = ["F1", "F1ct", "CI", "key-inraf", "stale", "stale-rebase"];
+ const PP_OFF = new Set((process.env.POSTPAINT_SABOTAGE ?? "").split(",").filter(Boolean));
+ const ppOn = (c) => !PP_OFF.has(c);
+ /** The frame that first painted the mover: the last frame whose rAF time is at or before the entry,
+@@ -143,7 +143,14 @@ export function analyse(frames, rest, { kPaint = -1, tolPx = 3, tolMs = 2, ks =
+     if (!ppOn("stale") || x.tlNow == null || x.tlNow === x.tl || x.ct === null) return x;
+     stale++;
+     const s = byK.get(x.k);
+-    return s ? { ...s, stale: true } : { ...x, ct: null };
++    // STALE-REBASE (MOT-VERB pass 9, PROPOSED): the in-rAF twin is read BEFORE the frame's later rAF
++    // callbacks, so a mover held paused and started by a write in a rAF registered after the sampler's
++    // (the fold's holdFirstFrame) reads ct 0 there whatever the write was: WebKit's frame-1 post read
++    // is stale on every fold, and PLANT skip painted frame 1 at ct 150 GREEN. A RUNNING stale read
++    // carries the frame's own clock back: ct − (tlNow − tl) × rate. Position stays the twin's.
++    const back = ppOn("stale-rebase") && x.ps === "running" ? x.ct - (x.tlNow - x.tl) * (x.pr ?? 1) : null;
++    if (s) return back === null ? { ...s, stale: true } : { ...s, ct: back, stale: true, rebased: true };
++    return back === null ? { ...x, ct: null } : { ...x, ct: back, stale: true, rebased: true };
+   });
+   const all = fixed.filter((x) => x.ct !== null).sort((a, b) => a.k - b.k);
+   const f = kPaint >= 0 ? all.filter((x) => x.k >= kPaint) : all;
+@@ -305,6 +312,17 @@ export function unitSelfTest() {
+   const u4 = !at(3.99, 0).f1ct && at(4.01, 0).f1ct && !at(0, 2.99).f1pos && at(0, 3.01).f1pos;
+   if (!u4) hole = true;
+   rows.push(`POSTPAINT unit U4 bounds: ct 3.99 ${at(3.99, 0).f1ct ? "RED" : "GREEN"} / 4.01 ${at(4.01, 0).f1ct ? "RED" : "GREEN"} · dx 2.99 ${at(0, 2.99).f1pos ? "RED" : "GREEN"} / 3.01 ${at(0, 3.01).f1pos ? "RED" : "GREEN"} ${u4 ? "OK (margins ±0.01)" : "← a hole"}`);
++  // U5 stale-rebase (MOT-VERB pass 9, PROPOSED): the fold's shape. Frame 1's in-rAF read holds the
++  // paused mover at ct 0 (the product's start write runs in a later rAF of the same frame); its post
++  // read ran after frame 2's timeline update. Clean: post ct 17 at tlNow 263 → rebased 0, GREEN.
++  // Planted (startTime written 150 ms early): post ct 167 → rebased 150, RED on F1ct alone.
++  const held = (ct0) => [fr(0, 246, ct0, 0, 263), fr(1, 263, ct0), fr(2, 280, ct0 + 17)];
++  const twin = [{ ...fr(0, 246, 0), ps: "paused" }, fr(1, 263, 17), fr(2, 280, 34)];
++  const u5c = analyse(held(17), rest, { kPaint: 0, inRAF: twin });
++  const u5p = analyse(held(167), rest, { kPaint: 0, inRAF: twin });
++  const u5 = !u5c.red && u5p.f1ct;
++  if (!u5) hole = true;
++  rows.push(`POSTPAINT unit U5 stale-rebase: clean ${fmtArm(u5c)} · planted ${fmtArm(u5p)} → ${u5 ? "OK (planted F1ct RED, clean GREEN)" : "← a hole: a stale frame 1 reads its pre-write twin"}`);
+   return { rows, hole };
+ }
+ 

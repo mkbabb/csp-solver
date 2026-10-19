@@ -1,0 +1,53 @@
+
+ RUN  v4.1.11 <critic-scratch>/tree/web/frontend
+
+ ❯ src/pencil/chrome/PlayerMark/rowBudget.test.ts (8 tests | 2 failed) 17ms
+     × keeps four rows at −ε: the board ends ε inside your row 9ms
+     × keeps four rows when the board is under your row as much as under all four 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/chrome/PlayerMark/rowBudget.test.ts > the row budget's one predicate (no growth) > keeps four rows at −ε: the board ends ε inside your row
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/PlayerMark/rowBudget.test.ts:30:79
+     28|   // sheet's bottom (the added rows lap none of it) and ε below it (th…
+     29|   it("keeps four rows at −ε: the board ends ε inside your row", () => {
+     30|     expect(takesShort(tall, short, box(10, 60, 50, short.bottom - 60 -…
+       |                                                                               ^
+     31|       false,
+     32|     );
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/pencil/chrome/PlayerMark/rowBudget.test.ts > the row budget's one predicate (no growth) > keeps four rows when the board is under your row as much as under all four
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/pencil/chrome/PlayerMark/rowBudget.test.ts:51:58
+     49|   it("keeps four rows when the board is under your row as much as unde…
+     50|     // a board entirely inside the short sheet's box: the added rows a…
+     51|     expect(takesShort(tall, short, box(10, 60, 50, 50))).toBe(false);
+       |                                                          ^
+     52|   });
+     53| });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 6 passed (8)
+   Start at  14:55:06
+   Duration  3.72s (transform 86ms, setup 69ms, import 100ms, tests 17ms, environment 3.02s)
+

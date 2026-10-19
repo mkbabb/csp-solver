@@ -1,0 +1,304 @@
+import { readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
+import { test, expect, type Page } from "@playwright/test";
+
+/**
+ * THE TAB'S PEN, AS THE BROWSER SEES IT — the behavioural twin of `lint:favicon` clause e (T9-W7
+ * §12 row 2; LAWS P7 §F iii). The gate reads `index.html` as text; this reads the BUILT page after
+ * hydration: the live `link[rel~=icon]` and `apple-touch-icon` nodes, `matchMedia(link.media)` in
+ * the scheme under test, the resolved URL's origin and path, any `<base>`, every attribute write to
+ * the links after parse, and the bytes the page itself fetches (content type and sha256 against
+ * the sidecar `scripts/icons.provenance.json`). Run it against a served dist (`PLAYWRIGHT_BASE_URL`).
+ *
+ * Every clause has an in-run plant that reds it ALONE (rewritten HTML or a re-routed response,
+ * never a file on disk), and the two negative-negatives must stay GREEN. The sabotage battery is
+ * pure: each clause is switched off over the SAME readings and its sole plant must turn GREEN.
+ */
+
+const SIDECAR = JSON.parse(
+  readFileSync(
+    fileURLToPath(new URL("../scripts/icons.provenance.json", import.meta.url)),
+    "utf8",
+  ),
+) as Record<string, string>;
+
+const WANT = {
+  icon: { path: "/icon.svg", type: "image/svg+xml", sha: SIDECAR["icon.svg"] },
+  "apple-touch-icon": {
+    path: "/apple-touch-icon.png",
+    type: "image/png",
+    sha: SIDECAR["apple-touch-icon.png"],
+  },
+} as const;
+type Rel = keyof typeof WANT;
+const RELS = Object.keys(WANT) as Rel[];
+/** The attributes a live link may carry; `type` is held to the rel's own, `media` is evaluated. */
+const ALLOW = ["rel", "href", "type", "media"];
+
+const CLAUSES = [
+  "count",
+  "allow",
+  "media",
+  "type",
+  "origin",
+  "path",
+  "base",
+  "ctype",
+  "sha",
+  "mutation",
+] as const;
+type Clause = (typeof CLAUSES)[number];
+
+interface LinkRead {
+  attrs: [string, string][];
+  href: string;
+  media: boolean; // matchMedia(link.media) in the scheme under test (true when no media)
+  status: number;
+  ctype: string;
+  sha: string;
+}
+interface Reading {
+  origin: string;
+  base: boolean;
+  links: Record<Rel, LinkRead[]>;
+  mutations: string[];
+}
+
+/** Installed before any page script: every write to a rel~=icon / apple-touch-icon link after parse. */
+const WATCH = () => {
+  const w = window as unknown as { __tabWrites: string[] };
+  w.__tabWrites = [];
+  const watched = (n: Node) =>
+    n instanceof HTMLLinkElement &&
+    /(^|\s)(icon|apple-touch-icon)(\s|$)/i.test(n.getAttribute("rel") ?? "");
+  document.addEventListener("DOMContentLoaded", () => {
+    new MutationObserver((list) => {
+      for (const r of list) {
+        if (r.type === "attributes" && watched(r.target))
+          w.__tabWrites.push(`${r.attributeName}=${(r.target as Element).getAttribute(r.attributeName ?? "")}`);
+        for (const n of [...r.addedNodes, ...r.removedNodes])
+          if (watched(n)) w.__tabWrites.push(`node ${(n as Element).outerHTML}`);
+      }
+    }).observe(document, { subtree: true, childList: true, attributes: true });
+  });
+};
+
+/** The page after hydration, as its own scripts left it: links, base, writes, and fetched bytes. */
+async function read(page: Page, url: string, scheme: "light" | "dark"): Promise<Reading> {
+  await page.emulateMedia({ colorScheme: scheme });
+  await page.addInitScript(WATCH);
+  await page.goto(url, { waitUntil: "load" });
+  // hydration; a plant that re-points the bundle too (E6's foreign <base>) never mounts, and is read as served
+  await page
+    .waitForFunction(() => (document.querySelector("#app")?.childElementCount ?? 0) > 0, null, {
+      timeout: 15_000,
+    })
+    .catch(() => undefined);
+  await page.waitForTimeout(400); // a post-mount re-point lands inside this window
+  return page.evaluate(async (rels) => {
+    const hex = (b: ArrayBuffer) =>
+      [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
+    const links = {} as Record<string, LinkRead[]>;
+    for (const rel of rels) {
+      links[rel] = [];
+      const nodes = [...document.querySelectorAll("link")].filter((l) =>
+        (l.getAttribute("rel") ?? "").toLowerCase().split(/\s+/).includes(rel),
+      );
+      for (const l of nodes) {
+        const got: LinkRead = {
+          attrs: [...l.attributes].map((a) => [a.name.toLowerCase(), a.value]),
+          href: l.href,
+          media: !l.media || matchMedia(l.media).matches,
+          status: 0,
+          ctype: "",
+          sha: "",
+        };
+        try {
+          const r = await fetch(l.href, { cache: "no-store" });
+          got.status = r.status;
+          got.ctype = r.headers.get("content-type") ?? "";
+          got.sha = hex(await crypto.subtle.digest("SHA-256", await r.arrayBuffer()));
+        } catch {
+          got.status = -1;
+        }
+        links[rel].push(got);
+      }
+    }
+    return {
+      origin: location.origin,
+      base: document.querySelector("base") !== null,
+      links,
+      mutations: (window as unknown as { __tabWrites?: string[] }).__tabWrites ?? [],
+    } as Reading;
+  }, RELS);
+}
+
+/** The clauses a reading reds, each with its reason; `off` switches clauses off (the battery). */
+function judge(r: Reading, off: ReadonlySet<Clause> = new Set()): [Clause, string][] {
+  const out: [Clause, string][] = [];
+  const red = (c: Clause, why: string) => {
+    if (!off.has(c)) out.push([c, why]);
+  };
+  if (r.base) red("base", "a live <base> element re-points every relative href");
+  if (r.mutations.length) red("mutation", `written after parse: ${r.mutations.join(" | ")}`);
+  for (const rel of RELS) {
+    const want = WANT[rel];
+    const links = r.links[rel] ?? [];
+    if (links.length !== 1) red("count", `${links.length} live ${rel} links`);
+    for (const l of links) {
+      for (const [k, v] of l.attrs)
+        if (!ALLOW.includes(k)) red("allow", `${rel}: ${k}="${v}" off the allowlist`);
+      const type = l.attrs.find(([k]) => k === "type")?.[1];
+      if (type !== undefined && type.trim().toLowerCase() !== want.type)
+        red("type", `${rel}: type="${type}", not ${want.type}`);
+      if (!l.media) red("media", `${rel}: its media query is false in this scheme`);
+      const u = new URL(l.href);
+      if (u.origin !== r.origin) red("origin", `${rel}: resolves to ${u.origin}`);
+      if (u.pathname + u.search + u.hash !== want.path)
+        red("path", `${rel}: resolves to ${u.pathname}${u.search}${u.hash}`);
+      if (l.status !== 200 || !l.ctype.toLowerCase().startsWith(want.type))
+        red("ctype", `${rel}: fetched ${l.status} ${l.ctype}`);
+      if (l.sha !== want.sha) red("sha", `${rel}: sha256 ${l.sha.slice(0, 12)}, not the sidecar's`);
+    }
+  }
+  return out;
+}
+
+interface Plant {
+  name: string;
+  /** the clauses it must red: `exact` reds these and no other; otherwise at least these */
+  want: Clause[];
+  exact: boolean;
+  scheme?: "light" | "dark";
+  html?: (h: string) => string;
+  setup?: (page: Page, origin: string) => Promise<void>;
+}
+const LINKS = /(<link rel="icon"[^>]*>\s*<link rel="apple-touch-icon"[^>]*>)/;
+const tag = (t: string) => [`<${t}>`, `</${t}>`];
+/** Serve `path` (glob or URL) with the icon's real bytes, a content type, and optionally new bytes. */
+const serve =
+  (at: string, ctype: string, edit: (svg: string) => string = (x) => x) =>
+  async (page: Page, origin: string) => {
+    const svg = await (await page.request.get(`${origin}/icon.svg`)).text();
+    void (await page.route(at, (route) =>
+      route.fulfill({
+        status: 200,
+        body: edit(svg),
+        headers: { "content-type": ctype, "access-control-allow-origin": "*" },
+      }),
+    ));
+  };
+/** After load, the page's own script writes the icon link (the E7 species: a main.ts re-point). */
+const repoint = (to: string, back: boolean) => async (page: Page) => {
+  await page.addInitScript(
+    ([to, back]) =>
+      addEventListener("load", () => {
+        const l = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
+        if (!l) return;
+        const was = l.getAttribute("href") ?? "";
+        l.setAttribute("href", to);
+        if (back) setTimeout(() => l.setAttribute("href", was), 50);
+      }),
+    [to, back] as const,
+  );
+};
+const thick = (svg: string) => svg.replace(/stroke-width="[^"]*"/, 'stroke-width="6"');
+
+const PLANTS: Plant[] = [
+  { name: "E1 the icon link scoped to dark, read light", want: ["media"], exact: true, html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="(prefers-color-scheme: dark)"') },
+  { name: "E2 the icon link typed text/plain", want: ["type"], exact: true, html: (h) => h.replace('type="image/svg+xml"', 'type="text/plain"') },
+  { name: "E3 both links inside a template", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("template").join(k)) },
+  { name: "E4 both links inside a noscript", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("noscript").join(k)) },
+  { name: "E5 both links kept only as a script string", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("script").join(`window.__x = ${JSON.stringify(k)};`)) },
+  { name: "E6 a base href to a foreign origin", want: ["base", "origin"], exact: false, html: (h) => h.replace("<title>", '<base href="https://example.com/" /><title>') },
+  { name: "E7 a script re-points the icon after load", want: ["mutation", "path", "sha"], exact: false, setup: async (page, origin) => {
+    await serve("**/tab-pen-thick.svg", "image/svg+xml", thick)(page, origin);
+    await repoint("/tab-pen-thick.svg", false)(page);
+  } },
+  { name: "P-base a same-origin base (resolution unchanged)", want: ["base"], exact: true, html: (h) => h.replace("<title>", '<base href="/" /><title>') },
+  { name: "P-allow a sizes ladder on the touch icon", want: ["allow"], exact: true, html: (h) => h.replace('rel="apple-touch-icon"', 'rel="apple-touch-icon" sizes="180x180"') },
+  { name: "P-origin the icon's bytes served off-origin", want: ["origin"], exact: true, html: (h) => h.replace('href="/icon.svg"', 'href="https://example.com/icon.svg"'), setup: serve("https://example.com/icon.svg", "image/svg+xml") },
+  { name: "P-path the icon's bytes at another path", want: ["path"], exact: true, html: (h) => h.replace('href="/icon.svg"', 'href="/tab-pen-copy.svg"'), setup: serve("**/tab-pen-copy.svg", "image/svg+xml") },
+  { name: "P-ctype the icon served as text/plain", want: ["ctype"], exact: true, setup: serve("**/icon.svg", "text/plain") },
+  { name: "P-sha the icon served with other bytes", want: ["sha"], exact: true, setup: serve("**/icon.svg", "image/svg+xml", thick) },
+  { name: "P-mutation a re-point undone 50 ms later", want: ["mutation"], exact: true, setup: async (page) => repoint("/icon.svg?x", true)(page) },
+  { name: "X1 CRITIC a CSP meta img-src none (the browser's image fetch of the icon is refused; the page fetch() is not)", want: ["ctype"], exact: false, html: (h) => h.replace("<title>", `<meta http-equiv="Content-Security-Policy" content="img-src 'none'" /><title>`) },
+  { name: "X2 CRITIC a script re-points the icon 1500 ms after load (outside the 400 ms window)", want: ["mutation", "path", "sha"], exact: false, setup: async (page, origin) => {
+    await serve("**/tab-pen-thick.svg", "image/svg+xml", thick)(page, origin);
+    await page.addInitScript(() => addEventListener("load", () => setTimeout(() => document.querySelector('link[rel~="icon"]')?.setAttribute("href", "/tab-pen-thick.svg"), 1500)));
+  } },
+  { name: "NN1 the links' attributes reordered", want: [], exact: true, html: (h) => h.replace('<link rel="icon" type="image/svg+xml" href="/icon.svg" />', '<link href="/icon.svg" type="image/svg+xml" rel="icon">') },
+  { name: "NN2 media=all on the icon (true in both schemes)", want: [], exact: true, html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="all"') },
+  { name: "NN3 E1 read dark (its query holds)", want: [], exact: true, scheme: "dark", html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="(prefers-color-scheme: dark)"') },
+];
+
+test("the tab's pen as the built page serves it: clean, plants, battery", async ({ browser, baseURL }) => {
+  test.setTimeout(600_000);
+  const origin = new URL(baseURL ?? "http://127.0.0.1").origin;
+  const unapplied = new Set<string>();
+  const once = async (p: Partial<Plant>, scheme: "light" | "dark") => {
+    const ctx = await browser.newContext();
+    const page = await ctx.newPage();
+    if (p.html) {
+      const edit = p.html;
+      await page.route(
+        (u) => u.origin === origin && u.pathname === "/",
+        async (route) => {
+          const res = await route.fetch();
+          const was = await res.text();
+          const body = edit(was);
+          if (body === was) unapplied.add(p.name ?? ""); // a plant that changes nothing proves nothing
+          await route.fulfill({ response: res, body });
+        },
+      );
+    }
+    await p.setup?.(page, origin);
+    const r = await read(page, `${origin}/`, scheme);
+    await ctx.close();
+    return r;
+  };
+  const rows: string[] = [];
+  let ok = true;
+  for (const scheme of ["light", "dark"] as const) {
+    const got = judge(await once({}, scheme));
+    rows.push(`  ${got.length ? "RED  " : "GREEN"}  clean ${scheme}${got.map(([c, w]) => `\n         ${c}: ${w}`).join("")}`);
+    if (got.length) ok = false;
+  }
+  const readings = new Map<Plant, Reading>();
+  for (const p of PLANTS) readings.set(p, await once(p, p.scheme ?? "light"));
+  for (const p of PLANTS) {
+    const fired = [...new Set(judge(readings.get(p)!).map(([c]) => c))].sort();
+    const want = [...p.want].sort();
+    const good = unapplied.has(p.name)
+      ? false
+      : p.exact
+      ? fired.join() === want.join()
+      : want.every((c) => fired.includes(c));
+    rows.push(`  ${good ? "AS REQUIRED" : "FAILED     "}  ${p.name}: ${unapplied.has(p.name) ? "the plant changed nothing" : `red [${fired.join(" ")}]`}, want ${p.exact ? "" : ">= "}[${want.join(" ")}]`);
+    if (!good) ok = false;
+  }
+  // the battery: each clause off over the same readings; its sole plants must then read GREEN
+  for (const c of CLAUSES) {
+    const sole = PLANTS.filter((p) => p.exact && p.want.length === 1 && p.want[0] === c);
+    const bite = sole.length > 0 && sole.every((p) => judge(readings.get(p)!, new Set([c])).length === 0);
+    rows.push(`  ${bite ? "BITE" : "HOLE"}  ${c} off: ${sole.map((p) => p.name.split(" ")[0]).join(" ") || "no sole plant"}`);
+    if (!bite) ok = false;
+  }
+  console.log(`tab-pen (${origin}, ${test.info().project.name}):\n${rows.join("\n")}`);
+  expect(ok, rows.join("\n")).toBe(true);
+});
+
+test("CRITIC: under img-src 'none' the icon's image load fails while fetch() succeeds", async ({ page, baseURL }) => {
+  const origin = new URL(baseURL ?? "http://127.0.0.1").origin;
+  await page.route((u) => u.origin === origin && u.pathname === "/", async (route) => {
+    const res = await route.fetch();
+    await route.fulfill({ response: res, body: (await res.text()).replace("<title>", `<meta http-equiv="Content-Security-Policy" content="img-src 'none'" /><title>`) });
+  });
+  await page.goto(`${origin}/`, { waitUntil: "load" });
+  const got = await page.evaluate(async () => {
+    const img = await new Promise((r) => { const i = new Image(); i.onload = () => r("load"); i.onerror = () => r("error"); i.src = "/icon.svg"; });
+    const f = await fetch("/icon.svg", { cache: "no-store" });
+    return { img, fetch: f.status };
+  });
+  console.log(`CRITIC csp (${test.info().project.name}): image ${got.img}, fetch ${got.fetch}`);
+});

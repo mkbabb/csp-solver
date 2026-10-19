@@ -1,0 +1,1481 @@
+diff --git a/web/frontend/e2e/boot-hand.spec.ts b/web/frontend/e2e/boot-hand.spec.ts
+index a9d9d812..adfff039 100644
+--- a/web/frontend/e2e/boot-hand.spec.ts
++++ b/web/frontend/e2e/boot-hand.spec.ts
+@@ -15,10 +15,17 @@ import { installTimeline } from './lib/postpaint.mjs';
+  *      ruling reaches 95 % (less one frame's interval). Born RED on `74a2b5d9` (digits at 352–479 ms,
+  *      ruled 95 % at 557–579 ms, pass 7) and under the bypass plant (a build whose `afterRuling`
+  *      returns null).
+- *   R  THE HAND IS A RATE: at 60 and 30 Hz the ruling takes no more than 1.2× its time at the native
+- *      rate in the same run (LAWS P7 §F: a rate keyed on the OBSERVED interval, never a per-frame
+- *      constant). Pass 7's clock capped each frame at 17 ms, so a 30 Hz panel read as a stall on every
+- *      frame and ruled at half speed: that build is R's plant.
++ *   R  THE HAND IS A RATE: at 60 and 30 Hz the hand keeps ≥ 0.9 of its native pace, i.e. the ruling
++ *      takes no more than 1/0.9 = 1.111× its native time in the same run (LAWS P8 §D, the law's 0.9;
++ *      pass 8's 1.2× is struck: pass 7's flat-17 ms clock passed it at 60 Hz in both engines). The
++ *      shim's arms are named at the rate they DELIVER (WebKit's native frame is ~10 ms, so its '60'
++ *      runs at 50 Hz and its '30' at 25 Hz), printed per arm. Pass 7's clock is R's plant.
++ *   L  A LOST FRAME NEVER TELEPORTS THE HAND (the stall leg, LAWS P7 §F (iii): M20's behavioural twin):
++ *      three 120 ms main-thread stalls injected in rAF at a quarter, half and three quarters of the
++ *      ruling; the ruled fraction gained on the frame after each lost frame (a rAF gap ≥ 100 ms between
++ *      the first stroke and 95 %) is ≤ 4× the larger step of its two neighbours on either side. The wall clock (`clock += dt`, the pre-M20 hand) is L's plant: a
++ *      lost frame there lands its whole interval at once. %/s is printed, never gated: a wall-clock
++ *      hand keeps its %/s across a stall by definition, so only the per-frame step can see it.
+  *   S  NOTHING BAKES UNDER THE HAND (`stacksResident`): no pose bake lands (a blob URL minted, which is
+  *      how every raster stack hands its encode over) between the first stroke and the ruling's 95 %,
+  *      and the wait's ceiling never fired (`data-hand-ceiling` absent). Born RED on `74a2b5d9` (its
+@@ -30,6 +37,11 @@ import { installTimeline } from './lib/postpaint.mjs';
+  * never the givens. Box load printed per line (LAWS P6 §B).
+  */
+ const RULED = 'ruled:svg.hand-drawn-grid > g:not(.boil-frame-layer) > path.grid-line';
++/** R's floor (LAWS P8 §D) and L's bound: a lost frame's step ≤ 4× its neighbours' (the hand's one
++ *  `stepMs` of travel reads ~1 at 60 Hz and ~2.2 on a 7.8 ms panel; the wall clock's 120 ms stall lands
++ *  7–15 frames at once). Env-overridable for the threshold battery only. */
++const R_FLOOR = Number(process.env.BOOT_R_FLOOR ?? 0.9);
++const L_BOUND = Number(process.env.BOOT_L_BOUND ?? 4);
+ const RATES = [
+   { name: 'native', hz: 0 },
+   { name: '60 Hz', hz: 60 },
+@@ -102,6 +114,35 @@ function watchWave(): void {
+   }).observe(document, { subtree: true, attributes: true, attributeFilter: ['style'] });
+ }
+ 
++/** Init script (L): three 120 ms main-thread stalls, each inside a rAF, the first frame the ruling's
++ *  drawn fraction (the same inline-dash sum as the `ruled:` subject) crosses 25, 50 and 75 %. */
++function stallRuling(): void {
++  const w = window as unknown as { __stalls: number[] };
++  w.__stalls = [];
++  const marks = [0.25, 0.5, 0.75];
++  const tick = () => {
++    const lines = document.querySelectorAll<SVGPathElement>(
++      'svg.hand-drawn-grid > g:not(.boil-frame-layer) > path.grid-line',
++    );
++    let dashed = 0;
++    let sum = 0;
++    for (const l of lines) {
++      const d = parseFloat(l.style.strokeDasharray);
++      const o = parseFloat(l.style.strokeDashoffset);
++      if (d > 0 && Number.isFinite(o)) dashed++;
++      sum += d > 0 && Number.isFinite(o) ? 1 - o / d : 1;
++    }
++    if (dashed > 0 && sum / lines.length >= marks[0]) {
++      marks.shift();
++      const t0 = performance.now();
++      while (performance.now() - t0 < 120);
++      w.__stalls.push(t0);
++    }
++    if (marks.length) requestAnimationFrame(tick);
++  };
++  requestAnimationFrame(tick);
++}
++
+ type Boot = {
+   interval: number;
+   t0: number;
+@@ -115,9 +156,11 @@ type Boot = {
+   bakesIn: number;
+   bakes: number;
+   ceiling: string | null;
++  /** L: per injected stall, the ruled step on the frame after it over the larger neighbour step */
++  stalls: { gap: number; step: number; near: number; ratio: number; rate: number }[];
+ };
+ 
+-async function boot(browser: Browser, hz: number): Promise<Boot> {
++async function boot(browser: Browser, hz: number, stall = false): Promise<Boot> {
+   const ctx = await browser.newContext({
+     viewport: { width: 1280, height: 800 },
+     reducedMotion: 'no-preference',
+@@ -126,6 +169,7 @@ async function boot(browser: Browser, hz: number): Promise<Boot> {
+   await ctx.addInitScript(watchWave);
+   await ctx.addInitScript(watchBakes);
+   await ctx.addInitScript(installTimeline, RULED);
++  if (stall) await ctx.addInitScript(stallRuling);
+   const page = await ctx.newPage();
+   await page.goto('/?game=sudoku');
+   await expect(page.locator('.boil-frame-bitmap')).toHaveCount(4, { timeout: 30000 });
+@@ -160,7 +204,28 @@ async function boot(browser: Browser, hz: number): Promise<Boot> {
+     worstStep = Math.max(worstStep, dx);
+     if (dt > 0) worstRate = Math.max(worstRate, dx / (dt / 1000));
+   }
++  // L: a frame whose rAF follows its predecessor by ≥ 100 ms inside the ruling is a lost frame
++  const steps = ruled.map((p, i) => ({
++    gap: i ? (ts.get(p.k) ?? 0) - (ts.get(ruled[i - 1].k) ?? 0) : 0,
++    dx: i ? (p.x - ruled[i - 1].x) / full : 0,
++    t: p.t,
++  }));
++  const stalls = steps
++    .map((s, i) => ({ ...s, i }))
++    .filter((s) => s.i > 2 && s.gap >= 100 && s.t > first.t && s.t <= at95.t)
++    .map((s) => {
++      const near = Math.max(
++        ...[-2, -1, 1, 2]
++          .map((d) => steps[s.i + d])
++          .filter((n) => n && n.gap > 0 && n.gap < 100)
++          .map((n) => n.dx),
++      );
++      // a lost frame that moved nothing (the hand between lines) reads 0, never 0/0
++      const ratio = s.dx <= 1e-6 ? 0 : near > 0 ? s.dx / near : Infinity;
++      return { gap: s.gap, step: s.dx, near, ratio, rate: s.dx / (s.gap / 1000) };
++    });
+   return {
++    stalls,
+     interval,
+     t0: first.t,
+     t95: at95.t,
+@@ -198,10 +263,27 @@ test(`the boot's one hand: the wave waits and the hand is a rate`, async ({ brow
+     if (b.bakesIn > 0 || b.ceiling !== null)
+       bad.push(`S ${r.name}: ${b.bakesIn} pose bake(s) landed under the hand, the ceiling fired ${b.ceiling ?? 0}×`);
+   }
++  // R at the law's 0.9 (LAWS P8 §D): pace = native ruling / arm ruling; the arm named at the rate it DELIVERS
+   for (const r of RATES.slice(1)) {
+     const k = got[r.name].ruling / got.native.ruling;
+-    if (k > 1.2) bad.push(`R ${r.name}: the ruling took ${k.toFixed(2)}× its native time (${got[r.name].ruling.toFixed(0)} vs ${got.native.ruling.toFixed(0)} ms)`);
++    const hz = 1000 / got[r.name].interval;
++    console.log(`BOOT ${project} R ${r.name} (delivers ${hz.toFixed(1)} Hz): ${k.toFixed(3)}× native, pace ${(1 / k).toFixed(3)} (floor ${R_FLOOR}, margin ${(1 / k - R_FLOOR).toFixed(3)})`);
++    if (1 / k < R_FLOOR) bad.push(`R ${r.name} (${hz.toFixed(1)} Hz): the hand kept ${(1 / k).toFixed(3)} of its native pace (${got[r.name].ruling.toFixed(0)} vs ${got.native.ruling.toFixed(0)} ms), under the law's ${R_FLOOR}`);
+   }
+   console.log(`BOOT ${project} verdict: ${bad.join(' · ') || 'GREEN'}`);
+   expect(bad).toEqual([]);
+ });
++
++test(`a lost frame never teleports the hand (L, the stall leg)`, async ({ browser }) => {
++  test.setTimeout(120000);
++  const project = test.info().project.name;
++  const b = await boot(browser, 0, true);
++  console.log(`BOOT ${project} L: ${fmt(b)}; load ${loadavg()[0].toFixed(1)}`);
++  for (const s of b.stalls)
++    console.log(
++      `BOOT ${project} L stall: gap ${s.gap.toFixed(1)} ms · step ${(100 * s.step).toFixed(2)} % vs neighbours ${(100 * s.near).toFixed(2)} % → ${s.ratio.toFixed(2)}× (bound ${L_BOUND}, margin ${(L_BOUND - s.ratio).toFixed(2)}) · ${(100 * s.rate).toFixed(0)} %/s`,
++    );
++  expect(b.stalls.length, 'the leg injected no lost frame inside the ruling (vacuous)').toBeGreaterThanOrEqual(2);
++  const worst = Math.max(...b.stalls.map((s) => s.ratio));
++  expect(worst, `a lost frame moved the ruling ${worst.toFixed(2)}× its neighbours' step`).toBeLessThanOrEqual(L_BOUND);
++});
+diff --git a/web/frontend/e2e/fold-verb.spec.ts b/web/frontend/e2e/fold-verb.spec.ts
+index 7bd06bb1..1a978825 100644
+--- a/web/frontend/e2e/fold-verb.spec.ts
++++ b/web/frontend/e2e/fold-verb.spec.ts
+@@ -92,7 +92,7 @@ function installClipRead(): void {
+ }
+ 
+ const SUBJECT = '.board-peek-host';
+-type Plant = 'skip' | 'f2' | null;
++type Plant = 'skip' | 'skip16' | 'f2' | null;
+ 
+ /** Open the cell, fold, and read frame 1 + the clock identity post-paint through the ONE sampler. */
+ async function readFold(
+@@ -107,6 +107,7 @@ async function readFold(
+     reducedMotion: 'no-preference',
+   });
+   if (plant === 'skip') await ctx.addInitScript(SKIP_PLANT);
++  if (plant === 'skip16') await ctx.addInitScript(SKIP_PLANT, 16);
+   if (plant === 'f2') await ctx.addInitScript(F2_PLANT, SUBJECT);
+   const page = await ctx.newPage();
+   await page.goto(cell.game === 'sudoku' ? '/?game=sudoku&board=' + BOARD : '/?game=' + cell.game);
+@@ -160,10 +161,14 @@ for (const cell of CELLS) {
+   });
+ }
+ 
+-// THE NEGATIVES, in-run, both engines: PLANT skip (frame 1 painted 150 ms in) must red F1, and the
+-// pass-7 critic's PLANT f2 (frame 1 at rest, then the clock jumps 150 ms on the second rAF) must red CI.
++// THE NEGATIVES, in-run, both engines: PLANT skip (frame 1 painted 150 ms in) must red F1, PLANT skip16
++// (one frame in, 16 ms: the pass-8 critic's WebKit frame-1 clock) must red F1ct, and the pass-7 critic's
++// PLANT f2 (frame 1 at rest, then the clock jumps 150 ms on the second rAF) must red CI. In WebKit the
++// fold's frame-1 post read is stale on every run (pass 9), so skip and skip16 red there only through the
++// ONE sampler's stale-rebase (MOT-VERB pass 9, PROPOSED to the home).
+ for (const [plant, clause] of [
+   ['skip', 'f1red'],
++  ['skip16', 'f1ct'],
+   ['f2', 'ciRed'],
+ ] as const)
+   test(`GA1 · PLANT ${plant} reds the post-paint read · ${CELLS[0].name}`, async ({ browser }) => {
+diff --git a/web/frontend/e2e/frame-halfstroke.spec.ts b/web/frontend/e2e/frame-halfstroke.spec.ts
+index 4916e815..e0039748 100644
+--- a/web/frontend/e2e/frame-halfstroke.spec.ts
++++ b/web/frontend/e2e/frame-halfstroke.spec.ts
+@@ -1,6 +1,6 @@
+ import { test, expect, type Browser } from '@playwright/test';
+ import { encodeSudoku } from './wire';
+-import { onOff, grey, median } from './lib/paint-lib.mjs';
++import { fourBands, fmt as fmtBands, type FourBands } from './lib/edge-bands.mjs';
+ 
+ // PRM: live, because the read is the steady look the default regime lands on (the draw-in done and
+ // the four poses baked); reduce bakes the same poses, and the frame is read at rest either way.
+@@ -12,13 +12,13 @@ import { onOff, grey, median } from './lib/paint-lib.mjs';
+  * bottom on the box's edge (`FRAME_Y_PAD` 0), half of each of those strokes fell outside the bitmap and
+  * was never painted: the owner saw the sides at their full weight and the top and bottom at half.
+  *
+- * THE READ, in paint: the board is photographed with the grid's ink ON and OFF, and the per-pixel
+- * coverage (the OFF grey minus the ON grey, over the OFF grey minus the ink's grey) is summed across each
+- * side's band on the cell-centre lines, where no inner rule crosses it. That sum is the side's painted
+- * depth in device pixels. Keyed on the board's DEVICE-PIXEL span (printed), never on the pointer.
+- *   F1  top and bottom each paint ≥ 0.85 of the sides' mean depth
+- *   F2  every side paints ≥ 0.6 of the stroke's own device width (12 units × the scale), in units of
+- *       the stroke's core ink, read off the sides' own strongest paint (no ink token is trusted)
++ * THE READ, in paint, through THE ONE four-band probe (`./lib/edge-bands.mjs`, pass 9; the pass-8 private
++ * `depth()`/`cov()` reader is deleted, LAWS P8 §I): the board is photographed with the grid's ink ON and
++ * OFF, one device station per column/row, and each band's painted depth is B3's statistic. Keyed on the
++ * board's DEVICE-PIXEL span (printed), never on the pointer.
++ *   B6  (was F1) every band paints ≥ 0.85 of the deepest band's depth: top and bottom against the sides
++ *   B3  (was F2) every band paints ≥ 0.9 × the frame's AUTHORED stroke (12 units × the scale)
++ *   B2/B4  the probe's own contrast and hole clauses, at its defaults
+  * PLANT (in-run, must RED): the baked ink cut to the box's inner 99 % vertically, which takes the outer
+  * part of the top and bottom strokes away as the edge bake used to.
+  * Born RED on the control (`74a2b5d9`): top and bottom read about half the sides at every rig.
+@@ -47,12 +47,21 @@ const RIGS = [
+ const SCHEMES = ['light', 'dark'] as const;
+ const PLANT_CSS = '.grid-ink { clip-path: inset(0.9% 0 0.9% 0); }';
+ const OFF_CSS = '.grid-ink, .hand-drawn-grid { visibility: hidden !important; }';
++// the grid's own box on every tree (the baked ink is a masked HTML box here and an svg `<image>` on
++// `74a2b5d9`: the edge list names both, so the control's read is a paint read, never a missing node)
++const SUBJECT = 'svg.hand-drawn-grid';
++const EDGE = 'svg.hand-drawn-grid, .grid-ink';
+ const UNITS = 1000;
+ const STROKE = 12;
+ const BAND = 26; // the inner rules start 26 units in: the band reads the frame alone
+ 
+-type Reading = { span: number; top: number; bottom: number; left: number; right: number; want: number };
++type Reading = { span: number; box: string; top: number; bottom: number; left: number; right: number; want: number; bands: FourBands };
+ 
++/** The frame's four bands through THE ONE probe (`./lib/edge-bands.mjs`, pass 9: the private depth reader
++ *  is gone). The subject is the grid's box, the edge its ink (both forms); the strip runs 8 px outside to just short of the
++ *  first inner rule (`BAND` units in), so a band reads the frame alone. B3's floor is the frame's
++ *  AUTHORED stroke (12 units × the scale) × 0.9 (pass9/CHAIR-RULINGS §7: a drawn frame floors at its
++ *  authored width × 0.9); B6 at 0.85 is F1's relative clause (top and bottom vs the deepest band). */
+ async function readFrame(
+   browser: Browser,
+   rig: (typeof RIGS)[number],
+@@ -71,84 +80,46 @@ async function readFrame(
+   await page.locator('.board-cells').first().waitFor();
+   expect(await page.locator('.board-cells [aria-label*="given clue"]').count()).toBe(71);
+   // the steady look: the draw-in done and all four poses baked (the live stack is the fallback)
+-  // (a box under a coverage mask on this tree; an svg `<image>` on `74a2b5d9`: the read keys on neither)
+   await expect(page.locator('.boil-frame-bitmap')).toHaveCount(4, { timeout: 30000 });
+   if (plant) await page.addStyleTag({ content: PLANT_CSS });
+   await page.evaluate(() => document.fonts.ready);
+-  const g = await page.evaluate(() => {
+-    const svg = document.querySelector('svg.hand-drawn-grid')!.getBoundingClientRect();
+-    const side = Math.min(svg.width, svg.height);
+-    return { x: svg.left + (svg.width - side) / 2, y: svg.top + (svg.height - side) / 2, side };
++  const g = await page.evaluate((sel) => {
++    const r = document.querySelector(sel)!.getBoundingClientRect();
++    return { w: r.width, h: r.height };
++  }, SUBJECT);
++  const side = Math.min(g.w, g.h);
++  const want = (STROKE * side) / UNITS; // css px
++  const bands = await fourBands(page, {
++    subject: SUBJECT,
++    edge: EDGE,
++    off: OFF_CSS,
++    out: 8,
++    inn: Math.max(4, Math.floor((BAND * side) / UNITS) - 1),
++    thick: want,
++    thickTol: 0.9,
++    relBand: 0.85,
+   });
+-  const margin = 16;
+-  const clip = {
+-    x: Math.max(0, g.x - margin),
+-    y: Math.max(0, g.y - margin),
+-    width: g.side + 2 * margin,
+-    height: g.side + 2 * margin,
+-  };
+-  const { on, off } = await onOff(page, clip, OFF_CSS);
+   await ctx.close();
+-  const d = rig.dpr;
+-  const u = (g.side * d) / UNITS; // device px per unit
+-  const X0 = (g.x - clip.x) * d;
+-  const Y0 = (g.y - clip.y) * d;
+-  const centres = Array.from({ length: 9 }, (_, i) => ((i + 0.5) * UNITS) / 9);
+-  const inner = Math.round(BAND * u);
+-  const outer = Math.round(margin * d);
+-  // THE STROKE'S CORE, read off the sides' own paint: the strongest 1 % of the ON−OFF grey step
+-  // across their bands (a dark step on light paper, a light one on dark), so one denominator serves
+-  // every tree, theme and engine and no ink token is trusted
+-  const step = (i: number) => grey(off.data, i) - grey(on.data, i);
+-  const steps: number[] = [];
+-  for (const c of centres)
+-    for (let k = -outer; k < inner; k++) {
+-      const along = Math.round(Y0 + c * u);
+-      for (const x of [Math.round(X0) + k, Math.round(X0 + g.side * d) - 1 - k])
+-        steps.push(step((along * on.w + x) * 3));
+-    }
+-  const sign = steps.reduce((a, v) => a + v, 0) >= 0 ? 1 : -1;
+-  const mags = steps.map((v) => v * sign).sort((p, q) => q - p);
+-  const core = mags[Math.floor(mags.length * 0.01)];
+-  const cov = (x: number, y: number): number =>
+-    core < 8 ? 0 : Math.min(1, Math.max(0, (step((y * on.w + x) * 3) * sign) / core));
+-  // one depth per cell-centre line, per side
+-  const depth = (side: 'top' | 'bottom' | 'left' | 'right'): number =>
+-    median(
+-      centres.map((c) => {
+-        const along = Math.round(c * u);
+-        let s = 0;
+-        for (let k = -outer; k < inner; k++) {
+-          if (side === 'top') s += cov(Math.round(X0) + along, Math.round(Y0) + k);
+-          if (side === 'bottom') s += cov(Math.round(X0) + along, Math.round(Y0 + g.side * d) - 1 - k);
+-          if (side === 'left') s += cov(Math.round(X0) + k, Math.round(Y0) + along);
+-          if (side === 'right') s += cov(Math.round(X0 + g.side * d) - 1 - k, Math.round(Y0) + along);
+-        }
+-        return s;
+-      }),
+-    );
++  const depth = (k: 'top' | 'bottom' | 'left' | 'right') => bands.bands?.[k]?.thickness ?? 0;
+   return {
+-    span: Math.round(g.side * d),
++    span: Math.round(side * rig.dpr),
++    box: `${g.w.toFixed(1)}×${g.h.toFixed(1)}`,
+     top: depth('top'),
+     bottom: depth('bottom'),
+     left: depth('left'),
+     right: depth('right'),
+-    want: STROKE * u,
++    want,
++    bands,
+   };
+ }
+ 
++/** The gate: the ONE probe's verdict (B0–B6), and the relative read printed as the pass-8 F1 ratio. */
+ function failures(r: Reading): string[] {
+-  const out: string[] = [];
+-  const sides = (r.left + r.right) / 2;
+-  for (const k of ['top', 'bottom'] as const)
+-    if (r[k] < 0.85 * sides) out.push(`F1 ${k} paints ${r[k].toFixed(2)} px against the sides' ${sides.toFixed(2)} (${(r[k] / sides).toFixed(3)} < 0.85)`);
+-  for (const k of ['top', 'bottom', 'left', 'right'] as const)
+-    if (r[k] < 0.6 * r.want) out.push(`F2 ${k} paints ${r[k].toFixed(2)} px of a ${r.want.toFixed(2)} px stroke`);
+-  return out;
++  return [...r.bands.why];
+ }
+ 
+ const fmt = (r: Reading) =>
+-  `span ${r.span} dpx · t ${r.top.toFixed(2)} b ${r.bottom.toFixed(2)} l ${r.left.toFixed(2)} r ${r.right.toFixed(2)} · stroke ${r.want.toFixed(2)} · t/b÷sides ${(Math.min(r.top, r.bottom) / ((r.left + r.right) / 2)).toFixed(3)}`;
++  `box ${r.box} · span ${r.span} dpx · depth t ${r.top.toFixed(2)} b ${r.bottom.toFixed(2)} l ${r.left.toFixed(2)} r ${r.right.toFixed(2)} css px · stroke ${r.want.toFixed(2)} · t/b÷sides ${(Math.min(r.top, r.bottom) / ((r.left + r.right) / 2)).toFixed(3)} · min÷deepest ${(Math.min(r.top, r.bottom, r.left, r.right) / Math.max(r.top, r.bottom, r.left, r.right)).toFixed(3)} · ${fmtBands(r.bands)}`;
+ 
+ for (const rig of RIGS)
+   for (const scheme of SCHEMES)
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 0d08914f..23a869da 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -71,6 +71,8 @@ import {
+   compoundClasses,
+   cssBlocks as shapeBlocks,
+   cssRules,
++  lengthPx,
++  mayMatch,
+   scriptWrites,
+   sfc,
+   sources,
+@@ -78,6 +80,7 @@ import {
+   stripHtml,
+   stripJs,
+   subjectCompound,
++  templateElements,
+   tokenSites,
+ } from "./shape-census.mjs";
+ 
+@@ -152,12 +155,16 @@ const EXEMPT_KEYS = {
+   // PASS 8 · MOT-VERB (charter row 2, LAWS P7 §F): the hand is a RATE keyed on the observed
+   // frame interval. Two more numbers, neither a length on screen.
+   "hand.maxStepMs": {
+-    ms: 34,
+-    why: "NOT A LENGTH — the most the hand's clock moves in one frame once its pace is observed (one 30 Hz frame): a slower panel slows the hand, and a run of stalls is never a pace (M20 D1)",
++    ms: 42,
++    why: "NOT A LENGTH — the most the hand's clock moves in one frame once its pace is observed (one 24 Hz frame, pass 9: LAWS P8's 0.9 floor holds down to 21.4 Hz): a slower panel slows the hand, and a run of stalls is never a pace (M20 D1)",
++  },
++  "hand.paceSlack": {
++    ms: 1.5,
++    why: "NOT A LENGTH — a RATIO: a frame may move the hand 1.5× the shortest recent interval (jitter travels whole, a lost frame does not; M20 D1, pass 9)",
+   },
+   "hand.paceWindow": {
+     ms: 5,
+-    why: "NOT A LENGTH — a COUNT of frames: the observed pace is the median of the last five intervals (M20 D1)",
++    why: "NOT A LENGTH — a COUNT of frames: the observed pace keys on the SHORTEST of the last five intervals (M20 D1; pass 9, ACC-FIVE's minimum)",
+   },
+   "hinge.dark": {
+     ms: 0.343,
+@@ -431,6 +438,18 @@ const ADMITTED = [
+     cls: "RETUNE",
+     why: "600 → 520: pass4/CHAIR-RULINGS §1.3 — ruling 1's 520 STANDS; `rise` reverts to the ratified default and 600 is the ballot, one line away",
+   },
++  // ── RETUNE (consumer) — MOT-VERB pass 9, charter row 3: the hand's pace keys on the window MINIMUM
++  // (ACC-FIVE's graft), so the pass-8 SEED `[stepMs, stepMs]` left bootHand.ts (2 reads → 1) and the
++  // file gained `MOTION.hand.paceSlack`, a RATIO the roster reads as a 1.5 ms clock. No length on
++  // screen fell: the floor is still `stepMs` (17) and the cap rose 34 → 42. The roster cannot tell a
++  // ratio from a clock; this row licenses that one read, at its value.
++  {
++    file: "src/pencil/composables/bootHand.ts",
++    consumer: "src/pencil/composables/bootHand.ts :: MOTION.hand.stepMs",
++    to: 1.5,
++    cls: "RETUNE",
++    why: "the seed's second `stepMs` read left with the median (pass8/critique/MOT-VERB gap 4, registry-v8 §2.10: ACC-FIVE's minimum-keyed pace); the gained `paceSlack` is a ratio (NOT A LENGTH), the floor stays 17 and the cap rose to 42",
++  },
+   // ── MOVED (TS) — three MOTION members the base shipped were re-homed onto rungs (pass 3/4):
+   // the TS ratchet (pass 7) banks the base's clocks, so each names its rung WITH its value.
+   {
+@@ -473,6 +492,14 @@ const SELF_TEST = process.argv.includes("--self-test");
+ const GATE_CLAUSES = {
+   "subject-reach":
+     "B6 · a new site whose SUBJECT COMPOUND reaches a banked subject may not ship shorter",
++  "element-reach":
++    "B6 · a new site that may land on a TEMPLATE ELEMENT a banked subject lands on may not ship shorter",
++  "css-arith":
++    "B6 · calc()/min()/max()/clamp() over a rung is valued at its lower bound, never at the rung",
++  "script-durations":
++    "B6 · a script write of a duration (style, :style object) carrying a length or a rung is a site",
++  "rung-publishers":
++    "B3 · every write of a --motion-<rung> token outside the one publisher is a second home",
+   "collect-sources":
+     "B6 · collect() walks the library's sources (index.html, public/**, every CSS language)",
+   "lib-decls":
+@@ -532,6 +559,44 @@ const BARE_EASE =
+ 
+ const toMs = (n, unit) => (unit === "s" ? Number(n) * 1000 : Number(n));
+ 
++/** The OUTERMOST calc()/min()/max()/clamp() around offset `at` of `body`, or null. */
++function mathAround(body, at) {
++  let found = null;
++  let depth = 0;
++  for (let i = at - 1; i >= 0; i--) {
++    const c = body[i];
++    if (c === ")") depth++;
++    else if (c === "(") {
++      if (depth > 0) {
++        depth--;
++        continue;
++      }
++      const fn = /(?:calc|min|max|clamp)$/i.exec(body.slice(0, i));
++      if (fn) {
++        let d = 0;
++        let j = i;
++        for (; j < body.length; j++) {
++          if (body[j] === "(") d++;
++          else if (body[j] === ")" && --d === 0) break;
++        }
++        found = body.slice(fn.index, j + 1);
++      }
++    }
++  }
++  return found;
++}
++
++/** A CSS math expression over rungs, valued as R4 values a length: its LOWER BOUND, read by the ONE
++ *  library's `lengthPx` (times carried as px, `s` scaled to ms). null where no bound exists. */
++function arithMs(expr, byName) {
++  const map = new Map([...byName].map(([k, v]) => [`--motion-${k}`, `${v}px`]));
++  const v = expr
++    .replace(/(\d*\.?\d+)ms\b/g, "$1px")
++    .replace(/(\d*\.?\d+)s\b/g, (_m, n) => `${Number(n) * 1000}px`);
++  const ms = lengthPx(v, {}, map);
++  return typeof ms === "number" && Number.isFinite(ms) ? ms : null;
++}
++
+ /**
+  * Position-aware read of one declaration body. Returns the ordered time positions per
+  * comma-separated clause, each tagged duration|delay and named|literal.
+@@ -545,8 +610,16 @@ function positions(prop, body) {
+   // 1 · MASK FIRST — a var()'s own comma is not a clause boundary. Rung reads become
+   //     opaque tokens so their fallback text is never mistaken for a bare literal.
+   const toks = [];
+-  let masked = body.replace(RUNG_VAR, (_m, name, fb) => {
+-    toks.push({ kind: "rung", rung: name, fallback: fb ?? null });
++  let masked = body.replace(RUNG_VAR, (_m, name, fb, at) => {
++    // PASS 9 (charter row 4): a rung read inside calc()/min()/max()/clamp() is the FUNCTION's value,
++    // never the rung's — `calc(var(--motion-leave) / 4)` shipped 50 ms on a site banked at 200.
++    const arith = mon("css-arith") ? mathAround(body, at) : null;
++    toks.push({
++      kind: "rung",
++      rung: name,
++      fallback: fb ?? null,
++      ...(arith ? { arith } : {}),
++    });
+     return `«${toks.length - 1}»`;
+   });
+   // 2 · a house curve read becomes its own token (B8 reads it); any OTHER var() with a
+@@ -632,7 +705,7 @@ function positions(prop, body) {
+  * into the template. What text can still move the key — a real selector rewrite — is caught
+  * by B6's ORPHAN clause instead, because a key that vanishes is a key that was edited.
+  */
+-function selectorOf(text, at) {
++function selectorOf(text, at, max = 80) {
+   const before = text.slice(0, at);
+   const open = before.lastIndexOf("{");
+   if (open < 0) return "—";
+@@ -651,10 +724,17 @@ function selectorOf(text, at) {
+       .replace(/\/\*[^]*?\*\//g, " ")
+       .replace(/\s+/g, " ")
+       .trim()
+-      .slice(0, 80) || "—"
++      .slice(0, max) || "—"
+   );
+ }
+ 
++/** Is offset `at` inside a `<style scoped>` block (Vue scopes it to its own template's elements)? */
++function scopedAt(text, at) {
++  const open = text.lastIndexOf("<style", at);
++  if (open < 0 || text.lastIndexOf("</style", at) > open) return false;
++  return /^<style\b[^>]*\bscoped\b/.test(text.slice(open, text.indexOf(">", open) + 1));
++}
++
+ function collectText(text, rel) {
+   const decls = [];
+   // PROSE IS NOT CODE. Comments are masked to spaces — offsets preserved, so every window
+@@ -677,7 +757,10 @@ function collectText(text, rel) {
+       file: rel,
+       line,
+       rel: `${rel}:${line}`,
++      scoped: scopedAt(text, m.index),
+       selector: selectorOf(scan, m.index),
++      // the WHOLE selector, for the element reach (the key's 80-char cut ends mid-compound)
++      fullSelector: selectorOf(scan, m.index, Infinity),
+       prop,
+       body: body.replace(/\s+/g, " ").trim().slice(0, 120),
+       whole: normBody(body),
+@@ -745,13 +828,15 @@ function libraryOnly(file, text, rel, found) {
+         const pos = positions(d.prop, d.value);
+         if (!pos.length) continue;
+         const at = offsetOf(d.line);
+-        const selector =
+-          (r.as ?? r.prelude).replace(/\s+/g, " ").trim().slice(0, 80) || "—";
++        const fullSelector = (r.as ?? r.prelude).replace(/\s+/g, " ").trim() || "—";
++        const selector = fullSelector.slice(0, 80);
+         out.push({
+           file: rel,
+           line: d.line,
+           rel: `${rel}:${d.line}`,
++          scoped: scopedAt(text, at),
+           selector,
++          fullSelector,
+           prop: d.prop,
+           body: normBody(d.value).slice(0, 120),
+           pos: termed(d.prop, pos),
+@@ -1046,6 +1131,129 @@ function fitOneWriter(files = null) {
+   return bad;
+ }
+ 
++/** PASS 9 (charter row 3; pass-8 critique §3.2, K15): a rung has ONE publisher — the generated
++ *  `<style data-motion-rungs>` node — and ONE registration (index.css `@property`). Every other
++ *  write of `--motion-<rung>` the ONE library's `tokenSites` reads (a script `setProperty`, a
++ *  `:style` object key, a Typed-OM write, a declaration in any sheet or SFC) is a second home: one
++ *  `setProperty("--motion-leave", "10ms")` in main.ts beat the publisher and moved every consumer to
++ *  10 ms in both engines. A computed-key write is UNRESOLVED and printed, never counted a publisher. */
++const RP_MEMO = new Map();
++function rungPublishers(rungs, files = null) {
++  if (!mon("rung-publishers")) return { bad: [], unresolved: 0 };
++  const memo = files ? null : rungs.map((r) => r.key).join(",");
++  if (memo !== null && RP_MEMO.has(memo)) return RP_MEMO.get(memo);
++  const res = rungPublishersRead(rungs, files);
++  if (memo !== null) RP_MEMO.set(memo, res);
++  return res;
++}
++function rungPublishersRead(rungs, files) {
++  const opt = files
++    ? (() => {
++        const m = new Map(files.map(([rel, text]) => [join(ROOT, rel), text]));
++        return {
++          files: [...m.keys()],
++          read: (f) => (m.has(f) ? m.get(f) : readFileSync(f, "utf8")),
++          exists: (f) => m.has(f) || existsSync(f),
++        };
++      })()
++    : {};
++  const bad = [];
++  let unresolved = 0;
++  for (const r of rungs) {
++    const token = `--motion-${r.key}`;
++    for (const x of tokenSites(ROOT, token, opt)) {
++      if (x.unresolved) {
++        unresolved++;
++        continue;
++      }
++      if (x.kind === "at-property" && x.file === "src/assets/index.css") continue; // the registration
++      bad.push(
++        `${x.file}:${x.line}  ${x.kind} ${x.prelude ?? ""} → ${token}: ${String(x.value).slice(0, 40)} — a SECOND home of a rung (the publisher is the one node; a script or sheet write outranks it and moves every consumer).`,
++      );
++    }
++  }
++  return { bad, unresolved };
++}
++
++/** PASS 9 (charter row 2; pass-8 critique §3.2, K1): a SCRIPT write of a duration — `el.style.x`,
++ *  `setProperty`, a `:style` object, Typed OM, cssText, every shape the ONE library's `scriptWrites`
++ *  reads — is a site the ratchet cannot key (no selector, no bank row): `vars["animation-duration"]
++ *  = "50ms"` shipped the reveal at 50 ms in both engines with every gate at 0. A script duration that
++ *  carries a length (unadmitted), a rung, or a computed hole reds; one that names only keyframes, a
++ *  curve or a LOCAL token (`var(--refuse-dur)`, valued at its own CSS site) holds. */
++const SCRIPT_DURATION_PROPS = [
++  "animation-duration",
++  "transition-duration",
++  "animation",
++  "transition",
++];
++function scriptDurations(files = null, ledger = LEDGER) {
++  if (!mon("script-durations")) return [];
++  const texts =
++    files ??
++    sources(ROOT)
++      .map((f) => [relative(ROOT, f), f])
++      .filter(
++        ([rel]) =>
++          /\.(ts|tsx|js|vue)$/.test(rel) &&
++          !/\.(test|spec)\.[jt]sx?$/.test(rel) &&
++          !rel.includes("/pencil/dev/"),
++      )
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  const bad = [];
++  for (const [rel, text] of texts) {
++    const code = rel.endsWith(".vue")
++      ? sfc(text)
++          .scripts.map((s) => s.text)
++          .join("\n")
++      : text;
++    for (const prop of SCRIPT_DURATION_PROPS)
++      for (const w of scriptWrites(code, prop)) {
++        if (w.unresolved) continue; // a computed NAME: the library prints it; it is not this prop
++        const v = String(w.value).trim();
++        const where = `${rel}:${w.line}  ${w.kind} ${w.prop}: ${v.slice(0, 60)}`;
++        // the value's string pieces; a template hole that is a BARE clock read is the TS consumer
++        // roster's (ratcheted by its count and, with clock-context, its value) — anything else in a
++        // hole, or a value with no string at all, is a computed duration no gate can value
++        const bareRead = new RegExp(
++          `^\\s*(?:${CLOCK_ROOTS.map(reEsc).join("|")})(?:\\.\\w+)+\\s*$`,
++        );
++        const lits = [...v.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*)\1/g)];
++        if (!lits.length && !bareRead.test(v)) {
++          bad.push(
++            `${where} — a COMPUTED script duration; the ratchet cannot value it.`,
++          );
++          continue;
++        }
++        for (const [, q, body] of lits) {
++          const holes = q === "`" ? [...body.matchAll(/\$\{([^}]*)\}/g)] : [];
++          if (holes.some((h) => !bareRead.test(h[1]))) {
++            bad.push(
++              `${where} — a COMPUTED script duration; the ratchet cannot value it.`,
++            );
++            continue;
++          }
++          if (holes.length) continue; // a bare clock read: the roster's
++          for (const pq of positions(w.prop, body)) {
++            if (pq.role !== "duration") continue;
++            if (pq.kind === "rung")
++              bad.push(
++                `${where} — a script write of a RUNG duration: the ratchet keys CSS sites, so this clock has no floor. Move it to the cascade.`,
++              );
++            else if (
++              pq.kind === "literal" &&
++              !admits({ file: rel, window: code }, pq.ms, ledger)
++            )
++              bad.push(
++                `${where} — a script duration of ${pq.ms}ms, unadmitted and unratcheted.`,
++              );
++          }
++        }
++      }
++  }
++  return bad;
++}
++
+ function published(cfg) {
+   const theme = readFileSync(THEME, "utf8");
+   // INTAKE-23 row 19 (one home, one publisher): the toggle's `--storybook-*` clocks are the
+@@ -1294,6 +1502,7 @@ function b3Mirror({ rungs }, p, decls) {
+     );
+   for (const c of p.componentPublishers)
+     bad.push(`${c.token} published from ${c.where} — one publisher, one node.`);
++  bad.push(...(p.rungPublishers ?? rungPublishers(rungs)).bad);
+   // NO FALLBACK (chair §6.5). A fallback is what made the ladder able to lie: research row B
+   // measured a DELETED publisher as invisible in both engines, so the one row that proves
+   // the publisher matters could never fire. The registration replaces it.
+@@ -1387,9 +1596,21 @@ function inventoryRows(decls, { rungs }) {
+     if (d.dev) continue;
+     for (const q of d.pos) {
+       if (q.role !== "duration") continue;
++      // a rung under CSS math is the function's lower bound (an unvaluable one reads 0: no bound
++      // is never a pass)
++      const ms =
++        q.kind === "rung"
++          ? q.arith
++            ? (arithMs(q.arith, byName) ?? 0)
++            : (byName.get(q.rung) ?? 0)
++          : q.ms;
+       rows.push({
+         key: `${d.file} :: ${d.selector} :: ${q.term}`,
+-        ms: q.kind === "rung" ? (byName.get(q.rung) ?? 0) : q.ms,
++        ms,
++        ...(q.arith ? { arith: q.arith } : {}),
++        scoped: !!d.scoped,
++        file: d.file,
++        sel: d.fullSelector ?? d.selector,
+         clause: q.clause,
+         fam: /^animation/.test(d.prop) ? "animation" : "transition",
+         term: q.term,
+@@ -1459,6 +1680,55 @@ function reaches(rs, ks) {
+   );
+ }
+ 
++/** PASS 9 (charter row 1; LAWS P7 §F, the SHAPE law's element keying — TAPE's clause in the ONE
++ *  library): the estate's TEMPLATE ELEMENTS, `[{file, els}]`, every shipped SFC's template read by
++ *  `templateElements`. A class reach asks whether one selector names every class of another; the
++ *  cascade asks whether both land on ONE element — `.game-cell` and `.cell-reveal-animated` are
++ *  disjoint class sets and DigitCell's root carries both (K7r: the reveal at 150 ms, both engines). */
++let ESTATE_ELS = null;
++function estateElements() {
++  if (ESTATE_ELS) return ESTATE_ELS;
++  ESTATE_ELS = [];
++  for (const f of sources(ROOT)) {
++    const rel = relative(ROOT, f);
++    if (!rel.endsWith(".vue") || rel.includes("/pencil/dev/")) continue;
++    const b = sfc(readFileSync(f, "utf8"));
++    if (b.template)
++      ESTATE_ELS.push({
++        file: rel,
++        els: templateElements(b.template.text, b.template.line),
++      });
++  }
++  return ESTATE_ELS;
++}
++/** The element as its CLASSES are carried: the static `class=` and every literal a `:class` names.
++ *  An opaque `:class`/`v-bind` (it MAY carry any class) does not make every rule in the estate land
++ *  on it here — the subject's own match keeps the library's conservative reading for its ancestors. */
++const carried = (el) => ({
++  ...el,
++  dynClass: false,
++  attrs: new Map([...el.attrs].filter(([k]) => k !== "v-bind")),
++});
++const selOf = (key) => key.split(" :: ")[1].replace(/^<style[^>]*>\s*/, "");
++/** Every element the live row `r` may land on: `[{file, el}]` (a scoped rule, its own file only). */
++function landsOn(r, universe) {
++  const out = [];
++  const sel = (r.sel ?? selOf(r.key)).replace(/^<style[^>]*>\s*/, "");
++  for (const { file, els } of universe) {
++    if (r.scoped && r.file !== file) continue;
++    for (const el of els) {
++      let hit;
++      try {
++        hit = mayMatch(sel, carried(el), els);
++      } catch {
++        hit = true; // a selector the library cannot read may land anywhere
++      }
++      if (hit) out.push({ file, el });
++    }
++  }
++  return out;
++}
++
+ /** The document shapes a RETUNE's `why` may cite. */
+ const RETUNE_CITE =
+   /CHAIR-RULINGS|INTAKE-?\d*|census\/|critique|registry-v\d|DISPOSITIONS|T9-B\d+/;
+@@ -1480,9 +1750,10 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   // every length in it.
+   const retunes = ledger.filter((r) => r.cls === "RETUNE");
+   for (const r of retunes) {
+-    if (typeof r.to !== "number" || !(r.rung || r.key || r.ts))
++    // a CONSUMER retune (B6 · 5's own door, `consumerRatchet`'s message) names its subject by `consumer`
++    if (typeof r.to !== "number" || !(r.rung || r.key || r.ts || r.consumer))
+       bad.push(
+-        `RETUNE row ${r.rung ?? r.key ?? r.ts ?? r.file} carries no \`to: <ms>\` or no subject — a retune without its value disarms the ratchet for that subject permanently.`,
++        `RETUNE row ${r.rung ?? r.key ?? r.ts ?? r.consumer ?? r.file} carries no \`to: <ms>\` or no subject — a retune without its value disarms the ratchet for that subject permanently.`,
+       );
+     // A DELIBERATE shortening names the document that decided it (INTAKE-23 row 18: "with the
+     // census cite in the key"); a retune whose why cites nothing is an undocumented one.
+@@ -1544,22 +1815,43 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+   //     replaces the element's animation whole, or a longhand, which sets every term) may not ship
+   //     below the banked length. A class-less subject (`*`, a tag, an attribute) reaches every
+   //     subject. The escape is a RETUNE keyed on the NEW site, with its value and its cite.
+-  if (mon("subject-reach")) {
+-    const live = new Map();
+-    for (const r of rows) if (r.key in sites && !live.has(r.key)) live.set(r.key, r);
+-    for (const r of rows) {
+-      if (r.key in sites || siteTo.has(r.key)) continue;
+-      const rs = subjectSets(r.key.split(" :: ")[1]);
+-      for (const [k, was] of Object.entries(sites)) {
+-        if (r.ms >= was) continue;
+-        const kr = live.get(k);
+-        if (!kr || kr.fam !== r.fam) continue;
+-        if (!(r.longhand || r.fam === "animation" || kr.term === r.term)) continue;
+-        if (!reaches(rs, subjectSets(k.split(" :: ")[1]))) continue;
++  const live = new Map();
++  for (const r of rows) if (r.key in sites && !live.has(r.key)) live.set(r.key, r);
++  // 2c · THE ELEMENT (pass 9, charter row 1): a new site that may land on a template element a
++  //      banked subject lands on — read by the ONE library's `templateElements` + `mayMatch` — is
++  //      the same element's clock, whatever its class set. Scoped rules land in their own file.
++  const universe = ctx.elements ?? (mon("element-reach") ? estateElements() : []);
++  const landed = new Map();
++  const on = (r) => {
++    if (!landed.has(r.key)) landed.set(r.key, landsOn(r, universe));
++    return landed.get(r.key);
++  };
++  const sameElement = (r, kr) => {
++    if (!mon("element-reach")) return null;
++    const mine = on(r);
++    if (!mine.length) return null;
++    for (const t of on(kr)) if (mine.some((x) => x.el === t.el)) return t;
++    return null;
++  };
++  for (const r of rows) {
++    if (r.key in sites || siteTo.has(r.key)) continue;
++    const rs = subjectSets(r.key.split(" :: ")[1]);
++    for (const [k, was] of Object.entries(sites)) {
++      if (r.ms >= was) continue;
++      const kr = live.get(k);
++      if (!kr || kr.fam !== r.fam) continue;
++      if (!(r.longhand || r.fam === "animation" || kr.term === r.term)) continue;
++      if (mon("subject-reach") && reaches(rs, subjectSets(k.split(" :: ")[1]))) {
+         bad.push(
+           `${r.key}  ships ${r.ms}ms and its SUBJECT reaches ${k}, banked at ${was}ms — a compound override on a banked subject is a shortening, not a new position. A RETUNE keyed on this site with a cite and \`to: ${r.ms}\`, or ship it at ≥ ${was}ms.  ${r.clause}`,
+         );
++        continue;
+       }
++      const t = sameElement(r, kr);
++      if (t)
++        bad.push(
++          `${r.key}  ships ${r.ms}ms and lands on ${t.file}:${t.el.line} <${t.el.tag} class="${[...t.el.classes].join(" ")}">, the ELEMENT ${k} (banked at ${was}ms) lands on — the cascade keys elements, not class sets. A RETUNE keyed on this site with a cite and \`to: ${r.ms}\`, or ship it at ≥ ${was}ms.  ${r.clause}`,
++        );
+     }
+   }
+   // 3 · THE ORPHAN CLAUSE (pass-4, the other half of §2.1's cure). Masking the selector shut
+@@ -2098,19 +2390,84 @@ const UA_KEYWORD =
+  * admission awaiting the chair's row or its strike; the verdict line counts them aloud, so a
+  * self-admitted alias can never read as a ruled one.
+  */
++/**
++ * THE MOTION LADDER'S OWN RUNG LEDGER (pass 9; CHAIR-RULINGS §11: "LADDER mints its KEYWORD_TWINS
++ * and fallback rows in the motion ladder's own rung ledger, not docs/tranches/LEDGER.md"). Each row
++ * is A.3-shaped — subject, value, ruling, why, re-trigger — and is BOUND: a KT row names a
++ * KEYWORD_TWINS token at its points and keeps its ceiling (a minted twin may shrink, never spread);
++ * FIT-1 names the measured fit's one writer and its registration (FIT_WRITERS, B3's fit-one-writer).
++ */
++const RUNG_LEDGER = [
++  {
++    id: "KT-1",
++    subject: "--ease-starTuck",
++    value: "ease-in (0.42,0,1,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the Bloom's star tuck, kept verbatim under T9-M15",
++    retrigger: "a re-curve of the tuck, or a read past its ceiling 2",
++  },
++  {
++    id: "KT-2",
++    subject: "--ease-starFade",
++    value: "ease-out (0,0,0.58,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the star's crest fade (T3-W13)",
++    retrigger: "a re-curve of the crest fade, or a read past its ceiling 1",
++  },
++  {
++    id: "KT-3",
++    subject: "--ease-prmLinear",
++    value: "linear (0,0,1,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the laminate's PRM fade, a same-frame fallback",
++    retrigger: "the laminate's PRM arm re-cut, or a read past its ceiling 1",
++  },
++  {
++    id: "KT-4",
++    subject: "--verb-dusk-ease",
++    value: "ease (0.25,0.1,0.25,1)",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "the dusk's `ease`, published as a verb (T3-W10)",
++    retrigger: "MOT-VERB re-curves the dusk, or a read past its ceiling 2",
++  },
++  {
++    id: "FIT-1",
++    subject: "--live-fit",
++    value:
++      "<number>, initial 0, one writer App.vue `mount.style.setProperty`, read bare as scale(var(--live-fit))",
++    ruling: "pass9/CHAIR-RULINGS §11",
++    why: "row 9's fallback: any fallback, declared default or second writer reds B3; GC1 reads the ablation at desk 1440x900 and phone 390x844, both engines",
++    retrigger: "a second writer, a fallback, or a declared default of --live-fit",
++  },
++];
++
++/** The rung ledger is CLOSED both ways (pass 9): a KT row names a twin that carries its id. */
++function ledgerBound(twins, ledger = RUNG_LEDGER) {
++  if (!mon("twin-ratchet")) return [];
++  return ledger
++    .filter((x) => /^KT-/.test(x.id))
++    .filter((x) => !twins.some((r) => r.row === x.id && r.token === x.subject))
++    .map(
++      (x) =>
++        `RUNG_LEDGER ${x.id} (${x.subject}) names no KEYWORD_TWINS row carrying it — STALE.`,
++    );
++}
++
+ const KEYWORD_TWINS = [
+   {
+     token: "--ease-starTuck",
++    row: "KT-1",
+     points: UA_POINTS["ease-in"],
+     since: "T3-W13 (the Bloom's star tuck, kept verbatim under T9-M15)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 2,
+   },
+   {
+     token: "--ease-starFade",
++    row: "KT-2",
+     points: UA_POINTS["ease-out"],
+     since: "T3-W13 (the star's crest fade)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 1,
+   },
+   {
+@@ -2121,16 +2478,18 @@ const KEYWORD_TWINS = [
+   },
+   {
+     token: "--ease-prmLinear",
++    row: "KT-3",
+     points: UA_POINTS.linear,
+     since: "the laminate's PRM fade (a same-frame fallback)",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 1,
+   },
+   {
+     token: "--verb-dusk-ease",
++    row: "KT-4",
+     points: UA_POINTS.ease,
+     since: "T3-W10 — the dusk's `ease`, published as a verb",
+-    chair: null,
++    chair: "pass9/CHAIR-RULINGS §11 (minted in RUNG_LEDGER)",
+     ceiling: 2,
+   },
+ ];
+@@ -2404,8 +2763,12 @@ function b8Curve(
+   // more clause than its ceiling, reds; the chair's row (`chair: "<ruling>"`) is the only door.
+   if (mon("twin-ratchet"))
+     for (const r of twins) {
+-      if (r.chair) continue;
+-      if (!LANE_TWINS.has(r.token))
++      // a twin MINTED in the rung ledger keeps its ceiling (pass 9): the mint names it, never frees it
++      const minted =
++        r.row && RUNG_LEDGER.some((x) => x.id === r.row && x.subject === r.token);
++      if (r.chair && !minted) continue;
++      if (r.chair && minted && typeof r.ceiling !== "number") continue;
++      if (!minted && !LANE_TWINS.has(r.token))
+         bad.push(
+           `KEYWORD_TWINS ${r.token} is a NEW lane-admitted twin (chair: null) — a lane may not admit a keyword by value; the chair's row or none.`,
+         );
+@@ -2418,6 +2781,7 @@ function b8Curve(
+           `KEYWORD_TWINS ${r.token} is read by ${twinReads.get(r)} shipped transition clauses, above its ceiling ${r.ceiling} — a lane-admitted keyword SPREAD.`,
+         );
+     }
++  if (twins === KEYWORD_TWINS) bad.push(...ledgerBound(twins));
+   return bad;
+ }
+ 
+@@ -2599,12 +2963,50 @@ function b11KindFence() {
+  * own numbers, the file's own literal consts) must equal the row's `ms` (`null` where it reads
+  * a runtime value). A sum only ever lengthens and is not read. Closed both ways.
+  */
++/** Does the ONE library carry the PROPOSED `clock-context` field (pass 9, charter row 5)? Until the
++ *  chair folds it, a `ctx: true` admission below is DORMANT (it admits a site no reader yet sees) and
++ *  is exempt from the STALE clause; once folded, it is live and STALE-checked like every row. */
++const LIB_CTX = clockReads("x && MOTION.y")[0]?.ctx !== undefined;
+ const ADMITTED_ARITH = [
++  {
++    file: "src/pencil/chrome/MarginNote.vue",
++    expr: "reduced ? 0 : MOTION.rungs.note",
++    ms: null,
++    ctx: true,
++    why: "PRM IS A VALUE OF THE NOTE'S CLOCK — 0 under reduce, else the note rung (pass 9, charter row 5: a ternary read is the consumer's value; the union's line)",
++  },
++  {
++    file: "src/pencil/grid/gridPaths.ts",
++    expr: "slot = now >= slot + FRONT_MIN_MS ? now + FRONT_MIN_MS : slot + FRONT_MIN_MS",
++    ms: null,
++    ctx: true,
++    why: "THE FRONT'S SLOT — the next commit is one floor after now or after the last slot, whichever is later (ACC-FIVE's cap; pass 9, charter row 5; the union's line)",
++  },
++  {
++    file: "src/games/shared/useFlipGlide.ts",
++    expr: "(ms: number) => options.settleGuardMs ?? ms + MOTION.settleGuardMs",
++    ms: null,
++    ctx: true,
++    why: "A CALLER'S OPTION OVERRIDES THE GUARD — `??` picks the caller's settle guard, else the glide plus MOTION's guard (pass 9, charter row 5: a logical read is the consumer's value)",
++  },
++  {
++    file: "src/pencil/glyph/HandwrittenGlyph.vue",
++    expr: "props.noiseDelay || DRAW_IN_PRESETS.glyph.baseDelay",
++    ms: null,
++    ctx: true,
++    why: "A PROP OVERRIDES THE PRESET — a glyph's own noise delay, else the draw-in preset's base delay (pass 9, charter row 5)",
++  },
++  {
++    file: "src/pencil/composables/bootHand.ts",
++    expr: "Math.max(shortest * MOTION.hand.paceSlack, MOTION.hand.stepMs)",
++    ms: null,
++    why: "NOT A LENGTH — the hand's per-frame allowance: 1.5× the shortest recent interval, floored at one 60 Hz frame (pass 9, charter row 3; ACC-FIVE's minimum graft)",
++  },
+   {
+     file: "src/pencil/composables/bootHand.ts",
+-    expr: "Math.min(sorted[sorted.length >> 1], MOTION.hand.maxStepMs)",
++    expr: "Math.min(floored, MOTION.hand.maxStepMs)",
+     ms: null,
+-    why: "NOT A LENGTH — the hand's observed pace: the median recent frame interval, capped at one 30 Hz frame (pass 8, charter row 2)",
++    why: "NOT A LENGTH — that allowance capped at one 24 Hz frame, so a run of stalls is never a faster pace (pass 9, charter row 3)",
+   },
+   {
+     file: "src/pencil/chrome/GameGallery/GameGallery.vue",
+@@ -2845,10 +3247,16 @@ function arithSites(files = null) {
+       libNames.some(([n, bare]) =>
+         clockReads(line, n, { bare }).some(
+           (r) =>
+-            r.arith &&
+-            (r.how === "math" ||
+-              (r.how === "bracket" && numericGroup(r.expr)) ||
+-              (r.how === "operator" && r.op !== "+")),
++            // PASS 9 (charter row 5; pass-8 critique §3.4): the consumer's VALUE, not its read — a
++            // read the library places in a value-choosing context (`&&`/`||`/`??`, a ternary, a
++            // comma operator, an indexed array literal, `Math.*.call/apply`) is B13's subject.
++            // `ctx` is the PROPOSED `clock-context` field (pass9/prototype/MOT-LADDER); absent, it
++            // reads nothing and the five K plants stay open.
++            !!r.ctx ||
++            (r.arith &&
++              (r.how === "math" ||
++                (r.how === "bracket" && numericGroup(r.expr)) ||
++                (r.how === "operator" && r.op !== "+"))),
+         ),
+       );
+     code.split("\n").forEach((line, i) => {
+@@ -3048,7 +3456,7 @@ function b13Arith(lad, sites = arithSites(), admitted = ADMITTED_ARITH) {
+       );
+   }
+   for (const r of admitted)
+-    if (!used.has(r))
++    if (!used.has(r) && !(r.ctx && !LIB_CTX))
+       bad.push(`ADMITTED_ARITH ${r.file} :: ${r.expr} admits nothing — STALE.`);
+   return bad;
+ }
+@@ -3480,6 +3888,7 @@ const checks = (ledger = LEDGER) => [
+       ...b6Floor(bank, () => deriveBase(decls, lad)),
+       ...b6NoShorten(rows, bank, lad, ledger),
+       ...consumerRatchet(bank, consumerRoster(null, lad), ledger),
++      ...scriptDurations(null, ledger),
+     ],
+   ],
+   ["B7 TAILWIND", () => b7Tailwind()],
+@@ -4843,6 +5252,212 @@ if (SELF_TEST) {
+           ],
+         ]),
+     ],
++    // ══ PASS 9 · the pass-8 critic's plants (K7r K7s K3 K1-shape K15), each through its clause ═══
++    ...(() => {
++      const f = "src/assets/index.css";
++      const dc = "src/games/shared/DigitCell.vue";
++      const banked = `.cell-reveal-animated {\n  animation: cell-reveal 0.3s var(--ease-anticipatePop);\n}\n`;
++      const bank = {
++        rungs: {},
++        sites: { [`${f} :: .cell-reveal-animated :: cell-reveal`]: 300 },
++      };
++      const rowsOf = (text, file = f) => {
++        const found = collectText(text, file);
++        return inventoryRows(
++          [...found, ...libraryOnly(join(ROOT, file), text, file, found)],
++          lad,
++        );
++      };
++      const els = (tpl, file = dc) => [{ file, els: templateElements(tpl, 1) }];
++      const cell = `<div class="game-cell" :class="{ 'cell-reveal-animated': armed }"></div>`;
++      const apart = `<div><div class="game-cell"></div><span class="cell-reveal-animated"></span></div>`;
++      const reach = (css, tpl = cell, file = f) =>
++        b6NoShorten(
++          [...rowsOf(banked), ...rowsOf(css, file)],
++          bank,
++          { rungs: [] },
++          [],
++          {
++            elements: els(tpl),
++          },
++        );
++      const k7r = ".game-cell {\n  animation-duration: var(--motion-whisper);\n}\n";
++      // K3's site, banked at the leave rung; a calc over it is valued at its lower bound
++      const fade = (v) =>
++        b6NoShorten(
++          rowsOf(
++            `.fade-leave-active {\n  transition: opacity ${v} var(--ease-standard);\n}\n`,
++          ),
++          { rungs: {}, sites: { [`${f} :: .fade-leave-active :: opacity`]: leaveMs } },
++          { rungs: [] },
++          [],
++          { elements: [] },
++        );
++      const leaveMs = lad.rungs.find((r) => r.key === "leave")?.value ?? 200;
++      const script = (code, rel = "src/x.ts") => scriptDurations([[rel, code]], []);
++      const pubs = (rel, text) => rungPublishers(lad.rungs, [[rel, text]]).bad;
++      return [
++        [
++          "B6 RATCHET",
++          "K7r VERBATIM — `.game-cell { animation-duration: var(--motion-whisper) }`: disjoint class sets, ONE element (DigitCell's root carries both)",
++          () => reach(k7r),
++        ],
++        [
++          "B6 RATCHET",
++          "K7s VERBATIM — `.board-cells .game-cell` (a descendant reach onto the same element)",
++          () =>
++            reach(
++              ".board-cells .game-cell {\n  animation-duration: var(--motion-whisper);\n}\n",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r where `.game-cell` and the reveal sit on DIFFERENT elements",
++          () => reach(k7r, apart),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r in ANOTHER file's `<style scoped>` (it lands on that file's elements only)",
++          () =>
++            reach(
++              `<template><p class="x"></p></template>\n<style scoped>\n${k7r}</style>\n`,
++              cell,
++              "src/games/shared/Other.vue",
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r at a LONGER rung (dusk ≥ the banked 300)",
++          () => reach(".game-cell {\n  animation-duration: var(--motion-dusk);\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "K7r bound−ε — `.game-cell { animation-duration: 299ms }` (one millisecond under the reveal's 300)",
++          () => reach(".game-cell {\n  animation-duration: 299ms;\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K7r at the bound: `.game-cell { animation-duration: 300ms }` (equal is not shorter)",
++          () => reach(".game-cell {\n  animation-duration: 300ms;\n}\n"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 VERBATIM — `calc(var(--motion-leave) / 4)` on a banked site (200 → 50)",
++          () => fade("calc(var(--motion-leave) / 4)"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 bound−ε — `calc(var(--motion-leave) - 1ms)` (one millisecond under the bank)",
++          () => fade("calc(var(--motion-leave) - 1ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "K3 min() — `min(var(--motion-leave), 199ms)`",
++          () => fade("min(var(--motion-leave), 199ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K3 at the bound: `calc(var(--motion-leave) + 0ms)`, `clamp(200ms, var(--motion-leave), 300ms)`, `max(…, 1ms)`",
++          () => [
++            ...fade("calc(var(--motion-leave) + 0ms)"),
++            ...fade("clamp(200ms, var(--motion-leave), 300ms)"),
++            ...fade("max(var(--motion-leave), 1ms)"),
++          ],
++        ],
++        [
++          "B6 RATCHET",
++          "K3 clamp() — `clamp(10ms, var(--motion-leave), 300ms)` is read at its FLOOR, as R4 reads a clamp",
++          () => fade("clamp(10ms, var(--motion-leave), 300ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K3 bound+ε: `calc(var(--motion-leave) + 1ms)`",
++          () => fade("calc(var(--motion-leave) + 1ms)"),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape — `el.style.animationDuration = "50ms"` (a script duration the ratchet cannot key)',
++          () => script('el.style.animationDuration = "50ms";\n'),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape — a `:style` object `{ animation: "cell-reveal var(--motion-whisper)" }` (a rung in script)',
++          () =>
++            script('const s = { animation: "cell-reveal var(--motion-whisper)" };\n'),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape bound−ε — `transition: "opacity 2ms"` (the smallest length the law reads)',
++          () => script('const s = { transition: "opacity 2ms" };\n'),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — script writes naming keyframes, a LOCAL token, or the PRM 1ms (not a length)",
++          () =>
++            script(
++              'const a = { animation: "refuse-shake var(--refuse-dur) linear" };\nconst b = { animation: "pencil-draw-on" };\nconst c = { transition: "opacity 1ms" };\n',
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          'K15 VERBATIM — main.ts `document.documentElement.style.setProperty("--motion-leave", "10ms")`',
++          () =>
++            pubs(
++              "src/main.ts",
++              'document.documentElement.style.setProperty("--motion-leave", "10ms");\n',
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "K15 sheet twin — an SFC `<style>` declaring `--motion-leave: 10ms` on a consumer",
++          () =>
++            pubs(
++              "src/x/X.vue",
++              "<template><p /></template>\n<style>\n.x {\n  --motion-leave: 10ms;\n}\n</style>\n",
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "NEGATIVE-NEGATIVE — main.ts READING a rung (`getPropertyValue`) and a consumer `var(--motion-leave)`",
++          () =>
++            pubs(
++              "src/main.ts",
++              'const v = getComputedStyle(document.documentElement).getPropertyValue("--motion-leave");\nconst css = ".x { transition: opacity var(--motion-leave) }";\n',
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          'K1-shape computed — `setProperty("animation-duration", `${MOTION.rungs.whisper / 3}ms`)` (a hole that is not a bare clock read)',
++          () =>
++            script(
++              'el.style.setProperty("animation-duration", `${MOTION.rungs.whisper / 3}ms`);\n',
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          'NEGATIVE-NEGATIVE — stopTheClock\'s shape: `still ? "0s" : `${MOTION.rungs.whisper}ms`` (a bare clock read the roster ratchets; 0s is not a length)',
++          () =>
++            script(
++              'style.setProperty(\n  "animation-duration",\n  still ? "0s" : `${MOTION.rungs.whisper}ms`,\n  "important",\n);\n',
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "the rung ledger: KT-1's twin loses its `row` (a minted row naming no twin)",
++          () =>
++            ledgerBound(
++              KEYWORD_TWINS.map((r) =>
++                r.row === "KT-1" ? { ...r, row: undefined } : r,
++              ),
++            ),
++        ],
++        [
++          "B8 CURVE",
++          "NEGATIVE-NEGATIVE — the rung ledger as minted (KT-1..KT-4 each carried)",
++          () => ledgerBound(KEYWORD_TWINS),
++        ],
++      ];
++    })(),
+     // ══ PASS 8 · the pass-7 critic's plants, each through the clause that now reads it ══════════
+     // ── charter row 1 · B6 on the SUBJECT COMPOUND (L7a, L7b, L1–L3; the `:is()` arm, `*`)
+     ...(() => {
+@@ -5142,10 +5757,12 @@ if (SELF_TEST) {
+         ],
+         [
+           "B13 ARITHMETIC",
+-          "NEGATIVE-NEGATIVE — a fallback `x || MOTION.rungs.whisper` and a read of a string group (`MOTION.verbs[v].ease`) are not arithmetic",
++          "NEGATIVE-NEGATIVE — a fallback `x || MOTION.rungs.whisper` and a read of a string group (`MOTION.verbs[v].ease`) are not arithmetic (pass 9: once the library carries `clock-context`, the fallback is the consumer's VALUE — B13's, by an admission — and only the string group stays here)",
+           () =>
+             one(
+-              "const d = opts.d || MOTION.rungs.whisper;\nconst e = MOTION.verbs[v].ease;",
++              LIB_CTX
++                ? "const e = MOTION.verbs[v].ease;"
++                : "const d = opts.d || MOTION.rungs.whisper;\nconst e = MOTION.verbs[v].ease;",
+             ),
+         ],
+       ];
+diff --git a/web/frontend/src/pencil/composables/bootHand.test.ts b/web/frontend/src/pencil/composables/bootHand.test.ts
+index 63f6e825..d18ca152 100644
+--- a/web/frontend/src/pencil/composables/bootHand.test.ts
++++ b/web/frontend/src/pencil/composables/bootHand.test.ts
+@@ -14,15 +14,17 @@ const { enrollStroke, beginRuling, afterRuling } = await import("./bootHand");
+ const SPAN = 600_000;
+ 
+ describe("the hand's clock (T9-M20 D1)", () => {
+-  it("a healthy frame is never slowed; a stall pauses the hand one step", () => {
++  it("a healthy frame is never slowed; a stall pauses the hand one cap", () => {
+     const seen: number[] = [];
+     enrollStroke((c) => {
+       seen.push(c);
+       return seen.length >= 4;
+     });
+     for (const t of [0, 16, 316, 332]) drive!(0, t / SPAN);
+-    // 16 ms passes whole; the 300 ms stall advances one `stepMs`; the next frame is whole again
+-    expect(seen).toEqual([0, 16, 16 + MOTION.hand.stepMs, 32 + MOTION.hand.stepMs]);
++    // 16 ms passes whole; the 300 ms stall advances one CAP (1.5 × 16 = 24, above the 17 ms floor);
++    // the next frame is whole again
++    const cap = Math.max(16 * MOTION.hand.paceSlack, MOTION.hand.stepMs);
++    expect(seen).toEqual([0, 16, 16 + cap, 32 + cap]);
+   });
+ });
+ 
+@@ -50,19 +52,60 @@ describe("the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F)", (
+     [125, 8],
+     [60, 1000 / 60],
+     [30, 1000 / 30],
++    [25, 40], // WebKit's '30 Hz' shim arm runs at 25 Hz (pass 9): pass 8's 34 ms cap read 0.85 here
+   ] as const)
+     it(`${hz} Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second)`, async () => {
+       const n = Math.round(1000 / ms);
+       const seen = await drawAt(frames(ms, n));
+       const rate = seen[seen.length - 1] / (ms * n);
+       expect(rate).toBeGreaterThanOrEqual(0.95);
+-      expect(rate).toBeLessThanOrEqual(1);
++      expect(rate).toBeLessThanOrEqual(1 + 1e-9);
+     });
+-  it("a stall pauses the hand for one frame at the panel's own rate", async () => {
++  /** The most one lost frame moves the hand on a panel of period `p`. */
++  const capAt = (p: number) =>
++    Math.min(
++      Math.max(p * MOTION.hand.paceSlack, MOTION.hand.stepMs),
++      MOTION.hand.maxStepMs,
++    );
++  it("a stall pauses the hand for at most one and a half frames at the panel's own rate", async () => {
+     const at30 = await drawAt([...frames(1000 / 30, 10), 300, 1000 / 30]);
+-    expect(at30[11] - at30[10]).toBeCloseTo(1000 / 30, 3);
++    expect(at30[11] - at30[10]).toBeCloseTo(capAt(1000 / 30), 3);
++    expect(at30[11] - at30[10]).toBeLessThanOrEqual(1.5 * (1000 / 30) + 1e-9);
+     const at60 = await drawAt([...frames(1000 / 60, 10), 300, 1000 / 60]);
+-    expect(at60[11] - at60[10]).toBeCloseTo(1000 / 60, 3);
++    expect(at60[11] - at60[10]).toBeCloseTo(capAt(1000 / 60), 3);
++    expect(at60[11] - at60[10]).toBeLessThanOrEqual(1.5 * (1000 / 60) + 1e-9);
++  });
++  it("a jittery shimmed 60 Hz panel (15.6/23.4 ms, chromium's) travels whole", async () => {
++    const dts = Array.from({ length: 60 }, (_, i) => (i % 3 === 2 ? 23.4 : 15.6));
++    const seen = await drawAt(dts);
++    expect(
++      seen[seen.length - 1] / dts.reduce((a, b) => a + b, 0),
++    ).toBeGreaterThanOrEqual(0.999);
++  });
++  // THE STALL-RUN ROWS (LAWS P8 §D, ACC-FIVE's graft): the pace keys on the window's SHORTEST tick,
++  // so every stall of a run shorter than the window travels one cap (1.5 × the panel's frame). Pass
++  // 8's median let the third consecutive 150 ms stall of five travel its cap (34 ms at 60 Hz).
++  it("every stall of a run shorter than the window travels one cap (≤ 1.5 frames)", async () => {
++    const n = MOTION.hand.paceWindow - 1;
++    const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, n)]);
++    for (let k = 11; k <= 10 + n; k++)
++      expect(seen[k] - seen[k - 1]).toBeCloseTo(capAt(1000 / 60), 6);
++  });
++  it("a run that fills the window is read as the panel, never past maxStepMs", async () => {
++    const n = MOTION.hand.paceWindow;
++    const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, n + 1)]);
++    // the stall before the window fills still travels one frame; the one that fills it, the cap
++    expect(seen[9 + n] - seen[8 + n]).toBeCloseTo(capAt(1000 / 60), 6);
++    expect(seen[10 + n] - seen[9 + n]).toBeCloseTo(MOTION.hand.maxStepMs, 6);
++    expect(seen[11 + n] - seen[10 + n]).toBeCloseTo(MOTION.hand.maxStepMs, 6);
++  });
++  it("a jittery fast panel never crawls (the stepMs floor)", async () => {
++    // 125 Hz with 4/12 ms jitter: the minimum is 4, the floor keeps every 12 ms frame whole
++    const dts = Array.from({ length: 125 }, (_, i) => (i % 2 ? 12 : 4));
++    const seen = await drawAt(dts);
++    expect(
++      seen[seen.length - 1] / dts.reduce((a, b) => a + b, 0),
++    ).toBeGreaterThanOrEqual(0.99);
+   });
+   it("a run of stalls is never read as the pace (capped at maxStepMs)", async () => {
+     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, 10)]);
+diff --git a/web/frontend/src/pencil/composables/bootHand.ts b/web/frontend/src/pencil/composables/bootHand.ts
+index cbb404b7..7886823c 100644
+--- a/web/frontend/src/pencil/composables/bootHand.ts
++++ b/web/frontend/src/pencil/composables/bootHand.ts
+@@ -7,12 +7,15 @@ import { MOTION } from "@pencil/config/pencilConfig";
+  * thread lost painted every line wherever the clock said (the grid's own four pose bakes landed
+  * inside its draw-in and moved one line 72–100 % in a single painted frame). Here one master
+  * `sequence` subscription carries the rAF timeline, and on each tick the hand's clock advances by
+- * that frame's interval, but never by more than the interval the display is KEEPING: the median
+- * of the last `MOTION.hand.paceWindow` frames, seeded with `stepMs` (one 60 Hz frame) and never
+- * above `maxStepMs` (one 30 Hz frame). So the hand is a RATE on every panel: a 60 Hz and a 30 Hz
+- * display draw the page in the same time, and a stall pauses the hand for one frame's travel at
+- * the panel's own rate instead of teleporting it. (Pass 7 capped the step at 17 ms outright,
+- * which a 30 Hz panel reads as a stall on every frame: the ruling ran at half speed.) The
++ * that frame's interval, but never by more than `paceSlack` × the interval the display is
++ * KEEPING: the SHORTEST of the last `MOTION.hand.paceWindow` frames (a lost frame only lengthens an
++ * interval, so the minimum is the panel; the slack passes a shimmed or loaded panel's jitter whole),
++ * never below `stepMs` (one 60 Hz frame) and never above `maxStepMs` (one 24 Hz frame). So the hand is a RATE on every panel: a 60, a 30 and a 25 Hz
++ * display draw the page in the same time, and a stall pauses the hand for at most one and a half
++ * frames' travel at the panel's own rate instead of teleporting it, for every stall in a run
++ * shorter than the window. (Pass 7 capped the step at 17 ms outright, which a 30 Hz panel reads as a stall on
++ * every frame; pass 8's MEDIAN let the third consecutive stall of five travel as the pace,
++ * ACC-FIVE's critic's trap.) The
+  * library form (the pace on the sequence itself, pencil-boil 0.12.1, LEDGER T9-R4) deletes the
+  * clock half of this file.
+  */
+@@ -23,16 +26,19 @@ let clock = 0;
+ let last = -1;
+ let master: SequenceHandle | null = null;
+ const strokes = new Set<Stroke>();
+-/** The last few frame intervals (the display's, observed), seeded with one 60 Hz frame twice. */
+-const intervals: number[] = [MOTION.hand.stepMs, MOTION.hand.stepMs];
++/** The last few frame intervals (the display's, observed). No seed: the first frame is observed. */
++const intervals: number[] = [];
+ 
+-/** The interval the display is keeping: the median of the recent frames, so one stall does not
+- *  move it and a 30 Hz panel reads 33 ms, not 17; capped, so a run of stalls is never a pace. */
++/** The most one frame may move the hand: `paceSlack` × the SHORTEST recent frame (a delivered
++ *  interval within that slack is the panel's own jitter and travels whole; a longer one is a lost
++ *  frame), so a run of stalls shorter than the window never moves it and a 30 Hz panel reads
++ *  33 ms, not 17; floored at one 60 Hz frame and capped, so a longer run is never a faster pace. */
+ function pace(dt: number): number {
+   intervals.push(dt);
+   if (intervals.length > MOTION.hand.paceWindow) intervals.shift();
+-  const sorted = [...intervals].sort((a, b) => a - b);
+-  return Math.min(sorted[sorted.length >> 1], MOTION.hand.maxStepMs);
++  const shortest = Math.min(...intervals);
++  const floored = Math.max(shortest * MOTION.hand.paceSlack, MOTION.hand.stepMs);
++  return Math.min(floored, MOTION.hand.maxStepMs);
+ }
+ 
+ function tick(_eased: number, raw: number): void {
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index 7840d32d..8c66e779 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -495,10 +495,13 @@ export const MOTION = {
+   },
+   /** T9-M20 · THE BOOT'S ONE HAND (`@pencil/composables/bootHand`). The hand's clock moves
+    *  each frame by that frame's interval, capped at the interval the display is keeping (the
+-   *  median of the last `paceWindow` frames), so a stalled frame pauses the hand for one
+-   *  frame's travel at the panel's own rate instead of teleporting it. `stepMs` seeds that
+-   *  median (one 60 Hz frame, before any is observed); `maxStepMs` caps it (one 30 Hz frame:
+-   *  a slower panel slows the hand, and a run of stalls is never read as a pace). `lift` is the fraction of a line's time
++   *  SHORTEST of the last `paceWindow` frames × `paceSlack`), so a stalled frame pauses the hand
++   *  for at most one and a half frames' travel at the panel's own rate instead of teleporting it
++   *  (the slack: a delivered interval within 1.5× the shortest is jitter, the chromium 60 Hz shim's
++   *  15.6/23.4 ms alternation, and travels whole; a FITTED constant, printed in the R row). `stepMs` floors that
++   *  pace (one 60 Hz frame: a fast panel's jitter never crawls the hand); `maxStepMs` caps it
++   *  (one 24 Hz frame: the hand keeps LAWS P8's 0.9 floor down to 21.4 Hz, a slower panel slows
++   *  it, and a run of stalls that fills the window is read as the panel, never past this). `lift` is the fraction of a line's time
+    *  at which the next line lands (the serial order). `serial` names the RUNG each tier spends
+    *  in that order, so no length is typed twice (the ORDER itself, T9-B25's one variable, is
+    *  baked at build in `usePathAnimation`). `bakeCeilingMs` is the longest the
+@@ -509,8 +512,9 @@ export const MOTION = {
+    *  gridPaths), one number for the boot hand and the fronts. */
+   hand: {
+     stepMs: 17,
+-    maxStepMs: 34,
++    maxStepMs: 42,
+     paceWindow: 5,
++    paceSlack: 1.5,
+     lift: 0.6,
+     serial: { frame: "throw", subgrid: "note", cell: "whisper" },
+     bakeCeilingMs: 1200,
+diff --git a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+index 2b7a2964..0be3dec8 100644
+--- a/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
++++ b/web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+@@ -745,12 +745,8 @@ onUnmounted(() => {
+   position: absolute;
+   inset: 0;
+   background-color: var(--grid-line-color);
+-  mask-size: contain;
+-  mask-position: center;
+-  mask-repeat: no-repeat;
+-  -webkit-mask-size: contain;
+-  -webkit-mask-position: center;
+-  -webkit-mask-repeat: no-repeat;
++  mask: center / contain no-repeat;
++  -webkit-mask: center / contain no-repeat;
+   opacity: 0;
+   will-change: opacity;
+ }

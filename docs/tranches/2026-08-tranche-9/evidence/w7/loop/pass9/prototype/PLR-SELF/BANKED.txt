@@ -1,0 +1,42 @@
+PLR-SELF · pass 9 · BANKED (cut through temporary indexes; nothing committed; exits read bare)
+base                 74a2b5d9
+tree (bank)          04c8b7dcbc37d4d05d61021783a228837da5f7ab   (the lane tree's own write-tree, web/frontend, the lane config dir excluded)
+tree (with ledger)   7fb4bdf0f6fad0b79404fd7f177df03822542c52
+
+pass9.diff                sha1 5ee85d8bb6c8e2492f9b0c755d62ad66fd4c60d1 · 615783 B · 38 files changed, 12489 insertions(+), 403 deletions(-) (--binary, product paths only)
+pass9-substrate.diff      sha1 013f21bb213577d407de67167afe8f1703758247 · 620680 B · = pass9.diff + docs/tranches/LEDGER.md
+pass9.delta.on-WAVE.diff  sha1 33e415443c631e24f276483ebe9d8643ddeeeab9 · 186205 B · 27 files changed, 2755 insertions(+), 455 deletions(-)
+proposed/edge-bands.drawn.diff  sha1 462dd40a723eec5a81f9e216c7d4b7a48b267c67 · 11823 B · NOT in the bank
+
+apply --check exits
+  pass9.diff           on 74a2b5d9: 0
+  pass9-substrate.diff on 74a2b5d9: 0
+  pass9.diff           on WAVE union acb9c08e: 1 (expected: homes v2's 10 files already exist there, and 8 files the union also edits fail to patch; the on-WAVE delta is the cut that lands there)
+  pass9-substrate.diff on WAVE union acb9c08e: 1
+  pass9.diff           on s10 (a15da8e6): 1 (§11 is in neither integration)
+  pass9.diff           on s13-s7-s3 (f1c9c3fe): 1 (§11 is in neither integration)
+  delta                on WAVE + homes.on-WAVE acde977b: 0
+  delta                on bare WAVE acb9c08e: 0
+  proposed             on the bank tree 04c8b7dc (74a2b5d9 + pass9.diff): 0
+  proposed             on acde977b: 0
+
+reproduce
+  74a2b5d9 + pass9.diff -> 04c8b7dcbc37d4d05d61021783a228837da5f7ab (exit of apply 0)
+  74a2b5d9 + pass9-substrate.diff -> 7fb4bdf0f6fad0b79404fd7f177df03822542c52
+  acde977b + delta -> f333e6de6740a08ec8d465071c60b15a26f8ac36
+
+grep (scratch, temp, home-absolute and dot-dir paths; a dot-dir on a +++ line)
+  pass9.diff: 0
+  pass9-substrate.diff: 0
+  pass9.delta.on-WAVE.diff: 0
+  proposed/edge-bands.drawn.diff: 0
+
+blobs in the bank tree (for COUNT / PLACE / the fold)
+  fcfec07d46faec29ad63197c3ff5c8100610c4e1  web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+  6b35c48d6cac5646bfbc2c947a99489ab1729fb2  web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
+  7954eb7c9b12eb9432e3d5ac7f51b5425b75830c  web/frontend/src/pencil/chrome/PlayerMark/rowBudget.test.ts
+  58dd45c17f99bdb75e3dc457150b6529ead1efcb  web/frontend/e2e/player-mark.spec.ts
+  8119e056c690428eff7ab139e4730e2e7bc939f0  web/frontend/src/games/shared/useSession.ts
+  71db527a6e71c9e85c97d84bb7e8677617abf81b  web/frontend/src/pencil/chrome/AttributionCard/HeadSheet.vue
+  77d5f5c500c1b7231ba3a91d038d6640afe60984  web/frontend/e2e/lib/edge-bands.mjs
+  9da8c478ea7478956c1b2d682ca28d2bdd40815c  web/frontend/e2e/lib/edge-bands.d.mts

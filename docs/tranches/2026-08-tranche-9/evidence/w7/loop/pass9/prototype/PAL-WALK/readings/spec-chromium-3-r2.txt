@@ -1,0 +1,49 @@
+# peer-walk.spec.ts chromium-3-r2: exit=1; load start 19:17:22 { 52.82 50.87 46.69 } end 19:19:06 { 58.52 53.42 48.17 } 
+ 1 failed
+ 2 passed (1.7m)
+[chromium/light] dpr 3 EDGE i=6 clean GREEN 
+[chromium/light] dpr 3 EDGE i=6 plant THIN_1PX RED
+[chromium/light] dpr 3 EDGE i=6 plant STROKE_OPACITY015 RED
+[chromium/dark] dpr 3 EDGE i=86 clean GREEN 
+[chromium/dark] dpr 3 EDGE i=86 plant THIN_1PX RED
+[chromium/dark] dpr 3 EDGE i=86 plant STROKE_OPACITY015 RED
+## plants: name total RED holes worst-G3-margin
+PLANT COMB_a25 8 8 0 0.267
+PLANT EMPTY_hidden 8 8 0 0.608
+PLANT FADE65_fill 24 24 0 0.062
+PLANT FADE65v_fill 24 24 0 0.062
+PLANT FADE80_fill 8 6 0 -0.001
+PLANT FADE80v_fill 8 6 0 -0.001
+PLANT FAINT30_fill 8 8 0 0.608
+PLANT FAINT30v_fill 8 8 0 0.608
+PLANT HEAD12_a25 8 8 0 0.031
+PLANT MID20_a25 8 8 0 0.046
+PLANT TAIL12_a25 8 8 0 0.014
+PLANT TAIL35_a25 8 8 0 0.158
+READING PAPER 8 0 0 -0.052
+## name vs HEAD same-index (median / frac<4.5) per subject-cell
+dark Aa0a0a c16 name 6.761/0.315 HEAD 5.39/0.363
+dark Aa0a0a c22 name 6.761/0.315 HEAD 5.39/0.363
+dark B2e c11 name 7.082/0.284 HEAD 5.899/0.315
+dark B2e c12 name 7.082/0.283 HEAD 5.899/0.315
+dark B2e c14 name 7.082/0.284 HEAD 5.899/0.315
+dark B2e c8 name 7.082/0.284 HEAD 5.899/0.315
+dark Bb0b0b c11 name 7.192/0.271 HEAD 5.991/0.305
+dark Bb0b0b c12 name 7.192/0.272 HEAD 5.991/0.306
+dark Bb0b0b c14 name 7.192/0.271 HEAD 5.991/0.305
+dark Bb0b0b c8 name 7.192/0.271 HEAD 5.991/0.305
+light Aa0a0a c16 name 12.473/0.342 HEAD 5.609/0.386
+light Aa0a0a c22 name 12.473/0.342 HEAD 5.609/0.385
+light B2e c11 name 11.891/0.347 HEAD 5.067/0.419
+light B2e c12 name 11.891/0.347 HEAD 5.067/0.419
+light B2e c14 name 11.891/0.347 HEAD 5.067/0.419
+light B2e c8 name 11.891/0.348 HEAD 5.067/0.419
+light Bb0b0b c11 name 11.891/0.339 HEAD 5.067/0.41
+light Bb0b0b c12 name 11.891/0.339 HEAD 5.067/0.41
+light Bb0b0b c14 name 11.891/0.339 HEAD 5.067/0.41
+light Bb0b0b c8 name 11.891/0.339 HEAD 5.067/0.41
+## failing assertions
+   1 Error: plant FADE80_fill reds the gate, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 16
+   1 Error: plant FADE80_fill reds the gate, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 22
+   1 Error: plant FADE80v_fill reds the gate, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 16
+   1 Error: plant FADE80v_fill reds the gate, A p-0000000a0a0a (hand 0, the host) on B's page, light cell 22

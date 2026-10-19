@@ -1,0 +1,9 @@
+RUN g10-p7-60 chromium 1 exit 0 load 51.68-46.74 base http://127.0.0.1:4236 env: HZ=60
+G10 chromium CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor GREEN
+  1 passed (20.0s)
+RUN g10-p7-60 webkit 1 exit 1 load 46.74-59.03 base http://127.0.0.1:4236 env: HZ=60
+G10 webkit CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor RED
+    Error: gauge re-cut a burst 15.5/s under its A.6-delivered floor (54.1/51.2/51.2; rate form 52.9 at load 59.0)
+  1 failed
+DONE g10-p7-60 12:12:33
+RESTORED-BYTE-EQUAL 12:12:33

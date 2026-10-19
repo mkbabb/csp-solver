@@ -1,0 +1,63 @@
+LOAD start 14:52  up 1 day, 20 mins, 2 users, load averages: 55.73 52.20 52.17
+load-ok 55.73 < 120 14:52:59
+
+Running 5 tests using 1 worker
+
+[1/5] [webkit] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board
+  1) [webkit] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 30
+
+    Call Log:
+    - Test timeout of 30000ms exceeded
+
+      56 |       { timeout: 30000 },
+      57 |     )
+    > 58 |     .toBe(0);
+         |      ^
+      59 | }
+      60 |
+      61 | /** A pose is settled when two reads 150ms apart agree — the dock's slide, the sheet's fade and
+        at settled (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:58:6)
+        at cellPage (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:121:3)
+        at cell (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:550:15)
+        at <critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:587:10
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #2: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-2.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #3: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-3.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #4: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-5.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #5: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-4.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    attachment #6: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/test-failed-6.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-webkit/error-context.md
+
+
+[2/5] [webkit] › e2e/player-mark.spec.ts:626:1 › the row budget adds rows only where they grow nothing over the board, on both axes
+[3/5] [webkit] › e2e/player-mark.spec.ts:645:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides
+[4/5] [webkit] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age
+[5/5] [webkit] › e2e/player-mark.spec.ts:706:1 › an open sheet reads the space again when the window changes under it
+  1 failed
+    [webkit] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+  4 passed (2.5m)
+LOAD end 14:55  up 1 day, 23 mins, 2 users, load averages: 48.33 48.48 50.51

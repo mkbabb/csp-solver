@@ -1,0 +1,246 @@
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index b7b863f2..67c02e10 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -39,20 +39,9 @@ import { fileURLToPath } from "node:url";
+ // Explicit import, matching check-golden-bytes / check-prod-shake: eslint runs this file
+ // with browser globals, so the implicit `process` is a no-undef error here.
+ import process from "node:process";
+-import { createHash } from "node:crypto";
+-import {
+-  census,
+-  effectiveAt,
+-  elementSites,
+-  lengthPx,
+-  mayMatch,
+-  resolve,
+-  sabotage as shapeSabotage,
+-  sfc,
+-  sources as shapeSources,
+-  templateElements,
+-  tokens,
+-} from "./shape-census.mjs";
++import { existsSync } from "node:fs";
++import * as shapeLib from "./shape-census.mjs";
++import { sabotage as shapeSabotage, sources as shapeSources } from "./shape-census.mjs";
+ 
+ const SRC = join(fileURLToPath(new URL("../src", import.meta.url)));
+ const INDEX_CSS = readFileSync(join(SRC, "assets/index.css"), "utf8");
+@@ -672,26 +661,8 @@ function gateNote(css, srcFiles, note) {
+ const NOTE_FE = fileURLToPath(new URL("..", import.meta.url));
+ const NOTE_REL = "src/pencil/chrome/MarginNote.vue";
+ const NOTE_SFC = join(NOTE_FE, NOTE_REL);
+-const PHONES = [
+-  "phone-portrait-390x844",
+-  "phone-portrait-375x812",
+-  "phone-landscape-844x390",
+-  "phone-landscape-812x375",
+-];
+-const DESKS = ["desk-1280x800", "desk-1440x900"];
+ /** The law's clauses, each one switched off in turn by the sabotage battery (LAWS P7 §F ii). */
+-const RESERVE_CLAUSES = [
+-  "R1",
+-  "R1-reach",
+-  "R2",
+-  "R3-important",
+-  "R3-seat",
+-  "R3-sure",
+-  "R4-every-site",
+-  "R4-consumer",
+-  "R4-element",
+-  "R4-unresolved",
+-];
++const RESERVE_CLAUSES = [];
+ /** The library clauses the law stands on; the battery switches these off through the library. */
+ const LIBRARY_CLAUSES = [
+   "media-eval",
+@@ -700,6 +671,9 @@ const LIBRARY_CLAUSES = [
+   "element-keyed",
+   "css-wide-var",
+   "supports-container",
++  "seat-element",
++  "r4-element",
++  "r4-unresolved",
+ ];
+ const reserveOff = new Set();
+ const libraryOff = { id: "" };
+@@ -709,170 +683,16 @@ const libraryOff = { id: "" };
+ // read once per (subject, property, library clause state); the SFC is read through the plant's
+ // overlay every time. The sites and their order are the library's (`s.file` keeps each file's own).
+ const NOTE_FILES = shapeSources(NOTE_FE);
+-const siteCache = new Map();
+-const utf8 = (f) => readFileSync(f, "utf8");
+-const sha = (s) => createHash("sha1").update(s).digest("hex");
+-function sitesOf(kind, cls, prop, sfcText) {
+-  const read = (f) => (f === NOTE_SFC ? sfcText : utf8(f));
+-  const sfcKey = sha(sfcText);
+-  // another file's element-keyed sites depend on the SFC's TEMPLATE (the elements it renders), so
+-  // a plant in the SFC's <style> reuses them
+-  const tplKey = sha(sfc(sfcText).template?.text ?? "");
+-  const out = [];
+-  for (const f of NOTE_FILES) {
+-    const own = f === NOTE_SFC;
+-    const rel = relative(NOTE_FE, f);
+-    const key = [
+-      kind,
+-      cls,
+-      prop,
+-      libraryOff.id,
+-      rel,
+-      own ? sfcKey : kind === "element" ? tplKey : "",
+-    ].join("|");
+-    let got = siteCache.get(key);
+-    if (!got) {
+-      const files = own || kind === "class" ? [f] : [NOTE_SFC, f];
+-      const all =
+-        kind === "class"
+-          ? census(NOTE_FE, cls, prop, { files, read })
+-          : elementSites(NOTE_FE, {
+-              file: NOTE_REL,
+-              pick: (e) => e.classes.has(cls),
+-              props: [prop],
+-              files,
+-              read,
+-            }).sites;
+-      got = all.filter((s) => s.file === rel);
+-      siteCache.set(key, got);
+-    }
+-    out.push(...got);
+-  }
+-  return out;
+-}
+-const tokenCache = new Map();
+-const tokensOf = (sfcText) => {
+-  const key = `${libraryOff.id}|${sha(sfcText)}`;
+-  if (!tokenCache.has(key))
+-    tokenCache.set(
+-      key,
+-      tokens(NOTE_FE, { read: (f) => (f === NOTE_SFC ? sfcText : utf8(f)) }).map,
+-    );
+-  return tokenCache.get(key);
+-};
+-
++/** THE ONE READER (row 3, PROPOSED): the §7 reserve law is the library's exported
++ *  `reserveReading`, read over the real tree through the plant's overlay. No second composition
++ *  lives here; the clauses are the library's (`SHAPE_SABOTAGE` / `shapeSabotage`). */
+ function reserveLaw(read) {
+-  const on = (c) => !reserveOff.has(c);
+-  const sfcText = (read ?? utf8)(NOTE_SFC);
+-  const fails = [];
+-  const map = tokensOf(sfcText);
+-  const where = (s) =>
+-    `${s.file}:${s.line} ${s.ctx ? `${s.ctx} ` : ""}${s.prelude} { ${s.prop}: ${s.value}${s.important ? " !important" : ""} }`;
+-  const seen = new Map();
+-  // R1-reach (pass 9, N7): a class site counts as the seat only when its selector may reach the
+-  // voice's TEMPLATE element (`.margin-note:not([role])` names the class and reaches nothing).
+-  const tpl = sfc(sfcText).template;
+-  const els = tpl ? templateElements(tpl.text, tpl.line) : [];
+-  const voiceEl = els.find((e) => e.classes.has("margin-note"));
+-  const reaches = (s) =>
+-    !on("R1-reach") ||
+-    (voiceEl != null &&
+-      (!s.prelude || s.prelude.startsWith("<") || mayMatch(s.prelude, voiceEl, els)));
+-  const voiceSites = [
+-    ...sitesOf("class", "margin-note", "min-height", sfcText).filter(reaches),
+-    ...sitesOf("element", "margin-note", "min-height", sfcText),
+-  ];
+-  for (const s of voiceSites) seen.set(`${s.file}:${s.line}:${s.value}`, s);
+-  const voice = [...seen.values()];
+-  if (on("R1") && voice.length !== 1)
+-    fails.push(
+-      `R1 the voice's min-height is set at ${voice.length} sites (want 1): ${voice.map(where).join(" | ") || "none"}`,
+-    );
+-  for (const s of voice) {
+-    const v = resolve(s.value, map).trim();
+-    if (on("R2") && v !== "inherit") fails.push(`R2 ${where(s)} resolves to '${v}'`);
+-    if (on("R3-important") && s.important)
+-      fails.push(`R3 ${where(s)} carries !important`);
+-    // R3-sure (pass 9, N5/N6): the seat must HOLD, so it is read on the regimes where its whole
+-    // context is certain (`@supports`/`@container` evaluated or read dead), not where it may hold
+-    const rg = (on("R3-sure") ? s.sure : undefined) ?? s.regimes ?? [];
+-    if (
+-      on("R3-seat") &&
+-      (!PHONES.every((p) => rg.includes(p)) || DESKS.some((d) => rg.includes(d)))
+-    )
+-      fails.push(
+-        `R3 ${where(s)} holds in [${rg.join(", ")}], not every phone and no desk`,
+-      );
+-  }
+-  const block = sitesOf("class", "margin-note-block", "min-height", sfcText);
+-  const reserveSites = on("R4-every-site") ? block : block.filter((s) => !s.ctx);
+-  // R4-element (pass 9, N4/N19): the voice's font and line are read from EVERY rule that may
+-  // reach its element (`> p:first-child`, `:has(…)`, `:not(:empty)`), not its class sites only,
+-  // and the LARGEST live candidate is the line the reserve must hold: a rule that grows the line
+-  // only once the voice holds ink is a candidate here, because the reserve is read at rest.
+-  const at = (cls, prop) => {
+-    const cl = sitesOf("class", cls, prop, sfcText);
+-    if (cls !== "margin-note" || !on("R4-element")) return cl;
+-    const all = new Map();
+-    for (const s of [...cl, ...sitesOf("element", cls, prop, sfcText)])
+-      all.set(`${s.file}:${s.line}:${s.value}`, s);
+-    return [...all.values()];
+-  };
+-  const fs = {
+-    block: at("margin-note-block", "font-size"),
+-    voice: at("margin-note", "font-size"),
+-  };
+-  const lh = {
+-    block: at("margin-note-block", "line-height"),
+-    voice: at("margin-note", "line-height"),
+-  };
+-  const live = (sites, rg) => sites.filter((s) => (s.regimes ?? []).includes(rg));
+-  // R4-unresolved (pass 9, row 4): a measure with no site is UNRESOLVED (null), never a typed
+-  // default; the old 16 and 1.2× read here only with the clause switched off.
+-  const masked = (v) => (on("R4-unresolved") ? null : v);
+-  const lineFrom = (value, size) => {
+-    const v = resolve(value, map).trim();
+-    if (/^[\d.]+$/.test(v)) return size == null ? null : +v * size;
+-    return lengthPx(value, size == null ? {} : { fontSize: size }, map);
+-  };
+-  const fontOf = (who, rg) => {
+-    if (who === "voice" && on("R4-element")) {
+-      const c = live(fs.voice, rg)
+-        .map((s) => lengthPx(s.value, {}, map))
+-        .filter((x) => x != null);
+-      return c.length ? Math.max(...c) : masked(16);
+-    }
+-    const e = effectiveAt(fs[who], rg);
+-    return (e && lengthPx(e.value, {}, map)) ?? masked(16);
+-  };
+-  const lineOf = (who, rg, size) => {
+-    if (who === "voice" && on("R4-element")) {
+-      const c = live(lh.voice, rg)
+-        .map((s) => lineFrom(s.value, size))
+-        .filter((x) => x != null);
+-      return c.length ? Math.max(...c) : masked(size == null ? null : size * 1.2);
+-    }
+-    const e = effectiveAt(lh[who], rg);
+-    if (!e) return masked(size == null ? null : size * 1.2);
+-    return lineFrom(e.value, size);
+-  };
+-  for (const rg of PHONES) {
+-    const eff = effectiveAt(reserveSites, rg);
+-    const size = fontOf("block", rg);
+-    const consumer = on("R4-consumer")
+-      ? {
+-          ...(size == null ? {} : { fontSize: size }),
+-          lineHeight: lineOf("block", rg, size) ?? undefined,
+-        }
+-      : {};
+-    const reserve = eff ? lengthPx(eff.value, consumer, map) : null;
+-    const line = lineOf("voice", rg, fontOf("voice", rg));
+-    if (reserve == null || line == null || reserve < line - 0.5)
+-      fails.push(
+-        `R4 ${rg}: the block reserves ${reserve == null ? "nothing it can bound" : `${reserve.toFixed(2)}px`} (${eff ? where(eff) : "no site"}) under the voice's ${line == null ? "UNRESOLVED" : `${line.toFixed(2)}px`} line`,
+-      );
+-  }
+-  return fails;
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  return shapeLib.reserveReading(
++    shapeLib,
++    { fe: NOTE_FE, files: NOTE_FILES, read: rd, exists: existsSync },
++    NOTE_REL,
++  );
+ }
+ const gateReserve = (read) => reserveLaw(read).map((f) => `note reserve: ${f}`);
+ 

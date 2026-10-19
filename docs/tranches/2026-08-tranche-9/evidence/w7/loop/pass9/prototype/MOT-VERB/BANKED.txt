@@ -1,0 +1,29 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-59 (the §13 tree, shared with MOT-LADDER; VERB ran second)
+base 74a2b5d9317e7795cee6bf63e861bd44f54ae80e
+opened-at 7b2e283989d2377abc10735239d8a58289263e9c (= LADDER's pass9-ladder.txt cut; no difference declared)
+tree 2b9c277e0733031cea9a4c27cdbf99d1f48f3685
+delta paths 8
+pass9.diff bytes 1078172 sha1 c11143f78a0650c1ae5bca16bd6eb6a5c3bc419f shortstat  80 files changed, 21594 insertions(+), 361 deletions(-)
+pass9-verb-delta.diff bytes 36644 sha1 43e2711548bb511f69bdf45bbdc15efffd89a317 shortstat  8 files changed, 246 insertions(+), 116 deletions(-)
+apply --check pass9.diff@base(74a2b5d9) exit 0 -> 2b9c277e0733031cea9a4c27cdbf99d1f48f3685
+apply --check pass9-verb-delta.diff@ladder-cut(7b2e283989d2377abc10735239d8a58289263e9c) exit 0 -> 2b9c277e0733031cea9a4c27cdbf99d1f48f3685
+apply --check pass9-verb-delta.diff@s13-s7-s3(f1c9c3fe) exit 1 -> -
+apply --check pass9-verb-delta.diff@s13-s7-s3+ladder-own-gate(2250db29) exit 1 -> -
+apply --3way pass9-verb-delta.diff@babea79d exit 0 unmerged 0
+apply --3way pass9-verb-delta.diff@f1c9c3fe exit 0 unmerged 0
+pass9.delta.on-s13-s7-s3.diff bytes 36641 sha1 c40a7830fe2fea197f5ff143159412be1653e21a -> 4130a0077b8984539adda198616e225ef956526f
+on-WAVE tree 137dc91f1e0c57b667ac692afaf789e501d11f0f
+pass9.delta.on-WAVE.diff bytes 36620 sha1 ee6aae2eaba57525cd0c992e267e7eadd7db2662 shortstat  8 files changed, 246 insertions(+), 116 deletions(-)
+apply --check pass9.delta.on-WAVE.diff@wave+homes+ladder(babea79d) exit 0 -> 137dc91f1e0c57b667ac692afaf789e501d11f0f
+apply --check pass9.delta.on-WAVE.diff@wave+homes(acde977b) exit 1 -> -
+apply --check pass9.delta.on-WAVE.diff@wave(acb9c08e) exit 1 -> -
+apply --check pass9.delta.on-s13-s7-s3.diff@s13-s7-s3(f1c9c3fe) exit 0 -> 4130a0077b8984539adda198616e225ef956526f
+pass9.s13.on-WAVE.diff bytes 73778 sha1 0cc0b8cbc87d85e7f1d4f9d3d0d6b5bab2874e46 shortstat  8 files changed, 872 insertions(+), 148 deletions(-)
+apply --check pass9.s13.on-WAVE.diff@s13-on-wave+homes(acde977b) exit 0 -> 137dc91f1e0c57b667ac692afaf789e501d11f0f
+contamination grep (scratchpad|/private/tmp|/tmp/|.claude/t9-scratch|+++ dot-path):
+  pass9.diff 2
+  pass9-verb-delta.diff 0
+  pass9.delta.on-WAVE.diff 0
+  pass9.delta.on-s13-s7-s3.diff 0
+  pass9.s13.on-WAVE.diff 0
+BANK-DONE

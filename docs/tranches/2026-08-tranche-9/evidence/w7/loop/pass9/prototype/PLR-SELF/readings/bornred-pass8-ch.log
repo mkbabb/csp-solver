@@ -1,0 +1,144 @@
+LOAD start 14:01  up 23:28, 2 users, load averages: 59.00 61.77 68.82
+
+Running 5 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/player-mark.spec.ts:519:1 › the desk draws the same rows at 800 and at 799, and the pass-3 query is why it did not (4.5s)
+  ✘  2 [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board (38.8s)
+  ✘  3 [chromium] › e2e/player-mark.spec.ts:626:1 › the row budget adds rows only where they grow nothing over the board, on both axes (21.0s)
+  ✘  4 [chromium] › e2e/player-mark.spec.ts:645:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides (32.4s)
+  ✘  5 [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age (9.2s)
+
+
+  1) [chromium] › e2e/player-mark.spec.ts:519:1 › the desk draws the same rows at 800 and at 799, and the pass-3 query is why it did not 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 1
+    Received: 4
+
+      534 |   // The desk's corner is CH-71's ratified pose, and under the no-growth rule it holds one row
+      535 |   // there: four rows lapped four cells where one laps two.
+    > 536 |   expect(tall.rows).toBe(1);
+          |                     ^
+      537 |   expect(tall.more).toBe('and 6 more');
+      538 |   // THE ROW: one pixel of desk viewport moves nothing.
+      539 |   expect(short.rows).toBe(tall.rows);
+        at <tree>/web/frontend/e2e/player-mark.spec.ts:536:21
+
+    Error Context: <lane-scratch>/pw-out/player-mark-the-desk-draws-cddd3-s-3-query-is-why-it-did-not-chromium/error-context.md
+
+  2) [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+
+    Error: expect(received).toMatchObject(expected)
+
+    - Expected  - 3
+    + Received  + 3
+
+      Object {
+    -   "lapped": 4,
+    -   "more": "and 6 more",
+    -   "rows": 1,
+    +   "lapped": 6,
+    +   "more": "and 3 more",
+    +   "rows": 4,
+      }
+
+      593 |   // still laps it. Four rows lapped six cells where one row laps four; the added rows grow the
+      594 |   // lap, so one row (pass 8 drew four and priced it).
+    > 595 |   expect(await cell(844, 390)).toMatchObject({ rows: 1, more: 'and 6 more', lapped: 4 });
+          |                                ^
+      596 | });
+      597 |
+      598 | /**
+        at <tree>/web/frontend/e2e/player-mark.spec.ts:595:32
+
+    Error Context: <lane-scratch>/pw-out/player-mark-a-portrait-pho-077aa-ur-rows-would-lap-the-board-chromium/error-context.md
+
+  3) [chromium] › e2e/player-mark.spec.ts:626:1 › the row budget adds rows only where they grow nothing over the board, on both axes 
+
+    Error: 802x800 coarse 9x9
+
+    expect(received).toMatchObject(expected)
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 3,
+    -   "rows": 1,
+    +   "lapped": 6,
+    +   "rows": 4,
+      }
+
+      633 |     await crowd(page, 6, `key-${w}x${h}-${size}`);
+      634 |     const r = await drawSheet(page);
+    > 635 |     expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'} ${size * size}x${size * size}`).toMatchObject({ rows, lapped });
+          |                                                                                        ^
+      636 |     await ctx.close();
+      637 |   }
+      638 | });
+        at <tree>/web/frontend/e2e/player-mark.spec.ts:635:88
+
+    Error Context: <lane-scratch>/pw-out/player-mark-the-row-budget-f422d-over-the-board-on-both-axes-chromium/error-context.md
+
+  4) [chromium] › e2e/player-mark.spec.ts:645:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides 
+
+    Error: [{"w":1024,"left":68,"rows":1,"lapped":3},{"w":1028,"left":70,"rows":1,"lapped":3},{"w":1032,"left":72,"rows":1,"lapped":3},{"w":1036,"left":74,"rows":1,"lapped":3},{"w":1040,"left":76,"rows":1,"lapped":3},{"w":1044,"left":78,"rows":4,"lapped":6},{"w":1048,"left":80,"rows":4,"lapped":6},{"w":1052,"left":82,"rows":4,"lapped":6},{"w":1056,"left":84,"rows":4,"lapped":6}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 3,
+    -   "rows": 1,
+    +   "lapped": 6,
+    +   "rows": 4,
+      }
+
+      661 |   for (let i = 1; i < seen.length; i++) expect(seen[i].left, log).toBeGreaterThan(seen[i - 1].left);
+      662 |   // ...and the pose did not
+    > 663 |   for (const s of seen) expect({ rows: s.rows, lapped: s.lapped }, log).toEqual({ rows: 1, lapped: 3 });
+          |                                                                         ^
+      664 | });
+      665 |
+      666 | /**
+        at <tree>/web/frontend/e2e/player-mark.spec.ts:663:73
+
+    Error Context: <lane-scratch>/pw-out/player-mark-the-row-budget-c5a2f-arse-while-the-board-slides-chromium/error-context.md
+
+  5) [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age 
+
+    Error: [{"rows":4,"lapped":4,"top":124.453125},{"rows":4,"lapped":4,"top":124.453125},{"rows":4,"lapped":4,"top":124.453125}]
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 2
+    + Received  + 2
+
+      Object {
+    -   "lapped": 2,
+    -   "rows": 1,
+    +   "lapped": 4,
+    +   "rows": 4,
+      }
+
+      692 |   }
+      693 |   for (const r of reads) {
+    > 694 |     expect({ rows: r.rows, lapped: r.lapped }, JSON.stringify(reads)).toEqual({ rows: 1, lapped: 2 });
+          |                                                                       ^
+      695 |     expect(Math.abs(r.top - 124.45), JSON.stringify(reads)).toBeLessThanOrEqual(0.5);
+      696 |   }
+      697 | });
+        at <tree>/web/frontend/e2e/player-mark.spec.ts:694:71
+
+    Error Context: <lane-scratch>/pw-out/player-mark-the-desk-draws-5b907-est-whatever-the-room-s-age-chromium/error-context.md
+
+  5 failed
+    [chromium] › e2e/player-mark.spec.ts:519:1 › the desk draws the same rows at 800 and at 799, and the pass-3 query is why it did not 
+    [chromium] › e2e/player-mark.spec.ts:546:1 › a portrait phone compresses exactly where four rows would lap the board 
+    [chromium] › e2e/player-mark.spec.ts:626:1 › the row budget adds rows only where they grow nothing over the board, on both axes 
+    [chromium] › e2e/player-mark.spec.ts:645:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides 
+    [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age 
+LOAD end 14:03  up 23:30, 2 users, load averages: 61.22 60.86 67.48

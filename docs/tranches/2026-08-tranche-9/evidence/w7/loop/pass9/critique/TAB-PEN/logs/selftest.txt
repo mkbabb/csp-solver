@@ -1,0 +1,115 @@
+11:51  up 21:19, 2 users, load averages: 45.40 54.09 65.01
+check-favicon (<crit-scratch>/tree/web/frontend):
+  a  GREEN
+  b  GREEN
+  c  GREEN
+  d  GREEN
+  e  GREEN
+  readings: arm W width 4 · mass 0.2295 · png tie mean |Δ| 0.0010 IoU 0.9942 blob 0 px · unresolved non-setProperty sites 44 (printed, not red)
+
+self-test plants:
+  RED as required  P1 main's favicon.svg verbatim: red abcde, want abcde
+  RED as required  P2 ink #1a1a1a: red c, want c [c.delta c.fallback]
+  RED as required  P3 stroke-width 6: red bde, want bde [b.width d.window d.arm e.png-tie]
+  RED as required  P4 @media deleted: red c, want c
+  RED as required  P5 FAINT INK stroke-opacity 0.15: red a, want a [a.attr]
+  RED as required  P5b FAINT INK #e8e6e3 on the light paper: red c, want c
+  RED as required  P6 the SVG edited after the PNG: red de, want de [e.prov-svg d.arm]
+  RED as required  E1 CSS stroke-width:9px (the owner's defect): red b, want b [b.prop]
+  RED as required  E2 FAINT INK by a later rule: red c, want c
+  RED as required  E3 a second ink element: red a, want a [a.element]
+  RED as required  E4 the pen hidden: red b, want b
+  RED as required  E5 a solid-red 180 PNG, sidecar re-stamped: red e, want e [e.png-paper e.png-darkest e.png-tie]
+  RED as required  E6 paper 8 x 8: red a, want a [a.paper]
+  RED as required  E7 viewBox 64 (the ink halves): red a, want a [a.viewbox]
+  RED as required  E8 a dashed pen: red b, want b
+  RED as required  E9 the light rule moved after @media (dark ink on dark paper): red c, want c
+  RED as required  E10 FAINT INK by alpha, #0a0a0a26: red c, want c [c.opaque]
+  RED as required  E11 style= on the path: red a, want a
+  RED as required  E12 a second <style> (read too): red ab, want ab [a.count]
+  RED as required  E13 the paper painted over the pen: red a, want a [a.order]
+  RED as required  E14 @import in <style>: red b, want b [b.at-rule]
+  RED as required  E15 a rule for every element: red b, want b [b.selector]
+  RED as required  E16 !important: red b, want b [b.important]
+  RED as required  E17 a comment hiding markup: red a, want a [a.junk]
+  RED as required  E18 ink by an unresolvable var(): red c, want c
+  RED as required  E19 the page's paper moved at a palette family's :root (disagrees with @theme): red ce, want ce [c.conflict c.tokens e.png-paper]
+  RED as required  C1 SVG ink mass: five pen lines, a near-solid block (the thick tab again): red de, want de [d.mass d.arm e.png-tie]
+  RED as required  C1m the block entered in the arm table itself, its PNG rastered from it: red de, want de [d.mass]
+  RED as required  C2 a 180 PNG of four ink bars, coverage ~0.23 (not the s): red e, want e [e.png-tie]
+  RED as required  C3 the letter Z at the same box and pen: red de, want de [d.arm e.png-tie]
+  RED as required  C5 arm H by its const, W's PNG kept (the tab and the home screen disagree): red e, want e [e.png-tie]
+  RED as required  C6 both icon links commented out in index.html (no icon ships): red e, want e [e.link-icon e.link-touch]
+  RED as required  C7 a second rel=icon after ours, to a thick SVG: red e, want e [e.link-icon]
+  RED as required  C7b a second apple-touch-icon, to another PNG: red e, want e [e.link-touch]
+  RED as required  C7c `shortcut icon` to a thick SVG (rel is a token list): red e, want e [e.link-icon]
+  RED as required  C7d a second icon link whose rel is spelled with an entity (&#105;con): red e, want e [e.link-icon]
+  RED as required  C15 the paper re-declared in index.html's own <style>: red ce, want ce [c.conflict]
+  RED as required  C8 a second @theme paper sorting AFTER index.css: red ce, want ce [c.conflict c.tokens]
+  RED as required  C9 a second @theme paper sorting BEFORE index.css (walk order made it GREEN): red ce, want ce [c.conflict c.tokens]
+  RED as required  C10 a .dark site in an SFC retoning the ink: red c, want c [c.conflict]
+  RED as required  C11 the paper at an unplaced site (a scoped rule): red c, want c [c.unplaced]
+  RED as required  C12 a computed setProperty that may write the paper: red c, want c [c.unresolved]
+  RED as required  C13 favicon.svg left beside icon.svg: red e, want e [e.favicon]
+  RED as required  C14 the icon link's href moved to /favicon.svg: red e, want e [e.link-icon]
+  RED as required  S1 a repeated attribute: red a, want a [a.dupe]
+  RED as required  S2 an element before the root <svg>: red a, want a [a.root]
+  RED as required  S3 the XHTML namespace: red a, want a [a.ns]
+  RED as required  S4 the paper offset x=4: red a, want a [a.paper-xy]
+  RED as required  S5 the pen filled: red b, want b [b.fill]
+  RED as required  S6 butt caps: red b, want b [b.cap]
+  RED as required  S7 mitre joins: red b, want b [b.join]
+  RED as required  S8 a rule under a foreign @media: red bc, want bc [b.context]
+  RED as required  S9 the file padded past 600 B: red b, want b [b.bytes]
+  RED as required  S10 relative commands (m/c): red de, want de [d.unreadable]
+  RED as required  S11 an arm drawn at 0.6 scale (in the table, PNG from its path): red de, want de [d.extent]
+  RED as required  S12 an arm moved 2 units right (in the table, PNG from its path): red d, want d [d.centre]
+  RED as required  S13 public/icon.svg missing: red e, want e [e.icon-file]
+  RED as required  S14 the touch icon missing: red e, want e [e.png-file]
+  RED as required  S15 a re-rastered PNG with the old sha in the sidecar: red e, want e [e.prov-png]
+  RED as required  S16 a 90 x 90 touch icon: red e, want e [e.png-size]
+  RED as required  S17 one transparent pixel in the touch icon: red e, want e [e.png-opaque]
+  RED as required  C8-E1 the icon link scoped to dark (a light tab shows no s): red e, want e [e.link-icon]
+  RED as required  C8-E2 the icon link typed text/plain (a UA skips the type): red e, want e [e.link-icon]
+  RED as required  C8-E3 both links inside a template (inert): red e, want e [e.link-icon e.link-touch]
+  RED as required  C8-E4 both links inside a noscript (raw text with scripting on): red e, want e [e.link-icon e.link-touch]
+  RED as required  C8-E5 both links kept only as a script string: red e, want e [e.link-icon e.link-touch]
+  RED as required  C8-E6 a base href to a foreign origin before the links: red e, want e [e.link-icon e.link-touch]
+  RED as required  C8-E6b a sizes ladder on the touch icon (struck at pass 9: one link per rel): red e, want e [e.link-touch]
+  RED as required  C8-E8 a 12 x 12 ink square in the touch icon's paper (a mark that is not the s): red e, want e [e.png-blob]
+  RED as required  C8-T1 the arm table's W edited to a Z, its svg and PNG re-made from the table: red d, want d [d.pin]
+  RED as required  T3 the arm table's WIDTH edited to 4.5 (off the ballot's set), svg and PNG re-made: red d, want d [d.pin]
+  GREEN as required  NN1 the same ink spelled rgb(10 10 10): red none, want none
+  GREEN as required  NN2 a decoy rule inside a CSS comment: red none, want none
+  GREEN as required  NN3 a decoy second rel=icon inside an HTML comment: red none, want none
+  GREEN as required  NN8 the icon link's href spelled with an entity (/icon&#46;svg) is the same link: red none, want none
+  GREEN as required  NN4 a second @theme paper that AGREES with index.css: red none, want none
+  GREEN as required  NN5 the owner's arm B by one const (WIDTH 5), its PNG rastered from the path: red none, want none
+  GREEN as required  NN6 the owner's arm H by one const, its PNG rastered from the path: red none, want none
+  GREEN as required  NN7 the shipped PNG against a raster of the same path (a W PNG from the analytic raster): red none, want none
+  PINNED  EDGE b.width lo 3.6 ±0.01: past 3.599 RED · inside 3.6 GREEN
+  PINNED  EDGE b.width hi 5.2 ±0.01: past 5.201 RED · inside 5.2 GREEN
+  PINNED  EDGE b.bytes hi 600 ±1: past 601 RED · inside 600 GREEN
+  PINNED  EDGE c.tokens lo 7 ±0.02: past 6.99998 RED · inside 7.00001 GREEN
+  PINNED  EDGE c.delta hi 0.5 ±0.01: past 0.500113 RED · inside 0.499991 GREEN
+  PINNED  EDGE c.fallback hi 0.5 ±0.01: past 0.500113 RED · inside 0.499991 GREEN
+  PINNED  EDGE d.extent lo 0.55 ±0.002: past 0.549937 RED · inside 0.55 GREEN
+  PINNED  EDGE d.extent hi 0.8 ±0.002: past 0.800062 RED · inside 0.8 GREEN
+  PINNED  EDGE d.centre hi 0.5 ±0.005: past 0.501 RED · inside 0.5 GREEN
+  PINNED  EDGE d.window lo 0.15 ±0.002: past 0.149993 RED · inside 0.150004 GREEN
+  PINNED  EDGE d.window hi 0.17 ±0.002: past 0.17001 RED · inside 0.169996 GREEN
+  PINNED  EDGE d.window lo 0.19 ±0.002: past 0.189998 RED · inside 0.190013 GREEN
+  PINNED  EDGE d.window hi 0.21 ±0.002: past 0.210013 RED · inside 0.209996 GREEN
+  PINNED  EDGE d.mass lo 0.18 ±0.002: past 0.179998 RED · inside 0.180006 GREEN
+  PINNED  EDGE d.mass hi 0.32 ±0.002: past 0.320002 RED · inside 0.319992 GREEN
+  PINNED  EDGE e.png-paper hi 2 ±0.05: past 2.00097 RED · inside 1.99947 GREEN
+  PINNED  EDGE e.png-darkest hi 4 ±0.05: past 4.00001 RED · inside 3.99817 GREEN
+  PINNED  EDGE e.png-coverage lo 0.18 ±0.002: past 0.17998 RED · inside 0.180011 GREEN
+  PINNED  EDGE e.png-coverage hi 0.32 ±0.002: past 0.320015 RED · inside 0.319984 GREEN
+  PINNED  EDGE e.png-delta hi 0.02 ±0.0005: past 0.0200007 RED · inside 0.0199994 GREEN
+  PINNED  EDGE e.png-tie lo 0.97 ±0.0005: past 0.969907 RED · inside 0.970034 GREEN
+  PINNED  EDGE e.png-blob hi 16 ±1: past 17 RED · inside 16 GREEN
+
+check-favicon: the tab's s is one pen line, on the page's paper, in its ink
+selftest exit 0
+11:51  up 21:19, 2 users, load averages: 43.56 53.27 64.53

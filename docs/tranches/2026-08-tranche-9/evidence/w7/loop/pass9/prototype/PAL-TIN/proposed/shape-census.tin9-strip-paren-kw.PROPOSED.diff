@@ -1,0 +1,51 @@
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -85,6 +85,8 @@
+     "GRAPHITE · @property preludes (initial-value) as declaration sites",
+   "r1-dark-arm": "GRAPHITE · R1's second path (a chromatic token with no dark arm)",
+   "strip-regex": "TIN · the JS stripper is regex-literal aware",
++  "strip-paren-kw":
++    "TIN (pass 9) · a `/` after the `)` of an if/while/for/with head starts a regex, never a division",
+   "rel-color": "TIN · relative colour syntax with literal channels",
+   "fold-hole":
+     "TIN · foldConcat({hole}) keeps an unresolved leaf as a HOLE (a minted `--x-?-y` stays readable)",
+@@ -344,6 +346,18 @@
+   let j = o.length - 1;
+   while (j >= 0 && /\s/.test(o[j])) j--;
+   if (j < 0) return true;
++  // TIN (strip-paren-kw): \`if (e) /\\/\\//.test(t)\` — the \`)\` closes a statement HEAD, so the \`/\` opens
++  // a regex; read as a division its \`//\` blanked 75.40 % of the shipped entry chunk (pass-8 critic C2)
++  if (o[j] === ")" && on("strip-paren-kw")) {
++    let depth = 0;
++    let k = j;
++    for (; k >= 0; k--) {
++      if (o[k] === ")") depth++;
++      else if (o[k] === "(" && --depth === 0) break;
++    }
++    if (k > 0 && /(?:^|[^\w$.])(?:if|while|for|with)\s*$/.test(o.slice(Math.max(0, k - 12), k)))
++      return true;
++  }
+   if (REGEX_PREV.has(o[j])) {
+     // `a++ / b` and `a-- / b` are division
+     if ((o[j] === "+" || o[j] === "-") && o[j - 1] === o[j]) return false;
+@@ -4670,6 +4684,20 @@
+         "min-height",
+       );
+       return a.length === 1 && b.length === 1 && div.length === 1;
++    },
++  ],
++  [
++    "strip-paren-kw",
++    "TIN",
++    "C2 · a regex after an if-head's `)` is code (a division after a call's `)` stays a division)",
++    (L) => {
++      const BS = String.fromCharCode(92);
++      const a = L.scriptWrites(
++        "if (e) /" + BS + "/" + BS + '//.test(t); el.style.minHeight = "0";\n',
++        "min-height",
++      );
++      const div = L.scriptWrites("const r = f(a) / 2; el.style.minHeight = c / 2; // tail\n", "min-height");
++      return a.length === 1 && div.length === 1;
+     },
+   ],
+   [

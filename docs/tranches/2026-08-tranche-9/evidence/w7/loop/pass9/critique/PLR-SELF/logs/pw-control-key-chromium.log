@@ -1,0 +1,66 @@
+LOAD start 14:59  up 1 day, 26 mins, 2 users, load averages: 53.52 50.90 51.08
+load-ok 53.52 < 120 14:59:06
+
+Running 2 tests using 1 worker
+
+[1/2] [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age
+  1) [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: 7
+    Received: 1
+
+    Call Log:
+    - Timeout 15000ms exceeded while waiting on the predicate
+
+      111 |   await expect
+      112 |     .poll(() => page.locator('.players-roster .player-row').count(), { timeout: 15000 })
+    > 113 |     .toBe(n + 1);
+          |      ^
+      114 | }
+      115 |
+      116 | /** A page at one cell, its pointer regime WITNESSED rather than assumed. */
+        at crowd (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:113:6)
+        at <critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:680:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-the-desk-draws-5b907-est-whatever-the-room-s-age-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/player-mark-the-desk-draws-5b907-est-whatever-the-room-s-age-chromium/error-context.md
+
+
+[2/2] [chromium] › e2e/player-mark.spec.ts:1047:1 › Enter right after a tap toggles once: the key forgives the debt
+  2) [chromium] › e2e/player-mark.spec.ts:1047:1 › Enter right after a tap toggles once: the key forgives the debt 
+
+    Test timeout of 30000ms exceeded.
+
+    Error: locator.evaluate: Test ended.
+    Call log:
+      - waiting for locator('[data-player-mark]:visible')
+
+
+      992 |   await page.goto(SOLO);
+      993 |   await settled(page);
+    > 994 |   await mark(page).evaluate((el) => {
+          |                    ^
+      995 |     const seen: string[] = [el.getAttribute('aria-expanded')!];
+      996 |     const ev: { k: string; t: number }[] = [];
+      997 |     Object.assign(window, { __states: seen, __ev: ev });
+        at debtPage (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:994:20)
+        at debtRow (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:1010:37)
+        at forgiveRow (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:1027:17)
+        at <critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:1048:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-Enter-right-af-c2d9e-e-the-key-forgives-the-debt-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/player-mark-Enter-right-af-c2d9e-e-the-key-forgives-the-debt-chromium/error-context.md
+
+
+  2 failed
+    [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age 
+    [chromium] › e2e/player-mark.spec.ts:1047:1 › Enter right after a tap toggles once: the key forgives the debt 
+LOAD end 14:59  up 1 day, 27 mins, 2 users, load averages: 66.04 54.80 52.52

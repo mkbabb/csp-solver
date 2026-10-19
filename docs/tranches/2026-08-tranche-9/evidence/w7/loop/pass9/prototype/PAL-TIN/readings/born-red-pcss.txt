@@ -1,0 +1,87 @@
+PAL-TIN pass 9 · BORN-RED on the .pcss second publisher (charter row 1; the pass-8 critic's §1.2 plant)
+plant: src/games/shared/tin.pcss = 'html.dark { --color-peer-1-name: #ffd9b8; }' imported at GameBoard.vue:16, planted IN the lane tree for one build and one gate run, then restored (GameBoard sha 6466befa before = after; tin.pcss moved to trash)
+bytes (od -c):
+0000000    h   t   m   l   .   d   a   r   k       {       -   -   c   o
+0000020    l   o   r   -   p   e   e   r   -   1   -   n   a   m   e   :
+0000040        #   f   f   d   9   b   8   ;       }  \n                
+
+built CSS diff clean vs planted (one rule + the GameBoard scope hash): + html.dark{--color-peer-1-name:#ffd9b8}
+
+== NODE (source gate, --dist)
+BORN-RED · the .pcss publisher (src/games/shared/tin.pcss: html.dark { --color-peer-1-name: #ffd9b8; } imported by GameBoard.vue) · load 35.06 32.86 33.17 · 19:02:46
+-- control: source gate on the clean tree
+EXIT=0
+-- plant: source gate on the planted tree (1 import)
+EXIT=1
+restored GameBoard 6466befa94bd (want 6466befa94bd)
+-- control: --dist on the clean build index-aaNZWoto1P9b.css
+EXIT=0
+-- plant: --dist on the planted build index-CmIeDcyXIfIG.css
+EXIT=1
+  4a: dist:assets/index-CmIeDcyXIfIG.css declares --color-peer-1-name: #ffd9b8 in `html.dark` — a declaration index.css does not make, a second publisher in the built sheet
+  4a: src/games/shared/tin.pcss declares --color-peer-1-name — a second publisher of the tin index.css owns
+
+== BROWSER chromium · spec peer-tin · base http://127.0.0.1:4245 index-SJIsOyxY9-w6.js · load 40.02 34.28 33.68 · start 19:03:10
+  ✘  1 [chromium] › ../../../../../worktrees/wf_308fa864-c94-2/web/frontend/e2e/peer-tin.spec.ts:547:1 › §2b the tape writes the author and their tally in the name arm, and both clear on paint (34.0s)
+§2c chromium light: the tape binds peer-1; authored rgb(75, 29, 0) · the cascade resolves rgb(75, 29, 0)
+§2c chromium light clean: the arm rgb(75, 29, 0) · name core rgb(75 29 0) (87 px) ΔE 0.0000 · tally core rgb(75 29 0) (11 px) ΔE 0.0000
+§2c chromium dark: the tape binds peer-1; authored rgb(255, 193, 161) · the cascade resolves rgb(255, 217, 184)
+§2c chromium dark clean: the arm rgb(255, 193, 161) · name core rgb(251 213 181) (215 px) ΔE 0.0475 · tally core rgb(255 217 184) (11 px) ΔE 0.0575
+  ✘  2 [chromium] › ../../../../../worktrees/wf_308fa864-c94-2/web/frontend/e2e/peer-tin.spec.ts:728:1 › §2c gate 4 on the surface: the tape and its tally paint the published name arm (5.2s)
+    Error: dark cell 11: the tape paints the AUTHORED peer-1 name arm
+    Expected: "rgb(255, 193, 161)"
+    Received: "rgb(255, 217, 184)"
+    Error: dark clean: the name paints ΔE 0.0475 from its arm
+EXIT=1 · load after 42.24 35.54 34.17 · end 19:03:53
+
+== BROWSER webkit · spec peer-tin · base http://127.0.0.1:4245 index-SJIsOyxY9-w6.js · load 41.18 35.43 34.14 · start 19:03:53
+  ✘  1 [webkit] › ../../../../../worktrees/wf_308fa864-c94-2/web/frontend/e2e/peer-tin.spec.ts:547:1 › §2b the tape writes the author and their tally in the name arm, and both clear on paint (1.2m)
+§2c webkit light: the tape binds peer-1; authored rgb(75, 29, 0) · the cascade resolves rgb(75, 29, 0)
+§2c webkit light clean: the arm rgb(75, 29, 0) · name core rgb(75 29 0) (352 px) ΔE 0.0000 · tally core rgb(75 29 0) (12 px) ΔE 0.0000
+§2c webkit dark: the tape binds peer-1; authored rgb(255, 193, 161) · the cascade resolves rgb(255, 217, 184)
+§2c webkit dark clean: the arm rgb(255, 193, 161) · name core rgb(255 217 184) (475 px) ΔE 0.0575 · tally core rgb(255 217 184) (12 px) ΔE 0.0575
+  ✘  2 [webkit] › ../../../../../worktrees/wf_308fa864-c94-2/web/frontend/e2e/peer-tin.spec.ts:728:1 › §2c gate 4 on the surface: the tape and its tally paint the published name arm (12.3s)
+    Error: dark cell 11: the tape paints the AUTHORED peer-1 name arm
+    Expected: "rgb(255, 193, 161)"
+    Received: "rgb(255, 217, 184)"
+    Error: dark clean: the name paints ΔE 0.0575 from its arm
+EXIT=1 · load after 73.94 48.67 39.44 · end 19:05:25
+
+
+== FINAL BYTES (gate sha1 d05491a3, spec sha1 1bf92b88)
+-- the source arm (born-src.sh, the same plant on the rsync replica)
+gate d05491a3 · planted 1 import line(s) · load 26.96 27.44 30.06
+0000000    h   t   m   l   .   d   a   r   k       {       -   -   c   o
+0000020    l   o   r   -   p   e   e   r   -   1   -   n   a   m   e   :
+0000040        #   f   f   d   9   b   8   ;       }  \n                
+source gate, planted: exit 1
+  4a: src/games/shared/tin.pcss declares --color-peer-1-name — a second publisher of the tin index.css owns
+source gate, restored (the control): exit 0
+GameBoard RESTORED
+-- the --dist arm
+gate d05491a3 · load 25.71 33.22 42.42 · 20:09:22
+--dist on the .pcss build (index-CmIeDcyXIfIG.css): exit 1
+--dist on the clean build (index-aaNZWoto1P9b.css), same run: exit 0
+  4a: dist:assets/index-CmIeDcyXIfIG.css declares --color-peer-1-name: #ffd9b8 in `html.dark` — a declaration index.css does not make, a second publisher in the built sheet
+-- the browser arm: the .pcss build served on :4245 (index-SJIsOyxY9-w6.js), §2[bc], DPR 1
+:4245 now pcss-fin pid 38455 serves index-SJIsOyxY9-w6.js
+born-fin chromium dpr1: EXIT=1 · load after 51.12 50.27 52.17 · end 19:56:12
+born-fin webkit dpr1: EXIT=1 · load after 52.37 50.69 52.14 · end 19:57:38
+:4245 now tree-fin pid 43473 serves index-BEvB64Xx8VeY.js
+-- chromium
+§2c chromium light: the tape binds peer-1; authored rgb(75, 29, 0) · the cascade resolves rgb(75, 29, 0)
+§2c chromium light clean: the arm rgb(75, 29, 0) · name core rgb(75 29 0) (87 px) ΔE 0.0000 · tally core rgb(75 29 0) (11 px) ΔE 0.0000
+§2c chromium dark: the tape binds peer-1; authored rgb(255, 193, 161) · the cascade resolves rgb(255, 217, 184)
+§2c chromium dark clean: the arm rgb(255, 193, 161) · name core rgb(251 213 181) (215 px) ΔE 0.0475 · tally core rgb(255 217 184) (11 px) ΔE 0.0575
+    Error: dark cell 11: the tape paints the AUTHORED peer-1 name arm
+    Error: dark clean: the name paints ΔE 0.0475 from its arm
+  2 failed
+-- webkit
+§2c webkit light: the tape binds peer-1; authored rgb(75, 29, 0) · the cascade resolves rgb(75, 29, 0)
+§2c webkit light clean: the arm rgb(75, 29, 0) · name core rgb(75 29 0) (352 px) ΔE 0.0000 · tally core rgb(75 29 0) (12 px) ΔE 0.0000
+§2c webkit dark: the tape binds peer-1; authored rgb(255, 193, 161) · the cascade resolves rgb(255, 217, 184)
+§2c webkit dark clean: the arm rgb(255, 193, 161) · name core rgb(255 217 184) (475 px) ΔE 0.0575 · tally core rgb(255 217 184) (12 px) ΔE 0.0575
+    Error: dark cell 11: the tape paints the AUTHORED peer-1 name arm
+    Error: dark clean: the name paints ΔE 0.0575 from its arm
+  2 failed
+-- the same-spec clean control (the tree build): §2c GREEN in both engines at DPR 1 and 2; §2b chromium DPR 1 RED on G5 only (27/27 entries, README §0 gap 1), WebKit 8/8 (readings/final-browser.txt)

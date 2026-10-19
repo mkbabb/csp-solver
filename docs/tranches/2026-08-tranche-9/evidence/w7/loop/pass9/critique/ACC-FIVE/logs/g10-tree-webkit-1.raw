@@ -1,0 +1,38 @@
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › ../tree/web/frontend/e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it
+[webkit] › ../tree/web/frontend/e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it
+G10 webkit clock driven 125 Hz (vsync stamps): measured 125.0 Hz over 1635 gaps, 49 vsyncs dropped by a late pump, 0 frame callbacks threw (precondition ≥ 93.75 Hz) · deal HARD ×1, tally inked 5 · .progress-trace nodes 4
+
+G10 webkit gauge: 124 d records, 31 frames (4.00 d/frame; by burst 4.00/4.00), 2 bursts, rates 62.5/62.5/s (worst 62.5, slowest 62.5; floor (gated, A.6-delivered) 56.3/56.3 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 51.2), DOM rates 62.5/61.2/s, frame min 16.0 ms [frames 4501.0→4517.0, DOM 4506.0→4523.0, lags 5.0/6.0], DOM min 14.0 ms DOM<15.5 [DOM 8867.0→8881.0, frames 8861.0→8877.0, lags 6.0/4.0], min gap by burst 16.0/16.0 ms (DOM 15.0/14.0), flush lag by burst 5.0–6.0/0.0–6.0 ms, 0 of 31 outside a frame
+
+G10 webkit tally: 0 d records, 0 frames (0.00 d/frame; by burst ), 0 bursts, rates /s (worst 0.0, slowest Infinity; floor (gated, A.6-delivered)  GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 51.2), DOM rates /s, frame min Infinity ms [], DOM min Infinity ms, min gap by burst  ms (DOM ), flush lag by burst  ms, 0 of 0 outside a frame
+
+G10 webkit join: 128 d records, 32 frames (4.00 d/frame; by burst 4.00), 1 bursts, rates 62.5/s (worst 62.5, slowest 62.5; floor (gated, A.6-delivered) 56.3 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 51.2), DOM rates 62.6/s DOM>62.5, frame min 16.0 ms [frames 11997.0→12013.0, DOM 12003.0→12018.0, lags 6.0/5.0], DOM min 11.0 ms DOM<15.5 [DOM 12196.0→12207.0, frames 12189.0→12205.0, lags 7.0/2.0], min gap by burst 16.0 ms (DOM 11.0), flush lag by burst 2.0–8.0 ms, 0 of 32 outside a frame
+
+G10 webkit CLAUSES seen RED · clock GREEN · interleave RED · ceiling GREEN · gap GREEN · floor GREEN
+
+  1) [webkit] › ../tree/web/frontend/e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 
+
+    Error: tally (.dt-stroke) never re-cut
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   0
+
+      375 |   // the row must SEE every consumer re-cut, or it measures nothing
+      376 |   for (const k of Object.keys(CONSUMERS))
+    > 377 |     expect(bursts_[k], `${k} (${CONSUMERS[k as keyof typeof CONSUMERS]}) never re-cut`).toBeGreaterThan(0);
+          |                                                                                         ^
+      378 |   // the clock first: a row whose clock cannot exceed its budget cannot see the budget broken, and
+      379 |   // a driven floor row (HZ < 93.75) must at least run at the rate it asked for
+      380 |   expect(hz.hz, `the animation clock ran at ${hz.hz.toFixed(1)} Hz; this row needs ≥ ${need.toFixed(2)} Hz`).toBeGreaterThanOrEqual(need);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass9/crit-ACC-FIVE/tree/web/frontend/e2e/front-rate.spec.ts:377:89
+
+    Error Context: ../pw-out-g10-tree/front-rate-G10-every-poseF-4d627-t-the-panel-s-rate-below-it-webkit/error-context.md
+
+
+  1 failed
+    [webkit] › ../tree/web/frontend/e2e/front-rate.spec.ts:172:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 

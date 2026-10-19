@@ -1,0 +1,48 @@
+# peer-walk.spec.ts §B only, chromium DPR 1, the tree, 19:01 (exit=1; load { 27.83 31.13 32.62 }): edge subject = the CELL's box (.game-cell.is-peer-cursor). The clean ring reads RED (left band depth 0, B4 holes, B3 under 1.80 on top/bottom). A geometry probe then read the ring's path 8 css px inside the cell's box (cell 70.7 px, path 54.8 px, stroke 4 px), so an 8 px strip of the cell box misses the line; the subject became the path itself. Kept as the record of the change.
+
+Running 1 test using 1 worker
+
+[chromium/light] dpr 1 band 0.295 i=5: isTheRing true (Δ to computed 2.4) · CORE px 432 max 3.834 p30 2.750 median 3.599 frac<3 36.8% noise 0 · scan core 3.730 · sensitivity 50%: worst 2.281 · 12/44 under 3 | 70%: worst 2.412 · 11/44 under 3 | 90%: worst 3.158 · 0/44 under 3 | 100%: worst 3.730 · 0/29 under 3 · path 54.8x54.7 stroke 1.89px · ink 152,111,159 vs computed 151,110,157 · fill 246,243,245 vs computed 246,243,245
+[chromium/light] dpr 1 band 0.295 i=6: isTheRing true (Δ to computed 2.4) · CORE px 433 max 3.314 p30 2.444 median 3.133 frac<3 41.3% noise 0 · scan core 3.259 · sensitivity 50%: worst 2.192 · 16/44 under 3 | 70%: worst 2.192 · 16/44 under 3 | 90%: worst 2.813 · 3/44 under 3 | 100%: worst 3.259 · 0/29 under 3 · path 54.8x54.7 stroke 1.89px · ink 131,139,111 vs computed 130,138,109 · fill 244,245,242 vs computed 244,245,242
+[chromium/light] dpr 1 band 0.295 i=86: isTheRing true (Δ to computed 1.7) · CORE px 431 max 3.827 p30 2.754 median 3.598 frac<3 36.7% noise 614 · scan core 3.729 · sensitivity 50%: worst 2.284 · 12/44 under 3 | 70%: worst 2.416 · 11/44 under 3 | 90%: worst 3.158 · 0/44 under 3 | 100%: worst 3.729 · 0/29 under 3 · path 54.8x54.7 stroke 1.89px · ink 150,111,165 vs computed 149,110,164 · fill 246,243,246 vs computed 246,243,246
+[chromium/light] dpr 1 band 0.295 i=89: isTheRing true (Δ to computed 2.4) · CORE px 433 max 3.825 p30 2.716 median 3.591 frac<3 37.0% noise 614 · scan core 3.721 · sensitivity 50%: worst 2.279 · 12/44 under 3 | 70%: worst 2.410 · 11/44 under 3 | 90%: worst 3.147 · 0/44 under 3 | 100%: worst 3.721 · 0/29 under 3 · path 54.8x54.7 stroke 1.89px · ink 155,111,152 vs computed 154,110,150 · fill 246,243,245 vs computed 246,243,245
+[chromium/light] dpr 1 band 0.295 i=95: isTheRing true (Δ to computed 2.4) · CORE px 433 max 3.314 p30 2.444 median 3.133 frac<3 41.3% noise 614 · scan core 3.259 · sensitivity 50%: worst 2.192 · 16/44 under 3 | 70%: worst 2.192 · 16/44 under 3 | 90%: worst 2.813 · 3/44 under 3 | 100%: worst 3.259 · 0/29 under 3 · path 54.8x54.7 stroke 1.89px · ink 131,139,111 vs computed 130,138,109 · fill 244,245,242 vs computed 244,245,242
+[chromium/light] dpr 1 EDGE i=6 clean RED top 3.368 d1 (n57 <3:0.368 holes 1/1r≤1 s8 3.368/0) · right 3.458 d2.08 (n57 <3:0.035 holes 0/0r s8 3.458/0 occ input.cell-native-input.absolute) · bottom 3.458 d1.47 (n57 <3:0.035 holes 1/1r≤1 s8 3.458/0 occ input.cell-native-input.absolute) · left 1 d0 (n57 <3:1 holes 57/1r≤57 s8 1/8 [first nearest 1 | center 1]) | topOnly GREEN station8 RED → RED B3 top painted depth 1 css px < 1.80 (2 × 0.9; ink p99); B3 bottom painted depth 1.47 css px < 1.80 (2 × 0.9; ink p99); B2 left core median 1 < 3; B3 left painted depth 0 css px < 1.80 (2 × 0.9; ink p99); B4 left holes 1 > 0.02 (57 stations in 1 runs, longest 57); B6 top painted depth 1 < 0.5 × the deepest band 2.08 (= 1.04); B6 left painted depth 0 < 0.5 × the deepest band 2.08 (= 1.04)
+[chromium/light] dpr 1 EDGE i=6 plant THIN_1PX RED top 1.711 d0.94 (n57 <3:1 holes 0/0r s8 1.711/0 [first start 1.711 | center 1.711 | end 1.711]) · right 3.195 d1 (n57 <3:0.351 holes 1/1r≤1 s8 3.368/1 occ input.cell-native-input.absolute) · bottom 3.071 d0.96 (n57 <3:0.439 holes 1/1r≤1 s8 3.357/0 occ input.cell-native-input.absolute) · left 1.214 d1.03 (n57 <3:1 holes 0/0r s8 1.224/0 [first nearest 1.214 | center 1]) | topOnly RED station8 RED → RED B2 top core median 1.711 < 3; B3 top painted depth 0.94 css px < 1.80 (2 × 0.9; ink p99); B3 right painted depth 1 css px < 1.80 (2 × 0.9; ink p99); B3 bottom painted depth 0.96 css px < 1.80 (2 × 0.9; ink p99); B2 left core median 1.214 < 3; B3 left painted depth 1.03 css px < 1.80 (2 × 0.9; ink p99)
+[chromium/light] dpr 1 EDGE i=6 plant STROKE_OPACITY015 RED top 1.577 d2.52 (n57 <3:1 holes 0/0r s8 1.62/0 [first start 1.577 | center 1.325 | end 1.325]) · right 1.367 d1.36 (n57 <3:1 holes 0/0r s8 1.367/0 occ input.cell-native-input.absolute [first nearest 1.367 occ input.cell-native-input.absolute | center 1.367 occ input.cell-native-input.absolute]) · bottom 1.365 d1.37 (n57 <3:1 holes 1/1r≤1 s8 1.367/0 occ input.cell-native-input.absolute [first end 1.365 occ input.cell-native-input.absolute | center 1.365 occ input.cell-native-input.absolute | start 1.365 occ input.cell-native-input.absolute]) · left 1 d0 (n57 <3:1 holes 57/1r≤57 s8 1/8 [first nearest 1 | center 1]) | topOnly RED station8 RED → RED B2 top core median 1.577 < 3; B2 right core median 1.367 < 3 (occluder input.cell-native-input.absolute); B3 right painted depth 1.36 css px < 1.80 (2 × 0.9; ink p99); B2 bottom core median 1.365 < 3 (occluder input.cell-native-input.absolute); B3 bottom painted depth 1.37 css px < 1.80 (2 × 0.9; ink p99); B2 left core median 1 < 3; B3 left painted depth 0 css px < 1.80 (2 × 0.9; ink p99); B4 left holes 1 > 0.02 (57 stations in 1 runs, longest 57); B6 left painted depth 0 < 0.5 × the deepest band 2.52 (= 1.26)
+  ✘  1 [chromium] › e2e/peer-walk.spec.ts:787:1 › §B the ring, photographed — the line the product actually draws (10.3s)
+
+
+  1) [chromium] › e2e/peer-walk.spec.ts:787:1 › §B the ring, photographed — the line the product actually draws 
+
+    Error: the ring's four bands, light i=6, dpr 1
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 9
+
+    - Array []
+    + Array [
+    +   "B3 top painted depth 1 css px < 1.80 (2 × 0.9; ink p99)",
+    +   "B3 bottom painted depth 1.47 css px < 1.80 (2 × 0.9; ink p99)",
+    +   "B2 left core median 1 < 3",
+    +   "B3 left painted depth 0 css px < 1.80 (2 × 0.9; ink p99)",
+    +   "B4 left holes 1 > 0.02 (57 stations in 1 runs, longest 57)",
+    +   "B6 top painted depth 1 < 0.5 × the deepest band 2.08 (= 1.04)",
+    +   "B6 left painted depth 0 < 0.5 × the deepest band 2.08 (= 1.04)",
+    + ]
+
+      840 |       for (const [k, v] of Object.entries(r.plants))
+      841 |         console.log(`${tag} plant ${k} ${v.red ? "RED" : "GREEN (a hole)"} ${edgeFmt(v)}`);
+    > 842 |       expect(r.clean.why, `the ring's four bands, ${arm} i=${hand}, dpr ${dpr}`).toEqual([]);
+          |                                                                                  ^
+      843 |       for (const [k, v] of Object.entries(r.plants))
+      844 |         expect(v.red, `edge plant ${k} RED, ${arm} i=${hand}, dpr ${dpr}`).toBe(true);
+      845 |     }
+        at <repo>/.claude/worktrees/wf_308fa864-c94-1/web/frontend/e2e/peer-walk.spec.ts:842:82
+
+    Error Context: <lane-scratch>/test-results/B-c1/peer-walk-§B-the-ring-phot-418bc--the-product-actually-draws-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/peer-walk.spec.ts:787:1 › §B the ring, photographed — the line the product actually draws 

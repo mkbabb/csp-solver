@@ -1,0 +1,248 @@
+load 24.42 31.81 43.49 13:17:07 served index-CubiZsMVSwTc.js spec-sha 26c409111a65
+
+Running 6 tests using 2 workers
+
+NOTE-RESERVE|chromium|390x844|light|clean|{"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+NOTE-RESERVE|chromium|390x844|dark|clean|{"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+  ✘  2 [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red (849ms)
+NOTE-RESERVE|webkit|390x844|light|clean|{"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+NOTE-RESERVE|chromium|844x390|light|clean|{"text":"","height":0,"line":22.0984,"reserve":20.8,"display":"block"}
+NOTE-RESERVE|webkit|390x844|dark|clean|{"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+  ✘  1 [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red (1.8s)
+NOTE-RESERVE|chromium|844x390|dark|clean|{"text":"","height":0,"line":22.0984,"reserve":20.8,"display":"block"}
+  ✘  3 [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red (808ms)
+NOTE-RESERVE|chromium|360x800|light|clean|{"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+NOTE-RESERVE|chromium|360x800|dark|clean|{"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+  ✘  5 [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red (791ms)
+NOTE-RESERVE|webkit|844x390|light|clean|{"text":"","height":0,"line":22.09844,"reserve":20.799999,"display":"block"}
+NOTE-RESERVE|webkit|844x390|dark|clean|{"text":"","height":0,"line":22.09844,"reserve":20.799999,"display":"block"}
+  ✘  4 [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red (1.8s)
+NOTE-RESERVE|webkit|360x800|light|clean|{"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+NOTE-RESERVE|webkit|360x800|dark|clean|{"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+  ✘  6 [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red (2.2s)
+
+
+  1) [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-06748-both-themes-every-plant-red-chromium/error-context.md
+
+  2) [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":22.0984,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":22.0984,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-14fc0-both-themes-every-plant-red-chromium/error-context.md
+
+  3) [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":20.8,"reserve":20.8,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-bf56c-both-themes-every-plant-red-chromium/error-context.md
+
+  4) [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-06748-both-themes-every-plant-red-webkit/error-context.md
+
+  5) [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":22.09844,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":22.09844,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-14fc0-both-themes-every-plant-red-webkit/error-context.md
+
+  6) [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red 
+
+    Error: light: {"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error: dark: {"text":"","height":0,"line":20.799999,"reserve":20.799999,"display":"block"}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      216 |       // soft: a red clean read still lets the other theme run and print (the control's dark arm
+      217 |       // is a reading, not a casualty of the light expect); its plants are not read on a red page
+    > 218 |       expect.soft(holds(clean), `${scheme}: ${JSON.stringify(clean)}`).toBe(true);
+          |                                                                        ^
+      219 |       if (!holds(clean)) {
+      220 |         await ctx.close();
+      221 |         continue;
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend/e2e/note-reserve.spec.ts:218:72
+
+    Error Context: ../../../../t9-scratch/work/pass9/crit-NOTE-LEDGER/pw-out/note-reserve-the-empty-voi-bf56c-both-themes-every-plant-red-webkit/error-context.md
+
+  6 failed
+    [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red 
+    [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red 
+    [chromium] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red 
+    [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 390×844 coarse, both themes, every plant red 
+    [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 844×390 coarse, both themes, every plant red 
+    [webkit] › e2e/note-reserve.spec.ts:205:3 › the empty voice holds its line at 360×800 coarse, both themes, every plant red 
+exit=1 load 23.42 31.48 43.30 13:17:15

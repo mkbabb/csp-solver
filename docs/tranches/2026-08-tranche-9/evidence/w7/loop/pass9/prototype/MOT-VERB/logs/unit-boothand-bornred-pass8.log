@@ -1,0 +1,66 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-59/web/frontend
+
+ ❯ src/pencil/composables/bootHand.test.ts (14 tests | 4 failed) 18ms
+     × 25 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second) 3ms
+     × a stall pauses the hand for one frame at the panel's own rate 2ms
+     × every stall of a run shorter than the window travels one frame 1ms
+     × a run that fills the window is read as the panel, never past maxStepMs 1ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/composables/bootHand.test.ts > the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F) > 25 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second)
+AssertionError: expected 0.833 to be greater than or equal to 0.95
+ ❯ src/pencil/composables/bootHand.test.ts:59:20
+     57|       const seen = await drawAt(frames(ms, n));
+     58|       const rate = seen[seen.length - 1] / (ms * n);
+     59|       expect(rate).toBeGreaterThanOrEqual(0.95);
+       |                    ^
+     60|       expect(rate).toBeLessThanOrEqual(1 + 1e-9);
+     61|     });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/pencil/composables/bootHand.test.ts > the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F) > a stall pauses the hand for one frame at the panel's own rate
+AssertionError: expected 16.666666666666657 to be close to 17, received difference is 0.3333333333333428, but expected 0.0005
+ ❯ src/pencil/composables/bootHand.test.ts:67:33
+     65|     const at60 = await drawAt([...frames(1000 / 60, 10), 300, 1000 / 6…
+     66|     // floored at stepMs: a 60 Hz frame (16.67) travels the 17 ms floor
+     67|     expect(at60[11] - at60[10]).toBeCloseTo(Math.max(1000 / 60, MOTION…
+       |                                 ^
+     68|   });
+     69|   // THE STALL-RUN ROWS (LAWS P8 §D, ACC-FIVE's graft): the pace keys …
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/pencil/composables/bootHand.test.ts > the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F) > every stall of a run shorter than the window travels one frame
+AssertionError: expected 16.666666666666657 to be close to 17, received difference is 0.3333333333333428, but expected 5e-7
+ ❯ src/pencil/composables/bootHand.test.ts:76:37
+     74|     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150…
+     75|     for (let k = 11; k <= 10 + n; k++)
+     76|       expect(seen[k] - seen[k - 1]).toBeCloseTo(Math.max(1000 / 60, MO…
+       |                                     ^
+     77|   });
+     78|   it("a run that fills the window is read as the panel, never past max…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/pencil/composables/bootHand.test.ts > the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F) > a run that fills the window is read as the panel, never past maxStepMs
+AssertionError: expected 34.00000000000003 to be close to 17, received difference is 17.00000000000003, but expected 5e-7
+ ❯ src/pencil/composables/bootHand.test.ts:82:39
+     80|     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150…
+     81|     // the stall before the window fills still travels one frame; the …
+     82|     expect(seen[9 + n] - seen[8 + n]).toBeCloseTo(MOTION.hand.stepMs, …
+       |                                       ^
+     83|     expect(seen[10 + n] - seen[9 + n]).toBeCloseTo(MOTION.hand.maxStep…
+     84|     expect(seen[11 + n] - seen[10 + n]).toBeCloseTo(MOTION.hand.maxSte…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  4 failed | 10 passed (14)
+   Start at  17:24:49
+   Duration  874ms (transform 64ms, setup 25ms, import 103ms, tests 18ms, environment 537ms)
+
+EXIT 1

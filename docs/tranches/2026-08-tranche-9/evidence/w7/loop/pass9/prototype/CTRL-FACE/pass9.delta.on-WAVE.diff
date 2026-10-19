@@ -1,0 +1,865 @@
+diff --git a/web/frontend/config-node.d.ts b/web/frontend/config-node.d.ts
+index 75b50e93..604a92cb 100644
+--- a/web/frontend/config-node.d.ts
++++ b/web/frontend/config-node.d.ts
+@@ -21,8 +21,9 @@
+ // at all until someone declares what they meant.
+ 
+ declare module "node:fs" {
+-  /** `readFileSync(abs, 'utf8')` — the only form the configs call. */
++  /** `readFileSync(abs, 'utf8')`, and the bare form for `face-stamp`'s BYTES (CTRL-FACE pass 9). */
+   export function readFileSync(path: string, encoding: "utf8"): string;
++  export function readFileSync(path: string): Uint8Array;
+   export function writeFileSync(path: string, data: string): void;
+   export function existsSync(path: string): boolean;
+   export function readdirSync(path: string): string[];
+@@ -33,13 +34,13 @@ declare module "node:fs" {
+ 
+ /** `face-stamp`'s digest over the build's module graph (T9-W7 CTRL-FACE). */
+ declare module "node:crypto" {
+-  export function createHash(algorithm: "sha1"): {
+-    update(data: string): { digest(encoding: "hex"): string };
++  interface Hash {
++    update(data: string | Uint8Array): Hash;
+     digest(encoding: "hex"): string;
+-  };
++  }
++  export function createHash(algorithm: "sha1"): Hash;
+ }
+ 
+-
+ declare module "node:path" {
+   export function join(...parts: string[]): string;
+   export function resolve(...parts: string[]): string;
+diff --git a/web/frontend/e2e/face-law.spec.ts b/web/frontend/e2e/face-law.spec.ts
+index d07fa673..d65196a7 100644
+--- a/web/frontend/e2e/face-law.spec.ts
++++ b/web/frontend/e2e/face-law.spec.ts
+@@ -3,7 +3,6 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "n
+ import { join } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { fourBands, EDGE_PLANTS, type FourBands as Bands } from "./lib/edge-bands.mjs";
+-import { onOff } from "./lib/paint-lib.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto (loadCard, below)
+ //
+@@ -1251,6 +1250,97 @@ for (const [label, route, use] of [
+ 
+ /* ══ 9 · THE CASE-WIDE OCCLUSION GATE (§10's leader; every §10 lane runs this) ══════════════ */
+ 
++/* ══ 8b · THE NAME PAINTS THE SUBSET'S FACE (pass 9, charter row 2) ══════════════════════════
++   The rendered row above reads computed `font-family`, which is a NAME: an `@font-face` or a
++   `FontFace` that re-binds "Patrick Hand" to another face leaves it identical. So each voice is
++   read as GLYPHS: the voice's whole cut (every codepoint its home rule's `unicode-range` names),
++   set in the voice, against the same string in a reference face loaded from the subset file the
++   home rule names under a fresh name, so no binding of the voice's name can reach it. The advance
++   must agree to 0.5 px at 48 px. Two re-bindings red in the same run: a CSS
++   `@font-face` and a script `FontFace` for "Patrick Hand", each pointed at a system face. */
++const VOICE_GLYPHS = [
++  ["--face-written", "patrickhand-subset"],
++  ["--face-printed", "fraunces-subset"],
++  ["--face-mono", "firacode-subset"],
++] as const;
++test.describe("the name paints the subset's face — the card · 1280 fine", () => {
++  test("each voice's word is the subset's advance, and a re-binding of the name reds", async ({ page }) => {
++    await loadCard(page);
++    const read = () =>
++      page.evaluate(async (rows) => {
++        const out: { voice: string; file: string; n: number; voiceW: number; refW: number; d: number; src: string | null }[] = [];
++        const rules = [...document.styleSheets].flatMap((s) => {
++          try {
++            return [...s.cssRules];
++          } catch {
++            return [];
++          }
++        });
++        for (const [voice, file] of rows) {
++          const rule = rules.find((r) => r instanceof CSSFontFaceRule && r.style.getPropertyValue("src").includes(file)) as CSSFontFaceRule | undefined;
++          const src = rule ? rule.style.getPropertyValue("src") : null;
++          const url = src ? /url\(["']?([^"')]+)["']?\)/.exec(src)?.[1] ?? null : null;
++          // THE WORD IS THE CUT: every codepoint the home rule's `unicode-range` declares, so no
++          // letter of it can fall back in either span and the read is the subset's whole advance.
++          const range = rule ? rule.style.getPropertyValue("unicode-range") : "";
++          const word = [...range.matchAll(/U\+([0-9A-F]+)(?:-([0-9A-F]+))?/gi)]
++            .flatMap((m) => {
++              const lo = parseInt(m[1], 16);
++              const hi = m[2] ? parseInt(m[2], 16) : lo;
++              return Array.from({ length: hi - lo + 1 }, (_, i) => String.fromCodePoint(lo + i));
++            })
++            .join("");
++          const name = `ref-${file}`;
++          if (url && ![...document.fonts].some((f) => f.family === name)) {
++            const d = (k: string) => rule!.style.getPropertyValue(k) || undefined;
++            const ff = new FontFace(name, `url(${new URL(url, rule!.parentStyleSheet?.href ?? location.href).href})`, {
++              weight: d("font-weight"),
++              style: d("font-style"),
++              stretch: d("font-stretch"),
++              unicodeRange: d("unicode-range"),
++            });
++            document.fonts.add(await ff.load());
++          }
++          const span = (fam: string) => {
++            const s = document.createElement("span");
++            s.style.cssText = `position:absolute;left:0;top:0;white-space:pre;font-size:48px;font-weight:400;font-style:normal;font-family:${fam}`;
++            s.textContent = word;
++            document.body.appendChild(s);
++            return s;
++          };
++          const a = span(`var(${voice})`);
++          const b = span(`"${name}", monospace`);
++          await document.fonts.ready;
++          const voiceW = a.getBoundingClientRect().width;
++          const refW = b.getBoundingClientRect().width;
++          a.remove();
++          b.remove();
++          out.push({ voice, file, n: [...word].length, voiceW: Math.round(voiceW * 100) / 100, refW: Math.round(refW * 100) / 100, d: Math.round(Math.abs(voiceW - refW) * 100) / 100, src });
++        }
++        return out;
++      }, VOICE_GLYPHS);
++    const say = (r: Awaited<ReturnType<typeof read>>) => r.map((x) => `${x.voice} n${x.n} ${x.voiceW}/${x.refW} Δ${x.d}`).join(" · ");
++    const clean = await read();
++    const t1 = await page.addStyleTag({ content: '@font-face { font-family: "Patrick Hand"; src: local("Courier New"), local("Courier"); }' });
++    const css = await read();
++    await t1.evaluate((e) => (e as Element).remove());
++    const js = await page.evaluate(async () => {
++      const ff = new FontFace("Patrick Hand", "local('Courier New'), local('Courier')");
++      document.fonts.add(await ff.load());
++      return true;
++    });
++    const scr = await read();
++    test.info().annotations.push({ type: "face-glyphs", description: `clean ${say(clean)} | @font-face plant ${say(css)} | FontFace plant (${js}) ${say(scr)}` });
++    for (const x of clean) {
++      expect(x.src, `${x.voice}: a home @font-face names ${x.file}`).not.toBeNull();
++      expect(x.n, `${x.voice}: the home rule's unicode-range gives the word`).toBeGreaterThan(8);
++      expect(x.d, `${x.voice} paints its subset (${x.voiceW} vs the reference ${x.refW})`).toBeLessThanOrEqual(0.5);
++    }
++    expect(css[0].d, `the @font-face re-binding reds (${say(css)})`).toBeGreaterThan(0.5);
++    expect(scr[0].d, `the FontFace re-binding reds (${say(scr)})`).toBeGreaterThan(0.5);
++  });
++});
++
+ /**
+  * THIRD OCCURRENCE OF ONE CLASS, so it becomes a law with a home rather than a third finding:
+  * CTRL-RULE arm (a)'s sticky pin covered 38.8 % of the name it pinned, W2's hover notes 68.4 %,
+@@ -2032,31 +2122,39 @@ for (const [label, use, sites] of [
+           ).toBe(true);
+       }
+ 
+-      // FORCED COLOURS COUNT PAINTED PIXELS (LAWS P7 §E iii): a `clip-path: inset(0)` keeps every
+-      // computed outline property green while painting 0 px. ON vs `outline-style: none`, pixels
+-      // that differ by ≥ 24 in any channel; the floor is half the ring's device perimeter.
++      // FORCED COLOURS, PER BAND WITH THICKNESS (pass 9, charter row 4; LAWS P8 §E). Pass 8 summed the
++      // painted pixels against half the device perimeter, and two rings that are not a ring passed it:
++      // the bottom band alone (`clip-path: inset(0 0 -8px 0)`, 109/87) and a 1 px ring (218/87). The
++      // read is now the ONE edge probe's four bands under `forced-colors: active`, ON against
++      // `outline-style: none` (the forced palette overrides any colour plant): each band floors its
++      // own depth (B3, 2 css px), its holes (B4) and its share of the deepest band (B6). Every site;
++      // the three plants red in the same run, the clean ring GREEN.
+       {
++        const FC_OPTS = { ...RING_OPTS, off: `${RP} { outline-style: none !important; }` };
++        const FC_PLANTS = [
++          ["CLIP0 clip-path inset(0)", `${RP} { clip-path: inset(0) !important; }`],
++          ["BOTTOM band only", `${RP} { clip-path: inset(0 0 -8px 0) !important; }`],
++          ["THIN 1px", `${RP} { outline-width: 1px !important; }`],
++        ] as const;
+         await page.emulateMedia({ forcedColors: "active" });
+-        await readAt(sites[sites.length - 1]);
+-        const count = async () => {
+-          const b = (await page.locator(RP).first().boundingBox())!;
+-          const clip = { x: Math.max(0, Math.floor(b.x - 8)), y: Math.max(0, Math.floor(b.y - 8)), width: Math.ceil(b.width + 16), height: Math.ceil(b.height + 16) };
+-          const { on, off } = await onOff(page, clip, `${RP} { outline-style: none !important; }`);
+-          let n = 0;
+-          for (let i = 0; i < on.data.length; i += 3)
+-            if (Math.max(Math.abs(on.data[i] - off.data[i]), Math.abs(on.data[i + 1] - off.data[i + 1]), Math.abs(on.data[i + 2] - off.data[i + 2])) >= 24) n++;
+-          return { n, floor: Math.round((b.width + b.height) * dpr) };
+-        };
+-        const fc = await count();
+-        const t = await page.addStyleTag({ content: `${RP} { clip-path: inset(0) !important; }` });
+-        await flush();
+-        const clipped = await count();
+-        await t.evaluate((e) => (e as Element).remove());
++        for (const sel of sites) {
++          await readAt(sel);
++          const fc = await fourBands(page, FC_OPTS);
++          const planted: string[] = [];
++          for (const [name, css] of FC_PLANTS) {
++            const t = await page.addStyleTag({ content: css });
++            await flush();
++            const p = await fourBands(page, FC_OPTS);
++            await t.evaluate((e) => (e as Element).remove());
++            await flush();
++            planted.push(`${name}: ${p.red ? "RED" : "GREEN"} (${sayBands(p)})`);
++            expect(p.red, `forced colours ${sel}: the plant ${name} reds a band (${sayBands(p)})`).toBe(true);
++          }
++          test.info().annotations.push({ type: "ring-forced-colors", description: `${sel} dpr${dpr}: ${sayBands(fc)} · ${planted.join(" · ")}` });
++          expect(fc.red, `forced colours ${sel}: the ring paints on all four bands (${sayBands(fc)}; ${fc.why.join("; ")})`).toBe(false);
++        }
+         await page.emulateMedia({ forcedColors: "none" });
+         await flush();
+-        test.info().annotations.push({ type: "ring-forced-colors", description: `painted ${fc.n} px (floor ${fc.floor}) · PLANT clip-path inset(0) ${clipped.n} px` });
+-        expect(clipped.n, `forced colours: the clip-path plant paints under the floor (${clipped.n} < ${clipped.floor})`).toBeLessThan(clipped.floor);
+-        expect(fc.n, `forced colours: the ring PAINTS ${fc.n} px ≥ ${fc.floor}`).toBeGreaterThanOrEqual(fc.floor);
+       }
+ 
+       // THE STRANDED CONTROL, same walk: a focusable with no indicator must read `none`.
+@@ -2121,6 +2219,142 @@ for (const [label, use, sites] of [
+   });
+ }
+ 
++/* ══ 12b · ONE RING ON EVERY CARD CONTROL (pass 9, charter row 5; CHAIR-RULINGS §5) ══════════
++   The ring row above reads two sites. The card renders every button, tab and tab stop its children
++   carry, and the fold shipped a second, dashed form on all of those (s10's generic rule) beside
++   DrawerTab's dashed `currentColor`: a reader of two sites cannot see either. So the census walks
++   EVERY focusable the visible card renders, plus the drawer's tab, by the keyboard's road, and
++   each must read the ONE form (solid, 2px, `--ring-ink`) AND paint it on four bands, off the hole
++   ledger below (each entry still red on its named band somewhere, or the row reds). The negative
++   in the same run: a control given a second form (a dashed `currentColor` ring) reds the census. */
++const RING_FOCUSABLE = 'button, [role="tab"], [tabindex="0"]';
++/** THE HOLE LEDGER: a band the ONE ring cannot paint for a reason this family does not own, named
++ *  with its owner and its band. It is CONTROL-ANCHORED, never an excuse: each entry must still hold
++ *  (red on a listed band) on at least one control it names, so a cure reds the row until the entry
++ *  is struck, and a red on any other band reds at once. Off the ledger, every band paints. */
++const RING_HOLES: readonly { at: string; bands: readonly string[]; owner: string; cells?: readonly string[] }[] = [
++  // On the union the case's `#card-foot` lays the bar outside the scrollport: the verbs' clip is
++  // gone (four bands whole at 390×844), and at 1280 a verb's own note, revealed by the same
++  // `:focus-visible`, hangs over the ring's bottom band from the foot's berth.
++  {
++    at: "#card-foot .action-verbs button",
++    bands: ["bottom"],
++    owner: "the verb's own note, hung in the foot's berth (CTRL-TAPE's berth)",
++    cells: ["1280 fine"],
++  },
++  {
++    at: ".drawer-tab",
++    bands: ["left", "bottom"],
++    owner: "the drawer's tongue is tucked 0.5rem under the board's paper (T9-W2 §2.7)",
++  },
++];
++for (const [label, use] of [
++  ["390×844 coarse", coarse(390, 844)],
++  ["1280 fine", {}],
++] as const) {
++  test.describe(`one ring on every card control — ${label}`, () => {
++    test.use(use);
++    // Two rows on one census: the FORM (CHAIR-RULINGS §5: one ring form per card) and the PAINT
++    // (station 1, off the hole ledger), so a paint hole never hides the form's verdict or the reverse.
++    for (const clause of ["form", "paint"] as const)
++    test(`every focusable in the card, and the drawer's tab, ${clause === "form" ? "wears" : "paints"} the ONE ring; a second form reds`, async ({ page }) => {
++      test.setTimeout(150_000);
++      // `reduce`: the chips' 150 ms colour transition carries `outline-color` and snaps under it
++      // (row 9); a read inside the fade is the transition's, not the ring's
++      await page.emulateMedia({ reducedMotion: "reduce" });
++      await loadCard(page);
++      const ringInk = await page.evaluate(() => {
++        const d = document.createElement("div");
++        d.style.color = "var(--ring-ink)";
++        document.body.appendChild(d);
++        const c = getComputedStyle(d).color;
++        d.remove();
++        return c;
++      });
++      const tag = () =>
++        page.evaluate(
++          ({ card, sel }) => {
++            const root = [...document.querySelectorAll(card)].find((c) => c.getClientRects().length)!;
++            const live = (e: Element) => e.getClientRects().length > 0 && !e.closest("[inert]") && !(e as HTMLButtonElement).disabled;
++            // the card, its foot (the case's `#card-foot`, where the bar is laid outside the scrollport
++            // once the foot lands) and the drawer's tab: every control the card's face answers for
++            const foot = document.querySelector("#card-foot");
++            const els = [...root.querySelectorAll(sel), ...(foot ? foot.querySelectorAll(sel) : []), ...document.querySelectorAll(".drawer-tab")].filter(live);
++            document.querySelectorAll("[data-ring-census]").forEach((e) => e.removeAttribute("data-ring-census"));
++            els.forEach((e, i) => e.setAttribute("data-ring-census", String(i)));
++            return els.map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].slice(0, 2).join(".")}`);
++          },
++          { card: CARD, sel: RING_FOCUSABLE },
++        );
++      const census = async () => {
++        const names = await tag();
++        const out: { name: string; fv: boolean; form: string; ok: boolean; bands: string; red: boolean; occ: string | null; whole: string | null }[] = [];
++        for (const [i, name] of names.entries()) {
++          await page.keyboard.press("Shift");
++          await page.keyboard.press("Tab");
++          await page.evaluate((i) => {
++            document.querySelectorAll("[data-ring-probe]").forEach((e) => e.removeAttribute("data-ring-probe"));
++            const el = document.querySelector<HTMLElement>(`[data-ring-census="${i}"]`)!;
++            el.setAttribute("data-ring-probe", "");
++            el.focus();
++          }, i);
++          await flushRing(page);
++          const r = await page.evaluate(() => {
++            const el = document.activeElement as HTMLElement;
++            const cs = getComputedStyle(el);
++            return { fv: el.matches(":focus-visible") && el.hasAttribute("data-ring-probe"), style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
++          });
++          const b = await fourBands(page, RING_OPTS);
++          const ok = r.fv && r.style === "solid" && r.width === "2px" && r.color === ringInk;
++          // an entry scoped to named cells (`cells`) applies only there
++          const hole = await page.evaluate(
++            (list) => list.findIndex((o) => o.on && document.querySelector("[data-ring-probe]")!.matches(o.at)),
++            RING_HOLES.map((h) => ({ at: h.at, on: !h.cells || h.cells.includes(label) })),
++          );
++          const thinnest = b.bands ? (Object.entries(b.bands).sort((x, y) => x[1].thickness - y[1].thickness)[0][0] as string) : null;
++          // on the ledger: the hole must still be there, on a listed band; off it: every band paints
++          const occ = hole >= 0 ? RING_HOLES[hole].owner : null;
++          const held = hole >= 0 && b.red && !!thinnest && RING_HOLES[hole].bands.includes(thinnest);
++          // on a ledger control a green read is no offence (one note may clear its verb where its
++          // sibling's does not); a red read off the listed bands is; the ENTRY must hold somewhere
++          const offLedger = hole >= 0 && b.red && !held;
++          out.push({ name, fv: r.fv, form: `${r.style} ${r.width} ${r.color}`, ok, bands: sayBands(b), red: hole >= 0 ? offLedger : b.red, occ, whole: hole >= 0 ? (held ? `held on ${thinnest}` : b.red ? `RED OFF THE LEDGER on ${thinnest}` : "whole") : null });
++        }
++        return out;
++      };
++      const clean = await census();
++      const off = (c: { ok: boolean; red: boolean }) => (clause === "form" ? !c.ok : c.red);
++      const bad = clean.filter(off);
++      test.info().annotations.push({
++        type: "ring-census",
++        description: `${clean.length} controls, ${clean.length - bad.length} on the ONE ring · ink ${ringInk} · ${clean.map((c) => `${c.name}: ${c.form}${c.red ? " BANDS RED " + c.bands : ""}`).join(" | ")}`,
++      });
++      const named = clean.filter((c) => c.occ);
++      // a ledger entry no control matches is stale: strike it or it hides the next hole
++      if (clause === "paint")
++        for (const h of RING_HOLES.filter((x) => !x.cells || x.cells.includes(label)))
++          expect(
++            clean.some((c) => c.occ === h.owner && /^held/.test(c.whole ?? "")),
++            `the hole ledger's entry for ${h.at} still holds on a control (else strike it)`,
++          ).toBe(true);
++      test.info().annotations.push({
++        type: "ring-census-ledger",
++        description: named.length ? named.map((c) => `${c.name}: ${c.bands} · ledger ${c.whole} · ${c.occ}`).join(" | ") : "none",
++      });
++      expect(clean.length, "the census found the card's controls").toBeGreaterThan(5);
++      expect(clean.some((c) => /drawer-tab/.test(c.name)), "the drawer's tab is in the census").toBe(true);
++      // THE NEGATIVE, same run: a second form on one control (the shape the fold shipped)
++      const t = await page.addStyleTag({ content: '[data-ring-census="0"]:focus-visible { outline: 2px dashed currentColor !important; }' });
++      const planted = await census();
++      await t.evaluate((e) => (e as Element).remove());
++      const caught = planted.filter(off).length;
++      test.info().annotations.push({ type: "ring-census-plant", description: `a second form on control 0: ${caught} control(s) off the ONE ring` });
++      expect(caught, "the planted second form reds the census").toBeGreaterThan(0);
++      expect(bad.map((c) => `${c.name}: ${c.form} fv ${c.fv}${c.red ? " · " + c.bands : ""}`), `every card control ${clause === "form" ? "wears" : "paints"} the ONE ring`).toEqual([]);
++    });
++  });
++}
++
+ /* ══ 12 · M17 SHIPS WITH ITS GATES (T9-M17, INTAKE rows 7, 8, 13 — pass 6) ════════════════════
+    Pass 5 cured the owner's "poor usage of space" and left every number in an evidence
+    instrument (`gpanel.mjs`): the column could come back and this file would read the same. The
+diff --git a/web/frontend/e2e/keys-crib.spec.ts b/web/frontend/e2e/keys-crib.spec.ts
+index 55bb2b53..e406f281 100644
+--- a/web/frontend/e2e/keys-crib.spec.ts
++++ b/web/frontend/e2e/keys-crib.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, type Page } from "@playwright/test";
+ import { installSampler, type PP, type PPRead } from "./lib/postpaint.mjs";
++import { atRest } from "./lib/rest-probes.mjs";
+ 
+ // PRM: live, because the owner's T9-M16 defect IS the fold's 200 ms transition: under reduce the old scroll landed and the crib showed
+ //
+@@ -330,11 +331,14 @@ for (const cell of [
+       const opening = await sampleVerbs(page, 700);
+       await click();
+       const o = await opening();
+-      await page.waitForTimeout(300);
++      // AT REST, NEVER A FIXED 300 ms (CTRL-FACE pass 9, charter row 6; `lint:sleep` W1): the next
++      // arm opens on a page with no running animation, read through the ONE rest probe.
++      const r1 = await atRest(page);
+       const closing = await sampleVerbs(page, 700);
+       await click();
+       const c = await closing();
+-      await page.waitForTimeout(300);
++      const r2 = await atRest(page);
++      expect([r1.residual, r2.residual], "the crib came to rest after each arm").toEqual([0, 0]);
+       return { o, c };
+     };
+     const inView = () =>
+diff --git a/web/frontend/e2e/visual-regression.spec.ts b/web/frontend/e2e/visual-regression.spec.ts
+index cadca706..630cc429 100644
+--- a/web/frontend/e2e/visual-regression.spec.ts
++++ b/web/frontend/e2e/visual-regression.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, devices, type Page } from "@playwright/test";
+ import { MOTION } from "../src/pencil/config/pencilConfig";
++import { heightAtRest } from "./lib/rest-probes.mjs";
+ 
+ // PRM: live, because the steady-state rows assert the boil machinery as it ships—the draw-in→boil
+ //   handoff, the pose stack's shape, exactly one layer visible—on a beat that's actually running.
+@@ -816,33 +817,12 @@ test("option chips keep their separation: ≥6px between neighbours, both axes",
+ 
+ /** The rail panel's own box at the cell that owns the price (pass 6: one card at every width —
+  *  `.mobile-board-width` was the deleted twin's name), READ AT REST (T9-W7 CTRL-FACE pass 8,
+- *  registry-v7 §2.9). The seal's ablation clause raced:
+- *  5 of ≈45 union runs read the shipped card EARLY at 922.13, before a later layout added 6.00, and
+- *  `shipped − handRung` fell to 25.25 under the clause's 28. The read now waits for the fonts and
+- *  for ten consecutive frames with the same height and no animation running in the card; a card
+- *  that never rests in 5 s returns what it has with `rested: false`, and the row asserts on it. */
+-const PANEL_H_AT_REST = async () => {
+-  await document.fonts.ready;
+-  const panel = document.querySelector<HTMLElement>(".controls-card .control-panel-wrap");
+-  if (!panel) return { h: null, rested: false, frames: 0 };
+-  const card = panel.closest<HTMLElement>(".controls-card")!;
+-  let last = -1,
+-    same = 0,
+-    frames = 0;
+-  const t0 = performance.now();
+-  while (same < 10 && performance.now() - t0 < 5000) {
+-    await new Promise<void>((r) => requestAnimationFrame(() => r()));
+-    frames++;
+-    const h = +panel.getBoundingClientRect().height.toFixed(2);
+-    const moving = card.getAnimations({ subtree: true }).some((a) => a.playState === "running");
+-    if (h === last && !moving) same++;
+-    else {
+-      same = 0;
+-      last = h;
+-    }
+-  }
+-  return { h: last, rested: same >= 10, frames };
+-};
++ *  registry-v7 §2.9). The seal's ablation clause raced: 5 of ≈45 union runs read the shipped card
++ *  EARLY at 922.13, before a later layout added 6.00. PASS 9 (LAWS P8 §I): the read is the ONE
++ *  library's `heightAtRest` (`./lib/rest-probes.mjs`), whose `confirm` clause re-reads after the
++ *  quiet window and restarts it on a late layout — the axis pass 8's hand-rolled reader had no
++ *  plant for. Every read here asserts `rested`. */
++const PANEL_AT_REST = { sel: ".controls-card .control-panel-wrap", root: ".controls-card", frames: 10 } as const;
+ 
+ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for", async ({
+   browser,
+@@ -940,7 +920,7 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+       rail: true,
+     });
+ 
+-    const rest = await p.evaluate(PANEL_H_AT_REST);
++    const rest = await heightAtRest(p, PANEL_AT_REST);
+     expect(rest.rested, `the shipped card came to rest (${rest.frames} frames)`).toBe(true);
+     const shipped = rest.h;
+     expect(
+@@ -962,12 +942,13 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+         ".zone-row-label { font-size: var(--type-tag) !important; line-height: 1.1 !important }";
+       document.head.appendChild(s);
+     }, ABLATE);
+-    const handRung = (await p.evaluate(PANEL_H_AT_REST)).h;
++    const rung = await heightAtRest(p, PANEL_AT_REST);
++    expect(rung.rested, `the ablated card came to rest (${rung.frames} frames)`).toBe(true);
++    const handRung = rung.h;
+     await p.evaluate((id) => document.getElementById(id)?.remove(), ABLATE);
+-    expect(
+-      (await p.evaluate(PANEL_H_AT_REST)).h,
+-      "the ablation is undone: the card returns to its shipped height at rest",
+-    ).toBe(shipped);
++    const back = await heightAtRest(p, PANEL_AT_REST);
++    expect(back.rested, "the restored card came to rest").toBe(true);
++    expect(back.h, "the ablation is undone: the card returns to its shipped height at rest").toBe(shipped);
+     expect(
+       shipped! - handRung!,
+       "what the seal bought: the two row captions at the printed rung",
+@@ -986,7 +967,9 @@ test("the iPad coarse card stays under the P1 seal: the chip seam is PAID for",
+                 .deal-row > .deal-btn { grid-area: 1 / 1 !important; justify-self: center !important }
+                 .peek-hold-surface { margin-block: 0.5rem !important }`,
+     });
+-    const reverted = (await p.evaluate(PANEL_H_AT_REST)).h;
++    const rev = await heightAtRest(p, PANEL_AT_REST);
++    expect(rev.rested, "the reverted card came to rest").toBe(true);
++    const reverted = rev.h;
+     expect(
+       reverted,
+       "negative control: the unpaid layout must break the seal",
+diff --git a/web/frontend/scripts/check-face-engine-identity.mjs b/web/frontend/scripts/check-face-engine-identity.mjs
+index 57580d96..0d648134 100644
+--- a/web/frontend/scripts/check-face-engine-identity.mjs
++++ b/web/frontend/scripts/check-face-engine-identity.mjs
+@@ -82,22 +82,31 @@ function sidecar(root = FRONTEND) {
+     return null;
+   }
+ }
+-/** sha1 over `<rel>\n<utf8>\n` for each file of the build's graph, in the sidecar's (sorted)
+- *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file. */
+-function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p, "utf8")) {
++/** sha1 over `<rel>\n` + BYTES + `\n` for each file of the build's graph, in the sidecar's (sorted)
++ *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file.
++ *  PASS 9 — BYTES, never utf8 (a woff2 decoded as text folds invalid sequences to U+FFFD: the
++ *  pass-8 critic's flipped Fraunces byte kept the digest), and the graph carries every EMITTED
++ *  asset's source, the CSS `url()` fonts first among them (the plugin writes it). */
++function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p)) {
+   if (!Array.isArray(files) || files.length === 0) return null;
+   const h = crypto.createHash("sha1");
+   for (const rel of files) {
+-    let text;
++    let bytes;
+     try {
+-      text = read(path.join(root, rel));
++      bytes = read(path.join(root, rel));
+     } catch {
+-      text = `\u0000MISSING ${rel}`;
++      bytes = `\u0000MISSING ${rel}`;
+     }
+-    h.update(`${rel}\n${text}\n`);
++    h.update(`${rel}\n`).update(bytes).update("\n");
+   }
+   return h.digest("hex");
+ }
++/** The faces the census measures, reached by `url()` from the sheets: each must be in the graph. */
++const FACE_ASSETS = [
++  "src/assets/fonts/patrickhand-subset.woff2",
++  "src/assets/fonts/firacode-subset.woff2",
++  "src/assets/fonts/fraunces-subset.woff2",
++];
+ const GRAPH = sidecar()?.files ?? null;
+ const TREE_STAMP = graphStamp(GRAPH);
+ 
+@@ -341,11 +350,14 @@ function selfTest(censuses) {
+     );
+     blind++;
+   }
+-  const utf8 = (p) => fs.readFileSync(p, "utf8");
++  const bytes = (p) => fs.readFileSync(p);
+   const sceneStamp = graphStamp(GRAPH, FRONTEND, (p) =>
+     p.endsWith(scene)
+-      ? `${utf8(p)}\n.controls-card { letter-spacing: 1px }\n`
+-      : utf8(p),
++      ? Buffer.concat([
++          bytes(p),
++          Buffer.from("\n.controls-card { letter-spacing: 1px }\n"),
++        ])
++      : bytes(p),
+   );
+   plant(
+     "scene.css edited after the build (letter-spacing on the card; a file the hand list missed)",
+@@ -353,6 +365,35 @@ function selfTest(censuses) {
+     f0,
+     sceneStamp,
+   );
++  // pass 9 — the pass-8 critic's three font plants, overlaid in memory (the CLI battery plants
++  // them on disk with the mtime restored): a byte appended, a face replaced by another face's
++  // bytes, one byte flipped where utf8 decoding hid it. Each face must be IN the graph first.
++  for (const f of FACE_ASSETS)
++    if (!GRAPH?.includes(f)) {
++      console.log(
++        `  BLIND  ${f} is not in the build's graph — a url() asset the stamp cannot see`,
++      );
++      blind++;
++    }
++  const [ph, fc, fr] = FACE_ASSETS;
++  const overlay = (name, fn) =>
++    plant(
++      name,
++      withServed,
++      f0,
++      graphStamp(GRAPH, FRONTEND, (p) =>
++        p.endsWith(name.split(" ")[0]) ? fn(bytes(p)) : bytes(p),
++      ),
++    );
++  overlay(`${ph} one byte appended`, (b) => Buffer.concat([b, Buffer.from([0])]));
++  overlay(`${fc} replaced whole by the Fraunces bytes`, () =>
++    bytes(path.join(FRONTEND, fr)),
++  );
++  overlay(`${fr} offset 127 flipped`, (b) => {
++    const c = Buffer.from(b);
++    c[127] ^= 0x01;
++    return c;
++  });
+   plant(
+     "a file the build read has gone missing",
+     withServed,
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 3aa2151a..787463ef 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -2273,8 +2273,23 @@ const FACE_SITES = {
+           "'FrauncesBake' is the @font-face the same string mints from the embedded subset",
+       ],
+     ]);
+-    // Computed-key script writes the law cannot resolve are ADMITTED by file and key, never dropped.
+-    const ADMITTED_COMPUTED = new Set(["src/games/shared/GameControlPanel.vue ?name"]);
++    // Computed-key script writes the law cannot resolve are ADMITTED BY SITE (pass 9, charter row 3):
++    // file + key + the site's own source line, each admitted once (a count pin). Pass 8 keyed file +
++    // key, so a second `setProperty(name, "Comic Sans MS")` in the same file rode the first one's
++    // admission. The roster is EMPTY at pass 9: the one site it held (GameControlPanel.vue's
++    // `card.style.setProperty(name, v)`) is resolved by the library's `param-carried` clause (homes
++    // v2), so nothing computed is admitted and every unresolved write reds.
++    const ADMITTED_COMPUTED = new Map(); // `${file} ${key} ${line text}` → reason
++    const GENERIC =
++      /^(serif|sans-serif|monospace|cursive|fantasy|system-ui|ui-[\w-]+|math|emoji|fangsong)$/i;
++    /** The ONE binding of each family a voice paints (pass 9, charter row 2): file + family + src. */
++    const HOME_FACES = new Set([
++      'src/assets/index.css Fraunces url("./fonts/fraunces-subset.woff2") format("woff2")',
++      'src/assets/index.css Fira Code url("./fonts/firacode-subset.woff2") format("woff2")',
++      'src/assets/index.css Patrick Hand url("./fonts/patrickhand-subset.woff2") format("woff2")',
++      // the bake's face, minted from the embedded subset through a template hole (the library's NUL)
++      "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue FrauncesBake url('\u0000') format('woff2')",
++    ]);
+     const split = (v, sep) => {
+       const out = [];
+       let d = 0,
+@@ -2322,6 +2337,7 @@ const FACE_SITES = {
+         exists: existsSync,
+       };
+       const got = {
++        faces: SC.fontFaces(fe, o),
+         all: SC.tokens(fe, o).all,
+         font: SC.census(fe, "*", "font-family", o),
+         voice: [...VOICES.keys()].flatMap((n) => SC.census(fe, "*", n, o)),
+@@ -2331,14 +2347,14 @@ const FACE_SITES = {
+     };
+     const gather = (fe, opts) => {
+       const rd = opts.read ?? ((f) => readFileSync(f, "utf8"));
+-      const out = { all: [], font: [], voice: [] };
++      const out = { all: [], font: [], voice: [], faces: [] };
+       const seen = new Set();
+       for (const f of [...FILES, ...(opts.extra ?? [])]) {
+         const got = readOne(fe, f, rd);
+-        for (const k of ["all", "font", "voice"])
++        for (const k of ["all", "font", "voice", "faces"])
+           for (const x of got[k]) {
+             // an @import pulls a sheet into its importer's read: count every site once
+-            const id = `${k}|${x.file}|${x.line}|${x.prop}|${x.value}|${x.prelude}`;
++            const id = `${k}|${x.file}|${x.line}|${x.prop}|${x.value}|${x.prelude}|${x.family}|${x.src}`;
+             if (seen.has(id)) continue;
+             seen.add(id);
+             out[k].push(x);
+@@ -2349,6 +2365,18 @@ const FACE_SITES = {
+     function check7(fe, opts = {}, off = new Set()) {
+       const bad = [];
+       const G = gather(fe, opts);
++      const rd = opts.read ?? ((f) => readFileSync(f, "utf8"));
++      const admits = new Map();
++      const admitted = (w) => {
++        const line =
++          String(rd(join(fe, w.file)))
++            .split("\n")
++            [w.line - 1]?.trim() ?? "";
++        const key = `${w.file} ${w.prop} ${line}`;
++        if (!admits.has(key)) admits.set(key, new Set());
++        admits.get(key).add(`${w.line}|${w.value}`); // one site, read by two censuses, counts once
++        return ADMITTED_COMPUTED.has(key) && admits.get(key).size === 1;
++      };
+       const all = G.all;
+       const declsOf = new Map();
+       for (const t of all) {
+@@ -2361,7 +2389,7 @@ const FACE_SITES = {
+       for (const w of G.voice) {
+         if (w.unresolved) {
+           // a computed write could name a voice: admitted by file and key, or it reds
+-          if (!ADMITTED_COMPUTED.has(`${w.file} ${w.prop}`))
++          if (!admitted(w))
+             bad.push(`${w.file}:${w.line} ${w.prop} — an unresolved computed write`);
+           continue;
+         }
+@@ -2420,8 +2448,7 @@ const FACE_SITES = {
+         if (/@font-face$/.test(s.prelude) || /@font-face/.test(s.ctx ?? "")) continue;
+         const at = `${s.file}:${s.line} [${s.kind}] ${String(s.prelude).slice(0, 60)}: ${s.prop} ${s.value}`;
+         if (s.unresolved) {
+-          if (!ADMITTED_COMPUTED.has(`${s.file} ${s.prop}`))
+-            bad.push(`${at} — an unresolved computed write`);
++          if (!admitted(s)) bad.push(`${at} — an unresolved computed write`);
+           continue;
+         }
+         let family;
+@@ -2448,6 +2475,51 @@ const FACE_SITES = {
+         if (why) continue;
+         bad.push(at);
+       }
++      // B1: THE NAME IS BOUND TO ONE FACE (pass 9, charter row 2). A voice resolves to a NAME; the
++      // face that name paints is an `@font-face` or a `FontFace`, and C1 never read either (an
++      // `@font-face{font-family:"Patrick Hand";src:local(…)}` and `document.fonts.add(new FontFace(
++      // "Patrick Hand", …))` both exited 0). Every family a voice or an admitted literal paints
++      // (generics aside) is bound once, at its home in HOME_FACES; a binding elsewhere, a second
++      // one, another src, or a family the law cannot read reds. A name nothing paints is inert.
++      // three disjuncts, each its own sabotage id and its own plant (LAWS P8 §F): B1u the name is
++      // unreadable · B1h the binding is off its home · B1n the home binding is written twice.
++      {
++        const painted = new Set();
++        const famsOf = (v, depth = 0) => {
++          for (const it of split(String(v), /,/)) {
++            const m = /^var\(\s*(--[\w-]+)/.exec(it.trim());
++            if (m) {
++              if (depth < 8)
++                for (const d of declsOf.get(m[1]) ?? [])
++                  famsOf(shorthandFamily(String(d.value)), depth + 1);
++            } else if (!GENERIC.test(unquote(it)) && !KEYWORD.test(unquote(it)))
++              painted.add(unquote(it).toLowerCase());
++          }
++        };
++        for (const v of VOICES.keys())
++          for (const d of declsOf.get(v) ?? []) famsOf(d.value);
++        for (const k of ADMITTED_LITERALS.keys()) famsOf(k.slice(k.indexOf(" ") + 1));
++        const bound = new Map();
++        for (const f of G.faces) {
++          const at = `${f.file}:${f.line} [${f.kind}] ${f.family} ← ${f.src}`;
++          if (f.unresolved) {
++            if (!off.has("B1u"))
++              bad.push(`${at} — a face bound under a name the law cannot read`);
++            continue;
++          }
++          if (!painted.has(String(f.family).toLowerCase())) continue;
++          const key = `${f.file} ${f.family} ${f.src}`;
++          bound.set(key, (bound.get(key) ?? 0) + 1);
++          if (!HOME_FACES.has(key) && !off.has("B1h"))
++            bad.push(
++              `${at} — a painted family bound off its one home (the name paints another face)`,
++            );
++          if (HOME_FACES.has(key) && bound.get(key) > 1 && !off.has("B1n"))
++            bad.push(
++              `${at} — the home binding written twice (the later one is the face)`,
++            );
++        }
++      }
+       return bad;
+     }
+ 
+@@ -2457,6 +2529,8 @@ const FACE_SITES = {
+     const hostText = readFileSync(host, "utf8");
+     const tsHost = join(fe, "src/__check7-plant.ts");
+     const logo = join(fe, "src/pencil/chrome/HandwrittenLogo/HandwrittenLogo.vue");
++    const gcp = join(fe, "src/games/shared/GameControlPanel.vue");
++    const ix = join(fe, "src/assets/index.css");
+     const inTemplate = (tag) =>
+       hostText.replace(/<\/template>\s*(?=<script|<style|$)/, `${tag}\n</template>\n`);
+     const inScript = (js) => hostText.replace(/<script([^>]*)>/, `<script$1>\n${js}`);
+@@ -2581,6 +2655,32 @@ const FACE_SITES = {
+             " scoped",
+           ) + "\n<style>\n:root { --plant-alias: var(--face-mono); }\n</style>\n",
+       },
++      // pass 9 — the binding (B1) and the site-keyed admission (charter rows 2 and 3)
++      "an @font-face re-binding a voice's name": {
++        vue: block(`@font-face { font-family: "Patrick Hand"; src: local(${CS}); }`),
++      },
++      "a FontFace re-binding a voice's name": {
++        ts: `document.fonts.add(new FontFace("Patrick Hand", "local('Comic Sans MS')"));\n`,
++      },
++      "a FontFace under a computed name": {
++        ts: `export const bind = (n: string) => document.fonts.add(new FontFace(n, "local('x')"));\n`,
++      },
++      "a fallback name re-bound (Georgia)": {
++        vue: block(`@font-face { font-family: Georgia; src: local(${CS}); }`),
++      },
++      "the home binding written twice (B1n alone)": {
++        ix: (t) => {
++          const m = /@font-face\s*\{[^}]*patrickhand-subset[^}]*\}/.exec(t);
++          return m ? `${t}\n${m[0]}\n` : t;
++        },
++      },
++      "a second computed setProperty in GameControlPanel.vue": {
++        gcp: (t) =>
++          t.replace(
++            '<script setup lang="ts">',
++            `<script setup lang="ts">\nfunction plantFace3(el: HTMLElement, name: string) { el.style.setProperty(name, ${CS}); }`,
++          ),
++      },
+       // the admission is keyed on the exact value
+       "the admitted logo literal changed": {
+         logo: (t) =>
+@@ -2630,7 +2730,11 @@ const FACE_SITES = {
+               ? pl.ts
+               : f === logo && pl.logo
+                 ? pl.logo(readFileSync(f, "utf8"))
+-                : readFileSync(f, "utf8"),
++                : f === gcp && pl.gcp
++                  ? pl.gcp(readFileSync(f, "utf8"))
++                  : f === ix && pl.ix
++                    ? pl.ix(readFileSync(f, "utf8"))
++                    : readFileSync(f, "utf8"),
+       };
+     };
+     const battery = (off) => {
+@@ -2680,7 +2784,7 @@ const FACE_SITES = {
+         g.push("index.html <style>");
+       return g;
+     };
+-    const CLAUSES7 = ["V1", "V2", "C1", "K1"];
++    const CLAUSES7 = ["V1", "V2", "C1", "K1", "B1u", "B1h", "B1n"];
+     if (process.argv.includes("--sabotage")) {
+       // LAWS P7 §F (ii): each clause off in turn must red the plant battery
+       let holes = 0;
+diff --git a/web/frontend/src/games/shared/DrawerTab.vue b/web/frontend/src/games/shared/DrawerTab.vue
+index 31d3a9a2..15cbf7e1 100644
+--- a/web/frontend/src/games/shared/DrawerTab.vue
++++ b/web/frontend/src/games/shared/DrawerTab.vue
+@@ -245,7 +245,8 @@ defineExpose({
+ }
+ 
+ .drawer-tab:focus-visible {
+-  outline: 2px dashed currentColor;
++  /* the card's ONE ring (CHAIR-RULINGS §5, pass 9): solid, in the ring ink */
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index f8354d94..8e991a21 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -2610,10 +2610,20 @@ const quickBerth = computed(() =>
+ :deep(button:focus-visible),
+ :deep([role="tab"]:focus-visible),
+ :deep([tabindex="0"]:focus-visible) {
+-  outline: 2px dashed var(--ring-ink);
++  outline: 2px solid var(--ring-ink);
+   outline-offset: 3px;
+ }
+ 
++/* THE FOCUSED CONTROL IS NEVER UNDER ITS OWN NOTE (CTRL-FACE pass 9). A well's hint tape reveals on
++   `:has(:focus-visible)` at z 50, and it hung across the very chip the keyboard had just reached:
++   the checking row's three chips read 1.24:1 under it and the invite verb lost a band to the
++   well's drawn frame. Lifted above the tape, in place (no offset: nothing moves). The bar's verbs
++   stay static, because their notes take the bar as their containing block. */
++.tray-well :deep(button:focus-visible) {
++  position: relative;
++  z-index: 51;
++}
++
+ .icon-btn:disabled {
+   opacity: 0.4;
+   pointer-events: none;
+@@ -3066,16 +3076,9 @@ const quickBerth = computed(() =>
+    station-1 ruling), and the pass-7 dash left 28–32 % of each band unpainted and the left band
+    1.73 px deep — a ring with holes, under WCAG 2.4.13's 2 px perimeter where the gaps fell. The
+    dash's reason (a scribbled chip wearing two solid marks 8px apart) is the cost, named in the
+-   B-FACE-RING row for the owner. */
+-.mobile-heading-btn:focus-visible {
+-  outline: 2px solid var(--ring-ink);
+-  outline-offset: 3px;
+-}
+-
+-.tray-well :deep(.ctrl-btn:focus-visible) {
+-  outline: 2px solid var(--ring-ink);
+-  outline-offset: 3px;
+-}
++   B-FACE-RING row for the owner. ONE FORM ON EVERY CONTROL (pass 9, CHAIR-RULINGS §5): the two
++   sites are struck into the card's generic `:deep()` rule above, which is solid now, so every
++   button, tab and tab stop the card renders, its children's included, wears the one ring. */
+ 
+ /* UI-12: the inactive tab's current value — the pencil hand at caption scale, reduced-
+    pressure graphite. Deliberately quiet: it names what's closed without competing with
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 4253e141..92e9df64 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -32,6 +32,8 @@ import { defineConfig, type Plugin } from 'vite'
+  * every module it read under this package (node_modules and dist aside) plus each sheet an `@import`
+  * pulls in, hashes each `<rel>\n<bytes>\n` in sorted order, and writes `{ js, stamp, files }` beside
+  * the census OUTSIDE `dist/` — nothing ships. The gate re-hashes the same list from disk.
++ * PASS 9 — the list adds every EMITTED asset's source (CSS `url()` fonts and images) and every file is
++ * hashed as BYTES (`<rel>\n` + bytes + `\n`).
+  */
+ function faceStamp(): Plugin {
+   return {
+@@ -48,9 +50,17 @@ function faceStamp(): Plugin {
+       // a sheet an `@import` pulls in (Tailwind inlines `typography.css` into `index.css`) is read
+       // by the build but is no module of its own: the ONE shape-census library follows the chain
+       const { followImports } = await import('./scripts/shape-census.mjs')
+-      const list = [...new Set(followImports([...mods]).filter(mine).map((p) => p.slice(root.length + 1)))].sort()
++      const srcs = new Set(followImports([...mods]).filter(mine))
++      // PASS 9 — THE EMITTED ASSETS' SOURCES. A file CSS reaches by `url()` (the three woff2 subsets,
++      // avatar.png) is emitted, never a module: `getModuleIds()` does not name it. Every emitted asset
++      // carries the files it was made from (`originalFileNames`); each joins the list.
++      for (const out of Object.values(bundle))
++        if (out.type === 'asset') for (const o of out.originalFileNames ?? []) srcs.add(resolve(root, o))
++      const list = [...srcs].filter((p) => mine(p) && existsSync(p)).map((p) => p.slice(root.length + 1)).sort()
++      // BYTES, never utf8: a woff2 decoded as text maps every invalid sequence to U+FFFD, so a flipped
++      // byte in a font kept the digest (pass 8, fraunces offset 127 0xfe→0xff).
+       const h = createHash('sha1')
+-      for (const rel of list) h.update(`${rel}\n${readFileSync(join(root, rel), 'utf8')}\n`)
++      for (const rel of list) h.update(`${rel}\n`).update(readFileSync(join(root, rel))).update('\n')
+       const js = Object.keys(bundle).find((k) => /^assets\/index-[^/]+\.js$/.test(k))
+       const dir = resolve(__dirname, '.face-engine')
+       if (!existsSync(dir)) mkdirSync(dir, { recursive: true })

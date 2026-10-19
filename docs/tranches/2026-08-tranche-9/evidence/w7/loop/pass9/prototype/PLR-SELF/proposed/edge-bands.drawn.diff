@@ -1,0 +1,161 @@
+diff --git a/web/frontend/e2e/lib/edge-bands.mjs b/web/frontend/e2e/lib/edge-bands.mjs
+index 77d5f5c5..4063fe38 100644
+--- a/web/frontend/e2e/lib/edge-bands.mjs
++++ b/web/frontend/e2e/lib/edge-bands.mjs
+@@ -29,6 +29,14 @@
+ //   ownfill (the chair, pass 9; LAWS P8 §E "the depth statistic excludes the subject's own fill tint"):
+ //       a pixel whose ON−OFF move is no more than the edge's own FILL tint explains (backgrounds, svg
+ //       fills, × 1.25 + 1 grey level) is not edge ink and adds no depth (LIVE's tier 2 counted a 0.08 fill)
++//   drawn (the chair, pass-9 ruling 7; PLR-SELF's roster): a HAND-DRAWN stroke frame is authored, not
++//       rasterised. At a site on `DRAWN_FRAMES` (and only there) B3's floor is the frame's AUTHORED
++//       stroke-width × `thickTol` (the house 1.5 px → 1.35), read off the roster's own SFC (each
++//       `<HandDrawnOutline>` whose static class carries the roster's class, its `:stroke-width`
++//       literal), never getComputedStyle; every other edge keeps 2 × 0.9 = 1.80. The roster PINS the
++//       width and the site count: a source that authors another width, or drops or adds a site, reds
++//       `drawn`. A caller passes `drawn: <roster name>` and never `thick` beside it (a typed floor is
++//       a lane-chosen parameter, LAWS P8 §E): `fourBands` refuses the pair.
+ //   B5  RELATIVE (RULE; LAWS P7 §E): with `above` (the previous ink's reading), each band's core median
+ //       ≥ above × 1.02 — the reference ink replayed through stroke-opacity / path opacity / filter
+ //       opacity() (INK_PLANTS) must red it
+@@ -42,13 +50,43 @@
+ // Exit: 0 clean GREEN and every plant RED · 1 clean RED · 3 a plant GREEN (a hole) · 4 both.
+ import process from "node:process";
+ import { fileURLToPath } from "node:url";
+-import { resolve as resolvePath } from "node:path";
++import { resolve as resolvePath, dirname } from "node:path";
++import { readFileSync } from "node:fs";
+ import { onOff, lum, grey, ratio, median, quantile, settle, args, load, playwright, openCell, cellsOf } from "./paint-lib.mjs";
+ 
+-export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill"];
++export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill", "drawn"];
+ const OFF_CLAUSES = new Set((process.env.EDGE_SABOTAGE ?? "").split(",").filter(Boolean));
+ const on = (c) => !OFF_CLAUSES.has(c);
+ 
++// ------------------------------------------------------------------------------- the drawn roster
++/** THE ROSTER OF DRAWN FRAMES (the chair, pass-9 ruling 7): the only sites whose B3 floor is their
++ *  authored stroke. `file` is relative to the frontend; `cls` is a static class on the frame's own
++ *  `<HandDrawnOutline>`; `width` and `sites` are PINNED (the source must author exactly these). The
++ *  head sheet's one frame draws both head sheets (the @mbabb card and §11's lobby share it). */
++export const DRAWN_FRAMES = Object.freeze({
++  "head-sheet": Object.freeze({ file: "src/pencil/chrome/AttributionCard/HeadSheet.vue", cls: "head-sheet-frame", width: 1.5, sites: 1 }),
++  "tray-well": Object.freeze({ file: "src/games/shared/GameControlPanel.vue", cls: "tray-well", width: 1.5, sites: 4 }),
++});
++const FE = resolvePath(dirname(fileURLToPath(import.meta.url)), "../..");
++/** The authored reference for a roster site, read off its SFC (or `source`, the self-test's). */
++export function authoredStroke(name, { source = null, fe = FE } = {}) {
++  const f = DRAWN_FRAMES[name];
++  if (!f) throw new Error(`drawn: "${name}" is not on DRAWN_FRAMES (${Object.keys(DRAWN_FRAMES).join(", ")})`);
++  const text = source ?? readFileSync(resolvePath(fe, f.file), "utf8");
++  const classes = (a) => (a.match(/(?:^|\s)class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
++  const tags = [...text.matchAll(/<HandDrawnOutline\b([^>]*)>/g)].map((m) => m[1]).filter((a) => classes(a).includes(f.cls));
++  const widths = tags.map((a) => {
++    const m = a.match(/(?:^|\s):stroke-width="([0-9.]+)"/);
++    return m ? Number(m[1]) : null;
++  });
++  const why = [];
++  if (tags.length !== f.sites) why.push(`drawn ${name}: ${tags.length} sites in ${f.file}, the roster pins ${f.sites}`);
++  widths.forEach((w, i) => {
++    if (w !== f.width) why.push(`drawn ${name}: site ${i + 1} authors stroke-width ${w}, the roster pins ${f.width}`);
++  });
++  return { name, file: f.file, width: f.width, widths, why };
++}
++
+ /** Page-side: the painted inks of the edge elements (and descendants) whose box meets `strip`. */
+ function edgeInks({ edge, strip }) {
+   const cv = document.createElement("canvas").getContext("2d");
+@@ -105,8 +143,13 @@ function edgeInks({ edge, strip }) {
+ 
+ export async function fourBands(
+   page,
+-  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick = 2, thickTol = 0.9, holes = 0.02, above = null, relBand = 0.5 },
++  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick: typed, thickTol = 0.9, holes = 0.02, above = null, relBand = 0.5, drawn = null, drawnSource = null },
+ ) {
++  // the drawn roster sets B3's floor from the authored reference; a typed `thick` beside it is refused
++  if (drawn && typed !== undefined) throw new Error(`drawn: "${drawn}" takes its floor from DRAWN_FRAMES; a typed thick (${typed}) beside it is a lane-chosen parameter`);
++  const ref = drawn ? authoredStroke(drawn, { source: drawnSource }) : null;
++  const thick = ref ? ref.width : (typed ?? 2);
++  const pin = ref && on("drawn") ? ref.why : [];
+   const loc = page.locator(subject).first();
+   const vis = await loc.isVisible().catch(() => false);
+   const edgeCount = await page.locator(edge).count();
+@@ -255,6 +298,7 @@ export async function fourBands(
+     if (on("B5") && above != null && band.coreMedian < above * 1.02)
+       why.push(`B5 ${side} core median ${band.coreMedian} < ${(above * 1.02).toFixed(3)} (the previous ink ${above} × 1.02)`);
+   }
++  why.push(...pin);
+   if (on("B6")) {
+     const deep = Math.max(...Object.values(bands).map((b) => b.thickness ?? 0));
+     for (const [side, b] of Object.entries(bands))
+@@ -403,6 +447,10 @@ const FIXTURE = (scheme) => {
+   <div id="f-gone" class="fx" hidden><svg class="f-gone-edge" viewBox="0 0 240 90"><rect x="1" y="1" width="238" height="88" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+   <div id="f-uneven" class="fx"><svg class="f-uneven-edge" viewBox="0 0 240 90" preserveAspectRatio="none"><path d="M0 2.5H240M237.5 0V90M0 87.5H240" stroke="${ink}" stroke-width="5" fill="none"/><path d="M1 0V90" stroke="${ink}" stroke-width="2" fill="none"/></svg></div>
+   <div id="f-fill" class="fx" style="outline: 1px solid ${ink}; background: ${scheme === "dark" ? "rgba(216,210,198,0.14)" : "rgba(59,56,51,0.14)"}"></div>
++  ${frame("f-drawn", ink, 1.5)}
++  ${frame("f-d14", ink, 1.4)}
++  ${frame("f-d13", ink, 1.3)}
++  ${frame("f-d055", ink, 0.825)}
+   <div id="f-flat" class="fx flat"><svg class="f-flat-edge" viewBox="0 0 240 6" preserveAspectRatio="none"><rect x="1" y="1" width="238" height="4" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+ </body></html>`;
+ };
+@@ -459,6 +507,31 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+       if (clause === "B6" && !r.why.every((w) => w.startsWith("B6"))) hole = true;
+       rows.push(`${T} ${c.subject} BORN-RED ${label} (${clause}) ${fmt(r)}${label.startsWith("DASHED") ? ` ← STATION-8 reads ${r.station8}` : ""}`);
+     }
++    // DRAWN (the chair, pass-9 ruling 7): the roster's floor at the authored 1.5 → 1.35, its bound
++    // read at ±ε (1.40 GREEN by 0.05, 1.30 RED by 0.05), the 1 px and the 0.55× (0.825 px) plants,
++    // the law's 1.80 on the same frame off the roster, and the pin (a source authoring 1.4)
++    const SRC = (w) => `<HandDrawnOutline\n  class="head-sheet-frame"\n  :stroke-width="${w}"\n/>`;
++    for (const [label, c, want, clause] of [
++      ["drawn 1.5 px at its authored floor", { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "GREEN"],
++      ["drawn 1.5 px OFF the roster (the law's 1.80)", { subject: "#f-drawn", edge: ".f-drawn-edge" }, "RED", "B3"],
++      ["drawn 1.40 px (bound + ε)", { subject: "#f-d14", edge: ".f-d14-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "GREEN"],
++      ["drawn 1.30 px (bound − ε)", { subject: "#f-d13", edge: ".f-d13-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn 1 px", { subject: "#f-thin", edge: ".f-thin-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn 0.55× (0.825 px)", { subject: "#f-d055", edge: ".f-d055-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn PIN: the source authors 1.4", { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.4) }, "RED", "drawn"],
++    ]) {
++      const r = await fourBands(page, c);
++      const d = Object.values(r.bands ?? {}).map((b) => b.thickness);
++      const margin = d.length ? (Math.min(...d) - (c.drawn ? 1.5 : 2) * 0.9).toFixed(3) : "n/a";
++      const ok = want === "GREEN" ? !r.red : r.red && r.why.some((w) => w.startsWith(clause));
++      if (!ok && want === "GREEN") cleanRed = true;
++      if (!ok && want !== "GREEN") hole = true;
++      rows.push(`${T} ${c.subject} DRAWN ${label} want ${want}${clause ? " (" + clause + ")" : ""} · min depth ${Math.min(...d)} margin ${margin} ${fmt(r)}${ok ? "" : " ← WRONG"}`);
++    }
++    // the typed floor beside the roster is refused (a lane-chosen parameter)
++    const refused = await fourBands(page, { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.5), thick: 1.5 }).then(() => false, () => true);
++    if (!refused) hole = true;
++    rows.push(`${T} #f-drawn DRAWN a typed thick beside the roster → ${refused ? "REFUSED" : "ACCEPTED ← a hole"}`);
+     // the LEGACY FADE15 (the edge root's `stroke` only): the path's own stroke attribute keeps its ink
+     const legacy = await fourBands(page, { subject: "#f-frame", edge: ".f-frame-edge" }).then(async () => {
+       const t = await page.addStyleTag({ content: `.f-frame-edge { color: color-mix(in srgb, currentColor 15%, transparent) !important; stroke: color-mix(in srgb, currentColor 15%, transparent) !important; }` });
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+index 9da8c478..78c8821c 100644
+--- a/web/frontend/e2e/lib/edge-bands.d.mts
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -50,7 +50,25 @@ export interface FourBandsOptions {
+   above?: number | null;
+   /** B6: each band's depth ≥ relBand × the deepest band's (default 0.5) */
+   relBand?: number;
++  /** a DRAWN_FRAMES name: B3 floors at the roster's authored width × thickTol, the source pinned
++   *  (clause `drawn`). Never passed with `thick` (refused). */
++  drawn?: DrawnFrameName | null;
++  /** the self-test's stand-in for the roster file's text */
++  drawnSource?: string | null;
+ }
++export type DrawnFrameName = "head-sheet" | "tray-well";
++export interface DrawnFrame {
++  readonly file: string;
++  readonly cls: string;
++  readonly width: number;
++  readonly sites: number;
++}
++export const DRAWN_FRAMES: Readonly<Record<DrawnFrameName, DrawnFrame>>;
++/** The authored reference for a roster site: its SFC's `:stroke-width` literals, and why they break the pin. */
++export function authoredStroke(
++  name: DrawnFrameName,
++  o?: { source?: string | null; fe?: string },
++): { name: DrawnFrameName; file: string; width: number; widths: (number | null)[]; why: string[] };
+ /** A plant: a CSS string, or `{ fade }` — every painted colour of the edge and its descendants at that alpha. */
+ export type EdgePlant = string | { fade: number };
+ export interface EdgeGateOptions extends FourBandsOptions {

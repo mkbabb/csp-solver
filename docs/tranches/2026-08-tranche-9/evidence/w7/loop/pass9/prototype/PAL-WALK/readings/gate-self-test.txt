@@ -1,0 +1,129 @@
+# check-peer-arcs.mjs --self-test on the tree's gate bytes BEFORE the final format pass (whitespace, eleven trailing commas and one unused line differ; the final bytes' reading is gate-final.txt); exit exit=0; load start 19:13:20 { 33.87 46.58 44.20 }
+  ✓ 1 ARCS AGREE — 35 declarations in index.css carry chroma > 0.06 and merge to 6 arc(s) at ±13°, and playerIdentity.ts declares them
+  ✓ 2 THE SEPARATION LAW — PAL-TIN's whole law (digit, ring, name; both arms; every pair) over 2 issued hands: the walk's capacity under it is 2 issued hand(s) (137.2480° open, no repeated hue in 144)
+      holds --color-user-ink light 0.2527 (0–1) ≥ 0.1 · margin 0.1527
+      holds --color-user-ink dark 0.2532 (0–1) ≥ 0.1 · margin 0.1532
+      holds --color-peer-cursor-ink light 0.1702 (0–1) ≥ 0.075 · margin 0.0952
+      holds --color-peer-cursor-ink dark 0.1712 (0–1) ≥ 0.1 · margin 0.0712
+      holds --color-peer-name-ink light 0.1253 (0–1) ≥ 0.1 · margin 0.0253
+      holds --color-peer-name-ink dark 0.1255 (0–1) ≥ 0.1 · margin 0.0255
+      n=5 names, every pair: walk 4/10 under, worst 0.0182 (1–4) / 4/10 under, worst 0.0194 (1–4) · HEAD 2/10 under, worst 0.0896 (1–4) / 2/10 under, worst 0.0975 (1–4)
+      n=8 names, every pair: walk 11/28 under, worst 0.0144 (2–7) / 11/28 under, worst 0.0139 (2–7) · HEAD 8/28 under, worst 0.0602 (0–5) / 8/28 under, worst 0.0593 (2–7)
+      n=16 names, every pair: walk 51/120 under, worst 0.0073 (2–15) / 51/120 under, worst 0.0057 (4–12) · HEAD 35/120 under, worst 0.0234 (0–13) / 35/120 under, worst 0.0239 (0–13)
+      LOSS (gated as written, never as a pass): n=8 light 11 under, worst 0.0144 (margin 0.0020) · n=8 dark 11 under, worst 0.0139 (margin 0.0020) · n=16 light 51 under, worst 0.0073 (margin 0.0020) · n=16 dark 51 under,
+  ✓ 3 BANDS AGREE — DIGIT_BANDS, RING_BANDS and NAME_BANDS are the bands index.css publishes, both arms; the name's night band ≥ 0.84 on both sides
+  ✓ 4 ONE PUBLISHER — 255 sources read through the one library (6 token names; 32 computed site(s): 17 in units/e2e, the shipped ones admitted by name from 13); nearest literal to a walked ink 0.0227 (src/pencil/config/p
+  ✓ 5 THE PAIR — over src/assets/index.css + src/assets/typography.css: ring 0.295 / 0.79, name 0.295 / 0.86, digit 0.44 / 0.65; no third arm, no player ink in a sheet
+  ✓ 6 THE CONSUMER — src/games/shared/GameBoard.vue: the tape's name binds --color-peer-name-ink 1 time(s), painted whole (no opacity under 1); the card-laid paper is NOT pinned (no gate reads it)
+
+SELF-TEST — every check against the inputs it must SEE, and the ones it must not:
+  ✓ 1 reds when a crayon hex moves
+  ✓ 1 reds when a var() alias is re-pointed at a new hex (192°)
+  ✓ 1 reds when a token is authored chromatic in hsl()
+  ✓ 1 is BLIND to a rename that moves no hue
+  ✓ 1 still RESERVES a renamed token's hue
+  ✓ 1 ignores a chromatic inside @media print
+  ✓ 2 reds SEP1 · two issued hands whose names sit 10° apart
+  ✓ 2 reds when the complement is empty
+  ✓ 2 reds a walk that repeats a hue at hand 77
+  ✓ 2 reds --color-user-ink light at floor 0.1 − 0.005 (planted 0.0957, read 0.0957)
+  ✓ 2 GREEN on --color-user-ink light at floor 0.1 + 0.005 (planted 0.1058, read 0.1058)
+  ✓ 2 reds --color-user-ink dark at floor 0.1 − 0.005 (planted 0.0945, read 0.0945)
+  ✓ 2 GREEN on --color-user-ink dark at floor 0.1 + 0.005 (planted 0.1050, read 0.1050)
+  ✓ 2 reds --color-peer-cursor-ink light at floor 0.075 − 0.005 (planted 0.0697, read 0.0697)
+  ✓ 2 GREEN on --color-peer-cursor-ink light at floor 0.075 + 0.005 (planted 0.0790, read 0.0790)
+  ✓ 2 reds --color-peer-cursor-ink dark at floor 0.1 − 0.005 (planted 0.0944, read 0.0944)
+  ✓ 2 GREEN on --color-peer-cursor-ink dark at floor 0.1 + 0.005 (planted 0.1053, read 0.1053)
+  ✓ 2 reds --color-peer-name-ink light at floor 0.1 − 0.005 (planted 0.0957, read 0.0957)
+  ✓ 2 GREEN on --color-peer-name-ink light at floor 0.1 + 0.005 (planted 0.1028, read 0.1028)
+  ✓ 2 reds --color-peer-name-ink dark at floor 0.1 − 0.005 (planted 0.0947, read 0.0947)
+  ✓ 2 GREEN on --color-peer-name-ink dark at floor 0.1 + 0.005 (planted 0.1054, read 0.1054)
+  ✓ 2 reds a stale capacity claim (hand 2 re-hued to 284 × C1.5°: capacity 3, the law itself green)
+  ✓ 2 reds the churned cost WORST − (bound − 0.001): planted 0.0116, read 10 under, worst 0.0116 against 0.0144 − 0.002
+  ✓ 2 GREEN on the churned cost WORST + (bound + 0.001): planted 0.0132, read 10 under, worst 0.0132 against 0.0144 − 0.002
+  ✓ 2 reds COUNT + (hand 7's name 0.05 from hand 3: 12 under against the row's 11, worst held)
+  ✓ 2 BORN-RED beyond its claim: TIN's room of 5 reads 0.0182 / 0.0194 under 0.1
+  ✓ 3 reds when --peer-ring-l moves on the sheet alone (0.295 → 0.20)
+  ✓ 3 reds when DIGIT_BANDS moves in the module alone
+  ✓ 3 reds when the dark arm stops publishing --peer-ring-l
+  ✓ 3 reds when the ring is bisected against a second table
+  ✓ 3 reds N1 · when --peer-name-l moves on the sheet alone (0.86 → 0.79)
+  ✓ 3 reds N2 · when NAME_BANDS moves in the module alone
+  ✓ 3 reds N3 · when the name is bisected against the ring's table
+  ✓ 3 reds A10 · the COORDINATED move to 0.80 (module AND sheet agree)
+  ✓ 3 is GREEN on the coordinated move to the floor itself (0.84)
+  ✓ 4 reds B1 · a band rule in gameCell.css
+  ✓ 4 reds B3 · a band on the tape in GameBoard.vue's style block
+  ✓ 4 reds A1 · a --color-peer-* token spelled as a hex in gameCell.css
+  ✓ 4 reds X1 · the ring ink aliased to a house token in gameCell.css
+  ✓ 4 reds X6 · the ring ink darkened by color-mix() in gameCell.css
+  ✓ 4 reds X2 · a :root band in index.html's <style>
+  ✓ 4 reds a peer ink declared in index.css itself
+  ✓ 4 reds C10 · a peer token in a template's inline style
+  ✓ 4 reds the inline publisher writing something other than the formula's string
+  ✓ 4 reds a second declaration at an admitted site (BoardHost.vue)
+  ✓ 4 reds a second declaration at an admitted site with ANOTHER value (the count still one)
+  ✓ 4 reds the formula's site gone (playerIdentity.ts stops returning the ring)
+  ✓ 4 reds K12 · the DIGIT half aliased on a descendant
+  ✓ 4 reds K12b · a fourth --color-user-ink in index.css
+  ✓ 4 reds K12c · the digit ink in a template's :style object
+  ✓ 4 reds N4 · the name's site bound to the ring's string (pair[1])
+  ✓ 4 reds N5 · a name ink declared on the tape rule
+  ✓ 4 reds a Tailwind arbitrary peer-ink class in a template
+  ✓ 4 reds A2(p5) · an agreeing band under another name in a .ts
+  ✓ 4 reds A4(p5) · a drifted hex table of player inks
+  ✓ 4 reds A6 · a far band under the held table's own name in another file
+  ✓ 4 reds a runtime setProperty of the band in a spec
+  ✓ 4 reds C1 · one scalar under a band name
+  ✓ 4 reds C2 · a nested band under a neutral outer name
+  ✓ 4 reds C4 · a templated peer token minted by setProperty
+  ✓ 4 reds C7 · a band declared from a .js file
+  ✓ 4 reds K1 · a band in a public/ stylesheet
+  ✓ 4 reds K1b · the ring ink aliased in a public/ stylesheet
+  ✓ 4 reds S1 · a .json table of peer inks
+  ✓ 4 reds S2 · a .tsx write
+  ✓ 4 reds S3 · a computed property name (setProperty of a joined name)
+  ✓ 4 reds S3b · a computed style key through a cast
+  ✓ 4 reds S3c · a computed style key, no cast
+  ✓ 4 reds T1 · a Tailwind candidate in public/404.html
+  ✓ 4 reds T2 · a Tailwind candidate in a README (Tailwind reads it; no census does)
+  ✓ 4 reds U1 · a .mts source naming a player's ink (UNREAD by the library)
+  ✓ 4 reds WA2 · a concatenated cssText write
+  ✓ 4 reds WA3 · a concatenated setAttribute('style') write
+  ✓ 4 reds WA4 · an SFC :style with a joined computed key
+  ✓ 4 reds WA5 · an @import in index.css of a sheet outside src/ that sets the name ink
+  ✓ 4 reds C3 a drifted table under a neutral name
+  ✓ 4 reds C5 an oklch() literal at the consumer
+  ✓ 4 reds C6 an eight-digit hex
+  ✓ 4 reds C7 a .js file
+  ✓ 4 reds C9 an rgb() literal
+  ✓ 4 reds C11 a CSS alias
+  ✓ 5 reds A7 · html.dark { --peer-name-l: .5 } in index.css
+  ✓ 5 reds A8 · html.dark { --peer-ink-l: .2 } in index.css
+  ✓ 5 reds A9 · .dark { --peer-name-l: .5 } in typography.css (index.css @imports it)
+  ✓ 5 reds A9b · .dark { --peer-ring-l: .2 } in typography.css
+  ✓ 5 reds LA1 · a .dark .game-cell ring arm
+  ✓ 5 reds P6 · the ring's light arm moved to 0.32
+  ✓ 5 reds P6 · a peer ink alias arm in index.css
+  ✓ 5 reds the name's light arm off the ring's (0.295 → 0.3)
+  ✓ 5 reds the name's dark arm under the floor (0.86 → 0.8)
+  ✓ 5 reds N6 · a third --peer-name-l arm (prefers-contrast)
+  ✓ GREEN on a unit fixture's mock ink, a public/ consumer and a literal setProperty
+  ✓ GREEN on a consumer and a comment quoting a band or a peer ink
+  ✓ GREEN on the formula's own string written as a value
+  ✓ 4 reds N3 · Typed OM `attributeStyleMap.set` of the name ink
+  ✓ 4 reds N4 · `insertRule` of a dark name band
+  ✓ 4 reds N5 · a <style> element's textContent rule
+  ✓ 4 reds N12 · a constructed sheet's `replaceSync`
+  ✓ 4 reds LN · a walked ink (#abddd3) beside a non-literal colour call
+  ✓ GREEN on a paint tolerance named PAINT_BAND in a spec
+  ✓ 4 reds a ring band table in a spec
+  ✓ GREEN on a spec importing an instrument that carries a peer-ink plant
+  ✓ GREEN on a TS mapped type over the motion verbs in pencilConfig.ts (admitted by name)
+  ✓ 4 reds the same mapped type in a file it is not admitted at
+  ✓ 6 reds N1 · the tape's name painted in the digit ink
+  ✓ 6 reds N16 · the tape's name at opacity 0.55
+  ✓ 6 reds a second consumer of the name ink off the anchor
+  KNOWN HOLES (the one library, PROPOSED): 0
+
+OK — the arcs playerIdentity.ts walks around are the arcs index.css actually reserves, the bands it bisects its chroma at are the bands the sheet paints, and every player's ink has one publisher.

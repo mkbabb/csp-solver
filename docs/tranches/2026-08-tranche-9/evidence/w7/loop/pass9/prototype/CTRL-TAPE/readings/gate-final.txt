@@ -1,0 +1,148 @@
+== tree live (exit 0)
+check-tape-foot: 11 clauses hold
+== tree --self-test --verbose (exit 0)
+  RED  B1 pad 0                                                 1 THE INSET: src/games/shared/scene.css:313 `.card-foot` padding-bottom: `max(0rem, env(safe-area-inset-bottom))` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net unreadable)
+  RED  the pass-5 max() form                                    1 THE INSET: src/games/shared/scene.css:313 `.card-foot` padding-bottom: `max(0.75rem, env(safe-area-inset-bottom))` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net unreadable)
+  RED  no inset                                                 1 THE INSET: src/games/shared/scene.css:313 `.card-foot` padding-bottom: `0.75rem` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.750rem)
+  RED  landscape under its floor                                1 THE INSET: at phone-landscape-844x390 the effective pad is src/games/shared/scene.css:340 `@media (max-width: 1023.98px) and (orientation: landscape) .card-foot` `calc(0.75rem + env(safe-area-inset-bottom))`
+  RED  B6 the foot under the card                               2 THE LAYER: at phone-portrait-390x844 the foot's z-index 1 is under the card's 45
+  RED  the pen's radius                                         3 THE PEN: the bar's frame is `stroke-width=1.5 outset=4 radius=0 pose=0`, the wells' `stroke-width=1.5 outset=4 radius=3 pose=0`
+  RED  the frame's own colour                                   3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { color: color-mix(
+    in srgb,
+    hsl(0 0% 0%) 55%,
+    transparent
+  ) } reaches the bar's frame and not a well's
+  RED  B2 visibility: hidden                                    3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { visibility: hidden } reaches the bar's frame and not a well's
+  RED  B3 v-if false                                            3 THE PEN: the frame's tag carries `v-if`
+  RED  B8 stroke-width 0 on the paths                           3 THE PEN: src/games/shared/GameControlPanel.vue:2557 `.bar-frame :deep(path)` { stroke-width: 0 } reaches the frame's <path> and not a well's
+  RED  X1 opacity 0                                             3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { opacity: 0 } reaches the bar's frame and not a well's
+  RED  X2 transparent ink                                       3 THE PEN: src/games/shared/GameControlPanel.vue:2557 `.bar-frame :deep(svg)` { color: transparent } reaches the frame's <svg> and not a well's
+  RED  FAINT opacity 0.15                                       3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { opacity: 0.15 } reaches the bar's frame and not a well's
+  RED  a border-top                                             4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { border-top: 2.5px solid } on the bar
+  RED  B4 border-block-start                                    4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { border-block-start: 2.5px solid } on the bar
+  RED  B5 box-shadow                                            4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { box-shadow: inset 0 2px 0 currentColor } on the bar
+  RED  an outline                                               4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { outline: 1.5px solid } on the bar
+  RED  the slab                                                 4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { background: hsl(24 6% 7%) } on the bar
+  RED  B7 background-image slab                                 4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { background-image: linear-gradient(hsl(24 6% 7%), hsl(24 6% 7%)) } on the bar
+  RED  the bar's ink made transparent                           4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { color: transparent } on the bar
+  RED  a border on the foot                                     4 ONE HAND: src/games/shared/scene.css:313 `.card-foot` { border-top: 1px solid } on the foot
+  RED  the floor with a fallback                                5 THE FLOOR: `.confirm-answer` needs `min-height: var(--tap-floor)`, bare
+  RED  a published band                                         6 THE BAND: a script publishes `--pin-band`/`--card-pad-t`; the band is CSS's
+  RED  K1 overflow: hidden on the bar                           8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { overflow: hidden } on the bar
+  RED  K2 contain: paint on the bar                             8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { contain: paint } on the bar
+  RED  K3 filter: opacity(0.15) on the bar                      8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { filter: opacity(0.15) } fades the bar
+  RED  K4 :deep(.outline-svg) display none                      3 THE PEN: src/games/shared/GameControlPanel.vue:2557 `.action-bar :deep(.outline-svg)` { display: none } reaches the frame's <svg> and not a well's
+  RED  K5 :first-child hidden                                   3 THE PEN: src/games/shared/GameControlPanel.vue:2557 `.action-bar > :first-child` { visibility: hidden } reaches the bar's frame and not a well's
+  RED  K6 #card-foot padding-bottom 0                           1 THE INSET: src/games/shared/scene.css:810 `#card-foot` padding-bottom: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  K7 padding-block-end 0                                   1 THE INSET: src/games/shared/scene.css:810 `.card-foot` padding-block-end: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  K8 padding shorthand 0                                   1 THE INSET: src/games/shared/scene.css:810 `.card-foot` padding: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  K9 overflow: clip on the foot                            8 THE CLIP: src/games/shared/scene.css:810 `.card-foot` { overflow: clip } on the foot
+  RED  K10 <template v-if> around the lip                       3 THE PEN: the frame mounts under a conditional <template v-if>
+  RED  K11 clip-path on the bar                                 8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { clip-path: inset(0) } on the bar
+  RED  K12 mask-image on the bar                                8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { mask-image: linear-gradient(transparent, transparent) } on the bar
+  RED  K13 #card-foot z-index 0                                 2 THE LAYER: at phone-portrait-390x844 the foot's z-index 0 is under the card's 45
+  RED  K14 compound .drawer-case .card-foot pad 0               1 THE INSET: src/games/shared/scene.css:810 `.drawer-case .card-foot` padding-bottom: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  K15 calc(pad + env() − pad)                              1 THE INSET: src/games/shared/scene.css:313 `.card-foot` padding-bottom: `calc(0.75rem + env(safe-area-inset-bottom) - 0.75rem)` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  N1 :is(.action-bar) overflow hidden                      8 THE CLIP: src/games/shared/GameControlPanel.vue:2557 `:is(.action-bar)` { overflow: hidden } on the bar
+  RED  N2 a second <style> block, contain: strict               8 THE CLIP: src/games/shared/GameControlPanel.vue:2976 `.action-bar` { contain: strict } on the bar
+  RED  N3 index.html <style> #card-foot pad 0                   1 THE INSET: index.html:41 `#card-foot` padding-bottom: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  N4 inline style on the bar's element                     8 THE CLIP: src/games/shared/GameControlPanel.vue:1518 `<div style>` { overflow: hidden } on the bar
+  RED  N5 a utility pad on the foot's element                   1 THE INSET: the foot's element carries `pb-0`
+  RED  N6 a script writes the foot's overflow                   8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes `overflow`
+  RED  N7 a var-led pad resolving to 0                          1 THE INSET: src/games/shared/scene.css:811 `.card-foot` padding-bottom: `0rem` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  N8 !important opacity on the frame in a media block      3 THE PEN: src/games/shared/GameControlPanel.vue:2557 `@media (hover: hover) .bar-frame` { opacity: 0 } reaches the bar's frame and not a well's
+  RED  N9 content-visibility on the foot                        8 THE CLIP: src/games/shared/scene.css:810 `.card-foot` { content-visibility: hidden } on the foot
+  RED  N10 overflow hidden on the case (closed pose)            8 THE CLIP: src/games/shared/scene.css:810 `html.drawer-closed .drawer-case` { overflow: hidden } on the case
+  RED  N11 a utility clip on the case's element                 8 THE CLIP: src/games/shared/GameScene.vue:207 `<div .overflow-hidden>` { overflow: hidden } on the case
+  RED  R1 the landscape pad keyed on a narrower query           7 THE REGIME: the foot's landscape pad keys on ["(max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px)"], the flank on "(max-width: 1023.98px) and (orientation: landscape)"
+  RED  R2 the flank ref keyed on another query                  7 THE REGIME: the foot's landscape pad keys on ["(max-width: 1023.98px) and (orientation: landscape)"], the flank on "(max-width: 1023px) and (orientation: landscape)"
+  RED  R3 a per-mount media ref in the panel                    7 THE REGIME: src/games/shared/GameControlPanel.vue mints its own media query (one MediaQueryList per regime lives in useCoarsePointer.ts)
+  RED  R4 the berth pad keyed off its mount's query             7 THE REGIME: the note berth's pad keys on ["(min-width: 1024px) and (hover: hover)"], its mount on "(min-width: 1024px) and (hover: hover) and (pointer: fine)"
+  RED  R5 the tongue's flank on its own query                   7 THE REGIME: the tongue's flank keys on ["(max-width: 900px) and (orientation: landscape)","(max-width: 1023.98px) and (orientation: landscape)"], not "(max-width: 1023.98px) and (orientation: landscape)"
+  RED  F1 revert the column: .drawer-case { display: block }    9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { display: block } on the case
+  RED  F2 .controls-card { flex-shrink: 0 }                     9 THE COLUMN: src/games/shared/scene.css:810 `.controls-card` { flex-shrink: 0 } — the card must yield to the cap
+  RED  F3 .card-foot { flex: 1 1 0; min-height: 0 }             9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { flex: 1 1 0 } — the foot never yields
+  RED  F4 .drawer-case { flex-direction: row }                  9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { flex-direction: row } on the case
+  RED  S1 an alias class on the foot + .foot-x { overflow: clip } 8 THE CLIP: src/games/shared/scene.css:810 `.foot-x` { overflow: clip } on the foot
+  RED  S2 .drawer-case > div:last-of-type { overflow: clip }    8 THE CLIP: src/games/shared/scene.css:810 `.drawer-case > div:last-of-type` { overflow: clip } on the foot
+  RED  S3 .drawer-case > div:last-of-type { padding-bottom: 0 } 1 THE INSET: src/games/shared/scene.css:810 `.drawer-case > div:last-of-type` padding-bottom: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  S4 [id="card-foot"] { padding-bottom: 0 }                1 THE INSET: src/games/shared/scene.css:810 `[id="card-foot"]` padding-bottom: `0` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.000rem)
+  RED  S5 [class~="action-bar"] { overflow: hidden }            8 THE CLIP: src/games/shared/GameControlPanel.vue:2557 `[class~="action-bar"]` { overflow: hidden } on the bar
+  RED  S6 :where(.action-bar) { overflow: hidden }              8 THE CLIP: src/games/shared/GameControlPanel.vue:2557 `:where(.action-bar)` { overflow: hidden } on the bar
+  RED  S7 nested .drawer-case { & > .card-foot { overflow: clip } } 8 THE CLIP: src/games/shared/scene.css:810 `.drawer-case > .card-foot` { overflow: clip } on the foot
+  RED  S8a a utility opacity on the bar's element               8 THE CLIP: src/games/shared/GameControlPanel.vue:1518 `<div .opacity-[0.15]>` { opacity: 0.15 } fades the bar
+  RED  S8b a screen-reader-only utility on the bar's element    8 THE CLIP: src/games/shared/GameControlPanel.vue:1518 `<div .sr-only>` { overflow: hidden } on the bar
+  RED  S8c a blur utility on the bar's element                  8 THE CLIP: src/games/shared/GameControlPanel.vue:1518 `<div .blur-sm>` { filter: blur(sm) } fades the bar
+  RED  S8d a contain utility on the bar's element               8 THE CLIP: src/games/shared/GameControlPanel.vue:1518 `<div .contain-[paint]>` { contain: paint } on the bar
+  RED  S8e a translate utility on the bar's element             10 THE SEAT: src/games/shared/GameControlPanel.vue:1518 `<div .translate-y-12>` { translate: y 3rem } moves the bar
+  RED  S9a bar.style.filter = opacity(0.1)                      8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes `filter`
+  RED  S9b bar.style.cssText overflow hidden                    8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes `overflow`
+  RED  S9c setAttribute style                                   8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes `overflow`
+  RED  S9d classList.add an overflow utility                    8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 adds `overflow-hidden` (overflow)
+  RED  S9e App.vue writes #card-foot's overflow                 8 THE SCRIPT: src/App.vue:847 writes `overflow`
+  RED  S10 .bar-frame { inset: 0 0 100% 0 }                     3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { inset: 0 0 100% 0 } reaches the bar's frame and not a well's
+  RED  S10b .bar-frame { position: static }                     3 THE PEN: src/games/shared/GameControlPanel.vue:2550 `.bar-frame` { position: static } reaches the bar's frame and not a well's
+  RED  S11 overflow: var(--nope, hidden) on the bar             8 THE CLIP: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { overflow: hidden } on the bar
+  RED  S12 calc(pad + env() * 0)                                1 THE INSET: src/games/shared/scene.css:313 `.card-foot` padding-bottom: `calc(0.75rem + env(safe-area-inset-bottom) * 0)` must ADD the inset (coefficient 1) to a net pad ≥ 0.75rem (net 0.750rem)
+  RED  S13 .card-foot { translate: 0 2.875rem }                 10 THE SEAT: src/games/shared/scene.css:810 `.card-foot` { translate: 0 2.875rem } moves the foot
+  RED  S14 .action-bar { top: 2.875rem }                        10 THE SEAT: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { top: 2.875rem } moves the bar
+  RED  S15 .card-foot { margin-bottom: -2.875rem }              10 THE SEAT: src/games/shared/scene.css:810 `.card-foot` { margin-bottom: -2.875rem } pulls the foot off its box
+  RED  S16 .action-bar { transform: scaleY(0) }                 10 THE SEAT: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { transform: scaleY(0) } moves the bar
+  RED  C1 a cap left on the card (max-height)                   9 THE COLUMN: src/games/shared/scene.css:810 `@media (min-width: 1024px) .controls-card` { max-height: 30rem } — the cap is the case's
+  RED  C2 the dock's case uncapped                              9 THE COLUMN: at phone-portrait-390x844 the case carries no cap
+  RED  C3 the foot grows (flex-grow 1)                          9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { flex-grow: 1 } — the foot never yields
+  RED  C4 the card's min-height                                 9 THE COLUMN: src/games/shared/scene.css:810 `.controls-card` { min-height: 20rem } — the card must yield to the cap
+  RED  C5 flex-flow: row wrap on the case                       9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { flex-flow: row wrap }
+  RED  C6 .action-bar { position: absolute }                    10 THE SEAT: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { position: absolute } on the bar
+  RED  C7 the foot positioned static                            2 THE LAYER: src/games/shared/scene.css:313 `.card-foot` position: static
+  RED  C8 a script sets the case's max-height                   9 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes `max-height`
+  RED  C9 a script adds a class it names by a variable          8 THE SCRIPT: src/games/shared/GameControlPanel.vue:818 writes a class the gate cannot resolve (extra)
+  RED  C10 a well-less path rule under the foot                 3 THE PEN: src/games/shared/scene.css:810 `#card-foot path` { stroke-width: 0 } reaches the frame's <path> and not a well's
+  RED  C1 the card not a scrollport (overflow-y: visible)       9 THE COLUMN: at tablet-1024x768-coarse the card is no scrollport (overflow-y: visible, src/games/shared/scene.css:810 `@media (min-width: 1024px) .controls-card`): its automatic minimum is its content
+  RED  C7 overflow-y: clip is no scrollport                     9 THE COLUMN: at tablet-1024x768-coarse the card is no scrollport (overflow-y: clip, src/games/shared/scene.css:810 `@media (min-width: 1024px) .controls-card`): its automatic minimum is its content
+  RED  the shorthand's y arm hidden                             9 THE COLUMN: at tablet-1024x768-coarse the card is no scrollport (overflow-y: hidden, src/games/shared/scene.css:810 `@media (min-width: 1024px) .controls-card`): its automatic minimum is its content
+  RED  the dock's card visible                                  9 THE COLUMN: at phone-portrait-390x844 the card is no scrollport (overflow-y: visible, src/games/shared/scene.css:810 `@media (max-width: 1023.98px) .controls-card`): its automatic minimum is its content
+  RED  C6 a vacuous cap (999rem)                                9 THE COLUMN: at tablet-1024x768-coarse the case's cap src/games/shared/scene.css:810 `@media (min-width: 1024px) .drawer-case` `999rem` bounds at 15984 px, past the viewport's 768
+  RED  the cap past the viewport by 1px                         9 THE COLUMN: at tablet-1024x768-coarse the case's cap src/games/shared/scene.css:810 `@media (min-width: 1024px) .drawer-case` `calc(100dvh + 1px)` bounds at 769 px, past the viewport's 768
+  GREEN the cap exactly the viewport (100dvh)                   (boundary)
+  RED  the dock's cap past the viewport by 1px                  9 THE COLUMN: at phone-portrait-390x844 the case's cap src/games/shared/scene.css:810 `@media (max-width: 1023.98px) .drawer-case` `calc(100dvh + 1px)` bounds at 845 px, past the viewport's 844
+  RED  the cap on a length nothing publishes                    9 THE COLUMN: at tablet-1024x768-coarse the case's cap src/games/shared/scene.css:810 `@media (min-width: 1024px) .drawer-case` `calc(100dvh + var(--nobody-publishes))` bounds at Infinity px, past the viewport's 768
+  RED  C4 the foot above the card (order: -1)                   9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { order: -1 } moves the foot in the column
+  RED  the card below the foot (order: 2)                       9 THE COLUMN: src/games/shared/scene.css:810 `.controls-card` { order: 2 } moves the card in the column
+  GREEN order: 0 on the foot                                    (boundary)
+  RED  C9 margin-top: 100vh on the foot                         9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { margin-top: 100vh } puts a band above the tape
+  RED  C10 padding-top: 100vh on the foot                       9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { padding-top: 100vh } puts a band above the tape
+  RED  margin-block 1px above the foot                          9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { margin-block: 1px 0 } puts a band above the tape
+  RED  padding-block-start 1px on the foot                      9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { padding-block-start: 1px } puts a band above the tape
+  GREEN margin-top: 0 on the foot                               (boundary)
+  RED  C14 padding-bottom: 100vh on the case                    9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { padding-bottom: 100vh } at phone-portrait-390x844 lays 844 px under the tape
+  RED  the case's bottom pad 33px                               9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { padding-bottom: 33px } at phone-portrait-390x844 lays 33 px under the tape
+  GREEN the case's bottom pad 32px                              (boundary)
+  RED  the case's padding-block end 50vh                        9 THE COLUMN: src/games/shared/scene.css:810 `.drawer-case` { padding-block: 0 50vh } at phone-portrait-390x844 lays 422 px under the tape
+  RED  C11 height: 0 on the foot                                9 THE COLUMN: src/games/shared/scene.css:810 `.card-foot` { height: 0 } — the foot is its content
+  RED  C12 height: 0 on the bar                                 9 THE COLUMN: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { height: 0 } — the bar is its content
+  RED  max-block-size on the bar                                9 THE COLUMN: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { max-block-size: 2rem } — the bar is its content
+  RED  P7 font-size: 0 on the bar                               4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { font-size: 0 } collapses the voice the verbs inherit
+  RED  font-size 9.9px on the bar                               4 ONE HAND: src/games/shared/GameControlPanel.vue:2536 `.action-bar` { font-size: 9.9px } collapses the voice the verbs inherit
+  GREEN font-size 10px on the bar                               (boundary)
+  RED  the font shorthand at 0 on the foot                      4 ONE HAND: src/games/shared/scene.css:810 `.card-foot` { font: 0/1 serif } collapses the voice the verbs inherit
+  RED  P9 @apply a clip on the foot                             8 THE APPLY: src/games/shared/scene.css `@apply overflow-hidden` sets `overflow`, a watched property, where the gate cannot key it
+  RED  @apply a fade anywhere                                   8 THE APPLY: src/games/shared/scene.css `@apply opacity-0` sets `opacity`, a watched property, where the gate cannot key it
+  RED  T4 v-show=false on the foot                              11 THE MOUNT: the foot carries `v-show="false"` (src/games/shared/GameScene.vue:232)
+  RED  T6 the hidden attribute on the foot                      11 THE MOUNT: the foot carries `hidden` (src/games/shared/GameScene.vue:232)
+  RED  a bound hidden on the foot                               11 THE MOUNT: the foot carries `:hidden="true"` (src/games/shared/GameScene.vue:232)
+  RED  v-if on the foot                                         11 THE MOUNT: the foot carries `v-if="false"` (src/games/shared/GameScene.vue:232)
+  RED  T5 the bar's Teleport disabled always                    11 THE MOUNT: the bar's Teleport is `:disabled="true"`, a constant: the bar never reaches the foot
+  RED  the Teleport disabled on a literal expression            11 THE MOUNT: the bar's Teleport is `:disabled="!false"`, a constant: the bar never reaches the foot
+  RED  the Teleport's bare disabled                             11 THE MOUNT: the bar's Teleport is `disabled` outright
+  RED  the Teleport sent elsewhere                              11 THE MOUNT: the bar's Teleport goes to `#drawer-handle`, not `#card-foot`
+  GREEN the Teleport disabled on a name                         (boundary)
+check-tape-foot self-test: 126 plants red, 6 boundaries green, live green
+check-tape-foot: 11 clauses hold
+== s10 + delta live / self-test
+check-tape-foot: 11 clauses hold
+check-tape-foot self-test: 126 plants red, 6 boundaries green, live green
+check-tape-foot: 11 clauses hold
+== WAVE self-test
+check-tape-foot self-test: 126 plants red, 6 boundaries green, live green
+check-tape-foot: 11 clauses hold

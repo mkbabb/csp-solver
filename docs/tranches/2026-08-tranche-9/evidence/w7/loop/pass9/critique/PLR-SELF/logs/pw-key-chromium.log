@@ -1,0 +1,32 @@
+LOAD start 14:45  up 1 day, 13 mins, 2 users, load averages: 25.79 40.63 50.31
+load-ok 25.79 < 120 14:45:29
+
+Running 6 tests using 1 worker
+
+[1/6] [chromium] › e2e/player-mark.spec.ts:626:1 › the row budget adds rows only where they grow nothing over the board, on both axes
+[2/6] [chromium] › e2e/player-mark.spec.ts:645:1 › the row budget holds one pose across 1024-1056 x 768 coarse while the board slides
+[3/6] [chromium] › e2e/player-mark.spec.ts:675:1 › the desk draws one row over two cells at rest, whatever the room's age
+[4/6] [chromium] › e2e/player-mark.spec.ts:1043:1 › a mouse click right after a tap toggles once: the press forgives the debt
+[chromium] › e2e/player-mark.spec.ts:1043:1 › a mouse click right after a tap toggles once: the press forgives the debt
+[debt] S2 withheld clean gap 33.5 ms · pointerup:touch@0 pointerup:mouse@34 click:mouse@34 → ["false","true","false"]
+
+[debt] S2 withheld CUT gap 15.8 ms · pointerup:touch@0 pointerup:mouse@16 click:mouse@16 → ["false","true"]
+
+[5/6] [chromium] › e2e/player-mark.spec.ts:1047:1 › Enter right after a tap toggles once: the key forgives the debt
+[chromium] › e2e/player-mark.spec.ts:1047:1 › Enter right after a tap toggles once: the key forgives the debt
+[debt] S3 withheld clean gap 18.6 ms · pointerup:touch@0 keydown:@19 click:@19 → ["false","true","false"]
+
+[debt] S3 withheld CUT gap 14.4 ms · pointerup:touch@0 keydown:@14 click:@14 → ["false","true"]
+
+[6/6] [chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt
+[chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt
+[debt] S1 own clean gap 15.7 ms · pointerup:touch@0 click:touch@0 click:@16 → ["false","true","false"]
+
+[debt] S1 own CUT gap 23.9 ms · pointerup:touch@0 click:touch@0 click:@24 → ["false","true"]
+
+[debt] S1 relabel clean gap 12.5 ms · pointerup:touch@0 click:mouse@6 click:@13 → ["false","true","false"]
+
+[debt] S1 relabel CUT gap 25.6 ms · pointerup:touch@0 click:mouse@4 click:@26 → ["false","true"]
+
+  6 passed (1.9m)
+LOAD end 14:47  up 1 day, 15 mins, 2 users, load averages: 48.42 42.90 49.88

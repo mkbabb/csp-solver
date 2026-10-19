@@ -1,0 +1,144 @@
+diff --git a/web/frontend/e2e/lib/glyph-pop.d.mts b/web/frontend/e2e/lib/glyph-pop.d.mts
+index 4c6cd96f..f963d474 100644
+--- a/web/frontend/e2e/lib/glyph-pop.d.mts
++++ b/web/frontend/e2e/lib/glyph-pop.d.mts
+@@ -20,6 +20,8 @@ export interface GlyphRead {
+   g4Lows?: string[];
+   /** the G4 columns the CONTROL's lows tolerated (`label:core`) */
+   g4Tolerated?: string[];
++  /** the G5 glyphs the CONTROL's same glyphs tolerated (`k'ch':core/control`), PROPOSED g5tol */
++  g5Tolerated?: string[];
+   transientOn?: number;
+   transientOff?: number;
+   outsideRun?: number;
+@@ -45,12 +47,15 @@ export interface GlyphOptions {
+   /** G5: the quantile of the glyph's interior read (default 0.5) */
+   g5Q?: number;
+   tolerate?: string[] | null;
++  /** the CONTROL's glyphCores (PROPOSED g5tol): glyph k under the floor is tolerated where the control
++   *  holds the same glyph under it and this read is no worse by more than G5_EPS */
++  g5tolerate?: (number | null)[] | null;
+ }
+ /** A plant: a CSS string, or a mask over the text run — `[a, b]` of the run (or glyph `glyph`'s box) at
+  *  25 %, striped (1 px at 25 % α) with `comb`. */
+ export type GlyphPlant = string | { mask: [number, number]; comb?: boolean; glyph?: number | null };
+ /** The control-anchored reference: the CONTROL's read of the same payload. */
+-export type GlyphControl = Pick<GlyphRead, "fracUnder" | "g4Lows" | "population">;
++export type GlyphControl = Pick<GlyphRead, "fracUnder" | "g4Lows" | "population" | "glyphCores">;
+ export interface GlyphGateOptions extends Omit<GlyphOptions, "fracBound"> {
+   payload: string;
+   plants?: Record<string, GlyphPlant> | null;
+@@ -66,6 +71,7 @@ export interface GlyphGate {
+ }
+ 
+ export const GLYPH_CLAUSES: readonly string[];
++export const G5_EPS: number;
+ export function autoSlices(span: number): number;
+ export function glyphPopulation(page: Page, o: GlyphOptions): Promise<GlyphRead>;
+ export function glyphGate(page: Page, o: GlyphGateOptions): Promise<GlyphGate>;
+diff --git a/web/frontend/e2e/lib/glyph-pop.mjs b/web/frontend/e2e/lib/glyph-pop.mjs
+index 39a15c5f..e490cc0c 100644
+--- a/web/frontend/e2e/lib/glyph-pop.mjs
++++ b/web/frontend/e2e/lib/glyph-pop.mjs
+@@ -57,13 +57,15 @@ const autoSlicePop = (pop, n) => Math.max(3, Math.min(8, Math.round(pop / n / 3)
+  *  pass-9 clauses — G5core (G5 reads a LOW quantile of the glyph's INTERIOR), G3clamp (a clean ≥ 0.95
+  *  never bounds G3 above 1), anchor (the control-anchored bound), g4tol (G4 tolerates only the
+  *  CONTROL's low columns, never this run's own). */
+-export const GLYPH_CLAUSES = ["G5core", "G3clamp", "anchor", "g4tol"];
++/** g5tol: how much worse than the control's same glyph a tolerated glyph core may read. */
++export const G5_EPS = 0.05;
++export const GLYPH_CLAUSES = ["G5core", "G3clamp", "anchor", "g4tol", "g5tol"];
+ const G_OFF = new Set((process.env.GLYPH_SABOTAGE ?? "").split(",").filter(Boolean));
+ const gOn = (c) => !G_OFF.has(c);
+ 
+ export async function glyphPopulation(
+   page,
+-  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true, g5Q = 0.5, tolerate = null },
++  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true, g5Q = 0.5, tolerate = null, g5tolerate = null },
+ ) {
+   const loc = page.locator(subject).first();
+   // ACC-SIX pass 8 (PROPOSED → the ONE copy; LAWS P7 §E): a text laid in a ZERO-HEIGHT box (the strip's
+@@ -144,7 +146,8 @@ export async function glyphPopulation(
+   const sl = [],
+     gw = [];
+   let g4Lows = [],
+-    tolerated = [];
++    tolerated = [],
++    g5tol = [];
+   let n = 0,
+     sp = 0,
+     lim = 0;
+@@ -180,6 +183,7 @@ export async function glyphPopulation(
+       why.push(`G4 column core (p${Math.round(sliceQ * 100)}) under ${lim.toFixed(2)} (= max(3.0, ${sliceRatio}×whole p${Math.round(sliceQ * 100)} ${core.toFixed(2)}); ${n} columns, ≥${sp} px) at ${lows.join(", ")}`);
+     if (glyphs && glyphs.length) {
+       const glows = [];
++      g5tol = [];
+       glyphs.forEach((g, k) => {
+         const q = toDev(g);
+         const v = pop.filter((_, j) => xs[j] >= q.l + 1 && xs[j] < q.r - 1 && ys[j] >= q.t && ys[j] < q.b);
+@@ -198,7 +202,15 @@ export async function glyphPopulation(
+           c = core.length >= sp ? +quantile(core, g5Q).toFixed(2) : v.length >= sp ? +quantile(v, sliceQ).toFixed(2) : null;
+         } else c = v.length >= sp ? +quantile(v, sliceQ).toFixed(2) : null;
+         gw.push(c);
+-        if (c != null && c < lim) glows.push(`${k}'${g.ch}':${c}`);
++        // g5tol (PLR-COUNT pass 9, PROPOSED): a glyph under the floor is tolerated ONLY where the
++        // CONTROL's read of the same payload holds the SAME glyph under the floor too, and this read is
++        // no worse than the control's by more than G5_EPS (by VALUE, never by index alone: a deeper
++        // fade of a glyph the control already holds low still reds)
++        const ref = g5tolerate?.[k];
++        if (c != null && c < lim) {
++          if (gOn("g5tol") && ref != null && ref < lim && c >= ref - G5_EPS) g5tol.push(`${k}'${g.ch}':${c}/${ref}`);
++          else glows.push(`${k}'${g.ch}':${c}`);
++        }
+       });
+       if (glows.length) why.push(`G5 glyph core (${gOn("G5core") ? `interior p${Math.round(g5Q * 100)}` : `p${Math.round(sliceQ * 100)}`}) under ${lim.toFixed(2)} at ${glows.join(", ")}`);
+     }
+@@ -215,6 +227,7 @@ export async function glyphPopulation(
+     glyphCores: gw,
+     g4Lows: g4Lows.map((x) => x.split(":")[0]),
+     g4Tolerated: tolerated,
++    g5Tolerated: g5tol,
+     transientOn,
+     transientOff,
+     outsideRun,
+@@ -235,7 +248,11 @@ export async function glyphGate(page, { subject, payload, plants = null, slack =
+   // shipped regression (OPA80F: frac 1.000 against its own 1.050)
+   const ref = control && gOn("anchor") ? control : first;
+   const bound = boundOf(ref.fracUnder, slack, ref.population ?? Infinity, opts.minPop ?? 40);
+-  opts = { ...opts, tolerate: control && gOn("anchor") ? (control.g4Lows ?? []) : opts.tolerate };
++  opts = {
++    ...opts,
++    tolerate: control && gOn("anchor") ? (control.g4Lows ?? []) : opts.tolerate,
++    g5tolerate: control && gOn("anchor") ? (control.glyphCores ?? null) : opts.g5tolerate,
++  };
+   const clean = await glyphPopulation(page, { subject, fracBound: bound, ...opts });
+   const P = plants ?? (img ? IMG_PLANTS(subject, img.ng, img.ink) : TEXT_PLANTS(subject));
+   const out = {};
+@@ -455,6 +472,27 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+     const g4of = (r) => r.why.some((w) => w.startsWith("G4"));
+     if (!ctlLow.g4Lows.length || g4of(tolLow) || !g4of(tolClean)) hole = true;
+     rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-long g4tol TAIL35 lows [${ctlLow.g4Lows.join(" ")}] | tolerated by a control holding them → G4 ${g4of(tolLow) ? "RED ← a hole" : "GREEN"} | against the unplanted control → G4 ${g4of(tolClean) ? "RED" : "GREEN ← a hole"}`);
++    // g5tol (PLR-COUNT pass 9, PROPOSED): HEAD12 on #g-long read as the CONTROL (its leading glyphs
++    // under the floor) → the same plant on the tree is tolerated glyph by glyph; against the unplanted
++    // control → G5 RED; a DEEPER fade of the same glyphs (8 % α) against the planted control → G5 RED
++    const g5of = (r) => r.why.some((w) => w.startsWith("G5"));
++    const head = TEXT_PLANTS("#g-long").HEAD12_a25;
++    const cut = await applyMask(page, "#g-long", head.mask);
++    await settle(page);
++    const c5Low = await glyphPopulation(page, { subject: "#g-long" });
++    const t5Same = await glyphPopulation(page, { subject: "#g-long", g5tolerate: c5Low.glyphCores });
++    const t5Bare = await glyphPopulation(page, { subject: "#g-long", g5tolerate: ctlClean.glyphCores });
++    await undoMask(page, "#g-long");
++    const [d0, d1] = cut.cut ?? [0, 0];
++    const deep = `linear-gradient(to right, rgba(0,0,0,.08) ${d1}px, #000 ${d1}px)`;
++    const tagD = await page.addStyleTag({ content: `#g-long { -webkit-mask-image: ${deep} !important; mask-image: ${deep} !important; }` });
++    await settle(page);
++    const t5Deep = await glyphPopulation(page, { subject: "#g-long", g5tolerate: c5Low.glyphCores });
++    await tagD.evaluate((e) => e.remove());
++    await settle(page);
++    const g5ok = g5of(c5Low) && !g5of(t5Same) && g5of(t5Bare) && g5of(t5Deep);
++    if (!g5ok) hole = true;
++    rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-long g5tol HEAD12 (cut ${d0}..${d1}) control G5 ${g5of(c5Low) ? "RED" : "GREEN ← the plant reads no glyph low"} | same plant, tolerated → G5 ${g5of(t5Same) ? "RED ← a hole" : `GREEN (${t5Same.g5Tolerated.length} tolerated)`} | against the unplanted control → G5 ${g5of(t5Bare) ? "RED" : "GREEN ← a hole"} | deeper (8 %) → G5 ${g5of(t5Deep) ? "RED" : "GREEN ← a hole (index tolerance)"}`);
+     // the LEGACY box clip on a ZERO-HEIGHT subject (ACC-SIX pass 8): G0/G1 — the hole the run clip closes
+     const zl = await glyphPopulation(page, { subject: "#g-zero", runClip: false });
+     rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-zero LEGACY-BOX-CLIP ${fmt(zl)} ← ${zl.red ? "RED (the box clip reads no glyph)" : "GREEN ← the fixture's box is not zero"}`);

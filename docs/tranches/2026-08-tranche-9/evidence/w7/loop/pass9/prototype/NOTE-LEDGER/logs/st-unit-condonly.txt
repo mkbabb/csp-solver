@@ -1,0 +1,51 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-46/web/frontend
+
+ ❯ src/games/shared/GameBoard.notes.test.ts (18 tests | 2 failed) 136ms
+     × a re-deal (no 0→N) still empties line one 8ms
+     × the flush memory ends with its flush: a later re-deal is not silenced 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a link that would not parse is said, and a re-deal still empties (share-truth) > a re-deal (no 0→N) still empties line one
+AssertionError: the deal empties the live line: expected 'only 4 fits here' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ only 4 fits here
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:355:57
+    353|     await w.setProps({ hint: null, givenCells: new Set(["6"]), boardGe…
+    354|     await nextTick();
+    355|     expect(margin(w), "the deal empties the live line").toBe("");
+       |                                                         ^
+    356|     w.unmount();
+    357|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/GameBoard.notes.test.ts > GameBoard — a link that would not parse is said, and a re-deal still empties (share-truth) > the flush memory ends with its flush: a later re-deal is not silenced
+AssertionError: the next deal reads the spent copy and empties: expected 'this shared link couldn\'t be read' to be '' // Object.is equality
+
+- Expected
++ Received
+
++ this shared link couldn't be read
+
+ ❯ src/games/shared/GameBoard.notes.test.ts:366:73
+    364|     await w.setProps({ givenCells: new Set(["6"]), boardGeneration: 3 …
+    365|     await nextTick();
+    366|     expect(margin(w), "the next deal reads the spent copy and empties"…
+       |                                                                         ^
+    367|     w.unmount();
+    368|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 16 passed (18)
+   Start at  12:41:39
+   Duration  1.70s (transform 636ms, setup 27ms, import 724ms, tests 136ms, environment 575ms)
+

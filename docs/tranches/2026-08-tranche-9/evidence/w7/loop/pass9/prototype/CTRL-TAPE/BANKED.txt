@@ -1,0 +1,26 @@
+CTRL-TAPE pass 9 bank (temp index, product paths only, --binary; never committed)
+
+pass9.diff                  base 74a2b5d9  tree 3fa1be2b6868316b5e05fe131ca73c5ed82d3f80
+                            843606 B  sha1 2323a354b940b0ee6b1408ecf5d00b61b589a731
+                            51 files changed, 15672 insertions(+), 742 deletions(-)  (cumulative lane on 74a2b5d9; carries homes v2 byte-exact)
+pass9.delta.on-WAVE.diff    base acde977b (WAVE acb9c08e + homes.on-WAVE a0f8e6f3)  tree cc4acf141dcea90c7df409b0d4284742b7420031
+                            53101 B  sha1 f0bce9aa08fa9ff1581d803c4ec46c85b4bfb04c
+                            11 files changed, 785 insertions(+), 34 deletions(-)
+pass9.delta.on-s10.diff     base a15da8e6 (74a2b5d9 + pass8/integrate/s10.diff)  tree 640b90bde79a9d4639d216fccf883bb977ad5589, pathspec web/frontend
+                            53101 B  sha1 78f09b2e1766d64f777584ca8f6aa48a4569e444
+                            11 files changed, 785 insertions(+), 34 deletions(-)
+
+open tree (pass 8 bank applied on 74a2b5d9): a6dc0c53, pass8.diff 676019 B sha1 d8e58cf3
+
+apply --check (fresh git archive of 74a2b5d9, GIT_CEILING_DIRECTORIES set):
+  pass9.diff            @ 74a2b5d9                      exit 0  (51 paths)
+  delta.on-WAVE         @ WAVE + homes.on-WAVE          exit 0  (11 paths)
+  delta.on-WAVE         @ WAVE bare (no homes)          exit 0  (11 paths)
+  delta.on-s10          @ s10                           exit 0  (11 paths)
+  delta.on-s10          @ WAVE + homes.on-WAVE          exit 0  (11 paths)
+  pass9.diff            @ s10                           exit 1  (expected: cumulative lane vs an integration that already carries it)
+  pass9.diff            @ WAVE + homes.on-WAVE          exit 1  (expected: same reason)
+
+grep for the bank law's path-leak list (session scratch, system temp, the lane's scratch dir): 0 / 0 / 0
+dot-dir paths: pass9.diff 1 (.github/workflows/ci.yml, a product path carried since pass8.diff); deltas 0
+dot-files under web/frontend: 0 / 0 / 0

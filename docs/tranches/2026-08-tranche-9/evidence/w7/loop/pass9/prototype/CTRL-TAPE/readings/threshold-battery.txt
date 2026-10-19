@@ -1,0 +1,30 @@
+cap+1 exit=1 check-tape-foot: 11 clauses hold
+cap-0.5 exit=1 check-tape-foot: 11 clauses hold
+pad+1 exit=1 check-tape-foot: 11 clauses hold
+pad-1 exit=1 check-tape-foot: 11 clauses hold
+font+e exit=1 check-tape-foot: 11 clauses hold
+font-e exit=1 check-tape-foot: 11 clauses hold
+top-1px exit=1 check-tape-foot: 11 clauses hold
+== thr-battery.txt.cap-0.5
+self-test: boundary "the cap exactly the viewport (100dvh)" REDS clause 9 (9 THE COLUMN: at tablet-1024x768-coarse the case's cap src/games/shared/scene.css:812 `@media (min-width: 1024px) .drawer-case` `100dvh` bounds at 768 px, past the viewport's 768)
+check-tape-foot self-test: 1 FAILED
+== thr-battery.txt.cap+1
+self-test: plant "the cap past the viewport by 1px" stayed GREEN on clause 9
+self-test: plant "the dock's cap past the viewport by 1px" stayed GREEN on clause 9
+check-tape-foot self-test: 2 FAILED
+== thr-battery.txt.font-e
+self-test: plant "font-size 9.9px on the bar" stayed GREEN on clause 4
+check-tape-foot self-test: 1 FAILED
+== thr-battery.txt.font+e
+self-test: boundary "font-size 10px on the bar" REDS clause 4 (4 ONE HAND: src/games/shared/GameControlPanel.vue:2749 `.action-bar` { font-size: 10px } collapses the voice the verbs inherit)
+check-tape-foot self-test: 1 FAILED
+== thr-battery.txt.pad-1
+self-test: boundary "the case's bottom pad 32px" REDS clause 9 (9 THE COLUMN: src/games/shared/scene.css:812 `.drawer-case` { padding-bottom: 32px } at phone-portrait-390x844 lays 32 px under the tape)
+check-tape-foot self-test: 1 FAILED
+== thr-battery.txt.pad+1
+self-test: plant "the case's bottom pad 33px" stayed GREEN on clause 9
+check-tape-foot self-test: 1 FAILED
+== thr-battery.txt.top-1px
+self-test: plant "margin-block 1px above the foot" stayed GREEN on clause 9
+self-test: plant "padding-block-start 1px on the foot" stayed GREEN on clause 9
+check-tape-foot self-test: 2 FAILED

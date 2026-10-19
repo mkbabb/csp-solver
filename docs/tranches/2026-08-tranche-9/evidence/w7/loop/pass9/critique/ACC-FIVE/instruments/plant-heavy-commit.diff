@@ -1,0 +1,11 @@
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -603,7 +603,7 @@
+     cancel();
+     slot = now >= slot + FRONT_MIN_MS ? now + FRONT_MIN_MS : slot + FRONT_MIN_MS;
+     last = now;
+-    commit(v);
++    commit(v); { const q0 = performance.now(); while (performance.now() - q0 < 18); }
+     // queued after the render's flush (the commit queued it), so this reads the landing; a
+     // write with no frame IS its landing, so the next frame is timed from there
+     queueMicrotask(() => {

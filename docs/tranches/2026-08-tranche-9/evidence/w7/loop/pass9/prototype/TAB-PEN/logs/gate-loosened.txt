@@ -1,0 +1,19 @@
+# the critic's six loosenings (+ blob) re-expressed on BOUNDS; each a copy of the final gate beside copies of icons.mjs and shape-census.mjs, run --self-test --root <the tree's web/frontend>
+11:37  up 21:05, 2 users, load averages: 95.63 75.36 73.97
+11:40  up 21:07, 2 users, load averages: 83.61 74.43 73.52
+ED[control]='s/^$//'
+ED[iou]='s/  "e.png-tie": \[0.97, Infinity\],/  "e.png-tie": [0.86, Infinity],/'
+ED[mean]='s/  "e.png-delta": \[-Infinity, 0.02\],/  "e.png-delta": [-Infinity, 0.03],/'
+ED[mass]='s/  "d.mass": \[0.18, 0.32\],/  "d.mass": [0.1, 0.4],/'
+ED[win]='s/(WIDTH \${arm.width})`, win);/(WIDTH ${arm.width})`, [win[0] - 0.02, win[1] + 0.02]);/'
+ED[ext]='s/  "d.extent": \[0.55, 0.8\],/  "d.extent": [0.45, 0.9],/'
+ED[cen]='s/  "d.centre": \[-Infinity, 0.5\],/  "d.centre": [-Infinity, 1.5],/'
+ED[blob]='s/  "e.png-blob": \[-Infinity, 16\],/  "e.png-blob": [-Infinity, 200],/'
+control bytes-changed=0 exit=0 failed=0 
+iou bytes-changed=2 exit=2 failed=1   FAILED  EDGE e.png-tie lo 0.97 ±0.0005: past 0.969907 GREEN · inside 0.970034 GREEN 
+mean bytes-changed=1 exit=2 failed=1   FAILED  EDGE e.png-delta hi 0.02 ±0.0005: past 0.0200007 GREEN · inside 0.0199994 GREEN 
+mass bytes-changed=53727 exit=2 failed=2   FAILED  EDGE d.mass lo 0.18 ±0.002: past 0.179998 GREEN · inside 0.180006 GREEN   FAILED  EDGE d.mass hi 0.32 ±0.002: past 0.320002 GREEN · inside 0.319992 GREEN 
+win bytes-changed=36523 exit=2 failed=4   FAILED  EDGE d.window lo 0.15 ±0.002: past 0.149993 GREEN · inside 0.150004 GREEN   FAILED  EDGE d.window hi 0.17 ±0.002: past 0.17001 GREEN · inside 0.169996 GREEN 
+ext bytes-changed=2 exit=2 failed=2   FAILED  EDGE d.extent lo 0.55 ±0.002: past 0.549937 GREEN · inside 0.55 GREEN   FAILED  EDGE d.extent hi 0.8 ±0.002: past 0.800062 GREEN · inside 0.8 GREEN 
+cen bytes-changed=1 exit=2 failed=1   FAILED  EDGE d.centre hi 0.5 ±0.005: past 0.501 GREEN · inside 0.5 GREEN 
+blob bytes-changed=52875 exit=2 failed=2   FAILED  C8-E8 a 12 x 12 ink square in the touch icon's paper (a mark that is not the s): red none, want e [e.png-blob:MISSING] (fired: )   FAILED  EDGE e.png-blob hi 16 ±1: past 17 GREEN · inside 16 GREEN 

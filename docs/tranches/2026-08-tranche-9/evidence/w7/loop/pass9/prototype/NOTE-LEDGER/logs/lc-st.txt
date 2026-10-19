@@ -1,0 +1,62 @@
+  plant ok  clean tree → ok
+  plant ok  seat deleted → note reserve: R1 0 voice sites
+  plant ok  E1 a shadowing zero after inherit → note reserve: R1 2 voice sites
+  plant ok  E2 a second <style scoped> → note reserve: R1 2 voice sites
+  plant ok  E2b a compound override → note reserve: R1 2 voice sites
+  plant ok  E3 the block's reserve at 1px → note reserve: R4 phone-portrait-390x844: reserve 1 < the voice's line 20.8
+  plant ok  E4 !important zero in the landscape block → note reserve: R1 2 voice sites
+  plant ok  a half-line reserve → note reserve: R4 phone-portrait-390x844: reserve 10.4 < the voice's line 20.8
+  plant ok  zeroed: the seat at 0 → note reserve: R2 0
+  plant ok  number: the seat at 1.3em, not inherit → note reserve: R2 1.3em
+  plant ok  wide: the seat outside any media block → note reserve: R3 seated in phone-portrait-390x844,phone-portrait-375x812,phone-landscape-844x390,phone-landscape-812x375,tablet-1024x768-coarse,desk-1280x800,desk-1440x900
+  plant ok  desk: the seat under (min-width: 1024px) → note reserve: R3 seated in tablet-1024x768-coarse,desk-1280x800,desk-1440x900
+  plant ok  inherit !important → note reserve: R3 !important
+  plant ok  M1 the block at 1px inside <1024 → note reserve: R4 phone-portrait-390x844: reserve 1 < the voice's line 20.8
+  plant ok  M2 the seat under `not all and` → note reserve: R3 seated in tablet-1024x768-coarse,desk-1280x800,desk-1440x900
+  plant ok  M3 the seat in the landscape block only → note reserve: R3 seated in phone-landscape-844x390,phone-landscape-812x375
+  plant ok  M4 the block's line at 1px inside <1024 → note reserve: R4 phone-portrait-390x844: reserve 1 < the voice's line 20.8
+  plant ok  M4em a 1.3em reserve on a 1px block → note reserve: R4 phone-portrait-390x844: reserve 1.3 < the voice's line 20.8
+  plant ok  M6 `> p:first-child` → note reserve: R1 2 voice sites
+  plant ok  M7 `[role=status]` → note reserve: R1 2 voice sites
+  plant ok  M8 an unsatisfiable seat → note reserve: R3 seated in 
+  plant ok  N3 the seat through a custom property holding `inherit` → note reserve: R2 var(--seat)
+  plant ok  N4 the voice's font set by element → note reserve: R4 phone-portrait-390x844: reserve 20.8 < the voice's line 52
+  plant ok  N5 the seat in a dead @supports → note reserve: R3 seated in 
+  plant ok  N6 the seat in a container query that never matches → note reserve: R3 seated in 
+  plant ok  N7 the seat narrowed to a selector the voice never matches → note reserve: R1 0 voice sites
+  plant ok  N19 the voice's line grows once it holds ink → note reserve: R4 phone-portrait-390x844: reserve 20.8 < the voice's line 35.2
+  plant ok  F1 the voice's line-height deleted → note reserve: R4 phone-portrait-390x844: reserve 20.8 < the voice's line null
+  plant ok  F2 the voice's font-size deleted → note reserve: R4 phone-portrait-390x844: reserve 20.8 < the voice's line null
+  plant ok  T- the reserve 0.51px under the voice's line → note reserve: R4 phone-portrait-390x844: reserve 20.29 < the voice's line 20.8
+  plant ok  T+ the reserve 0.49px under the voice's line holds (the slack's edge) → GREEN
+  plant ok  NN the seat in a live @supports holds → GREEN
+  plant ok  NN a 1px font on the block (its line is a length, the reserve holds) → GREEN
+  plant ok  NN `.margin-note-previous:not(.margin-note)` is not the voice → GREEN
+  sabotage media-eval     → RED (M2 the seat under `not all and`: GREEN)
+  sabotage em-lh          → RED (clean tree: RED: note reserve: R4 phone-portrait-390x844: reserve 20.8 < the voice's line 27.040000000000003)
+  sabotage r4-bound       → RED (clean tree: RED: note reserve: R4 phone-portrait-390x844: reserve 19.2 < the voice's line null)
+  sabotage element-keyed  → RED (M6 `> p:first-child`: GREEN)
+  sabotage css-wide-var   → RED (N3 the seat through a custom property holding `inherit`: GREEN)
+  sabotage supports-container → RED (N5 the seat in a dead @supports: GREEN)
+  sabotage seat-element   → RED (N7 the seat narrowed to a selector the voice never matches: GREEN)
+  sabotage r4-element     → RED (N4 the voice's font set by element: GREEN)
+  sabotage r4-unresolved  → RED (F1 the voice's line-height deleted: GREEN)
+ink-pressure ladder — every rung clears its floor, strictly increasing, in all 3 scopes (light, dark, print), each resolved out of index.css:
+  --ink-press-rule    55%  3.53 light / 4.36 dark / 4.76 print  ≥3 (non-text)
+  --ink-press-quiet   68%  5.23 light / 6.06 dark / 7.86 print  ≥4.5 (text)
+  --color-red-ink          4.98 light / 6.32 dark  ≥4.5 (.icon-sublabel.is-armed)
+  washi tape               17.36 light / 9.06 dark  ≥4.5 (--color-foreground on --sheet-washi-neutral)
+  margin note              5.19 light / 6.12 dark  ≥4.5 (--ink-press-quiet on --color-background; 18 discovered consumers of the two rungs, census names 4)
+
+ship-4 census — the six re-pitched surfaces, each pinned to the rung above (so the rung's floor is the surface's floor):
+  1  .keyboard-legend         color: var(--ink-press-quiet)
+  2  .legend-row kbd          border: var(--ink-press-rule)
+  3  .legend-sep              no `opacity` declaration
+  4  .margin-note-meta        color: var(--ink-press-quiet)
+  5  .icon-sublabel.is-armed  color: var(--color-red-ink)
+  6  .vignette-meta           color: var(--ink-press-quiet)
+
+ungoverned register — --color-muted-foreground 4.65 light / 7.69 dark:
+  light  rule < muted-foreground < quiet
+  dark   rule < quiet < muted-foreground
+  the ramp and the register cross between themes, and the crossing is GATED: exactly one ruling is admitted (src/assets/index.css §INK PRESSURE, 'WHAT THE LADDER DOES NOT GOVERN'), pinned to both rank strings above, and it reds on a second crossing, on a re-pitch that moves either rank, and on its own cure.

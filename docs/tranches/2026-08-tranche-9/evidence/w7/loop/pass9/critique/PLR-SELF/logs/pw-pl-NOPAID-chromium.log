@@ -1,0 +1,44 @@
+LOAD start 14:50  up 1 day, 18 mins, 2 users, load averages: 45.82 47.20 50.60
+load-ok 45.82 < 120 14:50:26
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt
+[chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt
+[debt] S1 own clean gap 34.3 ms · pointerup:touch@0 click:touch@0 click:@34 → ["false","true"]
+
+  1) [chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt 
+
+    Error: S1 own clean gap 34.3 ms · pointerup:touch@0 click:touch@0 click:@34
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 0
+
+      Array [
+        "false",
+        "true",
+    -   "false",
+      ]
+
+      1033 |         expect(r.hits, `${tag}: the cut landed exactly once`).toBe(1);
+      1034 |         expect(r.states, tag).toEqual(SWALLOWED);
+    > 1035 |       } else expect(r.states, tag).toEqual(OPEN_THEN_SHUT);
+           |                                    ^
+      1036 |     }
+      1037 | }
+      1038 | const centreClick = async (page: Page) => {
+        at forgiveRow (<critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:1035:36)
+        at <critic-scratch>/tree/web/frontend/e2e/player-mark.spec.ts:1061:3
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/player-mark-a-press-less-c-28bf6--paid-click-clears-the-debt-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/player-mark-a-press-less-c-28bf6--paid-click-clears-the-debt-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/player-mark.spec.ts:1054:1 › a press-less click right after the tap's own click toggles once: the paid click clears the debt 
+LOAD end 14:50  up 1 day, 18 mins, 2 users, load averages: 47.50 47.52 50.67

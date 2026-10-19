@@ -1,0 +1,77 @@
+#### unit-cap100.txt
+PLANT cap100 pencilConfig.ts ok
+      Tests  15 passed (15)
+#### unit-cap37.txt
+PLANT cap37 pencilConfig.ts ok
+     × 25 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second) 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 14 passed (15)
+#### unit-cap60.txt
+PLANT cap60 pencilConfig.ts ok
+      Tests  15 passed (15)
+#### unit-p7clock.txt
+PLANT p7clock bootHand.ts ok
+     × a healthy frame is never slowed; a stall pauses the hand one cap 7ms
+     × 30 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second) 1ms
+     × 25 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second) 2ms
+     × a stall pauses the hand for at most one and a half frames at the panel's own rate 1ms
+     × a jittery shimmed 60 Hz panel (15.6/23.4 ms, chromium's) travels whole 1ms
+     × every stall of a run shorter than the window travels one cap (≤ 1.5 frames) 1ms
+     × a run that fills the window is read as the panel, never past maxStepMs 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  7 failed | 8 passed (15)
+#### unit-p8hand.txt
+PLANT p8hand bootHand.ts ok
+PLANT p8hand bootHand.ts ok
+PLANT p8hand pencilConfig.ts ok
+     × a healthy frame is never slowed; a stall pauses the hand one cap 6ms
+     × 25 Hz: the hand keeps the wall's pace (≥ 0.95 of it over one second) 1ms
+     × a stall pauses the hand for at most one and a half frames at the panel's own rate 27ms
+     × a jittery shimmed 60 Hz panel (15.6/23.4 ms, chromium's) travels whole 2ms
+     × every stall of a run shorter than the window travels one cap (≤ 1.5 frames) 1ms
+     × a run that fills the window is read as the panel, never past maxStepMs 2ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  6 failed | 9 passed (15)
+#### unit-slack3.txt
+PLANT slack3 pencilConfig.ts ok
+     × a healthy frame is never slowed; a stall pauses the hand one cap 9ms
+     × a stall pauses the hand for at most one and a half frames at the panel's own rate 5ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  2 failed | 13 passed (15)
+#### unit-slackx2.txt
+PLANT slackx2 pencilConfig.ts ok
+     × a stall pauses the hand for at most one and a half frames at the panel's own rate 5ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  1 failed | 14 passed (15)
+#### unit-tree.txt
+PLANT tree none
+      Tests  15 passed (15)
+#### unit-wall.txt
+PLANT wall bootHand.ts ok
+     × a healthy frame is never slowed; a stall pauses the hand one cap 7ms
+     × a stall pauses the hand for at most one and a half frames at the panel's own rate 1ms
+     × every stall of a run shorter than the window travels one cap (≤ 1.5 frames) 0ms
+     × a run that fills the window is read as the panel, never past maxStepMs 1ms
+     × a run of stalls is never read as the pace (capped at maxStepMs) 1ms
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 5 ⎯⎯⎯⎯⎯⎯⎯
+      Tests  5 failed | 10 passed (15)
+#### unit-window2.txt
+PLANT window2 pencilConfig.ts ok
+      Tests  15 passed (15)
+#### unit-window50.txt
+PLANT window50 pencilConfig.ts ok
+      Tests  15 passed (15)
+#### bands-cap60.reds.txt
+  ✗ B2 CLOSED — 1
+  • [B2 CLOSED] MOTION.hand.maxStepMs ships 60ms; its EXEMPT row says ms: 42 — an exemption licenses ONE value.
+  • [SELF-TEST] the negative-negative REGRESSED: MOTION.hand.maxStepMs ships 60ms; its EXEMPT row says ms: 42 — an exemption licenses ONE value.
+#### bands-slackx2.reds.txt
+  ✗ B2 CLOSED — 1
+  ✗ B6 RATCHET — 1
+  • [B2 CLOSED] MOTION.hand.paceSlack ships 2ms; its EXEMPT row says ms: 1.5 — an exemption licenses ONE value.
+  • [B6 RATCHET] src/pencil/composables/bootHand.ts :: MOTION.hand.stepMs  banked 2× at 17ms, now 1× — and src/pencil/composables/bootHand.ts gained MOTION.hand.paceSlack (2ms): a consumer SWAPPED to a shorter rung. A RETUNE `{ consumer: "src/pencil/composables/bootHand.ts :: MOTION.hand.stepMs", to: <ms> }` citing its census, or read the rung it read.
+  • [SELF-TEST] the negative-negative REGRESSED: MOTION.hand.paceSlack ships 2ms; its EXEMPT row says ms: 1.5 — an exemption licenses ONE value.
+#### bands-window2.reds.txt
+  ✗ B2 CLOSED — 1
+  • [B2 CLOSED] MOTION.hand.paceWindow ships 2ms; its EXEMPT row says ms: 5 — an exemption licenses ONE value.
+  • [SELF-TEST] the negative-negative REGRESSED: MOTION.hand.paceWindow ships 2ms; its EXEMPT row says ms: 5 — an exemption licenses ONE value.
