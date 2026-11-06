@@ -13,11 +13,17 @@
 # is architecture- and toolchain-specific.
 #
 # Provenance of the value below:
-#   arch         x86_64-linux (matches the CI runner: ubuntu-latest)
-#   rustc        1.97.0 (2026-07-07), profile.bench (release + debug, strip=false)
-#   iai-callgrind 0.16.1 runner, valgrind 3.19.0, ASLR off (setarch -R)
-#   measured     2026-07-12, T4-W2; confirmed identical across two clean rebuilds
+#   arch         x86_64-linux, CI runner ubuntu-latest = ubuntu-26.04 (glibc 2.43, amd64v3)
+#   rustc        1.99.1 (2026-10-13), pinned in rust-toolchain.toml; profile.bench
+#                (release + debug, strip=false)
+#   iai-callgrind 0.16.1 runner, valgrind 3.26.0, ASLR off (setarch -R)
+#   measured     2026-11-06, CI run 42141244065 (the first run on ubuntu-26.04), with
+#                no source change since the last green run.
+#   history      1529452 (2026-07-12, T4-W2: rustc 1.97.0, valgrind 3.19.0, ubuntu-latest
+#                then 24.04). The -7.06% move is the image (glibc 2.39 -> 2.43 amd64v3,
+#                valgrind 3.22 -> 3.26), not the solver: the same rustc 1.99.1 read
+#                1545814 on 24.04 at 471aaa4c (run 39267828072).
 #
 # To re-baseline: run the iai lane (or the bench under Linux+Valgrind), read the
 # `Instructions:` count, replace the number below, and commit with the reason.
-1529452
+1421467

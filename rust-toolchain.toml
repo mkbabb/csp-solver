@@ -4,7 +4,12 @@
 # crates, and `clippy -D warnings` all build clean on stable (MSRV bisected to
 # 1.88; see docs/tranches/2026-07-tranche-2/evidence). Edition 2024 is stable as
 # of 1.85, so nothing here needs the nightly channel.
+#
+# An exact stable release, not the floating `stable` channel: the iai gate's
+# instruction count is a function of the compiler, so a floating channel moves
+# the baseline under an unchanged tree. Bumping this is a reviewed re-baseline of
+# csp-solver/benches/iai_queens.baseline.
 [toolchain]
-channel = "stable"
+channel = "1.99.1"
 components = ["rustfmt", "clippy"]
 targets = ["wasm32-unknown-unknown"]
