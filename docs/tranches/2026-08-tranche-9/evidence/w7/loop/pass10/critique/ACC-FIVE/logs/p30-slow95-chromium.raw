@@ -1,0 +1,46 @@
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame
+[chromium] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame
+D10-PARTIAL30 chromium off -1: first tick 33.0 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1
+
+D10-PARTIAL30 chromium off 2: first tick 26.5 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1
+
+D10-PARTIAL30 chromium off 6: first tick 26.4 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3
+
+D10-PARTIAL30 chromium off 15: first tick 15.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/1.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3
+
+D10-PARTIAL30 chromium off 27: first tick 4.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.1/31.7/31.7/31.7/31.7/31.7/12.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.2
+
+  1) [chromium] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame 
+
+    Error: 5 of 5 arms slowed or late
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 7
+
+    - Array []
+    + Array [
+    +   "off -1: first tick 33.0 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1",
+    +   "off 2: first tick 26.5 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1",
+    +   "off 6: first tick 26.4 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3",
+    +   "off 15: first tick 15.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/1.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3",
+    +   "off 27: first tick 4.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.1/31.7/31.7/31.7/31.7/31.7/12.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.2",
+    + ]
+
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+      597 |   testInfo.annotations.push({ type: "D10-partial30", description: lines.join(" · ") });
+    > 598 |   expect(reds, `${reds.length} of ${offs.length} arms slowed or late`).toEqual([]);
+          |                                                                        ^
+      599 | });
+      600 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-FIVE/tree/web/frontend/e2e/front-rate.spec.ts:598:72
+
+    Error Context: ../../../pw-out-p30-slow95-chromium/front-rate-D10-partial30-a-32db6-l-travels-every-whole-frame-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame 

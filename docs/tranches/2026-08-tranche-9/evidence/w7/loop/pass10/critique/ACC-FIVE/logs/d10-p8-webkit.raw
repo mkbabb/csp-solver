@@ -1,0 +1,30 @@
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/front-rate.spec.ts:479:1 › D10-stallrun: five consecutive 150 ms stalls inside a live tween each travel at most one frame
+[webkit] › e2e/front-rate.spec.ts:479:1 › D10-stallrun: five consecutive 150 ms stalls inside a live tween each travel at most one frame
+D10-STALLRUN webkit 5 stalled ticks (dt 155/156/156/153/153 ms) travelled 17.0/17.0/17.0/18.0/153.0 ms; cap max(stepMs 17, shortest tick 3.0) + 1 = 18.00 ms, margin -135.000 ms; 39 healthy ticks, worst healthy shortfall 2.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.4
+
+  1) [webkit] › e2e/front-rate.spec.ts:479:1 › D10-stallrun: five consecutive 150 ms stalls inside a live tween each travel at most one frame 
+
+    Error: 5 stalled ticks (dt 155/156/156/153/153 ms) travelled 17.0/17.0/17.0/18.0/153.0 ms; cap max(stepMs 17, shortest tick 3.0) + 1 = 18.00 ms, margin -135.000 ms; 39 healthy ticks, worst healthy shortfall 2.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.4
+
+    expect(received).toBeLessThanOrEqual(expected)
+
+    Expected: <= 18
+    Received:    153
+
+      530 |   testInfo.annotations.push({ type: "D10-stallrun", description: line });
+      531 |   expect(stalled.length, `the row injected ${nStall} stalls and saw ${stalled.length}: it measured nothing`).toBeGreaterThanOrEqual(Math.max(5, nStall));
+    > 532 |   expect(Math.max(...stalled.map((s) => s.travel)), line).toBeLessThanOrEqual(cap);
+          |                                                           ^
+      533 |   expect(shortHealthy.length, `healthy ticks slowed: ${line}`).toBe(0);
+      534 |   expect(r.stepMs, "the hand's step moved: the literal pin and its rows owe a re-read").toBe(STEP_MS);
+      535 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-FIVE/tree/web/frontend/e2e/front-rate.spec.ts:532:59
+
+    Error Context: ../../../pw-out-d10-p8-webkit/front-rate-D10-stallrun-fi-c1556-ch-travel-at-most-one-frame-webkit/error-context.md
+
+
+  1 failed
+    [webkit] › e2e/front-rate.spec.ts:479:1 › D10-stallrun: five consecutive 150 ms stalls inside a live tween each travel at most one frame 

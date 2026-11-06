@@ -1,0 +1,240 @@
+== webkit-n5-m18 project=webkit url=http://127.0.0.1:4231 fe=<crit-scratch>/n5/web/frontend grep=T9-M18
+Tue Nov  3 22:21:29 EST 2026
+load { 17.98 15.21 16.10 }
+zone inuse=654924
+armed yes
+served index-BZIPcArcjSn4.js
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+[guarded] waiting for the 'webkit' lock
+
+Running 7 tests using 1 worker
+
+[1/7] [webkit] › e2e/zone-grammar.spec.ts:1848:1 › T9-M18 · the ruled line's authored stroke is the PINNED 3, off the drawn roster, floor 2.70 — and N5 reds the pin
+[webkit] › e2e/zone-grammar.spec.ts:1848:1 › T9-M18 · the ruled line's authored stroke is the PINNED 3, off the drawn roster, floor 2.70 — and N5 reds the pin
+[RULE M18 pin] source {"width":1.65,"where":["src/games/shared/RuledLine.vue:95 1.65"]} pin 3 floor 2.7 roster ["src/pencil/chrome/AttributionCard/HeadSheet.vue","src/games/shared/GameControlPanel.vue"]
+
+  1) [webkit] › e2e/zone-grammar.spec.ts:1848:1 › T9-M18 · the ruled line's authored stroke is the PINNED 3, off the drawn roster, floor 2.70 — and N5 reds the pin 
+
+    Error: the authored stroke ["src/games/shared/RuledLine.vue:95 1.65"]
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 3
+    Received: 1.65
+
+      1855 |   const roster = Object.values(DRAWN_FRAMES).map((f) => f.file);
+      1856 |   console.log(`[RULE M18 pin] source ${JSON.stringify(shipped)} pin ${RULE_PIN} floor ${RULE_FLOOR} roster ${JSON.stringify(roster)}`);
+    > 1857 |   expect(shipped.width, `the authored stroke ${JSON.stringify(shipped.where)}`).toBe(RULE_PIN);
+           |                                                                                 ^
+      1858 |   expect(RULE_FLOOR, "the floor is max(0.9 × 3, 1.80)").toBeCloseTo(2.7, 9);
+      1859 |   expect(roster.some((f) => /RuledLine\.vue$/.test(f)), "the ruled line is off SELF's drawn roster").toBe(false);
+      1860 |   const n5 = RULE_SOURCE(plant("stroke-width: 1.65;"));
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:1857:81
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-the--d5db6--2-70-—-and-N5-reds-the-pin-webkit/error-context.md
+
+
+[2/7] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[RULE M18] 1280×800 fine light {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":64,"median":5.236,"thick":1.656},{"n":64,"median":5.084,"thick":1.656},{"n":64,"median":5.236,"thick":1.66},{"n":64,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":154},"stationsUnder3":0,"alpha":0.678,"alphaN":441,"pixelCoreUnder3":0.268}
+
+  2) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: the foot's rule {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":64,"median":5.236,"thick":1.656},{"n":64,"median":5.084,"thick":1.656},{"n":64,"median":5.236,"thick":1.66},{"n":64,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":154},"stationsUnder3":0,"alpha":0.678,"alphaN":441,"pixelCoreUnder3":0.268}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+    > 1898 |         expect(FOOT_RULE_HOLDS(d), `the foot's rule ${JSON.stringify(d)}`).toBe(true);
+           |                                                                            ^
+      1899 |
+      1900 |         // NEGATIVE CONTROLS, same run — each must red on its own.
+      1901 |         for (const [plant, css] of [
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:1898:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-the--19858--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-the--19858--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[3/7] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[RULE M18] 1280×800 fine dark {"chain":1,"scale":1,"coverage":1,"coreMedian":5.845,"p98":6.069,"quarters":[{"n":64,"median":6.069,"thick":1.642},{"n":64,"median":5.921,"thick":1.647},{"n":64,"median":6.069,"thick":1.653},{"n":64,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":154},"stationsUnder3":0,"alpha":0.679,"alphaN":439,"pixelCoreUnder3":0.132}
+
+  3) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: the foot's rule {"chain":1,"scale":1,"coverage":1,"coreMedian":5.845,"p98":6.069,"quarters":[{"n":64,"median":6.069,"thick":1.642},{"n":64,"median":5.921,"thick":1.647},{"n":64,"median":6.069,"thick":1.653},{"n":64,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":154},"stationsUnder3":0,"alpha":0.679,"alphaN":439,"pixelCoreUnder3":0.132}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+    > 1898 |         expect(FOOT_RULE_HOLDS(d), `the foot's rule ${JSON.stringify(d)}`).toBe(true);
+           |                                                                            ^
+      1899 |
+      1900 |         // NEGATIVE CONTROLS, same run — each must red on its own.
+      1901 |         for (const [plant, css] of [
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:1898:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-the--4f7a3--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-the--4f7a3--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[4/7] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[RULE M18] 390×844 coarse light {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":85,"median":5.236,"thick":1.656},{"n":84,"median":5.01,"thick":1.656},{"n":85,"median":5.236,"thick":1.66},{"n":84,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":204},"stationsUnder3":0,"alpha":0.678,"alphaN":581,"pixelCoreUnder3":0.269}
+
+  4) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: the foot's rule {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":85,"median":5.236,"thick":1.656},{"n":84,"median":5.01,"thick":1.656},{"n":85,"median":5.236,"thick":1.66},{"n":84,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":204},"stationsUnder3":0,"alpha":0.678,"alphaN":581,"pixelCoreUnder3":0.269}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+    > 1898 |         expect(FOOT_RULE_HOLDS(d), `the foot's rule ${JSON.stringify(d)}`).toBe(true);
+           |                                                                            ^
+      1899 |
+      1900 |         // NEGATIVE CONTROLS, same run — each must red on its own.
+      1901 |         for (const [plant, css] of [
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:1898:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-the--ffa9e--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-the--ffa9e--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[5/7] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+[RULE M18] 390×844 coarse dark {"chain":1,"scale":1,"coverage":1,"coreMedian":5.921,"p98":6.069,"quarters":[{"n":85,"median":6.069,"thick":1.642},{"n":84,"median":5.845,"thick":1.647},{"n":85,"median":6.069,"thick":1.653},{"n":84,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":204},"stationsUnder3":0,"alpha":0.679,"alphaN":577,"pixelCoreUnder3":0.135}
+
+  5) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: the foot's rule {"chain":1,"scale":1,"coverage":1,"coreMedian":5.921,"p98":6.069,"quarters":[{"n":85,"median":6.069,"thick":1.642},{"n":84,"median":5.845,"thick":1.647},{"n":85,"median":6.069,"thick":1.653},{"n":84,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":204},"stationsUnder3":0,"alpha":0.679,"alphaN":577,"pixelCoreUnder3":0.135}
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+    > 1898 |         expect(FOOT_RULE_HOLDS(d), `the foot's rule ${JSON.stringify(d)}`).toBe(true);
+           |                                                                            ^
+      1899 |
+      1900 |         // NEGATIVE CONTROLS, same run — each must red on its own.
+      1901 |         for (const [plant, css] of [
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:1898:76
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-the--6504e--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-the--6504e--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[6/7] [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[RULE M18 forced] webkit light regime witness forced-colors:active true
+
+[RULE M18 forced] webkit light shipped {"quarters":true,"stations":true,"weight":false} {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":64,"median":5.236,"thick":1.656},{"n":64,"median":5.084,"thick":1.656},{"n":64,"median":5.236,"thick":1.66},{"n":64,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":154},"stationsUnder3":0,"alpha":0.678,"alphaN":441,"pixelCoreUnder3":0.268}
+
+  6) [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+
+    Error: four bands under forced colours {"chain":1,"scale":1,"coverage":1,"coreMedian":3.725,"p98":5.236,"quarters":[{"n":64,"median":5.236,"thick":1.656},{"n":64,"median":5.084,"thick":1.656},{"n":64,"median":5.236,"thick":1.66},{"n":64,"median":5.236,"thick":1.656}],"span":{"median":1.656,"p10":1.651,"n":154},"stationsUnder3":0,"alpha":0.678,"alphaN":441,"pixelCoreUnder3":0.268}
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "quarters": true,
+        "stations": true,
+    -   "weight": true,
+    +   "weight": false,
+      }
+
+      2038 |       console.log(`[RULE M18 forced] ${browserName} ${theme} shipped ${d && JSON.stringify(bands(d))} ${JSON.stringify(d)}`);
+      2039 |       expect(d, "the rule is present under forced colours").not.toBeNull();
+    > 2040 |       expect(bands(d!), `four bands under forced colours ${JSON.stringify(d)}`).toEqual({ quarters: true, stations: true, weight: true });
+           |                                                                                 ^
+      2041 |       for (const [plant, css] of Object.entries(DRAWN_PLANTS("#card-foot svg.ruled-line", RULE_PIN))) {
+      2042 |         const tag = await page.addStyleTag({ content: css });
+      2043 |         const red = await FOOT_RULE(page);
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:2040:81
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-forc-6b698-nd-THIN-1PX-and-P055-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-forc-6b698-nd-THIN-1PX-and-P055-red-it-webkit/error-context.md
+
+
+[7/7] [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[RULE M18 forced] webkit dark regime witness forced-colors:active true
+
+[RULE M18 forced] webkit dark shipped {"quarters":true,"stations":true,"weight":false} {"chain":1,"scale":1,"coverage":1,"coreMedian":5.845,"p98":6.069,"quarters":[{"n":64,"median":6.069,"thick":1.642},{"n":64,"median":5.921,"thick":1.647},{"n":64,"median":6.069,"thick":1.653},{"n":64,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":154},"stationsUnder3":0,"alpha":0.679,"alphaN":439,"pixelCoreUnder3":0.132}
+
+  7) [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+
+    Error: four bands under forced colours {"chain":1,"scale":1,"coverage":1,"coreMedian":5.845,"p98":6.069,"quarters":[{"n":64,"median":6.069,"thick":1.642},{"n":64,"median":5.921,"thick":1.647},{"n":64,"median":6.069,"thick":1.653},{"n":64,"median":6.069,"thick":1.647}],"span":{"median":1.647,"p10":1.642,"n":154},"stationsUnder3":0,"alpha":0.679,"alphaN":439,"pixelCoreUnder3":0.132}
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 1
+
+      Object {
+        "quarters": true,
+        "stations": true,
+    -   "weight": true,
+    +   "weight": false,
+      }
+
+      2038 |       console.log(`[RULE M18 forced] ${browserName} ${theme} shipped ${d && JSON.stringify(bands(d))} ${JSON.stringify(d)}`);
+      2039 |       expect(d, "the rule is present under forced colours").not.toBeNull();
+    > 2040 |       expect(bands(d!), `four bands under forced colours ${JSON.stringify(d)}`).toEqual({ quarters: true, stations: true, weight: true });
+           |                                                                                 ^
+      2041 |       for (const [plant, css] of Object.entries(DRAWN_PLANTS("#card-foot svg.ruled-line", RULE_PIN))) {
+      2042 |         const tag = await page.addStyleTag({ content: css });
+      2043 |         const red = await FOOT_RULE(page);
+        at <crit-scratch>/n5/web/frontend/e2e/zone-grammar.spec.ts:2040:81
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    ../../../pw-out/zone-grammar-T9-M18-·-forc-3fe51-nd-THIN-1PX-and-P055-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M18-·-forc-3fe51-nd-THIN-1PX-and-P055-red-it-webkit/error-context.md
+
+
+  7 failed
+    [webkit] › e2e/zone-grammar.spec.ts:1848:1 › T9-M18 · the ruled line's authored stroke is the PINNED 3, off the drawn roster, floor 2.70 — and N5 reds the pin 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+    [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+Tue Nov  3 22:27:57 EST 2026
+load-end { 12.12 12.97 14.64 }
+zone-end inuse=754804
+EXIT 1

@@ -1,0 +1,47 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/ACC-SIX/arch/wave/web/frontend
+
+ ❯ src/pencil/grid/gridPaths.partial30.six.test.ts (7 tests | 6 failed) 64ms
+     × first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 42ms
+     × first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+     × first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+     × a SECOND front 12 frames after a partial-start front still runs at the panel's frame 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 6 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+AssertionError: expected 15 to be less than or equal to 11
+ ❯ src/pencil/grid/gridPaths.partial30.six.test.ts:53:20
+     51|       vi.doUnmock("@mkbabb/pencil-boil");
+     52|       // whole-frame start ends on frame 10 (the tree's own unit row);…
+     53|       expect(done).toBeLessThanOrEqual(11);
+       |                    ^
+     54|     });
+     55|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/6]⎯
+
+ FAIL  src/pencil/grid/gridPaths.partial30.six.test.ts > ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick > a SECOND front 12 frames after a partial-start front still runs at the panel's frame
+AssertionError: expected 15 to be less than or equal to 11
+ ❯ src/pencil/grid/gridPaths.partial30.six.test.ts:62:18
+     60|     const done = run(Array.from({ length: 40 }, (_, k) => (k + 1) * F)…
+     61|     vi.doUnmock("@mkbabb/pencil-boil");
+     62|     expect(done).toBeLessThanOrEqual(11);
+       |                  ^
+     63|   });
+     64|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/6]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  6 failed | 1 passed (7)
+   Start at  19:32:43
+   Duration  687ms (transform 75ms, setup 28ms, import 59ms, tests 64ms, environment 394ms)
+

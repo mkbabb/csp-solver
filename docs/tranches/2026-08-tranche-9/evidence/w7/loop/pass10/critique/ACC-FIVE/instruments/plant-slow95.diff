@@ -1,0 +1,11 @@
+--- gridPaths.f67c70ee.ts	2026-11-02 17:30:41
++++ gridPaths.slow95.ts	2026-11-02 17:34:05
+@@ -725,7 +725,7 @@
+         MOTION.hand.stepMs,
+         panelFrameMs(dt, origin + t, first, held),
+       );
+-      clock += Math.min(dt, cap);
++      clock += Math.min(dt, cap) * (dt > 25 ? 0.95 : 1); // CRIT PLANT slow95
+       held = dt > cap;
+       first = false;
+       prev = t;

@@ -1,0 +1,67 @@
+OPEN chromium 17:33:43 alive 4236:200 4258:200  control index-CubiZsMVSwTc.js
+RUN p30 chromium exit 0 17:33:43-17:44:55 load 10.88-6.64 inuse=15760/inuse=15776 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-PARTIAL30 chromium off -1: first tick 32.2 ms after start(); ended on frame 8; dt 33/33/33/33/33/33/33; travel 33.3/33.3/33.3/33.3/33.3/33.3/7.8; 0 of 2 whole frames from the fifth step under dt − 1; load 7.3
+D10-PARTIAL30 chromium off 2: first tick 28.0 ms after start(); ended on frame 8; dt 33/33/33/33/33/33/33; travel 33.0/33.0/33.0/33.0/33.0/33.0/14.2; 0 of 2 whole frames from the fifth step under dt − 1; load 7.0
+D10-PARTIAL30 chromium off 6: first tick 25.8 ms after start(); ended on frame 8; dt 33/33/33/33/34/33/33; travel 33.1/33.1/33.1/33.0/33.1/33.1/15.9; 0 of 2 whole frames from the fifth step under dt − 1; load 7.0
+D10-PARTIAL30 chromium off 15: first tick 17.0 ms after start(); ended on frame 8; dt 33/33/33/33/33/33/33; travel 32.6/32.6/32.6/32.6/32.6/32.6/27.2; 0 of 2 whole frames from the fifth step under dt − 1; load 7.0
+D10-PARTIAL30 chromium off 27: first tick 4.9 ms after start(); ended on frame 9; dt 33/33/33/33/33/33/33/33; travel 33.3/33.3/33.3/33.3/33.3/33.3/33.3/1.8; 0 of 3 whole frames from the fifth step under dt − 1; load 7.0
+  1 passed (11.4s)
+RUN d10 chromium exit 0 17:44:55-17:45:03 load 6.64-6.70 inuse=15776/inuse=15776 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-STALLRUN chromium 5 stalled ticks (dt 142/158/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 7.1) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 6.6
+  1 passed (3.3s)
+SWAP 458bb26f 17:45:03
+RUN p30-p9 chromium exit 1 17:45:07-17:48:08 load 6.81-6.27 inuse=15776/inuse=15716 base http://127.0.0.1:4236 blob 458bb26f env: 
+D10-PARTIAL30 chromium off -1: first tick 33.4 ms after start(); ended on frame 10; dt 33/33/33/33/33/33/33/33/33; travel 17.0/17.0/17.0/33.3/33.3/33.3/33.3/33.3/5.5; 0 of 4 whole frames from the fifth step under dt − 1; load 6.3
+D10-PARTIAL30 chromium off 2: first tick 27.2 ms after start(); ended on frame 11; dt 33/33/33/33/34/33/33/33/33/33; travel 17.0/17.0/17.0/27.2/27.2/27.2/27.2/27.2/27.2/9.0; 5 of 5 whole frames from the fifth step under dt − 1; load 6.3
+D10-PARTIAL30 chromium off 6: first tick 23.2 ms after start(); ended on frame 12; dt 33/33/33/33/33/33/33/33/33/33/33; travel 17.0/17.0/17.0/23.1/23.1/23.1/23.1/23.1/23.1/23.1/10.5; 6 of 6 whole frames from the fifth step under dt − 1; load 6.0
+D10-PARTIAL30 chromium off 15: first tick 17.9 ms after start(); ended on frame 14; dt 33/33/33/33/33/33/33/33/33/33/33/33/33; travel 17.0/17.0/17.0/17.9/17.9/17.9/17.9/17.9/17.9/17.9/17.9/17.9/10.9; 8 of 8 whole frames from the fifth step under dt − 1; load 6.0
+D10-PARTIAL30 chromium off 27: first tick 4.8 ms after start(); ended on frame 15; dt 33/33/33/33/33/33/33/33/33/33/33/33/33/33; travel 17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/14.2; 9 of 9 whole frames from the fifth step under dt − 1; load 6.4
+    Error: 4 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+SWAP eeb58de2 17:48:08
+RUN d10-p8 chromium exit 1 17:48:12-18:04:19 load 6.97-9.71 inuse=15716/inuse=15766 base http://127.0.0.1:4236 blob eeb58de2 env: 
+D10-STALLRUN chromium 5 stalled ticks (dt 150/150/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/149.6 ms; cap max(stepMs 17, shortest tick 6.7) + 1 = 18.00 ms, margin -131.600 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.0
+    Error: 5 stalled ticks (dt 150/150/150/150/150 ms) travelled 17.0/17.0/17.0/17.0/149.6 ms; cap max(stepMs 17, shortest tick 6.7) + 1 = 18.00 ms, margin -131.600 ms; 39 healthy ticks, worst healthy shortfall 0.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.0
+  1 failed
+RESTORED-BYTE-EQUAL 18:04:19
+RUN g10 chromium exit 0 18:04:23-18:07:47 load 9.34-10.21 inuse=15766/inuse=15811 base http://127.0.0.1:4236 blob f67c70ee env: 
+G10 chromium clock driven 125 Hz (vsync stamps): measured 125.0 Hz over 2362 gaps, 27 vsyncs dropped by a late pump, 0 frame callbacks threw (precondition ≥ 93.75 Hz) · deal HARD ×3, tally inked 5 · .progress-trace nodes 4
+G10 chromium gauge: 188 d records, 47 frames (4.00 d/frame; by burst 4.00/4.00/4.00), 3 bursts, rates 58.8/60.0/59.0/s (worst 60.0, slowest 58.8; floor (gated, A.6-delivered) 53.0/54.0/53.1 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 10.4), DOM rates 59.0/60.3/59.4/s, frame min 15.9 ms [frames 14347.2→14363.1, DOM 14348.8→14363.6, lags 1.6/0.5], DOM min 14.3 ms DOM<15.5 [DOM 5853.1→5867.4, frames 5851.2→5867.2, lags 1.9/0.2], min gap by burst 16.0/16.0/15.9 ms (DOM 14.3/15.1/14.7), flush lag by burst 0.2–1.9/0.1–2.0/0.2–1.8 ms, 3 of 47 outside a frame
+G10 chromium tally: 496 d records, 50 frames (9.92 d/frame; by burst 9.92), 1 bursts, rates 58.4/s (worst 58.4, slowest 58.4; floor (gated, A.6-delivered) 52.5 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 10.4), DOM rates 58.6/s, frame min 15.5 ms [frames 619.2→634.7, DOM 623.0→634.9, lags 3.8/0.2], DOM min 9.3 ms DOM<15.5 [DOM 506.0→515.3, frames 499.2→515.2, lags 6.8/0.1], min gap by burst 15.5 ms (DOM 9.3), flush lag by burst 0.1–6.8 ms, 0 of 50 outside a frame
+G10 chromium join: 128 d records, 32 frames (4.00 d/frame; by burst 4.00), 1 bursts, rates 61.5/s (worst 61.5, slowest 61.5; floor (gated, A.6-delivered) 55.4 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 GREEN at load 10.4), DOM rates 61.6/s, frame min 15.9 ms [frames 17323.2→17339.1, DOM 17325.5→17340.1, lags 2.3/1.0], DOM min 13.8 ms DOM<15.5 [DOM 17206.9→17220.7, frames 17203.2→17219.2, lags 3.7/1.5], min gap by burst 15.9 ms (DOM 13.8), flush lag by burst 0.9–3.7 ms, 0 of 32 outside a frame
+G10 chromium SHARE floor 0.9 · held (min over bursts of rate ÷ min(delivered best, A.6's best at R)) gauge 0.9416 · tally 0.9337 · join 0.9841 · margin 0.0337 · load 10.4
+G10 chromium CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor GREEN · rateform GREEN
+  1 passed (20.0s)
+SWAP heavy 18:07:48
+RUN g10-heavy chromium exit 1 18:07:52-18:08:42 load 10.21-9.62 inuse=15811/inuse=15885 base http://127.0.0.1:4236 blob 0cdf4f77 env: 
+G10 chromium clock driven 125 Hz (vsync stamps): measured 125.0 Hz over 2192 gaps, 230 vsyncs dropped by a late pump, 0 frame callbacks threw (precondition ≥ 93.75 Hz) · deal HARD ×4, tally inked 5 · .progress-trace nodes 4
+G10 chromium gauge: 188 d records, 47 frames (4.00 d/frame; by burst 4.00/4.00/4.00), 3 bursts, rates 53.0/53.6/53.6/s (worst 53.6, slowest 53.0; floor (gated, A.6-delivered) 47.7/48.2/48.2 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 3/3 at load 9.9), DOM rates 53.5/53.5/53.3/s, frame min 16.0 ms [frames 6084.3→6100.3, DOM 6104.4→6122.6, lags 20.1/22.3], DOM min 18.0 ms, min gap by burst 16.0/16.0/16.0 ms (DOM 18.0/18.0/18.1), flush lag by burst 19.7–25.7/18.2–25.9/18.2–26.3 ms, 0 of 47 outside a frame
+G10 chromium tally: 408 d records, 48 frames (8.50 d/frame; by burst 8.50), 1 bursts, rates 39.4/s (worst 39.4, slowest 39.4; floor (gated, A.6-delivered) 35.5 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 1/1 at load 9.9), DOM rates 39.6/s, frame min 23.2 ms [frames 940.3→963.5, DOM 959.6→981.9, lags 19.3/18.4], DOM min 22.2 ms, min gap by burst 23.2 ms (DOM 22.2), flush lag by burst 18.1–26.4 ms, 0 of 48 outside a frame
+G10 chromium join: 108 d records, 27 frames (4.00 d/frame; by burst 4.00), 1 bursts, rates 50.8/s (worst 50.8, slowest 50.8; floor (gated, A.6-delivered) 45.7 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 1/1 at load 9.9), DOM rates 50.9/s, frame min 16.0 ms [frames 17452.3→17468.3, DOM 17473.4→17493.8, lags 21.1/25.5], DOM min 18.6 ms, min gap by burst 16.0 ms (DOM 18.6), flush lag by burst 18.8–26.8 ms, 0 of 27 outside a frame
+G10 chromium SHARE floor 0.9 · held (min over bursts of rate ÷ min(delivered best, A.6's best at R)) gauge 0.8485 · tally 0.6309 · join 0.8125 · margin -0.2691 · load 9.9
+G10 chromium CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor GREEN · rateform RED
+    Error: gauge: 3 of 3 bursts under the at-R floor 56.3/s (0.9 × A.6's best at 125.0 Hz) at load 9.9
+      403 |   expect(load, `UNREAD, not red: the rate form is no verdict at a 1-minute load of ${load.toFixed(1)} (> 120)`).toBeLessThanOrEqual(120);
+  1 failed
+RESTORED-BYTE-EQUAL 18:08:42
+alive 4236:200 4258:200 
+RUN ctrl chromium exit 1 18:08:46-18:12:28 load 9.62-18.90 inuse=15885/inuse=15966 base http://127.0.0.1:4258 blob f67c70ee env: 
+    Error: expect(received).toBeGreaterThan(expected)
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4258/src/pencil/grid/gridPaths.ts
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4258/src/pencil/grid/gridPaths.ts
+    Error: page.evaluate: TypeError: Failed to fetch dynamically imported module: http://127.0.0.1:4258/src/pencil/grid/gridPaths.ts
+  4 failed
+DONE chromium 18:12:28 alive 4236:200 4258:200 
+SWAP slow95 18:12:31
+RUN p30-slow95 chromium exit 1 18:12:35-18:12:54 load 17.78-16.15 inuse=15966/inuse=15966 base http://127.0.0.1:4236 blob a9f2e27e env: 
+D10-PARTIAL30 chromium off -1: first tick 33.0 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1
+D10-PARTIAL30 chromium off 2: first tick 26.5 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 18.1
+D10-PARTIAL30 chromium off 6: first tick 26.4 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/0.9; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3
+D10-PARTIAL30 chromium off 15: first tick 15.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.2/31.7/31.7/31.7/31.7/31.7/1.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.3
+D10-PARTIAL30 chromium off 27: first tick 4.7 ms after start(); ended on frame 11; dt 33/33/33/33/33/33/33/33/33/33; travel 16.1/16.1/16.1/16.1/31.7/31.7/31.7/31.7/31.7/12.4; 5 of 5 whole frames from the fifth step under dt − 1; load 17.2
+    Error: 5 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+RESTORED-BYTE-EQUAL 18:12:54
+DONE2 chromium 18:12:54

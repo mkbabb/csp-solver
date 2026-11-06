@@ -1,0 +1,9 @@
+{
+  "manifest_version": 3,
+  "name": "erase10-user-origin",
+  "version": "1.0",
+  "permissions": ["scripting", "tabs"],
+  "host_permissions": ["http://127.0.0.1/*"],
+  "background": { "service_worker": "sw.js" },
+  "content_scripts": [{ "matches": ["http://127.0.0.1/*"], "js": ["cs.js"], "run_at": "document_start" }]
+}

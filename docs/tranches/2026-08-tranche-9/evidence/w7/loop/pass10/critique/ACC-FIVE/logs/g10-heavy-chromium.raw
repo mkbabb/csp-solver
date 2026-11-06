@@ -1,0 +1,40 @@
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/front-rate.spec.ts:174:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it
+[chromium] › e2e/front-rate.spec.ts:174:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it
+G10 chromium clock driven 125 Hz (vsync stamps): measured 125.0 Hz over 2192 gaps, 230 vsyncs dropped by a late pump, 0 frame callbacks threw (precondition ≥ 93.75 Hz) · deal HARD ×4, tally inked 5 · .progress-trace nodes 4
+
+G10 chromium gauge: 188 d records, 47 frames (4.00 d/frame; by burst 4.00/4.00/4.00), 3 bursts, rates 53.0/53.6/53.6/s (worst 53.6, slowest 53.0; floor (gated, A.6-delivered) 47.7/48.2/48.2 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 3/3 at load 9.9), DOM rates 53.5/53.5/53.3/s, frame min 16.0 ms [frames 6084.3→6100.3, DOM 6104.4→6122.6, lags 20.1/22.3], DOM min 18.0 ms, min gap by burst 16.0/16.0/16.0 ms (DOM 18.0/18.0/18.1), flush lag by burst 19.7–25.7/18.2–25.9/18.2–26.3 ms, 0 of 47 outside a frame
+
+G10 chromium tally: 408 d records, 48 frames (8.50 d/frame; by burst 8.50), 1 bursts, rates 39.4/s (worst 39.4, slowest 39.4; floor (gated, A.6-delivered) 35.5 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 1/1 at load 9.9), DOM rates 39.6/s, frame min 23.2 ms [frames 940.3→963.5, DOM 959.6→981.9, lags 19.3/18.4], DOM min 22.2 ms, min gap by burst 23.2 ms (DOM 22.2), flush lag by burst 18.1–26.4 ms, 0 of 48 outside a frame
+
+G10 chromium join: 108 d records, 27 frames (4.00 d/frame; by burst 4.00), 1 bursts, rates 50.8/s (worst 50.8, slowest 50.8; floor (gated, A.6-delivered) 45.7 GREEN; rate form (printed) 0.9 × A.6's best at 125.0 Hz = 56.3 RED 1/1 at load 9.9), DOM rates 50.9/s, frame min 16.0 ms [frames 17452.3→17468.3, DOM 17473.4→17493.8, lags 21.1/25.5], DOM min 18.6 ms, min gap by burst 16.0 ms (DOM 18.6), flush lag by burst 18.8–26.8 ms, 0 of 27 outside a frame
+
+G10 chromium SHARE floor 0.9 · held (min over bursts of rate ÷ min(delivered best, A.6's best at R)) gauge 0.8485 · tally 0.6309 · join 0.8125 · margin -0.2691 · load 9.9
+
+G10 chromium CLAUSES seen GREEN · clock GREEN · interleave GREEN · ceiling GREEN · gap GREEN · floor GREEN · rateform RED
+
+  1) [chromium] › e2e/front-rate.spec.ts:174:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 
+
+    Error: gauge: 3 of 3 bursts under the at-R floor 56.3/s (0.9 × A.6's best at 125.0 Hz) at load 9.9
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: 0
+    Received: 3
+
+      403 |   expect(load, `UNREAD, not red: the rate form is no verdict at a 1-minute load of ${load.toFixed(1)} (> 120)`).toBeLessThanOrEqual(120);
+      404 |   for (const k of ks)
+    > 405 |     expect(rateRed[k], `${k}: ${rateRed[k]} of ${bursts_[k]} bursts under the at-R floor ${rateFloor.toFixed(1)}/s (0.9 × A.6's best at ${hz.hz.toFixed(1)} Hz) at load ${load.toFixed(1)}`).toBe(0);
+          |                                                                                                                                                                                              ^
+      406 |   await ctx.close();
+      407 | });
+      408 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-FIVE/tree/web/frontend/e2e/front-rate.spec.ts:405:190
+
+    Error Context: ../../../pw-out-g10-heavy-chromium/front-rate-G10-every-poseF-4d627-t-the-panel-s-rate-below-it-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/front-rate.spec.ts:174:1 › G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at the panel's rate below it 

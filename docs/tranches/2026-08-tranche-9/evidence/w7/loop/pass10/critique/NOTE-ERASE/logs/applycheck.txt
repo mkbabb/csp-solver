@@ -1,0 +1,10 @@
+CHECK pass10.diff on bare 74a2b5d9 exit=0 gitdir=$S/copies/b74/.git paths=19 0 errors
+CHECK (ref) pass10.diff on pass9 tree exit=1 gitdir=$S/copies/t9/.git paths=19 36 errors
+CHECK pass10.diff on WAVE+homes v3 (72b7ad67) exit=1 gitdir=$S/copies/waveh/.git paths=19 36 errors
+CHECK pass10.diff on s13-s7-s3+homes v3 (30af7d01) exit=1 gitdir=$S/copies/s13h/.git paths=19 36 errors
+CHECK delta on WAVE+homes v3 (72b7ad67) exit=0 gitdir=$S/copies/waveh/.git paths=4 0 errors
+CHECK delta on s13+homes v3 (30af7d01) exit=0 gitdir=$S/copies/s13h/.git paths=4 0 errors
+bare-waveh tree 044284b5eb08b66b9f4ab54961e01f51e5935e11 (from 72b7ad67ef8cf43589d276621478cd11283fb180, -R homes exit 0)
+CHECK delta on bare waveh (temp index, gitdir $S/copies/waveh/.git) exit=0 paths=4
+bare-s13h tree e33d791dc58a2eefa853d7cd030261059de79154 (from 30af7d0124ccc1788a17658162afe878c467e014, -R homes exit 0)
+CHECK delta on bare s13h (temp index, gitdir $S/copies/s13h/.git) exit=0 paths=4

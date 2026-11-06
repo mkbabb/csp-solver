@@ -1,0 +1,52 @@
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index a164c434..5d39ddf3 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -227,6 +227,8 @@ export const CLAUSES = {
+     "TAPE (homes v3) · admittedSites: a declaration on the chain off the file+line list reds, and a list entry no site answers is stale and reds",
+   bounds:
+     "TAPE (homes v3) · bounds(value, regime): a length's [lo, hi] at a regime's viewport (vh/vw/%, env() = [0, ∞), an unpublished var() = (−∞, ∞), calc/min/max/clamp)",
++  renderless:
++    "LEDGER (pass 10, PROPOSED) · a renderless built-in (`<Transition>`, `<KeepAlive>`, `<Suspense>`, `<template>`, a tag-less `<TransitionGroup>`) renders no element: its children's parent is the nearest element that renders (C4 `p > span` across the note's `<Transition>`)",
+   "r4-descend":
+     "LEDGER C1–C6 (homes v3) · R4 reads the voice's LINE BOX: each descendant's font, line, height and box growth, and the voice's own padding, margin, border and vertical-align",
+ };
+@@ -3360,6 +3362,15 @@ export function templateElements(tpl, baseLine = 1) {
+       parent: stack.at(-1) ?? null,
+       line: baseLine + lineAt(t, m.index) - 1,
+     };
++    // renderless (LEDGER, pass 10): a built-in that renders no element is in the stack for its
++    // close tag, never a parent; a child's parent is the nearest ancestor that renders
++    if (on("renderless"))
++      el.parent =
++        [...stack].reverse().find((x) => !els[x].renderless) ?? null;
++    el.renderless =
++      on("renderless") &&
++      (/^(Transition|transition|KeepAlive|keep-alive|Suspense|template)$/.test(m[2]) ||
++        (/^(TransitionGroup|transition-group)$/.test(m[2]) && !attrs.has("tag")));
+     els.push(el);
+     if (!m[4] && !VOID.test(m[2])) stack.push(el.i);
+   }
+@@ -7120,6 +7131,22 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "renderless",
++    "LEDGER",
++    "R1 `<p class=\"v\"><Transition><span class=\"k\">` reads the span's parent as the p, and `.v > .k` may match it; a `<TransitionGroup tag=\"ul\">` renders and stays a parent",
++    (L) => {
++      const els = L.templateElements(
++        '<div class="r"><p class="v"><Transition name="x"><span v-if="t" class="k"></span></Transition></p><TransitionGroup tag="ul" class="g"><li class="i"></li></TransitionGroup></div>',
++      );
++      const by = (c) => els.find((e) => e.classes.has(c));
++      return (
++        els[by("k").parent].classes.has("v") &&
++        L.mayMatch(".v > .k", by("k"), els) !== false &&
++        els[by("i").parent].classes.has("g")
++      );
++    },
++  ],
+   [
+     "r4-descend",
+     "LEDGER",

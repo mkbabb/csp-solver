@@ -1,0 +1,75 @@
+PAL-TIN pass 10 · BANKED 2026-11-04 (cut 12:0x, checks read bare from bank-check.txt)
+lane tree: worktree wf_308fa864-c94-2, HEAD 74a2b5d9 (no commit; the diff is the working tree through a temporary index)
+final bytes: check-peer-tin.mjs sha1 76255232 · useSession.ts sha1 32b71331 · shape-census.mjs sha1 49115989 (homes v3, unedited)
+
+pass10.diff: base 74a2b5d9 -> tree 9fdae2fe57b79aea144383487358409ddbb54d58
+ 33 files changed, 16181 insertions(+), 84 deletions(-)
+bytes 777698 · sha1 8cec1746bf706a386bff8fcb0f0ba41b103ea2d8
+
+pass10.delta.on-WAVE.diff: DECLARED BASE = the pass-9 WAVE union + homes v3 = 74a2b5d9 + pass9/integrate/WAVE.diff (sha1 b3725e4f, tree 044284b5) + pass10/instruments/homes.on-WAVE.diff (sha1 0723d508) -> tree 9528a8ec4d5c49e71392e9b8e0caf57f8f8d2177; after the delta 52c34fb68743c8e3bc6484d18dfdd7103b414da0
+ 2 files changed, 266 insertions(+), 21 deletions(-) (scripts/check-peer-tin.mjs, src/games/shared/useSession.ts)
+bytes 21851 · sha1 dd52a3f4f540bd1c7f41a1df629a82b0e7285e8c
+
+apply --check, each on a fresh git archive with its own .git:
+  pass10.diff on fresh 74a2b5d9: exit 0
+  negative control (--reverse on fresh 74a2b5d9, must be non-0): exit 1
+  applied for real on 74a2b5d9: exit 0
+    33 paths, 0 differ from the lane tree
+  WAVE.diff on fresh 74a2b5d9: exit 0
+  pass10.delta.on-WAVE.diff on the plain WAVE (74a2b5d9 + WAVE.diff): exit 0
+  homes.on-WAVE.diff (0723d508) on it: exit 0
+  pass10.delta.on-WAVE.diff on the WAVE + homes v3 (its declared base): exit 0
+  negative control (--reverse there, must be non-0): exit 1
+  applied for real: exit 0
+    web/frontend/scripts/check-peer-tin.mjs equals the lane tree's
+  DONE
+
+paths (33):
+.github/workflows/ci.yml
+web/frontend/e2e/lib/edge-bands.d.mts
+web/frontend/e2e/lib/edge-bands.mjs
+web/frontend/e2e/lib/glyph-pop.d.mts
+web/frontend/e2e/lib/glyph-pop.mjs
+web/frontend/e2e/lib/paint-lib.d.mts
+web/frontend/e2e/lib/paint-lib.mjs
+web/frontend/e2e/lib/postpaint.d.mts
+web/frontend/e2e/lib/postpaint.mjs
+web/frontend/e2e/lib/rest-probes.d.mts
+web/frontend/e2e/lib/rest-probes.mjs
+web/frontend/e2e/multiplayer.spec.ts
+web/frontend/e2e/peer-tin.spec.ts
+web/frontend/knip.json
+web/frontend/package.json
+web/frontend/scripts/check-peer-tin.mjs
+web/frontend/scripts/check-pw-projects.mjs
+web/frontend/scripts/shape-census.d.mts
+web/frontend/scripts/shape-census.mjs
+web/frontend/src/assets/index.css
+web/frontend/src/games/posters.test.ts
+web/frontend/src/games/shared/BoardHost.vue
+web/frontend/src/games/shared/GameBoard.vue
+web/frontend/src/games/shared/GameControlPanel.vue
+web/frontend/src/games/shared/PosterBoard.test.ts
+web/frontend/src/games/shared/playerIdentity.ts
+web/frontend/src/games/shared/useGameState.ts
+web/frontend/src/games/shared/useSession.test.ts
+web/frontend/src/games/shared/useSession.ts
+web/frontend/src/games/shared/useStagingBridge.test.ts
+web/frontend/src/pencil/glyph/PlayerTick.vue
+web/frontend/src/pencil/grid/HandDrawnGrid/HandDrawnGrid.vue
+web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+
+route note: the charter names acde977b (pass 8's union + homes v2) as the pass-9 cut base. This delta is cut on
+the pass-9 WAVE, which carries TIN's pass-9 bank; acde977b does not, so it is not this delta's base and was not
+checked. The WAVE union is this section's integrated tree, so its check above is the section's check.
+the WAVE+homes v3 tree reads 9528a8ec through this lane's temporary index; CHAIR-FOLD.md prints 72b7ad67 for
+its own route. That mismatch is unexplained. The 10 home paths are blob-equal to this lane tree's.
+
+the separation-law hand-over for PAL-WALK (watch 2): instruments/separation-law.into-walk-gate2.pass10.diff
+  sha1 7e9a6105, 7,958 B, cut on WALK's live gate blob 1ee13421 -> 75a625bd
+  git apply --check on 1ee13421 (WALK's pass-9 bank tree, own .git): exit 0
+  git apply --check on the WAVE's copy 1ac0874a: exit 0
+PROPOSED for the chair (the ONE library, never forked): proposed/shape-census.tin10-raw-import-style-src.PROPOSED.diff
+  sha1 fb3207cd, 2,214 B, on homes v3's shape-census.mjs 49115989 -> c2a4abd5 (clauses raw-import, style-src)
+grep of both bank diffs for scratchpad, /private/tmp, /tmp/, .claude/t9-scratch: 0 hits. The one dot-path is
+.github/workflows/ci.yml, a product path carried from pass 9's bank. No scratch dot-dir (.vite-*, .pw-*) is in it.

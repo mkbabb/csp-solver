@@ -1,0 +1,62 @@
+
+ RUN  v4.1.11 <crit-scratch>/r2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (46 tests | 3 failed) 112ms
+     × the ROUNDED bytes of all three strings keep the law's 12°, and the ring is the tighter one 10ms
+     × every hand carries a ring string at its own band, never the digit's 1ms
+     × every hand carries a name string at its own band, bisected at the name's pair 0ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > the ROUNDED bytes of all three strings keep the law's 12°, and the ring is the tighter one
+TypeError: Cannot read properties of null (reading '1')
+ ❯ inkParts src/games/shared/useSession.test.ts:52:22
+     50|     inkFor(i)[key],
+     51|   )!;
+     52|   return { C: Number(m[1]), h: Number(m[2]) };
+       |                      ^
+     53| };
+     54| const hueOfInk = (i: number): number => inkParts(i).h;
+ ❯ painted src/games/shared/useSession.test.ts:57:20
+ ❯ src/games/shared/useSession.test.ts:263:27
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > every hand carries a ring string at its own band, never the digit's
+AssertionError: expected 'var(--color-ring)' to match /^oklch\(var\(--peer-ring-l\) [\d.]+ […/
+
+- Expected:
+/^oklch\(var\(--peer-ring-l\) [\d.]+ [\d.]+deg\)$/
+
++ Received:
+"var(--color-ring)"
+
+ ❯ src/games/shared/useSession.test.ts:318:20
+    316|       const ring = ink["--color-peer-cursor-ink"];
+    317|       expect(ring).not.toBe(digit);
+    318|       expect(ring).toMatch(/^oklch\(var\(--peer-ring-l\) [\d.]+ [\d.]+…
+       |                    ^
+    319|       // one hue, two bands: the hand is the same pencil and only the …
+    320|       expect(ring.split(" ").pop()).toBe(digit.split(" ").pop());
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > every hand carries a name string at its own band, bisected at the name's pair
+TypeError: Cannot read properties of null (reading '1')
+ ❯ inkParts src/games/shared/useSession.test.ts:52:22
+     50|     inkFor(i)[key],
+     51|   )!;
+     52|   return { C: Number(m[1]), h: Number(m[2]) };
+       |                      ^
+     53| };
+     54| const hueOfInk = (i: number): number => inkParts(i).h;
+ ❯ src/games/shared/useSession.test.ts:354:37
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  3 failed | 53 passed (56)
+   Start at  13:50:09
+   Duration  870ms (transform 432ms, setup 32ms, import 663ms, tests 149ms, environment 620ms)
+

@@ -1,0 +1,17 @@
+gate 76255232 lib 49115989 load 23.76 19.68 16.80
+clean0 exit 0 · 0 findings · baseline
+F1-call exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty.call(el.style, "--color-peer-2-ring", "#000");
+F2-array-held exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; const k = ["--color-peer-2-ring"]; el.style.setProperty(k[0], "#000");
+F3-template exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; const i = 2; el.style.setProperty(`--color-peer-${i}-ring`, "#000");
+F4-concat exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("--color-" + "peer-2-ring", "#000");
+F5-js-escape exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("\u002d-color-peer-2-ring", "#000");
+F10-registerProperty exit 1 · 1 findings · src/games/shared/p.ts: CSS.registerProperty({ name: "--color-peer-2-ring", syntax: "<color>", inherits: false, initialValue: "#000" });
+F11-insertRule exit 1 · 1 findings · src/games/shared/p.ts: document.styleSheets[0].insertRule(":root{--color-peer-2-ring:#000}");
+F12-cssText exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.cssText = "--color-peer-2-ring: #000";
+F13-join exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty(["--color", "peer", "2", "ring"].join("-"), "#000");
+F14-base64 exit 0 · 0 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty(atob("LS1jb2xvci1wZWVyLTItcmluZw=="), "#000");
+F15-fromCharCode exit 0 · 0 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty(String.fromCharCode(45,45,99,111,108,111,114,45,112,101,101,114,45,50,45,114,105,110,103), "#000");
+F8-public-svg exit 1 · 1 findings · public/p10.svg: <svg xmlns="http://www.w3.org/2000/svg"><style>:root{--color-peer-2-ring:#000}</style></svg>
+F7-style-attr exit 1 · 1 findings · src/games/shared/P10.vue: <template><span style="--color-peer-2-ring: #000">x</span></template>
+clean1 exit 0 · 0 findings · after
+DONE

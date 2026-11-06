@@ -1,0 +1,394 @@
+diff --git a/web/frontend/e2e/count-yield.spec.ts b/web/frontend/e2e/count-yield.spec.ts
+index c02a507..e11baf5 100644
+--- a/web/frontend/e2e/count-yield.spec.ts
++++ b/web/frontend/e2e/count-yield.spec.ts
+@@ -1,5 +1,6 @@
+ import { test, expect, type Browser, type Page } from "@playwright/test";
+ import { installTimeline } from "./lib/postpaint.mjs";
++import { atRest } from "./lib/rest-probes.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto, in `open()` below. The row reads
+ //   boxes, one text range and a painted timeline of that range, never a tween.
+@@ -92,6 +93,16 @@ const BOARD16 =
+     .replace(/\//g, "_")
+     .replace(/=+$/, "");
+ 
++/** PASS 10 · the SAME deal transposed (rows <-> columns, the givens with them): a second real payload
++ *  whose first steps are named in the long "...in this column" form (G-FIT-UNION, below). */
++const PUZ16T = Array.from({ length: 256 }, (_, i) => PUZ16[(i % 16) * 16 + Math.floor(i / 16)]).join("");
++const BOARD16T =
++  "?board=" +
++  btoa(String.fromCharCode(1) + "4." + PUZ16T)
++    .replace(/\+/g, "-")
++    .replace(/\//g, "_")
++    .replace(/=+$/, "");
++
+ type Pose = {
+   strip: number;
+   tabY: number | null;
+@@ -150,7 +161,7 @@ async function settled(page: Page): Promise<Pose> {
+     .toBe(true);
+   return pose;
+ }
+-type Open = { scheme?: "light" | "dark"; holdFonts?: Promise<void> };
++type Open = { scheme?: "light" | "dark"; holdFonts?: Promise<void>; board?: string };
+ async function open(browser: Browser, cell: Cell, o: Open = {}) {
+   const ctx = await browser.newContext({
+     viewport: cell.viewport,
+@@ -168,7 +179,7 @@ async function open(browser: Browser, cell: Cell, o: Open = {}) {
+   }
+   await page.emulateMedia({ reducedMotion: "reduce" });
+   // a held font holds the load event: the page is read from its DOM, never its load
+-  await page.goto("/" + BOARD16, o.holdFonts ? { waitUntil: "domcontentloaded" } : undefined);
++  await page.goto("/" + (o.board ?? BOARD16), o.holdFonts ? { waitUntil: "domcontentloaded" } : undefined);
+   await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
+   if (!o.holdFonts) await page.evaluate(() => document.fonts.ready);
+   return { ctx, page };
+@@ -297,15 +308,27 @@ async function across(page: Page, turn: () => Promise<void>) {
+   });
+   await turn();
+   const after = await settled(page);
+-  // a fixed tail past the settle: WebKit's frames run at its shim's 25-50 Hz, and the window must
+-  // hold ten frames after the turn in both engines
+-  await page.waitForTimeout(500);
++  // The window must hold ten post-paint frames after the turn in both engines (WebKit's run at its
++  // shim's 25-50 Hz). Pass 10: an EVENT wait on the recorder's own count, then the ONE library's
++  // rest probe; pass 9's fixed 500 ms tail here was `lint:sleep`'s red (LAWS P9 §B, CHAIR p10 §21).
++  await expect
++    .poll(
++      () =>
++        page.evaluate((t) => {
++          const w = window as unknown as { __pf: { post: Frame[] }; __rz?: number };
++          const z = w.__rz ?? t;
++          return w.__pf.post.filter((f) => f.t > z).length;
++        }, t0),
++      { intervals: [100], timeout: 15000 },
++    )
++    .toBeGreaterThanOrEqual(10);
++  const rest = await atRest(page);
+   const frames = await stopTimeline(page);
+   const tz = (await page.evaluate(() => (window as unknown as { __rz?: number }).__rz)) ?? t0;
+   const before = Object.fromEntries(poses) as Record<string, Pose>;
+   const mid = after.voiceMid ?? 0;
+   const pre = rowTwo(frames, t0, mid).filter((f) => f.t <= tz);
+-  return { before, stand, after, frames, t0, tz, pre, row2: rowTwo(frames, tz, mid), late: frames.filter((f) => f.t > tz).length };
++  return { before, stand, after, frames, t0, tz, pre, rest, row2: rowTwo(frames, tz, mid), late: frames.filter((f) => f.t > tz).length };
+ }
+ const show = (fs: Frame[], tz: number) => fs.map((f) => `k${f.k}@${(f.t - tz).toFixed(1)}ms y${f.r?.y}`).join(" ") || "none";
+ 
+@@ -378,3 +401,161 @@ for (const cell of [cells[2], cells[3]])
+     expect.soft(r.late, "METRIC: the recorder read frames after the widening").toBeGreaterThanOrEqual(10);
+     expect.soft(r.row2.length, `METRIC: post-paint frames painting the count on a second row (of ${r.late})`).toBe(0);
+   });
++
++/** PASS 10 · ABS IN A READING (the pass-9 critic's G-ABS; registry-v9 §6, SIX + LEDGER): pass 9 moved
++ *  the ABSOLUTE strip clause (keyed on the control's 20.8 px) to LEDGER's painted reserve, and no row
++ *  then read the strip WITH THE COUNT LAID. "The strip is one line either way, so the tab never moves
++ *  for the count" is read here as a difference, the count the one variable: the `laid` pose against
++ *  the last un-laid pose that speaks the same way (a voiced pose against `press1`, a silent one
++ *  against `rest`; `74a2b5d9`'s press-2 hint is silent, the union's speaks), so the reserve's own
++ *  motion between a silent and a voiced strip (LEDGER's, not the count's) is never charged here.
++ *  The in-run negative lays one more pixel under the block only while the count is laid
++ *  (`.meta-yields`): the strip must then move, or the row cannot see the class it gates. A MARGIN,
++ *  not padding: the preflight's border-box lets a silent block's `min-height` swallow a padding
++ *  pixel (`74a2b5d9`'s silent press 2 read Δstrip 0.00 under it), so a padding plant gates nothing
++ *  there. */
++const ABS_EPS = 0.05; // px: a literal, never derived from the reading
++for (const cell of [cells[1], cells[2], cells[3]])
++  test(`ABS: the strip and the tab never move for the count · ${cell.name}`, async ({ browser }) => {
++    test.setTimeout(180000);
++    const { ctx, page } = await open(browser, cell);
++    const P = Object.fromEntries(await lay(page)) as Record<string, Pose>;
++    const ref = P.laid.voice ? P.press1 : P.rest;
++    const refName = P.laid.voice ? "press1" : "rest";
++    const laidUp = P.laid.meta !== null && !P.laid.record;
++    let planted: Pose | null = null;
++    if (laidUp) {
++      // joined at run time: a spec is a Tailwind source (T9-R6)
++      await page.addStyleTag({ content: [".margin-note-block.meta-yields", "{ margin-bottom: 1px !important }"].join(" ") });
++      planted = await settled(page);
++    }
++    await ctx.close();
++    expect(laidUp, "the count is laid with no record in line two (the row's witness)").toBe(true);
++    expect(!!ref.voice, `the reference pose speaks as \`laid\` does (${refName})`).toBe(!!P.laid.voice);
++    const dS = P.laid.strip - ref.strip;
++    const dT = (P.laid.tabY ?? 0) - (ref.tabY ?? 0);
++    const pS = planted ? planted.strip - P.laid.strip : 0;
++    const pT = planted ? (planted.tabY ?? 0) - (P.laid.tabY ?? 0) : 0;
++    console.log(
++      `ABS ${cell.name}: ref ${refName} strip ${ref.strip} tab ${ref.tabY} · laid strip ${P.laid.strip} tab ${P.laid.tabY} meta ${P.laid.meta} · Δstrip ${dS.toFixed(2)} Δtab ${dT.toFixed(2)} · PLANT +1px margin on .meta-yields: Δstrip ${pS.toFixed(2)} Δtab ${pT.toFixed(2)}`,
++    );
++    expect.soft(Math.abs(dS), "ABS: the count adds no height to the strip").toBeLessThanOrEqual(ABS_EPS);
++    expect.soft(Math.abs(dT), "ABS: the tab never moves for the count").toBeLessThanOrEqual(ABS_EPS);
++    expect.soft(pS, "ABS PLANT: one pixel on the laid block moves the strip (the row can fail)").toBeGreaterThanOrEqual(0.5);
++  });
++
++/** PASS 10 · LIFE (the chair's pass-10 pick 4: THE SEAT GOVERNS) and SEAT's born-RED (the pass-9
++ *  critic's G-SEAT). The count lives from the deal's first write for as many writes as the lesson
++ *  runs, until the seat ends it: a record standing in line two (§7's ledger) takes the count's berth
++ *  and the lesson is OVER, so the count does not come back when that record LEAVES. Where no record
++ *  ever stands (`74a2b5d9`'s note has no line two) the lesson is the product's own: three writes,
++ *  one rest, then gone. Either way, once gone the count never returns inside the deal.
++ *
++ *  The seat's own EFFECT is read, not the template's hide: pass 9's SEAT asserts held while the
++ *  record stood, where `v-if="meta && !(metaYields && previous)"` hides the count whether or not the
++ *  seat ended the lesson (`noseat`, the seat line deleted, read 11/11 GREEN both engines). Here the
++ *  record is made to LEAVE through the product's own path: the press-2 cell is written over with
++ *  another digit, which falsifies the record line two holds, and the ledger strikes it. With the
++ *  seat the count stays gone; without it the template lets the lesson's count back (RED).
++ *  Plants (one rewrite each, the lane's evidence dir): `noseat` reds the seat disjunct on the union;
++ *  `lift4` (the lesson keyed on four writes) reds the three-writes disjunct on the tree. */
++const glyphMap = (page: Page) =>
++  page.evaluate(() => [...document.querySelectorAll(".board-shell .game-cell")].map((c) => !!c.querySelector(".glyph-svg")));
++async function overwrite(page: Page, i: number) {
++  const input = page.locator(".board-shell .game-cell .cell-native-input").nth(i);
++  const was = await input.evaluate((e) => (e as HTMLInputElement).value);
++  const key = ["1", "2", "3"].find((k) => k !== was)!;
++  await input.focus();
++  await page.keyboard.press(key);
++  return { was, key };
++}
++for (const cell of [cells[2], cells[3]])
++  test(`LIFE: the count lives until the seat ends the lesson, and never comes back · ${cell.name}`, async ({ browser }) => {
++    test.setTimeout(300000);
++    const { ctx, page } = await open(browser, cell);
++    const g0 = await glyphMap(page);
++    const seq: Array<[string, Pose]> = await lay(page);
++    const g1 = await glyphMap(page);
++    const wcell = g1.findIndex((g, i) => g && !g0[i]);
++    expect(await hint(page)).toBe(true);
++    seq.push(["press3", await settled(page)]);
++    const seat = seq[seq.length - 1][1].record;
++    let over: { was: string; key: string } | null = null;
++    if (seat) {
++      // THE SEAT DISJUNCT (the union): the record LEAVES, the lesson stays over
++      expect(wcell, "the press-2 write is found on the board").toBeGreaterThanOrEqual(0);
++      over = await overwrite(page, wcell);
++      seq.push(["left", await settled(page)]);
++      for (let k = 0; k < 2; k++) {
++        expect(await hint(page)).toBe(true);
++        seq.push([`after${k + 1}`, await settled(page)]);
++      }
++    } else {
++      // THE THREE-WRITES DISJUNCT (no line two): hint on until the third write has rested, then two more
++      for (let k = 4; k <= 12 && (await written(page)) < 3; k++) {
++        expect(await hint(page)).toBe(true);
++        seq.push([`press${k}`, await settled(page)]);
++      }
++      seq.push(["rested", await settled(page)]);
++      for (let k = 0; k < 2; k++) {
++        expect(await hint(page)).toBe(true);
++        seq.push([`after${k + 1}`, await settled(page)]);
++      }
++    }
++    const n = await written(page);
++    await ctx.close();
++    const line = seq.map(([k, p]) => `${k} ${p.meta ?? "-"}${p.record ? " R" : ""}`).join(" · ");
++    console.log(`LIFE ${cell.name}: ${seat ? "SEAT" : "THREE"} · cell ${wcell}${over ? ` ${over.was}->${over.key}` : ""} · written ${n} · ${line}`);
++    const P = Object.fromEntries(seq) as Record<string, Pose>;
++    expect(P.laid.meta, "the count was laid at the first write (the row's witness)").toBe("1 of 170 on the board");
++    const laidAt = seq.findIndex(([k]) => k === "laid");
++    const gone = seq.findIndex(([, p], i) => i > laidAt && p.meta === null);
++    expect.soft(gone, "LIFE: the lesson ends inside the run").toBeGreaterThan(0);
++    for (const [k, p] of seq.slice(gone > 0 ? gone : seq.length))
++      expect.soft(p.meta, `LIFE: once gone the count never comes back (${k})`).toBe(null);
++    if (seat) {
++      expect(P.left.record, "the record LEFT line two (the seat row's witness)").toBe(false);
++      expect.soft(P.press3.meta, "SEAT: the record takes the count's berth").toBe(null);
++      expect.soft(P.left.meta, "SEAT: the lesson ended at the seat, so the record's leaving brings no count back").toBe(null);
++    } else {
++      expect(n, "three writes were laid (the row's witness)").toBeGreaterThanOrEqual(3);
++      for (const [k, p] of seq)
++        if (/^press\d+$/.test(k) && p.meta !== null) expect.soft(p.meta, `THREE: the count follows the board (${k})`).toMatch(/^[123] of 170 on the board$/);
++      expect.soft(P.rested.meta, "THREE: after the third write's rest the lesson lifts").toBe(null);
++    }
++  });
++
++/** PASS 10 · G-FIT-UNION (the pass-9 critic's `len32`: a yield keyed on the voice's length >= 32 read
++ *  11/11 GREEN on the union, both engines, because the union's FIT cells read the count beside a
++ *  31-char voice at `laid` and SEAT swaps the press-3 assert away). FIT is read here at the FIRST
++ *  pose where the count stands (or should) beside a LONG line with no record in line two: the
++ *  transposed deal, whose steps are named "...in this column". The voice's length at that pose is
++ *  printed, never assumed; a yield keyed on any length the pose carries reds this row. */
++for (const cell of [cells[2], cells[3]])
++  test(`FIT-LONG: beside the long line, with no record, the count stays · ${cell.name}`, async ({ browser }) => {
++    test.setTimeout(240000);
++    // BOTH deals, every qualifying pose: the union's long line comes at `laid` of the transposed deal
++    // (its press-3 line stands beside a record), `74a2b5d9`'s at press 3 of the base deal (its press-2
++    // hint is silent). No fallback: a qualifying pose on either deal is read, and at least one must exist.
++    const read: Array<[string, Pose]> = [];
++    for (const [deal, board] of [["T", BOARD16T], ["B", BOARD16]] as const) {
++      const { ctx, page } = await open(browser, cell, { board });
++      const seq: Array<[string, Pose]> = await lay(page);
++      expect(await hint(page)).toBe(true);
++      seq.push(["press3", await settled(page)]);
++      await ctx.close();
++      const laidAt = seq.findIndex(([k]) => k === "laid");
++      seq.forEach(([k, p], i) => {
++        if (i >= laidAt && p.voice.length >= 32 && !p.record) read.push([`${deal}:${k}`, p]);
++      });
++      console.log(
++        `FIT-LONG ${cell.name} deal ${deal}: ` + seq.map(([k, p]) => `${k} voice(${p.voice.length}) meta ${p.meta ?? "-"}${p.record ? " R" : ""}`).join(" · "),
++      );
++    }
++    console.log(`FIT-LONG ${cell.name}: read at ${read.map(([k, p]) => `${k}(${p.voice.length})`).join(", ") || "none"}`);
++    expect(read.length, "a pose with the count's lesson open, a voice of 32+ chars and no record (the row's witness)").toBeGreaterThan(0);
++    for (const [k, p] of read) {
++      expect.soft(p.meta, `FIT-LONG ${k}: the count stays beside a ${p.voice.length}-char line`).toBe("1 of 170 on the board");
++      expect.soft(p.metaRow2, `FIT-LONG ${k}: on the voice's row`).toBe(false);
++    }
++  });
+diff --git a/web/frontend/e2e/wash-step.spec.ts b/web/frontend/e2e/wash-step.spec.ts
+index 127bca3..f692864 100644
+--- a/web/frontend/e2e/wash-step.spec.ts
++++ b/web/frontend/e2e/wash-step.spec.ts
+@@ -11,8 +11,8 @@ import { onOff, lum, ratio } from "./lib/paint-lib.mjs";
+  * the const in index.css names. The row selects an empty cell on a real 9x9 deal (`?board=`, 30
+  * givens), photographs the inner 40 % of an empty PEER cell with its wash and with the wash layer
+  * hidden (the SAME pixels, one variable), and reads the step between them (WCAG ratio of the mean
+- * luminances). The step is the wash: it must not fall under HEAD's own painted step (1.078 light /
+- * 1.104 dark, the critic's reading of `74a2b5d9`), less 0.006 for the photograph.
++ * luminances). The step is the wash: it must not fall under HEAD's own painted step in that cell
++ * (the readings below), less 0.001.
+  *
+  * IN-RUN PLANTS (each must RED, the negative in the same run): W1 the consumer faded
+  * (`.cell-peer { opacity: .2 }`: 1.017-1.026 on GRAPHITE's tree) and W5 an `@property`
+@@ -27,6 +27,17 @@ import { onOff, lum, ratio } from "./lib/paint-lib.mjs";
+  * the arm one percent under its pin read GREEN. In-run per arm: W7 the arm erased under
+  * `prefers-contrast: more` (1.000), and ε, the arm one percent under its pin (6 % / 12 %), which
+  * must read under the floor; the margin is printed beside every reading.
++ *
++ * PASS 10 (the pass-9 critic's gap 6): the step was rounded to three decimals and the floors are
++ * HEAD less one such quantum, so the clean read cleared by +0.001 in 6 of 8 cells and WebKit's ε
++ * (light, more) read 1.141 against 1.142: the bound's resolution WAS its margin. The step is now
++ * read unrounded and printed to four decimals with its margin. The floor stays a bound pinned to
++ * the control's same-payload reading (HEAD's step, `74a2b5d9`), and W1 / W5 / W7 stay in-run
++ * negatives that must read under it (each reds by 0.06 or more). ε, the arm one percent under its
++ * pin, is a WITNESS here, never a gate: its painted distance from HEAD is the floor's own
++ * quantum, so no ±ε pair in paint separates it from a photograph's rounding. The arm's percent is
++ * held by the SOURCE pin (`check-theme-tokens` W8 ± ε at 0.1 %), which is the gate for it. The
++ * witness prints its unrounded step and whether it read under the floor.
+  */
+ 
+ const FLOOR = {
+@@ -73,7 +84,7 @@ async function step(page: Page, clip: { x: number; y: number; width: number; hei
+     for (let k = 0; k < n; k++) s += lum(p.data, k * 3);
+     return s / n;
+   };
+-  return +ratio(mean(on), mean(off)).toFixed(3);
++  return ratio(mean(on), mean(off));
+ }
+ 
+ for (const contrast of ["no-preference", "more"] as const)
+@@ -114,6 +125,7 @@ for (const scheme of ["light", "dark"] as const) {
+       height: Math.max(2, Math.round(b.height * 0.4)),
+     };
+     const clean = await step(page, clip);
++    const f4 = (v: number) => v.toFixed(4);
+     const planted: Record<string, number> = {};
+     for (const [k, css] of Object.entries(PLANTS[contrast])) {
+       const tag = await page.addStyleTag({ content: css });
+@@ -126,17 +138,17 @@ for (const scheme of ["light", "dark"] as const) {
+       peer!,
+     );
+     const floor = FLOOR[contrast][scheme];
+-    const margin = (v: number) => (v - floor >= 0 ? "+" : "") + (v - floor).toFixed(3);
++    const margin = (v: number) => (v - floor >= 0 ? "+" : "") + (v - floor).toFixed(4);
+     console.log(
+-      `WASH ${scheme} contrast ${contrast}: cell ${pick} peer ${peer} step ${clean} (floor ${floor}, margin ${margin(clean)}) · ` +
++      `WASH ${scheme} contrast ${contrast}: cell ${pick} peer ${peer} step ${f4(clean)} (floor ${floor}, margin ${margin(clean)}) · ` +
+         Object.entries(planted)
+-          .map(([k, v]) => `${k} ${v} (${margin(v)})`)
++          .map(([k, v]) => `${k}${k === "eps" ? " (witness)" : ""} ${f4(v)} (${margin(v)}${k === "eps" ? (v < floor ? ", under" : ", NOT under") : ""})`)
+           .join(" · ") +
+         ` · computed ${computed}`,
+     );
+     await ctx.close();
+     expect.soft(clean, "the wash's painted step clears HEAD's").toBeGreaterThanOrEqual(floor);
+     for (const [k, v] of Object.entries(planted))
+-      expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(floor);
++      if (k !== "eps") expect.soft(v, `plant ${k} must read under the floor (the row can fail)`).toBeLessThan(floor);
+   });
+ }
+diff --git a/web/frontend/src/pencil/grid/gridPaths.partial30.six.test.ts b/web/frontend/src/pencil/grid/gridPaths.partial30.six.test.ts
+new file mode 100644
+index 0000000..7d03f03
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.partial30.six.test.ts
+@@ -0,0 +1,76 @@
++import { describe, it, expect, vi } from "vitest";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++// T9-W7 ACC-SIX pass 10 · `crit.partial30` SHIPPED AS SIX's OWN UNIT ROW (the chair's pass-10 pick 6:
++// every present consumer of `frontGate`/`frontTween` ships it until ACC-FIVE's row 1 lands and its
++// pass-10 blob rides by sha; SIX consumes them through `DifficultyTally.vue`'s tally front). The
++// rows are the pass-9 ACC-FIVE critic's, verbatim below this paragraph. On SIX's tree, which
++// carries FIVE's PASS-9 primitive by sha (no pass-10 blob rides yet), they read RED 6/6 (the
++// primitive's partial first tick, LAWS P9 §D); that red is the row's honest reading and is FIVE's
++// cure to land, never this file's to re-word. The negative control is the last row.
++//
++// PASS-9 CRITIC PROBE (ACC-FIVE): the window MINIMUM vs a 30 Hz panel whose tween starts MID-FRAME.
++// frontTween's first tick is dt = (first rAF ts) - (start()'s performance.now()), a PARTIAL frame
++// (0..33 ms on a 30 Hz panel). Keyed on the minimum of 32 ticks, one partial tick < stepMs pins the
++// cap at stepMs for the next 32 frames (~1.07 s at 30 Hz): every 33 ms frame then travels 17 ms,
++// the half-speed class the observed cap was minted to cure (pass 7/8's 30 Hz row).
++const F = 1000 / 30;
++const load = async () => {
++  vi.resetModules();
++  let carrier: {
++    onProgress: (e: number, raw: number) => void;
++    durationMs: number;
++  } | null = null;
++  vi.doMock("@mkbabb/pencil-boil", async (orig) => ({
++    ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++    createSequenceSubscription: (o: typeof carrier) => {
++      carrier = o;
++      return { start() {}, stop() {} };
++    },
++  }));
++  const { frontTween } = await import("@pencil/grid/gridPaths");
++  vi.spyOn(performance, "now").mockImplementation(() => 1000);
++  // run one 240 ms tween over the given rAF elapsed times (ms from its start()); frames to its end
++  const run = (elapsed: number[]) => {
++    let n = 0;
++    let done = -1;
++    frontTween({
++      durationMs: 240,
++      easing: (x) => x,
++      onProgress: () => void n++,
++      onComplete: () => (done = n + 1),
++    }).start();
++    for (const ms of elapsed)
++      if (done < 0) carrier!.onProgress(0, ms / carrier!.durationMs);
++    return done;
++  };
++  return run;
++};
++
++describe("ACC-SIX · crit.partial30 — a 30 Hz panel with a partial first tick", () => {
++  for (const partial of [2, 5, 9, 12, 16])
++    it(`first tick ${partial} ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)`, async () => {
++      const run = await load();
++      const done = run(Array.from({ length: 40 }, (_, k) => partial + k * F));
++      vi.doUnmock("@mkbabb/pencil-boil");
++      // whole-frame start ends on frame 10 (the tree's own unit row); one partial frame adds <= 1
++      expect(done).toBeLessThanOrEqual(11);
++    });
++
++  it("a SECOND front 12 frames after a partial-start front still runs at the panel's frame", async () => {
++    const run = await load();
++    run(Array.from({ length: 12 }, (_, k) => 5 + k * F)); // front A, 5 ms partial first tick
++    // front B starts on a frame boundary of the SAME page (window shared); its ticks are whole frames
++    const done = run(Array.from({ length: 40 }, (_, k) => (k + 1) * F));
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(done).toBeLessThanOrEqual(11);
++  });
++
++  it("NEGATIVE CONTROL: a whole-frame start ends on frame 10 (MOTION.hand.stepMs read)", async () => {
++    const run = await load();
++    const done = run(Array.from({ length: 40 }, (_, k) => (k + 1) * F));
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(MOTION.hand.stepMs).toBe(17);
++    expect(done).toBe(10);
++  });
++});

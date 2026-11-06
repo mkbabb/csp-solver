@@ -1,0 +1,388 @@
+diff --git a/web/frontend/e2e/front-rate.spec.ts b/web/frontend/e2e/front-rate.spec.ts
+index 8cb21f3b..c8f55242 100644
+--- a/web/frontend/e2e/front-rate.spec.ts
++++ b/web/frontend/e2e/front-rate.spec.ts
+@@ -81,6 +81,8 @@ const BUDGET_PER_S = 62.5;
+ const MIN_GAP_MS = 15.5;
+ const MIN_CLOCK_HZ = 1.5 * BUDGET_PER_S;
+ const FLOOR_SHARE = 0.9;
++/** The hand's step, a LITERAL (LAWS P9 §F); the D10 rows assert `MOTION.hand.stepMs` equals it. */
++const STEP_MS = 17;
+ const CONSUMERS = { gauge: ".progress-trace", tally: ".dt-stroke", join: ".join-pose path" };
+ const DEAL = process.env.DEAL ?? "HARD";
+ 
+@@ -284,8 +286,13 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+   const rateRed: Record<string, number> = {};
+   const floorsOf: Record<string, number[]> = {};
+   // the rate form, PRINTED per burst: 0.9 × the A.6-deliverable best at the clock's measured Hz
+-  const rateFloor = FLOOR_SHARE * Math.min(BUDGET_PER_S, hz.hz / Math.ceil((MIN_GAP_MS * hz.hz) / 1000));
++  // THE SHARE IS A KNOB (LAWS P8 §F; pass 10 row 3): G10_FLOOR_SHARE=0.9±ε pins the margin; the
++  // row prints the share each consumer's worst burst actually held (rate ÷ its uncapped floor)
++  const share = Number(process.env.G10_FLOOR_SHARE ?? FLOOR_SHARE);
++  const rateBest = Math.min(BUDGET_PER_S, hz.hz / Math.ceil((MIN_GAP_MS * hz.hz) / 1000));
++  const rateFloor = share * rateBest;
+   const load = loadavg()[0];
++  const heldShare: Record<string, number> = {};
+   const minGaps: Record<string, number> = {};
+   const bursts_: Record<string, number> = {};
+   let tallyBestDPerFrame = 0;
+@@ -321,7 +328,9 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+     const domRates = rated.map(({ q }) => ((q.length - 1) / (q[q.length - 1] - q[0])) * 1000);
+     const rates = rated.map(({ fr }) => ((fr.length - 1) / (fr[fr.length - 1] - fr[0])) * 1000);
+     // each burst's floor on its own frames: 0.9 × min(62.5, the A.6 optimum over its span)
+-    const floors = rated.map(({ fr, wall }) => FLOOR_SHARE * Math.min(BUDGET_PER_S, a6Best(fr[0], fr[fr.length - 1], wall)));
++    const bests = rated.map(({ fr, wall }) => Math.min(BUDGET_PER_S, a6Best(fr[0], fr[fr.length - 1], wall)));
++    const floors = bests.map((b) => share * b);
++    heldShare[k] = Math.min(Infinity, ...rates.map((r, i) => Math.min(r / bests[i], r / rateBest)));
+     worsts[k] = Math.max(0, ...rates);
+     slowest[k] = Math.min(Infinity, ...rates);
+     // THE FLOOR, GATED on the A.6-delivered form (pass9/CHAIR-RULINGS §6, LAWS P8 §D), every burst;
+@@ -370,7 +379,13 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+     ceiling: ks.every((k) => worsts[k] <= BUDGET_PER_S),
+     gap: ks.every((k) => minGaps[k] >= MIN_GAP_MS),
+     floor: ks.every((k) => shortfall[k] >= 0),
++    // THE PRODUCT-COST WITNESS (pass-9 critique §2; pass 10 row 3): the delivered floor is cut from
++    // the frames a slow commit drops, so it cannot see the commit's cost (plant heavy-commit: tally
++    // 40/s, six clauses GREEN). CHAIR §6's at-R floor, 0.9 × A.6's best at the clock's measured Hz,
++    // is GATED here; the box law owns its load (no verdict above a 1-minute load of 120).
++    rateform: ks.every((k) => rateRed[k] === 0),
+   };
++  console.log(`G10 ${testInfo.project.name} SHARE floor ${share} · held (min over bursts of rate ÷ min(delivered best, A.6's best at R)) ${ks.map((k) => `${k} ${heldShare[k].toFixed(4)}`).join(" · ")} · margin ${(Math.min(...ks.map((k) => heldShare[k])) - share).toFixed(4)} · load ${load.toFixed(1)}`);
+   console.log(`G10 ${testInfo.project.name} CLAUSES ${Object.entries(clauses).map(([k, v]) => `${k} ${v ? "GREEN" : "RED"}`).join(" · ")}`);
+   // the row must SEE every consumer re-cut, or it measures nothing
+   for (const k of Object.keys(CONSUMERS))
+@@ -385,6 +400,9 @@ test("G10: every poseFronts consumer re-cuts at most 62.5 times a second, and at
+     expect(minGaps[k], `${k}'s shortest gap between re-cut frames ${minGaps[k].toFixed(1)} ms is inside the budget's window`).toBeGreaterThanOrEqual(MIN_GAP_MS);
+     expect(shortfall[k], `${k} re-cut a burst ${(-shortfall[k]).toFixed(1)}/s under its A.6-delivered floor (${floorsOf[k].map((v) => v.toFixed(1)).join("/")}; rate form ${rateFloor.toFixed(1)} at load ${load.toFixed(1)})`).toBeGreaterThanOrEqual(0);
+   }
++  expect(load, `UNREAD, not red: the rate form is no verdict at a 1-minute load of ${load.toFixed(1)} (> 120)`).toBeLessThanOrEqual(120);
++  for (const k of ks)
++    expect(rateRed[k], `${k}: ${rateRed[k]} of ${bursts_[k]} bursts under the at-R floor ${rateFloor.toFixed(1)}/s (0.9 × A.6's best at ${hz.hz.toFixed(1)} Hz) at load ${load.toFixed(1)}`).toBe(0);
+   await ctx.close();
+ });
+ 
+@@ -501,10 +519,81 @@ test("D10-stallrun: five consecutive 150 ms stalls inside a live tween each trav
+   const stalled = steps.filter((s) => stallMs > 0 && s.dt >= 0.8 * stallMs);
+   const healthy = steps.filter((s) => !(stallMs > 0 && s.dt >= 0.8 * stallMs));
+   const minTick = Math.min(...healthy.map((s) => s.dt));
+-  const cap = Math.max(r.stepMs, minTick) + slack;
+-  const line = `${stalled.length} stalled ticks (dt ${stalled.map((s) => s.dt.toFixed(0)).join("/")} ms) travelled ${stalled.map((s) => s.travel.toFixed(1)).join("/")} ms; cap max(stepMs ${r.stepMs}, shortest tick ${minTick.toFixed(1)}) + ${slack} = ${cap.toFixed(2)} ms, margin ${(cap - Math.max(0, ...stalled.map((s) => s.travel))).toFixed(3)} ms; ${healthy.length} healthy ticks, worst healthy shortfall ${Math.max(0, ...healthy.map((s) => s.dt - s.travel)).toFixed(2)} ms; load ${loadavg()[0].toFixed(1)}`;
++  // LITERAL bounds (LAWS P9 §F: a stall-run row never reads its bound from the subject's config):
++  // the hand's step is pinned here and the config is asserted EQUAL to it, never read into a bound
++  const cap = Math.max(STEP_MS, minTick) + slack;
++  // THE HEALTHY-TRAVEL CLAUSE (pass-9 critique §2.2; pass 10 row 2): a tick that is not a stall
++  // travels at least min(its dt, the step) − slack. The cap may slow a stall, never a healthy frame.
++  const shortHealthy = healthy.filter((s) => s.travel < Math.min(s.dt, STEP_MS) - slack);
++  const line = `${stalled.length} stalled ticks (dt ${stalled.map((s) => s.dt.toFixed(0)).join("/")} ms) travelled ${stalled.map((s) => s.travel.toFixed(1)).join("/")} ms; cap max(stepMs ${r.stepMs}, shortest tick ${minTick.toFixed(1)}) + ${slack} = ${cap.toFixed(2)} ms, margin ${(cap - Math.max(0, ...stalled.map((s) => s.travel))).toFixed(3)} ms; ${healthy.length} healthy ticks, worst healthy shortfall ${Math.max(0, ...healthy.map((s) => s.dt - s.travel)).toFixed(2)} ms, ${shortHealthy.length} under min(dt, ${STEP_MS}) − ${slack}${shortHealthy.length ? ` [${shortHealthy.slice(0, 6).map((s) => `${s.dt.toFixed(1)}→${s.travel.toFixed(1)}`).join(", ")}]` : ""}; config stepMs ${r.stepMs}; load ${loadavg()[0].toFixed(1)}`;
+   console.log(`D10-STALLRUN ${testInfo.project.name} ${line}`);
+   testInfo.annotations.push({ type: "D10-stallrun", description: line });
+   expect(stalled.length, `the row injected ${nStall} stalls and saw ${stalled.length}: it measured nothing`).toBeGreaterThanOrEqual(Math.max(5, nStall));
+   expect(Math.max(...stalled.map((s) => s.travel)), line).toBeLessThanOrEqual(cap);
++  expect(shortHealthy.length, `healthy ticks slowed: ${line}`).toBe(0);
++  expect(r.stepMs, "the hand's step moved: the literal pin and its rows owe a re-read").toBe(STEP_MS);
++});
++
++/**
++ * D10-PARTIAL30 — A FRONT STARTED BETWEEN FRAMES ON A 30 Hz PANEL, IN THIS ENGINE (pass 10 row 1/2;
++ * LAWS P9 §D, the first-tick law). DEV-ONLY: it imports the served tree's own `frontTween` from
++ * `/src` (no copy), so a preview dist cannot host it (the control at 74a2b5d9 has no `frontTween`);
++ * its preview column reads SKIP. The ONE library's driven clock at 30 Hz is the panel; each arm is a
++ * fresh context whose 240 ms front starts `off` ms after a frame's callback (−1: inside it), the way
++ * a watcher or an input handler starts one. pencil-boil stamps the start at `start()`, so the first
++ * tick is a partial frame. Gates, every arm (literals): the front ends by frame 11 (a whole-frame
++ * start ends on 10, one partial adds ≤ 1), and every 30 Hz frame from the fifth step on travels its
++ * whole dt − 1 (THE HEALTHY-TRAVEL CLAUSE on the driven panel). BORN-RED: pass 9's window minimum
++ * with the partial read in (`gridPaths.ts` 458bb26f) slows 5 of 6 arms to 17–24 ms of 33 (pass-9
++ * critique §1.1); NEGATIVE: the pass-8 median of nine is GREEN here and RED on the stall run.
++ */
++test("D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame", async ({ browser }, testInfo) => {
++  const offs = (process.env.P30_OFFS ?? "-1,2,6,15,27").split(",").map(Number);
++  test.setTimeout(30000 + offs.length * 45000); // keyed on the arm count (LAWS P9 §B), load printed per arm
++  const ck = clockFor("driven", 30);
++  const lines: string[] = [];
++  const reds: string[] = [];
++  for (const off of offs) {
++    const ctx = await browser.newContext({ reducedMotion: "no-preference" });
++    try {
++      await ctx.addInitScript(ck.script as (o: unknown) => void, ck.arg);
++      const page = await ctx.newPage();
++      await page.goto("/?size=3&difficulty=EASY");
++      await page.waitForSelector(".sudoku-cell", { timeout: 60000 });
++      await page.waitForTimeout(1500);
++      const r = await page.evaluate(
++        async ([grid, off]) => {
++          const m = await import(/* @vite-ignore */ grid);
++          const rec: { at: number; clock: number }[] = [];
++          let startedAt = 0;
++          let frames = 0;
++          await new Promise<void>((done) => {
++            const tw = m.frontTween({
++              durationMs: 240,
++              easing: (x: number) => x,
++              onProgress: (e: number, at: number) => (frames++, rec.push({ at, clock: e * 240 })),
++              onComplete: (at: number) => (frames++, rec.push({ at, clock: 240 }), done()),
++            });
++            const go = () => ((startedAt = performance.now()), tw.start());
++            requestAnimationFrame(() => (off < 0 ? go() : setTimeout(go, off)));
++            setTimeout(done, 5000);
++          });
++          return { rec, frames, startedAt };
++        },
++        ["/src/pencil/grid/gridPaths.ts", off] as const,
++      );
++      // the end's step lands ON 240 and travels only what was left: it is no frame's travel
++      const steps = r.rec.slice(1).map((x, i) => ({ dt: x.at - r.rec[i].at, travel: x.clock - r.rec[i].clock, end: x.clock === 240 }));
++      const whole = steps.slice(4).filter((s) => s.dt < 50 && !s.end);
++      const slowed = whole.filter((s) => s.travel < s.dt - 1);
++      const line = `off ${off}: first tick ${(r.rec[0]?.at - r.startedAt).toFixed(1)} ms after start(); ended on frame ${r.frames}; dt ${steps.map((s) => s.dt.toFixed(0)).join("/")}; travel ${steps.map((s) => s.travel.toFixed(1)).join("/")}; ${slowed.length} of ${whole.length} whole frames from the fifth step under dt − 1; load ${loadavg()[0].toFixed(1)}`;
++      lines.push(line);
++      if (r.rec.length < 4 || r.frames > 11 || slowed.length) reds.push(line);
++    } finally {
++      await ctx.close();
++    }
++  }
++  for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
++  testInfo.annotations.push({ type: "D10-partial30", description: lines.join(" · ") });
++  expect(reds, `${reds.length} of ${offs.length} arms slowed or late`).toEqual([]);
+ });
+diff --git a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+index 5d2633c9..24a70527 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.poseFronts.test.ts
+@@ -544,6 +544,7 @@ describe("frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the wind
+   // travelled 150 ms. The cap now reads the SHORTEST tick of the window, so a run is capped until
+   // it fills the window; the cliff is pinned from both sides (PANEL_WINDOW − 1 capped, PANEL_WINDOW
+   // travels), and a 60 → 30 Hz drop is read as the panel once its frames fill the window.
++  // Bounds are LITERALS (LAWS P9 §F, the value roster): 17 is the hand's step, 18 the step + 1.
+   const stallRun = async (nStall: number, stallMs = 150) => {
+     vi.resetModules();
+     let carrier: {
+@@ -584,26 +585,155 @@ describe("frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the wind
+   for (const n of [1, 4, 5, 9])
+     it(`${n} consecutive 150 ms stalls: every one capped at ≤ stepMs + 1`, async () => {
+       const { travel, after, F } = await stallRun(n);
+-      expect(Math.max(...travel)).toBeLessThanOrEqual(MOTION.hand.stepMs + 1);
++      expect(Math.max(...travel)).toBeLessThanOrEqual(18);
+       expect(after).toBeCloseTo(F, 2);
+     });
+ 
+   it("the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels", async () => {
+     const below = await stallRun(31);
+     expect(below.PANEL_WINDOW).toBe(32);
+-    expect(Math.max(...below.travel)).toBeLessThanOrEqual(MOTION.hand.stepMs + 1);
++    expect(Math.max(...below.travel)).toBeLessThanOrEqual(18);
+     const at = await stallRun(32);
+-    expect(Math.max(...at.travel.slice(0, 31))).toBeLessThanOrEqual(
+-      MOTION.hand.stepMs + 1,
+-    );
++    expect(Math.max(...at.travel.slice(0, 31))).toBeLessThanOrEqual(18);
+     expect(at.travel[31]).toBeCloseTo(150, 3); // the cost, declared in gridPaths: the run IS the panel
+   });
+ 
+   it("a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)", async () => {
+     const { travel } = await stallRun(40, 1000 / 30);
+-    expect(travel[0]).toBeCloseTo(MOTION.hand.stepMs, 3); // read as a stall while 60 Hz frames remain
+-    expect(travel[30]).toBeCloseTo(MOTION.hand.stepMs, 3);
++    expect(travel[0]).toBeCloseTo(17, 3); // read as a stall while 60 Hz frames remain
++    expect(travel[30]).toBeCloseTo(17, 3);
+     expect(travel[31]).toBeCloseTo(1000 / 30, 2); // the 32nd 30 Hz frame: the panel, full travel
+     expect(travel[39]).toBeCloseTo(1000 / 30, 2);
+   });
+ });
++
++describe("frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading)", () => {
++  // The pass-9 critic's born-RED (critique/ACC-FIVE crit.partial30): a tween's first tick runs from
++  // start(), anywhere inside a frame, to the next frame. Read into the window, a partial under the
++  // hand's step pinned the minimum there for 32 front frames, and a 30 Hz panel's fronts travelled
++  // 17 of every 33 ms (a 240 ms front ended on frame 15, not 10). Every bound below is a LITERAL
++  // (LAWS P9 §F: a stall-run row never reads its bound from the subject's config): 17 is the
++  // hand's step, 33.333 the panel's frame, 11 the 30 Hz end with one partial frame's travel.
++  const F30 = 1000 / 30;
++  const page = async () => {
++    vi.resetModules();
++    let carrier: {
++      onProgress: (e: number, raw: number) => void;
++      durationMs: number;
++    } | null = null;
++    vi.doMock("@mkbabb/pencil-boil", async (orig) => ({
++      ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++      createSequenceSubscription: (o: typeof carrier) => {
++        carrier = o;
++        return { start() {}, stop() {} };
++      },
++    }));
++    const { frontTween } = await import("./gridPaths");
++    vi.spyOn(performance, "now").mockImplementation(() => 1000);
++    // one front over the given rAF times (ms from its start()); its per-tick travel and its end frame
++    const run = (elapsed: number[], durationMs = 240) => {
++      const clock: number[] = [];
++      let done = -1;
++      frontTween({
++        durationMs,
++        easing: (x) => x,
++        onProgress: (v) => clock.push(v * durationMs),
++        onComplete: () => (done = clock.length + 1),
++      }).start();
++      const dts: number[] = [];
++      for (const [k, ms] of elapsed.entries()) {
++        if (done >= 0) break;
++        dts.push(ms - (k ? elapsed[k - 1] : 0));
++        carrier!.onProgress(0, ms / carrier!.durationMs);
++      }
++      const travel = clock.map((c, k) => c - (k ? clock[k - 1] : 0));
++      return { done, travel, dts };
++    };
++    return run;
++  };
++  const frames30 = (first: number, n = 40) =>
++    Array.from({ length: n }, (_, k) => first + k * F30);
++
++  it("THE LITERALS' PIN: the hand's step is 17 ms (a move re-reads every literal row in this file)", () => {
++    expect(MOTION.hand.stepMs).toBe(17);
++  });
++
++  for (const partial of [2, 5, 9, 12, 16, 27])
++    it(`a ${partial} ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole`, async () => {
++      const run = await page();
++      const r = run(frames30(partial));
++      vi.doUnmock("@mkbabb/pencil-boil");
++      expect(r.done).toBeLessThanOrEqual(11);
++      // THE HEALTHY-TRAVEL CLAUSE: the partial travels itself up to the step (the panel unknown, the
++      // cap is the step); ticks 2..5 travel the step; from the sixth every 33 ms frame travels whole
++      expect(r.travel[0]).toBeCloseTo(Math.min(partial, 17), 6);
++      for (let k = 1; k < Math.min(5, r.travel.length); k++)
++        expect(r.travel[k]).toBeGreaterThanOrEqual(17 - 1e-6);
++      for (let k = 5; k < r.travel.length; k++)
++        expect(r.travel[k]).toBeGreaterThanOrEqual(F30 - 1e-6);
++    });
++
++  it("a SECOND front after a partial-start front still runs at the panel's frame from its first whole tick", async () => {
++    const run = await page();
++    run(frames30(5, 12)); // front A: a 5 ms partial, then eleven whole 30 Hz frames
++    const b = run(frames30(F30)); // front B on the same page (one window), a whole-frame start
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(b.done).toBeLessThanOrEqual(8);
++    for (const t of b.travel) expect(t).toBeGreaterThanOrEqual(F30 - 1e-6);
++  });
++
++  it("STALE partials: three short fronts each starting 4 ms before a frame leave no short reading behind", async () => {
++    const run = await page();
++    for (let f = 0; f < 3; f++) run(frames30(4, 3), 60); // three ticks each: one 4 ms partial, two whole frames
++    const d = run(frames30(4));
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(d.done).toBeLessThanOrEqual(9);
++    for (let k = 1; k < d.travel.length; k++)
++      expect(d.travel[k]).toBeGreaterThanOrEqual(F30 - 1e-6);
++  });
++
++  it("A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading", async () => {
++    // the same class by another door: the frame after a long task lands a few ms after it on a
++    // timer-driven clock; read in, it pinned the cap at 17 for 32 frames (12 of 12 at 17 of 33 ms)
++    const run = await page();
++    const t = frames30(F30, 12);
++    t.push(t[11] + 150, t[11] + 156);
++    for (let k = 1; k <= 12; k++) t.push(t[13] + k * F30);
++    const r = run(t, 1e7);
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(r.travel[12]).toBeLessThanOrEqual(F30 + 1e-6); // the stall: one panel frame of travel
++    expect(r.travel[13]).toBeCloseTo(6, 6); // the remainder travels itself
++    for (let k = 14; k < 26; k++)
++      expect(r.travel[k]).toBeGreaterThanOrEqual(F30 - 1e-6);
++  });
++
++  it("the remainder rule's limits, both sides: a short tick after a HEALTHY one is read; a longer tick after a stall is read", async () => {
++    // after a healthy 30 Hz frame a 6 ms tick is read (the panel may have got faster): the cap
++    // falls to the step for the window, the cost declared in gridPaths. A 60 → 30 Hz drop's frames
++    // follow ticks the cap held back and are LONGER than the minimum, so the drop is still learned
++    // (the RUN-of-stalls describe's 60 → 30 row reads it from the other side).
++    const run = await page();
++    const t = frames30(F30, 12);
++    t.push(t[11] + 6);
++    for (let k = 1; k <= 6; k++) t.push(t[12] + k * F30);
++    const r = run(t, 1e7);
++    vi.doUnmock("@mkbabb/pencil-boil");
++    for (let k = 13; k < 19; k++) expect(r.travel[k]).toBeCloseTo(17, 6);
++  });
++
++  for (const n of [5, 9])
++    it(`BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then ${n} consecutive 150 ms stalls, each capped at ≤ 18 ms`, async () => {
++      const run = await page();
++      const F60 = 1000 / 60;
++      const times = [3, ...Array.from({ length: 12 }, (_, k) => 3 + (k + 1) * F60)];
++      for (let s = 0; s < n; s++) times.push(times[times.length - 1] + 150);
++      times.push(times[times.length - 1] + F60);
++      const r = run(times, 1e7);
++      vi.doUnmock("@mkbabb/pencil-boil");
++      const stalls = r.travel.slice(13, 13 + n);
++      expect(stalls.length).toBe(n);
++      expect(Math.max(...stalls)).toBeLessThanOrEqual(18);
++      expect(r.travel[13 + n]).toBeCloseTo(F60, 2); // the healthy frame after the run keeps its travel
++      for (let k = 1; k < 13; k++) expect(r.travel[k]).toBeCloseTo(F60, 6); // and every one before it
++    });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 0a6af1e5..d15e5bdf 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -790,15 +790,35 @@ export function frontGate(commit: (v: number) => void) {
+ // have filled the window (~1.07 s at half speed).
+ // Until five ticks are seen the panel is unknown and the cap is the hand's own step: a stalled
+ // first frame would land the front wherever the wall says (the displacement clause, D10). The cost
+-// is a 30 Hz panel's first tween: four frames at the hand's step, ~65 ms late on a 240 ms front.
++// is a 30 Hz panel's first tween: four frames at the hand's step, ~65 ms late on a 240 ms front
++// (five once the tween's own first tick is no reading, below: D10-partial30 reads 17 ×4 after it).
+ // ONE READING A FRAME, keyed on the frame's time: every tween ticks in the same frame (the reveal
+ // wave runs 61), and fed per tick the window took a stall 61 times in one frame (pass 8).
++// A TWEEN'S FIRST TICK IS NO READING (pass-9 critique §1.1): it runs from `start()`, which lands
++// anywhere inside a frame, to the next frame, so it is a PARTIAL frame. Read into the window, one
++// partial under the hand's step pinned the minimum there for the next 32 front frames, and a 30 Hz
++// panel's fronts ran at half speed (crit.partial30, 6 of 6). The partial still travels, capped as
++// any tick is; it is only kept out of the window, and the frame it lands on stays open to the next
++// tween's whole tick.
++// NOR IS A STALL'S REMAINDER (the same class, pass 10): the frame after a long task can land a few
++// ms after it on a timer-driven clock (6.0–9.0 ms on a headless 60 Hz page, D10's print), and read in
++// it pinned the cap at the step for 32 frames exactly as a partial did (12 of 12 frames of a 30 Hz
++// panel at 17 of 33 ms). A tick SHORTER than the window's minimum, right after a tick the cap held
++// back, is that remainder. A longer one is read (a 60 → 30 Hz drop is still learned), and a short tick
++// after a healthy one is still read (the panel got faster).
+ const PANEL_MIN_TICKS = 5;
+ export const PANEL_WINDOW = 32;
+ const ticks: number[] = [];
+ let tickAt = -Infinity;
+-function panelFrameMs(dt: number, at: number): number {
+-  if (dt > 0 && Math.abs(at - tickAt) >= 1) {
++function panelFrameMs(
++  dt: number,
++  at: number,
++  partial: boolean,
++  afterStall: boolean,
++): number {
++  const remainder =
++    afterStall && ticks.length >= PANEL_MIN_TICKS && dt < Math.min(...ticks);
++  if (!partial && !remainder && dt > 0 && Math.abs(at - tickAt) >= 1) {
+     tickAt = at;
+     ticks.push(dt);
+     if (ticks.length > PANEL_WINDOW) ticks.shift();
+@@ -826,13 +846,21 @@ export function frontTween(o: {
+   const SPAN_MS = 600_000; // the carrier's span: the tween ends on its own clock long before
+   let clock = 0;
+   let prev = 0;
++  let first = true; // the next tick runs from start(), not from a frame: a partial (panelFrameMs)
++  let held = false; // the last tick was a stall the cap held back: the next may be its remainder
+   let origin = 0; // the carrier's start on the rAF clock (pencil-boil reads performance.now() there)
+   const seq = createSequenceSubscription({
+     durationMs: SPAN_MS,
+     onProgress: (_eased, raw) => {
+       const t = raw * SPAN_MS;
+       const dt = Math.max(0, t - prev);
+-      clock += Math.min(dt, Math.max(MOTION.hand.stepMs, panelFrameMs(dt, origin + t)));
++      const cap = Math.max(
++        MOTION.hand.stepMs,
++        panelFrameMs(dt, origin + t, first, held),
++      );
++      clock += Math.min(dt, cap);
++      held = dt > cap;
++      first = false;
+       prev = t;
+       if (clock < o.durationMs)
+         return o.onProgress(o.easing(clock / o.durationMs), origin + t);

@@ -1,0 +1,50 @@
+
+ RUN  v4.1.11 <crit-scratch>/wv2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (50 tests | 2 failed) 116ms
+     × ink is the tin taken in order, digit and ring off one arithmetic 3ms
+     × F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND 3ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > ink is the tin taken in order, digit and ring off one arithmetic
+AssertionError: expected 'var(--color-ring)' to be 'var(--color-peer-1-ring)' // Object.is equality
+
+Expected: "var(--color-peer-1-ring)"
+Received: "var(--color-ring)"
+
+ ❯ src/games/shared/useSession.test.ts:152:50
+    150|     // against a 3.0 floor. The ring is that pencil at its own lightne…
+    151|     // the two keys can never name two different colours for one perso…
+    152|     expect(inkFor(0)["--color-peer-cursor-ink"]).toBe("var(--color-pee…
+       |                                                  ^
+    153|     expect(inkFor(13)["--color-peer-cursor-ink"]).toBe("var(--color-pe…
+    154|     // …and the NAME ARM the attribution tape writes in is the same st…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useSession.test.ts:446:44
+    444|     const mine = () => p.session.session.players.value.find((r) => r.s…
+    445|     // minted at the join (`mint`): an index of your own, or nothing
+    446|     expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
+       |                                            ^
+    447|     // adopted from the room's `k` (`adoptInk`): the room's index for …
+    448|     const me = p.selfId();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 58 passed (60)
+   Start at  13:47:11
+   Duration  905ms (transform 514ms, setup 42ms, import 709ms, tests 154ms, environment 605ms)
+

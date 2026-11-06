@@ -1,0 +1,10 @@
+EXIT=0 | node scripts/check-favicon.mjs
+EXIT=0 | node scripts/check-favicon.self-test.mjs
+EXIT=0 | node scripts/check-motion-contract.mjs --self-test
+EXIT=0 | node scripts/check-pw-projects.mjs --self-test
+EXIT=0 | node scripts/check-lane-membership.mjs --self-test
+EXIT=0 | node scripts/check-copy-register.mjs --self-test
+EXIT=0 | npx vue-tsc --noEmit -p tsconfig.e2e.json
+EXIT=0 | npx knip
+EXIT=0 | npx eslint e2e/tab-pen.spec.ts scripts/check-favicon.mjs scripts/check-favicon.self-test.mjs scripts/check-favicon.plants.mjs scripts/check-pw-projects.mjs
+14:52  up 1 day, 11 mins, 2 users, load averages: 6.92 6.23 5.85

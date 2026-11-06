@@ -1,0 +1,40 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-46 (HEAD 74a2b5d9; never committed)
+lane NOTE-LEDGER · pass 10 · batch 2 · cut through temporary indexes (GIT_INDEX_FILE), product paths only, --binary, no commit
+
+open state: the work tree through a temporary index read tree aa2a9b0d, diff sha1 ffae10c52896a84b9048fca368480c5486a5da16, 599592 B, 28 files +12501/-113 = pass9/prototype/NOTE-LEDGER/pass9.diff and its BANKED.txt on every field (no disagreement)
+homes v3 by sha: homes.on-WAVE.diff 0723d5085bb55d245158723f8d6a854a2526044f; --3way refused on the work tree ("does not exist in index": the home files are untracked there; exit 1, nothing touched), then --check 0 and plain apply 0, 10 paths, git dir .git/worktrees/wf_f72f3b5a-83a-46; the 13 home paths then byte-equal 74a2b5d9 + homes.diff 07257854047e9345962d11473df3fab75a42a9c2 (git-init'd archive): residual home edits 0
+grafted by sha: pass9/prototype/NOTE-LEDGER/proposed/PROPOSED-lint-ink-collapse.diff e9d06197 (check 0, apply 0 on the tree after homes v3)
+
+pass10.diff
+declared base 74a2b5d9317e7795cee6bf63e861bd44f54ae80e; it RUNS on 74a2b5d9 + homes.diff 07257854 (the 13 home paths are NOT carried, LAWS P9 §A: reset to HEAD in the temporary index, knip.json included)
+index tree (no homes) 8fbdfdf773b41891f6b7f037bd359d3c8f06a62f
+bytes 163253
+sha1 86ad027285500b0647169105f4a990655f4ac73a
+shortstat 15 files changed, 2667 insertions(+), 112 deletions(-)   (= the pass-9 bank's 28 paths minus the 13 home paths)
+interdiff over the pass-9 bank, homes excluded: 5 files · e2e/note-reserve.spec.ts +80/-20 · scripts/check-ink-pressure.mjs +34/-196 · scripts/check-font-coverage.mjs +54/-3 · src/games/shared/GameBoard.vue +11/-4 · src/games/shared/GameBoard.notes.test.ts +18/-0
+git apply --check on 74a2b5d9 (archive, own .git chk-base, tree 243fbf57): exit 0, 15 paths
+74a2b5d9 + pass10.diff + homes.diff applied -> tree b91ac674; byte-equal to the work tree on every changed path (differs 0)
+
+pass10.delta.on-WAVE.diff
+DECLARED base: the WAVE union 954bbbab (74a2b5d9 + pass9/integrate/WAVE.diff b3725e4f) + homes v3's on-WAVE copy 0723d508 + NOTE-ERASE's pass10.delta.on-WAVE.diff d2a2752c = archive tree a0be129a (ERASE's own result tree u10f; LEDGER takes ERASE's fence by sha, charter batch order ERASE -> LEDGER)
+result tree 05ed6ead7b379302462fd12d40b47b1d1c4e08bf
+bytes 28200
+sha1 39ccf2baabc4ffb034dd4515b877e75c708bf44c
+shortstat 5 files changed, 198 insertions(+), 224 deletions(-)
+  e2e/note-reserve.spec.ts · scripts/check-ink-pressure.mjs · scripts/check-font-coverage.mjs · src/games/shared/GameBoard.vue · src/games/shared/GameBoard.notes.test.ts (no path shared with ERASE10's four)
+GameBoard.vue on the WAVE is a hand port of the tree's cure into the WAVE's arms (ERASE's emptyColumn() and repeat guard kept); the other four are the tree's interdiff applied 0
+git apply --check, each on a fresh git archive of 74a2b5d9 with its own .git:
+  the declared base a0be129a (WAVE + homes v3 + ERASE10): exit 0, 5 paths; applied for real -> 05ed6ead
+  the bare WAVE 954bbbab (archive tree 044284b5): exit 0, 5 paths
+  WAVE + homes v3 (72b7ad67): exit 0, 5 paths
+  the bare s13-s7-s3 2f11714f (archive tree e33d791d): exit 0, 5 paths
+  s13-s7-s3 + homes v3 (30af7d01): exit 0, 5 paths
+  s13-s7-s3 + homes v3 + ERASE10 (7c574ca1): exit 0, 5 paths
+  bare 74a2b5d9: exit 1 (expected; the delta is WAVE-cut)
+stacked route: rides ERASE10 d2a2752c by declaration; it shares no path with it and checks 0 with or without it.
+
+PROPOSED (not banked; filed for the instruments lane under proposed/)
+PROPOSED-homes-renderless.diff 2694 B sha1 1d44c5874adf776836c79a3428698e63bad37317, +27/-0 on scripts/shape-census.mjs: apply --check 0 on the work tree (homes v3), on WAVE + homes v3, on s13-s7-s3 + homes v3
+
+grep of pass10.diff, pass10.delta.on-WAVE.diff, the PROPOSED and README.md for LAWS P8 §K's four scratch-path patterns: 0 hits each; dot-directory paths on +++ lines: 0 each
+no commit, no stash, no push, no ref update; no git on main or in the control tree

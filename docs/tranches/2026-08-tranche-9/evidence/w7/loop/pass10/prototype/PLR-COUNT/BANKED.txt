@@ -1,0 +1,29 @@
+PLR-COUNT · pass 10 · BANKED 2026-11-04 03:10 (cut through temporary indexes; nothing committed; every exit read bare)
+
+open state           tree 3d5f368a = pass9.diff f78f9cf1 (725,892 B) byte for byte: no disagreement with pass-9 BANKED.txt
+homes v3             homes.on-WAVE.diff 0723d508 applied at open (check 0, apply 0, 10 paths); 13 home paths = ac862f1e's blobs (13/13); residual home edits 0
+SELF pass 10         SELF's p9->p10 product change (7fb4bdf0 -> b959448e: node.d.ts, player-mark.spec.ts, rowBudget.ts, pencilConfig.ts; cut a9be9332) applied 0;
+                     node.d.ts 011ce521 and rowBudget.ts 031f9471 = SELF's blobs; player-mark.spec.ts / pencilConfig.ts = SELF's hunks + COUNT's own pass-8/9 edits
+
+work tree            add -A web/frontend on 74a2b5d9 -> tree d3ad9037 (frontend 7d408f60); 0 paths outside web/frontend
+
+pass10.diff                 DECLARED BASE 74a2b5d9 (runs on ac862f1e = 74a2b5d9 + homes.diff 07257854; carries NO home path: 0 of 13)
+  sha1 5c5b42d7a0d77e7dbd598f290fd95fbc1da29047 · 308,884 B · 28 files changed, 5081 insertions(+), 513 deletions(-) (--binary, product paths only)
+pass10.delta.on-WAVE.diff   DECLARED BASE = 954bbbab + homes.on-WAVE.diff 0723d508 (-> 8c46d9de) + PLR-SELF pass10.delta.on-WAVE.diff 540b93da
+                            (frontend 11d04ba3 in this lane's git-archive scratch)
+  sha1 b5496790dbc421a450010705f7704ddbc17b90ee · 29,338 B · 1 file changed, 319 insertions(+), 80 deletions(-) · path: web/frontend/e2e/player-tally.spec.ts
+  result frontend 0c123eba
+
+apply --check (fresh git archive of web/frontend, own git init, git dir printed; exit bare)
+  base               | 74a2b5d9             | pass10.diff               | exit 0 | paths 28 | <lane scratch>/acx/base/.git
+  basehomes          | ac862f1e             | pass10.diff               | exit 0 | paths 28 | <lane scratch>/acx/bh/.git
+  wave (= section)   | 954bbbab             | pass10.delta.on-WAVE.diff | exit 0 | paths 1  | <lane scratch>/acx/wave/.git
+  wave-full          | 954bbbab             | pass10.diff               | exit 1 | paths 28 | 46 errors (the homes + SELF's/COUNT's pass-9 bytes already on the union; not a route)
+  wavehomes          | 8c46d9de             | pass10.delta.on-WAVE.diff | exit 0 | paths 1  | <lane scratch>/acx/wh/.git
+  STACKED (route)    | 8c46d9de + SELF 540b93da (applied 0) | pass10.delta.on-WAVE.diff | exit 0 | paths 1 | <lane scratch>/acx/ws/.git -> frontend 0c123eba
+  SELF->COUNT->PLACE | the stacked tree above | PLR-PLACE pass10.delta.on-WAVE.diff 7d888a8a | exit 0 -> frontend e999e521
+  SELF->PLACE->COUNT | 8c46d9de + SELF + PLACE | this delta | exit 0 -> frontend e999e521 (the two orders are one tree)
+  section's integrated tree = the WAVE union 954bbbab (§11 is in neither s10 nor s13-s7-s3); acde977b is not a route (pass 9's WAVE)
+
+grep (LAWS P8 §K's four scratch-path patterns ; a dot-dir on a +++ line): pass10.diff 0 · 0 ; delta 0 · 0
+lint:sleep on the bank (the tree): exit 0 (36 specs); on the union with the delta: exit 1 = SIX :302, LEDGER :305/:357 (identical without the delta)

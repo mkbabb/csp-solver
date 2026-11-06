@@ -1,0 +1,55 @@
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-CTRL-TAPE/base74/web/frontend
+
+ ❯ src/games/shared/useGameState.ink.test.ts (6 tests | 2 failed) 19ms
+     × R · a digit restored on reload is player ink, with the undo log empty 4ms
+     × C · after a digit and an answered Clear the board holds no ink 2ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useGameState.ink.test.ts > boardInk — the destructive ask's signal is the board's player ink > R · a digit restored on reload is player ink, with the undo log empty
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useGameState.ink.test.ts:116:34
+    114|     const { model, wrapper } = await mountModel(makeDomain(SAVED()));
+    115|     expect(model.undoDepth.value).toBe(0);
+    116|     expect(model.boardInk.value).toBe(true);
+       |                                  ^
+    117|     wrapper.unmount();
+    118|   });
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useGameState.ink.test.ts > boardInk — the destructive ask's signal is the board's player ink > C · after a digit and an answered Clear the board holds no ink
+AssertionError: expected true to be false // Object.is equality
+
+- Expected
++ Received
+
+- false
++ true
+
+ ❯ src/games/shared/useGameState.ink.test.ts:131:34
+    129|     model.setCell(40, 7);
+    130|     model.clearBoard();
+    131|     expect(model.boardInk.value).toBe(false);
+       |                                  ^
+    132|     model.undo(); // the Clear undone: the digit is back on the board
+    133|     expect(model.boardInk.value).toBe(true);
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed (1)
+      Tests  2 failed | 4 passed (6)
+   Start at  22:55:03
+   Duration  525ms (transform 79ms, setup 14ms, import 107ms, tests 19ms, environment 285ms)
+
+exit=1

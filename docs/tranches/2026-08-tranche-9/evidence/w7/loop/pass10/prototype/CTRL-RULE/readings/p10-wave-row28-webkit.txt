@@ -1,0 +1,59 @@
+== wave-webkit project=webkit url=http://127.0.0.1:4231 fe=<lane-scratch>/wave/web/frontend grep=row 28 · behaviour|row 28 · paint
+Tue Nov  3 22:03:13 EST 2026
+load { 23.94 19.91 16.89 }
+zone inuse=320616
+armed yes
+served index-B3AhQX0wXIN4.js
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+Running 2 tests using 1 worker
+
+[1/2] [webkit] › e2e/zone-grammar.spec.ts:2158:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line
+[webkit] › e2e/zone-grammar.spec.ts:2158:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line
+[RULE row 28 served] webkit [{"site":".card-foot[data-v-2cbc421b] { padding-bottom: calc(.75rem + env(safe-area-inset-bottom)) }","prop":"padding-bottom","pad":true,"v0":12,"v34":46}]
+
+[RULE row 28 flat] webkit inset 0 {"pad":12,"ink":839,"clears":5}
+
+[RULE row 28 synth] webkit inset 34 (3 declarations rewritten) {"pad":46,"ink":805,"clears":5}
+
+[RULE row 28 plant] webkit E4 !important max() in a coarse block: served [".card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important } → 2.4 @0 / 34 @34"] synth34 {"pad":34,"ink":817,"clears":-7}
+
+[RULE row 28 plant] webkit E3 the compound override: served ["#card-foot.card-foot { padding-bottom: 0.15rem } → 2.4 @0 / 2.4 @34"] synth34 {"pad":2.4,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit a shadowing declaration in one block: served [".card-foot { padding-bottom: 0.15rem } → 2.4 @0 / 2.4 @34"]
+
+[RULE row 28 plant] webkit a structural selector: served ["div:nth-last-child(n)[id=\"card-foot\"] { padding-bottom: 0px !important } → 0 @0 / 0 @34"] flat {"pad":0,"ink":844,"clears":0} synth34 {"pad":0,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit an !important universal: served ["* { padding-bottom: 0px !important } → 0 @0 / 0 @34"] flat {"pad":0,"ink":844,"clears":0} synth34 {"pad":0,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit K1b the net-zero stack: served ["#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)) } → 2.4 @0 / 2.4 @34"] synth34 {"pad":2.4,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit K13b the logical longhand: served ["#card-foot.card-foot { padding-block-end: 0.15rem } → 2.4 @0 / 2.4 @34"] synth34 {"pad":2.4,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit K14 the logical shorthand: served ["#card-foot.card-foot { padding-block-end: 0.15rem } → 2.4 @0 / 2.4 @34","#card-foot.card-foot { padding-block: 0px 0.15rem } → 2.4 @0 / 2.4 @34"] synth34 {"pad":2.4,"ink":844,"clears":-34}
+
+[RULE row 28 plant] webkit N1 translate sinks the foot by the inset: served [] synth34 {"pad":46,"ink":839,"clears":-29}
+
+[RULE row 28 plant] webkit N1 translate sinks the foot by the inset: the served arm is blind by design (served GREEN); the paint arm owns it
+
+[RULE row 28 plant] webkit N6 top sinks the foot by the inset: served [] synth34 {"pad":46,"ink":839,"clears":-29}
+
+[RULE row 28 plant] webkit N6 top sinks the foot by the inset: the served arm is blind by design (served GREEN); the paint arm owns it
+
+[RULE row 28 plant] webkit N2 the foot's children sink by the inset: served [] synth34 {"pad":46,"ink":839,"clears":-29}
+
+[RULE row 28 plant] webkit N2 the foot's children sink by the inset: the served arm is blind by design (served GREEN); the paint arm owns it
+
+[RULE row 28 plant] webkit inline write: served ["style= { padding-bottom: 0px } → 0 @0 / 0 @34"]
+
+[RULE row 28 plant] webkit margin-block-end takes the inset back: served ["#card-foot.card-foot { margin-block-end: calc(0px - env(safe-area-inset-bottom)) } → 0 @0 / -34 @34"]
+
+[RULE row 28 served] webkit sabotage → plants read GREEN {"logical":["K13b the logical longhand","K14 the logical shorthand","margin-block-end"],"evaluate":["K1b the net-zero stack","margin-block-end"],"shift":["margin-block-end"]}
+
+[2/2] [webkit] › e2e/zone-grammar.spec.ts:2220:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · paint under a real inset (chromium CDP): the lowest ink clears the inset line by ≥ 2 css, and max() reds it
+  1 skipped
+  1 passed (33.5s)
+Tue Nov  3 22:04:17 EST 2026
+load-end { 28.91 21.62 17.72 }
+zone-end inuse=349531
+EXIT 0

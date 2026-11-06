@@ -1,0 +1,34 @@
+zone inuse=7652617 load 9.86 9.93 8.42
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/focus-ring.spec.ts:1137:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline
+  1) [chromium] › e2e/focus-ring.spec.ts:1137:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+
+    Error: the active card's outline is the system Highlight
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: "rgba(5, 0, 73, 0.8)"
+    Received: "rgb(0, 0, 0)"
+
+      1175 |     return getComputedStyle(document.getElementById(id)!).outlineColor;
+      1176 |   });
+    > 1177 |   expect(deckInk, "the active card's outline is the system Highlight").toBe(highlight);
+           |                                                                        ^
+      1178 |   const hl = (highlight.match(/[\d.]+/g) ?? []).map(Number);
+      1179 |   const highlightRGB = [hl[0], hl[1], hl[2], hl[3] ?? 1] as [number, number, number, number];
+      1180 |   expect(hl.length >= 3 && highlightRGB.every(Number.isFinite), `the system Highlight resolves to an rgb(a) ink (${highlight})`).toBe(true);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1177:72
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/focus-ring.spec.ts:1137:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+end zone inuse=7652617 load 9.79 9.92 8.42

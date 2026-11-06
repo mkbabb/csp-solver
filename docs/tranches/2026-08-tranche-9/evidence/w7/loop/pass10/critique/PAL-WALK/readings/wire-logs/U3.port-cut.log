@@ -1,0 +1,53 @@
+
+ RUN  v4.1.11 <crit-scratch>/wv2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (50 tests | 2 failed) 132ms
+     × F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND 6ms
+     × U3 — no two known ids share an identity (the ink and its lap), across two epochs from two authors 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useSession.test.ts:446:44
+    444|     const mine = () => p.session.session.players.value.find((r) => r.s…
+    445|     // minted at the join (`mint`): an index of your own, or nothing
+    446|     expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
+       |                                            ^
+    447|     // adopted from the room's `k` (`adoptInk`): the room's index for …
+    448|     const me = p.selfId();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/2]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U3 — no two known ids share an identity (the ink and its lap), across two epochs from two authors
+AssertionError: expected 2 to be 4 // Object.is equality
+
+- Expected
++ Received
+
+- 4
++ 2
+
+ ❯ src/games/shared/useSession.test.ts:692:31
+    690|     );
+    691|     expect(ids).toHaveLength(4); // you and three hands
+    692|     expect(new Set(ids).size).toBe(ids.length);
+       |                               ^
+    693|   });
+    694|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/2]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  2 failed | 58 passed (60)
+   Start at  13:47:15
+   Duration  888ms (transform 503ms, setup 25ms, import 692ms, tests 170ms, environment 577ms)
+

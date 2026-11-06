@@ -1,0 +1,35 @@
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+> csp-solver-frontend@0.1.0 lint:sleep
+> node scripts/check-sleep-lint.mjs --self-test
+
+SLEEP LINT — 54 specs · 103 waitForTimeout sites in 30 files · 9 fixed in-page sampling windows · 4 cited exemptions · 7 sleep-ok tags
+
+SELF-TEST — red fixtures must flag, green fixtures must not:
+  ✓ RED — sleep → boundingBox → one-shot expect (the plain disease)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep → helper-wrapped .count() → one-shot expect (a11y:305's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — fixed rAF deadline → distant one-shot geometry (drawer:154's shape)
+      → 1 flag(s), expected flag
+  ✓ RED — sleep-ok tag present but the reason is a shrug
+      → 1 flag(s), expected flag
+  ✓ GREEN — the cure: expect.poll over the same surface, no sleep at all
+      → 0 flag(s), expected clean
+  ✓ GREEN — sleep with a cited sleep-ok: the elapsed time is the subject
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a retrying assertion (auto-waiting locator matcher)
+      → 0 flag(s), expected clean
+  ✓ GREEN — a sleep before a read that feeds NO assertion in the window
+      → 0 flag(s), expected clean
+  ✓ RED — an EXEMPT entry that no longer resolves to a site
+      → 4 stale
+
+3 failure(s):
+
+  • count-yield.spec.ts:302 — a fixed 500ms sleep sits inside `across()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:305 — a fixed 1600ms sleep sits inside `speak()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:357 — a fixed 1200ms sleep sits inside `openCell()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+

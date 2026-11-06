@@ -1,0 +1,33 @@
+== arm p10 blob f67c70eec5cefefa1408499a9f63758d08d1502b 17:03:51 load 16.37 12.04 9.76
+exit 0 ::  Test Files 2 passed (2)  Tests 61 passed (61) 
+== arm p10v1 blob c0fbe399c0466e8419e6ce757262e5bdaa2343fa 17:03:59 load 16.18 12.08 9.79
+exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯  Test Files 1 failed | 1 passed (2)  Tests 1 failed | 60 passed (61) 
+     × A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading 7ms
+== arm p9 blob 458bb26ff2fac0c53ab545db574325df2b219156 17:04:05 load 15.68 12.04 9.79
+exit 1 :: ⎯⎯⎯⎯⎯⎯ Failed Tests 15 ⎯⎯⎯⎯⎯⎯⎯  Test Files 2 failed (2)  Tests 15 failed | 46 passed (61) 
+     × first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 14ms
+     × first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 4ms
+     × a SECOND front 12 frames after a partial-start front still runs at the panel's frame 5ms
+     × a 2 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 6ms
+     × a 5 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 4ms
+     × a 9 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 3ms
+     × a 12 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 16ms
+     × a 16 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 3ms
+     × a 27 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 4ms
+     × a SECOND front after a partial-start front still runs at the panel's frame from its first whole tick 3ms
+     × STALE partials: three short fronts each starting 4 ms before a frame leave no short reading behind 4ms
+     × A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading 4ms
+== arm p8 blob eeb58de2fae508b1fd3418921ca273bd197c13b3 17:04:11 load 15.08 12.04 9.81
+exit 1 :: ⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯  Test Files 1 failed | 1 passed (2)  Tests 7 failed | 54 passed (61) 
+     × 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 6ms
+     × 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 3ms
+     × the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels 5ms
+     × a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost) 3ms
+     × the remainder rule's limits, both sides: a short tick after a HEALTHY one is read; a longer tick after a stall is read 3ms
+     × BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 5 consecutive 150 ms stalls, each capped at ≤ 18 ms 3ms
+     × BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 9 consecutive 150 ms stalls, each capped at ≤ 18 ms 3ms
+RESTORED-BYTE-EQUAL 17:04:17
+DONE

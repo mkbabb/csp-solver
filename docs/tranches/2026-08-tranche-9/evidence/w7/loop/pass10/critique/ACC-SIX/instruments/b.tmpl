@@ -1,0 +1,21 @@
+// crit-ACC-SIX pass 10 · out-of-tree build of rig __RIG__ with ONE in-memory plant (never banked; the critic's)
+import base from '__ROOT__/vite.config.ts';
+const P = process.env.PLANT ?? 'none';
+const S = '/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-SIX';
+const LINE = 'if (m.offsetTop > v.offsetTop + v.offsetHeight / 2) emit("yielded");';
+const SEAT = 'if (props.metaYields && props.meta && props.previous) return emit("yielded");';
+const REC = `:previous="marginPrevious?.text ?? ''"`;
+const must = (o: string, c: string) => { if (o === c) throw new Error('plant missed ' + P); console.error('PLANT-HIT ' + P); return o; };
+const plant = { name: 'critsix-plant', enforce: 'pre' as const, transform(code: string, id: string) {
+  if (P === 'none') return;
+  if (id.endsWith('/games/shared/GameBoard.vue')) {
+    if (P === 'norec') return must(code.replace(REC, `:previous="''"`), code);
+    return;
+  }
+  if (!id.endsWith('/chrome/MarginNote.vue')) return;
+  if (P === 'noseat') return must(code.replace(SEAT, ''), code);
+  if (P === 'len32') return must(code.replace(LINE, LINE + ' if (props.text && props.text.length >= 32) emit("yielded");'), code);
+  if (P === 'norec') return;
+  throw new Error('unknown plant ' + P);
+} };
+export default { ...base, plugins: [plant, ...(base.plugins ?? [])], cacheDir: S + '/cache/__RIG__-' + P, build: { ...(base.build ?? {}), outDir: S + '/dist/__RIG__-' + P, emptyOutDir: false } };

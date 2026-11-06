@@ -1,0 +1,39 @@
+
+ RUN  v4.1.11 <crit-scratch>/r2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (46 tests | 1 failed) 150ms
+     × U5 — once agreed, a relay cannot move the index; the author's later word and a NEW author's board land 6ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U5 — once agreed, a relay cannot move the index; the author's later word and a NEW author's board land
+AssertionError: expected { …(3) } to deeply equal { …(3) }
+
+- Expected
++ Received
+
+  {
+-   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.0659 112.41deg)",
+-   "--color-peer-name-ink": "oklch(var(--peer-name-l) 0.0659 112.41deg)",
+-   "--color-user-ink": "oklch(var(--peer-ink-l) 0.0978 112.41deg)",
++   "--color-peer-cursor-ink": "oklch(var(--peer-ring-l) 0.1416 320.64deg)",
++   "--color-peer-name-ink": "oklch(var(--peer-name-l) 0.1139 320.64deg)",
++   "--color-user-ink": "oklch(var(--peer-ink-l) 0.2107 320.64deg)",
+  }
+
+ ❯ src/games/shared/useSession.test.ts:723:29
+    721|       "peer-1",
+    722|     );
+    723|     expect(inkOf("peer-1")).toEqual(inkFor(11));
+       |                             ^
+    724|     // a DIFFERENT author's newer board is a new room's worth of assig…
+    725|     p.hear(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 55 passed (56)
+   Start at  13:50:10
+   Duration  883ms (transform 509ms, setup 26ms, import 730ms, tests 198ms, environment 547ms)
+

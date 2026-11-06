@@ -1,0 +1,26 @@
+
+Running 1 test using 1 worker
+
+  ✘  1 [chromium] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals (2ms)
+
+
+  1) [chromium] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: true
+    Received: false
+
+      564 | test('drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals', () => {
+      565 |   expect(zeroLengthLeave({ animationDuration: '0s', painted: 1 })).toBe(true);
+    > 566 |   expect(zeroLengthLeave({ animationDuration: '0s', painted: 2 })).toBe(true);
+          |                                                                    ^
+      567 |   expect(zeroLengthLeave({ animationDuration: '0s', painted: 3 })).toBe(false);
+      568 |   expect(zeroLengthLeave({ animationDuration: '0.001s', painted: 1 })).toBe(false);
+      569 | });
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/NOTE-ERASE/copies/t10s/web/frontend/e2e/affordances.spec.ts:566:68
+
+    Error Context: ../../../../pw-out-sab/affordances-drop-clock-the-2a6fd-frame-and-±1-ms-as-literals-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals 

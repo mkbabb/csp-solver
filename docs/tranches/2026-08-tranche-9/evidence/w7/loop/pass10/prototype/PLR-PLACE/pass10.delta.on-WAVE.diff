@@ -1,0 +1,635 @@
+diff --git a/web/frontend/e2e/player-place.spec.ts b/web/frontend/e2e/player-place.spec.ts
+index 8bc7c1ac..262e9620 100644
+--- a/web/frontend/e2e/player-place.spec.ts
++++ b/web/frontend/e2e/player-place.spec.ts
+@@ -46,12 +46,19 @@
+  *      as `none` in Chromium: the tap shut the sheet and reached nothing). Read at 9×9 AND 16×16
+  *      (pass 9), with NO_BOTTOM cut in the run as its negative
+  *  15  OPEN, THEN RESIZE AT REST (pass-6 critic): an open sheet reads, once a resize comes to rest,
+- *      what a fresh open at the new size reads — rows, chart, lap — in whichever arm is built
++ *      what a fresh open at the new size reads — rows, chart, lap — in whichever arm is built; the
++ *      negative cuts EVERY re-fit path in the run (resize, settle, face) and reds (pass 10)
++ * 15f  A FACE THAT LANDS UNDER AN OPEN SHEET (pass 10, the font-landing leg): the hand face held
++ *      until the sheet is open, then released; the open sheet reads what a fresh open reads, and
++ *      the same cut reds it
+  *  16  THE SIDE EDGE (pass-8 critic gap 1): at 390×664, 9×9 and 16×16, taps 1–3px inside the
+  *      sheet's right edge reach no cell, and taps 1–6px right of it reach the cell under them; NO_RIGHT
+  *      cut in the run is its negative. Rows 14 and 16 gate in Chromium and PRINT in WebKit (aim)
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page, type TestInfo } from '@playwright/test';
++import { readFileSync } from 'node:fs';
++import { loadavg } from 'node:os';
++import { fileURLToPath } from 'node:url';
+ import { atRest as quiet } from './lib/rest-probes.mjs';
+ 
+ const Q = 'difficulty=EASY&wire=local';
+@@ -304,9 +311,18 @@ test('3 · Hidden says one null and draws you nowhere; Shown says your cell once
+   await ctx.close();
+ });
+ 
++// THE UNION'S TALLY (pass 10; the pass-9 WAVE's `player-place:307`, union-born): on the WAVE the mark
++// carries PLR-COUNT's tally, whose strokes draw in when a player arrives and whose poses swap on the
++// SHARED boil beat (`useTallyStrokes`), by the clock and never by a `cur`. 45 + 45 `class` records on
++// `g.pt-pose` and four strokes' `stroke-dashoffset` draw-in were the union's mutations in the shut
++// head (the lane's probe, 246 records), none of them the walk's. The row follows the union's shipped
++// arm (CHAIR pass 10 §9): the draw-in is waited out first, and ONE record shape is admitted, a
++// `class` record on a `g.pt-pose` (counted and printed beside the row); every other record in the
++// scope counts. The in-run plant proves the admission is that narrow: an attribute that is not
++// `class`, set on the same pose (or on the mark where no tally is drawn), counts exactly once.
+ test('4 · the head is still while a peer walks the board, and the same scope moves once open', async ({
+   browser,
+-}) => {
++}, info) => {
+   test.slow();
+   const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 } });
+   const [a, b] = await table(ctx, 2);
+@@ -320,11 +336,19 @@ test('4 · the head is still while a peer walks the board, and the same scope mo
+       // The scope is the mark's own parent: the button AND its sheet, shut or open, and every
+       // `cur`-driven node the sheet can hold (the chart, the qualifiers, the rows).
+       const scope = m.parentElement!;
+-      const w = window as unknown as { __muts: number; __obs?: MutationObserver; __scope: string };
++      const w = window as unknown as { __muts: number; __boil: number; __obs?: MutationObserver; __scope: string };
+       w.__muts = 0;
++      w.__boil = 0;
+       w.__obs?.disconnect();
+       w.__scope = `${scope.tagName.toLowerCase()} holding ${scope.querySelectorAll('[data-player-mark],[data-lobby]').length}`;
+-      w.__obs = new MutationObserver((r) => (w.__muts += r.length));
++      const beat = (r: MutationRecord) =>
++        r.type === 'attributes' && r.attributeName === 'class' && (r.target as Element).matches?.('g.pt-pose');
++      w.__obs = new MutationObserver((rs) => {
++        for (const r of rs) {
++          if (beat(r)) w.__boil++;
++          else w.__muts++;
++        }
++      });
+       w.__obs.observe(scope, { subtree: true, childList: true, attributes: true, characterData: true });
+     });
+   const walk = async (n: number) => {
+@@ -338,16 +362,29 @@ test('4 · the head is still while a peer walks the board, and the same scope mo
+     await a.bringToFront();
+   };
+ 
++  // the tally's draw-in (where one is drawn) comes to rest before the watch opens
++  await stable(() => a.evaluate(() => [...document.querySelectorAll('.pt-stroke')].map((s) => s.getAttribute('stroke-dashoffset'))));
+   await watch();
+   const t0 = Date.now();
+   await walk(WALK);
+   const shutMs = Date.now() - t0;
+   const shut = await a.evaluate(() => ({
+     muts: (window as any).__muts as number,
++    boil: (window as any).__boil as number,
+     scope: (window as any).__scope as string,
+   }));
++  // THE PLANT, in the run: one non-`class` attribute on the pose the admission names (else the mark)
++  const planted = await a.evaluate(async () => {
++    const m = [...document.querySelectorAll('[data-player-mark]')].find((e) => (e as HTMLElement).getBoundingClientRect().width > 0)!;
++    const before = (window as any).__muts as number;
++    (m.parentElement!.querySelector('g.pt-pose') ?? m).setAttribute('data-place-plant', '1');
++    await new Promise((r) => setTimeout(r, 0));
++    return { on: m.parentElement!.querySelector('g.pt-pose') ? 'g.pt-pose' : 'the mark', counted: ((window as any).__muts as number) - before };
++  });
++  info.annotations.push({ type: 'shut head', description: JSON.stringify({ ...shut, shutMs, planted }) });
+   expect(shut.scope).toBe('div holding 2');
+-  expect(shut.muts, `0 mutations over ${WALK} cells in ${shutMs} ms, sheet shut`).toBe(0);
++  expect(shut.muts, `0 mutations over ${WALK} cells in ${shutMs} ms, sheet shut (${shut.boil} boil-beat pose swaps admitted)`).toBe(0);
++  expect(planted.counted, `the plant on ${planted.on} counts once: the admission is one record shape`).toBe(1);
+ 
+   await openSheet(a);
+   await a.waitForTimeout(400);
+@@ -473,6 +510,18 @@ const DISJUNCT: Record<Disjunct, RegExp> = {
+ };
+ const SABOTAGE = (process.env.PLACE_SABOTAGE || null) as Disjunct | null;
+ if (SABOTAGE && !(SABOTAGE in DISJUNCT)) throw new Error(`PLACE_SABOTAGE=${SABOTAGE}: no such clause`);
++/** THE THRESHOLD BATTERY (LAWS P8 §F; the pass-9 critic's ±0.5/±1.5 px, now the lane's own):
++ *  `PLACE_THRESH=<bound>:<ε>` moves ONE live bound of `outside()` by a LITERAL ε in every coarse
++ *  table of the run, `e.clientX > r.right` → `e.clientX > (r.right + ε)`. ε is typed on the command
++ *  line, never derived from a constant. ±0.5 must hold every clean read (the 1px pair sits outside
++ *  it); ±1.5 must red the bound's own row at its 1px pair. */
++const THRESH = (() => {
++  const raw = process.env.PLACE_THRESH || '';
++  const m = /^(left|right|top|bottom):([+-]\d+(?:\.\d+)?)$/.exec(raw);
++  if (raw && !m) throw new Error(`PLACE_THRESH=${raw}: <left|right|top|bottom>:<±ε>`);
++  return m ? { bound: m[1], eps: m[2] } : null;
++})();
++const thresholdSite = (bound: string) => new RegExp(`(e\\.client[XY]\\s*[<>]\\s*)r\\.${bound}\\b`);
+ 
+ async function coarseTable(browser: Browser, height: number, size = 3, cut: Disjunct | null = SABOTAGE, width = 390) {
+   const ctx = await browser.newContext({
+@@ -481,11 +530,14 @@ async function coarseTable(browser: Browser, height: number, size = 3, cut: Disj
+     isMobile: true,
+     deviceScaleFactor: 1,
+   });
+-  const hits = { n: 0 };
+-  if (cut)
++  const hits = { n: 0, t: 0 };
++  if (cut || THRESH)
+     await ctx.route(/\/src\/pencil\/chrome\/PlayerMark\/PlayerMark\.vue(\?[^#]*)?$/, async (route) => {
+       const res = await route.fetch();
+-      const body = (await res.text()).replace(DISJUNCT[cut], () => (hits.n++, ''));
++      let body = await res.text();
++      if (cut) body = body.replace(DISJUNCT[cut], () => (hits.n++, ''));
++      if (THRESH)
++        body = body.replace(thresholdSite(THRESH.bound), (_m, head: string) => (hits.t++, `${head}(r.${THRESH.bound} + ${THRESH.eps})`));
+       await route.fulfill({ response: res, body });
+     });
+   const pages = await table(ctx, 2, size);
+@@ -494,6 +546,7 @@ async function coarseTable(browser: Browser, height: number, size = 3, cut: Disj
+   }
+   // each page of the table loads the module once, and the cut lands once in each
+   if (cut) expect(hits.n, `${cut}: the cut landed exactly once per page`).toBe(pages.length);
++  if (THRESH) expect(hits.t, `${THRESH.bound} ${THRESH.eps}: the bound moved exactly once per page`).toBe(pages.length);
+   return { ctx, pages, hits };
+ }
+ 
+@@ -1004,31 +1057,40 @@ const ABOVE: Aim = Object.fromEntries(
+ );
+ const want = (aim: Aim) => Object.fromEntries(Object.keys(aim).map((k) => [k, k.startsWith('in') ? 'none' : 'cell']));
+ 
+-/** A row's two arms in ONE run: the clean read gates in Chromium, and the in-run negative (its
+- *  clause cut) must red there on the band's nearest pixel WHERE THE BAND EXISTS (`bites`). WebKit
+- *  prints both (print-only for aim). */
++/** A row's two arms in ONE run. The CLEAN read gates in BOTH engines: what a tap 1–3px inside and
++ *  1–10px outside reaches is deterministic in WebKit too, and pass 9 read it equal to Chromium's at
++ *  every row (pass-9 critic gap 13: `edgeRow` returned before it). The in-run negative (its clause
++ *  cut) must red on the band's nearest pixel WHERE THE BAND EXISTS (`bites`), in Chromium only: the
++ *  emulated aim is WebKit's touch adjustment, which gates nothing (CHAIR pass 9 §11), so WebKit
++ *  PRINTS the negative. Real iOS aim stays on the RUNSHEET (M19). */
+ async function edgeRow(browser: Browser, info: TestInfo, name: string, height: number, size: number, aim: Aim, clause: Disjunct, nearest: string, bites: boolean, width = 390) {
+   const c = await edgeReads(browser, height, size, aim, undefined, width);
+   const clean = c.read;
+-  const negative = SABOTAGE ? null : (await edgeReads(browser, height, size, aim, clause, width)).read;
++  // under a battery plant the run IS the negative: no clause is cut beside it (a cut clause takes the
++  // threshold's site with it)
++  const negative = SABOTAGE || THRESH ? null : (await edgeReads(browser, height, size, aim, clause, width)).read;
+   info.annotations.push({ type: name, description: JSON.stringify({ size, width, height, sabotage: SABOTAGE, clean, [clause]: negative, hit: c.hit }) });
+-  if (info.project.name === 'webkit') return; // print-only for aim (CHAIR pass 9 §11)
+-  expect(clean, `${name}: the clean read`).toEqual(want(aim));
++  info.annotations.push({ type: `${name} scope`, description: bites ? 'reach + band' : 'REACH ONLY (no band at this board)' });
++  expect(clean, `${name}: the clean read (${info.project.name})`).toEqual(want(aim));
++  if (info.project.name === 'webkit') return; // the negative is print-only for aim (CHAIR pass 9 §11)
+   if (negative && bites) expect(negative[nearest], `${name}: ${clause} cut in the run reaches nothing at ${nearest}`).toBe('none');
+ }
+ 
+ // WHERE THE BAND EXISTS (pass 9, both cells read whole with the clause cut): at 9×9 Chromium aims
+ // a touch 1–3px off the sheet at the sheet, so the clause bears the load and its cut reds the row.
+ // At 16×16 it aims the same touches at the cell under them (all of 1–10px below at 390×844 and 1–6px
+-// right at 390×664 read `cell` with NO_BOTTOM or NO_RIGHT cut), so there is no band to cure there:
+-// the 16×16 rows gate the reach and PRINT their negative, which no cut of this clause can red.
++// right at 390×664 read `cell` with NO_BOTTOM or NO_RIGHT cut), so there is no band to cure there.
++// THE 16×16 ROWS ARE REACH-ONLY, DECLARED (pass-9 critic gap 9): they gate what a tap inside and
++// outside reaches, in both engines, and PRINT their negative, which no cut of the clause can red
++// because Chromium has no band at that board. Their titles say so.
+ for (const size of [3, 4]) {
+   const n = size * size;
+   const bites = size === 3;
+   // THE BAND IS CURED, NOT PRICED (pass 8): one expectation. Pass 7 pinned Chromium's 1–3px below
+   // as `none` (the touch aimed at the sheet shut it and reached nothing). At 16×16 the chart laps
+   // 79.30px of the board here (pass-8 table), so the band runs over the board's fourth row.
+-  test(`14 · both sides of the sheet edge at ${n}×${n}: inside reaches no cell, and 1px below already reaches the cell`, async ({
++  const scope = bites ? '' : ' (reach only)';
++  test(`14 · both sides of the sheet edge at ${n}×${n}${scope}: inside reaches no cell, and 1px below already reaches the cell`, async ({
+     browser,
+   }, info) => {
+     test.slow();
+@@ -1038,7 +1100,7 @@ for (const size of [3, 4]) {
+   // board runs on to 376, so the band right of the sheet is a real one at every lapping phone cell.
+   // In Chromium a touch 1–3px right of it is aimed at the sheet; with NO_RIGHT cut it shut the sheet
+   // and reached nothing (the critic's 3/3).
+-  test(`16 · the side edge at ${n}×${n}: 1px right of the sheet already reaches the cell`, async ({
++  test(`16 · the side edge at ${n}×${n}${scope}: 1px right of the sheet already reaches the cell`, async ({
+     browser,
+   }, info) => {
+     test.slow();
+@@ -1049,7 +1111,7 @@ for (const size of [3, 4]) {
+   // first columns (board left 241), so the band above the sheet is over the board there. At 9×9
+   // Chromium aims a touch 1–3px above it at the sheet, and with NO_TOP cut it reached nothing; at
+   // 16×16 it aims them at the cell, as rows 14 and 16 read.
+-  test(`17 · the top edge at ${n}×${n}, 844×390: 1px above the sheet already reaches the cell`, async ({
++  test(`17 · the top edge at ${n}×${n}${scope}, 844×390: 1px above the sheet already reaches the cell`, async ({
+     browser,
+   }, info) => {
+     test.slow();
+@@ -1057,15 +1119,59 @@ for (const size of [3, 4]) {
+   });
+ }
+ 
+-// ── 15 · OPEN, THEN RESIZE AT REST (pass-6 critic 1.1; LAWS P6 §D) ──────────────────────────────
++// ── 15 · OPEN, THEN RESIZE AT REST (pass-6 critic 1.1; LAWS P6 §D; LAWS P9 §F) ──────────────────
+ // The sheet's regime (how many rows; under `CHART_YIELDS`, whether the chart is drawn) is decided
+ // by a measurement, so the measurement is taken again when the space changes under an open sheet.
+ // The row is arm-agnostic: whatever the arm decides on a FRESH open at the new size is what the
+-// open sheet must read once the resize has come to rest. Two cells: two at the table, opened at
+-// 390×860 where the chart laps nothing (the yield's cell: it keeps the chart there and must give it
+-// up at 390×664), and three at the table, opened at 390×1000 (the chart arm's cell: three rows
+-// there, one row and `and 2 more` at 390×664). The negative control is a file plant (the resize
+-// listener struck): the open sheet then keeps the pose it opened on.
++// open sheet must read once the resize has come to rest.
++//
++// THE RE-FIT PATHS, ENUMERATED (PlayerMark.vue's `watch(isOpen)`; pass-9 critic gap 1): a resize
++// (`refit`), a transition outside the head coming to rest (`onSettle` → `refit`, PLR-SELF's), and
++// a face landing (`refont`, pass 10). The in-run negative cuts EVERY one, each counted as landing
++// once per page, and must red at every cell the row reads. Pass 9 named the resize listener alone
++// as the negative, and it read GREEN: the settle path re-fit the open sheet anyway.
++// `PLACE_REFIT_CUT=<path>` cuts one path instead (the battery); a single cut gates only where it
++// covers the row's own paths (row 15: resize AND settle; row 15f: face), and is printed otherwise.
++const ARM: 'chart' | 'yield' | 'list' = (() => {
++  const src = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), 'utf8');
++  const chart = /const PLACE_CHART = (true|false);/.exec(src('../src/App.vue'))?.[1];
++  const yields = /const CHART_YIELDS = (true|false);/.exec(src('../src/pencil/chrome/PlayerMark/PlayerMark.vue'))?.[1];
++  if (!chart || !yields) throw new Error('B-CHART: an arm const moved; re-key ARM');
++  return chart === 'false' ? 'list' : yields === 'true' ? 'yield' : 'chart';
++})();
++const MODULE = /\/src\/pencil\/chrome\/PlayerMark\/PlayerMark\.vue(\?[^#]*)?$/;
++const REFIT_PATHS = {
++  resize: /window\.addEventListener\(\s*["']resize["'],\s*refit\s*\);?/,
++  settle: /document\.addEventListener\(\s*["']transitionend["'],\s*onSettle\s*\);?/,
++  face: /document\.fonts\?\.addEventListener\(\s*["']loadingdone["'],\s*refont\s*\);?/,
++} as const;
++type RefitPath = keyof typeof REFIT_PATHS;
++const ALL_PATHS = Object.keys(REFIT_PATHS) as RefitPath[];
++const ONE_CUT = (process.env.PLACE_REFIT_CUT || null) as RefitPath | null;
++if (ONE_CUT && !(ONE_CUT in REFIT_PATHS)) throw new Error(`PLACE_REFIT_CUT=${ONE_CUT}: no such path`);
++const NEGATIVE: readonly RefitPath[] = ONE_CUT ? [ONE_CUT] : ALL_PATHS;
++const gates = (own: readonly RefitPath[]) => own.every((p) => NEGATIVE.includes(p));
++/** A table read beside its negative: each read is a fresh table, so the budget is keyed on the
++ *  count of tables (LAWS P9 §B), the load printed at the row's head and tail. */
++const TABLE_BUDGET_MS = 90000;
++const load1 = () => +loadavg()[0].toFixed(2);
++
++/** The cut is made IN THE RUN from the dev server's own module (a dist has no `/src/`: DEV-ONLY,
++ *  LAWS P9 §B), and every path it names must land once in every page that loads it. */
++async function cutRefit(ctx: BrowserContext, paths: readonly RefitPath[]) {
++  const hits = Object.fromEntries(paths.map((p) => [p, 0])) as Record<RefitPath, number>;
++  if (paths.length)
++    await ctx.route(MODULE, async (route) => {
++      const res = await route.fetch();
++      let body = await res.text();
++      for (const p of paths) body = body.replace(REFIT_PATHS[p], () => (hits[p]++, ''));
++      await route.fulfill({ response: res, body });
++    });
++  return (pages: number) => {
++    for (const p of paths) expect(hits[p], `${p}: the cut landed exactly once per page`).toBe(pages);
++  };
++}
++
+ const lapRead = (p: Page) =>
+   sheet(p).evaluate((el) => {
+     const s = el.getBoundingClientRect();
+@@ -1084,22 +1190,29 @@ const lapRead = (p: Page) =>
+       lapped,
+     };
+   });
++type Lap = Awaited<ReturnType<typeof lapRead>>;
+ 
+-for (const [n, from] of [
+-  [2, 860],
+-  [3, 1000],
+-] as const) {
+-  test(`15 · open at 390×${from}, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (${n} at the table)`, async ({
+-    browser,
+-  }, info) => {
+-    test.slow();
+-    const ctx = await browser.newContext({
+-      viewport: { width: 390, height: from },
+-      hasTouch: true,
+-      isMobile: true,
+-      deviceScaleFactor: 1,
+-    });
++/** Shut the open sheet and open it again: the pose a FRESH open decides in the space as it is. */
++async function reopen(a: Page): Promise<Lap> {
++  await mark(a).tap();
++  await expect(mark(a)).toHaveAttribute('aria-expanded', 'false');
++  await mark(a).tap();
++  await expect(mark(a)).toHaveAttribute('aria-expanded', 'true');
++  await stable(() => lapRead(a));
++  return lapRead(a);
++}
++
++async function resizeRead(browser: Browser, n: number, from: number, cut: readonly RefitPath[]) {
++  const ctx = await browser.newContext({
++    viewport: { width: 390, height: from },
++    hasTouch: true,
++    isMobile: true,
++    deviceScaleFactor: 1,
++  });
++  try {
++    const landed = await cutRefit(ctx, cut);
+     const pages = await table(ctx, n);
++    landed(pages.length);
+     const [a] = pages;
+     expect(await a.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
+     await a.bringToFront();
+@@ -1113,20 +1226,140 @@ for (const [n, from] of [
+     await quiet(a);
+     await stable(() => lapRead(a));
+     const opened = await lapRead(a);
+-    expect(opened, `390×${from}: the sheet opens clear of the board`).toMatchObject({ open: true, lapped: 0 });
+     await a.setViewportSize({ width: 390, height: 664 });
+     await expect.poll(() => a.evaluate(() => innerHeight)).toBe(664);
++    await quiet(a);
+     await stable(() => lapRead(a));
+     const atRest = await lapRead(a);
+-    await mark(a).tap();
+-    await expect(mark(a)).toHaveAttribute('aria-expanded', 'false');
+-    await mark(a).tap();
+-    await expect(mark(a)).toHaveAttribute('aria-expanded', 'true');
+-    await stable(() => lapRead(a));
+-    const fresh = await lapRead(a);
+-    info.annotations.push({ type: 'resize', description: JSON.stringify({ opened, atRest, fresh }) });
+-    expect(fresh.lapped, 'at 390×664 the sheet laps the board in every arm').toBeGreaterThan(0);
+-    expect(atRest, 'at rest after the resize = a fresh open at 390×664').toEqual(fresh);
++    return { opened, atRest, fresh: await reopen(a) };
++  } finally {
+     await ctx.close();
++  }
++}
++
++// THE CELLS. Three at the table, opened at 390×1000 (three rows, nothing lapped; one row at 664).
++// Two at the table at 390×860 is the YIELD arm's cell (it keeps the chart there and must give it
++// up at 664), read only under that arm. Under the shipped chart arm it is STRUCK from this row: two
++// at the table draw two rows and the chart at 860 and at 664 alike (the list holds both rows at
++// both sizes, and the chart always draws), so no path, cut or not, moves it and no negative can red
++// it (pass-9 critic §3e: every path cut, it still read at rest = fresh, 2 rows · chart · 94.6 px).
++const RESIZE_CELLS: readonly (readonly [number, number])[] =
++  ARM === 'yield'
++    ? [
++        [2, 860],
++        [3, 1000],
++      ]
++    : [[3, 1000]];
++for (const [n, from] of RESIZE_CELLS) {
++  test(`15 · open at 390×${from}, resize to 390×664 at rest: the open sheet reads what a fresh open there reads (${n} at the table)`, async ({
++    browser,
++  }, info) => {
++    test.setTimeout(2 * TABLE_BUDGET_MS);
++    info.annotations.push({ type: 'load-1m at head', description: String(load1()) });
++    const clean = await resizeRead(browser, n, from, []);
++    const negative = await resizeRead(browser, n, from, NEGATIVE);
++    info.annotations.push({ type: 'resize', description: JSON.stringify({ arm: ARM, clean, cut: NEGATIVE, negative }) });
++    info.annotations.push({ type: 'load-1m at tail', description: String(load1()) });
++    expect(clean.opened, `390×${from}: the sheet opens clear of the board`).toMatchObject({ open: true, lapped: 0 });
++    expect(clean.fresh.lapped, 'at 390×664 the sheet laps the board in every arm').toBeGreaterThan(0);
++    expect(clean.atRest, 'at rest after the resize = a fresh open at 390×664').toEqual(clean.fresh);
++    // THE NEGATIVE, IN THE RUN: the same cell with the paths cut opens and re-opens as the clean
++    // one does (a fresh open is the open's own `fit`, which no cut touches)...
++    expect(negative.opened, 'negative: the same open').toEqual(clean.opened);
++    expect(negative.fresh, 'negative: the same fresh open').toEqual(clean.fresh);
++    // ...and with every re-fit path cut the open sheet keeps the pose it opened on, so the row reds.
++    if (gates(['resize', 'settle'])) {
++      expect(negative.atRest.rows, `${NEGATIVE.join('+')} cut: the open sheet keeps its opened rows`).toBe(negative.opened.rows);
++      expect(negative.atRest, `${NEGATIVE.join('+')} cut: at rest is NOT a fresh open`).not.toEqual(negative.fresh);
++    }
+   });
+ }
++
++// ── 15f · A FACE THAT LANDS UNDER AN OPEN SHEET (LAWS P8 §D, the font-landing leg; pass-9 critic gap 2)
++// The budget is decided on MEASURED heights, and a row's height is its line count: the longest slug
++// (`long-66737` → `straightforward-tyrannosaurus`, quiet, so it carries a qualifier) wraps in one
++// face and not in the other. The hand face is HELD by the route until the sheet is open (the
++// product is never told: no `fonts.ready` wait anywhere in it), then released. The open sheet must
++// read, once the face is in, what a fresh open reads. The cell is one where the face MOVES the pose
++// (asserted: opened ≠ fresh, so the row can red), and the negative cuts every re-fit path in the run.
++// 390×1050 (pass 10, the lane's sweep 800–1050 at 9×9, Chromium): the fallback's slug wraps the four
++// rows past the board's top, so the open draws one row; in the hand they end 12.3px above it (312.4
++// against 324.7) and a fresh open draws four. At 800–1000 both faces draw one row: no leg there.
++const FACE = /patrickhand-subset[^/]*\.woff2(\?[^#]*)?$/;
++/** The hand face's own load state, read off the FontFaceSet (every `Patrick Hand` face, in order).
++ *  NOT `document.fonts.check()`: WebKit reads it true while the held face is still loading (pass 10,
++ *  this row's first WebKit read), so it witnesses nothing there. */
++const faceStatus = (p: Page) =>
++  p.evaluate(() => [...document.fonts].filter((f) => /Patrick Hand/.test(f.family)).map((f) => f.status));
++const FACE_CELL = { width: 390, height: 1050 };
++async function faceRead(browser: Browser, cut: readonly RefitPath[]) {
++  const ctx = await browser.newContext({ viewport: FACE_CELL, hasTouch: true, isMobile: true, deviceScaleFactor: 1 });
++  try {
++    const landed = await cutRefit(ctx, cut);
++    let release!: () => void;
++    const late = new Promise<void>((r) => (release = r));
++    const held = { n: 0 };
++    await ctx.route(FACE, async (route) => {
++      held.n++;
++      await late;
++      await route.continue();
++    });
++    try {
++      const a = await ctx.newPage();
++      // `domcontentloaded`: the `load` event waits on every subresource, the held face included
++      await a.goto(`./?size=3&${Q}`, { waitUntil: 'domcontentloaded' });
++      await settled(a);
++      landed(1);
++      expect(await a.evaluate(() => matchMedia('(pointer: coarse)').matches)).toBe(true);
++      await invite(a);
++      await a.evaluate((room) => {
++        const ch = new BroadcastChannel(`board:${room}`);
++        for (const id of ['long-66737', 'q-1', 'q-2', 'q-3', 'q-4', 'q-5']) ch.postMessage({ kind: 'hi', data: {}, from: id });
++        setTimeout(() => ch.close(), 0);
++      }, new URL(a.url()).searchParams.get('s')!);
++      await expect(a.locator('.players-roster .player-row')).toHaveCount(7);
++      await a.clock.setSystemTime(new Date(Date.now() + 21000));
++      await stable(() => cell(a, 0).evaluate((e) => e.getBoundingClientRect().top));
++      await quiet(a);
++      // THE PRECONDITION, WITNESSED: the face was asked for and has not landed
++      expect(held.n, 'the hand face was requested and held').toBeGreaterThan(0);
++      const pending = await faceStatus(a);
++      expect(pending.length, 'the page declares the hand face').toBeGreaterThan(0);
++      expect(pending, 'the face is not in yet').not.toContain('loaded');
++      await mark(a).tap();
++      await expect(mark(a)).toHaveAttribute('aria-expanded', 'true');
++      await quiet(a);
++      await stable(() => lapRead(a));
++      const opened = await lapRead(a);
++      release();
++      // the TEST waits for the face; the product is told nothing but what the browser tells it
++      await expect.poll(async () => (await faceStatus(a)).every((s) => s === 'loaded'), { timeout: 20000 }).toBe(true);
++      await quiet(a);
++      await stable(() => lapRead(a));
++      const atRest = await lapRead(a);
++      return { opened, atRest, fresh: await reopen(a) };
++    } finally {
++      release();
++    }
++  } finally {
++    await ctx.close();
++  }
++}
++test(`15f · a face that lands under an open sheet at ${FACE_CELL.width}×${FACE_CELL.height}: the open sheet reads what a fresh open reads`, async ({
++  browser,
++}, info) => {
++  test.setTimeout(2 * TABLE_BUDGET_MS);
++  info.annotations.push({ type: 'load-1m at head', description: String(load1()) });
++  const clean = await faceRead(browser, []);
++  const negative = await faceRead(browser, NEGATIVE);
++  info.annotations.push({ type: 'face', description: JSON.stringify({ arm: ARM, clean, cut: NEGATIVE, negative }) });
++  info.annotations.push({ type: 'load-1m at tail', description: String(load1()) });
++  expect(clean.fresh.rows, 'THE CELL IS LIVE: the landed face moves the rows a fresh open decides').not.toBe(clean.opened.rows);
++  expect(clean.atRest, 'at rest after the face lands = a fresh open').toEqual(clean.fresh);
++  expect(negative.opened, 'negative: the same open').toEqual(clean.opened);
++  expect(negative.fresh, 'negative: the same fresh open').toEqual(clean.fresh);
++  if (gates(['face'])) {
++    expect(negative.atRest.rows, `${NEGATIVE.join('+')} cut: the open sheet keeps its opened rows`).toBe(negative.opened.rows);
++    expect(negative.atRest, `${NEGATIVE.join('+')} cut: at rest is NOT a fresh open`).not.toEqual(negative.fresh);
++  }
++});
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 8597326e..af88d71a 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -1113,8 +1113,9 @@ const CUR_MS = 120;
+  * `CUR_MS` is a ceiling on the sender, not a stream, so "settled" is a RECEIVER-side timer:
+  * hold the latest arrival, restart on a newer one, draw when it fires. It damps MOVES only; the
+  * reading the sheet opens on is drawn at once. Beside `CUR_MS` because it is the same word's
+- * other end.
++ * other end. A dwell on the receiver, never a travel: no rung of the ladder moves anything here.
+  */
++// policy: dwell
+ export const PLACE_SETTLE_MS = 700;
+ /**
+  * A silent peer's ghost expires. The socket that stays OPEN behind a dead page is nobody's
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerLobby.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerLobby.vue
+index e880bf0c..be9bec98 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerLobby.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerLobby.vue
+@@ -135,12 +135,13 @@ watch(
+    and each one class above `HeadSheet`'s own, because a media query adds no specificity and the
+    two scoped sheets land in no promised order: `.head-sheet.is-open` out-ranked a bare
+    `.player-lobby` here, and the open sheet kept its 150ms fade under reduce (PLR-PLACE pass 3,
+-   measured `0.15s, 0.15s, 0s`). */
++   measured `0.15s, 0.15s, 0s`). The arm is the gesture's ABSENCE, `transition: none`, not two
++   `0s` longhands: a zero names no verb and no rung, and `none` is the one spelling that says
++   nothing moves (T9-W7 pass 10, the union's lint:verbs). */
+ @media (prefers-reduced-motion: reduce) {
+   .player-lobby.head-sheet,
+   .player-lobby.head-sheet.is-open {
+-    transition-duration: 0s;
+-    transition-delay: 0s;
++    transition: none;
+   }
+ }
+ 
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index ef87690c..1ac6224a 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -1,5 +1,13 @@
+ <script setup lang="ts">
+-import { computed, nextTick, onBeforeUnmount, ref, useId, watch } from "vue";
++import {
++  computed,
++  nextTick,
++  onBeforeUnmount,
++  ref,
++  shallowRef,
++  useId,
++  watch,
++} from "vue";
+ import PlayerLobby from "./PlayerLobby.vue";
+ import { LOBBY_COPY } from "./copy";
+ import type { LobbyLine, MarkRow, PlaceInput, PlaceChartInput } from "./types";
+@@ -325,6 +333,7 @@ function unbind(): void {
+   document.removeEventListener("focusin", onDocFocusin);
+   window.removeEventListener("resize", refit);
+   document.removeEventListener("transitionend", onSettle);
++  document.fonts?.removeEventListener("loadingdone", refont);
+   cancelAnimationFrame(refitFrame);
+ }
+ watch(isOpen, (open) => {
+@@ -333,6 +342,7 @@ watch(isOpen, (open) => {
+   document.addEventListener("focusin", onDocFocusin);
+   window.addEventListener("resize", refit);
+   document.addEventListener("transitionend", onSettle);
++  document.fonts?.addEventListener("loadingdone", refont);
+ });
+ onBeforeUnmount(unbind);
+ 
+@@ -375,7 +385,10 @@ const quietAt = ref<Record<string, number | null>>({});
+  *
+  * THE SPACE IS READ AGAIN WHEN IT CHANGES UNDER AN OPEN SHEET: on a resize, and when a
+  * transition outside the head comes to rest, one frame later, so a board still sliding is read
+- * where it stops. A read that finds the same board in the same window changes nothing.
++ * where it stops. A read that finds the same board in the same window changes nothing — except
++ * after a FACE LANDS (`document.fonts` `loadingdone`): the board and the window can be where they
++ * were while every row under the open sheet is a new height (a slug that wrapped in the fallback
++ * fits on one line in the hand, or the reverse), so that read is taken whatever the board says.
+  */
+ const ROWS = { tall: 5, short: 2 } as const;
+ const cramped = ref(false);
+@@ -446,6 +459,10 @@ function refit(): void {
+   cancelAnimationFrame(refitFrame);
+   refitFrame = requestAnimationFrame(() => void fit(true));
+ }
++function refont(): void {
++  space = "";
++  refit();
++}
+ function onSettle(e: TransitionEvent): void {
+   const t = e.target as Node | null;
+   if (!el.value?.contains(t) && !document.getElementById(lobbyId)?.contains(t)) refit();
+@@ -469,7 +486,11 @@ const overflow = computed(() =>
+ // fires. What is NOT damped is the reading the sheet OPENS on: every open seeds the chart from
+ // what the room holds at that moment, before any timer is armed, so a press shows where
+ // everyone is now and never an empty board (pass 3 opened empty for 804/812 ms, both engines).
+-const settled = ref<Record<string, number | null>>({});
++// A MAP, NOT A RECORD (T9-W7 pass 10, the union's wash reach): who sits where is data, never a
++// style bag, and an object rebuilt with a computed key (`{ ...s, [id]: pos }`, or the rest-spread
++// that drops one) reads to the theme gate as a publisher that may name any custom property. Each
++// change is a new Map, so the shallow ref is the change.
++const settled = shallowRef<ReadonlyMap<string, number | null>>(new Map());
+ /** EACH PEER'S CLOCK IS ITS OWN: the cell a peer's timer is holding, and the timer. A change to
+  *  the map that leaves a peer's `cur` where their pending timer already has it restarts nothing
+  *  (pass-4 critic, THE HOSTAGE: one walker re-armed every pending peer and held a single move
+@@ -489,30 +510,31 @@ watch([isOpen, () => props.place?.cursors], ([open, now], [wasOpen]) => {
+   if (!open || !now) return stopTimers();
+   if (!wasOpen) {
+     stopTimers();
+-    settled.value = { ...now };
++    settled.value = new Map(Object.entries(now));
+     return;
+   }
+   for (const [id, pos] of Object.entries(now)) {
+     if (id in timers && pending[id] === pos) continue;
+     clearTimeout(timers[id]);
+     delete timers[id];
+-    if (settled.value[id] === pos) continue;
++    if (settled.value.get(id) === pos) continue;
+     pending[id] = pos;
+     timers[id] = setTimeout(() => {
+       delete timers[id];
+-      settled.value = { ...settled.value, [id]: pos };
++      settled.value = new Map(settled.value).set(id, pos);
+     }, props.place!.settleMs);
+   }
+   // THE LEAVE WALKS EVERY CLOCK, not the settled set alone (pass-5 critic, THE GHOST): a peer
+   // whose FIRST move since the open is still pending has a timer and no settled cell, and a leave
+   // or a deal (the session empties the map) that skipped them let the timer fire later and draw
+   // them on a cell of a board that is gone.
+-  for (const id of new Set([...Object.keys(settled.value), ...Object.keys(timers)])) {
++  for (const id of new Set([...settled.value.keys(), ...Object.keys(timers)])) {
+     if (id in now) continue;
+     clearTimeout(timers[id]);
+     delete timers[id];
+-    if (!(id in settled.value)) continue;
+-    const { [id]: _gone, ...rest } = settled.value;
++    if (!settled.value.has(id)) continue;
++    const rest = new Map(settled.value);
++    rest.delete(id);
+     settled.value = rest;
+   }
+ });
+@@ -525,7 +547,7 @@ watch([isOpen, () => props.place?.self ?? null], ([open, at]) => {
+ });
+ onBeforeUnmount(stopTimers);
+ 
+-const placed = (id: string) => typeof settled.value[id] === "number";
++const placed = (id: string) => typeof settled.value.get(id) === "number";
+ 
+ /** A seating chart of a room with nobody else in it is not a chart, so it draws only when the
+  *  room is ≥2. A peer with no settled cell, or with no ink, has a row and no dot: BoardHost's
+@@ -546,7 +568,7 @@ const chart = computed<PlaceChartInput | null>(() => {
+       .map((r) => ({
+         id: r.id,
+         ink: r.ink["--color-user-ink"],
+-        pos: settled.value[r.id] as number,
++        pos: settled.value.get(r.id) as number,
+       })),
+   };
+ });

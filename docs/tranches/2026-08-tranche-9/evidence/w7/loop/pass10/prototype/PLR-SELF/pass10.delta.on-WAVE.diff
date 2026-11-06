@@ -1,0 +1,443 @@
+diff --git a/web/frontend/e2e/node.d.ts b/web/frontend/e2e/node.d.ts
+index 96d63c7f..e7d92ffd 100644
+--- a/web/frontend/e2e/node.d.ts
++++ b/web/frontend/e2e/node.d.ts
+@@ -61,6 +61,12 @@ declare module 'node:url' {
+   export function fileURLToPath(url: string | URL): string
+ }
+ 
++/** `loadavg()[0]` — the box's 1-minute load, printed beside a row whose budget is keyed on its
++ *  cell count (LAWS P9 §B; `player-mark.spec.ts`). */
++declare module 'node:os' {
++  export function loadavg(): number[]
++}
++
+ declare module 'node:os' {
+   /** `loadavg()[0]`: the box's 1-minute load, printed beside a rate row (LAWS P8 §B). */
+   export function loadavg(): number[]
+diff --git a/web/frontend/e2e/player-mark.spec.ts b/web/frontend/e2e/player-mark.spec.ts
+index f6cdc9a3..849d0a3d 100644
+--- a/web/frontend/e2e/player-mark.spec.ts
++++ b/web/frontend/e2e/player-mark.spec.ts
+@@ -33,8 +33,8 @@
+  */
+ import { test, expect, type Browser, type BrowserContext, type Page } from '@playwright/test';
+ import { pressCommitted } from './committed-press';
+-import * as edgeBands from './lib/edge-bands.mjs';
+-import { EDGE_PLANTS, edgeGate, fmt } from './lib/edge-bands.mjs';
++import { loadavg } from 'node:os';
++import { DRAWN_FRAMES, DRAWN_PLANTS, EDGE_PLANTS, edgeGate, fmt } from './lib/edge-bands.mjs';
+ import { readFileSync } from 'node:fs';
+ import { fileURLToPath } from 'node:url';
+ 
+@@ -546,17 +546,19 @@ async function drawSheet(page: Page) {
+   return lobby(page).evaluate(
+     (el, q) => {
+       const s = el.getBoundingClientRect();
+-      const lapped = [...document.querySelectorAll('.sudoku-cell')]
++      const cells = [...document.querySelectorAll('.sudoku-cell')]
+         .map((c) => c.getBoundingClientRect())
+-        .filter(
+-          (c) =>
+-            c.width > 0 && c.left < s.right && c.right > s.left && c.top < s.bottom && c.bottom > s.top,
+-        ).length;
++        .filter((c) => c.width > 0);
++      const lapped = cells.filter(
++        (c) => c.left < s.right && c.right > s.left && c.top < s.bottom && c.bottom > s.top,
++      ).length;
+       return {
+         rows: el.querySelectorAll('.pl-row').length,
+         more: el.querySelector('.pl-more')?.textContent?.trim() ?? '',
+         lapped,
+         chart: !!el.querySelector('.place-chart'),
++        // how far the board runs past the drawn sheet's bottom (the area clause's witness, below)
++        below: +(Math.max(...cells.map((c) => c.bottom)) - s.bottom).toFixed(2),
+         pass3: matchMedia(q.PASS3).matches,
+         pass5: matchMedia(q.PASS5).matches,
+       };
+@@ -565,6 +567,22 @@ async function drawSheet(page: Page) {
+   );
+ }
+ 
++/**
++ * THE AREA CLAUSE DECIDES NO REAL CELL, AND THIS IS ITS STATED REASON (pass-9 critic gap 7; LAWS
++ * P8 §F: a disjunct with no plant on the surface it gates carries its unreachability). `takesShort`
++ * keeps four rows over a lapped board only when the board's overlap with the four-row sheet EQUALS
++ * its overlap with your one row, which needs the board to end inside your row. The board sits under
++ * the head and runs far past the one-row sheet: wherever one row is drawn, the board's bottom is
++ * `below` px under the sheet's bottom, so any lap of the four rows grows the lap, and the clause
++ * reads exactly as `laps` (the critic's LAPONLY, any lap → one row, GREEN on every row here). The
++ * witness is asserted on every one-row cell, so the day a layout puts the board's end inside the
++ * sheet the clause becomes reachable and these rows red until a cell prices it.
++ */
++const areaMoot = <T extends { rows: number; below: number }>(r: T, at: string): T => {
++  if (r.rows === 1) expect(r.below, `${at}: the board runs past the one-row sheet`).toBeGreaterThan(0);
++  return r;
++};
++
+ test('the desk draws the same rows at 800 and at 799, and the pass-3 query is why it did not', async ({
+   page,
+ }) => {
+@@ -592,10 +610,21 @@ test('the desk draws the same rows at 800 and at 799, and the pass-3 query is wh
+   expect(short.pass3).toBe(false);
+ });
+ 
++/** A row whose wall time scales with its cells carries a budget keyed on the count (LAWS P9 §B: this
++ *  row died at the 30 s default at load ~51 and passed in 48.8 / 54.6 s at load ~73). One cell is a
++ *  fresh coarse page, a crowd and a drawn sheet: 30 s each at any load the box law reads a verdict
++ *  at (≤ 120), and the load is printed at the row's head and tail. */
++const PHONE_CELLS = 8;
++const CELL_BUDGET_MS = 30000;
++const load1 = () => +loadavg()[0].toFixed(2);
+ test('a portrait phone compresses exactly where four rows would lap the board', async ({
+   browser,
+ }) => {
++  test.setTimeout(PHONE_CELLS * CELL_BUDGET_MS);
++  test.info().annotations.push({ type: 'load-1m at head', description: String(load1()) });
++  let cells = 0;
+   const cell = async (w: number, h: number, long = false) => {
++    cells++;
+     const p = await coarsePage(browser, w, h);
+     await invite(p.page);
+     if (long) {
+@@ -611,7 +640,7 @@ test('a portrait phone compresses exactly where four rows would lap the board',
+       await expect(p.page.locator('.players-roster')).toContainText('straightforward-tyrannosaurus');
+       await p.page.clock.setSystemTime(new Date(Date.now() + 21000));
+     } else await crowd(p.page, 6, `band-${w}x${h}`);
+-    const r = await drawSheet(p.page);
++    const r = areaMoot(await drawSheet(p.page), `${w}x${h}${long ? ' long' : ''}`);
+     await p.ctx.close();
+     return r;
+   };
+@@ -645,6 +674,9 @@ test('a portrait phone compresses exactly where four rows would lap the board',
+   // still laps it. Four rows lapped six cells where one row laps four; the added rows grow the
+   // lap, so one row (pass 8 drew four and priced it).
+   expect(await cell(844, 390)).toMatchObject(armed({ rows: 1, more: 'and 6 more', lapped: priced(4, 6) }));
++  // the budget is keyed on the count the row actually drew
++  expect(cells).toBe(PHONE_CELLS);
++  test.info().annotations.push({ type: 'load-1m at tail', description: String(load1()) });
+ });
+ 
+ /**
+@@ -681,16 +713,18 @@ test('the row budget adds rows only where they grow nothing over the board, on b
+   browser,
+ }) => {
+   test.setTimeout(300000);
++  const belows: number[] = [];
+   for (const [w, h, coarse, size, rows, lapped, chartLapped] of KEY_CELLS) {
+     const { ctx, page } = await cellPage(browser, w, h, coarse, boardOf(size));
+     await invite(page);
+     await crowd(page, 6, `key-${w}x${h}-${size}`);
+-    const r = await drawSheet(page);
+-    expect(r, `${w}x${h} ${coarse ? 'coarse' : 'fine'} ${size * size}x${size * size} arm ${ARM}`).toMatchObject(
+-      armed({ rows, lapped: priced<number>(lapped, chartLapped) }),
+-    );
++    const at = `${w}x${h} ${coarse ? 'coarse' : 'fine'} ${size * size}x${size * size} arm ${ARM}`;
++    const r = areaMoot(await drawSheet(page), at);
++    expect(r, at).toMatchObject(armed({ rows, lapped: priced<number>(lapped, chartLapped) }));
++    belows.push(r.below);
+     await ctx.close();
+   }
++  test.info().annotations.push({ type: 'area clause: least board run past the one-row sheet (px)', description: String(Math.min(...belows)) });
+ });
+ 
+ /**
+@@ -707,7 +741,7 @@ test('the row budget holds one pose across 1024-1056 x 768 coarse while the boar
+     const { ctx, page } = await cellPage(browser, w, 768, true);
+     await invite(page);
+     await crowd(page, 6, `sweep-${w}`);
+-    const r = await drawSheet(page);
++    const r = areaMoot(await drawSheet(page), `sweep ${w}x768`);
+     const left = await page.evaluate(() => document.querySelector('.board-peek-host')!.getBoundingClientRect().left);
+     seen.push({ w, left: +left.toFixed(2), rows: r.rows, lapped: r.lapped });
+     await ctx.close();
+@@ -728,6 +762,36 @@ test('the row budget holds one pose across 1024-1056 x 768 coarse while the boar
+  * a reason that is not the sheet's. ±0.5 px of 124.45 holds both engines and still reds a board
+  * that moved by a row of chrome.
+  */
++/**
++ * §11'S RULING ON THE UNION (pass-9 critic gap 11; registry-v9 §6, PLACE × COUNT): the state line
++ * and the seating chart never draw together, and which one draws follows the ARM THE BUILD SHIPS
++ * (LAWS P8 §G: no default moves; pass10/CHAIR-RULINGS §9: the union's test follows the shipped arm).
++ * Alone there is no chart and the line is drawn; in a room the chart arm draws the chart and no
++ * line, the list arm the line and no chart. A row that reads `.pl-state` in a room under the chart
++ * arm reads a line the shipped sheet does not draw: that side re-authors (PLR-COUNT, batch 4).
++ */
++test('the state line and the chart never draw together, and the shipped arm picks which', async ({ browser }) => {
++  const { ctx, page } = await cellPage(browser, 1280, 800, false);
++  const read = async () => {
++    if ((await mark(page).getAttribute('aria-expanded')) !== 'true') await mark(page).click();
++    await openSheet(page);
++    const r = await lobby(page).evaluate((el) => ({
++      line: el.querySelectorAll('.pl-state').length,
++      chart: el.querySelectorAll('.place-chart').length,
++    }));
++    await page.keyboard.press('Escape');
++    await expect(mark(page)).toHaveAttribute('aria-expanded', 'false');
++    return r;
++  };
++  expect(await read(), 'alone').toEqual({ line: 1, chart: 0 });
++  await invite(page);
++  await crowd(page, 2, 'line-or-chart');
++  const room = await read();
++  expect(room.line + room.chart, `in a room, arm ${ARM}: one of the two`).toBe(1);
++  if (ARM !== 'yield') expect(room, `in a room, arm ${ARM}`).toEqual(ARM === 'chart' ? { line: 0, chart: 1 } : { line: 1, chart: 0 });
++  await ctx.close();
++});
++
+ test('the desk draws one row over two cells at rest, whatever the room\'s age', async ({ page }) => {
+   await page.setViewportSize({ width: 1280, height: 800 });
+   await page.goto(SOLO);
+@@ -999,8 +1063,10 @@ test('a click with no press after a tap toggles once, whenever it comes', async
+  *       with the tap's own click withheld (WebKit's delivery; a hybrid touch-and-mouse device)
+  *   S3  `onKey` forgives — a tap, then Enter on the mark about 100 ms on (same delivery)
+  *   S1  `onClick` pays — the tap's own click arrives (Chromium's delivery, or one click labelled
+- *       `mouse` 60 ms after the release, the RELABEL delivery, in both engines), then a press-less
+- *       click about 100 ms on
++ *       `mouse`, the RELABEL delivery, in both engines: 60 ms after the release where the engine
++ *       sends no trusted click of its own, which is WebKit's case; in Chromium the trusted touch
++ *       click cancels that timer and is relabelled at once, +4–6 ms), then a press-less click about
++ *       100 ms on, and in its own row at the window's far edge (≥ 300 ms, `FAR_MS`)
+  * The pass-8 critic's costs, each the negative's: S1 swallowed a press-less click at +109 ms,
+  * S2 a mouse click at +111-120 ms, S3 an Enter at +117-143 ms. The clean arm toggles each time.
+  */
+@@ -1081,7 +1147,43 @@ async function debtRow(browser: Browser, delivery: Delivery, cut: Clause | null,
+ }
+ const OPEN_THEN_SHUT = ['false', 'true', 'false'];
+ const SWALLOWED = ['false', 'true'];
+-async function forgiveRow(browser: Browser, clause: Clause, arms: Delivery[], act: (page: Page) => Promise<void>) {
++/** THE CUT ARM IS DEV-ONLY (LAWS P9 §B; pass-9 critic gap 9): it re-serves the dev server's own
++ *  `PlayerMark.vue` module, which a built dist does not have (its hits read 0 there). A row run
++ *  against a served dist SKIPS, never reds, and says why. */
++async function devServed(browser: Browser) {
++  const ctx = await browser.newContext();
++  try {
++    const page = await ctx.newPage();
++    await page.goto(SOLO);
++    return await page.evaluate(() => !!document.querySelector('script[src*="/@vite/client"]'));
++  } finally {
++    await ctx.close();
++  }
++}
++/** The far edge of the debt's window (pass-9 critic gap 9: every read sat at 12–92 ms). The
++ *  activation is a press-less `click()` fired IN THE PAGE on the first frame at or past `FAR_MS`
++ *  after the release's own time stamp, so the gap is the page's clock, not the runner's. */
++const FAR_MS = 300;
++const farClick = (page: Page) =>
++  page.evaluate(
++    (far) =>
++      new Promise<void>((done) => {
++        const ev = (window as any).__ev as { k: string; t: number }[];
++        const up = ev.find((e) => e.k === 'pointerup:touch')!.t;
++        const el = document.querySelector('[data-player-mark]') as HTMLElement;
++        const tick = (now: number) => (now - up >= far ? (el.click(), done()) : requestAnimationFrame(tick));
++        requestAnimationFrame(tick);
++      }),
++    FAR_MS,
++  );
++async function forgiveRow(
++  browser: Browser,
++  clause: Clause,
++  arms: Delivery[],
++  act: (page: Page) => Promise<void>,
++  floor = 0,
++) {
++  test.skip(!(await devServed(browser)), 'dev-only: the CUT arm re-serves the dev server\'s PlayerMark.vue module');
+   for (const delivery of arms)
+     for (const cut of [null, clause] as const) {
+       const r = await debtRow(browser, delivery, cut, act);
+@@ -1089,6 +1191,7 @@ async function forgiveRow(browser: Browser, clause: Clause, arms: Delivery[], ac
+       console.log(`[debt] ${tag} → ${JSON.stringify(r.states)}`);
+       // the activation came inside the debt's window, or the negative proves nothing
+       expect(r.gap, tag).toBeLessThan(350);
++      expect(r.gap, `${tag}: at or past ${floor} ms`).toBeGreaterThanOrEqual(floor);
+       if (cut) {
+         expect(r.hits, `${tag}: the cut landed exactly once`).toBe(1);
+         expect(r.states, tag).toEqual(SWALLOWED);
+@@ -1120,6 +1223,13 @@ test('a press-less click right after the tap\'s own click toggles once: the paid
+   const arms: Delivery[] = browserName === 'chromium' ? ['own', 'relabel'] : ['relabel'];
+   await forgiveRow(browser, 'S1', arms, (page) => mark(page).evaluate((el) => (el as HTMLElement).click()));
+ });
++test('a press-less click at the far edge of the debt\'s window toggles once: the paid click cleared it', async ({
++  browser,
++  browserName,
++}) => {
++  const arms: Delivery[] = browserName === 'chromium' ? ['own', 'relabel'] : ['relabel'];
++  await forgiveRow(browser, 'S1', arms, farClick, FAR_MS);
++});
+ 
+ /**
+  * BOTH HEAD DISCLOSURES PAINT A DRAWN EDGE ON ALL FOUR SIDES AND NO CSS BORDER, IN BOTH THEMES
+@@ -1144,13 +1254,12 @@ const border = (page: Page, sel: string) =>
+     );
+   });
+ 
+-// B3 ON A DRAWN FRAME (CHAIR-RULINGS pass 9 §7): the house frame floors at its AUTHORED width × 0.9,
+-// read by the ONE probe off its own roster (`DRAWN_FRAMES`, `drawn: 'head-sheet'`), never a `thick`
+-// typed here. The roster is PROPOSED to the library by this lane (pass9/prototype/PLR-SELF); until
+-// the chair folds it the library has no lawful floor for this frame, and the row says so and skips
+-// rather than run at a parameter of its own choosing (pass 8 ran it at `thick: 1.5`).
+-const ROSTER = 'DRAWN_FRAMES' in edgeBands;
+-const DRAWN: Record<string, unknown> = ROSTER ? { drawn: 'head-sheet' } : {};
++// B3 ON A DRAWN FRAME (CHAIR-RULINGS pass 9 §7; pass 10 §10, folded in homes v3): the house frame
++// floors at its AUTHORED width × 0.9, read by the ONE probe off its own roster (`DRAWN_FRAMES`,
++// `drawn: 'head-sheet'`), never a `thick` or `thickTol` typed here (the library refuses both). The
++// roster is a NAMED import, so its absence fails this file at load, never a skip (pass-9 critic
++// gap 4: a skip keyed on the export's presence masked a dropped roster). Every regime carries the
++// roster's own two drawn plants (LAWS P8 §E): THIN_1PX and the 0.55× plant of the authored width.
+ type Regime = { name: string; coarse: boolean; media: Parameters<Page['emulateMedia']>[0]; all: boolean };
+ // LAWS P7 §E(i): the shipped regime (reduce, fine) carries every plant; the arms the row did not
+ // emulate in pass 8 carry X4 and THIN_1PX (the pass-8 critic's template).
+@@ -1163,8 +1272,9 @@ const REGIMES: Regime[] = [
+ test('both head disclosures paint a drawn edge on all four sides and no CSS border, in both themes', async ({
+   browser,
+ }) => {
+-  test.skip(!ROSTER, 'B3 on a drawn frame waits on the drawn roster in the ONE library (CHAIR-RULINGS pass 9 §7; PROPOSED by PLR-SELF)');
+   test.setTimeout(900000);
++  const roster = DRAWN_FRAMES['head-sheet'];
++  expect(roster, 'the roster pins the head sheet at 1.5 × 1').toMatchObject({ width: 1.5, sites: 1 });
+   for (const rg of REGIMES)
+     for (const scheme of ['light', 'dark'] as const) {
+       const ctx = await browser.newContext({ viewport: { width: 1280, height: 800 }, hasTouch: rg.coarse });
+@@ -1179,8 +1289,10 @@ test('both head disclosures paint a drawn edge on all four sides and no CSS bord
+         const edge = `${subject} .head-sheet-edge`;
+         expect(await border(page, subject), `${T} ${subject}`).toBe(0);
+         const P = EDGE_PLANTS(edge);
+-        const plants = rg.all ? P : { X4_opacity_015: P.X4_opacity_015, THIN_1PX: P.THIN_1PX };
+-        const { clean, plants: read } = await edgeGate(page, { subject, edge, plants, ...DRAWN });
++        const D = DRAWN_PLANTS(edge, roster.width);
++        const plants = rg.all ? { ...P, ...D } : { X4_opacity_015: P.X4_opacity_015, ...D };
++        expect(Object.keys(D).length, `${T} ${subject} THIN_1PX + the 0.55× plant`).toBe(2);
++        const { clean, plants: read } = await edgeGate(page, { subject, edge, plants, drawn: 'head-sheet' });
+         expect(clean.red, `${T} ${subject} clean: ${fmt(clean)}`).toBe(false);
+         for (const [name, r] of Object.entries(read)) {
+           if (r.info) test.info().annotations.push({ type: `${T} ${subject} ${name}`, description: fmt(r) });
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 336e91e6..4c6dcc26 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -141,6 +141,13 @@ const EXEMPT_KEYS = {
+     ms: 90,
+     why: "the tally's stroke-to-stroke step — a DELAY between an arrival's strokes (B9's axis), never a travel",
+   },
++  // §11 · B-INK-RUNG (pass10/CHAIR-RULINGS §11: the ballot's NAME and its default (b) EXEMPT, the
++  // chair's, not PLR-SELF's admission; the owner's ballot keeps arm (a), the rung): the head mark's
++  // colour turn on the room's join.
++  presenceInkMs: {
++    ms: 400,
++    why: "the head mark's one colour turn on the room's join, slower than the sheet's 150ms disclosure and inside the 1180ms join wash it lands with (B-INK-RUNG (b), pass10/CHAIR-RULINGS §11)",
++  },
+   // PASS 7 · B2 READS EVERY LEAF (INTAKE-23 row 17, "every clock's ONE home"): a nested number
+   // (`hand: { stepMs: 17 }`) escaped a top-level-only scan. These two are not lengths at all.
+   "bands.sun": {
+diff --git a/web/frontend/scripts/check-pencil-verbs.mjs b/web/frontend/scripts/check-pencil-verbs.mjs
+index c15cbe3b..0554ac9a 100644
+--- a/web/frontend/scripts/check-pencil-verbs.mjs
++++ b/web/frontend/scripts/check-pencil-verbs.mjs
+@@ -223,13 +223,9 @@ const ADMITTED = new Map([
+   ],
+   // ── GRADED — the players well: struck with the well itself (T9-W7 §11 drew the room in the
+   // head's lobby; the six one-shots it admitted are gone from GameControlPanel.vue).
+-  // ── §11 the head mark (T9-W7 PLR-SELF, on the union for the first time): the stub's ONE colour
+-  // turn (graphite to the room's ink on the board's join, 400ms, `MOTION.presenceInkMs`) and its
+-  // reduced-motion snap. No verb carries a colour turn at this length; §13 owns naming one.
+-  [
+-    "pencil/chrome/PlayerMark/PlayerMark.vue :: color var(--presence-ink-dur) var(--ease-standard) #1",
+-    ["signature", "the head mark's one colour turn, on the join", ["curve"]],
+-  ],
++  // ── §11 the head mark: PLR-SELF's two self-admitted rows are STRUCK (LAWS P9 §F; pass-9 critic
++  // gap 6). The mark's colour turn now names its verb (layDown) and its reduced-motion snap zeroes
++  // the length token, so neither is an offence. The tally's stroke row below is PLR-COUNT's.
+   [
+     "pencil/chrome/PlayerMark/PlayerMark.vue :: stroke var(--presence-ink-dur) var(--ease-standard) #1",
+     [
+@@ -238,10 +234,6 @@ const ADMITTED = new Map([
+       ["curve"],
+     ],
+   ],
+-  [
+-    "pencil/chrome/PlayerMark/PlayerMark.vue :: 0s #1",
+-    ["prm", "the head mark's ink snaps under reduce", ["curve"]],
+-  ],
+   // ── LOOP — a loop is not a gesture.
+   [
+     "pencil/chrome/ScribbleLoader.vue :: scribble-cycle 1000ms linear infinite #1",
+diff --git a/web/frontend/src/games/shared/useSession.test.ts b/web/frontend/src/games/shared/useSession.test.ts
+index 0095b3f9..49d7b2a9 100644
+--- a/web/frontend/src/games/shared/useSession.test.ts
++++ b/web/frontend/src/games/shared/useSession.test.ts
+@@ -442,8 +442,11 @@ describe("ink is the room's, not the page's — `k` adoption", () => {
+     const p = await bootPage();
+     await p.session.joinSession("room-f1");
+     const mine = () => p.session.session.players.value.find((r) => r.self)?.ink ?? {};
+-    // minted at the join (`mint`): an index of your own, or nothing
+-    expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
++    // a room of ONE binds nothing under either arm (pass10/CHAIR-RULINGS §9: the union's test follows
++    // the shipped arm, and this row is the side that read a mint at the join the union never makes):
++    // PAL-TIN's `withSelfInk` binds your own ink once a SECOND id is known, and the head mark rests
++    // graphite alone (`player-mark.spec.ts` row 1)
++    expect(mine()).toEqual({});
+     // adopted from the room's `k` (`adoptInk`): the room's index for you, or nothing
+     const me = p.selfId();
+     p.hear(
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+index 01120963..ef87690c 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
++++ b/web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+@@ -681,7 +681,8 @@ const lines = computed<LobbyLine[]>(() =>
+   /* THE INK IS BOUND ONCE, HERE: the ring and the written count read it. */
+   --mark-ink: var(--ink-press-quiet);
+   color: var(--mark-ink);
+-  transition: color var(--presence-ink-dur) var(--ease-standard);
++  /* the room's ink is LAID DOWN on the mark (§13's verb; its length is B-INK-RUNG's exempt 400) */
++  transition: color var(--presence-ink-dur) var(--verb-layDown-ease);
+   /* The tap debt's bound (`TAP_CLICK_MS`) assumes a tap's own click follows its release
+      promptly. `index.css` scopes `manipulation` to `.board-cells`; the mark is outside it, so
+      it says so on its own hit box: no double-tap zoom here, so no wait before the click. */
+@@ -769,10 +770,11 @@ const lines = computed<LobbyLine[]>(() =>
+   stroke-opacity: 0.95;
+ }
+ 
++/* PRM: the presence length itself reads zero, so every turn that spends it (the mark's colour and
++   the tally's strokes) snaps; it outranks the length the template binds on the button. */
+ @media (prefers-reduced-motion: reduce) {
+-  .player-mark,
+-  .pt-stroke {
+-    transition-duration: 0s;
++  .player-mark {
++    --presence-ink-dur: 0s !important;
+   }
+ }
+ </style>
+diff --git a/web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts b/web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
+index 6b35c48d..031f9471 100644
+--- a/web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
++++ b/web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
+@@ -14,6 +14,13 @@
+  *
+  * The bound is zero and it is strict: equal areas keep `tall` (the added rows lap nothing), any
+  * growth takes `short`. Its two sides are the unit rows beside this file.
++ *
++ * ON THE REAL SURFACE THE AREA CLAUSE DECIDES NO CELL (pass-9 critic gap 7). Its keep-tall side
++ * needs a board that laps the four rows but ends inside your one row; the board sits under the head
++ * and runs past the one-row sheet at every cell the e2e rows read (`player-mark.spec.ts`'s
++ * `areaMoot` asserts that run on every one-row cell and prints the least of it), so as shipped the
++ * clause reads exactly as `laps`: ANY LAP TAKES ONE ROW (B-NAMES arm (a), captioned so). Only the
++ * synthetic boxes beside this file reach the keep-tall side.
+  */
+ export interface Box {
+   left: number;
+diff --git a/web/frontend/src/pencil/config/pencilConfig.ts b/web/frontend/src/pencil/config/pencilConfig.ts
+index 1bb94bba..3842338a 100644
+--- a/web/frontend/src/pencil/config/pencilConfig.ts
++++ b/web/frontend/src/pencil/config/pencilConfig.ts
+@@ -155,7 +155,8 @@ export const MOTION = {
+    *  thing in the head that ever moves, so it is a colour and nothing else: no travel, no
+    *  scale, no beat. 400ms — slower than the sheet's 150ms disclosure (this is not a response
+    *  to a press) and well inside the board's own 1180ms join wash, which it lands with on the
+-   *  same event. PRM: 0s, the transition simply does not run. */
++   *  same event. PRM: 0s, the transition simply does not run. EXEMPT by cite: ballot
++   *  B-INK-RUNG, default (b) (pass10/CHAIR-RULINGS §11); arm (a) snaps it to a rung. */
+   presenceInkMs: 400,
+   /** THE DURATION LADDER (T9-W7 §13 · M09) — a short closed set of LENGTHS, not
+    *  meanings. What a rung is spent on is the call site's business; the ladder only says

@@ -1,0 +1,84 @@
+== arm f67c70ee blob f67c70eec5cefefa1408499a9f63758d08d1502b 17:31:29 load 8.55 11.03 11.57
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 2 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed | 2 passed (3)
+      Tests  2 failed | 62 passed (64)
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either
+× SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11 67ms
+× TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either 4ms
+exit 1
+== arm 458bb26f blob 458bb26ff2fac0c53ab545db574325df2b219156 17:31:32 load 8.51 10.98 11.55
+⎯⎯⎯⎯⎯⎯ Failed Tests 18 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  3 failed (3)
+      Tests  18 failed | 46 passed (64)
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > a SECOND front 12 frames after a partial-start front still runs at the panel's frame
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+FAIL  src/pencil/grid/crit.partial30.test.ts > CRITIC p9 — a 30 Hz panel with a partial first tick > first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > NEGATIVE CONTROL: C started EARLY in the task (a 140 ms partial, held) — the remainder is excluded, every whole frame travels
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > STALE partials: three short fronts each starting 4 ms before a frame leave no short reading behind
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 12 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 16 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 2 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 27 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 5 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a 9 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > a SECOND front after a partial-start front still runs at the panel's frame from its first whole tick
+× A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading 2ms
+× NEGATIVE CONTROL: C started EARLY in the task (a 140 ms partial, held) — the remainder is excluded, every whole frame travels 3ms
+× SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11 44ms
+× STALE partials: three short fronts each starting 4 ms before a frame leave no short reading behind 3ms
+× TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either 4ms
+× a 12 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 3ms
+× a 16 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 3ms
+× a 2 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 5ms
+× a 27 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 2ms
+× a 5 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 3ms
+× a 9 ms first tick, then 30 Hz frames: the front ends by frame 11 and every frame after the sixth travels whole 2ms
+× a SECOND front 12 frames after a partial-start front still runs at the panel's frame 3ms
+× a SECOND front after a partial-start front still runs at the panel's frame from its first whole tick 2ms
+× first tick 12 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+× first tick 16 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+× first tick 2 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 10ms
+× first tick 5 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+× first tick 9 ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure) 3ms
+exit 1
+== arm eeb58de2 blob eeb58de2fae508b1fd3418921ca273bd197c13b3 17:31:34 load 8.51 10.98 11.55
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 7 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  1 failed | 2 passed (3)
+      Tests  7 failed | 57 passed (64)
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 5 consecutive 150 ms stalls, each capped at ≤ 18 ms
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 9 consecutive 150 ms stalls, each capped at ≤ 18 ms
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > the remainder rule's limits, both sides: a short tick after a HEALTHY one is read; a longer tick after a stall is read
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost)
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a RUN of stalls (pass 9 row 1: the cap keys on the window's minimum) > the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels
+× 5 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 5ms
+× 9 consecutive 150 ms stalls: every one capped at ≤ stepMs + 1 3ms
+× BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 5 consecutive 150 ms stalls, each capped at ≤ 18 ms 3ms
+× BESIDE THE STALL RUN: a 3 ms first tick, twelve 60 Hz frames, then 9 consecutive 150 ms stalls, each capped at ≤ 18 ms 2ms
+× a 60 → 30 Hz drop is the panel once its frames fill the window (the window's other cost) 4ms
+× the remainder rule's limits, both sides: a short tick after a HEALTHY one is read; a longer tick after a stall is read 3ms
+× the window's cliff, read from both sides: PANEL_WINDOW − 1 stalls capped, PANEL_WINDOW travels 4ms
+exit 1
+== arm c0fbe399 blob c0fbe399c0466e8419e6ce757262e5bdaa2343fa 17:31:35 load 8.51 10.98 11.55
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+ Test Files  2 failed | 1 passed (3)
+      Tests  4 failed | 60 passed (64)
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > NEGATIVE CONTROL: C started EARLY in the task (a 140 ms partial, held) — the remainder is excluded, every whole frame travels
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11
+FAIL  src/pencil/grid/crit.remainder.test.ts > CRITIC p10 — the stall's remainder read by a tween that did not see the stall > TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either
+FAIL  src/pencil/grid/gridPaths.poseFronts.test.ts > frontTween — a PARTIAL first tick (pass 10 row 1: the tween's own first tick is no panel reading) > A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading
+× A STALL'S REMAINDER: a 6 ms frame right after a 150 ms stall on a 30 Hz panel is no reading 6ms
+× NEGATIVE CONTROL: C started EARLY in the task (a 140 ms partial, held) — the remainder is excluded, every whole frame travels 3ms
+× SOLO: a front started at a long task's end (1 ms partial, then a 6 ms remainder) on a warm 30 Hz page ends by frame 11 58ms
+× TWO TWEENS: W runs through the stall (held), C starts at its end; the remainder is no reading for either 3ms
+exit 1
+RESTORED-BYTE-EQUAL f67c70eec5cefefa1408499a9f63758d08d1502b
+UNIT-DONE

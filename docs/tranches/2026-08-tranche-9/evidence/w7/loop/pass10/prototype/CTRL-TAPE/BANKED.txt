@@ -1,0 +1,20 @@
+CTRL-TAPE pass 10 bank (temporary indexes, product paths only, --binary, home paths excluded; never committed)
+
+pass10.diff                 base 74a2b5d9 (+ homes v3 homes.diff 07257854 by sha, disjoint paths)
+                            lane tree cdc0742ef9c7ebea8d8c82add75cb13cc1e537fa (temp index; the scratch Playwright config dropped)
+                              593538 B  sha1 8f01aaafcdeb4264b9b710ce6ac81b32ef647396
+                            38 files changed, 7420 insertions(+), 743 deletions(-); home paths in it 0
+pass10.delta.on-WAVE.diff   DECLARED BASE: the WAVE union 954bbbab (74a2b5d9 + pass9/integrate/WAVE.diff) + pass10/instruments/homes.on-WAVE.diff 0723d508,
+                            read through a temp index as tree 9528a8ec (archive copy) -> 3093de7b
+                              207814 B  sha1 d1b8dc0ee8212da3ce1162eafe13669675e90983
+                            12 files changed, 1652 insertions(+), 98 deletions(-)
+
+apply --check (each on a fresh git archive of 74a2b5d9 with its own git init; exit read bare):
+  pass10.diff @ 74a2b5d9 (fresh git archive): exit 0, paths 38, GIT_CEILING_DIRECTORIES=<lane scratch>, git dir <lane scratch>/base74/.git
+  pass10.delta.on-WAVE.diff @ the WAVE 954bbbab + homes.on-WAVE 0723d508 (fresh archive): exit 0, paths 12, GIT_CEILING_DIRECTORIES=<lane scratch>, git dir <lane scratch>/wave0/.git
+  pass10.delta.on-WAVE.diff @ s10 (74a2b5d9 + pass9 s10.diff) + homes.on-WAVE 0723d508 (fresh archive): exit 0, paths 12, GIT_CEILING_DIRECTORIES=<lane scratch>, git dir <lane scratch>/s100/.git
+  pass10.diff @ the WAVE + homes, the cumulative bank (expected 1): exit 1, paths 38, GIT_CEILING_DIRECTORIES=<lane scratch>, git dir <lane scratch>/wave0/.git
+  pass10.diff @ s10 + homes, the cumulative bank (expected 1): exit 1, paths 38, GIT_CEILING_DIRECTORIES=<lane scratch>, git dir <lane scratch>/s100/.git
+
+leak grep (LAWS P8 §K four patterns: session scratch, system temp ×2, the lane scratch dir): pass10.diff 0, delta 0
+dot-dir paths: pass10.diff 1 (.github/workflows/ci.yml, a product path carried since pass8.diff); delta 0

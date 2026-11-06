@@ -1,0 +1,95 @@
+
+ RUN  v4.1.11 /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-FIVE/wave/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (50 tests | 3 failed) 177ms
+     × F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND 7ms
+     × U3 — no two known ids share an ink string, across two epochs from two authors 3ms
+     × U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears 4ms
+ ❯ src/games/shared/BoardHost.authors.test.ts (10 tests | 1 failed) 72ms
+     × binds the ring's own ink, not the digit's 8ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 4 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — the peer's ring is the hand's other pressure, and it says who > binds the ring's own ink, not the digit's
+AssertionError: expected 'var(--color-peer-4-ring)' to contain 'var(--peer-ring-l)'
+
+Expected: "var(--peer-ring-l)"
+Received: "var(--color-peer-4-ring)"
+
+ ❯ src/games/shared/BoardHost.authors.test.ts:245:26
+    243|     expect(h.ringInk(1)).toBe(ink["--color-peer-cursor-ink"]);
+    244|     expect(h.ringInk(1)).not.toBe(ink["--color-user-ink"]);
+    245|     expect(h.ringInk(1)).toContain("var(--peer-ring-l)");
+       |                          ^
+    246|     expect(h.ringInk(0)).toBe(""); // no cursor, no binding
+    247|     h.w.unmount();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/4]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useSession.test.ts:446:44
+    444|     const mine = () => p.session.session.players.value.find((r) => r.s…
+    445|     // minted at the join (`mint`): an index of your own, or nothing
+    446|     expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
+       |                                            ^
+    447|     // adopted from the room's `k` (`adoptInk`): the room's index for …
+    448|     const me = p.selfId();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/4]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U3 — no two known ids share an ink string, across two epochs from two authors
+AssertionError: expected 2 to be 4 // Object.is equality
+
+- Expected
++ Received
+
+- 4
++ 2
+
+ ❯ src/games/shared/useSession.test.ts:688:32
+    686|     );
+    687|     expect(inks).toHaveLength(4); // you and three hands
+    688|     expect(new Set(inks).size).toBe(inks.length);
+       |                                ^
+    689|   });
+    690|
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/4]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > U5 — once agreed, the index beats a later `k` from the same author; a NEW author clears
+AssertionError: expected { …(2) } to deeply equal { …(2) }
+
+- Expected
++ Received
+
+  {
+-   "--color-peer-cursor-ink": "var(--color-peer-1-ring)",
+-   "--color-user-ink": "var(--color-peer-1)",
++   "--color-peer-cursor-ink": "var(--color-peer-2-ring)",
++   "--color-user-ink": "var(--color-peer-2)",
+  }
+
+ ❯ src/games/shared/useSession.test.ts:727:29
+    725|       "peer-1",
+    726|     );
+    727|     expect(inkOf("peer-1")).toEqual(inkFor(5));
+       |                             ^
+    728|     // a DIFFERENT author's newer board is a new room's worth of assig…
+    729|     p.hear(
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[4/4]⎯
+
+
+ Test Files  2 failed | 35 passed (37)
+      Tests  4 failed | 507 passed (511)
+   Start at  17:32:00
+   Duration  13.30s (transform 1.18s, setup 181ms, import 3.05s, tests 4.14s, environment 14.07s)
+

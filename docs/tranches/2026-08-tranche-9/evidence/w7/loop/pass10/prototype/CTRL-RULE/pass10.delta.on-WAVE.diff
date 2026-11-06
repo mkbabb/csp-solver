@@ -1,0 +1,112 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 9cdc5cf..7192d60 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -1845,8 +1845,11 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+    *  (why the charter's "Δ = 34" binds the pad sites only). A value the evaluator cannot reduce to
+    *  px (a `var()`, an `em`, a viewport unit, another `env()`) is RED by name, never assumed. */
+   const FOOT_EPS = 0.05;
+-  const FOOT_PAD_PROPS = ["padding-bottom", "padding-block-end", "padding-block"];
+-  const FOOT_SHIFT_PROPS = ["margin-bottom", "margin-block-end", "margin-block", "bottom", "inset-block-end", "inset-block"];
++  // PASS 10: the read set is the PHYSICAL side; its logical twins (`padding-block(-end)`,
++  // `margin-block(-end)`, `inset-block(-end)`) are the ONE library's `logical-sides` clause (homes v3,
++  // folded from this lane's pass-9 PROPOSED), so the gate's own `logical` switch is now the library's.
++  const FOOT_PAD_PROPS = ["padding-bottom"];
++  const FOOT_SHIFT_PROPS = ["margin-bottom", "bottom"];
+   const BLOCK_END = (prop: string, value: string, inset: number): number | null => {
+     const v = value
+       .replace(/\s*!important\s*$/, "")
+@@ -1919,8 +1922,8 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     const r = elementSites(FE, {
+       file: "src/games/shared/GameScene.vue",
+       pick: (el: { id: string | null }) => el.id === "card-foot",
+-      // `logical` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
+-      props: off.includes("logical") ? ["padding-bottom"] : [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
++      // the library's `logical-sides` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
++      props: [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
+       read,
+     });
+     // `regimes` off = the one portrait cell (what a row that reads one emulated cell sees)
+@@ -1999,7 +2002,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       ["gate every-site", () => verdict(["every-site"])],
+       ["gate regimes", () => verdict(["regimes"])],
+       ["gate evaluate (pass 8's text match)", () => verdict(["evaluate"])],
+-      ["gate logical", () => verdict(["logical"])],
++      ["library logical-sides", () => { sabotage(["logical-sides"]); try { return verdict(); } finally { sabotage([]); } }],
+       ["gate own-pad", () => verdict(["own-pad"])],
+       ["gate shift", () => verdict(["shift"])],
+     ] as const) {
+@@ -2128,16 +2131,23 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+   /** A plant as it would be served at a synthetic inset (its own `env()` rewritten too). */
+   const AT_INSET = (css: string, inset: number) => css.replace(FOOT_ENV, `${inset}px`);
+ 
+-  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a synthetic 34]. */
+-  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean][] = [
+-    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true],
+-    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true],
+-    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
+-    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true],
+-    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true],
+-    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true],
+-    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true],
+-    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true],
++  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a
++   *  synthetic 34, the SERVED arm reads it]. Pass 10 (the pass-9 critic's N1/N6/N2; LAWS P9 §F, a plant
++   *  per disjunct): three displacements the source and served arms are BLIND to by design (`translate`,
++   *  `top`, the foot's children) — row 28 closes them on the PAINT arm alone, so each is that arm's own
++   *  born-RED here, in both engines, and the served arm's blindness is printed, not hidden. */
++  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean, boolean][] = [
++    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true, true],
++    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true, true],
++    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false, true], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
++    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true, true],
++    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true, true],
++    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true, true],
++    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true, true],
++    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true, true],
++    ["N1 translate sinks the foot by the inset", "#card-foot.card-foot { translate: 0 env(safe-area-inset-bottom); }", false, true, false],
++    ["N6 top sinks the foot by the inset", "#card-foot.card-foot { position: relative; top: env(safe-area-inset-bottom); }", false, true, false],
++    ["N2 the foot's children sink by the inset", "#card-foot.card-foot > * { position: relative; top: env(safe-area-inset-bottom); }", false, true, false],
+   ];
+   const FOOT_READ = async (page: Page, inset: number) => {
+     const pad = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("card-foot")!).paddingBottom));
+@@ -2151,7 +2161,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+   }) => {
+     // eighteen page loads (a fresh page per plant, flat and synthetic): the default 30 s is one
+     // WebKit load's budget under a box load of 60–70 (the first WAVE run timed out at plant 4)
+-    test.setTimeout(240_000);
++    test.setTimeout(300_000);
+     const st = await SYNTH_ROUTE(page);
+     await OPEN(page);
+     const served = await SERVED_PAD(page);
+@@ -2173,7 +2183,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     const greens: Record<string, string[]> = { logical: [], evaluate: [], shift: [] };
+     // NEGATIVE CONTROLS, each on a fresh page: the served arm reds on every plant, the flat paint on
+     // the ones that move ink at inset 0, and the synthetic 34 on every one that gives the inset away.
+-    for (const [name, css, paints0, paints34] of FOOT_BEHAVIOUR_PLANTS) {
++    for (const [name, css, paints0, paints34, seen] of FOOT_BEHAVIOUR_PLANTS) {
+       await OPEN(page, () => page.addStyleTag({ content: css }));
+       const s = await SERVED_PAD(page);
+       const p0 = paints0 ? await FOOT_READ(page, 0) : null;
+@@ -2184,8 +2194,10 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       }
+       const p34 = paints34 ? await FOOT_READ(page, 34) : null;
+       console.log(`[RULE row 28 plant] ${browserName} ${name}: served ${JSON.stringify(SERVED_BAD(s))}${p0 ? ` flat ${JSON.stringify(p0)}` : ""}${p34 ? ` synth34 ${JSON.stringify(p34)}` : ""}`);
+-      expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
+-      for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      if (seen) {
++        expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
++        for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      } else console.log(`[RULE row 28 plant] ${browserName} ${name}: the served arm is blind by design (served ${SERVED_OK(s) ? "GREEN" : "RED"}); the paint arm owns it`);
+       if (p0) expect(p0.clears ?? 0, `negative control ${name} (flat paint)`).toBeLessThan(2);
+       if (p34) expect(p34.clears ?? 0, `negative control ${name} (synthetic 34 paint)`).toBeLessThan(2);
+     }
+@@ -2234,7 +2246,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     expect(red, "negative control: max() gives the band away").toBeLessThan(2);
+     await tag.evaluate((n) => (n as Element).remove());
+     // pass 9: the pass-8 critic's K-plants under the REAL inset (each reds here, as on the synthetic arm)
+-    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^K1/.test(n))) {
++    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^(K1|N[126] )/.test(n))) {
+       const k = await page.addStyleTag({ content: css });
+       await SHEET_SETTLED(page);
+       const r = await FOOT_READ(page, 34);

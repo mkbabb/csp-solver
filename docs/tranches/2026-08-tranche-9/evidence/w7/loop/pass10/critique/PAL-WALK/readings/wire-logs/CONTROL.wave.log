@@ -1,0 +1,33 @@
+
+ RUN  v4.1.11 <crit-scratch>/wv2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (50 tests | 1 failed) 118ms
+     × F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND 5ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 1 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useSession.test.ts:446:44
+    444|     const mine = () => p.session.session.players.value.find((r) => r.s…
+    445|     // minted at the join (`mint`): an index of your own, or nothing
+    446|     expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
+       |                                            ^
+    447|     // adopted from the room's `k` (`adoptInk`): the room's index for …
+    448|     const me = p.selfId();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/1]⎯
+
+
+ Test Files  1 failed | 1 passed (2)
+      Tests  1 failed | 59 passed (60)
+   Start at  13:47:08
+   Duration  1.13s (transform 522ms, setup 29ms, import 745ms, tests 155ms, environment 1.05s)
+

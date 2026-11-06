@@ -1,0 +1,581 @@
+diff --git a/web/frontend/e2e/note-reserve.spec.ts b/web/frontend/e2e/note-reserve.spec.ts
+index 2f0abaf..72bcff4 100644
+--- a/web/frontend/e2e/note-reserve.spec.ts
++++ b/web/frontend/e2e/note-reserve.spec.ts
+@@ -1,6 +1,8 @@
+ // PRM: live, because the row reads the EMPTY voice's box at rest in the regime that ships (no
+ // motion runs on an empty voice; a reduced-motion emulation would read a regime the owner does not see).
+ import { expect, test, type Browser, type Page } from "@playwright/test";
++// The ONE library's rest waits (homes v3, LAWS P9 §B: never a fixed sleep in a live read).
++import { atRest, heightAtRest } from "./lib/rest-probes.mjs";
+ 
+ /**
+  * THE NOTE'S RESERVE, READ ON THE PAGE (T9-W7 §7, NOTE-LEDGER; LAWS P7 §F (iii)).
+@@ -284,27 +286,68 @@ const readSpoken = (page: Page): Promise<Spoken> =>
+       docH: document.documentElement.scrollHeight,
+     };
+   });
+-/** Nothing under the voice moves: the strip and the board's top within half a pixel. */
+-const still = (rest: Spoken, spoke: Spoken) =>
++/** The WHOLE speak window (LAWS P9 §D, the critic's C7): every frame from the keypress until the
++ *  strip is at rest through the ONE library, never two instants. `frames` is the count sampled. */
++type Window = { frames: number; strip: number; boardTop: number; docH: number; moved: number };
++/** Nothing under the voice moves in ANY frame of the window: the strip and the board's top within
++ *  half a pixel of rest, and the document's height EQUAL to rest (a 0.39 px growth that rounds the
++ *  page's scroll height up a whole pixel moves the page). */
++const still = (rest: Spoken, spoke: Spoken, w: Window, doc = true) =>
+   rest.text === "" &&
+   spoke.text !== "" &&
+-  Math.abs(spoke.strip - rest.strip) <= 0.5 &&
+-  Math.abs(spoke.boardTop - rest.boardTop) <= 0.5;
+-/** The voice's first sentence: a hint on the first empty cell (the product's `h`). */
+-async function speak(page: Page) {
+-  await page.evaluate(() =>
++  w.frames > 0 &&
++  w.strip <= 0.5 &&
++  w.boardTop <= 0.5 &&
++  (!doc || w.docH === 0);
++/** The voice's first sentence: a hint on the first empty cell (the product's `h`), sampled every
++ *  animation frame from before the keypress until `heightAtRest` reads the strip at rest. */
++async function speak(page: Page, rest: Spoken): Promise<Window> {
++  await page.evaluate(() => {
++    const strip = document.querySelector<HTMLElement>(".board-margin");
++    const cell = document.querySelector<HTMLElement>(".game-cell");
++    const out: { strip: number; boardTop: number; docH: number }[] = [];
++    const w = window as unknown as { __noteWin?: { out: typeof out; on: boolean } };
++    w.__noteWin = { out, on: true };
++    const tick = () => {
++      if (!w.__noteWin?.on || !strip || !cell) return;
++      out.push({
++        strip: strip.getBoundingClientRect().height,
++        boardTop: cell.getBoundingClientRect().top,
++        docH: document.documentElement.scrollHeight,
++      });
++      requestAnimationFrame(tick);
++    };
++    requestAnimationFrame(tick);
+     [...document.querySelectorAll<HTMLInputElement>(".game-cell input")]
+       .find((i) => !i.value)
+-      ?.focus(),
+-  );
++      ?.focus();
++  });
+   await page.keyboard.press("h");
+   await expect
+     .poll(() => readSpoken(page).then((r) => r.text), { timeout: 10_000 })
+     .not.toBe("");
+-  // the sentence's draw-in and the strip's settle; then the board is read at rest again
+-  await page.waitForTimeout(1600);
++  // the window closes on the library's rest (the strip's subtree has no running animation and
++  // its height holds for 10 frames and a confirmation), never on a fixed sleep (lint:sleep)
++  const r = await heightAtRest(page, { sel: ".board-margin", frames: 10, timeout: 8000 });
++  expect(r.rested, `the strip came to rest: ${JSON.stringify(r)}`).toBe(true);
+   await page.evaluate(() => (document.activeElement as HTMLElement | null)?.blur());
+   await settle(page);
++  const out = await page.evaluate(() => {
++    const w = window as unknown as {
++      __noteWin?: { out: { strip: number; boardTop: number; docH: number }[]; on: boolean };
++    };
++    if (w.__noteWin) w.__noteWin.on = false;
++    return w.__noteWin?.out ?? [];
++  });
++  const d = (f: (x: (typeof out)[number]) => number, at: number) =>
++    out.reduce((m, x) => Math.max(m, Math.abs(f(x) - at)), 0);
++  return {
++    frames: out.length,
++    strip: d((x) => x.strip, rest.strip),
++    boardTop: d((x) => x.boardTop, rest.boardTop),
++    docH: d((x) => x.docH, rest.docH),
++    moved: out.filter((x) => Math.abs(x.strip - rest.strip) > 0.5).length,
++  };
+ }
+ // The negative's rule, assembled at run time (a product string is a Tailwind source, T9-R6).
+ const DOUBLE = (v: string) =>
+@@ -313,11 +356,20 @@ const DOUBLE = (v: string) =>
+ // bound: still) and by 0.6 px (outside: moved). Light only; the bound is not a theme variable.
+ const EDGE = (px: number) => (v: string) =>
+   `.margin-note-block[${v}] > p:first-child:${"has"}(.margin-note-ink) { padding-bottom: ${px}px; }`;
++// C7 (the pass-9 critic's): a TRANSIENT growth, only while the sentence's enter transition runs
++// (25–32 frames). Still at both instants; the whole-window sampler must read it moved. Keyed on
++// the ink's ENTER class whatever the transition is named (`note-swap` on this tree; the union's
++// first sentence enters as `note`), so the plant exercises its effect on every tree it runs on.
++const C7 = (v: string) =>
++  `.margin-note-ink[class*="-enter-active"][${v}] { padding-bottom: 12px; }`;
++// The edge pair reads the STRIP's bound only (`doc: null`): the page's height is an integer, so a
++// 0.4 px growth may round it up a pixel; that clause has its own plants (clean and double).
+ const ARMS = {
+-  clean: { css: null, still: true, light: false },
+-  double: { css: DOUBLE, still: false, light: false },
+-  "edge-in": { css: EDGE(0.4), still: true, light: true },
+-  "edge-out": { css: EDGE(0.6), still: false, light: true },
++  clean: { css: null, still: true, light: false, doc: true },
++  double: { css: DOUBLE, still: false, light: false, doc: null },
++  c7: { css: C7, still: false, light: false, doc: null },
++  "edge-in": { css: EDGE(0.4), still: true, light: true, doc: null },
++  "edge-out": { css: EDGE(0.6), still: false, light: true, doc: null },
+ } as const;
+ 
+ async function openCell(
+@@ -354,7 +406,11 @@ async function openCell(
+     coarse: cell.coarse,
+     dark: scheme === "dark",
+   });
+-  await page.waitForTimeout(1200);
++  // the opening's settle through the ONE library (lint:sleep: never a fixed sleep): the strip's
++  // height holds and nothing in the document runs
++  const r = await heightAtRest(page, { sel: ".board-margin", frames: 10, timeout: 8000 });
++  expect(r.rested, `the opening came to rest: ${JSON.stringify(r)}`).toBe(true);
++  await atRest(page);
+   await settle(page);
+   return { ctx, page };
+ }
+@@ -371,16 +427,20 @@ for (const cell of SPOKEN_CELLS) {
+         if (spec.css) await page.addStyleTag({ content: spec.css(await scopeOf(page)) });
+         await settle(page);
+         const rest = await readSpoken(page);
+-        await speak(page);
++        const w = await speak(page, rest);
+         const spoke = await readSpoken(page);
+         const dStrip = spoke.strip - rest.strip;
+         const dBoard = spoke.boardTop - rest.boardTop;
+         console.log(
+-          `NOTE-SPOKEN|${browserName}|${cell.width}x${cell.height}|${scheme}|${arm}|strip ${rest.strip.toFixed(2)}->${spoke.strip.toFixed(2)} (${dStrip.toFixed(2)})|boardTop ${rest.boardTop.toFixed(2)}->${spoke.boardTop.toFixed(2)} (${dBoard.toFixed(2)})|docH ${rest.docH}->${spoke.docH}|${JSON.stringify(spoke.text)}`,
++          `NOTE-SPOKEN|${browserName}|${cell.width}x${cell.height}|${scheme}|${arm}|strip ${rest.strip.toFixed(2)}->${spoke.strip.toFixed(2)} (${dStrip.toFixed(2)})|boardTop ${rest.boardTop.toFixed(2)}->${spoke.boardTop.toFixed(2)} (${dBoard.toFixed(2)})|docH ${rest.docH}->${spoke.docH}|window frames ${w.frames} max|Δstrip| ${w.strip.toFixed(2)} max|ΔboardTop| ${w.boardTop.toFixed(2)} max|ΔdocH| ${w.docH} moved ${w.moved}|${JSON.stringify(spoke.text)}`,
+         );
+-        // the clean page is still; the double evasion must move the strip (its in-run negative)
++        // the clean page is still over the whole window, docH included; the double evasion and
++        // C7's transient growth must read moved (the in-run negatives)
+         expect
+-          .soft(still(rest, spoke), `${scheme} · ${arm}: ${JSON.stringify({ rest, spoke })}`)
++          .soft(
++            still(rest, spoke, w, spec.doc !== null),
++            `${scheme} · ${arm}: ${JSON.stringify({ rest, spoke, w })}`,
++          )
+           .toBe(spec.still);
+         await ctx.close();
+       }
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 55e814e..dae82d6 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -1168,14 +1168,33 @@ const problems = [];
+ // 0. So the pin covers EVERY margin extractor, and it is keyed on the STRINGS as well as the
+ // names: an open group may derive no string a margin extractor derives, whatever it calls its
+ // extractor.
+-const MUST_CLOSE = Object.keys(EXTRACT).filter((k) => /^margin/.test(k));
++//
++// KEYED ON VERDICT REACH (T9-W7 pass 10, charter row 5): pass 9 still chose the extractors by
++// their NAME (`/^margin/`), so renaming `marginVerdictCopy` and opening its group read clean
++// through the pin and red only the vacuity row. An extractor must close when any string it
++// derives REACHES the voice: a sentence authored in `techniqueVoice.ts`, or a `setMargin("…")`
++// literal at its call site in GameBoard.vue. A rename moves no string, so the pin holds.
++// `FONT_SABOTAGE=reach` restores the name key (the self-test's NARROW plant must then misread).
++const spokenAt = new Set(
++  grab(pick(/^src\/games\/shared\/GameBoard\.vue$/), /setMargin\(\s*"([^"]+)"/g).map(
++    (x) => x.s,
++  ),
++);
++const reachesVoice = (x) =>
++  /^src\/games\/shared\/techniqueVoice\.ts$/.test(x.where) || spokenAt.has(x.s);
++const mustClose = (extract) =>
++  process.env.FONT_SABOTAGE === "reach"
++    ? Object.keys(extract).filter((k) => /^margin/.test(k))
++    : Object.keys(extract).filter((k) => extract[k].run().some(reachesVoice));
++const MUST_CLOSE = mustClose(EXTRACT);
+ const unclosed = (faces, extract = EXTRACT) => {
+-  const margin = new Set(MUST_CLOSE.flatMap((k) => extract[k].run().map((x) => x.s)));
++  const must = mustClose(extract);
++  const margin = new Set(must.flatMap((k) => extract[k].run().map((x) => x.s)));
+   return faces.flatMap((f) =>
+     f.corpus
+       .filter((g) => !g.closed && g.derive)
+       .flatMap((g) => {
+-        const named = g.derive.filter((d) => MUST_CLOSE.includes(d));
++        const named = g.derive.filter((d) => must.includes(d));
+         const held = g.derive
+           .flatMap((d) => extract[d]?.run() ?? [])
+           .map((x) => x.s)
+@@ -2134,6 +2153,38 @@ if (process.argv.includes("--self-test")) {
+       1,
+     ],
+     ['`setMargin("solved it!")` deleted', findings(FACES, dropCall("solved it!")), 1],
++    [
++      // the pass-8 critic's `fc-narrow`: `marginVerdictCopy` keeps its name and loses its
++      // `setMargin` grab; `boardVerdicts` (no `margin` in its name) takes it; the verdicts move
++      // to an OPEN group deriving it, and a call site is deleted. Under the name key this reads 0
++      // (the deletion a departure); keyed on reach it reds through the pin.
++      "NARROW: the setMargin verdicts behind `boardVerdicts` in an open group, `solved it!` deleted",
++      (() => {
++        const atBoard = (x) => /GameBoard\.vue$/.test(x.where);
++        const board = EXTRACT.marginVerdictCopy
++          .run()
++          .filter(atBoard)
++          .map((x) => x.s);
++        const narrowed = {
++          ...EXTRACT,
++          marginVerdictCopy: {
++            ...EXTRACT.marginVerdictCopy,
++            run: () => EXTRACT.marginVerdictCopy.run().filter((x) => !atBoard(x)),
++          },
++          boardVerdicts: {
++            what: '`setMargin("…")`\'s literals',
++            run: () => dropCall("solved it!").marginVerdictCopy.run().filter(atBoard),
++          },
++        };
++        const kept = {
++          ...group,
++          strings: group.strings.filter((s) => !board.includes(s)),
++        };
++        const open = { ...twin(["boardVerdicts"], undefined), strings: board };
++        return findings(withGroups([kept, open]), narrowed);
++      })(),
++      1,
++    ],
+     ["CONTROL — the margin extractors pinned", MUST_CLOSE.length, 2],
+     ["CONTROL — the flags and the tree as they stand", findings(FACES), 0],
+   ];
+diff --git a/web/frontend/scripts/check-ink-pressure.mjs b/web/frontend/scripts/check-ink-pressure.mjs
+index f7b33c6..2f19a00 100644
+--- a/web/frontend/scripts/check-ink-pressure.mjs
++++ b/web/frontend/scripts/check-ink-pressure.mjs
+@@ -39,20 +39,9 @@ import { fileURLToPath } from "node:url";
+ // Explicit import, matching check-golden-bytes / check-prod-shake: eslint runs this file
+ // with browser globals, so the implicit `process` is a no-undef error here.
+ import process from "node:process";
+-import { createHash } from "node:crypto";
+-import {
+-  census,
+-  effectiveAt,
+-  elementSites,
+-  lengthPx,
+-  mayMatch,
+-  resolve,
+-  sabotage as shapeSabotage,
+-  sfc,
+-  sources as shapeSources,
+-  templateElements,
+-  tokens,
+-} from "./shape-census.mjs";
++import { existsSync } from "node:fs";
++import * as shapeLib from "./shape-census.mjs";
++import { sabotage as shapeSabotage, sources as shapeSources } from "./shape-census.mjs";
+ 
+ const SRC = join(fileURLToPath(new URL("../src", import.meta.url)));
+ const INDEX_CSS = readFileSync(join(SRC, "assets/index.css"), "utf8");
+@@ -682,26 +671,8 @@ function gateNote(css, srcFiles, note) {
+ const NOTE_FE = fileURLToPath(new URL("..", import.meta.url));
+ const NOTE_REL = "src/pencil/chrome/MarginNote.vue";
+ const NOTE_SFC = join(NOTE_FE, NOTE_REL);
+-const PHONES = [
+-  "phone-portrait-390x844",
+-  "phone-portrait-375x812",
+-  "phone-landscape-844x390",
+-  "phone-landscape-812x375",
+-];
+-const DESKS = ["desk-1280x800", "desk-1440x900"];
+ /** The law's clauses, each one switched off in turn by the sabotage battery (LAWS P7 §F ii). */
+-const RESERVE_CLAUSES = [
+-  "R1",
+-  "R1-reach",
+-  "R2",
+-  "R3-important",
+-  "R3-seat",
+-  "R3-sure",
+-  "R4-every-site",
+-  "R4-consumer",
+-  "R4-element",
+-  "R4-unresolved",
+-];
++const RESERVE_CLAUSES = [];
+ /** The library clauses the law stands on; the battery switches these off through the library. */
+ const LIBRARY_CLAUSES = [
+   "media-eval",
+@@ -710,6 +681,10 @@ const LIBRARY_CLAUSES = [
+   "element-keyed",
+   "css-wide-var",
+   "supports-container",
++  "seat-element",
++  "r4-element",
++  "r4-unresolved",
++  "r4-descend",
+ ];
+ const reserveOff = new Set();
+ const libraryOff = { id: "" };
+@@ -719,170 +694,16 @@ const libraryOff = { id: "" };
+ // read once per (subject, property, library clause state); the SFC is read through the plant's
+ // overlay every time. The sites and their order are the library's (`s.file` keeps each file's own).
+ const NOTE_FILES = shapeSources(NOTE_FE);
+-const siteCache = new Map();
+-const utf8 = (f) => readFileSync(f, "utf8");
+-const sha = (s) => createHash("sha1").update(s).digest("hex");
+-function sitesOf(kind, cls, prop, sfcText) {
+-  const read = (f) => (f === NOTE_SFC ? sfcText : utf8(f));
+-  const sfcKey = sha(sfcText);
+-  // another file's element-keyed sites depend on the SFC's TEMPLATE (the elements it renders), so
+-  // a plant in the SFC's <style> reuses them
+-  const tplKey = sha(sfc(sfcText).template?.text ?? "");
+-  const out = [];
+-  for (const f of NOTE_FILES) {
+-    const own = f === NOTE_SFC;
+-    const rel = relative(NOTE_FE, f);
+-    const key = [
+-      kind,
+-      cls,
+-      prop,
+-      libraryOff.id,
+-      rel,
+-      own ? sfcKey : kind === "element" ? tplKey : "",
+-    ].join("|");
+-    let got = siteCache.get(key);
+-    if (!got) {
+-      const files = own || kind === "class" ? [f] : [NOTE_SFC, f];
+-      const all =
+-        kind === "class"
+-          ? census(NOTE_FE, cls, prop, { files, read })
+-          : elementSites(NOTE_FE, {
+-              file: NOTE_REL,
+-              pick: (e) => e.classes.has(cls),
+-              props: [prop],
+-              files,
+-              read,
+-            }).sites;
+-      got = all.filter((s) => s.file === rel);
+-      siteCache.set(key, got);
+-    }
+-    out.push(...got);
+-  }
+-  return out;
+-}
+-const tokenCache = new Map();
+-const tokensOf = (sfcText) => {
+-  const key = `${libraryOff.id}|${sha(sfcText)}`;
+-  if (!tokenCache.has(key))
+-    tokenCache.set(
+-      key,
+-      tokens(NOTE_FE, { read: (f) => (f === NOTE_SFC ? sfcText : utf8(f)) }).map,
+-    );
+-  return tokenCache.get(key);
+-};
+-
++/** THE ONE READER (row 3, PROPOSED): the §7 reserve law is the library's exported
++ *  `reserveReading`, read over the real tree through the plant's overlay. No second composition
++ *  lives here; the clauses are the library's (`SHAPE_SABOTAGE` / `shapeSabotage`). */
+ function reserveLaw(read) {
+-  const on = (c) => !reserveOff.has(c);
+-  const sfcText = (read ?? utf8)(NOTE_SFC);
+-  const fails = [];
+-  const map = tokensOf(sfcText);
+-  const where = (s) =>
+-    `${s.file}:${s.line} ${s.ctx ? `${s.ctx} ` : ""}${s.prelude} { ${s.prop}: ${s.value}${s.important ? " !important" : ""} }`;
+-  const seen = new Map();
+-  // R1-reach (pass 9, N7): a class site counts as the seat only when its selector may reach the
+-  // voice's TEMPLATE element (`.margin-note:not([role])` names the class and reaches nothing).
+-  const tpl = sfc(sfcText).template;
+-  const els = tpl ? templateElements(tpl.text, tpl.line) : [];
+-  const voiceEl = els.find((e) => e.classes.has("margin-note"));
+-  const reaches = (s) =>
+-    !on("R1-reach") ||
+-    (voiceEl != null &&
+-      (!s.prelude || s.prelude.startsWith("<") || mayMatch(s.prelude, voiceEl, els)));
+-  const voiceSites = [
+-    ...sitesOf("class", "margin-note", "min-height", sfcText).filter(reaches),
+-    ...sitesOf("element", "margin-note", "min-height", sfcText),
+-  ];
+-  for (const s of voiceSites) seen.set(`${s.file}:${s.line}:${s.value}`, s);
+-  const voice = [...seen.values()];
+-  if (on("R1") && voice.length !== 1)
+-    fails.push(
+-      `R1 the voice's min-height is set at ${voice.length} sites (want 1): ${voice.map(where).join(" | ") || "none"}`,
+-    );
+-  for (const s of voice) {
+-    const v = resolve(s.value, map).trim();
+-    if (on("R2") && v !== "inherit") fails.push(`R2 ${where(s)} resolves to '${v}'`);
+-    if (on("R3-important") && s.important)
+-      fails.push(`R3 ${where(s)} carries !important`);
+-    // R3-sure (pass 9, N5/N6): the seat must HOLD, so it is read on the regimes where its whole
+-    // context is certain (`@supports`/`@container` evaluated or read dead), not where it may hold
+-    const rg = (on("R3-sure") ? s.sure : undefined) ?? s.regimes ?? [];
+-    if (
+-      on("R3-seat") &&
+-      (!PHONES.every((p) => rg.includes(p)) || DESKS.some((d) => rg.includes(d)))
+-    )
+-      fails.push(
+-        `R3 ${where(s)} holds in [${rg.join(", ")}], not every phone and no desk`,
+-      );
+-  }
+-  const block = sitesOf("class", "margin-note-block", "min-height", sfcText);
+-  const reserveSites = on("R4-every-site") ? block : block.filter((s) => !s.ctx);
+-  // R4-element (pass 9, N4/N19): the voice's font and line are read from EVERY rule that may
+-  // reach its element (`> p:first-child`, `:has(…)`, `:not(:empty)`), not its class sites only,
+-  // and the LARGEST live candidate is the line the reserve must hold: a rule that grows the line
+-  // only once the voice holds ink is a candidate here, because the reserve is read at rest.
+-  const at = (cls, prop) => {
+-    const cl = sitesOf("class", cls, prop, sfcText);
+-    if (cls !== "margin-note" || !on("R4-element")) return cl;
+-    const all = new Map();
+-    for (const s of [...cl, ...sitesOf("element", cls, prop, sfcText)])
+-      all.set(`${s.file}:${s.line}:${s.value}`, s);
+-    return [...all.values()];
+-  };
+-  const fs = {
+-    block: at("margin-note-block", "font-size"),
+-    voice: at("margin-note", "font-size"),
+-  };
+-  const lh = {
+-    block: at("margin-note-block", "line-height"),
+-    voice: at("margin-note", "line-height"),
+-  };
+-  const live = (sites, rg) => sites.filter((s) => (s.regimes ?? []).includes(rg));
+-  // R4-unresolved (pass 9, row 4): a measure with no site is UNRESOLVED (null), never a typed
+-  // default; the old 16 and 1.2× read here only with the clause switched off.
+-  const masked = (v) => (on("R4-unresolved") ? null : v);
+-  const lineFrom = (value, size) => {
+-    const v = resolve(value, map).trim();
+-    if (/^[\d.]+$/.test(v)) return size == null ? null : +v * size;
+-    return lengthPx(value, size == null ? {} : { fontSize: size }, map);
+-  };
+-  const fontOf = (who, rg) => {
+-    if (who === "voice" && on("R4-element")) {
+-      const c = live(fs.voice, rg)
+-        .map((s) => lengthPx(s.value, {}, map))
+-        .filter((x) => x != null);
+-      return c.length ? Math.max(...c) : masked(16);
+-    }
+-    const e = effectiveAt(fs[who], rg);
+-    return (e && lengthPx(e.value, {}, map)) ?? masked(16);
+-  };
+-  const lineOf = (who, rg, size) => {
+-    if (who === "voice" && on("R4-element")) {
+-      const c = live(lh.voice, rg)
+-        .map((s) => lineFrom(s.value, size))
+-        .filter((x) => x != null);
+-      return c.length ? Math.max(...c) : masked(size == null ? null : size * 1.2);
+-    }
+-    const e = effectiveAt(lh[who], rg);
+-    if (!e) return masked(size == null ? null : size * 1.2);
+-    return lineFrom(e.value, size);
+-  };
+-  for (const rg of PHONES) {
+-    const eff = effectiveAt(reserveSites, rg);
+-    const size = fontOf("block", rg);
+-    const consumer = on("R4-consumer")
+-      ? {
+-          ...(size == null ? {} : { fontSize: size }),
+-          lineHeight: lineOf("block", rg, size) ?? undefined,
+-        }
+-      : {};
+-    const reserve = eff ? lengthPx(eff.value, consumer, map) : null;
+-    const line = lineOf("voice", rg, fontOf("voice", rg));
+-    if (reserve == null || line == null || reserve < line - 0.5)
+-      fails.push(
+-        `R4 ${rg}: the block reserves ${reserve == null ? "nothing it can bound" : `${reserve.toFixed(2)}px`} (${eff ? where(eff) : "no site"}) under the voice's ${line == null ? "UNRESOLVED" : `${line.toFixed(2)}px`} line`,
+-      );
+-  }
+-  return fails;
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  return shapeLib.reserveReading(
++    shapeLib,
++    { fe: NOTE_FE, files: NOTE_FILES, read: rd, exists: existsSync },
++    NOTE_REL,
++  );
+ }
+ const gateReserve = (read) => reserveLaw(read).map((f) => `note reserve: ${f}`);
+ 
+@@ -974,6 +795,23 @@ const RESERVE_PLANTS = {
+   "N19 the voice's line grows once it holds ink": tail(
+     `.margin-note-block > p:first-child:${"has"}(.margin-note-ink) {\n  line-height: 2.2;\n}\n`,
+   ),
++  // pass 9's critic's six (the class at CI's only reserve arm): one rule each that grows the
++  // spoken half's LINE BOX through a property or an element R4-element never read; every one
++  // painted +8 to +18 px on first speech with this row GREEN. Read by homes v3's `r4-descend`.
++  "C1 the ink's block padding": tail(".margin-note-ink {\n  padding-block: 6px;\n}\n"),
++  "C2 the ink's own font-size": tail(".margin-note-ink {\n  font-size: 30px;\n}\n"),
++  "C3 the voice padded once it holds ink": tail(
++    `.margin-note:${"has"}(.margin-note-ink) {\n  padding-top: 8px;\n}\n`,
++  ),
++  "C4 a descendant's block margin": tail(
++    ".margin-note-block > p > span {\n  margin-top: 10px;\n}\n",
++  ),
++  "C5 the ink's vertical-align": tail(
++    ".margin-note-ink {\n  vertical-align: 12px;\n}\n",
++  ),
++  "C6 N19's line-height one element deeper": tail(
++    ".margin-note-ink {\n  line-height: 2.2;\n}\n",
++  ),
+   // row 4: a measure with no site reads UNRESOLVED and reds, never the typed 16 / 1.2×
+   "F1 the voice's line-height deleted": (sfc) => sfc.replace(VOICE_LH, "$1"),
+   "F2 the voice's font-size deleted": (sfc) => sfc.replace(VOICE_FS, "$1"),
+diff --git a/web/frontend/src/games/shared/GameBoard.notes.test.ts b/web/frontend/src/games/shared/GameBoard.notes.test.ts
+index 3fb88f2..3a3a1fd 100644
+--- a/web/frontend/src/games/shared/GameBoard.notes.test.ts
++++ b/web/frontend/src/games/shared/GameBoard.notes.test.ts
+@@ -367,6 +367,24 @@ describe("GameBoard — a link that would not parse is said, and a re-deal still
+     w.unmount();
+   });
+ 
++  it("the first board's generation a tick after its givens does not write over the sentence (gap 10)", async () => {
++    const w = mountBoard({ dealt: true, freshBoardCopy: once() });
++    // the givens land in one flush, the same board's generation bump in the next
++    await w.setProps({ givenCells: new Set(["5"]) });
++    await nextTick();
++    expect(margin(w)).toBe("this shared link couldn't be read");
++    await w.setProps({ boardGeneration: 2 });
++    await nextTick();
++    expect(margin(w), "the late bump is the same arrival").toBe(
++      "this shared link couldn't be read",
++    );
++    // and the memory is spent on that arrival: the next deal empties
++    await w.setProps({ givenCells: new Set(["6"]), boardGeneration: 3 });
++    await nextTick();
++    expect(margin(w)).toBe("");
++    w.unmount();
++  });
++
+   it("the flush memory ends with its flush: a later re-deal is not silenced", async () => {
+     const w = mountBoard({ dealt: true, freshBoardCopy: once() });
+     await w.setProps({ givenCells: new Set(["5"]), boardGeneration: 2 });
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 4c77e19..5e90860 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -1288,7 +1288,13 @@ let pendingFreshAnnounce: string | null = null;
+ // generation arm stays silent on that arrival. A RE-DEAL never reaches this arm (a re-deal
+ // refills the same set in one flush, so `prev` is never 0), so it still reads "" and empties
+ // line one: the caption law's arm is unchanged.
+-let spokeThisFlush = false;
++// Pass 10 (the critic's gap 10): the memory is keyed on the ARRIVAL, not the flush. A first board
++// whose generation bump lands a tick after its givens read the flush memory spent and wrote the
++// spent copy ("") over the sentence. The arm records the givens it spoke for; the generation arm
++// stays silent once for that same board, whichever flush it lands in, and a re-deal (other
++// givens) still empties line one.
++let spokeFor: string | null = null;
++const givensKey = () => [...props.givenCells].sort().join(",");
+ watch(
+   () => props.givenCells.size,
+   (n, prev) => {
+@@ -1297,8 +1303,7 @@ watch(
+       if (mounted) {
+         setMargin(props.freshBoardCopy(), "graphite", "state");
+         emptyColumn();
+-        spokeThisFlush = true;
+-        void nextTick(() => (spokeThisFlush = false));
++        spokeFor = givensKey();
+       } else pendingFreshAnnounce = props.freshBoardCopy(); // flushed in onMounted
+     }
+   },
+@@ -1322,11 +1327,13 @@ watch(
+     // deal may still say (a shared link that would not parse), so this is the same call the
+     // no-givens arm below makes.
+     if (props.givenCells.size > 0) {
+-      if (props.dealt && !spokeThisFlush) {
++      const arrival = spokeFor !== null && spokeFor === givensKey();
++      spokeFor = null;
++      if (props.dealt && !arrival) {
+         // The FIRST board reaches here AND the 0→N watch above in one flush; the same line
+         // said twice would open NOTE-ERASE's repeat hole (empty, then re-say a beat after the
+         // leave) on an arrival. Line one is only re-written when it says something else, and
+-        // never on the arrival the 0→N arm has just spoken for (`spokeThisFlush`, above).
++        // never on the arrival the 0→N arm has just spoken for (`spokeFor`, above).
+         const line = props.freshBoardCopy();
+         if (!line || line !== marginLive.value.text)
+           setMargin(line, "graphite", "state");

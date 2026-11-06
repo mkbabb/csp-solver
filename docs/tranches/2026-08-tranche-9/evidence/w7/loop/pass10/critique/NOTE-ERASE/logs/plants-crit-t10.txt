@@ -1,0 +1,14 @@
+exit 0 | clean | ladder registration: 7 rungs, 0 breaches
+exit 1 | SIX-1 .call | ladder registration: 7 rungs, 1 breaches
+exit 1 | SIX-2 ?.() | ladder registration: 7 rungs, 1 breaches
+exit 1 | SIX-3 Reflect.apply | ladder registration: 7 rungs, 1 breaches
+exit 1 | SIX-4 (0, f)() | ladder registration: 7 rungs, 1 breaches
+exit 1 | SIX-5 const-keyed CSS[k]() | ladder registration: 7 rungs, 1 breaches
+exit 1 | SIX-6 let .bind alias | ladder registration: 7 rungs, 1 breaches
+exit 0 | CRIT-A Reflect.get(CSS, joined key).call | ladder registration: 7 rungs, 0 breaches
+exit 0 | CRIT-B destructured computed key | ladder registration: 7 rungs, 0 breaches
+exit 1 | CRIT-C plain call in a JS module outside src/ | ladder registration: 7 rungs, 1 breaches
+exit 1 | CRIT-D globalThis.CSS.registerProperty | ladder registration: 7 rungs, 1 breaches
+exit 1 | CRIT-E window['CSS']['registerProperty'] | ladder registration: 7 rungs, 1 breaches
+exit 0 | CRIT-F Object.getOwnPropertyDescriptor(CSS, k).value | ladder registration: 7 rungs, 0 breaches
+exit 0 | NEG typeof probe (must stay 0) | ladder registration: 7 rungs, 0 breaches

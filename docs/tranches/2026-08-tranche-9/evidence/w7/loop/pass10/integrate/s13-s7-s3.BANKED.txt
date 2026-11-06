@@ -1,0 +1,47 @@
+lane     s13-s7-s3 integration · pass 10 · batch 7 · Opus · archive copies with their own .git, temporary indexes, --binary, no commit
+base     74a2b5d9317e7795cee6bf63e861bd44f54ae80e (archive tree 243fbf573f125376314dbc88e55dfba0376e3936)
+route    pass9/integrate/s13-s7-s3.diff 280bd910 (108 paths, exit 0) -> e33d791d · homes.on-WAVE.diff 0723d508 --3way (10 paths, exit 0) -> 30af7d01
+arms     MOT-LADDER 80235fc9 (2) -> 1019ff2d · NOTE-ERASE d2a2752c (4) -> 3aa4b8c2 · NOTE-LEDGER 39ccf2ba (5) -> 7cf2fc80 · ACC-FIVE 16bc1b97 (3) -> c0049305 · ACC-SIX 57845ba5 (3) -> 74435547
+gitdir   /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/integrate-s13-s7-s3/t/.git (own repo) on every apply
+tree     74435547a379d1306844ac0b0dd112c7417ce741
+bank     s13-s7-s3.diff bytes 1896343 sha1 3769ecfcc5a0f2f815ff7132566ebccde37a8900 109 files changed, 36611 insertions(+), 691 deletions(-)
+  form   git diff --binary 243fbf57 74435547 (the archive base; the docs/precepts gitlink is absent on both sides)
+  check  fresh git archive 74a2b5d9 + own .git (replay/): --check 0, apply --index 0, 109 paths, replayed write-tree 74435547 = the tree
+  check  control archive c/ (74a2b5d9): --check 0
+  WAVE   base-cut: --check on the WAVE exits 1 (expected, web/frontend/src/pencil/types.ts); the WAVE route is the companion
+companion s13-s7-s3.delta.on-p9h.diff bytes 180112 sha1 8d2d03a468458e8c44166b99c63db91b3e42ed6f 17 files changed, 2299 insertions(+), 333 deletions(-)
+  DECLARED BASE 30af7d0124ccc1788a17658162afe878c467e014 = s13-s7-s3 (2f11714f) + homes v3 on-WAVE 0723d508
+  check  30af7d01 (ab-s13h/.git) 0 · bare s13 e33d791d (ab-s13/.git) 0 · bare WAVE 044284b5 (wave/.git) 0 · WAVE + homes v3 72b7ad67 (wave/.git) 0
+grep     s13-s7-s3.diff: scratch patterns 1 (pass-9 literal "/tmp/lawful-copy", line 17834; pass 9's bank has the same 1) · dot-dir +++ 1 (.github/workflows/ci.yml, pass-9 product path)
+grep     companion: scratch patterns 0 · dot-dir +++ 0
+battery  tree/control: vue-tsc 0/0 · typecheck:e2e 0/- · lint:motion 0/0 · lint:bands 1/1 · lint:verbs 0/1 · lint:theme-tokens 0/0 · lint:sleep 0/0 · propblock 0/0 · propblock-self 0/0 · tokcensus 0/1 · tokcensus-self 0/1
+vitest   UNREAD x9: guarded REFUSED (exit 75), kernel zone data.kalloc.1024 8.92M
+browser  UNREAD all: zone inuse 8,889,723 -> 8,916,744 (>= 8M), ZONE-ARMED present; the owner must reboot
+BANK-DONE
+--- continuation 5 (after the owner's reboot; interim, superseded by the final block below when present)
+reverify bank sha1 3769ecfc = BANKED; fresh archive r2/ (r2/.git) apply --index 0, 109 paths, write-tree 74435547 = tree
+vitest   tree 0 x9 (78 files / 983 tests) · control 0 x9 (68 / 830)
+check8   tree 1 (FLOOR BAND x4: chromium 235<318, webkit 234<317, filter-census-{cr,wk} 6<7) · control 0
+sg:254   chromium ablation: x13 (S13 alone, 116e6fdd) RED :236@:262 · x7 (S7 alone, b91ac674) 0 · tree RED same · control 0 -> MOT-LADDER owns it
+chromium dev  tree 141/5 (+sg 7/1, cy 17/1, nr 7/0) · ctrl 38/108 (+sg 8/0, cy 0/18, nr 0/7)
+chromium pv   tree 175/4 (sg:236 + front-rate :424/:479/:550 dev-only on dist) · ctrl 46/133 · dist tree index-DwVX0izzXpWG.js css 104574 B
+chromium thr  filter-census 8/8 tree, 6/8 ctrl · theme-bake 10/10 tree, 0/10 ctrl
+chromium pi   11 / 21 / 12, floor 0/0/0 (= pass 9) · filters boot 21/21 rest 9/9 (ctrl 21/23, 9/11)
+--- continuation 5, FINAL (supersedes 'vitest UNREAD' and 'browser UNREAD' above; the bank itself is unchanged)
+bank     unchanged: s13-s7-s3.diff sha1 3769ecfc (1896343 B, 109 files, +36611/-691) · companion 8d2d03a4 (180112 B)
+check    fresh archive r2/.git: apply --index 0, 109 paths, write-tree 74435547 · companion --check 0 on 30af7d01 (ab-s13h/.git), e33d791d (ab-s13/.git), 72b7ad67 WAVE+homes v3 (wave/.git), re-run 03:4x
+grep     unchanged: bank 1 scratch literal (pass-9 "/tmp/lawful-copy" test string) + 1 dot-dir (.github/workflows/ci.yml) · companion 0/0
+battery  r2 tree/control: vue-tsc 0/0 · typecheck:e2e 0/0 · lint:motion 0 · lint:bands 1 (B6x2 B13x3) · lint:verbs 0 · lint:theme-tokens 0 · lint:sleep 0 · propblock 0/0 · tokcensus 0/1
+vitest   tree 0 x9 = 78 files / 983 tests · control 0 x9 = 68 / 830
+check8   tree 1 (FLOOR BAND x4) · control 0 · seal READ: SEAL 1227.5, visual-regression 12/12 x4
+dist     tree index-DwVX0izzXpWG.js css 104574 B (r2 carries .git) · control index-CubiZsMVSwTc.js css 93634 B
+sg:254   ablation both engines: x13 (S13 alone) RED :236@:262 · x7 (S7 alone) 0 · tree RED · control 0 => MOT-LADDER
+cr dev   tree 141/5 + sg 7/1 + cy 17/1 + nr 7/0 · ctrl 38/108 + 8/0 + 0/18 + 0/7
+cr pv    tree 175/4 · ctrl 46/133 · thr tree 18/18 (fc 8/8, tb 10/10) · thr ctrl 6/18
+wk dev   tree 171/7/1 · ctrl 46/132/1
+wk pv    tree 173/5/1 · ctrl 45/133/1 · thr tree 18/18 · thr ctrl 6/18
+tree reds  sg:236 (both engines, both servings) · cy:341 RESIZE dark WebKit (dev+pv) · front-rate :424/:479/:550 on the dist only (dev-only, no skip) · dev-graph only: ladder-prm:84 x4 (DEV FilterTuner), cy:357 FONT, pc:397 light
+pi       chromium 11/21/12 floor 0/0/0 · webkit 11/21/12 floor 0/0/0 · filters rest 9/9 both engines (ctrl 9/11)
+unread   visual-golden (golden config, chromium): dropped from the queue, the WAVE's column (CHAIR 20)
+box      load 9.61-41.56 at every row start/end (< 60), zone inuse 1633 -> 9621 (< 8M) throughout; every server inside its row's guarded call; no listener on 4255/4256 at return
+BANK-DONE-CONT5

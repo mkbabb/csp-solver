@@ -1,0 +1,2802 @@
+diff --git a/.github/workflows/ci.yml b/.github/workflows/ci.yml
+index c0fe3926..b7d51d8c 100644
+--- a/.github/workflows/ci.yml
++++ b/.github/workflows/ci.yml
+@@ -986,6 +986,20 @@ jobs:
+             - name: theme-token census (every @theme token has a consumer, self-tested)
+               working-directory: web/frontend
+               run: npm run lint:theme-tokens
++            # T9-M22 (TAB-PEN) — the tab's s: one pen line in the page's own ink on its own paper.
++            # It reads the SHAPE (markup allowlist, every <style> rule in source order, the page's links
++            # and tokens through shape-census, the path rastered analytically, the touch icon's own
++            # pixels held to that raster, every pixel read), and its self-test
++            # (check-favicon.self-test.mjs, the plants in check-favicon.plants.mjs) plants 74 defects
++            # plus 8 negative-negatives and pins every numeric bound with an edge plant each side
++            # (23 edges) and every cut inside the tie at cut +/- epsilon/2 (3 cuts);
++            # `--sabotage-battery` (by hand) switches each of its 50 checks and 10 library clauses
++            # off, and `--threshold-battery` moves each bound and cut by its epsilon both ways
++            # (52 moves). Its live twin, e2e/tab-pen.spec.ts, is a local instrument (O-12: CI stays
++            # browserless).
++            - name: favicon gate (the house pen, the page's tokens, self-tested)
++              working-directory: web/frontend
++              run: npm run lint:favicon
+             # T5-W2 2.1c — the TDZ probe, WIRED at T7-W6. `lint:tdz` has been in package.json
+             # since 2.1 and no CI step ever called it, which is a package.json script, not a
+             # lane. Two arms: the GRAPH arm asserts the three severed edges of the old
+diff --git a/.gitignore b/.gitignore
+index bd478ff0..177cea65 100644
+--- a/.gitignore
++++ b/.gitignore
+@@ -63,8 +63,11 @@ web/frontend/playwright-report-throttle/
+ # web/frontend/scripts/check-golden-bytes.mjs (≤150 KB/image, EVIDENCE-POLICY).
+ !web/frontend/e2e/goldens/
+ !web/frontend/e2e/goldens/**/*.png
+-# T4-W3 social card — the one committed public PNG (og:image, <=150 KB under B1).
++# The committed public PNGs, excepted from the global *.png ignore: T4-W3's social card (og:image,
++# <=150 KB under B1) and T9-M22's touch icon (rastered from public/icon.svg by scripts/icons.mjs;
++# lint:favicon (e) holds it to the path in CI).
+ !web/frontend/public/og-card.png
++!web/frontend/public/apple-touch-icon.png
+ # T4-W8 author avatar — BUNDLED same-origin (AttributionCard.vue imports it; Vite emits it
+ # content-hashed under /assets/) to retire the app's last third-party network hit (ROW 5 /
+ # FAM-14). A real deploy asset (6 KB), must ship despite the global *.png ignore.
+diff --git a/web/frontend/e2e/tab-pen.spec.ts b/web/frontend/e2e/tab-pen.spec.ts
+new file mode 100644
+index 00000000..6a41128a
+--- /dev/null
++++ b/web/frontend/e2e/tab-pen.spec.ts
+@@ -0,0 +1,368 @@
++import { readFileSync } from "node:fs";
++import { fileURLToPath } from "node:url";
++import { test, expect, type Page } from "@playwright/test";
++
++// PRM: live, because the twin reads the icon links, their image loads and their bytes at three
++// instants (hydrated, a late tick, after the theme toggle); no frame or moving surface is measured.
++
++/**
++ * THE TAB'S PEN, AS THE BROWSER SEES IT — the behavioural twin of `lint:favicon` clause e (T9-W7
++ * §12 row 2; LAWS P7 §F iii). The gate reads `index.html` as text; this reads the BUILT page under
++ * production's own CSP (public/_headers' `/*` policy, put on the document by the twin itself): the
++ * live `link[rel~=icon]` and `apple-touch-icon` nodes, `matchMedia(link.media)` in the scheme under
++ * test, the resolved URL's origin and path, any `<base>`, every attribute write to the links from
++ * document start, each icon LOADED AS AN IMAGE (`new Image()`, which CSP governs by img-src, as the
++ * UA's own icon load is), and the bytes the page fetches (content type and sha256 against the
++ * sidecar). It reads THREE times: after hydration, after a late tick (2 s after load), and after
++ * the in-app theme toggle is pressed. Run it against a served dist (`PLAYWRIGHT_BASE_URL`).
++ *
++ * Every clause has an in-run plant that reds it ALONE (rewritten HTML or CSP, or a re-routed
++ * response, never a file on disk), and the negative-negatives must stay GREEN. The sabotage battery
++ * is pure: each clause is switched off over the SAME readings and its sole plant must turn GREEN.
++ */
++
++const file = (p: string) => readFileSync(fileURLToPath(new URL(p, import.meta.url)), "utf8");
++const SIDECAR = JSON.parse(file("../scripts/icons.provenance.json")) as Record<string, string>;
++/** public/_headers' `/*` block (CF Pages' format), its Content-Security-Policy: the one production serves. */
++const CSP = (() => {
++  let on = false;
++  for (const line of file("../public/_headers").split("\n")) {
++    if (/^[^\s#]/.test(line)) on = line.trim() === "/*";
++    const m = on && /^\s+content-security-policy:\s*(.*)$/i.exec(line);
++    if (m) return m[1].trim();
++  }
++  return "";
++})();
++
++const WANT = {
++  icon: { path: "/icon.svg", type: "image/svg+xml", sha: SIDECAR["icon.svg"] },
++  "apple-touch-icon": {
++    path: "/apple-touch-icon.png",
++    type: "image/png",
++    sha: SIDECAR["apple-touch-icon.png"],
++  },
++} as const;
++type Rel = keyof typeof WANT;
++const RELS = Object.keys(WANT) as Rel[];
++/** The attributes a live link may carry; `type` is held to the rel's own, `media` is evaluated. */
++const ALLOW = ["rel", "href", "type", "media"];
++const TOGGLE = 'button[aria-label^="Switch to"]';
++type Instant = "hydrated" | "late" | "toggled";
++
++const CLAUSES = [
++  "count",
++  "allow",
++  "media",
++  "type",
++  "origin",
++  "path",
++  "base",
++  "img",
++  "ctype",
++  "sha",
++  "mutation",
++] as const;
++type Clause = (typeof CLAUSES)[number];
++
++interface LinkRead {
++  attrs: [string, string][];
++  href: string;
++  media: boolean; // matchMedia(link.media) in the scheme under test (true when no media)
++  img: string; // the icon loaded as an image under the page's CSP: load | error | empty | timeout
++  status: number;
++  ctype: string;
++  sha: string;
++}
++interface Reading {
++  at: Instant;
++  pressed: boolean; // the toggle was found and pressed (the toggled instant only)
++  origin: string;
++  base: boolean;
++  links: Record<Rel, LinkRead[]>;
++  mutations: string[];
++}
++
++/** An init script, so it runs at document start, before the parser and every module script: each
++ *  attribute write to a rel~=icon / apple-touch-icon link, and each such link added or removed once
++ *  parsing is done (the parser's own insertions land while readyState is "loading": not writes). */
++const WATCH = () => {
++  const w = window as unknown as { __tabWrites: string[] };
++  w.__tabWrites = [];
++  const watched = (n: Node) =>
++    n instanceof HTMLLinkElement &&
++    /(^|\s)(icon|apple-touch-icon)(\s|$)/i.test(n.getAttribute("rel") ?? "");
++  new MutationObserver((list) => {
++    for (const r of list) {
++      if (r.type === "attributes" && watched(r.target))
++        w.__tabWrites.push(
++          `${r.attributeName}=${(r.target as Element).getAttribute(r.attributeName ?? "")}`,
++        );
++      else if (r.type === "childList" && document.readyState !== "loading")
++        for (const n of [...r.addedNodes, ...r.removedNodes])
++          if (watched(n)) w.__tabWrites.push(`node ${(n as Element).outerHTML}`);
++    }
++  }).observe(document, { subtree: true, childList: true, attributes: true });
++};
++
++/** One instant's reading of the page as its own scripts left it: links, image loads, base, writes, bytes. */
++const snapshot = (page: Page, at: Instant, pressed: boolean): Promise<Reading> =>
++  page.evaluate(
++    async ([rels, at, pressed]) => {
++      const hex = (b: ArrayBuffer) =>
++        [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, "0")).join("");
++      const asImage = (src: string) =>
++        new Promise<string>((done) => {
++          const im = new Image();
++          const t = setTimeout(() => done("timeout"), 5_000);
++          im.onload = () => (clearTimeout(t), done(im.naturalWidth > 0 ? "load" : "empty"));
++          im.onerror = () => (clearTimeout(t), done("error"));
++          im.src = src;
++        });
++      const links = {} as Record<string, LinkRead[]>;
++      for (const rel of rels) {
++        links[rel] = [];
++        const nodes = [...document.querySelectorAll("link")].filter((l) =>
++          (l.getAttribute("rel") ?? "").toLowerCase().split(/\s+/).includes(rel),
++        );
++        for (const l of nodes) {
++          const got: LinkRead = {
++            attrs: [...l.attributes].map((a) => [a.name.toLowerCase(), a.value]),
++            href: l.href,
++            media: !l.media || matchMedia(l.media).matches,
++            img: await asImage(l.href),
++            status: 0,
++            ctype: "",
++            sha: "",
++          };
++          try {
++            const r = await fetch(l.href, { cache: "no-store" });
++            got.status = r.status;
++            got.ctype = r.headers.get("content-type") ?? "";
++            got.sha = hex(await crypto.subtle.digest("SHA-256", await r.arrayBuffer()));
++          } catch {
++            got.status = -1;
++          }
++          links[rel].push(got);
++        }
++      }
++      return {
++        at,
++        pressed,
++        origin: location.origin,
++        base: document.querySelector("base") !== null,
++        links,
++        mutations: [...((window as unknown as { __tabWrites?: string[] }).__tabWrites ?? [])],
++      } as Reading;
++    },
++    [RELS, at, pressed] as const,
++  );
++
++/** The page read at its three instants: hydrated (+400 ms), late (2 s after load), toggled (+400 ms). */
++async function read(page: Page, url: string, scheme: "light" | "dark"): Promise<Reading[]> {
++  await page.emulateMedia({ colorScheme: scheme });
++  await page.addInitScript(WATCH);
++  await page.goto(url, { waitUntil: "load" });
++  const loaded = Date.now();
++  // hydration; a plant that re-points the bundle too (E6's foreign <base>) never mounts, and is read as served
++  await page
++    .waitForFunction(() => (document.querySelector("#app")?.childElementCount ?? 0) > 0, null, {
++      timeout: 15_000,
++    })
++    .catch(() => undefined);
++  await page.waitForTimeout(400);
++  const out = [await snapshot(page, "hydrated", false)];
++  await page.waitForTimeout(Math.max(0, 2_000 - (Date.now() - loaded)));
++  out.push(await snapshot(page, "late", false));
++  const toggle = page.locator(TOGGLE).first();
++  const pressed = (await toggle.count()) > 0;
++  if (pressed) await toggle.click({ timeout: 5_000 }).catch(() => undefined);
++  await page.waitForTimeout(400);
++  out.push(await snapshot(page, "toggled", pressed));
++  return out;
++}
++
++/** The clauses one instant reds, each with its reason; `off` switches clauses off (the battery). */
++function judgeOne(r: Reading, off: ReadonlySet<Clause>): [Clause, string][] {
++  const out: [Clause, string][] = [];
++  const red = (c: Clause, why: string) => {
++    if (!off.has(c)) out.push([c, `${r.at}: ${why}`]);
++  };
++  if (r.base) red("base", "a live <base> element re-points every relative href");
++  if (r.mutations.length) red("mutation", `written after parse: ${r.mutations.join(" | ")}`);
++  for (const rel of RELS) {
++    const want = WANT[rel];
++    const links = r.links[rel] ?? [];
++    if (links.length !== 1) red("count", `${links.length} live ${rel} links`);
++    for (const l of links) {
++      for (const [k, v] of l.attrs)
++        if (!ALLOW.includes(k)) red("allow", `${rel}: ${k}="${v}" off the allowlist`);
++      const type = l.attrs.find(([k]) => k === "type")?.[1];
++      if (type !== undefined && type.trim().toLowerCase() !== want.type)
++        red("type", `${rel}: type="${type}", not ${want.type}`);
++      if (!l.media) red("media", `${rel}: its media query is false in this scheme`);
++      const u = new URL(l.href);
++      if (u.origin !== r.origin) red("origin", `${rel}: resolves to ${u.origin}`);
++      if (u.pathname + u.search + u.hash !== want.path)
++        red("path", `${rel}: resolves to ${u.pathname}${u.search}${u.hash}`);
++      if (l.img !== "load") red("img", `${rel}: as an image under the page's CSP: ${l.img}`);
++      if (l.status !== 200 || !l.ctype.toLowerCase().startsWith(want.type))
++        red("ctype", `${rel}: fetched ${l.status} ${l.ctype}`);
++      if (l.sha !== want.sha) red("sha", `${rel}: sha256 ${l.sha.slice(0, 12)}, not the sidecar's`);
++    }
++  }
++  return out;
++}
++const judge = (rs: Reading[], off: ReadonlySet<Clause> = new Set()) =>
++  rs.flatMap((r) => judgeOne(r, off));
++
++interface Plant {
++  name: string;
++  /** the clauses it must red: `exact` reds these and no other; otherwise at least these */
++  want: Clause[];
++  exact: boolean;
++  scheme?: "light" | "dark";
++  html?: (h: string) => string;
++  csp?: (c: string) => string;
++  setup?: (page: Page, origin: string) => Promise<void>;
++}
++const LINKS = /(<link rel="icon"[^>]*>\s*<link rel="apple-touch-icon"[^>]*>)/;
++const tag = (t: string) => [`<${t}>`, `</${t}>`];
++/** Serve `at` (glob or URL) with a content type and the icon's bytes (or `body`'s, or edited ones). */
++const serve =
++  (at: string, ctype: string, edit: (svg: string) => string = (x) => x, from = "/icon.svg") =>
++  async (page: Page, origin: string) => {
++    const real = await page.request.get(`${origin}${from}`);
++    const body = from.endsWith(".svg") ? edit(await real.text()) : await real.body();
++    void (await page.route(at, (route) =>
++      route.fulfill({
++        status: 200,
++        body,
++        headers: { "content-type": ctype, "access-control-allow-origin": "*" },
++      }),
++    ));
++  };
++/** The page's own script writes the icon link: after `load` + `ms`, or when the theme toggle is pressed. */
++const repoint = (to: string, back: boolean, ms = 0, onToggle = false) => async (page: Page) => {
++  await page.addInitScript(
++    ([to, back, ms, onToggle, sel]) => {
++      const go = () => {
++        const l = document.querySelector<HTMLLinkElement>('link[rel~="icon"]');
++        if (!l) return;
++        const was = l.getAttribute("href") ?? "";
++        l.setAttribute("href", to);
++        if (back) setTimeout(() => l.setAttribute("href", was), 50);
++      };
++      if (onToggle)
++        addEventListener("click", (e) => (e.target as Element)?.closest?.(sel) && setTimeout(go), true);
++      else addEventListener("load", () => setTimeout(go, ms));
++    },
++    [to, back, ms, onToggle, TOGGLE] as const,
++  );
++};
++const thick = (svg: string) => svg.replace(/stroke-width="[^"]*"/, 'stroke-width="6"');
++/** E7's species at a given moment: the thick SVG served, the icon re-pointed at it. */
++const thickWhen = (ms: number, onToggle = false) => async (page: Page, origin: string) => {
++  await serve("**/tab-pen-thick.svg", "image/svg+xml", thick)(page, origin);
++  await repoint("/tab-pen-thick.svg", false, ms, onToggle)(page);
++};
++/** P-origin's policy: production's, with example.com let in for images and fetches (so only origin reds). */
++const withOrigin = (c: string) =>
++  c.replace(/img-src([^;]*)/, "img-src$1 https://example.com").replace(/connect-src([^;]*)/, "connect-src$1 https://example.com");
++
++const PLANTS: Plant[] = [
++  { name: "E1 the icon link scoped to dark, read light", want: ["media"], exact: true, html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="(prefers-color-scheme: dark)"') },
++  { name: "E2 the icon link typed text/plain", want: ["type"], exact: true, html: (h) => h.replace('type="image/svg+xml"', 'type="text/plain"') },
++  { name: "E3 both links inside a template", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("template").join(k)) },
++  { name: "E4 both links inside a noscript", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("noscript").join(k)) },
++  { name: "E5 both links kept only as a script string", want: ["count"], exact: true, html: (h) => h.replace(LINKS, (k) => tag("script").join(`window.__x = ${JSON.stringify(k)};`)) },
++  { name: "E6 a base href to a foreign origin", want: ["base", "origin"], exact: false, html: (h) => h.replace("<title>", '<base href="https://example.com/" /><title>') },
++  { name: "E7 a script re-points the icon after load", want: ["mutation", "path", "sha"], exact: false, setup: thickWhen(0) },
++  { name: "X1 production's CSP with img-src 'none' (fetch still 200)", want: ["img"], exact: true, csp: (c) => c.replace(/img-src[^;]*/, "img-src 'none'") },
++  { name: "X2 the icon re-pointed 1,500 ms after load", want: ["mutation", "path", "sha"], exact: false, setup: thickWhen(1_500) },
++  { name: "X3 the icon re-pointed when the theme toggle is pressed", want: ["mutation", "path", "sha"], exact: false, setup: thickWhen(0, true) },
++  { name: "X4 a module script re-points the icon as it evaluates", want: ["mutation", "path"], exact: false, html: (h) => h.replace("</head>", '<script type="module" src="/tab-pen-write.js"></script></head>'), setup: async (page) => void (await page.route("**/tab-pen-write.js", (route) => route.fulfill({ status: 200, body: 'document.querySelector(\'link[rel~="icon"]\')?.setAttribute("href", "/icon.svg?module");', headers: { "content-type": "text/javascript" } }))) },
++  { name: "P-base a same-origin base (resolution unchanged)", want: ["base"], exact: true, html: (h) => h.replace("<title>", '<base href="/" /><title>') },
++  { name: "P-allow a sizes ladder on the touch icon", want: ["allow"], exact: true, html: (h) => h.replace('rel="apple-touch-icon"', 'rel="apple-touch-icon" sizes="180x180"') },
++  { name: "P-origin the icon's bytes served off-origin, the policy letting them in", want: ["origin"], exact: true, csp: withOrigin, html: (h) => h.replace('href="/icon.svg"', 'href="https://example.com/icon.svg"'), setup: serve("https://example.com/icon.svg", "image/svg+xml") },
++  { name: "P-path the icon's bytes at another path", want: ["path"], exact: true, html: (h) => h.replace('href="/icon.svg"', 'href="/tab-pen-copy.svg"'), setup: serve("**/tab-pen-copy.svg", "image/svg+xml") },
++  { name: "P-ctype the touch icon served as application/octet-stream (an image sniffs, a type does not)", want: ["ctype"], exact: true, setup: serve("**/apple-touch-icon.png", "application/octet-stream", undefined, "/apple-touch-icon.png") },
++  { name: "P-ctype-svg the icon served as text/plain", want: ["ctype"], exact: false, setup: serve("**/icon.svg", "text/plain") },
++  { name: "P-sha the icon served with other bytes", want: ["sha"], exact: true, setup: serve("**/icon.svg", "image/svg+xml", thick) },
++  { name: "P-mutation a re-point undone 50 ms later", want: ["mutation"], exact: true, setup: async (page) => repoint("/icon.svg?x", true)(page) },
++  { name: "NN1 the links' attributes reordered", want: [], exact: true, html: (h) => h.replace('<link rel="icon" type="image/svg+xml" href="/icon.svg" />', '<link href="/icon.svg" type="image/svg+xml" rel="icon">') },
++  { name: "NN2 media=all on the icon (true in both schemes)", want: [], exact: true, html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="all"') },
++  { name: "NN3 E1 read dark (its query holds)", want: [], exact: true, scheme: "dark", html: (h) => h.replace('<link rel="icon"', '<link rel="icon" media="(prefers-color-scheme: dark)"') },
++];
++
++test("the tab's pen as the built page serves it: clean, plants, battery", async ({ browser, baseURL }) => {
++  test.setTimeout(900_000);
++  const origin = new URL(baseURL ?? "http://127.0.0.1").origin;
++  const unapplied = new Set<string>();
++  const once = async (p: Partial<Plant>, scheme: "light" | "dark") => {
++    const ctx = await browser.newContext();
++    try {
++      const page = await ctx.newPage();
++      // the document always carries production's CSP; a plant may rewrite its HTML or its policy
++      await page.route(
++        (u) => u.origin === origin && u.pathname === "/",
++        async (route) => {
++          const res = await route.fetch();
++          const was = await res.text();
++          const body = p.html ? p.html(was) : was;
++          const csp = p.csp ? p.csp(CSP) : CSP;
++          // a plant that changes nothing proves nothing
++          if ((p.html && body === was) || (p.csp && csp === CSP)) unapplied.add(p.name ?? "");
++          await route.fulfill({
++            response: res,
++            body,
++            headers: { ...res.headers(), "content-security-policy": csp },
++          });
++        },
++      );
++      await p.setup?.(page, origin);
++      return await read(page, `${origin}/`, scheme);
++    } finally {
++      await ctx.close();
++    }
++  };
++  const rows: string[] = [];
++  let ok = !!CSP;
++  if (!CSP) rows.push("  FAILED  no Content-Security-Policy read from public/_headers' /* block");
++  for (const scheme of ["light", "dark"] as const) {
++    const rs = await once({}, scheme);
++    for (const r of rs) {
++      const got = judge([r]);
++      const unpressed = r.at === "toggled" && !r.pressed;
++      rows.push(
++        `  ${got.length || unpressed ? "RED  " : "GREEN"}  clean ${scheme} ${r.at}${unpressed ? " (the theme toggle was not found)" : ""}${got.map(([c, w]) => `\n         ${c}: ${w}`).join("")}`,
++      );
++      if (got.length || unpressed) ok = false;
++    }
++  }
++  const readings = new Map<Plant, Reading[]>();
++  for (const p of PLANTS) readings.set(p, await once(p, p.scheme ?? "light"));
++  for (const p of PLANTS) {
++    const fired = [...new Set(judge(readings.get(p)!).map(([c]) => c))].sort();
++    const when = [...new Set(judge(readings.get(p)!).map(([, w]) => w.split(":")[0]))].join(" ");
++    const want = [...p.want].sort();
++    const good = unapplied.has(p.name)
++      ? false
++      : p.exact
++        ? fired.join() === want.join()
++        : want.every((c) => fired.includes(c));
++    rows.push(
++      `  ${good ? "AS REQUIRED" : "FAILED     "}  ${p.name}: ${unapplied.has(p.name) ? "the plant changed nothing" : `red [${fired.join(" ")}]${when ? ` at ${when}` : ""}`}, want ${p.exact ? "" : ">= "}[${want.join(" ")}]`,
++    );
++    if (!good) ok = false;
++  }
++  // the battery: each clause off over the same readings; its sole plants must then read GREEN
++  for (const c of CLAUSES) {
++    const sole = PLANTS.filter((p) => p.exact && p.want.length === 1 && p.want[0] === c);
++    const bite =
++      sole.length > 0 && sole.every((p) => judge(readings.get(p)!, new Set([c])).length === 0);
++    rows.push(`  ${bite ? "BITE" : "HOLE"}  ${c} off: ${sole.map((p) => p.name.split(" ")[0]).join(" ") || "no sole plant"}`);
++    if (!bite) ok = false;
++  }
++  console.log(`tab-pen (${origin}, ${test.info().project.name}):\n${rows.join("\n")}`);
++  expect(ok, rows.join("\n")).toBe(true);
++});
+diff --git a/web/frontend/index.html b/web/frontend/index.html
+index b6f93288..16d2fde2 100644
+--- a/web/frontend/index.html
++++ b/web/frontend/index.html
+@@ -12,7 +12,8 @@
+       content="width=device-width, initial-scale=1.0, viewport-fit=cover"
+     />
+     <title>sudoku</title>
+-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
++    <link rel="icon" type="image/svg+xml" href="/icon.svg" />
++    <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
+     <!-- P5 (Tranche II): fonts are self-hosted woff2 subsets, wired via @font-face
+          in src/assets/index.css — the Google Fonts CDN link is gone, so is the
+          fonts.googleapis.com / fonts.gstatic.com CSP allowance (see public/_headers). -->
+diff --git a/web/frontend/package.json b/web/frontend/package.json
+index f569bb75..ebf9c4e8 100644
+--- a/web/frontend/package.json
++++ b/web/frontend/package.json
+@@ -34,6 +34,8 @@
+     "lint:catch": "node scripts/check-empty-catch.mjs --self-test",
+     "lint:theme-selectors": "node scripts/check-theme-selectors.mjs --self-test",
+     "lint:theme-tokens": "node scripts/check-theme-tokens.mjs --self-test",
++    "lint:favicon": "node scripts/check-favicon.mjs && node scripts/check-favicon.self-test.mjs",
++    "icons": "node scripts/icons.mjs",
+     "lint:lanes": "node scripts/check-lane-membership.mjs --self-test",
+     "lint:sleep": "node scripts/check-sleep-lint.mjs --self-test",
+     "lint:motion": "node scripts/check-motion-contract.mjs --self-test",
+diff --git a/web/frontend/public/apple-touch-icon.png b/web/frontend/public/apple-touch-icon.png
+new file mode 100644
+index 0000000000000000000000000000000000000000..5c4a97038dddd828ab7c0bfbe37477beecb19611
+GIT binary patch
+literal 2473
+zcmV;a30C%rP)<h;3K|Lk000e1NJLTq006WA006WI0{{R33KRAK0008AP)t-s`}+Cc
+z-`*G)7{bB84h{~Bii-C2^a=_J3kwVS`S|$v_Oi0E_4M-$3=A6^8xRl>5fKsh_VwG^
+z*%lTSE-o(X>gk)BnOj;~a&mFW$j9>W@cH=n*45OKk&$|Oc@q;8?(OX5<m5s^LcYDd
+z6ciLFC@3Bt9xN;@-rn5}4GmCGPZAOmG&D5a+}oFymGJNGWMpKvwY4TCCF$tr#l*wB
+zySr0TQh9lJ(a_K8>FDwB@9*yI)6&tQp`h8=*Mfq9At4~w*41KRVHFh>nV6S-eSCO$
+zcjDsVtE;N*?CZ_U%cG;BzrMXFCnqN+CiC*~xVN{csHe=!%JlQ{u&}So%E?4TL`q6Y
+zQc_W5V`DivIS&sHEiEm#wzlKq;v*s=X=!P-w6wv%zmJZN%E`#TzP_iYreR=UNl8c?
+z92{d}VnIPcot&GNm6cakR?yGRFfcIe>*}egsK>^|ARr&4q@#O#dcC~7=jP>aZ*Eyw
+zSkBGN=;!85O-zZ1h&((zU|(NfUS5ZWhC@R`pPrpuTU+7b;NaljgoA@lPE9H*DuaT8
+zH8nMLb#x>nBX)Lm=H=ypfPWt!9<;NwK0ZE-i;Ec<8MCsoY;0_fjg1{09md7Ps;a47
+zTwJ@lx}~M0QBhFb+uG96(1nDAl#`Q_l9D$!H=doGkdKer+1P)7env({MMXtzZEdZs
+ztV>HuIyyRyjEvON(s6Nce0+O~iHTHGQ*dx^Mn*+4GBTi_p2)|>B_t%+*VZ#LGsD8c
+znwglKo0_JkrNqO+fq{USmzHN|XDKNucXxJZXlS~*xv{aZPft!|Wo17<Kfu4fI5;?!
+zl$1L=JEEeYRa8{Z&doqTKv-8-R#jCZA|Y;WZgg~WOiW8_YiqBsu7-t$F)=YVHa6Ye
+z+$$?9<m2PHxVRi9tf~M2010qNS#tmYK1l!oK1l&JAg|c~00x~&L_t(|+U=a>R~t(d
+zz$YQe03lEk5-fO&yBCKR3WXvq?$lc<)V-zd?)vKfD$m{B-Ch2V2k*l>uXJ{^GP5&1
+zXMW$g`#a0*?45h>1^^C+!{Kl^91e%W;cz&QI35uT`<6N88;!=~!pd`}bJw!1>$#>n
+z^!ykD9Dyxy!NJNR4;Jrl)5%sn6yel&*C(=NoVhn0N+A7*dS6DA*RG!gB~!BhA_K}7
+z-w%WGh`bX_S2?!L0_79qFws*E&q;vF=xm_1o2-}wm9v4$UJ?{)fod=W<ZHj0e}`&`
+zY0}vF^irsvQCBow*_8<p3;sdcIX8AdOdMIMmGj@DAU6CiXyd$OG{ndlofgjaF%T;;
+z-5R8H@enhwR1udx3bB(-I)l=U!!HfrA}sAsz!|z9CYvNdB78rVq;w=1X*idlbD+zs
+zk8A$<@`p>d+w(zPhIL`)%=K-b`AD%&BPTs5e&zN}nTV5X(5E}TaCap=;7Q84TkNLk
+z_ZJEO<@TrjTv%TtCH=O@vbY)U;-!>!OH}$LQVE~%%kZ{U!k^bCidlb7#yLeWi{2}3
+zMVgEv`QZjK(#M6acS&-H$$tvJVKRtFUlO?7$1-B9{6x??iiq@9^u=oPWUVp5_frEA
+z=>hb`3gtzqdR|LulL2|HIbJg3ysX!7d8|cWYfyHeEgC+ER<v}8{7AR7+w#_+r5hFG
+zU8qzfnTWI-S~?5QQ6jyLi1b9Xv{^x@3EmH_=q@rZ#0%KgGypS3zR%Z_DtMr!pHUPn
+z>w$gGa+FkJ8jLPTcid1EEot5VYGXCz&Mh(MTm6&5f~{L>^zfgLj-TmC&KaB)c>h)?
+zuc8EImXb6c;=WL-6F|AiCPtKCR{7OfW~K9Ng4VTZ%v#S9IpUp-WmGy%>|mNu!R8wA
+z74K=;0=BVeeb7~tt*wbY=_+rRMY;ZY;jCF3CDalV{LQ{>?Rq_uD!1w71uR+DyF+R0
+z3UFh`dX@A_`MUvbj0}kd{U)nPn6rclZ|59&or!(VuJEL99cYu=QSmN2lS13N&mg}O
+zWZP)=qHAqd)Y3mzMtA>yF<M#Yt%vG<QrfAsW7xT40yXRWLB)+uON*J>?VhJ%R>f}`
+zt=#*@T@`)hu+%_G+RLI<Xv3BoI@XIq!_;VR&Z48OON~>b9sdL!?V@*lR9G8MWKg=>
+zKk8LzFRi4tYtQ#np}jhSlD0?GT;(HKB~$4g56-l>D_z+}iiwo9Sm}6V8`T7`pjcTh
+z)jEZ4x?NDL<gq+o2PiY~Df!+D7%0tKLn389m%EuLH^hdt$T?10jx$o*iE!MNo}3)B
+z0#?XyNM0w|EL8w?A@`(NcLAoz%{e4Ndcee%HSl`lwrlJ0fH_J-U9}SS00v1(cJXc9
+zbQZ0FX^W`#3BV?GMv;?_-o&Ui_-pl}wm$ylOTqfoWp<^(ni2u&jSNczr@-#F3-j9{
+zA_8YM-;9>-z*tf(s7M@2GYyFq_}ZGyXzOrX@hABIm#De><En~ZM@uJR3P0n4_2)f<
+z==zw9CwkV1dBst9s+}L8rQgI7Jn5kqm>$c&umLUY#3H@!;lS%~#4Sck9{{9Aka3I{
+z^rI)%vDBJUQK3`S$6Y9pF=1I9$i_;v`a0`uwDeUhhf;KG)t`HB639Is2jo7SRC{ht
+z7Ah-L6O=xs>QVF!6)c4m;gIeYDumxu{sp0Pv)~!v5SHgKSg?6jTd3@4WM3}Q55uyg
+z0T3zf*G`lFQy1OKMJIDGWggFoUBl<w#d1=~DUI3Ub<}&9QoNI{226KOYmzitwXJZq
+zO{)si9};Sw`q?>)og&AYu{HB&N$DX)V><!#OKq&heAK)9nt5uj&Tb!iMDy(S*sr7R
+zj4z+n+#@jpbYMFcU4dG072gD3evektI43}=HFC!KGY%fjnmF&lJ0>~VM+0YX+-;&l
+z^3E3gpUS*P+Bxn8{FS%h1!SEKkCCVsdiD~%&qSPuwvgrIoafX776&y&IYRQgFK0Uu
+z=K!+f;9lkUH*CLi#OwD(n1AvrtXPvVpr~&!ZggcyKqK5*-LWWll$C1P<jH-~TeWgY
+zjt*$dl*RFCp2@h@U+8pZt7dMsDSP;`U#B%)I*jSnUuVl3`?e&mYRm)F@tXcxZ@Z))
+z4Nc!!es~dJ2TyBP$g1r266CgG*%!Gnbi5l&z7O7ZUG7wKwIkU$%zcMrSzo5}0JFmo
+n91e%W;cz${4u`|xaHR4NH=d??#i(4m00000NkvXXu0mjfAm7o*
+
+literal 0
+HcmV?d00001
+
+diff --git a/web/frontend/public/favicon.svg b/web/frontend/public/favicon.svg
+deleted file mode 100644
+index d0473d6a..00000000
+--- a/web/frontend/public/favicon.svg
++++ /dev/null
+@@ -1,17 +0,0 @@
+-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
+-  <defs>
+-    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
+-      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
+-      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
+-    </filter>
+-    <clipPath id="c">
+-      <rect width="32" height="32" rx="6" ry="6"/>
+-    </clipPath>
+-  </defs>
+-  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
+-  <g clip-path="url(#c)">
+-    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
+-      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
+-    </g>
+-  </g>
+-</svg>
+diff --git a/web/frontend/public/icon.svg b/web/frontend/public/icon.svg
+new file mode 100644
+index 00000000..f14bf261
+--- /dev/null
++++ b/web/frontend/public/icon.svg
+@@ -0,0 +1 @@
++<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>rect{fill:#fbfaf9}path{stroke:#0a0a0a}@media(prefers-color-scheme:dark){rect{fill:#110f0e}path{stroke:#edece9}}</style><rect width="32" height="32" fill="#fbfaf9"/><path d="M22.6,9.6C21.4,7.1 18.6,6 15.8,6C12,6 9.6,7.9 9.6,10.6C9.6,13.4 12.4,14.6 16.2,15.8C21,17.3 24,18.4 24,21.2C24,24.4 20.4,26 15.8,26C11.6,26 8,24.6 8,22.6" fill="none" stroke="#0a0a0a" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/></svg>
+diff --git a/web/frontend/scripts/check-favicon.mjs b/web/frontend/scripts/check-favicon.mjs
+new file mode 100644
+index 00000000..b43d92a7
+--- /dev/null
++++ b/web/frontend/scripts/check-favicon.mjs
+@@ -0,0 +1,857 @@
++#!/usr/bin/env node
++/**
++ * THE FAVICON GATE (T9-M22, TAB-PEN). The tab's s is one pen line on the page's paper, in the page's
++ * ink. It reads the SHAPE, not the spelling (LAWS P6 §F): the markup against an allowlist, every
++ * `<style>` rule in source order with the last one winning, the page's links and tokens through the
++ * estate's ONE library (`shape-census.mjs`: `htmlLinks`, `tokenSites`, `tokenConflicts`, colours
++ * scored by ΔE), the path rastered analytically, and the touch icon's own pixels. Browserless.
++ *
++ *   a  the markup     exactly one each of svg, style, rect, path, and nothing else: no comment, no
++ *                     entity, no second element, no attribute outside the allowlist (so no filter,
++ *                     clip, rx/ry, transform, opacity, style="", dasharray). viewBox `0 0 32 32`; the
++ *                     rect covers it at 0,0; the rect is painted before the path.
++ *   b  one pen line   the path: fill none, round caps and joins, stroke-width a bare number in
++ *                     [3.6, 5.2] of the 32 viewBox. The `<style>` body holds `rect{fill}` and
++ *                     `path{stroke}` only, at the top level or inside `@media (prefers-color-scheme:
++ *                     dark)`; no other property, selector, at-rule or !important. <= 600 B.
++ *   c  the page's     the painted fill and stroke, resolved per scheme through the cascade (the
++ *      colours        attributes, then every rule in source order), are the page's
++ *                     --color-background / --color-foreground (ΔE <= 0.5, opaque) in light and in
++ *                     dark. The tokens are read at EVERY site the library finds; a site outside
++ *                     `:root`/`@theme` and `.dark` is RED, two placed sites that disagree are RED
++ *                     (never resolved by walk order), and an unresolved `setProperty` is RED. Ink
++ *                     over paper >= 7:1 in each scheme.
++ *   d  the pen        the path and stroke-width are the arm table's (`scripts/icons.mjs`: PEN[ARM],
++ *                     WIDTH), and that table is a PINNED ballot arm (ARM_PIN: each arm's path
++ *                     sha256, widths {4, 5}; a re-cut of the pen is a stated edit here); the exact extrema bbox inflated by half the pen is within [0.55, 0.80]
++ *                     of the tile per axis, centred within 0.5 unit; stroke / (bbox H + stroke) is in
++ *                     WINDOWS[WIDTH] (a tab-size legibility window, 2 px at 16 px, keyed to the pen's
++ *                     width so the owner's arm B needs one const, not a gate edit); the path's ink
++ *                     MASS, rastered analytically at 180 (4 × 4 samples a pixel), is in [0.18, 0.32].
++ *   e  the estate     index.html (comments and inert template/noscript/script/style contents
++ *                     stripped, no <base>) carries EXACTLY ONE rel~=icon, to /icon.svg, and exactly
++ *                     one apple-touch-icon, to /apple-touch-icon.png, each attribute on the library's
++ *                     LINK_ALLOW (no media, no sizes: one link per rel); favicon.svg is gone
++ *                     (the rename busts the favicon store); scripts/icons.provenance.json carries both
++ *                     files' sha256; the PNG decodes to 180 x 180, opaque, its ink coverage in
++ *                     [0.18, 0.32], and it IS the path, every pixel read: each pixel off the pen's
++ *                     support (dilated 1 px) is the light paper (max ΔE <= 1), each pixel the pen
++ *                     covers whole (eroded 1 px) is the light ink (max ΔE <= 1), and between them the
++ *                     coverage against the analytic raster reads mean |Δ| <= 0.02 and IoU >= 0.97,
++ *                     with no 4-connected mark the path does not explain (|Δ| > 0.5) over 16 px.
++ *                     A PNG that isn't the s reds on content, whatever the sidecar says. Its live
++ *                     twin is `e2e/tab-pen.spec.ts`.
++ *
++ * This file is the gate alone. Its self-test, the EDGES, the CUTS and both batteries live in
++ * `check-favicon.self-test.mjs`, and the plant table (the fixture) in `check-favicon.plants.mjs`:
++ * `node scripts/check-favicon.self-test.mjs [--sabotage-battery | --threshold-battery]
++ * [--root <web/frontend>]` (`npm run lint:favicon` runs the gate, then the self-test). Every numeric
++ * bound lives in BOUNDS (or WINDOWS), every cut inside tie() in CUTS, each pinned from outside.
++ * Run: `node scripts/check-favicon.mjs [--root <web/frontend>]`.
++ */
++import { createHash } from "node:crypto";
++import fs from "node:fs";
++import path from "node:path";
++import process from "node:process";
++import { pathToFileURL } from "node:url";
++import zlib from "node:zlib";
++import { ARM, PEN, WIDTH, WINDOWS } from "./icons.mjs";
++import {
++  cssRules,
++  deltaE,
++  exactlyOneLink,
++  parseColor,
++  resolve,
++  sources,
++  stripCss,
++  tokenConflicts,
++  tokenSites,
++  tokens,
++} from "./shape-census.mjs";
++
++export const argRoot = process.argv.indexOf("--root");
++export const ROOT =
++  argRoot > 0
++    ? path.resolve(process.argv[argRoot + 1])
++    : path.join(import.meta.dirname, "..");
++export const TOKENS = ["--color-background", "--color-foreground"];
++export const sha256 = (b) => createHash("sha256").update(b).digest("hex");
++/** EVERY numeric bound the audit reads, [lo, hi], keyed by its check id (WINDOWS is the arm table's,
++ *  per width). The self-test's EDGES pin each one from outside this table: a plant measured within
++ *  ε past the bound must red, one within ε inside must not, and `--threshold-battery` moves every
++ *  bound by its ε both ways (LAWS P8 §F, threshold sabotage). Moving a bound is an EDGES edit too. */
++export const BOUNDS = {
++  "b.width": [3.6, 5.2],
++  "b.bytes": [-Infinity, 600],
++  "c.tokens": [7, Infinity],
++  "c.delta": [-Infinity, 0.5],
++  "c.fallback": [-Infinity, 0.5],
++  "d.extent": [0.55, 0.8],
++  "d.centre": [-Infinity, 0.5],
++  "d.mass": [0.18, 0.32],
++  "e.png-paper": [-Infinity, 1],
++  "e.png-coverage": [0.18, 0.32],
++  "e.png-ink": [-Infinity, 1],
++  "e.png-delta": [-Infinity, 0.02],
++  "e.png-tie": [0.97, Infinity],
++  "e.png-blob": [-Infinity, 16],
++};
++export const inside = (id, v, [lo, hi] = BOUNDS[id]) => v >= lo && v <= hi;
++/** The cuts inside tie(), each a bound on a PIXEL, not on a reading: the IoU's binarisation level, the
++ *  blob's |Δcoverage| cut, and the off-path mask's reach (px). Each is pinned by a CUT row (a plant at
++ *  cut ± ε, the gate's own read) and moved by `--threshold-battery` like a bound (LAWS P8 §F). */
++export const CUTS = { "e.png-tie": 0.5, "e.png-blob": 0.5, "e.png-reach": 1 };
++/** The arm table PINNED (T9-B27/B28): each ballot arm's path by sha256, and the width set. A table
++ *  edit that is not one of these reds d.pin; re-cutting the pen is a stated edit of THIS table. */
++export const ARM_PIN = {
++  W: "fce8f710b97b45f7f3667ad56d74486055b7ac6fb60482482fc73dd36e6449e9",
++  H: "e2ed86c88fcd132d8121d014806f90defccf2678388a533572c29fe1111e691f",
++  widths: [4, 5],
++};
++export const OFF = new Set(); // the gate's own sabotage switch (check ids)
++
++/* ── colour ─────────────────────────────────────────────────────────────────── */
++export const lum = ({ rgb }) =>
++  rgb
++    .map((v) => (v <= 0.04045 ? v / 12.92 : ((v + 0.055) / 1.055) ** 2.4))
++    .reduce((s, v, i) => s + v * [0.2126, 0.7152, 0.0722][i], 0);
++export const contrast = (a, b) => {
++  const [hi, lo] = [lum(a), lum(b)].sort((p, q) => q - p);
++  return (hi + 0.05) / (lo + 0.05);
++};
++export const opaque = (c) => c && (c.a ?? 1) >= 0.999;
++
++/** The page's two tokens through the ONE library, placed light (`:root`, which `@theme` reads as) /
++ *  dark (`.dark`) / unplaced, with the library's conflicts. The library reads each file once (cached
++ *  on its path and text; a plant that adds a file pays for that file alone); memoised per list. */
++export const siteCache = new WeakMap();
++export const fileCache = new Map();
++export function fileTokens({ file, text }) {
++  const key = `${file}\u0000${text}`;
++  if (!fileCache.has(key)) {
++    const abs = path.join(ROOT, file);
++    const io = {
++      files: [abs],
++      read: (p) => (p === abs ? text : fs.readFileSync(p, "utf8")),
++      exists: (p) => p === abs || fs.existsSync(p),
++    };
++    const mine = (x) => x.file === file; // an @import's target is read at its own entry
++    fileCache.set(key, {
++      sites: TOKENS.flatMap((prop) =>
++        tokenSites(ROOT, prop, io)
++          .filter(mine)
++          .map((x) => ({ ...x, prop })),
++      ),
++      decls: tokens(ROOT, io).all.filter(mine),
++    });
++  }
++  return fileCache.get(key);
++}
++export function pageTokens(files) {
++  if (siteCache.has(files)) return siteCache.get(files);
++  const per = files.map(fileTokens);
++  const sites = per.flatMap((f) => f.sites);
++  const map = new Map(per.flatMap((f) => f.decls.map((x) => [x.prop, x.value])));
++  const placed = sites.filter((s) => !s.unresolved);
++  const home = (s) =>
++    s.ctx || s.important
++      ? null
++      : s.prelude.replace(/\s+/g, "") === ":root"
++        ? "light"
++        : s.prelude.replace(/\s+/g, "") === ".dark"
++          ? "dark"
++          : null;
++  const tok = { light: {}, dark: {} };
++  for (const s of placed)
++    if (home(s)) tok[home(s)][s.prop] = parseColor(resolve(s.value, map));
++  const conflicts = tokenConflicts(placed);
++  // A token whose placed sites disagree has no value this gate can know (the build's order decides):
++  // it resolves to nothing, in whichever order the walk met the sites.
++  for (const c of conflicts) if (home(c.sites[0])) tok[home(c.sites[0])][c.name] = null;
++  const out = {
++    tok,
++    unplaced: placed.filter((s) => !home(s)),
++    unresolved: sites.filter((s) => s.unresolved),
++    conflicts,
++  };
++  siteCache.set(files, out);
++  return out;
++}
++
++/* ── the markup ─────────────────────────────────────────────────────────────── */
++export const ALLOWED = {
++  svg: ["xmlns", "viewBox"],
++  style: [],
++  rect: ["width", "height", "fill", "x", "y"],
++  path: ["d", "fill", "stroke", "stroke-width", "stroke-linecap", "stroke-linejoin"],
++};
++export function parseSvg(svg) {
++  const els = [];
++  let styleText = "";
++  const tag =
++    /<(\/?)([A-Za-z][\w:.-]*)((?:\s+[^\s=>/]+\s*=\s*(?:"[^"]*"|'[^']*'))*)\s*(\/?)>/y;
++  const junk = [];
++  let i = 0;
++  let inStyle = false;
++  while (i < svg.length) {
++    if (inStyle) {
++      const end = svg.indexOf("</style>", i);
++      if (end < 0) return { els, styleText, junk: ["an unclosed <style>"] };
++      styleText += svg.slice(i, end);
++      i = end;
++      inStyle = false;
++      continue;
++    }
++    const lt = svg.indexOf("<", i);
++    const text = svg.slice(i, lt < 0 ? svg.length : lt);
++    if (text.trim()) junk.push(`text "${text.trim().slice(0, 20)}"`);
++    if (lt < 0) break;
++    tag.lastIndex = lt;
++    const m = tag.exec(svg);
++    if (!m) {
++      junk.push(`markup this gate can't read at "${svg.slice(lt, lt + 12)}"`);
++      break;
++    }
++    i = tag.lastIndex;
++    if (m[1]) continue;
++    const attrs = [...m[3].matchAll(/([^\s=]+)\s*=\s*(?:"([^"]*)"|'([^']*)')/g)].map(
++      (a) => [a[1], a[2] ?? a[3]],
++    );
++    els.push({
++      name: m[2],
++      attrs,
++      dupe: new Set(attrs.map(([k]) => k)).size < attrs.length,
++    });
++    if (m[2] === "style" && !m[4]) inStyle = true;
++  }
++  return { els, styleText, junk };
++}
++
++/* ── geometry: absolute M/L/H/V/C/Q/Z → polylines (curves at 24 steps) and exact extrema ─────── */
++export function geometry(d) {
++  const t = d.match(/[A-Za-z]|-?\d*\.?\d+(?:e-?\d+)?/g);
++  if (!t || t.some((x) => /[a-z]/.test(x) || /[^MLHVCQZ\d.e-]/.test(x))) return null;
++  const xs = [];
++  const ys = [];
++  const lines = [];
++  let line = null;
++  const ext = (v) => {
++    const out = [v[0], v[v.length - 1]];
++    const roots = [];
++    if (v.length === 4) {
++      const [a, b, c] = [
++        -v[0] + 3 * v[1] - 3 * v[2] + v[3],
++        2 * (v[0] - 2 * v[1] + v[2]),
++        v[1] - v[0],
++      ];
++      if (Math.abs(a) < 1e-12) {
++        if (Math.abs(b) > 1e-12) roots.push(-c / b);
++      } else if (b * b - 4 * a * c >= 0) {
++        const s = Math.sqrt(b * b - 4 * a * c);
++        roots.push((-b + s) / (2 * a), (-b - s) / (2 * a));
++      }
++    } else if (Math.abs(v[0] - 2 * v[1] + v[2]) > 1e-12)
++      roots.push((v[0] - v[1]) / (v[0] - 2 * v[1] + v[2]));
++    for (const u of roots.filter((r) => r > 0 && r < 1)) out.push(bez(v, u));
++    return out;
++  };
++  const bez = (v, u) =>
++    v.length === 4
++      ? (1 - u) ** 3 * v[0] +
++        3 * (1 - u) ** 2 * u * v[1] +
++        3 * (1 - u) * u * u * v[2] +
++        u ** 3 * v[3]
++      : (1 - u) ** 2 * v[0] + 2 * (1 - u) * u * v[1] + u * u * v[2];
++  let [cx, cy] = [0, 0];
++  let cmd = "";
++  for (let i = 0; i < t.length;) {
++    if (/[A-Z]/.test(t[i])) cmd = t[i++];
++    const n = () => +t[i++];
++    if (cmd === "Z") {
++      if (line) {
++        line.push(line[0]);
++        [cx, cy] = line[0];
++      }
++      continue;
++    }
++    if (cmd === "M") {
++      [cx, cy] = [n(), n()];
++      lines.push((line = [[cx, cy]]));
++      cmd = "L"; // implicit lineto after a moveto's first pair
++    } else if (cmd === "L") [cx, cy] = [n(), n()];
++    else if (cmd === "H") cx = n();
++    else if (cmd === "V") cy = n();
++    else if (cmd === "C" || cmd === "Q") {
++      const p = [[cx, cy]];
++      for (let k = 0; k < (cmd === "C" ? 3 : 2); k++) p.push([n(), n()]);
++      xs.push(...ext(p.map((q) => q[0])));
++      ys.push(...ext(p.map((q) => q[1])));
++      for (let k = 1; k <= 24; k++)
++        line?.push([
++          bez(
++            p.map((q) => q[0]),
++            k / 24,
++          ),
++          bez(
++            p.map((q) => q[1]),
++            k / 24,
++          ),
++        ]);
++      [cx, cy] = p[p.length - 1];
++      continue;
++    } else return null;
++    if (!line) return null;
++    if (cmd !== "L" || line.length > 1 || line[0][0] !== cx || line[0][1] !== cy)
++      line.push([cx, cy]);
++    xs.push(cx);
++    ys.push(cy);
++  }
++  if (!lines.length || xs.some(Number.isNaN)) return null;
++  return {
++    box: [Math.min(...xs), Math.min(...ys), Math.max(...xs), Math.max(...ys)],
++    lines,
++  };
++}
++
++/** Per-pixel ink coverage of a round-capped, round-joined pen of `pen` units along the path, on an
++ *  `n` × `n` raster of the 32 viewBox, `ss` × `ss` samples a pixel (the union of capsules IS the
++ *  round-cap/round-join stroke). Memoised. */
++export const rasterCache = new Map();
++export function raster(d, pen, n = 180, ss = 4) {
++  const key = `${d}|${pen}|${n}|${ss}`;
++  if (rasterCache.has(key)) return rasterCache.get(key);
++  const g = geometry(d);
++  if (!g) return null;
++  const k = (n * ss) / 32;
++  const S = n * ss;
++  const r = (pen / 2) * k;
++  const ink = new Uint8Array(S * S);
++  for (const line of g.lines)
++    for (let j = 0; j < line.length; j++) {
++      const [ax, ay] = [line[j][0] * k, line[j][1] * k];
++      const [bx, by] =
++        j + 1 < line.length ? [line[j + 1][0] * k, line[j + 1][1] * k] : [ax, ay];
++      const [dx, dy] = [bx - ax, by - ay];
++      const L2 = dx * dx + dy * dy;
++      const x0 = Math.max(0, Math.floor(Math.min(ax, bx) - r));
++      const x1 = Math.min(S - 1, Math.ceil(Math.max(ax, bx) + r));
++      const y0 = Math.max(0, Math.floor(Math.min(ay, by) - r));
++      const y1 = Math.min(S - 1, Math.ceil(Math.max(ay, by) + r));
++      for (let y = y0; y <= y1; y++)
++        for (let x = x0; x <= x1; x++) {
++          const [px, py] = [x + 0.5 - ax, y + 0.5 - ay];
++          const u = L2 ? Math.max(0, Math.min(1, (px * dx + py * dy) / L2)) : 0;
++          const [ex, ey] = [px - u * dx, py - u * dy];
++          if (ex * ex + ey * ey <= r * r) ink[y * S + x] = 1;
++        }
++    }
++  const cov = new Float64Array(n * n);
++  for (let y = 0; y < S; y++)
++    for (let x = 0; x < S; x++)
++      if (ink[y * S + x])
++        cov[Math.floor(y / ss) * n + Math.floor(x / ss)] += 1 / (ss * ss);
++  const out = { cov, mass: cov.reduce((s, v) => s + v, 0) / (n * n) };
++  rasterCache.set(key, out);
++  return out;
++}
++
++/* ── the touch icon's pixels (PNG, non-interlaced, any colour type) ─────────── */
++export function decodePng(buf) {
++  if (!buf || buf.length < 33 || buf.readUInt32BE(0) !== 0x89504e47) return null;
++  let o = 8;
++  let hdr = null;
++  let plte = null;
++  let trns = null;
++  const idat = [];
++  while (o + 8 <= buf.length) {
++    const len = buf.readUInt32BE(o);
++    const type = buf.toString("latin1", o + 4, o + 8);
++    const data = buf.subarray(o + 8, o + 8 + len);
++    o += 12 + len;
++    if (type === "IHDR")
++      hdr = {
++        w: data.readUInt32BE(0),
++        h: data.readUInt32BE(4),
++        depth: data[8],
++        ct: data[9],
++        lace: data[12],
++      };
++    else if (type === "PLTE") plte = data;
++    else if (type === "tRNS") trns = data;
++    else if (type === "IDAT") idat.push(data);
++    else if (type === "IEND") break;
++  }
++  const ch = { 0: 1, 2: 3, 3: 1, 4: 2, 6: 4 }[hdr?.ct];
++  if (!hdr || hdr.lace || !ch || (hdr.ct === 3 && !plte)) return null;
++  const bits = ch * hdr.depth;
++  const stride = Math.ceil((hdr.w * bits) / 8);
++  const step = Math.max(1, bits >> 3);
++  let raw;
++  try {
++    raw = zlib.inflateSync(Buffer.concat(idat));
++  } catch {
++    return null;
++  }
++  const px = Buffer.alloc(stride * hdr.h);
++  for (let y = 0; y < hdr.h; y++) {
++    const f = raw[y * (stride + 1)];
++    for (let x = 0; x < stride; x++) {
++      const r = raw[y * (stride + 1) + 1 + x];
++      const a = x >= step ? px[y * stride + x - step] : 0;
++      const b = y ? px[(y - 1) * stride + x] : 0;
++      const c = x >= step && y ? px[(y - 1) * stride + x - step] : 0;
++      const pa = Math.abs(b - c);
++      const pb = Math.abs(a - c);
++      const pc = Math.abs(a + b - 2 * c);
++      const pred = [0, a, b, (a + b) >> 1, pa <= pb && pa <= pc ? a : pb <= pc ? b : c][
++        f
++      ];
++      px[y * stride + x] = (r + pred) & 255;
++    }
++  }
++  const sample = (y, k) => {
++    const bit = k * hdr.depth;
++    const byte = px[y * stride + (bit >> 3)];
++    if (hdr.depth >= 8) return byte;
++    return (byte >> (8 - hdr.depth - (bit & 7))) & ((1 << hdr.depth) - 1);
++  };
++  const scale = hdr.depth < 8 && hdr.ct !== 3 ? 255 / ((1 << hdr.depth) - 1) : 1;
++  const rgba = [];
++  const w16 = hdr.depth === 16 ? 2 : 1;
++  for (let y = 0; y < hdr.h; y++)
++    for (let x = 0; x < hdr.w; x++) {
++      const s = (k) => sample(y, x * ch * w16 + k * w16) * scale;
++      if (hdr.ct === 3) {
++        const i = s(0);
++        rgba.push([plte[3 * i], plte[3 * i + 1], plte[3 * i + 2], trns?.[i] ?? 255]);
++      } else if (hdr.ct < 2 || hdr.ct === 4)
++        rgba.push([s(0), s(0), s(0), hdr.ct === 4 ? s(1) : 255]);
++      else rgba.push([s(0), s(1), s(2), hdr.ct === 6 ? s(3) : 255]);
++    }
++  return { w: hdr.w, h: hdr.h, rgba };
++}
++
++/** The PNG held to the analytic raster, every pixel read (pass 10; no one-pixel read survives):
++ *  - `paper`: the max ΔE to the paper over EVERY pixel off the path (support dilated by REACH px) —
++ *    a tint, a box at any coverage, a dot of one pixel, wherever it sits;
++ *  - `ink`: the max ΔE to the ink over EVERY pixel the pen covers whole (coverage 1, eroded by REACH);
++ *  - `meanDelta`, `iou` (binarised at CUTS["e.png-tie"]) and `blob` (the largest 4-connected run with
++ *    |Δcoverage| > CUTS["e.png-blob"]) on the coverage, for the fringe between the two masks. */
++export function tie(img, ras, paper, ink) {
++  const P = paper.rgb.map((v) => v * 255);
++  const I = ink.rgb.map((v) => v * 255);
++  const n = img.w;
++  const [cutT, cutB, R] = [CUTS["e.png-tie"], CUTS["e.png-blob"], CUTS["e.png-reach"]];
++  // near: the pen's support dilated by R; core: its whole-coverage pixels eroded by R (the two masks
++  // a rasteriser's fringe may not reach past)
++  const near = new Uint8Array(img.rgba.length);
++  const core = new Uint8Array(img.rgba.length).fill(1);
++  for (let i = 0; i < near.length; i++)
++    for (let dy = -R; dy <= R; dy++)
++      for (let dx = -R; dx <= R; dx++) {
++        const [x, y] = [(i % n) + dx, Math.floor(i / n) + dy];
++        const j = x >= 0 && y >= 0 && x < n && y < n ? y * n + x : -1;
++        if (ras.cov[i] > 0 && j >= 0) near[j] = 1;
++        if (j < 0 || ras.cov[j] !== 1) core[i] = 0;
++      }
++  const de = (p, c) => deltaE({ rgb: p.slice(0, 3).map((v) => v / 255), a: 1 }, c);
++  const same = (p, Q) =>
++    Math.round(Q[0]) === p[0] && Math.round(Q[1]) === p[1] && Math.round(Q[2]) === p[2];
++  let [sum, inter, union, paperMax, inkMax] = [0, 0, 0, 0, 0];
++  const off = new Uint8Array(img.rgba.length); // |Δcoverage| > cutB: a pixel the path does not explain
++  for (let i = 0; i < img.rgba.length; i++) {
++    const px = img.rgba[i];
++    if (!near[i] && !same(px, P)) paperMax = Math.max(paperMax, de(px, paper));
++    if (core[i] && !same(px, I)) inkMax = Math.max(inkMax, de(px, ink));
++    const a = [0, 1, 2].reduce((s, c) => s + (P[c] - px[c]) / (P[c] - I[c]), 0) / 3;
++    const got = Math.min(1, Math.max(0, a));
++    const want = ras.cov[i];
++    sum += Math.abs(got - want);
++    off[i] = Math.abs(got - want) > cutB ? 1 : 0;
++    if (got >= cutT || want >= cutT) union++;
++    if (got >= cutT && want >= cutT) inter++;
++  }
++  // the largest 4-connected component of unexplained pixels: a mark, not a rasteriser's fringe
++  let blob = 0;
++  for (let i = 0; i < off.length; i++) {
++    if (off[i] !== 1) continue;
++    let size = 0;
++    const stack = [i];
++    off[i] = 2;
++    while (stack.length) {
++      const j = stack.pop();
++      size++;
++      for (const k of [j - n, j + n, j % n ? j - 1 : -1, (j + 1) % n ? j + 1 : -1])
++        if (k >= 0 && k < off.length && off[k] === 1) {
++          off[k] = 2;
++          stack.push(k);
++        }
++    }
++    blob = Math.max(blob, size);
++  }
++  return {
++    meanDelta: sum / img.rgba.length,
++    iou: union ? inter / union : 0,
++    blob,
++    paperMax,
++    inkMax,
++  };
++}
++
++/* ── the audit: one model in, a list of [clause, id, reason] out ─────────────── */
++export function audit(m, arm = { name: ARM, width: WIDTH, d: PEN[ARM] }) {
++  const fails = [];
++  const red = (clause, id, why) => {
++    if (!OFF.has(id)) fails.push([clause, id, why]);
++  };
++  // every numeric reading, by check id (the self-test's EDGES seek plants on these)
++  const readings = (fails.readings = {});
++  const bound = (clause, id, v, what, range = BOUNDS[id]) => {
++    (readings[id] ??= []).push(v);
++    if (!inside(id, v, range))
++      red(clause, id, `${what} ${+v.toFixed(4)}, outside [${range.join(", ")}]`);
++  };
++  const svg = m.svg ?? "";
++  const { tok, unplaced, unresolved, conflicts } = pageTokens(m.files);
++
++  // a · the markup
++  const { els, styleText, junk } = parseSvg(svg);
++  for (const j of junk) red("a", "a.junk", j);
++  const count = (n) => els.filter((e) => e.name === n).length;
++  for (const n of Object.keys(ALLOWED))
++    if (count(n) !== 1)
++      red("a", "a.count", `${count(n)} <${n}> elements, exactly one wanted`);
++  for (const e of els) {
++    if (!ALLOWED[e.name])
++      red("a", "a.element", `<${e.name}> is not one of svg, style, rect, path`);
++    else
++      for (const [k] of e.attrs)
++        if (!ALLOWED[e.name].includes(k))
++          red("a", "a.attr", `<${e.name}> carries ${k}=`);
++    if (e.dupe) red("a", "a.dupe", `<${e.name}> repeats an attribute`);
++  }
++  const get = (n, k) =>
++    els.find((e) => e.name === n)?.attrs.find(([a]) => a === k)?.[1];
++  if (els[0]?.name !== "svg") red("a", "a.root", "the root element is not <svg>");
++  if (get("svg", "xmlns") !== "http://www.w3.org/2000/svg")
++    red("a", "a.ns", "the svg namespace is wrong");
++  if (
++    (get("svg", "viewBox") ?? "")
++      .trim()
++      .split(/[\s,]+/)
++      .join(" ") !== "0 0 32 32"
++  )
++    red("a", "a.viewbox", `viewBox "${get("svg", "viewBox")}", 0 0 32 32 wanted`);
++  if (get("rect", "width") !== "32" || get("rect", "height") !== "32")
++    red("a", "a.paper", "the paper is not 32 x 32");
++  for (const k of ["x", "y"])
++    if (get("rect", k) !== undefined && +get("rect", k) !== 0)
++      red("a", "a.paper-xy", `the paper's ${k} is not 0`);
++  const order = els.map((e) => e.name);
++  if (order.indexOf("rect") > order.indexOf("path"))
++    red("a", "a.order", "the paper is painted over the pen");
++
++  // b · one pen line
++  if (get("path", "fill") !== "none")
++    red("b", "b.fill", `fill="${get("path", "fill")}", not a pen line`);
++  if (get("path", "stroke-linecap") !== "round")
++    red("b", "b.cap", "stroke-linecap is not round");
++  if (get("path", "stroke-linejoin") !== "round")
++    red("b", "b.join", "stroke-linejoin is not round");
++  const swText = get("path", "stroke-width") ?? "";
++  const sw = /^\d+(\.\d+)?$/.test(swText) ? +swText : NaN;
++  bound("b", "b.width", sw, `stroke-width "${swText}" =`);
++  const rules = cssRules(styleText);
++  if (/@(?!media\b)/.test(stripCss(styleText)))
++    red("b", "b.at-rule", "an at-rule other than @media in <style>");
++  const DARK = "@media (prefers-color-scheme:dark)";
++  const own = { rect: "fill", path: "stroke" };
++  for (const r of rules) {
++    const at = r.ctx.map((c) =>
++      c.replace(/\s*([():])\s*/g, "$1").replace(/^@media\(/, "@media ("),
++    );
++    if (at.length > 1 || (at.length === 1 && at[0] !== DARK))
++      red("b", "b.context", `a rule under "${r.ctx.join(" ")}"`);
++    if (!own[r.prelude])
++      red("b", "b.selector", `a rule for "${r.prelude}", only rect and path allowed`);
++    for (const d of r.decls) {
++      if (d.prop !== own[r.prelude])
++        red("b", "b.prop", `${r.prelude}{${d.prop}} in <style>`);
++      if (d.important) red("b", "b.important", `!important on ${r.prelude}{${d.prop}}`);
++    }
++    r.dark = at.length === 1;
++  }
++  bound("b", "b.bytes", Buffer.byteLength(svg), "bytes");
++
++  // c · the page's colours, resolved through the cascade per scheme
++  for (const s of unplaced)
++    red(
++      "c",
++      "c.unplaced",
++      `${s.prop} is declared at ${s.file} "${[s.ctx, s.prelude].join(" ").trim()}", a site this gate doesn't place`,
++    );
++  for (const s of unresolved.filter((u) => /setProperty/.test(u.kind)))
++    red(
++      "c",
++      "c.unresolved",
++      `${s.file}: ${s.kind} "${s.prelude}" may write the page's tokens`,
++    );
++  for (const c of conflicts)
++    red(
++      "c",
++      "c.conflict",
++      `${c.name} has ${c.sites.length} placed sites that disagree (${c.sites.map((s) => `${s.file} ${s.value}`).join(" · ")}): walk order is not the cascade`,
++    );
++  for (const scheme of ["light", "dark"]) {
++    const t = tok[scheme];
++    const want = { rect: t["--color-background"], path: t["--color-foreground"] };
++    if (!opaque(want.rect) || !opaque(want.path))
++      red(
++        "c",
++        "c.tokens",
++        `the ${scheme} tokens don't resolve to opaque ink and paper`,
++      );
++    else bound("c", "c.tokens", contrast(want.rect, want.path), `${scheme} ink:paper`);
++    for (const el of ["rect", "path"]) {
++      let value = get(el, own[el]);
++      for (const r of rules)
++        if (r.prelude === el && (!r.dark || scheme === "dark"))
++          for (const d of r.decls) if (d.prop === own[el]) value = d.value;
++      const got = parseColor(value ?? "");
++      if (!opaque(got))
++        red(
++          "c",
++          "c.opaque",
++          `${scheme} ${el} ${own[el]} "${value}" is not an opaque colour`,
++        );
++      else if (want[el])
++        bound("c", "c.delta", deltaE(got, want[el]), `${scheme} ${el} "${value}" ΔE`);
++    }
++    if (scheme === "light")
++      for (const el of ["rect", "path"]) {
++        const attr = parseColor(get(el, own[el]) ?? "");
++        if (!opaque(attr))
++          red(
++            "c",
++            "c.fallback",
++            `the ${el}'s ${own[el]} attribute (the no-CSS fallback) is not opaque`,
++          );
++        else if (want[el])
++          bound(
++            "c",
++            "c.fallback",
++            deltaE(attr, want[el]),
++            `the ${el}'s fallback ${own[el]} ΔE`,
++          );
++      }
++  }
++
++  // d · the pen: the arm table's, its box, its window, its mass
++  const d = get("path", "d") ?? "";
++  if (d !== arm.d || sw !== arm.width)
++    red(
++      "d",
++      "d.arm",
++      `the path or stroke-width is not the arm table's (scripts/icons.mjs ARM ${arm.name}, WIDTH ${arm.width})`,
++    );
++  if (sha256(arm.d) !== ARM_PIN[arm.name] || !ARM_PIN.widths.includes(arm.width))
++    red(
++      "d",
++      "d.pin",
++      `the arm table's ${arm.name} / WIDTH ${arm.width} is not a pinned ballot arm (ARM_PIN; a re-cut is a stated edit)`,
++    );
++  const g = geometry(d);
++  const ras = g && Number.isFinite(sw) ? raster(d, sw) : null;
++  if (!g)
++    red(
++      "d",
++      "d.unreadable",
++      "the path's geometry is unreadable (relative or unknown commands)",
++    );
++  else {
++    const pen = Number.isFinite(sw) ? sw : 0;
++    const [W, H] = [g.box[2] - g.box[0] + pen, g.box[3] - g.box[1] + pen];
++    bound("d", "d.extent", W / 32, "ink width of the tile");
++    bound("d", "d.extent", H / 32, "ink height of the tile");
++    const [cx, cy] = [(g.box[0] + g.box[2]) / 2, (g.box[1] + g.box[3]) / 2];
++    bound(
++      "d",
++      "d.centre",
++      Math.hypot(cx - 16, cy - 16),
++      "ink centre's distance from (16, 16)",
++    );
++    const win = WINDOWS[arm.width] ?? [NaN, NaN];
++    bound("d", "d.window", pen / H, `stroke/H (WIDTH ${arm.width})`, win);
++    if (ras) bound("d", "d.mass", ras.mass, "the path's ink mass (analytic, 180 px)");
++  }
++
++  // e · the estate and the touch icon's own pixels; a link's red names what is wrong with it
++  const linkWhy = ({ ok, links, why }, href) =>
++    [
++      ...why,
++      ...(ok && links[0].href !== href
++        ? [`href="${links[0].href}" is not ${href}`]
++        : []),
++    ].join("; ");
++  const icon = exactlyOneLink(m.html, "icon");
++  if (!icon.ok || icon.links[0].href !== "/icon.svg")
++    red(
++      "e",
++      "e.link-icon",
++      `index.html's rel~=icon link(s) (${icon.links.map((l) => l.href).join(", ") || "none"}): ${linkWhy(icon, "/icon.svg")}`,
++    );
++  const touch = exactlyOneLink(m.html, "apple-touch-icon");
++  if (!touch.ok || touch.links[0].href !== "/apple-touch-icon.png")
++    red(
++      "e",
++      "e.link-touch",
++      `index.html's apple-touch-icon link(s) (${touch.links.map((l) => l.href).join(", ") || "none"}): ${linkWhy(touch, "/apple-touch-icon.png")}`,
++    );
++  if (!m.iconExists) red("e", "e.icon-file", "public/icon.svg is missing");
++  if (m.faviconExists) red("e", "e.favicon", "public/favicon.svg still ships");
++  const prov = m.provenance ?? {};
++  if (prov["icon.svg"] !== sha256(svg))
++    red("e", "e.prov-svg", "the provenance sha is not icon.svg's (run npm run icons)");
++  if (!m.png) red("e", "e.png-file", "public/apple-touch-icon.png is missing");
++  else {
++    if (prov["apple-touch-icon.png"] !== sha256(m.png))
++      red(
++        "e",
++        "e.prov-png",
++        "the provenance sha is not apple-touch-icon.png's (run npm run icons)",
++      );
++    const img = decodePng(m.png);
++    if (!img || img.w !== 180 || img.h !== 180)
++      red("e", "e.png-size", "apple-touch-icon.png is not a readable 180 x 180 PNG");
++    else {
++      const paper = tok.light["--color-background"];
++      const ink = tok.light["--color-foreground"];
++      const col = ([r, gg, b]) => ({ rgb: [r / 255, gg / 255, b / 255], a: 1 });
++      if (img.rgba.some((p) => p[3] < 255))
++        red("e", "e.png-opaque", "the touch icon has transparent pixels");
++      if (!paper)
++        red("e", "e.png-paper", "there is no light paper token to hold the icon to");
++      if (!ink)
++        red("e", "e.png-ink", "there is no light ink token to hold the icon to");
++      let cover = 0;
++      if (paper && ink)
++        for (const p of img.rgba)
++          cover += Math.min(
++            1,
++            Math.max(0, (lum(paper) - lum(col(p))) / (lum(paper) - lum(ink))),
++          );
++      cover /= img.rgba.length;
++      bound("e", "e.png-coverage", cover, "the touch icon's ink coverage");
++      if (paper && ink && ras) {
++        // the touch icon IS the path: every pixel off it is the paper, every pixel it covers whole
++        // is the ink, and the fringe between holds to the analytic coverage
++        const fit = tie(img, ras, paper, ink);
++        bound(
++          "e",
++          "e.png-paper",
++          fit.paperMax,
++          "the touch icon's paper: max ΔE over every pixel off the path",
++        );
++        bound(
++          "e",
++          "e.png-ink",
++          fit.inkMax,
++          "the touch icon's ink: max ΔE over every pixel the pen covers whole",
++        );
++        bound(
++          "e",
++          "e.png-delta",
++          fit.meanDelta,
++          "the touch icon vs the path: mean |Δcoverage|",
++        );
++        bound("e", "e.png-tie", fit.iou, "the touch icon vs the path: IoU");
++        bound(
++          "e",
++          "e.png-blob",
++          fit.blob,
++          "the touch icon's largest mark the path does not explain (px)",
++        );
++      } else if (!ras)
++        red("e", "e.png-tie", "the path has no raster to hold the touch icon to");
++    }
++  }
++  return fails;
++}
++
++export function readTree(root) {
++  const read = (...p) => {
++    try {
++      return fs.readFileSync(path.join(root, ...p));
++    } catch {
++      return null;
++    }
++  };
++  const html = String(read("index.html") ?? "");
++  const one = exactlyOneLink(html, "icon").links[0]?.href;
++  const href = one?.startsWith("/") ? one.slice(1) : "icon.svg";
++  let provenance;
++  try {
++    provenance = JSON.parse(String(read("scripts", "icons.provenance.json")));
++  } catch {
++    provenance = null;
++  }
++  return {
++    svg: String(read("public", href) ?? ""),
++    html,
++    files: sources(root).map((f) => ({
++      file: path.relative(root, f),
++      text: fs.readFileSync(f, "utf8"),
++    })),
++    png: read("public", "apple-touch-icon.png"),
++    provenance,
++    iconExists: read("public", "icon.svg") !== null,
++    faviconExists: read("public", "favicon.svg") !== null,
++  };
++}
++
++/** The gate's plain run (the self-test, the batteries and the plants live beside it, in
++ *  check-favicon.self-test.mjs and check-favicon.plants.mjs, and import this file). */
++export function run(model = readTree(ROOT)) {
++  const fails = audit(model);
++  console.log(`check-favicon (${ROOT}):`);
++  for (const clause of "abcde") {
++    const mine = fails.filter(([c]) => c === clause);
++    console.log(
++      `  ${clause}  ${mine.length ? "RED" : "GREEN"}${mine.map(([, id, w]) => `\n       ${id}: ${w}`).join("")}`,
++    );
++  }
++  const ras = raster(PEN[ARM], WIDTH);
++  const img = decodePng(model.png);
++  const pt = pageTokens(model.files);
++  if (
++    ras &&
++    img &&
++    pt.tok.light["--color-background"] &&
++    pt.tok.light["--color-foreground"]
++  ) {
++    const fit = tie(
++      img,
++      ras,
++      pt.tok.light["--color-background"],
++      pt.tok.light["--color-foreground"],
++    );
++    console.log(
++      `  readings: arm ${ARM} width ${WIDTH} · mass ${ras.mass.toFixed(4)} · png paper max ΔE ${fit.paperMax.toFixed(3)} ink max ΔE ${fit.inkMax.toFixed(3)} · tie mean |Δ| ${fit.meanDelta.toFixed(4)} IoU ${fit.iou.toFixed(4)} blob ${fit.blob} px · unresolved non-setProperty sites ${pt.unresolved.length - pt.unresolved.filter((u) => /setProperty/.test(u.kind)).length} (printed, not red)`,
++    );
++  }
++  return fails;
++}
++
++if (
++  process.argv[1] &&
++  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
++) {
++  const fails = run();
++  if (fails.length) {
++    console.error(`\ncheck-favicon: ${fails.length} failure(s)`);
++    process.exit(1);
++  }
++  console.log(
++    "\ncheck-favicon: the tab's s is one pen line, on the page's paper, in its ink",
++  );
++}
+diff --git a/web/frontend/scripts/check-favicon.plants.mjs b/web/frontend/scripts/check-favicon.plants.mjs
+new file mode 100644
+index 00000000..c31df13b
+--- /dev/null
++++ b/web/frontend/scripts/check-favicon.plants.mjs
+@@ -0,0 +1,555 @@
++/**
++ * THE FAVICON GATE'S PLANT TABLE (T9-M22, TAB-PEN): the fixture `check-favicon.self-test.mjs` reads.
++ * Each row is `plant(label, edit(svg), want clauses, {ids, png, html, files, arm, patch, …})`: a
++ * defect made in memory from the clean model that must red exactly `want` (and fire every check id
++ * in `ids`), or a negative-negative (`want` "") that must stay GREEN. The helpers come in `t`; the
++ * table imports nothing, so a row is data on the gate's own model, never a second reading of it.
++ * NOT-A-LANE: a fixture of `check-favicon.self-test.mjs`, which `npm run lint:favicon` runs in CI.
++ */
++export default function plants(t) {
++  const { plant, inStyle, withFile, pathTo, cleanPx, bars, clean } = t;
++  const { MAIN_FAVICON, PAPER_RGB, INK_RGB, BLOCK, LINKS, Z, movePath } = t;
++  const { png180, pngN, pngOf, decodePng, ARM, PEN, WIDTH } = t;
++  return [
++    plant("P1 main's favicon.svg verbatim", () => MAIN_FAVICON, "abcde"),
++    plant("P2 ink #1a1a1a", (s) => s.replaceAll("#0a0a0a", "#1a1a1a"), "c", {
++      ids: ["c.delta", "c.fallback"],
++    }),
++    plant(
++      "P3 stroke-width 6",
++      (s) => s.replace(/stroke-width="[^"]*"/, 'stroke-width="6"'),
++      "bde",
++      { ids: ["b.width", "d.window", "d.arm", "e.png-tie"] },
++    ),
++    plant(
++      "P4 @media deleted",
++      (s) => s.replace(/@media[^{]*\{(?:[^{}]*\{[^}]*\})*[^}]*\}/, ""),
++      "c",
++    ),
++    plant(
++      "P5 FAINT INK stroke-opacity 0.15",
++      (s) => s.replace("<path ", '<path stroke-opacity="0.15" '),
++      "a",
++      { ids: ["a.attr"] },
++    ),
++    plant(
++      "P5b FAINT INK #e8e6e3 on the light paper",
++      (s) => s.replaceAll("#0a0a0a", "#e8e6e3"),
++      "c",
++    ),
++    plant(
++      "P6 the SVG edited after the PNG",
++      (s) => s.replace(/d="M[\d.]+/, (x) => `${x}1`),
++      "de",
++      { keepSha: true, ids: ["e.prov-svg", "d.arm"] },
++    ),
++    plant(
++      "E1 CSS stroke-width:9px (the owner's defect)",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;stroke-width:9px}"),
++      "b",
++      { ids: ["b.prop"] },
++    ),
++    plant("E2 FAINT INK by a later rule", inStyle("path{stroke:#e8e6e3}"), "c"),
++    plant(
++      "E3 a second ink element",
++      (s) =>
++        s.replace("</svg>", '<circle cx="16" cy="16" r="12" fill="#0a0a0a"/></svg>'),
++      "a",
++      { ids: ["a.element"] },
++    ),
++    plant(
++      "E4 the pen hidden",
++      (s) =>
++        s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;visibility:hidden}"),
++      "b",
++    ),
++    plant("E5 a solid-red 180 PNG, sidecar re-stamped", (s) => s, "e", {
++      png: png180(() => [255, 0, 0]),
++      ids: ["e.png-paper", "e.png-ink", "e.png-tie"],
++    }),
++    plant(
++      "E6 paper 8 x 8",
++      (s) => s.replace('<rect width="32" height="32"', '<rect width="8" height="8"'),
++      "a",
++      { ids: ["a.paper"] },
++    ),
++    plant(
++      "E7 viewBox 64 (the ink halves)",
++      (s) => s.replace('viewBox="0 0 32 32"', 'viewBox="0 0 64 64"'),
++      "a",
++      { ids: ["a.viewbox"] },
++    ),
++    plant(
++      "E8 a dashed pen",
++      (s) =>
++        s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a;stroke-dasharray:1 6}"),
++      "b",
++    ),
++    plant(
++      "E9 the light rule moved after @media (dark ink on dark paper)",
++      (s) =>
++        s
++          .replace("<style>rect{fill:#fbfaf9}path{stroke:#0a0a0a}", "<style>")
++          .replace("</style>", "rect{fill:#fbfaf9}path{stroke:#0a0a0a}</style>"),
++      "c",
++    ),
++    plant(
++      "E10 FAINT INK by alpha, #0a0a0a26",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a26}"),
++      "c",
++      { ids: ["c.opaque"] },
++    ),
++    plant(
++      "E11 style= on the path",
++      (s) => s.replace("<path ", '<path style="stroke-width:9px" '),
++      "a",
++    ),
++    plant(
++      "E12 a second <style> (read too)",
++      (s) => s.replace("</style>", "</style><style>path{stroke-width:9px}</style>"),
++      "ab",
++      { ids: ["a.count"] },
++    ),
++    plant(
++      "E13 the paper painted over the pen",
++      (s) => s.replace(/(<rect[^>]*\/>)(<path[^>]*\/>)/, "$2$1"),
++      "a",
++      { ids: ["a.order"] },
++    ),
++    plant(
++      "E14 @import in <style>",
++      (s) => s.replace("<style>", "<style>@import url(x.css);"),
++      "b",
++      { ids: ["b.at-rule"] },
++    ),
++    plant("E15 a rule for every element", inStyle("*{stroke-width:9px}"), "b", {
++      ids: ["b.selector"],
++    }),
++    plant(
++      "E16 !important",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:#0a0a0a!important}"),
++      "b",
++      { ids: ["b.important"] },
++    ),
++    plant(
++      "E17 a comment hiding markup",
++      (s) => s.replace("</svg>", "<!-- --></svg>"),
++      "a",
++      { ids: ["a.junk"] },
++    ),
++    plant(
++      "E18 ink by an unresolvable var()",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:var(--x,#e8e6e3)}"),
++      "c",
++    ),
++    plant(
++      "E19 the page's paper moved at a palette family's :root (disagrees with @theme)",
++      (s) => s,
++      "ce",
++      {
++        files: withFile(
++          "src/assets/palette.css",
++          ":root { --color-background: #f4efe4; }",
++        ),
++        ids: ["c.conflict", "c.tokens", "e.png-paper"],
++      },
++    ),
++    // pass 8 (the pass-7 critic's C-plants and the clauses they bite)
++    plant(
++      "C1 SVG ink mass: five pen lines, a near-solid block (the thick tab again)",
++      pathTo(BLOCK),
++      "de",
++      { ids: ["d.mass", "d.arm", "e.png-tie"] },
++    ),
++    plant(
++      "C1m the block entered in the arm table itself, its PNG rastered from it",
++      pathTo(BLOCK),
++      "de",
++      {
++        arm: { name: "block", width: WIDTH, d: BLOCK },
++        png: pngOf(BLOCK, WIDTH),
++        ids: ["d.mass"],
++      },
++    ),
++    plant("C2 a 180 PNG of four ink bars, coverage ~0.23 (not the s)", (s) => s, "e", {
++      png: bars,
++      ids: ["e.png-tie"],
++    }),
++    plant("C3 the letter Z at the same box and pen", pathTo("M9,6H23L9,26H23"), "de", {
++      ids: ["d.arm", "e.png-tie"],
++    }),
++    plant(
++      "C5 arm H by its const, W's PNG kept (the tab and the home screen disagree)",
++      pathTo(PEN.H),
++      "e",
++      { arm: { name: "H", width: WIDTH, d: PEN.H }, ids: ["e.png-tie"] },
++    ),
++    plant(
++      "C6 both icon links commented out in index.html (no icon ships)",
++      (s) => s,
++      "e",
++      {
++        html: (h) =>
++          h.replace(
++            /(<link rel="icon"[^>]*>\s*<link rel="apple-touch-icon"[^>]*>)/,
++            "<!-- $1 -->",
++          ),
++        ids: ["e.link-icon", "e.link-touch"],
++      },
++    ),
++    plant("C7 a second rel=icon after ours, to a thick SVG", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="icon" type="image/svg+xml" href="/thick.svg" />',
++        ),
++      ids: ["e.link-icon"],
++    }),
++    plant("C7b a second apple-touch-icon, to another PNG", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="apple-touch-icon" sizes="180x180" href="/thick.png" />',
++        ),
++      ids: ["e.link-touch"],
++    }),
++    // the disjuncts (LAWS P8 §F): each half of a two-part guard has its own plant
++    plant("D1 the one touch link pointed at another PNG", (s) => s, "e", {
++      html: (h) => h.replace('href="/apple-touch-icon.png"', 'href="/thick.png"'),
++      ids: ["e.link-touch"],
++    }),
++    plant("D2 a 180 x 179 touch icon (h off)", (s) => s, "e", {
++      png: pngN(180, (i) => cleanPx[i], false, 179),
++      ids: ["e.png-size"],
++    }),
++    plant("D3 a 179 x 180 touch icon (w off)", (s) => s, "e", {
++      png: pngN(179, (i) => cleanPx[Math.floor(i / 179) * 180 + (i % 179)], false, 180),
++      ids: ["e.png-size"],
++    }),
++    plant("C7c `shortcut icon` to a thick SVG (rel is a token list)", (s) => s, "e", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <link rel="shortcut icon" href="/thick.svg" />',
++        ),
++      ids: ["e.link-icon"],
++    }),
++    plant(
++      "C7d a second icon link whose rel is spelled with an entity (&#105;con)",
++      (s) => s,
++      "e",
++      {
++        html: (h) =>
++          h.replace(
++            /(<link rel="apple-touch-icon"[^>]*>)/,
++            '$1\n    <link rel="&#105;con" href="/thick.svg" />',
++          ),
++        ids: ["e.link-icon"],
++      },
++    ),
++    plant("C15 the paper re-declared in index.html's own <style>", (s) => s, "ce", {
++      files: clean.files.map((f) =>
++        f.file === "index.html"
++          ? {
++              ...f,
++              text: f.text.replace(
++                "</head>",
++                "<style>:root{--color-background:#f4efe4}</style></head>",
++              ),
++            }
++          : f,
++      ),
++      html: (h) =>
++        h.replace("</head>", "<style>:root{--color-background:#f4efe4}</style></head>"),
++      ids: ["c.conflict"],
++    }),
++    plant("C8 a second @theme paper sorting AFTER index.css", (s) => s, "ce", {
++      files: withFile("src/zz-palette.css", "@theme { --color-background: #f4efe4; }"),
++      ids: ["c.conflict", "c.tokens"],
++    }),
++    plant(
++      "C9 a second @theme paper sorting BEFORE index.css (walk order made it GREEN)",
++      (s) => s,
++      "ce",
++      {
++        files: [
++          {
++            file: "src/assets/aa-palette.css",
++            text: "@theme { --color-background: #f4efe4; }",
++          },
++          ...clean.files,
++        ],
++        ids: ["c.conflict", "c.tokens"],
++      },
++    ),
++    plant("C10 a .dark site in an SFC retoning the ink", (s) => s, "c", {
++      files: withFile(
++        "src/zz.vue",
++        "<template><i/></template>\n<style>\n.dark { --color-foreground: #8a8a8a; }\n</style>\n",
++      ),
++      ids: ["c.conflict"],
++    }),
++    plant("C11 the paper at an unplaced site (a scoped rule)", (s) => s, "c", {
++      files: withFile("src/zz-scope.css", ".board { --color-background: #f4efe4; }"),
++      ids: ["c.unplaced"],
++    }),
++    plant("C12 a computed setProperty that may write the paper", (s) => s, "c", {
++      files: withFile(
++        "src/zz-write.ts",
++        "export const w = (k: string) => document.documentElement.style.setProperty(k, '#f4efe4');\n",
++      ),
++      ids: ["c.unresolved"],
++    }),
++    plant("C13 favicon.svg left beside icon.svg", (s) => s, "e", {
++      patch: { faviconExists: true },
++      ids: ["e.favicon"],
++    }),
++    plant("C14 the icon link's href moved to /favicon.svg", (s) => s, "e", {
++      html: (h) => h.replace('href="/icon.svg"', 'href="/favicon.svg"'),
++      ids: ["e.link-icon"],
++    }),
++    // pass 8: one plant per check the clause-sabotage battery found un-bitten (each fires its id alone)
++    plant(
++      "S1 a repeated attribute",
++      (s) =>
++        s.replace(
++          'stroke-linecap="round"',
++          'stroke-linecap="round" stroke-linecap="round"',
++        ),
++      "a",
++      { ids: ["a.dupe"] },
++    ),
++    plant("S2 an element before the root <svg>", (s) => `<style></style>${s}`, "a", {
++      ids: ["a.root"],
++    }),
++    plant(
++      "S3 the XHTML namespace",
++      (s) =>
++        s.replace(
++          'xmlns="http://www.w3.org/2000/svg"',
++          'xmlns="http://www.w3.org/1999/xhtml"',
++        ),
++      "a",
++      { ids: ["a.ns"] },
++    ),
++    plant(
++      "S4 the paper offset x=4",
++      (s) => s.replace('<rect width="32"', '<rect x="4" width="32"'),
++      "a",
++      { ids: ["a.paper-xy"] },
++    ),
++    plant("S5 the pen filled", (s) => s.replace('fill="none"', 'fill="#0a0a0a"'), "b", {
++      ids: ["b.fill"],
++    }),
++    plant(
++      "S6 butt caps",
++      (s) => s.replace('stroke-linecap="round"', 'stroke-linecap="butt"'),
++      "b",
++      { ids: ["b.cap"] },
++    ),
++    plant(
++      "S7 mitre joins",
++      (s) => s.replace('stroke-linejoin="round"', 'stroke-linejoin="miter"'),
++      "b",
++      { ids: ["b.join"] },
++    ),
++    plant(
++      "S8 a rule under a foreign @media",
++      inStyle("@media(min-width:1px){path{stroke:#0a0a0a}}"),
++      "bc",
++      { ids: ["b.context"] },
++    ),
++    plant(
++      "S9 the file padded past 600 B",
++      (s) => s.replace("</svg>", `${" ".repeat(200)}</svg>`),
++      "b",
++      { ids: ["b.bytes"] },
++    ),
++    plant("S10 relative commands (m/c)", (s) => s.replace(/ d="M/, ' d="m'), "de", {
++      ids: ["d.unreadable"],
++    }),
++    plant(
++      "S11 an arm drawn at 0.6 scale (in the table, PNG from its path)",
++      pathTo(movePath(PEN[ARM], 0, 0, 0.6)),
++      "de",
++      {
++        arm: { name: "small", width: WIDTH, d: movePath(PEN[ARM], 0, 0, 0.6) },
++        png: pngOf(movePath(PEN[ARM], 0, 0, 0.6), WIDTH),
++        ids: ["d.extent"],
++      },
++    ),
++    plant(
++      "S12 an arm moved 2 units right (in the table, PNG from its path)",
++      pathTo(movePath(PEN[ARM], 2, 0)),
++      "d",
++      {
++        arm: { name: "moved", width: WIDTH, d: movePath(PEN[ARM], 2, 0) },
++        png: pngOf(movePath(PEN[ARM], 2, 0), WIDTH),
++        ids: ["d.centre"],
++      },
++    ),
++    plant("S13 public/icon.svg missing", (s) => s, "e", {
++      patch: { iconExists: false },
++      ids: ["e.icon-file"],
++    }),
++    plant("S14 the touch icon missing", (s) => s, "e", {
++      patch: { png: null },
++      ids: ["e.png-file"],
++    }),
++    plant("S15 a re-rastered PNG with the old sha in the sidecar", (s) => s, "e", {
++      png: pngOf(PEN[ARM], WIDTH),
++      stalePng: true,
++      ids: ["e.prov-png"],
++    }),
++    plant("S16 a 90 x 90 touch icon", (s) => s, "e", {
++      png: pngN(90, () => PAPER_RGB),
++      ids: ["e.png-size"],
++    }),
++    plant("S17 one transparent pixel in the touch icon", (s) => s, "e", {
++      png: pngOf(PEN[ARM], WIDTH, 180 * 90),
++      ids: ["e.png-opaque"],
++    }),
++    // E1–E6 (pass-8 critic): links the HTML text carries that a parser never makes live, or makes
++    // live wrong; the ONE library's html-inert / link-allow / base-red clauses red them
++    ...[
++      [
++        "C8-E1 the icon link scoped to dark (a light tab shows no s)",
++        (h) =>
++          h.replace(
++            '<link rel="icon"',
++            '<link rel="icon" media="(prefers-color-scheme: dark)"',
++          ),
++        ["e.link-icon"],
++      ],
++      [
++        "C8-E2 the icon link typed text/plain (a UA skips the type)",
++        (h) => h.replace('type="image/svg+xml"', 'type="text/plain"'),
++        ["e.link-icon"],
++      ],
++      [
++        "C8-E3 both links inside a template (inert)",
++        (h) => h.replace(LINKS, `<${"template"}>$1</${"template"}>`),
++        ["e.link-icon", "e.link-touch"],
++      ],
++      [
++        "C8-E4 both links inside a noscript (raw text with scripting on)",
++        (h) => h.replace(LINKS, `<${"noscript"}>$1</${"noscript"}>`),
++        ["e.link-icon", "e.link-touch"],
++      ],
++      [
++        "C8-E5 both links kept only as a script string",
++        (h) =>
++          h.replace(
++            LINKS,
++            (k) =>
++              `<${"script"}>window.__x = '${k.replace(/\n\s*/g, " ")}';</${"script"}>`,
++          ),
++        ["e.link-icon", "e.link-touch"],
++      ],
++      [
++        "C8-E6 a base href to a foreign origin before the links",
++        (h) =>
++          h.replace(
++            "<title>",
++            `<${"base"} href="https://example.com/" />\n    <title>`,
++          ),
++        ["e.link-icon", "e.link-touch"],
++      ],
++      [
++        "C8-E6b a sizes ladder on the touch icon (struck at pass 9: one link per rel)",
++        (h) =>
++          h.replace(
++            'rel="apple-touch-icon"',
++            `rel="apple-touch-icon" ${"sizes"}="180x180"`,
++          ),
++        ["e.link-touch"],
++      ],
++    ].map(([label, html, ids]) => plant(label, (s) => s, "e", { html, ids })),
++    plant(
++      "C8-E8 a 12 x 12 ink square in the touch icon's paper (a mark that is not the s)",
++      (s) => s,
++      "e",
++      {
++        png: (() => {
++          const img = decodePng(clean.png);
++          return png180((i) =>
++            i % 180 >= 150 && i % 180 < 162 && i >= 150 * 180 && i < 162 * 180
++              ? INK_RGB
++              : img.rgba[i].slice(0, 3),
++          );
++        })(),
++        ids: ["e.png-blob"],
++      },
++    ),
++    plant(
++      "C8-T1 the arm table's W edited to a Z, its svg and PNG re-made from the table",
++      pathTo(Z),
++      "d",
++      { arm: { name: ARM, width: WIDTH, d: Z }, png: pngOf(Z, WIDTH), ids: ["d.pin"] },
++    ),
++    plant(
++      "T3 the arm table's WIDTH edited to 4.5 (off the ballot's set), svg and PNG re-made",
++      (s) => s.replace('stroke-width="4"', 'stroke-width="4.5"'),
++      "d",
++      {
++        arm: { name: ARM, width: 4.5, d: PEN[ARM] },
++        png: pngOf(PEN[ARM], 4.5),
++        ids: ["d.pin"],
++      },
++    ),
++    plant(
++      "NN1 the same ink spelled rgb(10 10 10)",
++      (s) => s.replace("path{stroke:#0a0a0a}", "path{stroke:rgb(10 10 10)}"),
++      "",
++    ),
++    plant(
++      "NN2 a decoy rule inside a CSS comment",
++      (s) =>
++        s.replace(
++          "path{stroke:#0a0a0a}",
++          "path{stroke:#0a0a0a/* path{stroke-width:9px} */}",
++        ),
++      "",
++    ),
++    plant("NN3 a decoy second rel=icon inside an HTML comment", (s) => s, "", {
++      html: (h) =>
++        h.replace(
++          /(<link rel="apple-touch-icon"[^>]*>)/,
++          '$1\n    <!-- <link rel="icon" href="/thick.svg" /> -->',
++        ),
++    }),
++    plant(
++      "NN8 the icon link's href spelled with an entity (/icon&#46;svg) is the same link",
++      (s) => s,
++      "",
++      { html: (h) => h.replace('href="/icon.svg"', 'href="/icon&#46;svg"') },
++    ),
++    plant("NN4 a second @theme paper that AGREES with index.css", (s) => s, "", {
++      files: withFile(
++        "src/zz-agree.css",
++        "@theme { --color-background: hsl(48 15% 98%); }",
++      ),
++    }),
++    plant(
++      "NN5 the owner's arm B by one const (WIDTH 5), its PNG rastered from the path",
++      (s) => s.replace('stroke-width="4"', 'stroke-width="5"'),
++      "",
++      {
++        arm: { name: ARM, width: 5, d: PEN[ARM] },
++        png: pngOf(PEN[ARM], 5),
++      },
++    ),
++    plant(
++      "NN6 the owner's arm H by one const, its PNG rastered from the path",
++      pathTo(PEN.H),
++      "",
++      { arm: { name: "H", width: WIDTH, d: PEN.H }, png: pngOf(PEN.H, WIDTH) },
++    ),
++    plant(
++      "NN7 the shipped PNG against a raster of the same path (a W PNG from the analytic raster)",
++      (s) => s,
++      "",
++      { png: pngOf(PEN[ARM], WIDTH) },
++    ),
++  ];
++}
+diff --git a/web/frontend/scripts/check-favicon.self-test.mjs b/web/frontend/scripts/check-favicon.self-test.mjs
+new file mode 100644
+index 00000000..b632fd43
+--- /dev/null
++++ b/web/frontend/scripts/check-favicon.self-test.mjs
+@@ -0,0 +1,716 @@
++#!/usr/bin/env node
++/**
++ * THE FAVICON GATE'S SELF-TEST (T9-M22, TAB-PEN), split from `check-favicon.mjs` at pass 10. It runs
++ * the gate plainly, then plants every row of `check-favicon.plants.mjs` in memory (each must RED
++ * exactly its clause set and the check ids it names; the negative-negatives must stay GREEN), then
++ * the EDGES (every numeric bound pinned by a plant within ε each side, sought on the gate's own
++ * reading) and the CUTS (every cut inside tie() pinned by a plant at cut ± ε/2). `--sabotage-battery`
++ * switches each check off in turn, and each library clause the gate reads, and the self-test must red
++ * every time; `--threshold-battery` moves each bound and each cut by its ε both ways, and every move
++ * must red. Run: `node scripts/check-favicon.self-test.mjs [--sabotage-battery |
++ * --threshold-battery] [--root <web/frontend>]`.
++ */
++import process from "node:process";
++import zlib from "node:zlib";
++import { ARM, PEN, WIDTH, WINDOWS } from "./icons.mjs";
++import { deltaE, parseColor, sabotage } from "./shape-census.mjs";
++import {
++  BOUNDS,
++  CUTS,
++  OFF,
++  ROOT,
++  audit,
++  decodePng,
++  fileCache,
++  pageTokens,
++  raster,
++  readTree,
++  run,
++  sha256,
++} from "./check-favicon.mjs";
++import plants from "./check-favicon.plants.mjs";
++
++const MAIN_FAVICON = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32">
++  <defs>
++    <filter id="w" x="-20%" y="-20%" width="140%" height="140%">
++      <feTurbulence type="turbulence" baseFrequency="0.035" numOctaves="3" seed="5" result="t"/>
++      <feDisplacementMap in="SourceGraphic" in2="t" scale="4" xChannelSelector="R" yChannelSelector="G"/>
++    </filter>
++    <clipPath id="c">
++      <rect width="32" height="32" rx="6" ry="6"/>
++    </clipPath>
++  </defs>
++  <rect width="32" height="32" rx="6" ry="6" fill="#faf8f5"/>
++  <g clip-path="url(#c)">
++    <g transform="translate(1.10,29.71) scale(0.056751)" filter="url(#w)">
++      <path fill="#1a1a1a" d="M268-49.50L268-49.50Q296.50-49.50 310.25-62Q324-74.50 324-92L324-92Q324-102.50 320-111.75Q316-121 301.50-128.75Q287-136.50 255.50-141.50L255.50-141.50Q162.50-157 113.75-182.75Q65-208.50 47.50-243.75Q30-279 30-323L30-323Q30-404.50 86.75-450.75Q143.50-497 254.50-497L254.50-497Q292.50-497 315.25-491Q338-485 351.75-479Q365.50-473 376.50-473L376.50-473Q389-473 395.75-479Q402.50-485 409.75-491Q417-497 430.50-497L430.50-497Q441-497 449.50-490Q458-483 463.50-464L463.50-464L489.50-375.50Q497.50-349.50 494.25-334Q491-318.50 475-312.50L475-312.50Q459-306.50 447.25-312Q435.50-317.50 424-334L424-334Q401.50-367.50 376.50-389.50Q351.50-411.50 324.50-422.50Q297.50-433.50 268-433.50L268-433.50Q234.50-433.50 217.75-421Q201-408.50 201-387.50L201-387.50Q201-374.50 207.75-365Q214.50-355.50 235.50-347.75Q256.50-340 298-332.50L298-332.50Q371-319.50 413.50-295.25Q456-271 474.50-235.50Q493-200 493-152L493-152Q493-102 466-64.50Q439-27 392.25-6.50Q345.50 14 285.50 14L285.50 14Q248.50 14 227.25 7.75Q206 1.50 192.50-4.75Q179-11 166-11L166-11Q153-11 143.50-4.75Q134 1.50 125 7.75Q116 14 104 14L104 14Q93 14 85.50 6Q78-2 74.50-21.50L74.50-21.50L59-107Q54.50-132.50 58.50-145.25Q62.50-158 76.50-164L76.50-164Q92-170.50 104-163.75Q116-157 128.50-139.50L128.50-139.50Q163-90 198.50-69.75Q234-49.50 268-49.50Z"/>
++    </g>
++  </g>
++</svg>
++`;
++
++/** An n x n PNG whose pixel i is `fn(i)` → [r, g, b] (or [r, g, b, a] with `alpha`): the self-test's
++ *  touch icons. */
++function pngN(n, fn, alpha = false, h = n) {
++  const chunk = (t, d) => {
++    const out = Buffer.alloc(12 + d.length);
++    out.writeUInt32BE(d.length, 0);
++    out.write(t, 4, "latin1");
++    d.copy(out, 8);
++    out.writeUInt32BE(
++      zlib.crc32(Buffer.concat([Buffer.from(t), d])) >>> 0,
++      8 + d.length,
++    );
++    return out;
++  };
++  const rows = [];
++  for (let y = 0; y < h; y++)
++    rows.push(
++      Buffer.from([0, ...Array.from({ length: n }, (_, x) => fn(y * n + x)).flat()]),
++    );
++  return Buffer.concat([
++    Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]),
++    chunk("IHDR", Buffer.from([0, 0, 0, n, 0, 0, 0, h, 8, alpha ? 6 : 2, 0, 0, 0])),
++    chunk("IDAT", zlib.deflateSync(Buffer.concat(rows))),
++    chunk("IEND", Buffer.alloc(0)),
++  ]);
++}
++const png180 = (fn, alpha) => pngN(180, fn, alpha);
++const BLOCK = "M8,6H24V26H8ZM8,11H24M8,16H24M8,21H24"; // C1: five pen lines, a near-solid tab
++const PAPER_RGB = [251, 250, 249];
++const INK_RGB = [10, 10, 10];
++/** The path rastered analytically and encoded over the light paper and ink (what `npm run icons` makes). */
++const pngOf = (d, pen, alphaAt = -1) => {
++  const { cov } = raster(d, pen);
++  const px = (i) => PAPER_RGB.map((p, c) => Math.round(p + (INK_RGB[c] - p) * cov[i]));
++  return alphaAt < 0
++    ? png180(px)
++    : png180((i) => [...px(i), i === alphaAt ? 0 : 255], true);
++};
++/** Every absolute x,y pair of a path moved by (dx, dy) and scaled by k (x) and ky (y) about (16, 16). */
++const LINKS = /(<link rel="icon"[^>]*>\s*<link rel="apple-touch-icon"[^>]*>)/;
++const Z = "M9,6H23L9,26H23"; // T1 (pass-8 critic): a Z drawn into the arm table
++const movePath = (d, dx, dy, k = 1, ky = k) =>
++  d.replace(
++    /(-?\d*\.?\d+),(-?\d*\.?\d+)/g,
++    (_, x, y) =>
++      `${+(16 + (x - 16) * k + dx).toFixed(3)},${+(16 + (y - 16) * ky + dy).toFixed(3)}`,
++  );
++/** THE EDGES (LAWS P8 §F, threshold sabotage). Each numeric bound pinned from OUTSIDE `BOUNDS` (and
++ *  WINDOWS): `bound` and `eps` are this table's own literals. `make(t)` builds a plant from one
++ *  parameter; the seek bisects t on the GATE'S OWN READING of the id, so both plants are data (a
++ *  path, a PNG, a token), measured, never a number typed beside the bound. The outer plant sits
++ *  within ε past the bound and must red the id; the inner sits within ε inside and must not. An
++ *  integer `t` indexes pixels or a candidate list pre-sorted by the gate's own ΔE. */
++const EDGE_SEEN = new Map(); // id|side → {tIn, tOut}: the seek is independent of BOUNDS, so it runs once
++function edges(clean) {
++  const img0 = decodePng(clean.png);
++  const ras0 = raster(PEN[ARM], WIDTH);
++  const P = PAPER_RGB;
++  const I = INK_RGB;
++  const repng = (fn) => png180((i) => fn(i, img0.rgba[i].slice(0, 3)));
++  const cube = (c, r) => {
++    const out = [];
++    for (let a = -r; a <= r; a++)
++      for (let b = -r; b <= r; b++)
++        for (let e = -r; e <= r; e++) out.push([c[0] + a, c[1] + b, c[2] + e]);
++    return out.filter((p) => p.every((v) => v >= 0 && v <= 255));
++  };
++  const { light } = pageTokens(clean.files).tok;
++  const byDE = (list, rc) => {
++    if (!rc) return []; // no token to sort by: the row's plants cannot be made, and the row FAILS
++    const de = (p) => deltaE(parseColor(`rgb(${p.join(" ")})`), rc);
++    return list
++      .map((p) => [de(p), p])
++      .sort((x, y) => x[0] - y[0])
++      .map(([, p]) => p);
++  };
++  const paperPx = [...ras0.cov.keys()].filter((i) => ras0.cov[i] === 0).reverse(); // bottom first
++  const inkPx = [...ras0.cov.keys()].filter((i) => ras0.cov[i] > 0);
++  const pixels = (list, n, to) => {
++    const on = new Set(list.slice(0, n));
++    return { png: repng((i, px) => (on.has(i) ? to(px) : px)) };
++  };
++  const css = clean.files.find((f) => f.file.endsWith("assets/index.css"));
++  const swIs = (t) => ({
++    svg: clean.svg.replace(/stroke-width="[^"]*"/, `stroke-width="${t}"`),
++  });
++  const pathIs = (d, width = WIDTH) => ({
++    svg: clean.svg
++      .replace(/ d="[^"]*"/, ` d="${d}"`)
++      .replace(/stroke-width="[^"]*"/, `stroke-width="${width}"`),
++    arm: { name: ARM, width, d },
++  });
++  const nearPaper = byDE(cube(P, 7), light["--color-background"]);
++  const same = (px, Q) => px.every((v, c) => v === Q[c]);
++  const lone = paperPx.find((i) => i % img0.w === img0.w >> 1);
++  const lum8 = (px) => px[0] + px[1] + px[2];
++  const dark0 = img0.rgba.reduce(
++    (d, px, i) => (lum8(px) < lum8(img0.rgba[d]) ? i : d),
++    0,
++  );
++  const nearInk = byDE(cube(I, 9), light["--color-foreground"]);
++  // [id, side, bound, eps, make(t), [t0 inside, t1 outside], integer?]
++  return [
++    ["b.width", "lo", 3.6, 0.01, (t) => swIs(+t.toFixed(3)), [4, 3]],
++    ["b.width", "hi", 5.2, 0.01, (t) => swIs(+t.toFixed(3)), [4, 6]],
++    [
++      "b.bytes",
++      "hi",
++      600,
++      1,
++      (n) => ({ svg: clean.svg.replace(' d="M22.6', ` d="M22.6${"0".repeat(n)}`) }),
++      [0, 300],
++      1,
++    ],
++    [
++      "c.tokens",
++      "lo",
++      7,
++      0.02,
++      (t) => ({
++        files: clean.files.map((f) =>
++          f === css
++            ? {
++                ...f,
++                text: f.text.replace(
++                  "--color-foreground: hsl(0 0% 3.9%)",
++                  `--color-foreground: hsl(0 0% ${t.toFixed(4)}%)`,
++                ),
++              }
++            : f,
++        ),
++      }),
++      [3.9, 40],
++    ],
++    [
++      "c.delta",
++      "hi",
++      0.5,
++      0.01,
++      (t) => ({
++        svg: clean.svg.replace(
++          "path{stroke:#0a0a0a}",
++          `path{stroke:hsl(0 0% ${(3.9 + t).toFixed(4)}%)}`,
++        ),
++      }),
++      [0, 3],
++    ],
++    [
++      "c.fallback",
++      "hi",
++      0.5,
++      0.01,
++      (t) => ({
++        svg: clean.svg.replace(
++          ' stroke="#0a0a0a"',
++          ` stroke="hsl(0 0% ${(3.9 + t).toFixed(4)}%)"`,
++        ),
++      }),
++      [0, 3],
++    ],
++    [
++      "d.extent",
++      "lo",
++      0.55,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, k, 1)),
++      [1, 0.5],
++    ],
++    [
++      "d.extent",
++      "hi",
++      0.8,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, 1, k)),
++      [1, 1.3],
++    ],
++    ["d.centre", "hi", 0.5, 0.005, (t) => pathIs(movePath(PEN[ARM], t, 0)), [0, 1.5]],
++    [
++      "d.window",
++      "lo",
++      0.15,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, 1, k)),
++      [1, 1.3],
++    ],
++    [
++      "d.window",
++      "hi",
++      0.17,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, 1, k)),
++      [1, 0.8],
++    ],
++    [
++      "d.window",
++      "lo",
++      0.19,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, 1, k), 5),
++      [1, 1.3],
++    ],
++    [
++      "d.window",
++      "hi",
++      0.21,
++      0.002,
++      (k) => pathIs(movePath(PEN[ARM], 0, 0, 1, k), 5),
++      [1, 0.8],
++    ],
++    ["d.mass", "lo", 0.18, 0.002, (t) => swIs(+t.toFixed(4)), [4, 2]],
++    ["d.mass", "hi", 0.32, 0.002, (t) => swIs(+t.toFixed(4)), [4, 7]],
++    // the paper moved on EVERY pixel but pixel 0 (a one-pixel read cannot pin this row) …
++    [
++      "e.png-paper",
++      "hi",
++      1,
++      0.05,
++      (n) => ({
++        png: repng((i, px) => (i && !ras0.cov[i] && same(px, P) ? nearPaper[n] : px)),
++      }),
++      [0, nearPaper.length - 1],
++      1,
++    ],
++    // … and on ONE pixel, the bottom row's middle, off the path and away from pixel 0
++    [
++      "e.png-paper",
++      "hi",
++      1,
++      0.05,
++      (n) => ({ png: repng((i, px) => (i === lone ? nearPaper[n] : px)) }),
++      [0, nearPaper.length - 1],
++      1,
++    ],
++    // the whole stroke re-inked, the clean PNG's darkest pixel kept (a darkest-pixel read cannot pin it)
++    [
++      "e.png-ink",
++      "hi",
++      1,
++      0.05,
++      (n) => ({
++        png: repng((i, px) =>
++          i === dark0
++            ? px
++            : P.map((p, c) => Math.round(p + (nearInk[n][c] - p) * ras0.cov[i])),
++        ),
++      }),
++      [0, nearInk.length - 1],
++      1,
++    ],
++    [
++      "e.png-coverage",
++      "lo",
++      0.18,
++      0.002,
++      (n) => pixels(inkPx, n, () => P),
++      [0, inkPx.length],
++      1,
++    ],
++    [
++      "e.png-coverage",
++      "hi",
++      0.32,
++      0.002,
++      (n) => pixels(paperPx, n, () => I),
++      [0, paperPx.length],
++      1,
++    ],
++    [
++      "e.png-delta",
++      "hi",
++      0.02,
++      0.0005,
++      (n) => pixels(paperPx, n, (px) => px.map((v) => v - 10)),
++      [0, paperPx.length],
++      1,
++    ],
++    ["e.png-tie", "lo", 0.97, 0.0005, (n) => pixels(paperPx, n, () => I), [0, 2000], 1],
++    // the bottom row's paper, right to left: one 4-connected strip of n ink pixels
++    ["e.png-blob", "hi", 16, 1, (n) => pixels(paperPx, n, () => I), [0, 60], 1],
++  ];
++}
++/** The model a plant spec makes (the sidecar re-stamped, as `npm run icons` would). */
++const build = (clean, spec) => {
++  const m = { ...clean, ...spec };
++  delete m.arm; // the arm rides beside the model (audit's second argument), never in it
++  m.provenance = {
++    "icon.svg": sha256(m.svg),
++    "apple-touch-icon.png": m.png && sha256(m.png),
++  };
++  return m;
++};
++/** The gate's own reading of `id` on a spec: the extreme toward `side`, and whether the id fired. */
++function readEdge(clean, spec, id, side) {
++  const f = audit(build(clean, spec), spec.arm);
++  const r = f.readings[id] ?? [];
++  return {
++    v: side === "hi" ? Math.max(...r) : Math.min(...r),
++    fired: f.some(([, i]) => i === id),
++  };
++}
++function seekEdge(clean, [id, side, bound, , make, [t0, t1], int]) {
++  const out = (t) => {
++    const { v } = readEdge(clean, make(t), id, side);
++    return side === "hi" ? v > bound : v < bound;
++  };
++  let [a, b] = [t0, t1]; // a inside, b outside
++  if (out(a) || !out(b)) return null;
++  for (let k = 0; k < 40 && Math.abs(b - a) > (int ? 1 : 1e-6); k++) {
++    const m = int ? Math.floor((a + b) / 2) : (a + b) / 2;
++    if (out(m)) b = m;
++    else a = m;
++  }
++  return { tIn: a, tOut: b };
++}
++function edgeTest(clean, quiet, only = null) {
++  return edges(clean).map((e, k) => {
++    if (only !== null && k !== only) return true;
++    const [id, side, bound, eps, make] = e;
++    const key = `${k}|${id}|${side}|${bound}`;
++    let s;
++    let o;
++    let n;
++    try {
++      if (!EDGE_SEEN.has(key)) EDGE_SEEN.set(key, seekEdge(clean, e));
++      s = EDGE_SEEN.get(key);
++      if (s) [o, n] = [s.tOut, s.tIn].map((t) => readEdge(clean, make(t), id, side));
++    } catch {
++      s = null; // a plant the model cannot make (a sabotaged reading) is a FAILED row, never a crash
++    }
++    const ok =
++      !!s &&
++      o.fired &&
++      !n.fired &&
++      Math.abs(o.v - bound) <= eps &&
++      Math.abs(n.v - bound) <= eps;
++    if (!quiet)
++      console.log(
++        `  ${ok ? "PINNED" : "FAILED"}  EDGE ${id} ${side} ${bound} ±${eps}: ${
++          s
++            ? `past ${+o.v.toPrecision(6)} ${o.fired ? "RED" : "GREEN"} · inside ${+n.v.toPrecision(6)} ${n.fired ? "RED" : "GREEN"}`
++            : "no plant brackets the bound"
++        }`,
++      );
++    return ok;
++  });
++}
++
++/** THE CUTS (LAWS P8 §F, pass 10): each cut inside tie() pinned from outside CUTS by a plant built AT
++ *  cut ± ε/2 (a pixel value, or a pixel's distance from the pen), so moving the cut by ε flips one
++ *  side. [cut, its pinned value (this table's own literal, never read from CUTS), id the plant must
++ *  red, ε, make(t)]: make(value + ε/2) reds id, make(value − ε/2) does not. */
++function cutRows(clean) {
++  const img0 = decodePng(clean.png);
++  const ras0 = raster(PEN[ARM], WIDTH);
++  const n = img0.w;
++  const mix = (t) =>
++    PAPER_RGB.map((p, c) => Math.round(p + (1 - t) * (INK_RGB[c] - p)));
++  const at = (set, to) => ({
++    png: png180((i) => (set.has(i) ? to : img0.rgba[i].slice(0, 3))),
++  });
++  const full = (i) => ras0.cov[i] === 1;
++  let run = []; // the first 17 horizontally adjacent whole-coverage pixels: one 4-connected strip
++  for (let i = 0; i < ras0.cov.length && run.length < 17; i++)
++    run = full(i) && i % n && run.at(-1) === i - 1 ? [...run, i] : full(i) ? [i] : [];
++  // 400 whole-coverage pixels none 4-adjacent to another (even x, even y): the blob stays 1
++  const lone = [...ras0.cov.keys()]
++    .filter((i) => full(i) && !(i % 2) && !(Math.floor(i / n) % 2))
++    .slice(0, 400);
++  // a pixel off the pen's support by Chebyshev distance d (the bottom-most such pixel)
++  const ring = (d) => {
++    const dist = (i) => {
++      let m = Infinity;
++      for (let dy = -d - 1; dy <= d + 1; dy++)
++        for (let dx = -d - 1; dx <= d + 1; dx++) {
++          const [x, y] = [(i % n) + dx, Math.floor(i / n) + dy];
++          if (x >= 0 && y >= 0 && x < n && y < n && ras0.cov[y * n + x] > 0)
++            m = Math.min(m, Math.max(Math.abs(dx), Math.abs(dy)));
++        }
++      return m;
++    };
++    for (let i = ras0.cov.length - 1; i >= 0; i--) if (dist(i) === d) return i;
++    return -1;
++  };
++  return [
++    ["e.png-blob", 0.5, "e.png-blob", 0.02, (t) => at(new Set(run), mix(t))],
++    ["e.png-tie", 0.5, "e.png-tie", 0.02, (t) => at(new Set(lone), mix(t))],
++    [
++      "e.png-reach",
++      1,
++      "e.png-paper",
++      1,
++      (t) => at(new Set([ring(Math.round(t + 0.5))]), INK_RGB),
++    ],
++  ];
++}
++function cutTest(clean, quiet, only = null) {
++  return cutRows(clean).map(([cut, c, id, eps, make], k) => {
++    if (only !== null && k !== only) return true;
++    let o;
++    let i;
++    try {
++      [o, i] = [c + eps / 2, c - eps / 2].map((t) =>
++        readEdge(clean, make(t), id, "hi"),
++      );
++    } catch {
++      o = null; // a plant the model cannot make is a FAILED row, never a crash
++    }
++    const ok = !!o && o.fired && !i.fired;
++    if (!quiet)
++      console.log(
++        `  ${ok ? "PINNED" : "FAILED"}  CUT ${cut} ${c} ±${eps / 2} (red ${id}): ${
++          o
++            ? `past ${o.fired ? "RED" : "GREEN"} · inside ${i.fired ? "RED" : "GREEN"}`
++            : "no plant"
++        }`,
++      );
++    return ok;
++  });
++}
++
++function selfTest(clean, { quiet = false } = {}) {
++  // Every plant re-stamps the sidecar as `npm run icons` would (the gate must red on SHAPE, not on a
++  // stale sha), except P6, whose point is the stale sha. `ids` are check ids the plant must fire.
++  const plant = (
++    label,
++    edit,
++    want,
++    {
++      keepSha = false,
++      stalePng = false,
++      png = null,
++      files = null,
++      html = null,
++      arm,
++      patch = null,
++      ids = [],
++    } = {},
++  ) => {
++    const svg = edit(clean.svg);
++    const m = {
++      ...clean,
++      svg,
++      png: png ?? clean.png,
++      files: files ?? clean.files,
++      html: html ? html(clean.html) : clean.html,
++      ...patch,
++    };
++    if (!keepSha)
++      m.provenance = {
++        "icon.svg": sha256(svg),
++        "apple-touch-icon.png": stalePng
++          ? clean.provenance?.["apple-touch-icon.png"]
++          : m.png && sha256(m.png),
++      };
++    const fails = audit(m, arm);
++    const got = [...new Set(fails.map(([c]) => c))].sort().join("");
++    const fired = new Set(fails.map(([, id]) => id));
++    const missing = ids.filter((i) => !fired.has(i));
++    const changed =
++      svg !== clean.svg ||
++      png ||
++      files ||
++      (html && m.html !== clean.html) ||
++      arm ||
++      patch;
++    const ok = got === want && changed && !missing.length;
++    if (!quiet)
++      console.log(
++        `  ${ok ? (want ? "RED as required" : "GREEN as required") : "FAILED"}  ${label}: red ${got || "none"}, want ${want || "none"}${ids.length ? ` [${ids.map((i) => (fired.has(i) ? i : `${i}:MISSING`)).join(" ")}]` : ""}${ok ? "" : ` (fired: ${[...fired].join(" ")})`}`,
++      );
++    return ok;
++  };
++  const inStyle = (css) => (s) => s.replace("</style>", `${css}</style>`);
++  const withFile = (file, text) => [...clean.files, { file, text }];
++  const pathTo = (d) => (s) => s.replace(/ d="[^"]*"/, ` d="${d}"`);
++  const cleanPx = decodePng(clean.png).rgba.map((p) => p.slice(0, 3));
++  const bars = png180((i) => {
++    const [x, y] = [i % 180, Math.floor(i / 180)];
++    return Math.floor(y / 22) % 2 === 1 && y > 10 && y < 170 && x > 30 && x < 150
++      ? INK_RGB
++      : PAPER_RGB;
++  });
++  if (!quiet) console.log("\nself-test plants:");
++  const results = plants({
++    plant,
++    inStyle,
++    withFile,
++    pathTo,
++    cleanPx,
++    bars,
++    clean,
++    MAIN_FAVICON,
++    PAPER_RGB,
++    INK_RGB,
++    BLOCK,
++    LINKS,
++    Z,
++    movePath,
++    png180,
++    pngN,
++    pngOf,
++    decodePng,
++    ARM,
++    PEN,
++    WIDTH,
++  });
++  return [...results, ...edgeTest(clean, quiet), ...cutTest(clean, quiet)].every(
++    Boolean,
++  );
++}
++
++const model = readTree(ROOT);
++
++if (process.argv.includes("--threshold-battery")) {
++  // Every bound the EDGES pin, moved by its ε outward (loosened: the past plant must turn GREEN) and
++  // inward (tightened: the inside plant must turn RED) — each move must fail its edge row (LAWS P8 §F).
++  const rows = [];
++  let bite = 0;
++  const all = edges(model);
++  all.forEach((e, k) => {
++    const [id, side, bound, eps] = e;
++    const at = side === "lo" ? 0 : 1;
++    const table =
++      id === "d.window"
++        ? WINDOWS[Object.keys(WINDOWS).find((w) => WINDOWS[w][at] === bound)]
++        : BOUNDS[id];
++    for (const [how, sign] of [
++      ["loosen", side === "lo" ? -1 : 1],
++      ["tighten", side === "lo" ? 1 : -1],
++    ]) {
++      const keep = table[at];
++      table[at] = bound + sign * eps;
++      const ok = edgeTest(model, true, k)[k];
++      table[at] = keep;
++      rows.push(`  ${ok ? "HOLE" : "BITE"}  ${id} ${side} ${bound} ${how} by ${eps}`);
++      if (!ok) bite++;
++    }
++  });
++  // every cut inside tie(), moved by its ε both ways: each move must fail its CUT row
++  cutRows(model).forEach(([cut, , , eps], k) => {
++    for (const [how, sign] of [
++      ["up", 1],
++      ["down", -1],
++    ]) {
++      const keep = CUTS[cut];
++      CUTS[cut] = keep + sign * eps;
++      const ok = cutTest(model, true, k)[k];
++      CUTS[cut] = keep;
++      rows.push(`  ${ok ? "HOLE" : "BITE"}  CUT ${cut} ${keep} ${how} by ${eps}`);
++      if (!ok) bite++;
++    }
++  });
++  const clean = [...edgeTest(model, true), ...cutTest(model, true)].every(Boolean);
++  console.log(
++    `check-favicon --threshold-battery:\n${rows.join("\n")}\n  ${bite}/${rows.length} bite · unmoved edges ${clean ? "PINNED" : "FAILED"}`,
++  );
++  process.exit(bite === rows.length && clean ? 0 : 2);
++}
++
++if (process.argv.includes("--sabotage-battery")) {
++  // Every check id the self-test names, and the library clauses this gate reads: each switched off
++  // alone must red the self-test (LAWS P7 §F (ii)).
++  const ids = [
++    "a.junk",
++    "a.count",
++    "a.element",
++    "a.attr",
++    "a.dupe",
++    "a.root",
++    "a.ns",
++    "a.viewbox",
++    "a.paper",
++    "a.paper-xy",
++    "a.order",
++    "b.fill",
++    "b.cap",
++    "b.join",
++    "b.width",
++    "b.at-rule",
++    "b.context",
++    "b.selector",
++    "b.prop",
++    "b.important",
++    "b.bytes",
++    "c.unplaced",
++    "c.unresolved",
++    "c.conflict",
++    "c.tokens",
++    "c.opaque",
++    "c.delta",
++    "c.fallback",
++    "d.arm",
++    "d.pin",
++    "d.unreadable",
++    "d.extent",
++    "d.centre",
++    "d.window",
++    "d.mass",
++    "e.link-icon",
++    "e.link-touch",
++    "e.icon-file",
++    "e.favicon",
++    "e.prov-svg",
++    "e.png-file",
++    "e.prov-png",
++    "e.png-size",
++    "e.png-opaque",
++    "e.png-paper",
++    "e.png-coverage",
++    "e.png-ink",
++    "e.png-delta",
++    "e.png-tie",
++    "e.png-blob",
++  ];
++  const lib = [
++    "html-comment",
++    "html-inert",
++    "one-link",
++    "link-allow",
++    "base-red",
++    "token-conflict",
++    "tok-sites",
++    "at-own",
++    "collect-walk",
++    "decode",
++  ];
++  let bite = 0;
++  const rows = [];
++  for (const id of ids) {
++    OFF.clear();
++    OFF.add(id);
++    const ok = selfTest(model, { quiet: true });
++    rows.push(`  ${ok ? "HOLE" : "BITE"}  gate  ${id}`);
++    if (!ok) bite++;
++  }
++  OFF.clear();
++  for (const id of lib) {
++    sabotage([id]);
++    fileCache.clear(); // the library's readings under this clause's absence
++    const m2 = readTree(ROOT);
++    const ok = selfTest(m2, { quiet: true });
++    rows.push(`  ${ok ? "HOLE" : "BITE"}  lib   ${id}`);
++    if (!ok) bite++;
++  }
++  sabotage([]);
++  fileCache.clear();
++  console.log(
++    `check-favicon --sabotage-battery:\n${rows.join("\n")}\n  ${bite}/${ids.length + lib.length} bite`,
++  );
++  process.exit(bite === ids.length + lib.length ? 0 : 2);
++}
++
++if (run(model).length) {
++  console.error("\ncheck-favicon: the gate is RED on the tree (run check-favicon.mjs)");
++  process.exit(1);
++}
++if (!selfTest(model)) {
++  console.error(
++    "\ncheck-favicon: a plant did not red its clause (or a negative-negative went red)",
++  );
++  process.exit(2);
++}
++console.log(
++  "\ncheck-favicon self-test: every plant red its clause, every edge and cut pinned",
++);
+diff --git a/web/frontend/scripts/check-pw-projects.mjs b/web/frontend/scripts/check-pw-projects.mjs
+index 7392950a..b5428f55 100644
+--- a/web/frontend/scripts/check-pw-projects.mjs
++++ b/web/frontend/scripts/check-pw-projects.mjs
+@@ -255,6 +255,7 @@ const SPEC_MANIFEST = [
+   "spoken-controls.spec.ts",
+   "spoken-gallery.spec.ts",
+   "sudoku-interaction.spec.ts",
++  "tab-pen.spec.ts",
+   "theme-bake-freshness.spec.ts",
+   "theme-quadrants.spec.ts",
+   "throttled-void.spec.ts",
+diff --git a/web/frontend/scripts/icons.mjs b/web/frontend/scripts/icons.mjs
+new file mode 100644
+index 00000000..c71865e1
+--- /dev/null
++++ b/web/frontend/scripts/icons.mjs
+@@ -0,0 +1,96 @@
++#!/usr/bin/env node
++/**
++ * THE TAB'S PEN (T9-M22, TAB-PEN). Writes `public/icon.svg` from one pen line, rasters its light arm
++ * to `public/apple-touch-icon.png` (180 × 180, square paper: iOS rounds the corners itself, palette
++ * PNG), and records both files' sha256 in `scripts/icons.provenance.json`. CI never rasters: the PNG
++ * is vendored, and `check-favicon.mjs` (d, e) re-derives the path's coverage analytically and holds
++ * the PNG to it.
++ *
++ * THE ARM TABLE. Two owner ballots, one const each; flip one, run `npm run icons`, and the gate reads
++ * the pair against that arm's own windows:
++ *   ARM   (T9-B27, the hand): `W` the written monoline s (the default), `H` the house hand (the same
++ *         box, pen and paper with the 5's grammar borrowed: a short down-tick into a flat, slightly
++ *         tilted top stroke, one hard join at 94.5°).
++ *   WIDTH (T9-B28, the pen's width in the 32 viewBox): `4` (arm A, the default) or `5` (arm B).
++ * Arm P (a Fraunces outline) is not a pen line: choosing it re-cuts clause b, not a const.
++ *
++ * `sharp` is NOT a dependency of this package. It is miniflare's transitive (package-lock.json,
++ * `node_modules/sharp`), resolved through createRequire only when this file runs as a script, so the
++ * gate can import the table without it; a wrangler/miniflare bump can move it.
++ *
++ * NOT-A-LANE: it rides an undeclared transitive (sharp via miniflare) and writes committed binaries, so its cadence is a re-cut of the pen, run by hand; CI holds the pair through lint:favicon, which reads this file's arm table, the sidecar and the PNG's own pixels with no rasteriser (scripts/check-favicon.mjs).
++ *
++ * Run: `node scripts/icons.mjs` (write) · `node scripts/icons.mjs --check` (re-derive; exit 1 on
++ * any drift: the SVG's bytes, the PNG's decoded pixels, the sidecar). cwd web/frontend.
++ */
++import { createHash } from "node:crypto";
++import { createRequire } from "node:module";
++import fs from "node:fs";
++import path from "node:path";
++import process from "node:process";
++import { pathToFileURL } from "node:url";
++
++export const ARM = "W";
++export const WIDTH = 4;
++export const PEN = {
++  W: "M22.6,9.6C21.4,7.1 18.6,6 15.8,6C12,6 9.6,7.9 9.6,10.6C9.6,13.4 12.4,14.6 16.2,15.8C21,17.3 24,18.4 24,21.2C24,24.4 20.4,26 15.8,26C11.6,26 8,24.6 8,22.6",
++  H: "M23.6,8.7L23.9,6.3L15.2,5.9C11.2,5.8 9.3,8.1 9.6,10.9C10,13.9 12.8,14.7 16.6,16C21.4,17.5 24.2,18.9 23.8,21.7C23.5,24.7 19.9,26.3 15.4,26.1C11.4,25.9 8.4,24.2 8.1,22.2",
++};
++/** Clause d's stroke / (bbox H + stroke) window per pen width: each arm's own reading ± 0.01. */
++export const WINDOWS = { 4: [0.15, 0.17], 5: [0.19, 0.21] };
++// The page's tokens (index.css @theme / .dark), byte-copied; lint:favicon (c) reds any drift.
++const [PAPER, INK, DARK_PAPER, DARK_INK] = ["#fbfaf9", "#0a0a0a", "#110f0e", "#edece9"];
++
++const style = (paper, ink) => `rect{fill:${paper}}path{stroke:${ink}}`;
++export const icon = (d, width = WIDTH, dark = true) =>
++  `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32"><style>${style(PAPER, INK)}${
++    dark ? `@media(prefers-color-scheme:dark){${style(DARK_PAPER, DARK_INK)}}` : ""
++  }</style><rect width="32" height="32" fill="${PAPER}"/><path d="${d}" fill="none" stroke="${INK}" stroke-width="${width}" stroke-linecap="round" stroke-linejoin="round"/></svg>\n`;
++
++async function main() {
++  const ROOT = path.join(import.meta.dirname, "..");
++  const SVG = path.join(ROOT, "public", "icon.svg");
++  const PNG = path.join(ROOT, "public", "apple-touch-icon.png");
++  const SIDECAR = path.join(ROOT, "scripts", "icons.provenance.json");
++  const SIZE = 180;
++  const sha = (b) => createHash("sha256").update(b).digest("hex");
++  const sharp = createRequire(path.join(ROOT, "package.json"))("sharp");
++  const svg = icon(PEN[ARM]);
++  // The light arm, explicitly: the rasteriser's own prefers-color-scheme is not a thing to rely on.
++  const raster = () =>
++    sharp(Buffer.from(icon(PEN[ARM], WIDTH, false)), { density: (72 * SIZE) / 32 })
++      .resize(SIZE, SIZE)
++      .png({ palette: true, compressionLevel: 9 })
++      .toBuffer();
++  const pixels = (buf) => sharp(buf).ensureAlpha().raw().toBuffer();
++  const sidecar = (png) =>
++    `${JSON.stringify({ arm: ARM, width: WIDTH, "icon.svg": sha(svg), "apple-touch-icon.png": sha(png) }, null, 2)}\n`;
++
++  if (process.argv.includes("--check")) {
++    const kept = fs.readFileSync(PNG);
++    const [fresh, old] = [await pixels(await raster()), await pixels(kept)];
++    let maxDelta = fresh.length === old.length ? 0 : 255;
++    for (let i = 0; i < Math.min(fresh.length, old.length); i++)
++      maxDelta = Math.max(maxDelta, Math.abs(fresh[i] - old[i]));
++    const svgOk = fs.readFileSync(SVG, "utf8") === svg;
++    const sideOk = fs.readFileSync(SIDECAR, "utf8") === sidecar(kept);
++    console.log(
++      `icons --check (arm ${ARM}, width ${WIDTH}): svg ${svgOk ? "current" : "STALE"}, png decoded max Δ ${maxDelta}, sidecar ${sideOk ? "current" : "STALE"}`,
++    );
++    process.exit(svgOk && maxDelta === 0 && sideOk ? 0 : 1);
++  }
++
++  const png = await raster();
++  fs.writeFileSync(SVG, svg);
++  fs.writeFileSync(PNG, png);
++  fs.writeFileSync(SIDECAR, sidecar(png));
++  console.log(
++    `icon.svg (arm ${ARM}, width ${WIDTH}) ${sha(svg)} · apple-touch-icon.png ${SIZE}×${SIZE}, ${png.length} B`,
++  );
++}
++
++if (
++  process.argv[1] &&
++  import.meta.url === pathToFileURL(path.resolve(process.argv[1])).href
++)
++  await main();
+diff --git a/web/frontend/scripts/icons.provenance.json b/web/frontend/scripts/icons.provenance.json
+new file mode 100644
+index 00000000..734242ab
+--- /dev/null
++++ b/web/frontend/scripts/icons.provenance.json
+@@ -0,0 +1,6 @@
++{
++  "arm": "W",
++  "width": 4,
++  "icon.svg": "856c8ad5bdfe114aaf93fb4cd75e55122acc6fd055d880c9b03eaafadb14d338",
++  "apple-touch-icon.png": "b07f52f90cf3c4c49c4577787c9364df008491346fd61ea0c7595e0aa0dc5de6"
++}

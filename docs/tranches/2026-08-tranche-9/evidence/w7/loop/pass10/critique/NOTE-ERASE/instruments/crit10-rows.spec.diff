@@ -1,0 +1,53 @@
+--- /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-NOTE-ERASE/affordances.t10.orig.ts	2026-11-02 18:47:07
++++ /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-NOTE-ERASE/copies/t10/web/frontend/e2e/affordances.spec.ts	2026-11-02 18:50:11
+@@ -1058,3 +1058,50 @@
+   await page.keyboard.press('Control+Home');
+   expect(await focusedCellIndex(page)).toBe(0);
+ });
++
++// ── crit-NOTE-ERASE pass 10 (never banked): siblings of PRESENT IS NOT RUNNING that an INSTANT read on
++// `@leave` cannot see. Each row asserts the lane's own teeth (`zeroLengthLeave`) OR an erase over the
++// rung; a RED row is the hole. Plants assembled at run time (no Tailwind source).
++const CRIT_KF = ['crit', 'typo', 'kf'].join('-');
++const CRIT_PLANTS: { name: string; css: string }[] = [
++  { name: 'LEAVE-TO paused', css: '.margin-note-ink.note-leave-to { animation-play-state: paused !important; }' },
++  { name: 'LEAVE-TO timeline none', css: '.margin-note-ink.note-leave-to { animation-timeline: none !important; }' },
++  {
++    name: 'RUNNING verb that animates nothing (typo keyframes)',
++    css: `@keyframes ${CRIT_KF} { from { clip-pth: inset(0); } to { opacit: 0; } } .margin-note-ink.note-leave-active { animation-name: ${CRIT_KF} !important; }`,
++  },
++];
++for (const scheme of ['light', 'dark'] as const)
++  for (const p of CRIT_PLANTS) {
++    test(`drop clock CRIT10: ${p.name} — ${scheme}`, async ({ page }) => {
++      await page.emulateMedia({ colorScheme: scheme });
++      const leave = await redLineLeaves(page, (pg) => pg.addStyleTag({ content: p.css }).then(() => undefined));
++      const ops = await page.evaluate(() =>
++        (window as unknown as { __pf: PaintedTrack }).__pf.post
++          .filter((q) => q.r !== null)
++          .map((q) => +parseFloat(String(q.r!.x)).toFixed(2)),
++      );
++      console.log(`CRIT10-OPACITY ${scheme} ${p.name}: ${ops.join(' ')}`);
++      console.log(
++        `CRIT10 ${scheme} ${p.name}: name=${leave.animationName} dur=${leave.animationDuration} held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++      );
++      // The lane's own teeth: nothing RUNS over the clock it would write, so the leave is zero-length.
++      expect(zeroLengthLeave(leave), JSON.stringify(leave)).toBe(true);
++    });
++  }
++for (const scheme of ['light', 'dark'] as const)
++  test(`drop clock CRIT10 POSITIVE: the shipped verb, running — ${scheme}`, async ({ page }) => {
++    await page.emulateMedia({ colorScheme: scheme });
++    const leave = await redLineLeaves(page);
++    const ops = await page.evaluate(() =>
++      (window as unknown as { __pf: PaintedTrack }).__pf.post
++        .filter((q) => q.r !== null)
++        .map((q) => +parseFloat(String(q.r!.x)).toFixed(2)),
++    );
++    console.log(`CRIT10-OPACITY ${scheme} POSITIVE shipped verb: ${ops.join(' ')}`);
++    console.log(
++      `CRIT10 ${scheme} POSITIVE shipped verb: name=${leave.animationName} dur=${leave.animationDuration} held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
++    expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++    expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
++  });

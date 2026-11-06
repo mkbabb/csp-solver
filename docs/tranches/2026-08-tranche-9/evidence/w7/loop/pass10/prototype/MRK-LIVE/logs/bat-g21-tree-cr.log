@@ -1,0 +1,76 @@
+zone inuse=7661744 load 10.74 10.27 8.68
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/focus-ring.spec.ts:1141:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline
+[chromium] › e2e/focus-ring.spec.ts:1141:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline
+[G-LIVE-21] Highlight rgba(5, 0, 73, 0.8) · deck card rgba(5, 0, 73, 0.8) painted 762 px [top 184/334=0.551 · bottom 283/334=0.847 · left 183/409=0.447 · right 112/409=0.274] · staging solid 2px rgba(5, 0, 73, 0.8) painted 340 px [top 106/87=1.218 · bottom 79/87=0.908 · left 73/41=1.78 · right 82/41=2] · FCCLIP2 card 0 px, staging 0 px (outline-style still solid)
+
+[G-LIVE-21] FCSIDE card 215 px [top 215/334=0.644 · bottom 0/334=0 · left 0/409=0 · right 0/409=0] ⟨top depth 0.644 < 1.80 (215 px over 334); bottom depth 0 < 1.80 (0 px over 334); left depth 0 < 1.80 (0 px over 409); right depth 0 < 1.80 (0 px over 409)⟩ · staging 87 px [top 87/87=1 · bottom 0/87=0 · left 0/41=0 · right 0/41=0] ⟨top depth 1 < 1.80 (87 px over 87); bottom depth 0 < 1.80 (0 px over 87); left depth 0 < 1.80 (0 px over 41); right depth 0 < 1.80 (0 px over 41)⟩
+
+[G-LIVE-21] FC1PX card 494 px [top 143/334=0.428 · bottom 220/334=0.659 · left 101/409=0.247 · right 30/409=0.073] ⟨top depth 0.428 < 1.80 (143 px over 334); bottom depth 0.659 < 1.80 (220 px over 334); left depth 0.247 < 1.80 (101 px over 409); right depth 0.073 < 1.80 (30 px over 409)⟩ · staging 93 px [top 17/87=0.195 · bottom 3/87=0.034 · left 32/41=0.78 · right 41/41=1] ⟨top depth 0.195 < 1.80 (17 px over 87); bottom depth 0.034 < 1.80 (3 px over 87); left depth 0.78 < 1.80 (32 px over 41); right depth 1 < 1.80 (41 px over 41)⟩
+
+[G-LIVE-21] CRIT-FCMOVE card 0 px [top 0/334=0 · bottom 0/334=0 · left 0/409=0 · right 0/409=0] ⟨top depth 0 < 1.80 (0 px over 334); bottom depth 0 < 1.80 (0 px over 334); left depth 0 < 1.80 (0 px over 409); right depth 0 < 1.80 (0 px over 409)⟩ · staging 0 px [top 0/87=0 · bottom 0/87=0 · left 0/41=0 · right 0/41=0] ⟨top depth 0 < 1.80 (0 px over 87); bottom depth 0 < 1.80 (0 px over 87); left depth 0 < 1.80 (0 px over 41); right depth 0 < 1.80 (0 px over 41)⟩
+
+[G-LIVE-21 guard] btn solid · face none · painted 260 px (noise 0)
+
+  1) [chromium] › e2e/focus-ring.spec.ts:1141:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+
+    Error: every strip of the deck card's outline is painted at 0.9 × its authored width
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "top depth 0.551 < 1.80 (184 px over 334)",
+    +   "bottom depth 0.847 < 1.80 (283 px over 334)",
+    +   "left depth 0.447 < 1.80 (183 px over 409)",
+    +   "right depth 0.274 < 1.80 (112 px over 409)",
+    + ]
+
+      1319 |   // read: the deck card's strips paint 0.55–1.32 px of focus change in both engines, the staging
+      1320 |   // face's bottom 0.92–0.97, because the 2 px outline lands on ink the host already draws there).
+    > 1321 |   expect.soft(stripReds(cardPx), "every strip of the deck card's outline is painted at 0.9 × its authored width").toEqual([]);
+           |                                                                                                                   ^
+      1322 |   expect.soft(stripReds(stagingPx), "every strip of the staging face's outline is painted at 0.9 × its authored width").toEqual([]);
+      1323 |   expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
+      1324 |   expect(clipCard.total, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1321:115
+
+    Error: every strip of the staging face's outline is painted at 0.9 × its authored width
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 5
+
+    - Array []
+    + Array [
+    +   "top depth 1.218 < 1.80 (106 px over 87)",
+    +   "bottom depth 0.908 < 1.80 (79 px over 87)",
+    +   "left depth 1.78 < 1.80 (73 px over 41)",
+    + ]
+
+      1320 |   // face's bottom 0.92–0.97, because the 2 px outline lands on ink the host already draws there).
+      1321 |   expect.soft(stripReds(cardPx), "every strip of the deck card's outline is painted at 0.9 × its authored width").toEqual([]);
+    > 1322 |   expect.soft(stripReds(stagingPx), "every strip of the staging face's outline is painted at 0.9 × its authored width").toEqual([]);
+           |                                                                                                                         ^
+      1323 |   expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
+      1324 |   expect(clipCard.total, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+      1325 |   expect(clipStaging.total, "FCCLIP2: a clipped staging outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1322:121
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/focus-ring.spec.ts:1141:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+end zone inuse=7661744 load 11.44 10.48 8.80

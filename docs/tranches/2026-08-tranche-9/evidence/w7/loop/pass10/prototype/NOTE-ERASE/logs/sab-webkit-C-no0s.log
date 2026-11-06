@@ -1,0 +1,31 @@
+
+Running 3 tests using 1 worker
+
+  ✘  1 [webkit] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals (4ms)
+SAB|17|dur=0.017s|ms=53|conn=3|vis=1|durIs0s=RED|frames<=2=RED|struck time<150=GREEN
+  ✓  2 [webkit] › e2e/affordances.spec.ts:1067:3 › SAB near-bound write 17ms on the ghost still leave (1.7s)
+SAB|33|dur=0.033s|ms=68|conn=4|vis=1|durIs0s=RED|frames<=2=RED|struck time<150=GREEN
+  ✓  3 [webkit] › e2e/affordances.spec.ts:1067:3 › SAB near-bound write 33ms on the ghost still leave (1.6s)
+
+
+  1) [webkit] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: false
+    Received: true
+
+      566 |   expect(zeroLengthLeave({ animationDuration: '0s', painted: 2 })).toBe(true);
+      567 |   expect(zeroLengthLeave({ animationDuration: '0s', painted: 3 })).toBe(false);
+    > 568 |   expect(zeroLengthLeave({ animationDuration: '0.001s', painted: 1 })).toBe(false);
+          |                                                                        ^
+      569 | });
+      570 |
+      571 | for (const still of STILL_LEAVES) {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/NOTE-ERASE/copies/t10s/web/frontend/e2e/affordances.spec.ts:568:72
+
+    Error Context: ../../../../pw-out-sab/affordances-drop-clock-the-2a6fd-frame-and-±1-ms-as-literals-webkit/error-context.md
+
+  1 failed
+    [webkit] › e2e/affordances.spec.ts:564:1 › drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals 
+  2 passed (5.0s)

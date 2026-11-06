@@ -1,0 +1,336 @@
+diff --git a/web/frontend/e2e/focus-ring.spec.ts b/web/frontend/e2e/focus-ring.spec.ts
+index 1a0ade8..403aadf 100644
+--- a/web/frontend/e2e/focus-ring.spec.ts
++++ b/web/frontend/e2e/focus-ring.spec.ts
+@@ -509,9 +509,20 @@ const frames2 = (page: Page) =>
+  *  page: the indicator's own pixels, with anything that moves on its own (a caret, a sparkle)
+  *  subtracted pixel by pixel rather than by count. */
+ type Shot = Awaited<ReturnType<Page["screenshot"]>>;
+-const indicatorPixels = (page: Page, on: Shot, off: Shot, again: Shot, offAgain?: Shot) =>
++/** `ink` (pass 10, LIVE R1): when given, a moved pixel counts as paint only if the ON shot paints
++ *  that ink COMPOSITED over what the OFF shot painted at the same pixel (a·ink + (1−a)·off, within
++ *  `INK_TOL` RGB distance), so a host that MOVES or re-renders its own frame on focus
++ *  (CRIT-FCMOVE) is not read as an outline. The composite is the law, not a convenience: chromium's
++ *  emulated Highlight is rgba(5, 0, 73, 0.8), and a flat match lost 85–95 % of the outline's pixels
++ *  (first read, this pass). */
++const INK_TOL = 48;
++/** CLAUSE SABOTAGE (pass 10): `LIVE_SABOTAGE=inkkey` reads the FC strips unkeyed, as pass 9 did, so
++ *  CRIT-FCMOVE must go GREEN on the strips and its assert must red; `LIVE_SABOTAGE=hold` swaps the
++ *  refusing hold for pass 9's pinning one, so CRIT-ANC55 must go GREEN outside reduce and red its row. */
++const LIVE_SABOTAGE = new Set((process.env.LIVE_SABOTAGE ?? "").split(",").filter(Boolean));
++const indicatorPixels = (page: Page, on: Shot, off: Shot, again: Shot, offAgain?: Shot, ink?: [number, number, number, number] | null) =>
+   page.evaluate(
+-    async (shots) => {
++    async ({ shots, ink, tol }) => {
+       const load = async (s: string) => {
+         const blob = await (await fetch("data:image/png;base64," + s)).blob();
+         const bmp = await createImageBitmap(blob);
+@@ -531,11 +542,11 @@ const indicatorPixels = (page: Page, on: Shot, off: Shot, again: Shot, offAgain?
+         // outside `reduce`) swaps its lines' pose between any two shots and is never the indicator.
+         const n = moved(p, r, i) || (o ? moved(q, o, i) : false);
+         if (n) noise++;
+-        else if (moved(p, q, i)) paint++;
++        else if (moved(p, q, i) && (!ink || Math.hypot(...[0, 1, 2].map((c) => p[i + c] - (ink[3] * ink[c] + (1 - ink[3]) * q[i + c]))) <= tol)) paint++;
+       }
+       return { paint, noise };
+     },
+-    [on, off, again, ...(offAgain ? [offAgain] : [])].map((b) => b.toString("base64")),
++    { shots: [on, off, again, ...(offAgain ? [offAgain] : [])].map((b) => b.toString("base64")), ink: ink ?? null, tol: INK_TOL },
+   );
+ 
+ type Kind = "drawn" | "board" | "outline";
+@@ -994,6 +1005,10 @@ test("G-LIVE-19 · the ring's seams have one home and no masked default", async
+       toggleBleed: tcs?.getPropertyValue("--toggle-bleed").trim() ?? null,
+       marksRule: !!marks,
+       noteDuration,
++      // THE PUBLISHER's value (pass 10, R4: MOT-LADDER's `publishMotionRungs` writes the rung at boot
++      // into its own `<style data-motion-rungs>`; the registration's initial is the ladder's 0ms).
++      notePublished: getComputedStyle(document.documentElement).getPropertyValue("--motion-note").trim(),
++      notePublishers: [...document.querySelectorAll("style[data-motion-rungs]")].filter((e) => /--motion-note\s*:/.test(e.textContent ?? "")).length,
+     };
+   });
+ 
+@@ -1018,7 +1033,13 @@ test("G-LIVE-19 · the ring's seams have one home and no masked default", async
+ 
+   // Read as a TIME, not a spelling: the dist's minifier writes the same rung `.25s` (pass 9, lane dist).
+   const asMs = (v?: string) => (v == null ? NaN : /ms$/i.test(v.trim()) ? parseFloat(v) : parseFloat(v) * 1000);
+-  expect(asMs(reg.regs["--motion-note"]?.[0]), `the note's rung is registered at 250ms (read ${reg.regs["--motion-note"]?.[0]})`).toBe(250);
++  // RE-POINTED AT LADDER's PUBLISHER (pass 10, R4; the WAVE's G-LIVE-19 :1021 red): pass 9's clause
++  // read the struck stand-in's 250ms off the registration. On the union ONE block registers the rung
++  // at 0ms and ONE publisher writes 250ms at boot; both are read, the rung as a LITERAL (LAWS P9 §F:
++  // a value roster is no gate, so 250 is typed here, never read from MOTION).
++  expect(asMs(reg.regs["--motion-note"]?.[0]), `the note's rung is registered once at the ladder's 0ms (read ${reg.regs["--motion-note"]?.[0]})`).toBe(0);
++  expect(reg.notePublishers, "exactly one publisher writes the note's rung").toBe(1);
++  expect(asMs(reg.notePublished), `the publisher's rung is 250ms (read ${reg.notePublished})`).toBe(250);
+   expect(reg.marksRule, "the marks' scoped rule consumes var(--motion-note)").toBe(true);
+   expect(reg.noteDuration, "and paints the rung: marks-fade-in runs 250ms").toBe("0.25s");
+ });
+@@ -1168,6 +1189,9 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+     return getComputedStyle(document.getElementById(id)!).outlineColor;
+   });
+   expect(deckInk, "the active card's outline is the system Highlight").toBe(highlight);
++  const hl = (highlight.match(/[\d.]+/g) ?? []).map(Number);
++  const highlightRGB = [hl[0], hl[1], hl[2], hl[3] ?? 1] as [number, number, number, number];
++  expect(hl.length >= 3 && highlightRGB.every(Number.isFinite), `the system Highlight resolves to an rgb(a) ink (${highlight})`).toBe(true);
+ 
+   /** The pixels focus PAINTS in a host's OUTLINE BAND: the four strips outside its border box, out to
+    *  the outline's offset + width + 2 px, each photographed with focus on, off, on again. The box's
+@@ -1211,7 +1235,10 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+     const again = await shoot();
+     const strips: Strip[] = [];
+     for (let i = 0; i < geo.strips.length; i++) {
+-      const paint = live[i] ? (await indicatorPixels(page, on[i]!, off[i]!, again[i]!)).paint : 0;
++      // KEYED ON THE OUTLINE'S OWN INK (pass 10, R1/R2): only moved pixels painting the system
++      // Highlight count, so CRIT-FCMOVE (the outline clipped to nothing, the card moved 4 px) reads
++      // nothing (pass 9: WebKit 3.838/5.332/2.785/4.932 GREEN on all four strips, chromium 2 of 4).
++      const paint = live[i] ? (await indicatorPixels(page, on[i]!, off[i]!, again[i]!, undefined, LIVE_SABOTAGE.has("inkkey") ? null : highlightRGB)).paint : 0;
+       const along = Math.max(1, geo.strips[i].along);
+       strips.push({ side: geo.strips[i].side as Side, paint, along, depth: +(paint / along).toFixed(3) });
+     }
+@@ -1280,6 +1307,13 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+   };
+   const fcside = await sibling(".game-card, .staging-btn { clip-path: inset(-12px 0 0 0) !important; }");
+   const fc1px = await sibling(".game-card, .staging-btn { outline-width: 1px !important; }");
++  // CRIT-FCMOVE (the pass-9 critic's plant, R2's born-RED): the outline clipped to nothing AND the
++  // host moved 4 px on focus, so its own drawn frame moves with focus. An ink-keyed read counts none
++  // of that motion; pass 9's unkeyed read counted it GREEN on all four WebKit strips.
++  const fcmove = await sibling(
++    // the card arm is the critic's `plants/fcmove.css` verbatim; the staging arm is its twin on the face
++    ".gallery-viewport:focus-visible .game-card.is-center { clip-path: inset(0) !important; translate: -4px -4px !important; } .staging-btn:focus-visible { clip-path: inset(0) !important; translate: -4px -4px !important; }",
++  );
+   await stagingFocus();
+   await frames2(page);
+   await page.evaluate(() => document.querySelector("[data-gl21]")?.removeAttribute("data-gl21"));
+@@ -1288,6 +1322,7 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+   );
+   console.log(`[G-LIVE-21] FCSIDE card ${stripSay(fcside.c)} ⟨${stripReds(fcside.c).join("; ")}⟩ · staging ${stripSay(fcside.s)} ⟨${stripReds(fcside.s).join("; ")}⟩`);
+   console.log(`[G-LIVE-21] FC1PX card ${stripSay(fc1px.c)} ⟨${stripReds(fc1px.c).join("; ")}⟩ · staging ${stripSay(fc1px.s)} ⟨${stripReds(fc1px.s).join("; ")}⟩`);
++  console.log(`[G-LIVE-21] CRIT-FCMOVE card ${stripSay(fcmove.c)} ⟨${stripReds(fcmove.c).join("; ")}⟩ · staging ${stripSay(fcmove.s)} ⟨${stripReds(fcmove.s).join("; ")}⟩`);
+   expect(cardPx.total, "focus PAINTS on the deck's active card").toBeGreaterThan(FLOOR);
+   expect(stagingPx.total, "focus PAINTS on the staging face").toBeGreaterThan(FLOOR);
+   // SOFT, so the plants and the guard below still read when the shipped outline reds here (pass 9
+@@ -1298,10 +1333,25 @@ test("G-LIVE-21 · forced colours: the deck's active card carries the outline",
+   expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
+   expect(clipCard.total, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+   expect(clipStaging.total, "FCCLIP2: a clipped staging outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+-  expect(stripReds(fcside.c).length, "FCSIDE: three clipped sides of the card are caught per strip").toBeGreaterThanOrEqual(3);
+-  expect(stripReds(fcside.s).length, "FCSIDE: three clipped sides of the staging face are caught per strip").toBeGreaterThanOrEqual(3);
+-  expect(stripReds(fc1px.c).length, "FC1PX: a 1 px card outline is caught by the thickness clause").toBeGreaterThan(0);
+-  expect(stripReds(fc1px.s).length, "FC1PX: a 1 px staging outline is caught by the thickness clause").toBeGreaterThan(0);
++  // DIFFERENTIAL, never vacuous (pass 10, R1): the clean read already reds (G-LIVE-21 is a product red
++  // in both engines), so "≥ 3 red strips" on a plant proved nothing. Each plant must LOWER the strips
++  // it cuts below the clean read's own, and below the floor: FCSIDE keeps the top, so right, bottom
++  // and left each fall; FC1PX halves the outline, so the summed paint falls; CRIT-FCMOVE paints no
++  // Highlight at all.
++  const fell = (plant: { strips: Strip[] }, clean: { strips: Strip[] }, sides: Side[]) =>
++    sides.filter((sd) => {
++      const a = plant.strips.find((x) => x.side === sd);
++      const b = clean.strips.find((x) => x.side === sd);
++      return !a || !b || !(a.depth < b.depth && a.depth < 0.9 * FC_AUTHORED);
++    });
++  const CUT: Side[] = ["right", "bottom", "left"];
++  expect(fell(fcside.c, cardPx, CUT), "FCSIDE: each clipped side of the card falls below the clean read and the floor").toEqual([]);
++  expect(fell(fcside.s, stagingPx, CUT), "FCSIDE: each clipped side of the staging face falls below the clean read and the floor").toEqual([]);
++  expect(fc1px.c.total, "FC1PX: a 1 px card outline paints less than the clean 2 px").toBeLessThan(cardPx.total);
++  expect(fc1px.s.total, "FC1PX: a 1 px staging outline paints less than the clean 2 px").toBeLessThan(stagingPx.total);
++  expect(stripReds(fc1px.s).length, "FC1PX: a 1 px staging outline is caught by the thickness clause").toBeGreaterThan(stripReds(stagingPx).length);
++  expect(stripReds(fcmove.c).length, "CRIT-FCMOVE: a moved card with no outline reds all four strips").toBe(4);
++  expect(stripReds(fcmove.s).length, "CRIT-FCMOVE: a moved staging face with no outline reds all four strips").toBe(4);
+   expect(staging.on && staging.fv, "a staging face took keyboard focus").toBe(true);
+   expect(staging.style, "the staging face's outline is drawn").not.toBe("none");
+   expect(staging.width, "with width").toBeGreaterThan(0);
+@@ -1428,6 +1478,8 @@ const poseSettled = (p: Page, sel: string) =>
+ // reads it RED at `74a2b5d9` too — the chair's booked row, ledger T9-R7 (the loop's pass-5 label,
+ // re-pointed by pass6/RE-POINT.md), and a bounded tape is the owner's Arm B. The count rides as
+ // an annotation.
++/** G-LIVE-17's covering cap: a LITERAL (fitted; ballot B-TAPE-COVER proposed), never derived from the label. */
++const G17_COVER_CAP = 12;
+ test("G-LIVE-17 · the coarse tape names a cell and takes no tap (room, 390×844 coarse)", async ({
+   browser,
+ }) => {
+@@ -1520,16 +1572,16 @@ test("G-LIVE-17 · the coarse tape names a cell and takes no tap (room, 390×844
+     type: "covering (booked; bounded by the label's own length)",
+     description: `${r.cells} other cells, ${r.px2} px², label ${r.labelW} px wide, pitch ${r.pitch} px`,
+   });
+-  // THE COVERING, ASSERTED (pass 9, gap 11) — as the bound a ONE-LINE tape sets, never W2 §2.5's
+-  // covering law (that law reads RED at `74a2b5d9` and is the chair's booked T9-R7). The tape is one
+-  // line: its label is no taller than a cell, so it lies across at most two rows, and over at most
+-  // 2 × (⌈labelW / pitch⌉ + 1) cells. A tape that wraps or swells past a cell's height reds; its plant
+-  // below proves the read. (Pass 9's first cut bounded ONE row; the shipped tape straddles a row
+-  // boundary and read 6 cells against 4, both engines.)
+-  const span = (x: { labelW: number; pitch: number }) => 2 * (Math.ceil(x.labelW / Math.max(1, x.pitch)) + 1);
++  // THE COVERING, ASSERTED (pass 10, LAWS P9 §F "a bound that scales with its subject is no bound"):
++  // pass 9 bounded the cells by 2 × (⌈labelW / pitch⌉ + 1), which grows with the label it bounds, so
++  // the critic's CRIT-TAPE3X (the label ×3, 376 px) read GREEN in both engines. The bound is now a
++  // LITERAL the label cannot move: G17_COVER_CAP cells, the record's widest reading (10 cells at
++  // 131.63 px, passes 3/4) plus one row-straddle pair. It is a FITTED constant (LAWS P9 §E): it names
++  // the ballot B-TAPE-COVER (proposed; the chair names it) and is NOT W2 §2.5's covering law, which
++  // still reads RED at `74a2b5d9` and stays the chair's booked T9-R7.
+   expect(r.pitch, "the covering read found your own cell").toBeGreaterThan(0);
+   expect(r.labelH, `the tape is one line, no taller than a cell (${r.pitch} px)`).toBeLessThanOrEqual(r.pitch);
+-  expect(r.cells, `the tape covers at most two rows of its own label's length (${span(r)} cells)`).toBeLessThanOrEqual(span(r));
++  expect(r.cells, `the tape covers at most ${G17_COVER_CAP} other cells (a literal, never the label's own length)`).toBeLessThanOrEqual(G17_COVER_CAP);
+   expect(r.hitIsTape, "a tap at the label's centre reaches the cell, not the tape").toBe(false);
+   expect(r.air, "the tape and your ring share no pixel").not.toBeNull();
+   expect(r.air!, "the tape and your ring share no pixel").toBeGreaterThanOrEqual(0);
+@@ -1552,6 +1604,14 @@ test("G-LIVE-17 · the coarse tape names a cell and takes no tap (room, 390×844
+   // cover more cells than one row of its own length.
+   await b.addStyleTag({ content: ".attribution-tape .washi-label { transform: scaleY(4) !important; transform-origin: center !important; }" });
+   const tall = await read();
++  await b.evaluate(() => document.querySelector("style:last-of-type")?.remove());
++  // CRIT-TAPE3X, same run (the critic's pass-9 plant, the bound's born-RED): the label stretched to
++  // three times its run on one line must cover more than the literal cap. Under pass 9's scaling
++  // bound this read GREEN in both engines and on the control.
++  await b.addStyleTag({ content: ".attribution-tape .washi-label { transform: scaleX(3) !important; transform-origin: center !important; }" });
++  const wide3 = await read();
++  console.log(`[G-LIVE-17] CRIT-TAPE3X the label ×3 along its run: ${wide3.labelW} px, covers ${wide3.cells} cells against the cap ${G17_COVER_CAP}`);
++  expect(wide3.cells, "CRIT-TAPE3X: a tape three times its run reds the literal covering cap").toBeGreaterThan(G17_COVER_CAP);
+   console.log(`[G-LIVE-17] COVER4 the label at 4× its height: ${tall.labelH} px tall against the pitch ${tall.pitch}, covers ${tall.cells} cells`);
+   expect(tall.labelH, "the covering read can see a tape taller than a cell").toBeGreaterThan(tall.pitch);
+   await ctx.close();
+@@ -1843,16 +1903,34 @@ const docSettled = async (page: Page) => {
+     .toBe(true);
+ };
+ 
+-/** HOLD THE BEAT FOR ONE READ (pass 9). Outside `reduce` every baked pose stack on the page (the
+- *  grid, the toggle's sky, the logo, the outlines: sibling layers with `will-change: opacity`,
+- *  swapped on the boil beat) flips while a read photographs ON and OFF, and a neighbour's pose flip
+- *  between the two photographs is counted as the ring's paint (measured: the toggle's rays read 10–16
+- *  px of "depth" on one band under no-preference, B6 RED, while every band of the ring itself reads
+- *  2.4–2.5). The hold pins each stack at the pose it shows NOW, for the read only, so the two
+- *  photographs differ by focus alone; the ring's own breath is `docSettled`'s, not this. The ring
+- *  itself (the edge read, `.focus-ring`, the cell ghost) is NEVER held: a plant laid on it must
+- *  keep its force, and the read's OFF sheet must keep its own. */
++/** HOLD THE BEAT FOR ONE READ — the ONE library's hold (`e2e/lib/rest-probes.mjs`, homes v3), which
++ *  REFUSES and never pins (LAWS P9 §D, CRIT-ANC55). Outside `reduce` every baked pose stack (the grid,
++ *  the toggle's sky, the logo, the outlines: sibling layers with `will-change: opacity`, swapped on the
++ *  boil beat) flips while a read photographs ON and OFF, and a neighbour's flip between the two
++ *  photographs would count as the ring's paint. The library holds each stack at the pose it shows NOW
++ *  only when every candidate is a pose: a layer that holds a ring or a focus stop (HR1), or one at a
++ *  fractional opacity (HR2), refuses the WHOLE cell, nothing is pinned, and the row reads RED with the
++ *  refusal named. Pass 9's own copy pinned the ring's 0.55 parent to 1 and photographed a ring the user
++ *  never sees (4.188/4.379 GREEN under [no-preference], [more], [coarse]); it is struck. */
++const REST_PROBES = "./lib/rest-probes.mjs";
+ async function holdPoses(page: Page, edge: string) {
++  if (LIVE_SABOTAGE.has("hold")) return pinningHold(page, edge);
++  const rest = await instrument(REST_PROBES);
++  // `.game-card` is EXEMPT, never held: the deck's cards carry `will-change: transform, opacity` for
++  // the carousel glide, not the boil beat, and rest at their designed side-card opacities (0.78 /
++  // 0.58 measured). Held, they refused every deck read under [no-preference] (HR1/HR2, first read
++  // this pass); exempt, nothing pins them and the read sees the deck as the user does.
++  return rest.holdPoses(page, { edge, ring: ".focus-ring", exempt: [".cell-ghost", ".game-card"] }) as Promise<{
++    ok: boolean;
++    held: number;
++    refused: { el: string; why: string }[];
++    undo: () => Promise<void>;
++  }>;
++}
++
++/** Pass 9's PINNING hold, kept ONLY as the `LIVE_SABOTAGE=hold` arm (never called otherwise): it pins
++ *  every `will-change: opacity` element outside the ring to 1 or 0, the masked fallback LAWS P9 §D strikes. */
++async function pinningHold(page: Page, edge: string) {
+   const held = await page.evaluate((edge) => {
+     let n = 0;
+     for (const el of document.querySelectorAll<HTMLElement | SVGElement>("body *")) {
+@@ -1868,7 +1946,9 @@ async function holdPoses(page: Page, edge: string) {
+     content: '[data-pose-hold="on"] { opacity: 1 !important; visibility: visible !important; } [data-pose-hold="off"] { opacity: 0 !important; }',
+   });
+   return {
++    ok: true,
+     held,
++    refused: [] as { el: string; why: string }[],
+     undo: async () => {
+       await sheet.evaluate((e) => (e as HTMLElement).remove());
+       await page.evaluate(() => document.querySelectorAll("[data-pose-hold]").forEach((e) => e.removeAttribute("data-pose-hold")));
+@@ -1932,6 +2012,8 @@ const G23_HOME = [
+ const G23_SHIPPED = [...G23_HOME, "deck div.gallery-viewport", "deck button.staging-btn", "guard button.guard-btn"];
+ /** The plants' stop: one the dist ships (never the first stop that happens to read clean). */
+ const PLANT_STOP = "button.sun-moon-toggle";
++/** CRIT-ANC55's bytes, the critic's `plants/anc55.css` verbatim (no `!important`). */
++const CRIT_ANC55 = "html:has(button.sun-moon-toggle:focus-visible) :has(> svg.focus-ring) { will-change: opacity; opacity: 0.55; }";
+ /** The sibling's stop: the critic's MORE2S/COARSE2S site, later in the walk than the plant stop. */
+ const SIBLING_STOP = "button.logo-trigger";
+ 
+@@ -1955,6 +2037,8 @@ async function g23Kit(page: Page, regime: string) {
+   const read = async (subject: string, edgeSel: string, out: number, inn: number, key: string): Promise<Row> => {
+     // Under `reduce` the beat is frozen and nothing is held; outside it, the read holds the beat.
+     const hold = regime === "reduce" ? null : await holdPoses(page, edgeSel);
++    if (hold && !hold.ok)
++      return { key, red: true, why: [`B-HOLD refused (${hold.refused.map((x) => `${x.el}: ${x.why}`).join("; ")})`], bands: null };
+     try {
+       const r = await edge.fourBands(page, { subject, edge: edgeSel, out, inn });
+       return { key, red: r.red, why: r.why, bands: r.bands };
+@@ -2206,7 +2290,13 @@ async function g23Kit(page: Page, regime: string) {
+     expect(stale, "STALE: an admitted side now clears 3:1; strike its admission").toEqual([]);
+   };
+   const P = (sel: string) => edge.EDGE_PLANTS(sel) as Record<string, unknown>;
+-  return { log, chrome, tier2, judge, planted, everyStop, homeFloor, sibling, walkWhole, regimeLive, finish, P, verdict, brief };
++  /** CRIT-ANC55 (the pass-9 critic's plant, R2's born-RED, LAWS P9 §D): the ring's own parent at
++   *  opacity 0.55 with `will-change: opacity` while the plant stop holds focus. Under `reduce` the
++   *  painted ring reds on contrast; outside it the hold must REFUSE the cell (HR1: the layer holds a
++   *  ring), so the read reds by B-HOLD. Pass 9's pinning hold painted it at 1: GREEN 4.188/4.379. */
++  const anc55 = (theme: string) =>
++    planted(theme, `CRIT-ANC55 the ring's parent at 0.55 on ${PLANT_STOP}`, CRIT_ANC55, ".focus-ring", PLANT_STOP);
++  return { log, chrome, tier2, judge, planted, everyStop, homeFloor, sibling, walkWhole, regimeLive, finish, P, verdict, brief, anc55 };
+ }
+ 
+ test("G-LIVE-23 · the ring is visible on all four sides [reduce]: the whole walk, both themes, and its plants", async ({ page }) => {
+@@ -2221,6 +2311,7 @@ test("G-LIVE-23 · the ring is visible on all four sides [reduce]: the whole wal
+       : undefined);
+     await w.board(theme);
+     const clean = PLANT_STOP;
++    await k.anc55(theme);
+     const C = k.P(".focus-ring");
+     const G = k.P(T2);
+     // The confined pair (gap 5): NOTCH clips a 2 % slit through the middle of the ring, so the
+@@ -2287,6 +2378,7 @@ test("G-LIVE-23 · the ring is visible on all four sides [no-preference]: the wh
+     await w.board(theme);
+     const clean = PLANT_STOP;
+     await k.regimeLive(MQ, clean);
++    await k.anc55(theme);
+     await k.planted(theme, `NOPREF2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean);
+     await k.planted(theme, "NOPREF2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
+     if (theme === "light") {
+@@ -2317,6 +2409,7 @@ test("G-LIVE-23 · the ring is visible on all four sides [prefers-contrast: more
+     k.judge(theme, await k.tier2(40, "tier 2 on 9×9 cell 40"));
+     k.judge(theme, await k.tier2(0, "tier 2 on 9×9 cell 0"));
+     await k.regimeLive(MQ, clean);
++    await k.anc55(theme);
+     await k.planted(theme, `MORE2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean);
+     await k.planted(theme, "MORE2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
+     await k.sibling(w, theme, MQ);
+@@ -2341,6 +2434,7 @@ test.describe("G-LIVE-23 · coarse", () => {
+       k.judge(theme, await k.tier2(40, "tier 2 on 9×9 cell 40"));
+       k.judge(theme, await k.tier2(0, "tier 2 on 9×9 cell 0"));
+       await k.regimeLive(MQ, clean);
++      await k.anc55(theme);
+       await k.planted(theme, `COARSE2 on ${clean}`, G23_REGIME_PLANT(MQ), ".focus-ring", clean);
+       await k.planted(theme, "COARSE2 on tier 2", G23_REGIME_PLANT(MQ), T2, 40);
+       await k.sibling(w, theme, MQ);
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 55e814e..45632f4 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -594,6 +594,7 @@ const UNRESOLVED_SINKS = [
+       "is-peer-cursor",
+       "author-name",
+       "ghost-path",
++      "cell-frames",
+       "marks",
+       "corner-marks",
+       "center-marks",
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 0aee5de..338ef6e 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -335,6 +335,10 @@ export const INHERITED = new Map([
+     "--board-col :: games/shared/scene.css -> games/shared/DrawerTab.vue",
+     "declared on `.app-layout` below 1024px; the drawer tab lives inside that subtree",
+   ],
++  [
++    "--color-peer-cursor-ink :: games/shared/BoardHost.vue -> games/shared/gameCell.css",
++    "BoardHost binds it inline on each DigitCell root from `peerCursorInk`; gameCell.css (DigitCell's scoped sheet) reads it on that root's `.cell-ghost-path`, under `is-peer-cursor`, bound by the same predicate (T9-W7 §4, pass 10)",
++  ],
+   [
+     "--tap-floor :: App.vue -> pencil/chrome/PlayerMark/PlayerMark.vue",
+     "declared on `.page-root` (App.vue, T9-W2 §2.6); the head mark is its descendant (T9-W7 §11)",

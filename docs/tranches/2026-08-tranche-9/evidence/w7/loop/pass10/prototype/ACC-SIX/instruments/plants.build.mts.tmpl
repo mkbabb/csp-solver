@@ -1,0 +1,25 @@
+// ACC-SIX pass 10 · out-of-tree build of RIG __RIG__ with ONE in-memory plant (never banked)
+import base from '__ROOT__/vite.config.ts';
+const P = process.env.PLANT ?? 'none';
+const S = '/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/ACC-SIX';
+const LINE = 'if (m.offsetTop > v.offsetTop + v.offsetHeight / 2) emit("yielded");';
+const SEAT = 'if (props.metaYields && props.meta && props.previous) return emit("yielded");';
+const must = (o: string, c: string) => { if (o === c) throw new Error('plant missed ' + P); return o; };
+const plant = { name: 'acc6p10-plant', enforce: 'pre' as const, transform(code: string, id: string) {
+  if (P === 'none') return;
+  if (id.endsWith('/games/shared/GameBoard.vue')) {
+    if (P === 'lift4') return must(code.replace(/Math\.min\(3, (fillCounts?\.value\.(?:writable|fillable))\)/, 'Math.min(4, $1)'), code);
+    if (P === 'lift2') return must(code.replace(/Math\.min\(3, (fillCounts?\.value\.(?:writable|fillable))\)/, 'Math.min(2, $1)'), code);
+    return;
+  }
+  if (!id.endsWith('/chrome/MarginNote.vue')) return;
+  if (P === 'noseat') return must(code.replace(SEAT, ''), code);
+  if (P === 'len32') return must(code.replace(LINE, LINE + ' if (props.text && props.text.length >= 32) emit("yielded");'), code);
+  if (P === 'len35') return must(code.replace(LINE, LINE + ' if (props.text && props.text.length >= 35) emit("yielded");'), code);
+  if (P === 'overyield') return must(code.replace(LINE, 'if ((v.textContent ?? "").trim().length > 20) emit("yielded");'), code);
+  if (P.startsWith('late')) return must(code.replace(LINE, LINE.replace('emit("yielded");', `setTimeout(() => emit("yielded"), ${P.slice(4)});`)), code);
+  if (P === 'noro') return must(code.replace('yieldObserver = new ResizeObserver(readYield);', 'return;'), code);
+  if (['lift4', 'lift2'].includes(P)) return;
+  throw new Error('unknown plant ' + P);
+} };
+export default { ...base, plugins: [plant, ...(base.plugins ?? [])], cacheDir: S + '/cache/__RIG__-' + P, build: { ...(base.build ?? {}), outDir: S + '/dist/__RIG__-' + P, emptyOutDir: false } };

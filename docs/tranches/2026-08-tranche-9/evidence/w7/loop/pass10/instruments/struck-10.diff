@@ -1,0 +1,258 @@
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+index 9949b949..d25ede03 100644
+--- a/web/frontend/e2e/lib/edge-bands.d.mts
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -58,7 +58,30 @@ export interface FourBandsOptions {
+   /** homes v3 (B7): the reference width (css px) and the window every band's width / ref must lie in */
+   widthRef?: number | null;
+   widthWindow?: [number, number] | null;
++  /** a DRAWN_FRAMES name: B3 floors at the roster's pinned width × DRAWN_TOL (0.9), the source pinned
++   *  (clause `drawn`). Never passed with `thick` or `thickTol` (both refused: they throw). */
++  drawn?: DrawnFrameName | null;
++  /** the self-test's stand-in for the roster file's text */
++  drawnSource?: string | null;
+ }
++export type DrawnFrameName = "head-sheet" | "tray-well";
++export interface DrawnFrame {
++  readonly file: string;
++  readonly cls: string;
++  readonly width: number;
++  readonly sites: number;
++}
++export const DRAWN_FRAMES: Readonly<Record<DrawnFrameName, DrawnFrame>>;
++/** B3's tolerance on a roster site: a literal 0.9. */
++export const DRAWN_TOL: 0.9;
++/** The 1 px and 0.55× plants of a roster site's authored width. */
++export function DRAWN_PLANTS(edge: string, width: number): Record<string, string>;
++/** The authored reference for a roster site: its SFC's `:stroke-width` literals, and why they break the pin
++ *  (an unreadable roster file is a `why`, never a throw). */
++export function authoredStroke(
++  name: DrawnFrameName,
++  o?: { source?: string | null; fe?: string },
++): { name: DrawnFrameName; file: string; width: number; widths: (number | null)[]; why: string[] };
+ /** A plant: a CSS string, or `{ fade }` — every painted colour of the edge and its descendants at that alpha. */
+ export type EdgePlant = string | { fade: number };
+ export interface EdgeGateOptions extends FourBandsOptions {
+diff --git a/web/frontend/e2e/lib/edge-bands.mjs b/web/frontend/e2e/lib/edge-bands.mjs
+index 372e50e2..88f4ce36 100644
+--- a/web/frontend/e2e/lib/edge-bands.mjs
++++ b/web/frontend/e2e/lib/edge-bands.mjs
+@@ -29,6 +29,16 @@
+ //   ownfill (the chair, pass 9; LAWS P8 §E "the depth statistic excludes the subject's own fill tint"):
+ //       a pixel whose ON−OFF move is no more than the edge's own FILL tint explains (backgrounds, svg
+ //       fills, × 1.25 + 1 grey level) is not edge ink and adds no depth (LIVE's tier 2 counted a 0.08 fill)
++//   drawn (the chair, pass-9 ruling 7; PLR-SELF's roster, folded at pass 10 batch 0 with thickTol REFUSED):
++//       a HAND-DRAWN stroke frame is authored, not rasterised. At a site on `DRAWN_FRAMES` (and only there)
++//       B3's floor is the roster's PINNED width × 0.9 (`DRAWN_TOL`, a literal: the house 1.5 px → 1.35),
++//       never getComputedStyle; every other edge keeps 2 × 0.9 = 1.80. The roster PINS the width and the
++//       site count against the roster's own SFC (each `<HandDrawnOutline>` whose static class carries the
++//       roster's class, its `:stroke-width` literal): another width, or a dropped or added site, reds
++//       `drawn`. A caller passes `drawn: <roster name>` and never `thick` NOR `thickTol` beside it (a typed
++//       floor or tolerance is a lane-chosen parameter, LAWS P8 §E, P9 §E): `fourBands` refuses either.
++//       Every roster entry has a consumer: `--roster <name>` reads each site on a served page with its
++//       THIN_1PX and 0.55× plants (`DRAWN_PLANTS`).
+ //   B5  RELATIVE (RULE; LAWS P7 §E): with `above` (the previous ink's reading), each band's core median
+ //       ≥ above × 1.02 — the reference ink replayed through stroke-opacity / path opacity / filter
+ //       opacity() (INK_PLANTS) must red it
+@@ -48,16 +58,62 @@
+ //   node e2e/lib/edge-bands.mjs --url <u> --subject <sel> --edge <sel> [--off <css>] [--plants]
+ //        [--scheme dark] [--dpr 2] [--viewport 1280x800] [--ready <sel>] [--hover <sel>] [--click <sel>]
+ //        [--touch] [--prm 0] [--contrast more] [--above <n>] [--holes <f>] [--regimes all]
++//   node e2e/lib/edge-bands.mjs --url <u> --roster tray-well|head-sheet [--fe <the served tree's web/frontend>]
++//        (homes v3: the roster's consumer — every site under `drawn`, the pin, THIN_1PX and the 0.55× plant)
+ // Exit: 0 clean GREEN and every plant RED · 1 clean RED · 3 a plant GREEN (a hole) · 4 both.
+ import process from "node:process";
+ import { fileURLToPath } from "node:url";
+-import { resolve as resolvePath } from "node:path";
++import { resolve as resolvePath, dirname } from "node:path";
++import { readFileSync } from "node:fs";
+ import { onOff, lum, grey, ratio, median, quantile, settle, args, load, playwright, openCell, cellsOf } from "./paint-lib.mjs";
+ 
+-export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill", "B7", "inkkey"];
++export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill", "B7", "inkkey", "drawn"];
+ const OFF_CLAUSES = new Set((process.env.EDGE_SABOTAGE ?? "").split(",").filter(Boolean));
+ const on = (c) => !OFF_CLAUSES.has(c);
+ 
++// ------------------------------------------------------------------------------- the drawn roster
++/** THE ROSTER OF DRAWN FRAMES (the chair, pass-9 ruling 7): the only sites whose B3 floor is their
++ *  authored stroke. `file` is relative to the frontend; `cls` is a static class on the frame's own
++ *  `<HandDrawnOutline>`; `width` and `sites` are PINNED (the source must author exactly these). The
++ *  head sheet's one frame draws both head sheets (the @mbabb card and §11's lobby share it). */
++export const DRAWN_FRAMES = Object.freeze({
++  "head-sheet": Object.freeze({ file: "src/pencil/chrome/AttributionCard/HeadSheet.vue", cls: "head-sheet-frame", width: 1.5, sites: 1 }),
++  "tray-well": Object.freeze({ file: "src/games/shared/GameControlPanel.vue", cls: "tray-well", width: 1.5, sites: 4 }),
++});
++const FE = resolvePath(dirname(fileURLToPath(import.meta.url)), "../..");
++/** The authored reference for a roster site, read off its SFC (or `source`, the self-test's). */
++export function authoredStroke(name, { source = null, fe = FE } = {}) {
++  const f = DRAWN_FRAMES[name];
++  if (!f) throw new Error(`drawn: "${name}" is not on DRAWN_FRAMES (${Object.keys(DRAWN_FRAMES).join(", ")})`);
++  // a roster file that cannot be read is a RED reading, never a throw (LAWS P9 §F: a throwing reader is RED)
++  let text = source;
++  if (text == null)
++    try {
++      text = readFileSync(resolvePath(fe, f.file), "utf8");
++    } catch (e) {
++      return { name, file: f.file, width: f.width, widths: [], why: [`drawn ${name}: ${f.file} unreadable (${e.code ?? e})`] };
++    }
++  const classes = (a) => (a.match(/(?:^|\s)class="([^"]*)"/)?.[1] ?? "").split(/\s+/);
++  const tags = [...text.matchAll(/<HandDrawnOutline\b([^>]*)>/g)].map((m) => m[1]).filter((a) => classes(a).includes(f.cls));
++  const widths = tags.map((a) => {
++    const m = a.match(/(?:^|\s):stroke-width="([0-9.]+)"/);
++    return m ? Number(m[1]) : null;
++  });
++  const why = [];
++  if (tags.length !== f.sites) why.push(`drawn ${name}: ${tags.length} sites in ${f.file}, the roster pins ${f.sites}`);
++  widths.forEach((w, i) => {
++    if (w !== f.width) why.push(`drawn ${name}: site ${i + 1} authors stroke-width ${w}, the roster pins ${f.width}`);
++  });
++  return { name, file: f.file, width: f.width, widths, why };
++}
++/** B3's tolerance on a roster site: a LITERAL (pass-9 ruling 7's "× 0.9"), never a caller option. */
++export const DRAWN_TOL = 0.9;
++/** The drawn-edge plants every roster row ships (LAWS P8 §E): the 1 px plant and the 0.55× plant of the
++ *  authored width, both non-scaling so they paint at their css width. */
++export const DRAWN_PLANTS = (edge, width) => ({
++  THIN_1PX: `${edge}, ${edge} * { stroke-width: 1px !important; vector-effect: non-scaling-stroke !important; }`,
++  [`P055_${(0.55 * width).toFixed(3)}px`]: `${edge}, ${edge} * { stroke-width: ${(0.55 * width).toFixed(3)}px !important; vector-effect: non-scaling-stroke !important; }`,
++});
+ /** homes v3 (B7): the α50 SUB-PIXEL width of a station's coverage profile — the longest run at or above
+  *  `thr`, each crossing interpolated linearly between the two pixel centres that straddle it (G2's
+  *  `runWidth`, band-stat.mjs d2e2d620, read on |ON − OFF| so a light ink on a dark ground reads alike);
+@@ -151,8 +207,16 @@ function edgeInks({ edge, strip }) {
+ 
+ export async function fourBands(
+   page,
+-  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick = 2, thickTol = 0.9, holes = 0.02, above = null, relBand = 0.5, ink = null, inkTol = 48, widthRef = null, widthWindow = null },
++  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick: typed, thickTol: typedTol, holes = 0.02, above = null, relBand = 0.5, ink = null, inkTol = 48, widthRef = null, widthWindow = null, drawn = null, drawnSource = null },
+ ) {
++  // the drawn roster sets B3's floor from the authored reference; a typed `thick` or `thickTol` beside it
++  // is refused (pass10/CHAIR-RULINGS §10: thickTol REFUSED — `{drawn, thickTol: 0.5}` floored 1.5 at 0.75)
++  if (drawn && typed !== undefined) throw new Error(`drawn: "${drawn}" takes its floor from DRAWN_FRAMES; a typed thick (${typed}) beside it is a lane-chosen parameter`);
++  if (drawn && typedTol !== undefined) throw new Error(`drawn: "${drawn}" floors at the roster's width × ${DRAWN_TOL}; a typed thickTol (${typedTol}) beside it is a lane-chosen parameter`);
++  const ref = drawn ? authoredStroke(drawn, { source: drawnSource }) : null;
++  const thick = ref ? ref.width : (typed ?? 2);
++  const thickTol = ref ? DRAWN_TOL : (typedTol ?? 0.9);
++  const pin = ref && on("drawn") ? ref.why : [];
+   const loc = page.locator(subject).first();
+   const vis = await loc.isVisible().catch(() => false);
+   const edgeCount = await page.locator(edge).count();
+@@ -312,6 +376,7 @@ export async function fourBands(
+     if (on("B5") && above != null && band.coreMedian < above * 1.02)
+       why.push(`B5 ${side} core median ${band.coreMedian} < ${(above * 1.02).toFixed(3)} (the previous ink ${above} × 1.02)`);
+   }
++  why.push(...pin);
+   if (on("B6")) {
+     const deep = Math.max(...Object.values(bands).map((b) => b.thickness ?? 0));
+     for (const [side, b] of Object.entries(bands))
+@@ -473,6 +538,10 @@ const FIXTURE = (scheme) => {
+   <div id="f-gone" class="fx" hidden><svg class="f-gone-edge" viewBox="0 0 240 90"><rect x="1" y="1" width="238" height="88" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+   <div id="f-uneven" class="fx"><svg class="f-uneven-edge" viewBox="0 0 240 90" preserveAspectRatio="none"><path d="M0 2.5H240M237.5 0V90M0 87.5H240" stroke="${ink}" stroke-width="5" fill="none"/><path d="M1 0V90" stroke="${ink}" stroke-width="2" fill="none"/></svg></div>
+   <div id="f-fill" class="fx" style="outline: 1px solid ${ink}; background: ${scheme === "dark" ? "rgba(216,210,198,0.14)" : "rgba(59,56,51,0.14)"}"></div>
++  ${frame("f-drawn", ink, 1.5)}
++  ${frame("f-d14", ink, 1.4)}
++  ${frame("f-d13", ink, 1.3)}
++  ${frame("f-d055", ink, 0.825)}
+   <div id="f-fc" class="fx" style="background: ${scheme === "dark" ? "#e9e4d8" : "#2a2723"}; outline: 3px solid ${scheme === "dark" ? "rgb(102, 178, 255)" : "rgb(0, 90, 180)"};"></div>
+   <div id="f-flat" class="fx flat"><svg class="f-flat-edge" viewBox="0 0 240 6" preserveAspectRatio="none"><rect x="1" y="1" width="238" height="4" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+ </body></html>`;
+@@ -530,6 +599,36 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+       if (clause === "B6" && !r.why.every((w) => w.startsWith("B6"))) hole = true;
+       rows.push(`${T} ${c.subject} BORN-RED ${label} (${clause}) ${fmt(r)}${label.startsWith("DASHED") ? ` ← STATION-8 reads ${r.station8}` : ""}`);
+     }
++    // DRAWN (the chair, pass-9 ruling 7): the roster's floor at the authored 1.5 → 1.35, its bound
++    // read at ±ε (1.40 GREEN by 0.05, 1.30 RED by 0.05), the 1 px and the 0.55× (0.825 px) plants,
++    // the law's 1.80 on the same frame off the roster, and the pin (a source authoring 1.4)
++    const SRC = (w) => `<HandDrawnOutline\n  class="head-sheet-frame"\n  :stroke-width="${w}"\n/>`;
++    for (const [label, c, want, clause] of [
++      ["drawn 1.5 px at its authored floor", { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "GREEN"],
++      ["drawn 1.5 px OFF the roster (the law's 1.80)", { subject: "#f-drawn", edge: ".f-drawn-edge" }, "RED", "B3"],
++      ["drawn 1.40 px (bound + ε)", { subject: "#f-d14", edge: ".f-d14-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "GREEN"],
++      ["drawn 1.30 px (bound − ε)", { subject: "#f-d13", edge: ".f-d13-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn 1 px", { subject: "#f-thin", edge: ".f-thin-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn 0.55× (0.825 px)", { subject: "#f-d055", edge: ".f-d055-edge", drawn: "head-sheet", drawnSource: SRC(1.5) }, "RED", "B3"],
++      ["drawn PIN: the source authors 1.4", { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.4) }, "RED", "drawn"],
++    ]) {
++      const r = await fourBands(page, c);
++      const d = Object.values(r.bands ?? {}).map((b) => b.thickness);
++      const margin = d.length ? (Math.min(...d) - (c.drawn ? 1.5 : 2) * 0.9).toFixed(3) : "n/a";
++      const ok = want === "GREEN" ? !r.red : r.red && r.why.some((w) => w.startsWith(clause));
++      if (!ok && want === "GREEN") cleanRed = true;
++      if (!ok && want !== "GREEN") hole = true;
++      rows.push(`${T} ${c.subject} DRAWN ${label} want ${want}${clause ? " (" + clause + ")" : ""} · min depth ${Math.min(...d)} margin ${margin} ${fmt(r)}${ok ? "" : " ← WRONG"}`);
++    }
++    // the typed floor beside the roster is refused (a lane-chosen parameter)
++    const refused = await fourBands(page, { subject: "#f-drawn", edge: ".f-drawn-edge", drawn: "head-sheet", drawnSource: SRC(1.5), thick: 1.5 }).then(() => false, () => true);
++    if (!refused) hole = true;
++    rows.push(`${T} #f-drawn DRAWN a typed thick beside the roster → ${refused ? "REFUSED" : "ACCEPTED ← a hole"}`);
++    // pass10/CHAIR-RULINGS §10 (thickTol REFUSED): the critic's born-RED `{ drawn, thickTol: 0.5 }` floored the
++    // 1.5 px frame at 0.75 and a 1 px frame cleared it; the pair is refused like a typed thick
++    const refusedTol = await fourBands(page, { subject: "#f-thin", edge: ".f-thin-edge", drawn: "head-sheet", drawnSource: SRC(1.5), thickTol: 0.5 }).then(() => false, () => true);
++    if (!refusedTol) hole = true;
++    rows.push(`${T} #f-thin DRAWN a typed thickTol 0.5 beside the roster → ${refusedTol ? "REFUSED" : "ACCEPTED ← a hole (the 1 px frame clears 0.75)"}`);
+     // the LEGACY FADE15 (the edge root's `stroke` only): the path's own stroke attribute keeps its ink
+     const legacy = await fourBands(page, { subject: "#f-frame", edge: ".f-frame-edge" }).then(async () => {
+       const t = await page.addStyleTag({ content: `.f-frame-edge { color: color-mix(in srgb, currentColor 15%, transparent) !important; stroke: color-mix(in srgb, currentColor 15%, transparent) !important; }` });
+@@ -612,12 +711,51 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolvePath(process.ar
+     process.exit(exit);
+   }
+   const browser = await playwright()[engine].launch();
++  try {
+   if (A["self-test"]) {
+     for (const dpr of (A.dprs ?? "1,2").split(",").map(Number)) {
+       const r = await selfTest(browser, { dpr });
+       for (const row of r.rows) console.log(`${engine} ${row}`);
+       exit = Math.max(exit, r.exit);
+     }
++  } else if (A.roster) {
++    // homes v3 · THE ROSTER'S CONSUMER (pass10/CHAIR-RULINGS §10: the tray-well consumer): every painted site
++    // of the named entry read on the served page under `drawn` (the roster's pinned floor), with the source
++    // pin read on `--fe` (the served tree's own frontend), the site count, THIN_1PX and the 0.55× plant
++    const f = DRAWN_FRAMES[A.roster];
++    if (!f) throw new Error(`--roster ${A.roster}: not on DRAWN_FRAMES`);
++    const ref = authoredStroke(A.roster, A.fe ? { fe: resolvePath(A.fe) } : {});
++    let cleanRed = ref.why.length > 0,
++      hole = false;
++    for (const cell of cellsOf(A)) {
++      const { ctx, page } = await openCell(browser, cell);
++      try {
++        await page.goto(A.url);
++        await page.locator(A.ready ?? ".board-cells").first().waitFor({ timeout: 30000 });
++        await page.evaluate(() => document.fonts.ready);
++        await page.waitForFunction(() => document.getAnimations().every((a) => a.playState !== "running" || a.effect?.getTiming().iterations === Infinity), null, { timeout: 8000 }).catch(() => {});
++        await settle(page);
++        const tag = `${engine} ${cell.label} ${cell.width}x${cell.height} dpr${cell.dpr}`;
++        const n = await page.locator(`.${f.cls}`).count();
++        console.log(`EDGE ROSTER ${tag} ${A.roster}: ${n} painted sites (the roster pins ${f.sites}) · source ${ref.file} widths ${ref.widths.join(",")} → pin ${ref.why.length ? "RED " + ref.why.join("; ") : "holds"}`);
++        if (n !== f.sites) cleanRed = true;
++        for (let i = 0; i < n; i++) {
++          await page.evaluate(({ cls, i }) => document.querySelectorAll(`.${cls}`)[i].setAttribute("data-roster-site", String(i)), { cls: f.cls, i });
++          const subject = `[data-roster-site="${i}"]`;
++          const edge = `${subject} > .outline-svg`;
++          const g = await edgeGate(page, { subject, edge, drawn: A.roster, plants: DRAWN_PLANTS(edge, f.width) });
++          if (g.clean.red) cleanRed = true;
++          console.log(`EDGE ROSTER ${tag} ${A.roster} site ${i + 1}/${n} [edge ${g.clean.edgeCount}] CLEAN (floor ${f.width} × ${DRAWN_TOL} = ${(f.width * DRAWN_TOL).toFixed(2)}) ${fmt(g.clean)}`);
++          for (const [k, r] of Object.entries(g.plants)) {
++            if (!r.red && !r.noop) hole = true;
++            console.log(`EDGE ROSTER ${tag} ${A.roster} site ${i + 1}/${n} PLANT ${k} ${fmt(r)}`);
++          }
++        }
++      } finally {
++        await ctx.close();
++      }
++    }
++    exit = cleanRed ? (hole ? 4 : 1) : hole ? 3 : 0;
+   } else {
+     let cleanRed = false,
+       hole = false;
+@@ -649,7 +787,9 @@ if (process.argv[1] && fileURLToPath(import.meta.url) === resolvePath(process.ar
+     }
+     exit = cleanRed ? (hole ? 4 : 1) : hole ? 3 : 0;
+   }
++  } finally {
++    await browser.close();
++  }
+   console.log(`LOAD ${load()}`);
+-  await browser.close();
+   process.exit(exit);
+ }

@@ -1,0 +1,11 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (sabA)
+@@ -727,7 +727,7 @@
+       );
+       clock += Math.min(dt, cap);
+       held = dt > cap;
+-      first = false;
++      // SAB: first never cleared
+       prev = t;
+       if (clock < o.durationMs)
+         return o.onProgress(o.easing(clock / o.durationMs), origin + t);

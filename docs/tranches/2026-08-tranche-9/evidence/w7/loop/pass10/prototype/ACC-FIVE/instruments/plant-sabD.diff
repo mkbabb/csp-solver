@@ -1,0 +1,11 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (sabD)
+@@ -723,7 +723,7 @@
+       const dt = Math.max(0, t - prev);
+       const cap = Math.max(
+         MOTION.hand.stepMs,
+-        panelFrameMs(dt, origin + t, first, held),
++        panelFrameMs(dt, origin + t, first, false),
+       );
+       clock += Math.min(dt, cap);
+       held = dt > cap;

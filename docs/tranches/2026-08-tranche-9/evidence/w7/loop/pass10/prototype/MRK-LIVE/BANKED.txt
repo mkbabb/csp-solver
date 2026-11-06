@@ -1,0 +1,23 @@
+MRK-LIVE · pass 10 · BANKED 2026-11-04 11:46
+cut through temporary indexes (GIT_INDEX_FILE: read-tree / add -A / write-tree / diff --binary); no commit, no ref moved
+
+pass10.diff · sha1 932d9564f4e3833d3d494805b3cd0f79f9bc2419 · 237216 B · 23 files · 23 files changed, 3432 insertions(+), 179 deletions(-)
+  base: 74a2b5d9 + homes.diff (07257854, homes v3) = tree ac862f1e (declared); the 13 home paths stripped; work tree temp-index tree 3500b259c9232e8f194ff3f8447d5d7fc69b21cc
+  route: 74a2b5d9 + homes.diff (07257854) + pass10.diff
+  the whole lane on bare 74a2b5d9 (homes included, for the base check only, not banked):  36 files changed, 15125 insertions(+), 180 deletions(-)
+pass10.delta.on-WAVE.diff · sha1 b21fafb3e885be62db2be0712b9191a3bac6fc40 · 25340 B · 3 files changed, 127 insertions(+), 28 deletions(-)
+  base: 954bbbab (74a2b5d9 + pass9/integrate/WAVE.diff) + homes.on-WAVE.diff (0723d508) (declared); archive trees 19044c33 -> b0ef106e; the section's integrated tree IS the WAVE
+  paths: web/frontend/e2e/focus-ring.spec.ts web/frontend/scripts/check-font-coverage.mjs web/frontend/scripts/check-theme-tokens.mjs 
+
+apply --check (exits read bare; $S = the lane's durable scratch root, each base a git-inited archive):
+  whole-on-74a2b5d9: exit 0 · gitdir $S/base/.git · 36 paths 
+  pass10-on-74a2b5d9+homes3: exit 0 · gitdir $S/baseh3/.git · 23 paths 
+  pass10-on-74a2b5d9-bare: exit 0 · gitdir $S/base/.git · 23 paths 
+  delta-on-954bbbab+homes3: exit 0 · gitdir $S/waveh3/.git · 3 paths 
+  delta-on-954bbbab-bare: exit 0 · gitdir $S/wave/.git · 3 paths 
+
+leak grep (scratchpad, /private/tmp, /tmp/, .claude/t9-scratch): pass10.diff 0 · delta 0; +++ to a dot-path: 0 / 0
+home paths in the bank: 0 (pass10.diff) · 0 (delta)
+round trip (applied for real on fresh copies of the two bases): pass10.diff on 74a2b5d9 + homes v3 -> src/ e2e/ scripts/ equal the work tree (diff -rq 0, 0, 0; gitdir $S/rt-base/.git); the delta on 954bbbab + homes v3 -> equal the lane's WAVE copy (0, 0, 0; gitdir $S/rt-wave/.git)
+the pass-10 step over the pass-9 bank: e2e/focus-ring.spec.ts only (pass 9's spec -> sha1 1a0255c4: +111 / -27); no src/ byte moved this pass
+lint:sleep on the bank: tree 0 · the WAVE copy 1 = the WAVE's own three (count-yield:302, note-reserve:305/:357), 0 in focus-ring.spec.ts

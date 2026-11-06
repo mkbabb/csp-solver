@@ -1,0 +1,34 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-47 (HEAD 74a2b5d9; never committed)
+lane NOTE-ERASE · pass 10 · batch 1 · cut through temporary indexes (GIT_INDEX_FILE), product paths only, --binary, no commit
+
+open state: the work tree through a temporary index read tree 8c4f72ab, diff sha1 fd3173ab537fac7268b24496ece07d42403f3b4c, 573234 B, 32 files +11990/-94: byte-equal (cmp) to pass9/prototype/NOTE-ERASE/pass9.diff; agrees with the pass-9 BANKED.txt on every field
+homes v3 by sha: homes.on-WAVE.diff 0723d5085bb55d245158723f8d6a854a2526044f applied --3way on the work tree (git dir .git/worktrees/wf_f72f3b5a-83a-47, 10 paths, exit 0); the 13 home paths then blob-equal 74a2b5d9 + homes.diff 07257854047e9345962d11473df3fab75a42a9c2 (tree ac862f1e): residual home edits 0
+
+pass10.diff
+declared base 74a2b5d9317e7795cee6bf63e861bd44f54ae80e; it RUNS on 74a2b5d9 + homes.diff 07257854 by sha (the 13 home paths are NOT carried, LAWS P9 §A)
+the work tree's index tree (tree + homes v3) 9e4e8ec51259c90926dd70f2b19fcecd3e663464
+bytes 145035
+sha1 a32d9c2a38fa7aabe4e75aaaa1c0eaebc0d0948a
+shortstat 19 files changed, 2360 insertions(+), 93 deletions(-)   (= the lane's own path list: 32 product paths at open minus the 13 home paths)
+stray non-product paths 0 (.erase10/ and .erase10-build.mts, the never-banked scratch configs, stripped)
+interdiff over the pass-9 bank, homes excluded: 4 files, +200/-22
+  e2e/affordances.spec.ts +83/-10 · scripts/check-theme-tokens.mjs +35/-1 · src/pencil/chrome/MarginNote.vue +20/-6 · src/pencil/chrome/marginNote.motion.test.ts +62/-5
+git apply --check on 74a2b5d9 (git archive copy b0, own .git): exit 0, 19 paths
+git apply --check on 74a2b5d9 + homes.diff (temporary index in b0's repo, base+homes tree 7e0d4236): exit 0, 19 paths; applied -> tree f3eddf71 (archive tree; the work tree's index tree is 9e4e8ec5: an archive drops gitignored tracked files, as the instruments README declares)
+git apply --check on the WAVE + homes v3 (waveh): exit 1 (expected: pass10.diff is base-cut; the WAVE route is the delta below)
+
+pass10.delta.on-WAVE.diff
+declared base: the WAVE union 954bbbab (74a2b5d9 + pass9/integrate/WAVE.diff b3725e4f) + homes v3's on-WAVE copy 0723d508 = archive tree 72b7ad67 (the chair's CHAIR-FOLD.md route tree, rebuilt in the copy's own repo)
+result tree a0be129a (u10f)
+bytes 30247
+sha1 d2a2752c502c7a2a51735cb79f6a4ed901866ca8
+shortstat 4 files changed, 302 insertions(+), 35 deletions(-)
+  e2e/affordances.spec.ts · scripts/check-theme-tokens.mjs · src/pencil/chrome/MarginNote.vue · src/pencil/chrome/marginNote.motion.test.ts
+git apply --check on WAVE + homes v3 (waveh, own .git, tree 72b7ad67): exit 0, 4 paths
+git apply --check on s13-s7-s3 2f11714f + homes v3 (s13h, own .git): exit 0, 4 paths
+git apply --check on the bare WAVE (temporary index in waveh's repo, tree 044284b5): exit 0
+git apply --check on the bare s13-s7-s3 (temporary index in s13h's repo, tree e33d791d): exit 0
+stacked route: none. The delta rides no sibling's bank. LEDGER takes this fence by sha (charter: batch 1, ERASE first).
+
+grep both banks for 'scratchpad', '/private/tmp', '/tmp/', '.claude/t9-scratch': 0 hits each; dot-directory paths on +++ lines: 0 each
+no commit, no stash, no push, no ref update; no git on main or in the control tree

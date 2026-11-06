@@ -1,0 +1,43 @@
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -125,6 +125,8 @@
+   "literal-nothrow":
+     "WALK · a colour-function call with non-literal channels is no literal, never a throw",
+   "import-chain": "WALK · @import chains followed wherever they lead",
++  "raw-import": "TIN N27 · a `?raw`/`?inline` import is a text source, whatever its extension",
++  "style-src": "TIN N29 · an SFC `<style src>` is a sheet, wherever it sits",
+   "collect-walk": "LADDER · index.html and public/** walked",
+   longhand: "LADDER · a longhand answers for its shorthand",
+   "logical-sides":
+@@ -305,17 +307,29 @@
+             .join("\n")
+         : rd(f);
+       for (const m of stripJs(code).matchAll(
+-        /(?:\bimport\s*(?:[\w${}\s,*]+?\s*from\s*)?|\bexport\s*[\w${}\s,*]*?\s*from\s*|\bimport\s*\(\s*)(["'])(\.{1,2}\/[^"'?]+)(?:\?[^"']*)?\1/g,
++        /(?:\bimport\s*(?:[\w${}\s,*]+?\s*from\s*)?|\bexport\s*[\w${}\s,*]*?\s*from\s*|\bimport\s*\(\s*)(["'])(\.{1,2}\/[^"'?]+)(\?[^"']*)?\1/g,
+       )) {
+         const base = resolvePath(dirname(f), m[2]);
+         const p = [base, `${base}.ts`, `${base}.js`, `${base}/index.ts`].find((x) =>
+           ex(x),
+         );
+-        if (p && !seen.has(p) && (isCss(p) || /\.(vue|ts|tsx|js|mjs)$/.test(p))) {
++        // TIN N27 (raw-import): a `?raw` import is TEXT the code may inject as a sheet (`<style>`,
++        // `replaceSync`), whatever its extension — a source, read as text
++        const raw = on("raw-import") && /^\?(?:raw|inline)\b/.test(m[3] ?? "");
++        if (p && !seen.has(p) && (raw || isCss(p) || /\.(vue|ts|tsx|js|mjs)$/.test(p))) {
+           seen.add(p);
+           out.push(p);
+         }
+       }
++      // TIN N29 (style-src): an SFC's `<style src="…">` is a sheet the build compiles, wherever it sits
++      if (on("style-src") && f.endsWith(".vue"))
++        for (const m of rd(f).matchAll(/<style\b[^>]*?\bsrc\s*=\s*(["'])(\.{1,2}\/[^"']+)\1/g)) {
++          const p = resolvePath(dirname(f), m[2]);
++          if (!seen.has(p) && ex(p)) {
++            seen.add(p);
++            out.push(p);
++          }
++        }
+       continue;
+     }
+     if (!isCss(f) && !f.endsWith(".vue")) continue;

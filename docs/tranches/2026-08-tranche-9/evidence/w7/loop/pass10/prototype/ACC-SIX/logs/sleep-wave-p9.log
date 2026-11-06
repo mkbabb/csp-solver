@@ -1,0 +1,10 @@
+SLEEP LINT — 54 specs · 103 waitForTimeout sites in 30 files · 9 fixed in-page sampling windows · 4 cited exemptions · 7 sleep-ok tags
+
+3 failure(s):
+
+  • count-yield.spec.ts:302 — a fixed 500ms sleep sits inside `across()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:305 — a fixed 1600ms sleep sits inside `speak()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:357 — a fixed 1200ms sleep sits inside `openCell()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+

@@ -1,0 +1,84 @@
+
+Running 2 tests using 1 worker
+
+LIFE 1280x800 fine: THREE · cell 84 · written 4 · rest - · press1 - · press2 1 of 170 on the board · laid 1 of 170 on the board · press3 1 of 170 on the board · press4 2 of 170 on the board · press5 2 of 170 on the board · press6 3 of 170 on the board · rested 3 of 170 on the board · after1 3 of 170 on the board · after2 4 of 170 on the board
+  ✘  1 [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 1280x800 fine (3.3s)
+LIFE 844x390 coarse: THREE · cell 84 · written 4 · rest - · press1 - · press2 1 of 170 on the board · laid 1 of 170 on the board · press3 1 of 170 on the board · press4 2 of 170 on the board · press5 2 of 170 on the board · press6 3 of 170 on the board · rested 3 of 170 on the board · after1 3 of 170 on the board · after2 4 of 170 on the board
+  ✘  2 [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 844x390 coarse (3.1s)
+
+
+  1) [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 1280x800 fine 
+
+    Error: LIFE: the lesson ends inside the run
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   -1
+
+      511 |     const laidAt = seq.findIndex(([k]) => k === "laid");
+      512 |     const gone = seq.findIndex(([, p], i) => i > laidAt && p.meta === null);
+    > 513 |     expect.soft(gone, "LIFE: the lesson ends inside the run").toBeGreaterThan(0);
+          |                                                               ^
+      514 |     for (const [k, p] of seq.slice(gone > 0 ? gone : seq.length))
+      515 |       expect.soft(p.meta, `LIFE: once gone the count never comes back (${k})`).toBe(null);
+      516 |     if (seat) {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:513:63
+
+    Error: THREE: after the third write's rest the lesson lifts
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "3 of 170 on the board"
+
+      522 |       for (const [k, p] of seq)
+      523 |         if (/^press\d+$/.test(k) && p.meta !== null) expect.soft(p.meta, `THREE: the count follows the board (${k})`).toMatch(/^[123] of 170 on the board$/);
+    > 524 |       expect.soft(P.rested.meta, "THREE: after the third write's rest the lesson lifts").toBe(null);
+          |                                                                                          ^
+      525 |     }
+      526 |   });
+      527 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:524:90
+
+    Error Context: ../../../../t9-scratch/work/pass10/ACC-SIX/pw/pl-life-tree-lift4-chromium/e2e-count-yield-LIFE-the-c-e7767--comes-back-·-1280x800-fine-chromium/error-context.md
+
+  2) [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 844x390 coarse 
+
+    Error: LIFE: the lesson ends inside the run
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 0
+    Received:   -1
+
+      511 |     const laidAt = seq.findIndex(([k]) => k === "laid");
+      512 |     const gone = seq.findIndex(([, p], i) => i > laidAt && p.meta === null);
+    > 513 |     expect.soft(gone, "LIFE: the lesson ends inside the run").toBeGreaterThan(0);
+          |                                                               ^
+      514 |     for (const [k, p] of seq.slice(gone > 0 ? gone : seq.length))
+      515 |       expect.soft(p.meta, `LIFE: once gone the count never comes back (${k})`).toBe(null);
+      516 |     if (seat) {
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:513:63
+
+    Error: THREE: after the third write's rest the lesson lifts
+
+    expect(received).toBe(expected) // Object.is equality
+
+    Expected: null
+    Received: "3 of 170 on the board"
+
+      522 |       for (const [k, p] of seq)
+      523 |         if (/^press\d+$/.test(k) && p.meta !== null) expect.soft(p.meta, `THREE: the count follows the board (${k})`).toMatch(/^[123] of 170 on the board$/);
+    > 524 |       expect.soft(P.rested.meta, "THREE: after the third write's rest the lesson lifts").toBe(null);
+          |                                                                                          ^
+      525 |     }
+      526 |   });
+      527 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-45/web/frontend/e2e/count-yield.spec.ts:524:90
+
+    Error Context: ../../../../t9-scratch/work/pass10/ACC-SIX/pw/pl-life-tree-lift4-chromium/e2e-count-yield-LIFE-the-c-dbf3f-comes-back-·-844x390-coarse-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 1280x800 fine 
+    [chromium] › e2e/count-yield.spec.ts:473:3 › LIFE: the count lives until the seat ends the lesson, and never comes back · 844x390 coarse 

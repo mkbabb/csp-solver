@@ -1,0 +1,2302 @@
+diff --git a/web/frontend/e2e/lib/edge-bands.d.mts b/web/frontend/e2e/lib/edge-bands.d.mts
+index 9da8c478..9949b949 100644
+--- a/web/frontend/e2e/lib/edge-bands.d.mts
++++ b/web/frontend/e2e/lib/edge-bands.d.mts
+@@ -2,7 +2,7 @@
+ // imports it under `typecheck:e2e` (strict, no `allowJs`). No behaviour lives here; every export is typed
+ // with its option names (LAWS P8 §I: never `[k: string]: unknown`). The pass-8 hand-rolled copies
+ // (PLR-SELF's `BandsRead`/`EdgePlant`, CTRL-FACE's `FourBands`/`FourBandsOptions`) are folded in by name.
+-// NOT-A-LANE: the chair's home (T9-W7 pass 9, homes v2).
++// NOT-A-LANE: the chair's home (T9-W7 pass 9, homes v2; pass 10, homes v3).
+ import type { Browser, Page } from "@playwright/test";
+ 
+ export type Side = "top" | "right" | "bottom" | "left";
+@@ -16,6 +16,8 @@ export interface Band {
+   longestHole: number;
+   /** B3's painted depth, css px (the subject's own fill tint excluded: ownfill) */
+   thickness: number;
++  /** homes v3 (B7): the band's α50 sub-pixel width, css px (median over its stations) */
++  width?: number;
+   ink: "computed" | "p99";
+   station8?: { median: number; dropped: number; n: number };
+   pose?: string;
+@@ -50,6 +52,12 @@ export interface FourBandsOptions {
+   above?: number | null;
+   /** B6: each band's depth ≥ relBand × the deepest band's (default 0.5) */
+   relBand?: number;
++  /** homes v3 (inkkey): only pixels painting within `inkTol` (RGB distance, default 48) of this ink count */
++  ink?: [number, number, number] | string | null;
++  inkTol?: number;
++  /** homes v3 (B7): the reference width (css px) and the window every band's width / ref must lie in */
++  widthRef?: number | null;
++  widthWindow?: [number, number] | null;
+ }
+ /** A plant: a CSS string, or `{ fade }` — every painted colour of the edge and its descendants at that alpha. */
+ export type EdgePlant = string | { fade: number };
+@@ -75,4 +83,8 @@ export function INK_PLANTS(edge: string, a?: number): Record<string, EdgePlant>;
+ export function applyEdgePlant(page: Page, edge: string, plant: EdgePlant): Promise<() => Promise<void>>;
+ export function edgeGate(page: Page, o: EdgeGateOptions): Promise<{ clean: FourBands; plants: Record<string, FourBands> }>;
+ export function fmt(r: FourBands): string;
++/** homes v3 (B7): the α50 sub-pixel width of a coverage profile (device px). */
++export function alphaWidth(prof: ArrayLike<number>, thr: number): number;
++/** homes v3 (inkkey): an ink as [r, g, b]; a system colour is resolved by the page. */
++export function inkOf(page: Page, ink: [number, number, number] | string): Promise<[number, number, number] | null>;
+ export function selfTest(browser: Browser, o?: { dpr?: number }): Promise<{ rows: string[]; exit: number }>;
+diff --git a/web/frontend/e2e/lib/edge-bands.mjs b/web/frontend/e2e/lib/edge-bands.mjs
+index 77d5f5c5..372e50e2 100644
+--- a/web/frontend/e2e/lib/edge-bands.mjs
++++ b/web/frontend/e2e/lib/edge-bands.mjs
+@@ -32,6 +32,15 @@
+ //   B5  RELATIVE (RULE; LAWS P7 §E): with `above` (the previous ink's reading), each band's core median
+ //       ≥ above × 1.02 — the reference ink replayed through stroke-opacity / path opacity / filter
+ //       opacity() (INK_PLANTS) must red it
++//   B7  BAND STATISTIC (homes v3; ACC-GRAPHITE's G2 at its class, the four-band read): each band's α50
++//       SUB-PIXEL width (the run of a station's ON−OFF coverage at ≥ half the strip's own p99 move, both
++//       crossings interpolated — G2's one definition, numerator and denominator alike), median over the
++//       band; with `widthRef` (the reference read's width, css px) and `widthWindow` [lo, hi], every
++//       band's width / widthRef must lie inside it. X6 (a ring clipped to its middle: no left or right
++//       side) and the half-clip (a ring clipped to half its stroke) red it on the bands they thin.
++//   inkkey (homes v3; MRK-LIVE's critic CRIT-FCMOVE): with `ink` (a colour, or `"Highlight"` resolved in
++//       the page), a pixel counts only where the ON photo paints within `inkTol` of that ink — a card that
++//       MOVES on focus while its outline is clipped to nothing changes pixels, never the outline's ink
+ // The legacy TOP-ONLY and STATION-8 (max-pool of eight stations) readings print beside, so the hole each
+ // left is visible. `EDGE_SABOTAGE=B2,B3,…` switches clauses off (the clause-sabotage battery).
+ //   node e2e/lib/edge-bands.mjs --self-test [--engine chromium|webkit] [--dprs 1,2]
+@@ -45,10 +54,47 @@ import { fileURLToPath } from "node:url";
+ import { resolve as resolvePath } from "node:path";
+ import { onOff, lum, grey, ratio, median, quantile, settle, args, load, playwright, openCell, cellsOf } from "./paint-lib.mjs";
+ 
+-export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill"];
++export const EDGE_CLAUSES = ["B0", "B1", "B2", "B3", "B4", "B5", "B6", "ownfill", "B7", "inkkey"];
+ const OFF_CLAUSES = new Set((process.env.EDGE_SABOTAGE ?? "").split(",").filter(Boolean));
+ const on = (c) => !OFF_CLAUSES.has(c);
+ 
++/** homes v3 (B7): the α50 SUB-PIXEL width of a station's coverage profile — the longest run at or above
++ *  `thr`, each crossing interpolated linearly between the two pixel centres that straddle it (G2's
++ *  `runWidth`, band-stat.mjs d2e2d620, read on |ON − OFF| so a light ink on a dark ground reads alike);
++ *  a run touching the strip's end takes the end. Device px. */
++export function alphaWidth(prof, thr) {
++  if (!(thr > 0)) return 0;
++  let best = 0;
++  for (let a = 0; a < prof.length; a++) {
++    if (prof[a] < thr) continue;
++    let e = a;
++    while (e + 1 < prof.length && prof[e + 1] >= thr) e++;
++    const xs = a > 0 ? a - 0.5 + (thr - prof[a - 1]) / (prof[a] - prof[a - 1]) : 0;
++    const xt = e + 1 < prof.length ? e + 0.5 + (prof[e] - thr) / (prof[e] - prof[e + 1]) : prof.length;
++    best = Math.max(best, xt - xs);
++    a = e;
++  }
++  return best;
++}
++/** homes v3 (inkkey): an ink as [r, g, b] 0–255 — an array, `#rrggbb`, `rgb(…)`, or a system colour
++ *  (`Highlight`, `CanvasText`) resolved by the page under its own forced-colours regime. */
++export async function inkOf(page, ink) {
++  if (Array.isArray(ink)) return ink.slice(0, 3);
++  const hex = /^#([0-9a-f]{2})([0-9a-f]{2})([0-9a-f]{2})$/i.exec(String(ink));
++  if (hex) return [1, 2, 3].map((k) => parseInt(hex[k], 16));
++  const css = /^rgba?\(/i.test(String(ink))
++    ? String(ink)
++    : await page.evaluate((c) => {
++        const el = document.createElement("i");
++        el.style.color = c;
++        document.body.append(el);
++        const v = getComputedStyle(el).color;
++        el.remove();
++        return v;
++      }, String(ink));
++  const m = String(css).match(/[\d.]+/g);
++  return m ? m.slice(0, 3).map(Number) : null;
++}
+ /** Page-side: the painted inks of the edge elements (and descendants) whose box meets `strip`. */
+ function edgeInks({ edge, strip }) {
+   const cv = document.createElement("canvas").getContext("2d");
+@@ -105,7 +151,7 @@ function edgeInks({ edge, strip }) {
+ 
+ export async function fourBands(
+   page,
+-  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick = 2, thickTol = 0.9, holes = 0.02, above = null, relBand = 0.5 },
++  { subject, edge, off = null, out = 8, inn = 8, span = [0.1, 0.9], floor = 3.0, thick = 2, thickTol = 0.9, holes = 0.02, above = null, relBand = 0.5, ink = null, inkTol = 48, widthRef = null, widthWindow = null },
+ ) {
+   const loc = page.locator(subject).first();
+   const vis = await loc.isVisible().catch(() => false);
+@@ -131,6 +177,10 @@ export async function fourBands(
+           ? { x: b.x - out, y: b.y, width: out + inn, height: Math.min(b.height, vw.height) }
+           : { x: b.x + b.width - inn, y: b.y, width: out + inn, height: Math.min(b.height, vw.height) };
+   const offCss = off ?? `${edge}, ${edge} * { visibility: hidden !important; }`;
++  // inkkey: the ink a pixel must paint to count (a system colour is resolved by the page itself)
++  const inkRGB = ink != null && on("inkkey") ? await inkOf(page, ink) : null;
++  const isInk = (D, i) =>
++    !inkRGB || Math.hypot(D[i] - inkRGB[0], D[i + 1] - inkRGB[1], D[i + 2] - inkRGB[2]) <= inkTol;
+   const bands = {};
+   const why = [];
+   let b0 = null;
+@@ -169,19 +219,24 @@ export async function fourBands(
+       s1 = Math.ceil(len * span[1]);
+     const deltas = [];
+     for (let i = 0; i < ON.data.length; i += 3) {
++      if (!isInk(ON.data, i)) continue;
+       const d = Math.abs(grey(ON.data, i) - grey(OFF.data, i));
+       if (d >= 2) deltas.push(d);
+     }
+     const p99 = quantile(deltas, 0.99);
+     const st = [],
+-      th = [];
++      th = [],
++      wd = [];
+     for (let s = s0; s < s1; s++) {
+       let best = 1,
+         cov = 0;
++      const prof = new Float64Array(depth);
+       for (let d = 0; d < depth; d++) {
+         const x = horiz ? s : d,
+           y = horiz ? d : s;
+         const i = (y * ON.w + x) * 3;
++        if (!isInk(ON.data, i)) continue;
++        prof[d] = Math.abs(grey(ON.data, i) - grey(OFF.data, i));
+         const r = ratio(lum(ON.data, i), lum(OFF.data, i));
+         if (r > best) best = r;
+         const gOff = grey(OFF.data, i);
+@@ -198,6 +253,7 @@ export async function fourBands(
+       }
+       st.push(best);
+       th.push(cov / dpr);
++      wd.push(alphaWidth(prof, 0.5 * p99) / dpr);
+     }
+     // the hole runs (dropped stations) and the STATION-8 legacy (max-pool of eight)
+     const drop = st.map((v) => v <= 1.05);
+@@ -222,6 +278,7 @@ export async function fourBands(
+       holeRuns: runs,
+       longestHole: longest,
+       thickness: +median(th).toFixed(2),
++      width: +median(wd).toFixed(3),
+       ink: inks.length ? "computed" : "p99",
+       station8: { median: +median(pooled).toFixed(3), dropped: pooled.filter((v) => v <= 1.05).length, n: pooled.length },
+       pose: block,
+@@ -261,6 +318,14 @@ export async function fourBands(
+       if (b.stations >= 8 * dpr && b.thickness < relBand * deep)
+         why.push(`B6 ${side} painted depth ${b.thickness} < ${relBand} × the deepest band ${deep} (= ${(relBand * deep).toFixed(2)})`);
+   }
++  if (on("B7") && widthRef != null && widthWindow) {
++    const [lo, hi] = widthWindow;
++    for (const [side, b] of Object.entries(bands)) {
++      const q = (b.width ?? 0) / widthRef;
++      if (!(q >= lo && q <= hi))
++        why.push(`B7 ${side} α50 width ${b.width ?? 0} / ref ${widthRef} = ${q.toFixed(3)} outside [${lo}, ${hi}]`);
++    }
++  }
+   return {
+     red: why.length > 0,
+     why,
+@@ -310,7 +375,11 @@ export const INK_PLANTS = (edge, a = 0.81) => ({
+  *  per-element data attribute (an inline `!important` would outrank the OFF sheet, and the OFF photo
+  *  would then equal the ON photo — a RED for the wrong reason). */
+ export async function applyEdgePlant(page, edge, plant) {
++  // homes v3 (MRK-LIVE §9.12): a plant that computes NO css (a `{ fade }` on an edge matching nothing)
++  // is a no-op with a no-op undo — B0 carries that red; `addStyleTag` is never handed an empty sheet
++  const noop = async () => {};
+   if (typeof plant === "string") {
++    if (!plant.trim()) return noop;
+     const tag = await page.addStyleTag({ content: plant });
+     return () => tag.evaluate((e) => e.remove());
+   }
+@@ -342,6 +411,7 @@ export async function applyEdgePlant(page, edge, plant) {
+     },
+     { edge, a: plant.fade },
+   );
++  if (!css || !css.trim()) return noop;
+   const tag = await page.addStyleTag({ content: css });
+   return async () => {
+     await tag.evaluate((e) => e.remove());
+@@ -403,6 +473,7 @@ const FIXTURE = (scheme) => {
+   <div id="f-gone" class="fx" hidden><svg class="f-gone-edge" viewBox="0 0 240 90"><rect x="1" y="1" width="238" height="88" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+   <div id="f-uneven" class="fx"><svg class="f-uneven-edge" viewBox="0 0 240 90" preserveAspectRatio="none"><path d="M0 2.5H240M237.5 0V90M0 87.5H240" stroke="${ink}" stroke-width="5" fill="none"/><path d="M1 0V90" stroke="${ink}" stroke-width="2" fill="none"/></svg></div>
+   <div id="f-fill" class="fx" style="outline: 1px solid ${ink}; background: ${scheme === "dark" ? "rgba(216,210,198,0.14)" : "rgba(59,56,51,0.14)"}"></div>
++  <div id="f-fc" class="fx" style="background: ${scheme === "dark" ? "#e9e4d8" : "#2a2723"}; outline: 3px solid ${scheme === "dark" ? "rgb(102, 178, 255)" : "rgb(0, 90, 180)"};"></div>
+   <div id="f-flat" class="fx flat"><svg class="f-flat-edge" viewBox="0 0 240 6" preserveAspectRatio="none"><rect x="1" y="1" width="238" height="4" fill="none" stroke="${ink}" stroke-width="2"/></svg></div>
+ </body></html>`;
+ };
+@@ -469,6 +540,54 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+       return r;
+     });
+     rows.push(`${T} #f-frame LEGACY FADE15 (root stroke only) ${fmt(legacy)} ← the pass-7 form ${legacy.red ? "(read RED here)" : "(GREEN: the descendant form is load-bearing)"}`);
++    // homes v3 · B7, the band statistic (ACC-GRAPHITE's G2 at its class): the clean read's α50 width is
++    // the reference, the window [0.9, 1.1] a literal pin; the half-clip reds B7 alone, X6 reds B7 on the
++    // two sides it erases
++    const plantRead = async (css, c) => {
++      const t = await page.addStyleTag({ content: css });
++      await settle(page);
++      const r = await fourBands(page, c);
++      await t.evaluate((e) => e.remove());
++      await settle(page);
++      return r;
++    };
++    const RING_OFF = "#f-ring { outline-color: transparent !important; }";
++    const ringRef = median(Object.values((await fourBands(page, { subject: "#f-ring", edge: "#f-ring", off: RING_OFF })).bands).map((b) => b.width));
++    const W = { subject: "#f-ring", edge: "#f-ring", off: RING_OFF, widthRef: ringRef, widthWindow: [0.9, 1.1] };
++    const b7c = await fourBands(page, W);
++    if (b7c.red) cleanRed = true;
++    rows.push(`${T} #f-ring B7 CLEAN (ref α50 width ${ringRef} css px) ${fmt(b7c)} widths ${Object.values(b7c.bands).map((b) => b.width).join("/")}`);
++    const half = await plantRead("#f-ring { clip-path: inset(-1px) !important; }", { ...W, thick: 1 });
++    if (!half.red || !half.why.every((w) => w.startsWith("B7"))) hole = true;
++    rows.push(`${T} #f-ring B7 PLANT HALFCLIP (inset(-1px) on a 2 px outline; thick 1 so B7 alone may red) ${fmt(half)} widths ${Object.values(half.bands ?? {}).map((b) => b.width).join("/")}`);
++    const frameRef = median(Object.values((await fourBands(page, { subject: "#f-frame", edge: ".f-frame-edge" })).bands).map((b) => b.width));
++    const x6 = await plantRead(".f-frame-edge { clip-path: inset(0 22% 0 22%) !important; }", { subject: "#f-frame", edge: ".f-frame-edge", widthRef: frameRef, widthWindow: [0.9, 1.1] });
++    if (!x6.why.some((w) => w.startsWith("B7 left")) || !x6.why.some((w) => w.startsWith("B7 right"))) hole = true;
++    rows.push(`${T} #f-frame B7 PLANT X6 (inset(0 22% 0 22%): no left, no right; ref ${frameRef}) ${fmt(x6)}`);
++    // homes v3 · inkkey (MRK-LIVE's CRIT-FCMOVE): the outline clipped to nothing while the card moves 4 px
++    const FCINK = scheme === "dark" ? [102, 178, 255] : [0, 90, 180];
++    const FC = { subject: "#f-fc", edge: "#f-fc", off: "#f-fc { outline-color: transparent !important; clip-path: none !important; translate: none !important; }" };
++    const FCMOVE = "#f-fc { clip-path: inset(0) !important; translate: -4px -4px !important; }";
++    const fcClean = await fourBands(page, { ...FC, ink: FCINK });
++    if (fcClean.red) cleanRed = true;
++    rows.push(`${T} #f-fc INKKEY CLEAN (ink ${FCINK.join(",")}) ${fmt(fcClean)}`);
++    const fcKeyed = await plantRead(FCMOVE, { ...FC, ink: FCINK });
++    if (!fcKeyed.red) hole = true;
++    rows.push(`${T} #f-fc INKKEY PLANT CRIT-FCMOVE keyed on the ink ${fmt(fcKeyed)}`);
++    const fcBare = await plantRead(FCMOVE, FC);
++    rows.push(`${T} #f-fc INKKEY PLANT CRIT-FCMOVE unkeyed (the hole the key closes; printed) ${fmt(fcBare)}`);
++    // homes v3 · the absent edge (MRK-LIVE §9.12): a `{ fade }` plant on an edge matching nothing is a
++    // no-op with a no-op undo, and B0 carries the red — never a throw
++    let threw = null;
++    try {
++      const undo = await applyEdgePlant(page, ".f-none-edge", { fade: 0.15 });
++      await undo();
++    } catch (e) {
++      threw = String(e).split("\n")[0];
++    }
++    const absent = await fourBands(page, { subject: "#f-frame", edge: ".f-none-edge" });
++    if (threw || !absent.red) hole = true;
++    rows.push(`${T} ABSENT-EDGE { fade } plant → ${threw ? `THREW ${threw} ← a hole` : "no-op undo"}; ${fmt(absent)}`);
+     await ctx.close();
+   }
+   return { rows, exit: cleanRed ? (hole ? 4 : 1) : hole ? 3 : 0 };
+diff --git a/web/frontend/e2e/lib/glyph-pop.d.mts b/web/frontend/e2e/lib/glyph-pop.d.mts
+index 4c6cd96f..f963d474 100644
+--- a/web/frontend/e2e/lib/glyph-pop.d.mts
++++ b/web/frontend/e2e/lib/glyph-pop.d.mts
+@@ -20,6 +20,8 @@ export interface GlyphRead {
+   g4Lows?: string[];
+   /** the G4 columns the CONTROL's lows tolerated (`label:core`) */
+   g4Tolerated?: string[];
++  /** the G5 glyphs the CONTROL's same glyphs tolerated (`k'ch':core/control`), PROPOSED g5tol */
++  g5Tolerated?: string[];
+   transientOn?: number;
+   transientOff?: number;
+   outsideRun?: number;
+@@ -45,12 +47,15 @@ export interface GlyphOptions {
+   /** G5: the quantile of the glyph's interior read (default 0.5) */
+   g5Q?: number;
+   tolerate?: string[] | null;
++  /** the CONTROL's glyphCores (PROPOSED g5tol): glyph k under the floor is tolerated where the control
++   *  holds the same glyph under it and this read is no worse by more than G5_EPS */
++  g5tolerate?: (number | null)[] | null;
+ }
+ /** A plant: a CSS string, or a mask over the text run — `[a, b]` of the run (or glyph `glyph`'s box) at
+  *  25 %, striped (1 px at 25 % α) with `comb`. */
+ export type GlyphPlant = string | { mask: [number, number]; comb?: boolean; glyph?: number | null };
+ /** The control-anchored reference: the CONTROL's read of the same payload. */
+-export type GlyphControl = Pick<GlyphRead, "fracUnder" | "g4Lows" | "population">;
++export type GlyphControl = Pick<GlyphRead, "fracUnder" | "g4Lows" | "population" | "glyphCores">;
+ export interface GlyphGateOptions extends Omit<GlyphOptions, "fracBound"> {
+   payload: string;
+   plants?: Record<string, GlyphPlant> | null;
+@@ -66,6 +71,7 @@ export interface GlyphGate {
+ }
+ 
+ export const GLYPH_CLAUSES: readonly string[];
++export const G5_EPS: number;
+ export function autoSlices(span: number): number;
+ export function glyphPopulation(page: Page, o: GlyphOptions): Promise<GlyphRead>;
+ export function glyphGate(page: Page, o: GlyphGateOptions): Promise<GlyphGate>;
+diff --git a/web/frontend/e2e/lib/glyph-pop.mjs b/web/frontend/e2e/lib/glyph-pop.mjs
+index 39a15c5f..3d2120c6 100644
+--- a/web/frontend/e2e/lib/glyph-pop.mjs
++++ b/web/frontend/e2e/lib/glyph-pop.mjs
+@@ -57,13 +57,15 @@ const autoSlicePop = (pop, n) => Math.max(3, Math.min(8, Math.round(pop / n / 3)
+  *  pass-9 clauses — G5core (G5 reads a LOW quantile of the glyph's INTERIOR), G3clamp (a clean ≥ 0.95
+  *  never bounds G3 above 1), anchor (the control-anchored bound), g4tol (G4 tolerates only the
+  *  CONTROL's low columns, never this run's own). */
+-export const GLYPH_CLAUSES = ["G5core", "G3clamp", "anchor", "g4tol"];
++/** g5tol: how much worse than the control's same glyph a tolerated glyph core may read. */
++export const G5_EPS = 0.05;
++export const GLYPH_CLAUSES = ["G5core", "G3clamp", "anchor", "g4tol", "g5tol"];
+ const G_OFF = new Set((process.env.GLYPH_SABOTAGE ?? "").split(",").filter(Boolean));
+ const gOn = (c) => !G_OFF.has(c);
+ 
+ export async function glyphPopulation(
+   page,
+-  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true, g5Q = 0.5, tolerate = null },
++  { subject, off = null, floor = 4.5, minPop = 40, fracBound = null, delta = 6, pad = 2, slices = "auto", slicePop = "auto", sliceRatio = 0.4, sliceQ = 0.95, textRun = true, glyphWindows = true, runClip = true, g5Q = 0.5, tolerate = null, g5tolerate = null },
+ ) {
+   const loc = page.locator(subject).first();
+   // ACC-SIX pass 8 (PROPOSED → the ONE copy; LAWS P7 §E): a text laid in a ZERO-HEIGHT box (the strip's
+@@ -144,7 +146,8 @@ export async function glyphPopulation(
+   const sl = [],
+     gw = [];
+   let g4Lows = [],
+-    tolerated = [];
++    tolerated = [],
++    g5tol = [];
+   let n = 0,
+     sp = 0,
+     lim = 0;
+@@ -180,6 +183,7 @@ export async function glyphPopulation(
+       why.push(`G4 column core (p${Math.round(sliceQ * 100)}) under ${lim.toFixed(2)} (= max(3.0, ${sliceRatio}×whole p${Math.round(sliceQ * 100)} ${core.toFixed(2)}); ${n} columns, ≥${sp} px) at ${lows.join(", ")}`);
+     if (glyphs && glyphs.length) {
+       const glows = [];
++      g5tol = [];
+       glyphs.forEach((g, k) => {
+         const q = toDev(g);
+         const v = pop.filter((_, j) => xs[j] >= q.l + 1 && xs[j] < q.r - 1 && ys[j] >= q.t && ys[j] < q.b);
+@@ -198,7 +202,15 @@ export async function glyphPopulation(
+           c = core.length >= sp ? +quantile(core, g5Q).toFixed(2) : v.length >= sp ? +quantile(v, sliceQ).toFixed(2) : null;
+         } else c = v.length >= sp ? +quantile(v, sliceQ).toFixed(2) : null;
+         gw.push(c);
+-        if (c != null && c < lim) glows.push(`${k}'${g.ch}':${c}`);
++        // g5tol (PLR-COUNT pass 9, PROPOSED): a glyph under the floor is tolerated ONLY where the
++        // CONTROL's read of the same payload holds the SAME glyph under the floor too, and this read is
++        // no worse than the control's by more than G5_EPS (by VALUE, never by index alone: a deeper
++        // fade of a glyph the control already holds low still reds)
++        const ref = g5tolerate?.[k];
++        if (c != null && c < lim) {
++          if (gOn("g5tol") && ref != null && ref < lim && c >= ref - G5_EPS) g5tol.push(`${k}'${g.ch}':${c}/${ref}`);
++          else glows.push(`${k}'${g.ch}':${c}`);
++        }
+       });
+       if (glows.length) why.push(`G5 glyph core (${gOn("G5core") ? `interior p${Math.round(g5Q * 100)}` : `p${Math.round(sliceQ * 100)}`}) under ${lim.toFixed(2)} at ${glows.join(", ")}`);
+     }
+@@ -215,6 +227,7 @@ export async function glyphPopulation(
+     glyphCores: gw,
+     g4Lows: g4Lows.map((x) => x.split(":")[0]),
+     g4Tolerated: tolerated,
++    g5Tolerated: g5tol,
+     transientOn,
+     transientOff,
+     outsideRun,
+@@ -235,7 +248,11 @@ export async function glyphGate(page, { subject, payload, plants = null, slack =
+   // shipped regression (OPA80F: frac 1.000 against its own 1.050)
+   const ref = control && gOn("anchor") ? control : first;
+   const bound = boundOf(ref.fracUnder, slack, ref.population ?? Infinity, opts.minPop ?? 40);
+-  opts = { ...opts, tolerate: control && gOn("anchor") ? (control.g4Lows ?? []) : opts.tolerate };
++  opts = {
++    ...opts,
++    tolerate: control && gOn("anchor") ? (control.g4Lows ?? []) : opts.tolerate,
++    g5tolerate: control && gOn("anchor") ? (control.glyphCores ?? null) : opts.g5tolerate,
++  };
+   const clean = await glyphPopulation(page, { subject, fracBound: bound, ...opts });
+   const P = plants ?? (img ? IMG_PLANTS(subject, img.ng, img.ink) : TEXT_PLANTS(subject));
+   const out = {};
+@@ -256,7 +273,10 @@ export async function glyphGate(page, { subject, payload, plants = null, slack =
+ export const boundOf = (frac, slack = 0.05, pop = Infinity, minPop = 40) => {
+   if (frac == null || pop < minPop) return null;
+   const b = frac + slack;
+-  return gOn("G3clamp") && frac >= 0.95 ? Math.min(b, frac + (1 - frac) / 2) : b;
++  // homes v3 (COUNT's critic, gap 7): the clamp keys on the BOUND, not the reference — at a
++  // reference under 0.95 a slack over 0.05 reached 1.017 (SLK20) and G3 could not fire. Any bound at
++  // or past 0.95 is held half-way from its reference to 1, so no knob lifts it to 1.0.
++  return gOn("G3clamp") && b >= 0.95 ? Math.min(b, frac + (1 - frac) / 2) : b;
+ };
+ /** The FILE plants (COUNT, pass 8's critic): CSS a lane writes INTO the product file under test (never
+  *  an in-run sheet that the in-run plants could shadow). OPA80F: the subject at opacity 0.8. COMB: 1 px
+@@ -388,7 +408,16 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+     cleanRed = false;
+   // G3clamp (pure): a reference ≥ 0.95 never bounds above 1; the clamp's edge at 0.95 ± ε printed
+   const bs = [0.5, 0.9499, 0.95, 0.97, 1].map((x) => [x, boundOf(x)]);
+-  const clampOk = bs.every(([x, b]) => b <= 1 && b > x - 1e-9) && boundOf(0.97) < 1 && Math.abs(boundOf(0.5) - 0.55) < 1e-9;
++  // homes v3: the SLK20 plant — reference 0.817 at slack 0.20 bounded 1.017 under the reference-keyed
++  // clamp; the bound-keyed clamp holds it under 1 (0.9085), and slack 0.05 at 0.90 stays 0.95 exactly
++  const slk20 = boundOf(0.817, 0.2);
++  const clampOk =
++    bs.every(([x, b]) => b <= 1 && b > x - 1e-9) &&
++    boundOf(0.97) < 1 &&
++    Math.abs(boundOf(0.5) - 0.55) < 1e-9 &&
++    slk20 < 1 &&
++    Math.abs(boundOf(0.9) - 0.95) < 1e-9;
++  rows.push(`GLYPH self-test G3clamp SLK20 boundOf(0.817, 0.20) = ${slk20.toFixed(4)} ${slk20 < 1 ? "< 1 OK" : "≥ 1 ← a hole (a knob blinds G3)"}`);
+   if (!clampOk) hole = true;
+   rows.push(`GLYPH self-test G3clamp bounds ${bs.map(([x, b]) => `${x}→${b.toFixed(4)}`).join(" ")} ${clampOk ? "OK" : "← a hole (a bound reaches above 1)"}`);
+   for (const scheme of ["light", "dark"]) {
+@@ -455,6 +484,27 @@ export async function selfTest(browser, { dpr = 1 } = {}) {
+     const g4of = (r) => r.why.some((w) => w.startsWith("G4"));
+     if (!ctlLow.g4Lows.length || g4of(tolLow) || !g4of(tolClean)) hole = true;
+     rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-long g4tol TAIL35 lows [${ctlLow.g4Lows.join(" ")}] | tolerated by a control holding them → G4 ${g4of(tolLow) ? "RED ← a hole" : "GREEN"} | against the unplanted control → G4 ${g4of(tolClean) ? "RED" : "GREEN ← a hole"}`);
++    // g5tol (PLR-COUNT pass 9, PROPOSED): HEAD12 on #g-long read as the CONTROL (its leading glyphs
++    // under the floor) → the same plant on the tree is tolerated glyph by glyph; against the unplanted
++    // control → G5 RED; a DEEPER fade of the same glyphs (8 % α) against the planted control → G5 RED
++    const g5of = (r) => r.why.some((w) => w.startsWith("G5"));
++    const head = TEXT_PLANTS("#g-long").HEAD12_a25;
++    const cut = await applyMask(page, "#g-long", head.mask);
++    await settle(page);
++    const c5Low = await glyphPopulation(page, { subject: "#g-long" });
++    const t5Same = await glyphPopulation(page, { subject: "#g-long", g5tolerate: c5Low.glyphCores });
++    const t5Bare = await glyphPopulation(page, { subject: "#g-long", g5tolerate: ctlClean.glyphCores });
++    await undoMask(page, "#g-long");
++    const [d0, d1] = cut.cut ?? [0, 0];
++    const deep = `linear-gradient(to right, rgba(0,0,0,.08) ${d1}px, #000 ${d1}px)`;
++    const tagD = await page.addStyleTag({ content: `#g-long { -webkit-mask-image: ${deep} !important; mask-image: ${deep} !important; }` });
++    await settle(page);
++    const t5Deep = await glyphPopulation(page, { subject: "#g-long", g5tolerate: c5Low.glyphCores });
++    await tagD.evaluate((e) => e.remove());
++    await settle(page);
++    const g5ok = g5of(c5Low) && !g5of(t5Same) && g5of(t5Bare) && g5of(t5Deep);
++    if (!g5ok) hole = true;
++    rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-long g5tol HEAD12 (cut ${d0}..${d1}) control G5 ${g5of(c5Low) ? "RED" : "GREEN ← the plant reads no glyph low"} | same plant, tolerated → G5 ${g5of(t5Same) ? "RED ← a hole" : `GREEN (${t5Same.g5Tolerated.length} tolerated)`} | against the unplanted control → G5 ${g5of(t5Bare) ? "RED" : "GREEN ← a hole"} | deeper (8 %) → G5 ${g5of(t5Deep) ? "RED" : "GREEN ← a hole (index tolerance)"}`);
+     // the LEGACY box clip on a ZERO-HEIGHT subject (ACC-SIX pass 8): G0/G1 — the hole the run clip closes
+     const zl = await glyphPopulation(page, { subject: "#g-zero", runClip: false });
+     rows.push(`GLYPH self-test ${scheme} dpr${dpr} #g-zero LEGACY-BOX-CLIP ${fmt(zl)} ← ${zl.red ? "RED (the box clip reads no glyph)" : "GREEN ← the fixture's box is not zero"}`);
+diff --git a/web/frontend/e2e/lib/rest-probes.d.mts b/web/frontend/e2e/lib/rest-probes.d.mts
+index baf2a531..6d3a538d 100644
+--- a/web/frontend/e2e/lib/rest-probes.d.mts
++++ b/web/frontend/e2e/lib/rest-probes.d.mts
+@@ -56,4 +56,12 @@ export function rowTapFocus(
+   page: Page,
+   o: { cell: string; open: () => Promise<unknown>; row: string; ok?: string },
+ ): Promise<{ focus: string | null; kept: boolean; why?: string }>;
++/** homes v3: the focus-stop selector HR1 refuses to pin. */
++export const STOP_SEL: string;
++/** homes v3 · the hold REFUSES, never pins (HR1: a layer holding a ring or a stop; HR2: a fractional
++ *  opacity). A refusal pins nothing: the caller reads the cell RED or UNREAD. */
++export function holdPoses(
++  page: Page,
++  o?: { edge?: string | null; ring?: string; exempt?: string[] },
++): Promise<{ ok: boolean; held: number; refused: { el: string; why: string }[]; undo: () => Promise<void> }>;
+ export function selfTest(browser: Browser): Promise<{ rows: string[]; exit: number }>;
+diff --git a/web/frontend/e2e/lib/rest-probes.mjs b/web/frontend/e2e/lib/rest-probes.mjs
+index 3f642be1..cec4d7ff 100644
+--- a/web/frontend/e2e/lib/rest-probes.mjs
++++ b/web/frontend/e2e/lib/rest-probes.mjs
+@@ -55,8 +55,9 @@ export async function atRest(page, timeout = 6000) {
+ }
+ 
+ /** Clause switches for the rest-probes sabotage battery (REST_SABOTAGE=a,b). */
+-export const REST_CLAUSES = ["confirm", "anim"];
++export const REST_CLAUSES = ["confirm", "anim", "HR1", "HR2"];
+ const R_OFF = new Set((process.env.REST_SABOTAGE ?? "").split(",").filter(Boolean));
++const rOn = (c) => !R_OFF.has(c);
+ /** (e) HEIGHT AT REST (the chair, pass 9; CTRL-FACE's PANEL_H_AT_REST folded home, LAWS P8 §I): fonts
+  *  ready, then `frames` consecutive frames with the subject's height unchanged (to 0.01 px) and no
+  *  running animation in `root`'s subtree (anim); then a CONFIRMATION read `confirmMs` later must
+@@ -102,6 +103,58 @@ export async function heightAtRest(page, { sel, root = null, frames = 10, confir
+ }
+ 
+ /** Evaluate a JS expression string in the page. */
++/** homes v3 · THE HOLD REFUSES, NEVER PINS (MRK-LIVE's critic CRIT-ANC55; LAWS P9 §D). Outside
++ *  `reduce` a baked pose stack (sibling layers with `will-change: opacity`, swapped on the boil beat) may
++ *  flip between a read's two photographs, so a read may HOLD each stack at the pose it shows now. The
++ *  hold is lawful only for a binary pose layer that holds nothing the read judges:
++ *    HR1  a layer that holds a ring or a focus stop (or IS one, or holds the read's edge) is REFUSED —
++ *         pinning a ring's 0.55 ancestor to 1 photographs a ring the user never sees
++ *    HR2  a layer whose opacity is not 0 or 1 is REFUSED — it is not a pose, it is the paint
++ *  A refusal pins NOTHING: `{ ok: false, refused }` and the caller reads the cell RED or UNREAD, never a
++ *  pinned green. `{ ok: true, held, undo }` otherwise. The edge, the ring and `exempt` are never held. */
++export const STOP_SEL = 'a[href], button, input, select, textarea, summary, [tabindex]:not([tabindex="-1"]), [contenteditable="true"], [contenteditable=""]';
++export async function holdPoses(page, { edge = null, ring = ".focus-ring", exempt = [] } = {}) {
++  const r = await page.evaluate(
++    ({ skip, STOP, hr1, hr2 }) => {
++      const held = [],
++        refused = [];
++      for (const el of document.querySelectorAll("body *")) {
++        if (skip && el.closest(skip)) continue;
++        const cs = getComputedStyle(el);
++        if (!/opacity/.test(cs.willChange)) continue;
++        const c = typeof el.className === "string" ? el.className : (el.className?.baseVal ?? "");
++        const name = `${el.tagName.toLowerCase()}${c.trim() ? "." + c.trim().split(/\s+/).slice(0, 2).join(".") : ""}`;
++        const op = +cs.opacity;
++        if (hr1 && ((skip && el.querySelector(skip)) || el.matches(STOP) || el.querySelector(STOP))) {
++          refused.push({ el: name, why: "HR1 holds a ring or a focus stop" });
++          continue;
++        }
++        if (hr2 && op > 0 && op < 1) {
++          refused.push({ el: name, why: `HR2 opacity ${op} is not a pose (0 or 1)` });
++          continue;
++        }
++        held.push({ el, on: op > 0.5 && cs.visibility !== "hidden" });
++      }
++      if (refused.length) return { held: 0, refused };
++      for (const h of held) h.el.setAttribute("data-pose-hold", h.on ? "on" : "off");
++      return { held: held.length, refused };
++    },
++    { skip: [edge, ring, ...exempt].filter(Boolean).join(", "), STOP: STOP_SEL, hr1: rOn("HR1"), hr2: rOn("HR2") },
++  );
++  if (r.refused.length) return { ok: false, held: 0, refused: r.refused, undo: async () => {} };
++  const sheet = await page.addStyleTag({
++    content: '[data-pose-hold="on"] { opacity: 1 !important; visibility: visible !important; } [data-pose-hold="off"] { opacity: 0 !important; }',
++  });
++  return {
++    ok: true,
++    held: r.held,
++    refused: [],
++    undo: async () => {
++      await sheet.evaluate((e) => e.remove());
++      await page.evaluate(() => document.querySelectorAll("[data-pose-hold]").forEach((e) => e.removeAttribute("data-pose-hold")));
++    },
++  };
++}
+ export const js = (page, expr) => page.evaluate((e) => new Function(`return (${e})`)(), expr);
+ 
+ /** (b) open → resize at rest → read, vs a fresh open at the new size. `same(a, b)` decides agreement. */
+@@ -343,6 +396,32 @@ export async function selfTest(browser) {
+       rows.push(`REST self-test (e) height-at-rest ${name} h ${r.h} rested ${r.rested} frames ${r.frames} restarts ${r.restarts} → ${ok ? "AS THE LAW" : name === "CLEAN" ? "RED" : "← a hole"}`);
+     }
+   }
++  // (f) THE HOLD REFUSES (homes v3; CRIT-ANC55): CLEAN (two binary pose layers beside a ring) holds 2;
++  // ANC55 (the ring's parent at 0.55) refuses; HR1ONLY (a pose layer at 1 that holds a button) and
++  // HR2ONLY (a layer at 0.55 holding nothing) each refuse by their own clause alone
++  {
++    const PAGE = (body) => `<!doctype html><html><body style="margin:0;font:16px sans-serif"><button id="tg">t<span class="focus-ring" style="display:block;outline:2px solid #000"></span></button>${body}</body></html>`;
++    const L0 = '<div class="pose-a" style="will-change:opacity;opacity:0"><i>a</i></div><div class="pose-b" style="will-change:opacity;opacity:1"><i>b</i></div>';
++    for (const [name, body, want] of [
++      ["CLEAN", L0, (h) => h.ok && h.held === 2],
++      ["ANC55", L0 + '<div class="anc" style="will-change:opacity;opacity:0.55"><button>x<span class="focus-ring" style="display:block;outline:2px solid #000"></span></button></div>', (h) => !h.ok],
++      ["HR1ONLY", L0 + '<div class="stack" style="will-change:opacity;opacity:1"><button>x</button></div>', (h) => !h.ok && h.refused.every((x) => x.why.startsWith("HR1"))],
++      ["HR2ONLY", L0 + '<div class="wash" style="will-change:opacity;opacity:0.55"><i>w</i></div>', (h) => !h.ok && h.refused.every((x) => x.why.startsWith("HR2"))],
++    ]) {
++      const { ctx, page } = await openCell(browser, { width: 400, height: 300 });
++      await page.setContent(PAGE(body));
++      const h = await holdPoses(page, { edge: "#tg" });
++      const pinned = await page.evaluate(() => document.querySelectorAll("[data-pose-hold]").length);
++      await h.undo();
++      await ctx.close();
++      const ok = want(h) && (h.ok || pinned === 0);
++      if (!ok) {
++        if (name === "CLEAN") liveRed = true;
++        else hole = true;
++      }
++      rows.push(`REST self-test (f) hold ${name} ok ${h.ok} held ${h.held} pinned ${pinned} refused ${h.refused.map((x) => `${x.el}: ${x.why}`).join(" | ") || "—"} → ${ok ? "AS THE LAW" : name === "CLEAN" ? "RED" : "← a hole (a pinned green)"}`);
++    }
++  }
+   return { rows, exit: liveRed ? (hole ? 4 : 1) : hole ? 3 : 0 };
+ }
+ 
+diff --git a/web/frontend/scripts/shape-census.d.mts b/web/frontend/scripts/shape-census.d.mts
+index 68d9550c..b5d34b9d 100644
+--- a/web/frontend/scripts/shape-census.d.mts
++++ b/web/frontend/scripts/shape-census.d.mts
+@@ -54,6 +54,8 @@ export interface Site {
+   unresolved?: boolean;
+   stem?: boolean | string | null;
+   bad?: boolean;
++  /** homes v3: read from the FOLDED text (tok-string-fold) */
++  folded?: boolean;
+ }
+ export interface SfcBlock {
+   attrs: string;
+@@ -185,7 +187,7 @@ export function classWrites(
+   text: string,
+   baseLine?: number,
+ ): (Site & { classes: string[] })[];
+-export function scriptCss(js: string, baseLine?: number): Rule[];
++export function scriptCss(js: string, baseLine?: number): ScriptRule[];
+ export function cssBlocks(
+   f: string,
+   text: string,
+@@ -244,6 +246,8 @@ export function clockReads(
+   how: "math" | "bracket" | "operator" | "read";
+   /** the arithmetic operator beside the read, or null */
+   op: string | null;
++  /** PROPOSED (LADDER pass 9, `clock-context`): the value-choosing context the read feeds, or null for a bare read */
++  ctx?: "logical" | "ternary" | "comma" | "indexed-literal" | "call-apply" | null;
+ }[];
+ export function urlRefs(
+   text: string,
+@@ -309,8 +313,70 @@ export function darkArmCensus(
+   o?: TreeOptions & { ring?: string[]; ringAncestor?: string; chroma?: number },
+ ): Record<string, unknown>;
+ 
++// ── homes v3 (the chair, pass 10 batch 0) ───────────────────────────────────────────────────────
++/** `callee-norm`: every indirect call of method `m` rewritten to the direct `<recv>.m(args)`. */
++export function calleeNormal(
++  strippedJs: string,
++  m: string,
++  consts?: Map<string, string> | null,
++): string;
++/** `pct-decode`: a value carrying a non-base64 `data:` URI with its percent-escapes decoded. */
++export function pctDecode(value: string): string;
++/** `css-wide-kw`: the CSS-wide keyword a value is (direct, in a shorthand, or carried by var()), or null. */
++export function cssWide(
++  value: string,
++  map?: Map<string, string>,
++): {
++  keyword: "inherit" | "initial" | "unset" | "revert" | "revert-layer";
++  via: string;
++  /** the value leaves the author's cascade (initial, revert, revert-layer, an invalid var()) */
++  resets: boolean;
++  invalid?: boolean;
++} | null;
++/** `selector-key`: the key of a selector list — the whole list, whitespace collapsed. */
++export function selectorKey(sel: string): string;
++/** `admitted`: the admitted-list inversion (file+line keyed); `stale` entries answer no site. */
++export function admittedSites<S extends { file?: string; line: number; prop?: string }>(
++  sites: S[],
++  list: (string | S)[],
++  o?: { key?: (s: S) => string },
++): { unadmitted: (S & { key: string })[]; stale: string[]; ok: boolean };
++/** `bounds`: a length's [lo, hi] in css px at a regime (an id of REGIMES or a Regime). */
++export function bounds(value: string, regime: string | Regime): [number, number];
++/** `component-tree`: Vue's scoped-CSS reach and class fall-through over the template tree. */
++export function componentReach(
++  fe: string,
++  o?: TreeOptions,
++): {
++  roots(elFile: string): TemplateElement[];
++  reaches(ruleFile: string, elFile: string, el: TemplateElement): boolean;
++  fallThrough(elFile: string): { cls: string; file: string; line: number }[];
++};
++/** The per-file parse cache's counters (`SHAPE_NOCACHE=1` disables the cache). */
++export const cacheStats: { hits: number; misses: number };
++/** A string-rule site (`scriptCss`) names its sink; a folded read is marked. */
++export interface ScriptRule extends Rule {
++  via?:
++    | "insertRule"
++    | "replaceSync"
++    | "replace"
++    | "appendRule"
++    | "textContent"
++    | "innerHTML"
++    | "innerText"
++    | "outerHTML";
++  folded?: boolean;
++}
++
+ // ── the self-test ───────────────────────────────────────────────────────────────────────────────
+ export function fixture(tree: Record<string, string>, root?: string): Fixture;
++/** THE §7 reserve law (R1–R4), the ONE reader (LEDGER row 3, PROPOSED p9): read over a virtual
++ *  fixture or a real tree (`{fe, files, read, exists}`); returns the failures, empty when the law holds. */
++export function reserveReading(
++  L: Record<string, unknown>,
++  fx: Pick<Fixture, "fe" | "files" | "read" | "exists">,
++  file?: string,
++): string[];
+ export function selfTest(L: Record<string, unknown>): {
+   rows: {
+     clause: string | null;
+diff --git a/web/frontend/scripts/shape-census.mjs b/web/frontend/scripts/shape-census.mjs
+index 647faf12..a164c434 100644
+--- a/web/frontend/scripts/shape-census.mjs
++++ b/web/frontend/scripts/shape-census.mjs
+@@ -85,6 +85,8 @@ export const CLAUSES = {
+     "GRAPHITE · @property preludes (initial-value) as declaration sites",
+   "r1-dark-arm": "GRAPHITE · R1's second path (a chromatic token with no dark arm)",
+   "strip-regex": "TIN · the JS stripper is regex-literal aware",
++  "strip-paren-kw":
++    "TIN (pass 9) · a `/` after the `)` of an if/while/for/with head starts a regex, never a division",
+   "rel-color": "TIN · relative colour syntax with literal channels",
+   "fold-hole":
+     "TIN · foldConcat({hole}) keeps an unresolved leaf as a HOLE (a minted `--x-?-y` stays readable)",
+@@ -125,6 +127,8 @@ export const CLAUSES = {
+   "import-chain": "WALK · @import chains followed wherever they lead",
+   "collect-walk": "LADDER · index.html and public/** walked",
+   longhand: "LADDER · a longhand answers for its shorthand",
++  "logical-sides":
++    "RULE p9 · a logical side (`padding-block-end`, `padding-block`, `margin-block(-end)`, `inset-block(-end)`) is a site of its physical side (horizontal-tb)",
+   "semicolon-less": "LADDER · a semicolon-less declaration before a nested rule",
+   "clock-arith":
+     "LADDER · Math.min/max, bracket and bitwise clock reads are arithmetic",
+@@ -134,6 +138,10 @@ export const CLAUSES = {
+     "LADDER (pass 8) · a script write's value keeps its own parentheses (a cubic-bezier)",
+   "clock-alias":
+     "LADDER (pass 8) · a bare alias of a clock (`const W = MOTION.rungs.whisper`; `W >> 2`) is a clock read",
++  "clock-context":
++    "LADDER (pass 9, PROPOSED) · a clock read in a value-choosing context (`&&`/`||`/`??`, ternary, comma, indexed literal, `.call/.apply`) carries `ctx`",
++  "obj-bracket":
++    'LADDER (pass 9, PROPOSED) · a bracket write of a literal key on a style object (`vars["animation-duration"] = …`) is a write',
+   pcss: "ERASE · .pcss/.postcss sheets walked",
+   "register-split": "ERASE · a split-name registerProperty is resolved or UNRESOLVED",
+   "register-any":
+@@ -184,6 +192,8 @@ export const CLAUSES = {
+     "LEDGER N7 (chair p9) · a seat must match the voice's TEMPLATE element (attribute selectors read certain under :not())",
+   "r4-element":
+     "LEDGER N4/N19 (chair p9) · R4's voice font/line sites ELEMENT-keyed, the largest live candidate read",
++  "r4-unresolved":
++    "LEDGER row 4 (PROPOSED p9) · a font or line with no site reads UNRESOLVED (null) and reds R4, never a typed 16 / 1.2×",
+   "html-inert":
+     "TAB-PEN E3–E5 (chair p9) · <template>/<noscript>/<script>/<style> contents dropped before links are matched",
+   "link-allow":
+@@ -194,6 +204,31 @@ export const CLAUSES = {
+   "token-conflict": "TAB-PEN · two placed sites of one token that disagree",
+   "tok-param-carried":
+     "WAVE (pass 8, PROPOSED) · tokenSites' setProperty reader takes TAPE's param-carried resolution: the estate's SECOND setProperty reader read `put(name, v)` as computed",
++  // --- homes v3 (the chair, pass 10 batch 0)
++  "str-unescape":
++    'FACE CHECK 7 S2 (homes v3) · a script string\'s JS escapes are decoded before its CSS is parsed (`\\"Comic Sans MS\\"`)',
++  "string-rule":
++    "FACE CHECK 7 S2–S4 (homes v3) · rule text a script writes (insertRule, replaceSync, replace, textContent, innerHTML) is FOLDED and read as rules, `via` naming its sink",
++  "css-wide-kw":
++    "FACE CHECK 7 S8–S11 (homes v3) · cssWide(value, map): a CSS-wide keyword, direct, in a shorthand or carried by var(), named with its route",
++  "tok-string-fold":
++    "WALK X8/X9 (homes v3) · tokenSites' string arm reads the FOLDED text (concatenation, template literal); an interpolated value is an UNRESOLVED site",
++  "callee-norm":
++    "TIN N6 / ERASE (homes v3) · `.call`, `.apply`, `Reflect.apply`, `?.()`, `(0, f)()`, a const-keyed bracket and an assigned alias are rewritten to the direct call",
++  "register-callee":
++    "ERASE row 2 (homes v3) · a `registerProperty` reference the reader cannot resolve is an UNRESOLVED registration, never dropped",
++  "pct-decode":
++    "TIN N21/N22 (homes v3) · a data: URI's percent-escapes (`%23`) are decoded before its colour literals are read",
++  "component-tree":
++    "LADDER C1y/C17y (homes v3) · componentReach: a scoped rule reaches its own elements and each child component's root; a class on a component tag falls through to its root",
++  "selector-key":
++    "GRAPHITE → LADDER (homes v3) · selectorKey: a key over the WHOLE selector list, never cut at 80 characters",
++  admitted:
++    "TAPE (homes v3) · admittedSites: a declaration on the chain off the file+line list reds, and a list entry no site answers is stale and reds",
++  bounds:
++    "TAPE (homes v3) · bounds(value, regime): a length's [lo, hi] at a regime's viewport (vh/vw/%, env() = [0, ∞), an unpublished var() = (−∞, ∞), calc/min/max/clamp)",
++  "r4-descend":
++    "LEDGER C1–C6 (homes v3) · R4 reads the voice's LINE BOX: each descendant's font, line, height and box growth, and the voice's own padding, margin, border and vertical-align",
+ };
+ const OFF = new Set(
+   (process.env.SHAPE_SABOTAGE ?? "")
+@@ -344,6 +379,21 @@ function regexStart(o) {
+   let j = o.length - 1;
+   while (j >= 0 && /\s/.test(o[j])) j--;
+   if (j < 0) return true;
++  // TIN (strip-paren-kw): \`if (e) /\\/\\//.test(t)\` — the \`)\` closes a statement HEAD, so the \`/\` opens
++  // a regex; read as a division its \`//\` blanked 75.40 % of the shipped entry chunk (pass-8 critic C2)
++  if (o[j] === ")" && on("strip-paren-kw")) {
++    let depth = 0;
++    let k = j;
++    for (; k >= 0; k--) {
++      if (o[k] === ")") depth++;
++      else if (o[k] === "(" && --depth === 0) break;
++    }
++    if (
++      k > 0 &&
++      /(?:^|[^\w$.])(?:if|while|for|with)\s*$/.test(o.slice(Math.max(0, k - 12), k))
++    )
++      return true;
++  }
+   if (REGEX_PREV.has(o[j])) {
+     // `a++ / b` and `a-- / b` are division
+     if ((o[j] === "+" || o[j] === "-") && o[j - 1] === o[j]) return false;
+@@ -848,6 +898,22 @@ const SHORTHANDS = {
+   background: ["background-color", "background-image"],
+ };
+ export { SHORTHANDS };
++/** RULE (pass 9; the pass-8 critic's K13b / K14): the block-axis LOGICAL properties, read as
++ *  sites of the physical side they set in the estate's one writing mode (horizontal-tb). A reader
++ *  of `padding-bottom` that never asks for `padding-block-end` passed a logical longhand that
++ *  threw the inset away; CSSOM's `getPropertyValue('padding-bottom')` is blind to it as well. */
++const LOGICAL_SIDES = {
++  "padding-block": ["padding-top", "padding-bottom"],
++  "padding-block-start": ["padding-top"],
++  "padding-block-end": ["padding-bottom"],
++  "margin-block": ["margin-top", "margin-bottom"],
++  "margin-block-start": ["margin-top"],
++  "margin-block-end": ["margin-bottom"],
++  "inset-block": ["top", "bottom"],
++  "inset-block-start": ["top"],
++  "inset-block-end": ["bottom"],
++};
++export { LOGICAL_SIDES };
+ /** Does declaration `d` set `prop` — directly, via its shorthand (a var()-led shorthand is a literal
+  *  hit), or (LADDER) as a LONGHAND of the shorthand `prop` asks about? */
+ export function sets(d, prop) {
+@@ -856,6 +922,7 @@ export function sets(d, prop) {
+   if (lh && lh.includes(prop)) return true;
+   if (d.prop === "min-block-size" && prop === "min-height") return true;
+   if (on("longhand") && SHORTHANDS[prop]?.includes(d.prop)) return true;
++  if (on("logical-sides") && LOGICAL_SIDES[d.prop]?.includes(prop)) return true;
+   return false;
+ }
+ const kebab = (k) => {
+@@ -941,6 +1008,79 @@ export function foldConcat(expr, consts = new Map(), opts = {}) {
+   if (/^[A-Za-z_$][\w$]*$/.test(p) && consts.has(p)) return consts.get(p);
+   return hole;
+ }
++/** homes v3 (callee-norm; TIN N6, ERASE row 2's six spellings): every INDIRECT call of method `m`
++ *  rewritten to the direct `<recv>.m(args)` a reader keyed on `m(` sees — `<recv>.m.call(t, a, b)`,
++ *  `<recv>.m.apply(t, [a, b])`, `Reflect.apply(<recv>.m, t, [a, b])`, `<recv>.m?.(a)`, `(0, <recv>.m)(a)`,
++ *  `<recv>[K](a)` with K a literal or a same-file const naming `m`, and an ASSIGNED alias (`x = <recv>.m`,
++ *  `.bind(…)` or not, declared or not) called as `x(a)`. A non-literal argument array becomes a spread
++ *  (`m(...args)`), so the reader reads it UNRESOLVED, never as nothing. `s` is stripped JS. */
++export function calleeNormal(s, m, consts = null) {
++  if (!on("callee-norm")) return s;
++  const K = consts ?? constBindings(s);
++  const M = m.replace(/\$/g, "\\$");
++  const PATH = `((?:[A-Za-z_$][\\w$]*\\s*(?:\\?\\.|\\.)\\s*)*${M})`;
++  let t = s;
++  // `<recv>[K](` → `<recv>.m(` (K a literal string or a const that folds to m)
++  t = t.replace(
++    /\[\s*((["'`])[\w$]+\2|[A-Za-z_$][\w$]*)\s*\]\s*(?=\(|\?\.\s*\(|\.\s*(?:call|apply|bind)\b)/g,
++    (x, k) => {
++      const v = /^["'`]/.test(k) ? k.slice(1, -1) : K.get(k);
++      return v === m ? `.${m}` : x;
++    },
++  );
++  t = t.replace(new RegExp(`\\b${M}\\s*\\?\\.\\s*\\(`, "g"), `${m}(`);
++  t = t.replace(new RegExp(`\\(\\s*0\\s*,\\s*${PATH}\\s*\\)\\s*\\(`, "g"), "$1(");
++  // the argument-list forms, scanned with a balanced close
++  const rewrite = (re, build) => {
++    for (let guard = 0; guard < 200; guard++) {
++      const mm = re.exec(t);
++      if (!mm) return;
++      const open = mm.index + mm[0].length - 1;
++      const close = matchClose(t, open);
++      const args = splitArgs(t.slice(open + 1, close)).map((a) => a.trim());
++      let rep = build(mm, args);
++      if (rep == null) return;
++      // keep the line count: a reader's line numbers survive the rewrite
++      const nl = (x) => (x.match(/\n/g) ?? []).length;
++      rep += "\n".repeat(Math.max(0, nl(t.slice(mm.index, close + 1)) - nl(rep)));
++      t = t.slice(0, mm.index) + rep + t.slice(close + 1);
++      re.lastIndex = 0;
++    }
++  };
++  const spreadOf = (arr) => {
++    const a = (arr ?? "").trim();
++    return /^\[[\s\S]*\]$/.test(a) ? a.slice(1, -1) : a ? `...${a}` : "";
++  };
++  rewrite(
++    new RegExp(`${PATH}\\s*\\.\\s*call\\s*\\(`),
++    (mm, args) => `${mm[1]}(${args.slice(1).join(", ")})`,
++  );
++  rewrite(
++    new RegExp(`${PATH}\\s*\\.\\s*apply\\s*\\(`),
++    (mm, args) => `${mm[1]}(${spreadOf(args[1])})`,
++  );
++  rewrite(/\bReflect\s*\.\s*apply\s*\(/, (mm, args) =>
++    new RegExp(`(?:^|[\\s.])${M}$`).test(args[0] ?? "")
++      ? `${args[0]}(${spreadOf(args[2])})`
++      : `Reflect_apply(${args.join(", ")})`,
++  );
++  t = t.replace(/\bReflect_apply\(/g, "Reflect.apply(");
++  // an ASSIGNED alias: `x = <recv>.m` / `x = <recv>.m.bind(…)` (declared or not), called `x(`
++  const aliases = new Map();
++  for (const a of t.matchAll(
++    new RegExp(
++      `(?:\\b(?:const|let|var)\\s+)?(?<![\\w$.])([A-Za-z_$][\\w$]*)\\s*=(?!=)\\s*${PATH}\\s*(?:\\.\\s*bind\\s*\\([^)]*\\))?\\s*(?=[;\\n,)])`,
++      "g",
++    ),
++  ))
++    if (a[1] !== m) aliases.set(a[1], a[2].replace(/\s+/g, ""));
++  for (const [a, path] of aliases)
++    t = t.replace(
++      new RegExp(`(?<![\\w$.])${a.replace(/\$/g, "\\$")}\\s*(?:\\?\\.\\s*)?\\(`, "g"),
++      `${path}(`,
++    );
++  return t;
++}
+ /** A JS string body's escapes, in ONE pass (an escaped backslash is never re-read). The chair's
+  *  pass-9 cure (u-escape4; LAWS P8 §F, the shape law): `\uXXXX` takes EXACTLY four hex digits and
+  *  `\u{X…}` one to six inside braces; the pass-8 form took 4–6 bare digits and folded TIN's
+@@ -1480,7 +1620,7 @@ export function hasCompound(sels, tail) {
+  *  unresolved sites; concatenated names, cssText and setAttribute('style') are folded (WALK); a
+  *  same-file const carries its value (VERB); CSS inside a script string is read (FACE). */
+ export function scriptWrites(text, prop, baseLine = 1) {
+-  const s = stripJs(text);
++  const s = calleeNormal(stripJs(text), "setProperty");
+   const out = [];
+   const camel = prop.replace(/-([a-z])/g, (m, c) => c.toUpperCase());
+   const L = (i) => baseLine + lineAt(s, i) - 1;
+@@ -1508,6 +1648,19 @@ export function scriptWrites(text, prop, baseLine = 1) {
+   ))
+     if (kebab(m[2]) === prop)
+       out.push({ kind: "script-write", prop, value: carry(m[3]), line: L(m.index) });
++  // LADDER (pass 9, PROPOSED, K1): a literal-keyed bracket write on ANY object (a `:style` object
++  // built in script: `vars["animation-duration"] = "50ms"`) — `.style[…]` is the arm above
++  if (on("obj-bracket"))
++    for (const m of s.matchAll(
++      /([\w$)\]]+)\s*\[\s*(['"`])([^'"`$]+)\2\s*\]\s*=(?!=)\s*([^;\n]+)/g,
++    ))
++      if (!/(?:^|\.)style$/.test(m[1]) && kebab(m[3]) === prop)
++        out.push({
++          kind: "script-object-bracket",
++          prop,
++          value: carry(m[4]),
++          line: L(m.index),
++        });
+   // the chair p9 (typed-om; WALK's fork-parity, the shape law's fifth pass): Typed OM writes —
+   // `el.attributeStyleMap.set("--x", v)`, `.append(…)` — a literal name is a site, a computed one `?`
+   if (on("typed-om"))
+@@ -1772,29 +1925,51 @@ const holeBoundary = (p) => {
+  *  `<style>` tags dropped; rules and bare declaration strings both read. */
+ export function scriptCss(js, baseLine = 1) {
+   if (!on("script-css")) return [];
+-  const s = stripJs(js);
++  const s0 = stripJs(js);
+   const out = [];
++  const seen = new Set();
++  const SINK =
++    /(?:\.\s*(insertRule|replaceSync|replace|appendRule)\s*\(\s*|\.\s*(textContent|innerHTML|innerText|outerHTML)\s*(?:\+?=)\s*)$/;
+   const chunk =
+     /(["'`])((?:\\.|(?!\1)[^\\])*)\1(?:\s*\+\s*(["'`])((?:\\.|(?!\3)[^\\])*)\3)*/g;
+-  for (const m of s.matchAll(chunk)) {
+-    const text = [...m[0].matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)]
+-      .map((x) => x[2].replace(/\$\{[^}]*\}/g, "\u0000"))
+-      .join("")
+-      .replace(/<\/?style[^>]*>/g, " ");
+-    if (!/[a-zA-Z-]\s*:/.test(text)) continue;
+-    const line = baseLine + lineAt(s, m.index) - 1;
+-    if (text.includes("{"))
+-      for (const r of cssRules(text, line))
+-        out.push({ ...r, prelude: holeBoundary(r.prelude), kind: "script-css" });
+-    else if (/^\s*-{0,2}[a-zA-Z][\w-]*\s*:\s*\S/.test(text))
+-      out.push({
+-        ctx: [],
+-        prelude: "<script string>",
+-        decls: decls(text, line),
+-        line,
+-        kind: "script-css-string",
+-      });
+-  }
++  const scan = (s, folded) => {
++    for (const m of s.matchAll(chunk)) {
++      const text = [...m[0].matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)]
++        .map((x) => x[2].replace(/\$\{[^}]*\}/g, "\u0000"))
++        // homes v3 (str-unescape; FACE S2): the string's JS escapes decoded before CSS reads it
++        .map((x) => (on("str-unescape") ? unescapeJs(x) : x))
++        .join("")
++        .replace(/<\/?style[^>]*>/g, " ");
++      if (!/[a-zA-Z-]\s*:/.test(text)) continue;
++      const line = baseLine + lineAt(s, m.index) - 1;
++      const sink = on("string-rule")
++        ? SINK.exec(s.slice(Math.max(0, m.index - 40), m.index))
++        : null;
++      const via = sink ? (sink[1] ?? sink[2]) : undefined;
++      const emit = (o) => {
++        const k = `${o.prelude}\u0000${o.decls.map((d) => `${d.prop}:${d.value}`).join(";")}`;
++        if (folded && seen.has(k)) return;
++        seen.add(k);
++        out.push(via ? { ...o, via, ...(folded ? { folded: true } : {}) } : o);
++      };
++      if (text.includes("{"))
++        for (const r of cssRules(text, line))
++          emit({ ...r, prelude: holeBoundary(r.prelude), kind: "script-css" });
++      else if (/^\s*-{0,2}[a-zA-Z][\w-]*\s*:\s*\S/.test(text))
++        emit({
++          ctx: [],
++          prelude: "<script string>",
++          decls: decls(text, line),
++          line,
++          kind: "script-css-string",
++        });
++    }
++  };
++  scan(s0, false);
++  // homes v3 (string-rule; FACE S2–S4, WALK X8): the FOLDED text (`".a { " + k + ": v }"`, a
++  // template whose holes fold or read `?`) is scanned too; a rule the raw scan read is not doubled
++  // (an unfoldable leaf folds to the raw scan's own hole mark, so `holeBoundary` reads both alike)
++  if (on("string-rule")) scan(foldText(s0, { hole: "\u0000" }), true);
+   return out;
+ }
+ 
+@@ -1828,7 +2003,29 @@ export function cssBlocks(f, text, fe = "") {
+   return [];
+ }
+ /** Every rule a source carries, in source order, with the block's kind (script CSS included). */
++// homes v3 (LEDGER row 3, LAWS P9 §I "a proposed diff folds with its per-file cache"): a parse is a
++// pure function of a file's TEXT (and the process's clause set), so it is cached per file and re-used
++// while the text is the same; a plant that rewrites a file re-parses it. `SHAPE_NOCACHE=1` disables it.
++const FILE_CACHE = new Map();
++const NOCACHE = process.env.SHAPE_NOCACHE === "1";
++export const cacheStats = { hits: 0, misses: 0 };
++function perFile(kind, f, text, fn) {
++  if (NOCACHE) return fn();
++  const k = `${kind}\u0000${f}`;
++  const hit = FILE_CACHE.get(k);
++  if (hit && hit.text === text) {
++    cacheStats.hits++;
++    return hit.value;
++  }
++  cacheStats.misses++;
++  const value = fn();
++  FILE_CACHE.set(k, { text, value });
++  return value;
++}
+ export function rulesOf(f, text, fe = "") {
++  return perFile(`rules\u0000${fe}`, f, text, () => rulesOfRaw(f, text, fe)).slice();
++}
++function rulesOfRaw(f, text, fe = "") {
+   const out = [];
+   for (const b of cssBlocks(f, text, fe))
+     for (const r of cssRules(b.css, b.line)) out.push({ ...r, kind: b.kind });
+@@ -2222,6 +2419,7 @@ export function tokenSites(fe, token, { files, read, exists, extra = [] } = {})
+     return head.length > 2 && token.startsWith(head);
+   };
+   const jsSites = (js, line, kind, file) => {
++    js = calleeNormal(js, "setProperty");
+     const L = (i) => line + lineAt(js, i) - 1;
+     const consts = constBindings(js);
+     for (const m of js.matchAll(keyRe(esc)))
+@@ -2360,26 +2558,54 @@ export function tokenSites(fe, token, { files, read, exists, extra = [] } = {})
+               line: L(m.index),
+             });
+     }
+-    for (const m of js.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g))
+-      if (new RegExp(`${esc}\\s*:`).test(m[2]) && !new RegExp(`^${esc}$`).test(m[2])) {
+-        // WALK (pass 8, tok-string-rule; the chair p9): a string holding a whole RULE —
+-        // `insertRule(".peer { --x: v }")`, a `<style>` textContent, `replaceSync(…)` — is read
+-        // as rules, so the last declaration before `}` is a site; a bare declaration list stays decls
+-        const rules =
+-          on("tok-string-rule") && /\{/.test(m[2])
+-            ? cssRules(m[2].replace(/<\/?style[^>]*>/g, " "))
+-            : [{ prelude: "'…'", decls: decls(m[2]) }];
+-        for (const r of rules)
+-          for (const d of r.decls)
+-            if (d.prop === token)
+-              push({
+-                file,
+-                kind: `${kind}-css-string`,
+-                prelude: r.prelude === "'…'" ? "'…'" : `'${r.prelude} {…}'`,
+-                value: d.value,
+-                important: d.important,
+-                line: L(m.index),
+-              });
++    // homes v3 (tok-string-fold; WALK X8/X9): the strings of the FOLDED text are read too — a rule
++    // built by concatenation (`".dark { " + k + ": 0.5 }"`) or a template whose VALUE is interpolated
++    // (`${v}` folds to the hole `?`: an UNRESOLVED site, never nothing); a raw site is not doubled
++    const strSeen = new Set();
++    const texts = [[js, false]];
++    if (on("tok-string-fold")) texts.push([foldText(js, { hole: "?" }), true]);
++    for (const [jsT, folded] of texts)
++      for (const m0 of jsT.matchAll(/(['"`])((?:\\.|(?!\1)[^\\])*?)\1/g)) {
++        const m = [m0[0], m0[1], on("str-unescape") ? unescapeJs(m0[2]) : m0[2]];
++        m.index = m0.index;
++        // a folded cssText / style-attribute value is its own arm's site (above), never a second one
++        if (
++          folded &&
++          /(?:cssText\s*\+?=|setAttribute\s*\(\s*["'`]style["'`]\s*,)\s*$/.test(
++            jsT.slice(Math.max(0, m0.index - 48), m0.index),
++          )
++        )
++          continue;
++        if (
++          new RegExp(`${esc}\\s*:`).test(m[2]) &&
++          !new RegExp(`^${esc}$`).test(m[2])
++        ) {
++          // WALK (pass 8, tok-string-rule; the chair p9): a string holding a whole RULE —
++          // `insertRule(".peer { --x: v }")`, a `<style>` textContent, `replaceSync(…)` — is read
++          // as rules, so the last declaration before `}` is a site; a bare declaration list stays decls
++          const rules =
++            on("tok-string-rule") && /\{/.test(m[2])
++              ? cssRules(m[2].replace(/<\/?style[^>]*>/g, " "))
++              : [{ prelude: "'…'", decls: decls(m[2]) }];
++          for (const r of rules)
++            for (const d of r.decls)
++              if (d.prop === token) {
++                const pre = r.prelude === "'…'" ? "'…'" : `'${r.prelude} {…}'`;
++                const k = `${pre}\u0000${d.value}`;
++                if (folded && strSeen.has(k)) continue;
++                strSeen.add(k);
++                push({
++                  file,
++                  kind: `${kind}-css-string`,
++                  prelude: pre,
++                  value: d.value,
++                  important: d.important,
++                  line: folded ? line + lineAt(jsT, m.index) - 1 : L(m.index),
++                  ...(folded ? { folded: true } : {}),
++                  ...(folded && /\?/.test(d.value) ? { unresolved: true } : {}),
++                });
++              }
++        }
+       }
+     if (on("typed-om"))
+       for (const w of scriptWrites(js, token, 1))
+@@ -2535,6 +2761,7 @@ export function propertyRegistrations(fe, { files, read, exists } = {}) {
+           /\[\s*(["'`])registerProperty\1\s*\]\s*\(/g,
+           ".registerProperty(",
+         );
++        s = calleeNormal(s, "registerProperty", consts);
+         const aliases = new Set();
+         for (const a of s.matchAll(
+           /(?:const|let|var)\s+([A-Za-z_$][\w$]*)\s*=\s*(?:(?:window|globalThis)\s*\.\s*)?CSS\s*\.\s*registerProperty\b/g,
+@@ -2597,6 +2824,49 @@ export function propertyRegistrations(fe, { files, read, exists } = {}) {
+           line: lineAt(s, m.index),
+         });
+       }
++      // homes v3 (register-callee; ERASE row 2): a `registerProperty` REFERENCE no arm above read —
++      // not a direct call, not a `typeof` probe, not an object or destructuring key, not the right
++      // side of an alias whose calls were rewritten — is a registration nothing can read: UNRESOLVED.
++      // So is a computed member call on CSS (`CSS[k](…)`) whose key folds to no other method.
++      if (on("register-callee")) {
++        const push = (raw, i, kind) =>
++          out.push({
++            name: `?${raw}`,
++            unresolved: true,
++            inherits: null,
++            syntax: null,
++            initial: null,
++            kind,
++            file,
++            line: lineAt(s, i),
++          });
++        for (const m of s.matchAll(/(?<![\w$"'`])registerProperty(?![\w$"'`])/g)) {
++          const before = s.slice(Math.max(0, m.index - 60), m.index);
++          const after = s.slice(m.index + m[0].length, m.index + m[0].length + 60);
++          if (/^\s*\(/.test(after)) continue;
++          if (/\btypeof\s+(?:[\w$]+\s*(?:\?\.|\.)\s*)*$/.test(before)) continue;
++          if (
++            /^\s*:/.test(after) ||
++            (/[{,]\s*$/.test(before) && /^\s*[,}]/.test(after))
++          )
++            continue;
++          if (
++            /=(?!=)\s*(?:[A-Za-z_$][\w$]*\s*(?:\?\.|\.)\s*)*$/.test(before) &&
++            /^\s*(?:\.\s*bind\s*\([^)]*\))?\s*[;\n,)]/.test(after)
++          )
++            continue;
++          push(
++            `${before.slice(-24).trim()}registerProperty${after.slice(0, 12).trim()}`,
++            m.index,
++            "registerProperty-ref",
++          );
++        }
++        for (const m of s.matchAll(/\bCSS\s*\[\s*([^\]]+?)\s*\]\s*(?:\?\.\s*)?\(/g)) {
++          const k = foldConcat(m[1], consts);
++          if (k != null && k !== "registerProperty") continue;
++          push(`CSS[${m[1]}]`, m.index, "registerProperty-computed");
++        }
++      }
+       // ERASE (pass 8): `registerProperty(opts)`, `registerProperty(...defs)` — an argument that is
+       // not an object literal is a registration whose name nothing can read: UNRESOLVED, never dropped
+       if (on("register-any"))
+@@ -2616,6 +2886,107 @@ export function propertyRegistrations(fe, { files, read, exists } = {}) {
+   return out;
+ }
+ 
++// LADDER (pass 9, PROPOSED · clock-context): the VALUE a read feeds. A read that keeps its count and
++// lets the expression return another value (`leave && whisper`, `[leave, whisper][1]`, `c ? whisper :
++// leave`, `(leave, whisper)`, `Math.min.call(null, leave, 40)`) is the consumer's value, not its read
++// (pass-8 critique §3.4, K11 K16 K17 K12 K14). Returns the context's name, or null for a bare read.
++const OPEN = { "(": ")", "[": "]", "{": "}" };
++const CLOSE = { ")": "(", "]": "[", "}": "{" };
++function matchClose(s, i) {
++  let d = 0;
++  for (let j = i; j < s.length; j++) {
++    if (OPEN[s[j]]) d++;
++    else if (CLOSE[s[j]] && --d === 0) return j;
++  }
++  return s.length;
++}
++function depth0(span, re) {
++  let d = 0;
++  for (let i = 0; i < span.length; i++) {
++    const c = span[i];
++    if (OPEN[c]) d++;
++    else if (CLOSE[c]) d--;
++    else if (d === 0 && re.test(span.slice(i))) return true;
++  }
++  return false;
++}
++function valueContext(s, a, b) {
++  let d = 0;
++  let left = -1;
++  let opener = -1;
++  for (let i = a - 1; i >= 0; i--) {
++    const c = s[i];
++    if (CLOSE[c]) d++;
++    else if (OPEN[c]) {
++      if (d === 0) {
++        opener = i;
++        if (left < 0) left = i + 1;
++        break;
++      }
++      d--;
++    } else if (d === 0 && left < 0) {
++      if (c === "," || c === ";") left = i + 1;
++      else if (
++        c === "=" &&
++        !/[=!<>]/.test(s[i - 1] ?? "") &&
++        s[i + 1] !== "=" &&
++        s[i + 1] !== ">"
++      )
++        left = i + 1;
++      else if (
++        c === "\n" &&
++        !/(&&|\|\||\?\?|[?:]|[-+*/%&|^~!<>])\s*$/.test(s.slice(Math.max(0, i - 4), i))
++      )
++        left = i + 1;
++    }
++  }
++  if (left < 0) left = 0;
++  let right = s.length;
++  d = 0;
++  for (let j = b; j < s.length; j++) {
++    const c = s[j];
++    if (OPEN[c]) d++;
++    else if (CLOSE[c]) {
++      if (d === 0) {
++        right = j;
++        break;
++      }
++      d--;
++    } else if (d === 0 && (c === "," || c === ";")) {
++      right = j;
++      break;
++    } else if (
++      d === 0 &&
++      c === "\n" &&
++      !/^\s*(&&|\|\||\?\?|[?:.])/.test(s.slice(j + 1, j + 12))
++    ) {
++      right = j;
++      break;
++    }
++  }
++  const span = s.slice(left, right);
++  if (depth0(span, /^(&&|\|\||\?\?)/)) return "logical";
++  if (depth0(span, /^\?(?![.?])/)) return "ternary";
++  // a read in a ternary's arm: `c ? x : READ` — a `:` at depth 0 to the left with its `?` before it
++  if (depth0(span, /^:/) && /\?(?![.?])/.test(span)) return "ternary";
++  if (opener >= 0) {
++    const pre = s.slice(Math.max(0, opener - 40), opener);
++    if (s[opener] === "(") {
++      if (/\.\s*(?:call|apply)\s*$|\bReflect\s*\.\s*apply\s*$/.test(pre))
++        return "call-apply";
++      if (!/[\w$)\]]\s*$/.test(pre)) {
++        const inner = s.slice(opener + 1, matchClose(s, opener));
++        if (depth0(inner, /^,/)) return "comma";
++      }
++    } else if (s[opener] === "[" && !/[\w$)\]]\s*$/.test(pre)) {
++      const end = matchClose(s, opener);
++      if (/^\s*(?:\[|\.|\?\.)/.test(s.slice(end + 1, end + 8)))
++        return "indexed-literal";
++    }
++  }
++  return null;
++}
++
+ // ---------------------------------------------------------------------------- clock reads (LADDER)
+ /** Every read of the motion clock `root` (`MOTION.rungs.whisper`, `MOTION["rungs"].x`) with `arith`
+  *  true when it is ARITHMETIC: an operand of `* / % + - >> << >>> | & ^ ~`, an argument of a Math
+@@ -2654,6 +3025,9 @@ export function clockReads(text, root = "MOTION", { bare = false } = {}) {
+         : /[*/%-]\s*$/.test(before) || /^\s*[*/%-]/.test(after),
+       how: inMath ? "math" : bracket ? "bracket" : op ? "operator" : "read",
+       op: (opB ?? opA)?.[1] ?? null,
++      ...(on("clock-context")
++        ? { ctx: valueContext(s, m.index, m.index + m[0].length) }
++        : {}),
+     });
+   }
+   return out;
+@@ -3156,6 +3530,16 @@ export function elementSites(
+   if (!own) return { elements: [], sites: [] };
+   const b = sfc(rd(own));
+   const els = b.template ? templateElements(b.template.text, b.template.line) : [];
++  // homes v3 (component-tree; C17y): a class a PARENT writes on this component's tag falls through
++  // to this file's root element(s), so a rule keyed on it reaches the root
++  if (on("component-tree") && els.length) {
++    const reach = componentReach(fe, { files, read: rd, exists });
++    const ft = reach.fallThrough(relative(fe, own));
++    if (ft.length)
++      for (const r of reach.roots(relative(fe, own)))
++        if (els[r.i])
++          els[r.i].classes = new Set([...els[r.i].classes, ...ft.map((x) => x.cls)]);
++  }
+   const targets = els.filter(pick);
+   const sites = [];
+   const add = (s) => {
+@@ -3932,7 +4316,18 @@ export function deltaE(c1, c2) {
+   return 100 * Math.hypot(A[0] - B[0], A[1] - B[1], A[2] - B[2]);
+ }
+ /** Every colour literal in a value, in any syntax. */
++/** homes v3 (pct-decode; TIN N21/N22): a value carrying a `data:` URI (not base64) with its
++ *  percent-escapes decoded — `fill='%23ffb2f3'` is the colour `#ffb2f3` the SVG paints. A value with
++ *  no `data:` is returned as is (a `50%` is a percentage, never an escape). */
++export function pctDecode(value) {
++  const v = String(value);
++  if (!on("pct-decode") || !/data:/i.test(v) || /;base64,/i.test(v)) return v;
++  return v.replace(/%([0-9a-fA-F]{2})/g, (m, h) =>
++    String.fromCharCode(parseInt(h, 16)),
++  );
++}
+ export function colorLiterals(value) {
++  value = pctDecode(value);
+   const out = [];
+   const re =
+     /#[0-9a-fA-F]{3,8}\b|\b(?:rgba?|hsla?|hwb|lab|lch|oklab|oklch|color|color-mix)\((?:[^()]|\([^()]*\))*\)|\b[a-zA-Z]+\b/g;
+@@ -4230,6 +4625,302 @@ export function darkArmCensus(
+ const J = (...a) => a.join("");
+ const FX = "/fx";
+ /** A virtual tree: {files, read, exists, ls} for the option bags every reader takes. */
++// ------------------------------------------------------------------- homes v3 (the chair, pass 10)
++const CSS_WIDE = /^(inherit|initial|unset|revert|revert-layer)$/i;
++/** homes v3 (css-wide-kw; FACE CHECK 7 S8–S11): the CSS-wide keyword a value is, or null —
++ *  `{keyword, via, resets, invalid?}`. `via` is `direct` (`font-family: initial`, `font: initial`),
++ *  `var(--k: kw)` (a var() whose name holds a keyword: the keyword applies TO --k, so the consumer's
++ *  declaration is invalid at computed-value time and acts as `unset` — `invalid: true`) or
++ *  `var-fallback` (the keyword a fallback carries). `resets` is true when the value leaves the
++ *  author's cascade (initial, revert, revert-layer, or an invalid var()): a face law that admits a
++ *  keyword as lawful must read `resets` first. */
++export function cssWide(value, map = new Map()) {
++  if (!on("css-wide-kw")) return null;
++  const raw = String(value)
++    .trim()
++    .replace(/\s*!important\s*$/i, "");
++  const d = CSS_WIDE.exec(raw);
++  const resets = (k) => /^(initial|revert|revert-layer)$/.test(k);
++  if (d)
++    return {
++      keyword: d[1].toLowerCase(),
++      via: "direct",
++      resets: resets(d[1].toLowerCase()),
++    };
++  if (!/var\(/i.test(raw)) return null;
++  const r = resolve(raw, map).trim();
++  const bot = /^⊥(inherit|initial|unset|revert|revert-layer)\((--[\w-]+)\)$/.exec(r);
++  if (bot)
++    return {
++      keyword: "unset",
++      via: `var(${bot[2]}: ${bot[1]})`,
++      resets: true,
++      invalid: true,
++    };
++  const f = CSS_WIDE.exec(r);
++  if (f)
++    return {
++      keyword: f[1].toLowerCase(),
++      via: "var-fallback",
++      resets: resets(f[1].toLowerCase()),
++    };
++  return null;
++}
++/** homes v3 (selector-key; GRAPHITE's critic → LADDER's class): the key of a selector LIST is the
++ *  whole list, whitespace collapsed — never its first 80 characters (`check-motion-bands`' `selectorOf`
++ *  cut a list at 80, so a third selector added later shared the key and a widened spend hid). */
++export function selectorKey(sel) {
++  const full = String(sel).replace(/\s+/g, " ").trim();
++  return on("selector-key") ? full : full.slice(0, 80);
++}
++/** homes v3 (admitted; TAPE's critic, LAWS P9 §F "a denylist is never a class cure"): the ADMITTED-
++ *  LIST INVERSION. `sites` are every declaration that reaches the chain (element-keyed); `list` is the
++ *  admitted entries, each a key string or a site-shaped object, keyed by `key` (default file:line:prop).
++ *  → `{unadmitted, stale, ok}`: a site no entry admits reds (the class closes by construction), and an
++ *  entry no site answers is STALE and reds (a moved line is never silently admitted). */
++export function admittedSites(
++  sites,
++  list,
++  { key = (s) => `${s.file}:${s.line}:${s.prop}` } = {},
++) {
++  if (!on("admitted")) return { unadmitted: [], stale: [], ok: true };
++  const want = new Set(list.map((e) => (typeof e === "string" ? e : key(e))));
++  const hit = new Set();
++  const unadmitted = [];
++  for (const s of sites) {
++    const k = key(s);
++    if (want.has(k)) hit.add(k);
++    else unadmitted.push({ ...s, key: k });
++  }
++  const stale = [...want].filter((k) => !hit.has(k));
++  return { unadmitted, stale, ok: !unadmitted.length && !stale.length };
++}
++
++/** homes v3 (bounds; TAPE pass 9, lifted from check-tape-foot.mjs verbatim) · A LENGTH'S BOUNDS AT A REGIME, in css px: `[lo, hi]` of a value whose tokens were
++ *  already resolved through the token map. Viewport units take the regime's own box; `%` of the
++ *  case's block is read against the viewport height (the case sits in a viewport-capped column);
++ *  `env()` is [0, ∞); a var() nothing publishes is (−∞, ∞), so it can only LOOSEN a bound; calc
++ *  sums, products and quotients by numbers, `min`/`max`/`clamp` exactly. A cap whose `hi` exceeds
++ *  the viewport caps nothing (the pass-8 critic's C6, `max-height: 999rem`). */
++export function bounds(value, regime) {
++  const r = typeof regime === "string" ? REGIMES[regime] : regime;
++  if (!on("bounds") || !r) return [NaN, NaN];
++  const INF = Infinity;
++  const src = String(value).trim();
++  let i = 0;
++  const ws = () => {
++    while (i < src.length && /\s/.test(src[i])) i++;
++  };
++  const unit = (n, u) => {
++    u = (u ?? "").toLowerCase();
++    const v = /^(px|)$/.test(u)
++      ? n
++      : /^(rem|em)$/.test(u)
++        ? n * 16
++        : /^[dsl]?vh$/.test(u) || u === "%"
++          ? (n * r.height) / 100
++          : /^[dsl]?vw$/.test(u)
++            ? (n * r.width) / 100
++            : /^[dsl]?vmin$/.test(u)
++              ? (n * Math.min(r.width, r.height)) / 100
++              : /^[dsl]?vmax$/.test(u)
++                ? (n * Math.max(r.width, r.height)) / 100
++                : NaN;
++    return [v, v];
++  };
++  const args = () => {
++    const out = [];
++    for (;;) {
++      out.push(sum());
++      ws();
++      if (src[i] === ",") {
++        i++;
++        continue;
++      }
++      if (src[i] === ")") i++;
++      return out;
++    }
++  };
++  const atom = () => {
++    ws();
++    let m = /^(calc|min|max|clamp|env|var)\(/i.exec(src.slice(i));
++    if (m) {
++      i += m[0].length;
++      const fn = m[1].toLowerCase();
++      if (fn === "env" || fn === "var") {
++        let d = 1;
++        while (i < src.length && d) d += src[i] === "(" ? 1 : src[i++] === ")" ? -1 : 0;
++        return fn === "env" ? [0, INF] : [-INF, INF];
++      }
++      const a = args();
++      if (fn === "calc") return a[0];
++      const lo = a.map((x) => x[0]),
++        hi = a.map((x) => x[1]);
++      if (fn === "min") return [Math.min(...lo), Math.min(...hi)];
++      if (fn === "max") return [Math.max(...lo), Math.max(...hi)];
++      return [
++        Math.max(lo[0], Math.min(lo[1], lo[2])),
++        Math.max(hi[0], Math.min(hi[1], hi[2])),
++      ];
++    }
++    if (src[i] === "(") {
++      i++;
++      const v = sum();
++      ws();
++      if (src[i] === ")") i++;
++      return v;
++    }
++    m = /^(-?\d*\.?\d+(?:e-?\d+)?)([a-z%]*)/i.exec(src.slice(i));
++    if (!m) {
++      i = src.length;
++      return [NaN, NaN];
++    }
++    i += m[0].length;
++    return m[2] ? unit(+m[1], m[2]) : [+m[1], +m[1], true];
++  };
++  const product = () => {
++    let a = atom();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "*" && op !== "/") return a;
++      i++;
++      const b = atom();
++      const k = a[2] ? a[0] : b[0];
++      const x = a[2] ? b : a;
++      if (op === "/" && !b[2]) return [NaN, NaN];
++      const f = op === "*" ? k : 1 / b[0];
++      const p = [x[0] * f, x[1] * f].sort((m, n) => m - n);
++      a = a[2] && b[2] ? [p[0], p[1], true] : p;
++    }
++  };
++  const sum = () => {
++    let a = product();
++    for (;;) {
++      ws();
++      const op = src[i];
++      if (op !== "+" && op !== "-") return a;
++      i++;
++      const b = product();
++      a = op === "+" ? [a[0] + b[0], a[1] + b[1]] : [a[0] - b[1], a[1] - b[0]];
++    }
++  };
++  const v = sum();
++  return [v[0], v[1]];
++}
++
++/** homes v3 (component-tree; LADDER's critic C1y/C17y, LAWS P9 §F "the shape universe is the
++ *  component tree"): Vue's scoped-CSS reach and class fall-through, read over the template tree.
++ *  A `<style scoped>` rule of file P reaches P's own elements AND the ROOT element(s) of every child
++ *  component P's template renders (Vue stamps the parent's scope id on a child's root); a dynamic
++ *  `<component :is>` or `<RouterView>` may render ANY component, so its parent's scoped rules may reach
++ *  every root. A `class` / `:class` on a component tag is not a prop and FALLS THROUGH to that child's
++ *  root(s). → `{reaches(ruleFile, elFile, el), fallThrough(elFile) → [{cls, file, line}], roots(elFile)}`.
++ *  A root is a template element with no ancestor but transparent wrappers (template, Transition,
++ *  KeepAlive, Suspense). Files are repo-relative (as `census` prints them). */
++const TRANSPARENT = new Set([
++  "template",
++  "Transition",
++  "transition",
++  "KeepAlive",
++  "keep-alive",
++  "Suspense",
++  "suspense",
++]);
++const fnv = (t) => {
++  let h = 0x811c9dc5;
++  for (let i = 0; i < t.length; i++) h = Math.imul(h ^ t.charCodeAt(i), 0x01000193);
++  return (h >>> 0).toString(16);
++};
++const REACH_CACHE = new Map();
++export function componentReach(fe, { files, read, exists } = {}) {
++  const rd = read ?? ((f) => readFileSync(f, "utf8"));
++  const list = files
++    ? followImports(files, { read: rd, exists })
++    : sources(fe, { read: rd, exists });
++  const sig = `${fe}\u0000${list.map((f) => `${f}:${fnv(String(rd(f)))}`).join("|")}`;
++  if (!NOCACHE && REACH_CACHE.has(sig)) return REACH_CACHE.get(sig);
++  if (REACH_CACHE.size > 16) REACH_CACHE.clear();
++  const made = componentReachRaw(fe, list, rd, { files, exists });
++  REACH_CACHE.set(sig, made);
++  return made;
++}
++function componentReachRaw(fe, list, rd, { files, exists }) {
++  const off = !on("component-tree");
++  const elsOf = new Map();
++  const children = new Map();
++  const falls = new Map();
++  const add = (m, k, v) => (m.get(k) ?? m.set(k, []).get(k)).push(v);
++  const targets = new Map();
++  if (!off)
++    for (const t of componentSites(fe, { files, read: rd, exists }))
++      if (t.via === "template") targets.set(`${t.file}:${t.line}:${t.tag}`, t.target);
++  for (const f of list) {
++    if (!f.endsWith(".vue")) continue;
++    const file = relative(fe, f);
++    const text = rd(f);
++    const tpl = perFile("sfc-template", f, text, () => sfc(text).template);
++    const els = tpl
++      ? perFile("tpl-els", f, text, () => templateElements(tpl.text, tpl.line))
++      : [];
++    elsOf.set(file, els);
++    if (off) continue;
++    for (const el of els) {
++      const dyn = /^(component|RouterView|router-view)$/.test(el.tag);
++      if (
++        !dyn &&
++        (NATIVE.test(el.tag) || BUILTIN.has(el.tag) || BUILTIN.has(pascal(el.tag)))
++      )
++        continue;
++      if (!dyn && !/[A-Z]/.test(el.tag[0]) && !el.tag.includes("-")) continue;
++      const tg = dyn ? "*" : (targets.get(`${file}:${el.line}:${el.tag}`) ?? "*");
++      const child = tg === "UNRESOLVED" || tg === "native" ? "*" : tg;
++      add(children, file, child);
++      for (const c of el.classes) add(falls, child, { cls: c, file, line: el.line });
++    }
++  }
++  const roots = (file) => {
++    const els = elsOf.get(file) ?? [];
++    const top = (el) => {
++      for (let p = el.parent; p != null; p = els[p].parent)
++        if (!TRANSPARENT.has(els[p].tag)) return false;
++      return !TRANSPARENT.has(el.tag);
++    };
++    return els.filter(top);
++  };
++  const isRoot = (file, el) =>
++    roots(file).some((r) => r.i === el.i && r.line === el.line);
++  return {
++    roots,
++    reaches(ruleFile, elFile, el) {
++      if (ruleFile === elFile) return true;
++      if (off || !isRoot(elFile, el)) return false;
++      const ch = children.get(ruleFile) ?? [];
++      return ch.includes(elFile) || ch.includes("*");
++    },
++    /** a `:deep()` rule of ruleFile reaches elFile's elements when ruleFile renders elFile at any depth */
++    deepReaches(ruleFile, elFile) {
++      if (off) return false;
++      const seen = new Set([ruleFile]);
++      const q = [ruleFile];
++      while (q.length) {
++        for (const c of children.get(q.shift()) ?? []) {
++          if (c === "*" || c === elFile) return true;
++          if (!seen.has(c)) {
++            seen.add(c);
++            q.push(c);
++          }
++        }
++      }
++      return false;
++    },
++    fallThrough(elFile) {
++      if (off) return [];
++      return [...(falls.get(elFile) ?? []), ...(falls.get("*") ?? [])];
++    },
++  };
++}
++
+ export function fixture(tree, root = FX) {
+   const map = new Map(Object.entries(tree).map(([k, v]) => [join(root, k), v]));
+   const ls = (d) => {
+@@ -4289,7 +4980,7 @@ const DESKS = ["desk-1280x800", "desk-1440x900"];
+  *  demands): one voice site (class-keyed census ∪ element-keyed sites), resolving to `inherit`,
+  *  seated in EVERY phone regime and no desk regime (EVALUATED), no `!important`; the block's
+  *  reserve at each phone regime ≥ the voice's line, both resolved at their consumers. */
+-function reserveReading(L, fx, file = "src/MarginNote.vue") {
++export function reserveReading(L, fx, file = "src/MarginNote.vue") {
+   const o = { files: fx.files, read: fx.read, exists: fx.exists };
+   const fails = [];
+   const { map } = L.tokens(fx.fe, o);
+@@ -4332,16 +5023,20 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+       fails.push(`R3 seated in ${rg}`);
+   }
+   const block = L.census(fx.fe, "margin-note-block", "min-height", o);
++  // LEDGER row 4 (r4-unresolved): no site is UNRESOLVED (null), never the typed 16 / 1.2×
++  const masked = (v) => (on("r4-unresolved") ? null : v);
+   const fsOf = (cls, rg) => {
+     const e = L.effectiveAt(L.census(fx.fe, cls, "font-size", o), rg);
+-    return e ? L.lengthPx(e.value, {}, map) : 16;
++    return e ? L.lengthPx(e.value, {}, map) : masked(16);
+   };
+   const lhOf = (cls, rg, fs) => {
+     const e = L.effectiveAt(L.census(fx.fe, cls, "line-height", o), rg);
+-    if (!e) return fs * 1.2;
++    if (!e) return masked(fs == null ? null : fs * 1.2);
+     const n = /^[\d.]+$/.test(L.resolve(e.value, map).trim())
+-      ? +L.resolve(e.value, map) * fs
+-      : L.lengthPx(e.value, { fontSize: fs }, map);
++      ? fs == null
++        ? null
++        : +L.resolve(e.value, map) * fs
++      : L.lengthPx(e.value, fs == null ? {} : { fontSize: fs }, map);
+     return n;
+   };
+   for (const rg of PHONES) {
+@@ -4351,7 +5046,10 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+     const reserve = eff
+       ? L.lengthPx(
+           eff.value,
+-          { fontSize: bfs, lineHeight: lhOf("margin-note-block", rg, bfs) },
++          {
++            ...(bfs == null ? {} : { fontSize: bfs }),
++            lineHeight: lhOf("margin-note-block", rg, bfs) ?? undefined,
++          },
+           map,
+         )
+       : null;
+@@ -4366,17 +5064,129 @@ function reserveReading(L, fx, file = "src/MarginNote.vue") {
+       const fsC = at(["font-size"])
+         .map((s) => L.lengthPx(s.value, {}, map))
+         .filter((x) => x != null);
+-      const efs = Math.max(vfs, ...fsC);
++      const fsAll = [vfs, ...fsC].filter((x) => x != null);
++      const efs = fsAll.length ? Math.max(...fsAll) : null;
+       const lhC = at(["line-height"]).map((s) => {
+         const r = L.resolve(s.value, map).trim();
+-        return /^[\d.]+$/.test(r)
+-          ? +r * efs
+-          : L.lengthPx(s.value, { fontSize: efs }, map);
++        if (/^[\d.]+$/.test(r)) return efs == null ? null : +r * efs;
++        return L.lengthPx(s.value, efs == null ? {} : { fontSize: efs }, map);
+       });
+-      line = Math.max(
+-        lhOf("margin-note", rg, efs) ?? 0,
+-        ...lhC.filter((x) => x != null),
+-      );
++      const lhAll = [lhOf("margin-note", rg, efs), ...lhC].filter((x) => x != null);
++      line = lhAll.length ? Math.max(...lhAll) : null;
++    }
++    if (on("r4-descend") && L.elementSites && voiceEl && line != null) {
++      // homes v3 (r4-descend; LEDGER's critic C1–C6): R4 reads the voice's LINE BOX. The voice's
++      // DESCENDANTS (the ink box, the star) grow it by their own font, line, height,
++      // vertical-align and block-axis padding/margin/border; the voice grows it by its own (a
++      // `:has()` rule included). Conservative: each property's largest live candidate is summed.
++      const isDesc = (e) => {
++        for (let p = els[e.i]?.parent; p != null; p = els[p].parent)
++          if (p === voiceEl.i) return true;
++        return false;
++      };
++      const PROPS = [
++        "font-size",
++        "line-height",
++        "height",
++        "vertical-align",
++        "padding-top",
++        "padding-bottom",
++        "margin-top",
++        "margin-bottom",
++        "border-width",
++        "border-top-width",
++        "border-bottom-width",
++      ];
++      // the COMPONENT TREE bounds the reach (component-tree): another file's scoped rule reaches none of
++      // the voice's own elements (none is MarginNote's root) unless it is a `:deep()` rule of a component
++      // that renders MarginNote; an unscoped rule reaches as `mayMatch` says
++      const R = L.componentReach ? L.componentReach(fx.fe, o) : null;
++      const reach = (x) =>
++        !R ||
++        x.kind !== "sfc-style-scoped" ||
++        x.file === file ||
++        (/:deep\(/.test(String(x.prelude)) && R.deepReaches(x.file, file));
++      const live = (pick) =>
++        L.elementSites(fx.fe, { file, pick, props: PROPS, ...o }).sites.filter(
++          (x) => (x.regimes ?? []).includes(rg) && reach(x),
++        );
++      const sides = (d) => {
++        const p = d.prop;
++        const parts = splitTop(String(d.value).trim(), /\s+/).filter(Boolean);
++        if (/^(padding|margin)-(top|block-start)$/.test(p) || p === "border-top-width")
++          return [d.value, null];
++        if (
++          /^(padding|margin)-(bottom|block-end)$/.test(p) ||
++          p === "border-bottom-width"
++        )
++          return [null, d.value];
++        if (/^(padding|margin)-block$/.test(p)) return [parts[0], parts[1] ?? parts[0]];
++        if (/^(padding|margin|border-width)$/.test(p))
++          return [parts[0], parts[2] ?? parts[0]];
++        if (/^border(-block|-top|-bottom)?$/.test(p)) {
++          const w = parts.find((x) => /^[-+]?[\d.]/.test(x)) ?? null;
++          return [p === "border-bottom" ? null : w, p === "border-top" ? null : w];
++        }
++        return [null, null];
++      };
++      const px = (v, fs) =>
++        v == null
++          ? 0
++          : Math.max(0, L.lengthPx(v, fs == null ? {} : { fontSize: fs }, map) ?? 0);
++      const boxOf = (ss, fs) => {
++        let top = 0,
++          bottom = 0;
++        for (const x of ss) {
++          if (!/^(padding|margin|border)/.test(x.prop)) continue;
++          const [t, b] = sides(x);
++          top = Math.max(top, px(t, fs));
++          bottom = Math.max(bottom, px(b, fs));
++        }
++        return top + bottom;
++      };
++      const vlh = L.effectiveAt(L.census(fx.fe, "margin-note", "line-height", o), rg);
++      const vlhR = vlh ? L.resolve(vlh.value, map).trim() : null;
++      const dsites = live(isDesc);
++      let grown = line;
++      if (dsites.length) {
++        const fsD = Math.max(
++          vfs ?? 0,
++          ...dsites
++            .filter((x) => x.prop === "font-size")
++            .map(
++              (x) =>
++                L.lengthPx(x.value, vfs == null ? {} : { fontSize: vfs }, map) ?? 0,
++            ),
++        );
++        const lhC = dsites
++          .filter((x) => x.prop === "line-height")
++          .map((x) => {
++            const r = L.resolve(x.value, map).trim();
++            return /^[\d.]+$/.test(r)
++              ? +r * fsD
++              : (L.lengthPx(x.value, { fontSize: fsD }, map) ?? 0);
++          });
++        const lhD = lhC.length
++          ? Math.max(...lhC)
++          : vlhR != null && /^[\d.]+$/.test(vlhR)
++            ? +vlhR * fsD
++            : line;
++        const hD = Math.max(
++          0,
++          ...dsites.filter((x) => x.prop === "height").map((x) => px(x.value, fsD)),
++        );
++        const vaD = Math.max(
++          0,
++          ...dsites
++            .filter((x) => x.prop === "vertical-align")
++            .map((x) => Math.abs(L.lengthPx(x.value, { fontSize: fsD }, map) ?? 0)),
++        );
++        grown = Math.max(
++          line,
++          Math.max(lhD, hD + vaD) + (hD ? 0 : vaD) + boxOf(dsites, fsD),
++        );
++      }
++      line = grown + boxOf(live(isVoice), vfs);
+     }
+     if (reserve == null || line == null || reserve < line - 0.5)
+       fails.push(`R4 ${rg}: reserve ${reserve} < the voice's line ${line}`);
+@@ -4672,6 +5482,23 @@ const TESTS = [
+       return a.length === 1 && b.length === 1 && div.length === 1;
+     },
+   ],
++  [
++    "strip-paren-kw",
++    "TIN",
++    "C2 · a regex after an if-head's `)` is code (a division after a call's `)` stays a division)",
++    (L) => {
++      const BS = String.fromCharCode(92);
++      const a = L.scriptWrites(
++        "if (e) /" + BS + "/" + BS + '//.test(t); el.style.minHeight = "0";\n',
++        "min-height",
++      );
++      const div = L.scriptWrites(
++        "const r = f(a) / 2; el.style.minHeight = c / 2; // tail\n",
++        "min-height",
++      );
++      return a.length === 1 && div.length === 1;
++    },
++  ],
+   [
+     "rel-color",
+     "TIN",
+@@ -5054,6 +5881,22 @@ const TESTS = [
+       return L.census(f.fe, "r", "animation", f).length === 1;
+     },
+   ],
++  [
++    "logical-sides",
++    "RULE",
++    "RULE p9 (K13b / K14): a logical longhand and the logical block shorthand are sites of padding-bottom",
++    (L) => {
++      const f = fixture({
++        "src/a.css":
++          ".r { padding-block-end: 0.15rem; }\n.s { padding-block: 0 0.15rem; }\n.t { padding-inline-end: 1px; }\n",
++      });
++      return (
++        L.census(f.fe, "r", "padding-bottom", f).length === 1 &&
++        L.census(f.fe, "s", "padding-bottom", f).length === 1 &&
++        L.census(f.fe, "t", "padding-bottom", f).length === 0
++      );
++    },
++  ],
+   [
+     "semicolon-less",
+     "LADDER",
+@@ -5128,6 +5971,54 @@ const TESTS = [
+       );
+     },
+   ],
++  [
++    "clock-context",
++    "LADDER",
++    "K11 `&&`, K16 an indexed literal, K17 a ternary, K12 a comma, K14 `Math.min.call` carry `ctx`; a bare read, a call argument, an object value and a sum carry none (pass 9, PROPOSED)",
++    (L) => {
++      const c = (t) => L.clockReads(t).map((r) => r.ctx ?? null);
++      const all = (t, v) => c(t).length > 0 && c(t).every((x) => x === v);
++      return (
++        all("  }, MOTION.rungs.leave && MOTION.rungs.whisper);", "logical") &&
++        all(
++          "  }, [MOTION.rungs.leave, MOTION.rungs.whisper][1]);",
++          "indexed-literal",
++        ) &&
++        all(
++          "  }, MOTION.rungs.leave ? MOTION.rungs.whisper : MOTION.rungs.leave);",
++          "ternary",
++        ) &&
++        all("  }, (MOTION.rungs.leave, MOTION.rungs.whisper));", "comma") &&
++        all("  }, Math.min.call(null, MOTION.rungs.leave, 40));", "call-apply") &&
++        all("const d = a ?? MOTION.rungs.leave;", "logical") &&
++        all("  }, MOTION.rungs.leave);", null) &&
++        all("animate(el, { duration: MOTION.rungs.leave, easing: e });", null) &&
++        all("const t = MOTION.rungs.leave + MOTION.rungs.whisper;", null) &&
++        all("const o = a?.b + MOTION.rungs.leave;", null) &&
++        all("foo(MOTION.rungs.leave, 3);", null)
++      );
++    },
++  ],
++  [
++    "obj-bracket",
++    "LADDER",
++    "K1: a literal-keyed bracket write on a script style object is a write; `.style[…]` stays one site, a computed key none (pass 9, PROPOSED)",
++    (L) => {
++      const w = (t) => L.scriptWrites(t, "animation-duration").map((x) => x.kind);
++      const k1 = w(
++        'const vars = {};\nif (armed) vars["animation-duration"] = "50ms";\n',
++      );
++      const st = w('el.style["animation-duration"] = "50ms";\n');
++      return (
++        k1.length === 1 &&
++        k1[0] === "script-object-bracket" &&
++        st.length === 1 &&
++        st[0] === "script-write" &&
++        w('vars["animation-delay"] = "50ms";\n').length === 0 &&
++        w('vars[k] = "50ms";\n').length === 0
++      );
++    },
++  ],
+   // --- ERASE
+   [
+     "pcss",
+@@ -5641,6 +6532,26 @@ const TESTS = [
+         }),
+       ).length > 0,
+   ],
++  [
++    "r4-unresolved",
++    "LEDGER",
++    "row 4: the voice's line-height deleted, then its font-size deleted, each RED R4 as UNRESOLVED (never 1.2× / 16); the clean fixture GREEN",
++    (L) => {
++      const VOICE =
++        "  font-size: var(--type-body);\n  line-height: var(--type-leading-caption);\n";
++      const noLine = plantedFixture({
++        _swap: [VOICE, "  font-size: var(--type-body);\n"],
++      });
++      const noFont = plantedFixture({
++        _swap: [VOICE, "  line-height: var(--type-leading-caption);\n"],
++      });
++      return (
++        reserveReading(L, plantedFixture({})).length === 0 &&
++        reserveReading(L, noLine).some((f) => /R4 .*null/.test(f)) &&
++        reserveReading(L, noFont).some((f) => /R4 .*null/.test(f))
++      );
++    },
++  ],
+   // --- LIVE (pass 8's critic X11/X12; the chair's pass-9 cure)
+   [
+     "masked-const",
+@@ -5927,6 +6838,362 @@ const TESTS = [
+         L.mayMatch(".note.is-spent", at(bound), bound) === true
+       );
+     },
++  ], // --- homes v3 (the chair, pass 10 batch 0): FACE CHECK 7's two arms, WALK X8/X9, TIN gate 4, ERASE row 2
++  [
++    "str-unescape",
++    "FACE",
++    'S2 · `insertRule(".ctrl-word { font-family: \\"Comic Sans MS\\"; }")`: the escaped quotes decoded, the rule read whole',
++    (L) => {
++      const BS = String.fromCharCode(92);
++      const src = `sh.insertRule(".ctrl-word { font-family: ${BS}"Comic Sans MS${BS}"; }");\n`;
++      const r = L.scriptCss(src).filter((x) => x.prelude === ".ctrl-word");
++      return (
++        r.length === 1 &&
++        r[0].decls.some(
++          (d) => d.prop === "font-family" && d.value === '"Comic Sans MS"',
++        )
++      );
++    },
++  ],
++  [
++    "string-rule",
++    "FACE",
++    "S2–S4 · a concatenated insertRule, a replaceSync template and a <style> textContent are folded and read, each with its sink",
++    (L) => {
++      const one = (src, via) => {
++        const r = L.scriptCss(src).filter((x) => x.prelude === ".ctrl-word");
++        return r.some(
++          (x) =>
++            x.via === via &&
++            x.decls.some(
++              (d) => d.prop === "font-family" && /Comic Sans MS/.test(d.value),
++            ),
++        );
++      };
++      return (
++        one(
++          'const k = "font-" + "family";\nsh.insertRule(".ctrl-word { " + k + ": \'Comic Sans MS\' }");\n',
++          "insertRule",
++        ) &&
++        one(
++          "const F = 'Comic Sans MS';\ns.replaceSync(`.ctrl-word { font-family: ${F} }`);\n",
++          "replaceSync",
++        ) &&
++        one(
++          'el.textContent = ".ctrl-word { font-family: " + "\'Comic Sans MS\' }";\n',
++          "textContent",
++        )
++      );
++    },
++  ],
++  [
++    "css-wide-kw",
++    "FACE",
++    "S8 revert-layer, S9 initial, S10 `font: initial`, S11 `--k: revert; var(--k)` read as keywords that leave the cascade; `inherit` and a family read as such",
++    (L) => {
++      if (typeof L.cssWide !== "function") return false;
++      const map = new Map([["--k", "revert"]]);
++      const a = L.cssWide("revert-layer", map),
++        b = L.cssWide("initial", map),
++        c = L.cssWide("initial !important", map),
++        d = L.cssWide("var(--k)", map),
++        e = L.cssWide("var(--nope, initial)", map),
++        f = L.cssWide("inherit", map),
++        g = L.cssWide('"Patrick Hand", cursive', map);
++      return (
++        a?.resets === true &&
++        b?.resets === true &&
++        c?.keyword === "initial" &&
++        d?.invalid === true &&
++        d?.resets === true &&
++        /--k/.test(d?.via ?? "") &&
++        e?.via === "var-fallback" &&
++        e?.resets === true &&
++        f?.keyword === "inherit" &&
++        f?.resets === false &&
++        g === null
++      );
++    },
++  ],
++  [
++    "tok-string-fold",
++    "WALK",
++    'X8 `insertRule(".dark { " + k + ": 0.5 }")` with k folded publishes; X9 a template rule with an interpolated VALUE is an UNRESOLVED site',
++    (L) => {
++      const sites = (src) => {
++        const f = fixture({ "src/a.ts": src });
++        return L.tokenSites(f.fe, "--peer-name-l", f);
++      };
++      const x8 = sites(
++        'const k = "--peer-" + "name-l";\nsheet.insertRule(".dark { " + k + ": 0.5 }", 0);\n',
++      );
++      const x9 = sites("sh.replaceSync(`.dark { --peer-name-l: ${v} }`);\n");
++      return (
++        x8.length === 1 &&
++        x8[0].value === "0.5" &&
++        x9.length === 1 &&
++        x9[0].unresolved === true
++      );
++    },
++  ],
++  [
++    "callee-norm",
++    "TIN",
++    "N6 `Reflect.apply(el.style.setProperty, el.style, [name, v])`, `.call`, `.apply`, `(0, f)()`, `?.()` and N2's bracket call each publish once",
++    (L) => {
++      const T = "--color-peer-5-name";
++      const n = (src) => {
++        const f = fixture({ "src/a.ts": src + "\n" });
++        return L.tokenSites(f.fe, T, f).filter((x) => /#000/.test(x.value)).length;
++      };
++      return (
++        n(`Reflect.apply(el.style.setProperty, el.style, ["${T}", "#000"]);`) === 1 &&
++        n(`el.style.setProperty.call(el.style, "${T}", "#000");`) === 1 &&
++        n(`el.style.setProperty.apply(el.style, ["${T}", "#000"]);`) === 1 &&
++        n(`(0, el.style.setProperty)("${T}", "#000");`) === 1 &&
++        n(`el.style.setProperty?.("${T}", "#000");`) === 1 &&
++        n(`el.style["setProperty"]("${T}", "#000");`) === 1
++      );
++    },
++  ],
++  [
++    "callee-norm",
++    "ERASE",
++    "row 2's six spellings (`.call`, `?.()`, `Reflect.apply`, `(0, f)()`, a const-keyed bracket, an assigned `.bind` alias) each read as the registration by name",
++    (L) => {
++      const D =
++        '{ name: "--plant-e", syntax: "<time>", inherits: false, initialValue: "0ms" }';
++      const six = [
++        `CSS.registerProperty.call(CSS, ${D});`,
++        `CSS.registerProperty?.(${D});`,
++        `Reflect.apply(CSS.registerProperty, CSS, [${D}]);`,
++        `(0, CSS.registerProperty)(${D});`,
++        `const k9 = "registerProperty"; CSS[k9](${D});`,
++        `let r9; r9 = CSS.registerProperty.bind(CSS); r9(${D});`,
++      ];
++      return six.every((src) => {
++        const f = fixture({ "src/a.ts": src + "\n" });
++        const r = L.propertyRegistrations(f.fe, f);
++        return r.length === 1 && r[0].name === "--plant-e" && !r[0].unresolved;
++      });
++    },
++  ],
++  [
++    "register-callee",
++    "ERASE",
++    "an opaque `CSS[f](…)` and a passed `queue(CSS.registerProperty)` are UNRESOLVED registrations; a `typeof` probe is not",
++    (L) => {
++      const D =
++        '{ name: "--plant-e", syntax: "<time>", inherits: false, initialValue: "0ms" }';
++      const reg = (src) => {
++        const f = fixture({ "src/a.ts": src + "\n" });
++        return L.propertyRegistrations(f.fe, f);
++      };
++      const opaque = reg(`const f = pick(); CSS[f](${D});`);
++      const passed = reg("queue(CSS.registerProperty);");
++      const probe = reg(
++        `if (typeof CSS.registerProperty === "function") CSS.registerProperty(${D});`,
++      );
++      return (
++        opaque.length === 1 &&
++        opaque[0].unresolved === true &&
++        passed.length === 1 &&
++        passed[0].unresolved === true &&
++        probe.length === 1 &&
++        probe[0].name === "--plant-e" &&
++        !probe[0].unresolved
++      );
++    },
++  ],
++  [
++    "pct-decode",
++    "TIN",
++    "N21/N22 · `fill='%23ffb2f3'` in a data: URI reads the colour #ffb2f3; a bare `50%` is untouched",
++    (L) => {
++      const uri = `url("data:image/svg+xml,<svg><path fill='%23ffb2f3'/></svg>")`;
++      const hit = L.colorLiterals(uri).some((c) => /ffb2f3/i.test(c.text));
++      return hit && (L.pctDecode ? L.pctDecode("50%") === "50%" : false);
++    },
++  ],
++  // --- homes v3: LADDER's component tree, GRAPHITE → LADDER's selector key, TAPE's admitted list and bounds, LEDGER's line box
++  [
++    "component-tree",
++    "LADDER",
++    "C1y a parent's scoped rule reaches the child's ROOT (and a dynamic <component> may); C17y a class on the component tag falls through and its rule reaches the root; Other.vue, rendering no child, reaches nothing",
++    (L) => {
++      if (typeof L.componentReach !== "function") return false;
++      const RULE = ".game-cell { animation-duration: 150ms; }\n";
++      const f = fixture({
++        "src/Child.vue":
++          '<template>\n  <div class="game-cell"><i class="game-cell">x</i></div>\n</template>\n',
++        "src/Parent.vue": `<template>\n  <section><Child class="cell-quick" /></section>\n</template>\n<script setup lang="ts">\nimport Child from "./Child.vue";\n</script>\n<style scoped>\n${RULE}</style>\n`,
++        "src/Other.vue": `<template>\n  <p>y</p>\n</template>\n<style scoped>\n${RULE}</style>\n`,
++        "src/Host.vue": `<template>\n  <component :is="x" />\n</template>\n<style scoped>\n${RULE}</style>\n`,
++        "src/index.css": ".cell-quick { animation-duration: 150ms; }\n",
++      });
++      const R = L.componentReach(f.fe, f);
++      const els = L.templateElements(
++        '\n  <div class="game-cell"><i class="game-cell">x</i></div>\n',
++      );
++      const root = R.roots("src/Child.vue")[0];
++      const inner = els.find((e) => e.tag === "i");
++      const ft = R.fallThrough("src/Child.vue").map((x) => x.cls);
++      const es = L.elementSites(f.fe, {
++        file: "src/Child.vue",
++        pick: (e) => e.parent == null,
++        props: ["animation-duration"],
++        ...f,
++      });
++      return (
++        root?.tag === "div" &&
++        R.reaches("src/Parent.vue", "src/Child.vue", root) === true &&
++        R.reaches("src/Host.vue", "src/Child.vue", root) === true &&
++        R.reaches("src/Other.vue", "src/Child.vue", root) === false &&
++        R.reaches("src/Parent.vue", "src/Child.vue", inner) === false &&
++        ft.includes("cell-quick") &&
++        es.sites.some((x) => x.file === "src/index.css" && /cell-quick/.test(x.prelude))
++      );
++    },
++  ],
++  [
++    "selector-key",
++    "GRAPHITE",
++    "a third selector added past the 80th character changes the key; whitespace never does",
++    (L) => {
++      if (typeof L.selectorKey !== "function") return false;
++      const A =
++        ".board-shell .game-cell.is-selected:not(.is-given), .board-shell .game-cell:has(input:focus-visible)";
++      return (
++        A.length > 80 &&
++        L.selectorKey(A) !== L.selectorKey(`${A}, .board-shell .game-cell.is-peer`) &&
++        L.selectorKey(A) === L.selectorKey(A.replace(/, /g, ",\n   "))
++      );
++    },
++  ],
++  [
++    "admitted",
++    "TAPE",
++    "a site off the file+line list reds; a list entry whose line moved is STALE and reds; the full list holds",
++    (L) => {
++      if (typeof L.admittedSites !== "function") return false;
++      const sites = [
++        { file: "src/a.css", line: 3, prop: "padding-bottom" },
++        { file: "src/a.css", line: 9, prop: "min-height" },
++      ];
++      const a = L.admittedSites(sites, ["src/a.css:3:padding-bottom"]);
++      const b = L.admittedSites(sites, [
++        "src/a.css:4:padding-bottom",
++        "src/a.css:9:min-height",
++      ]);
++      const c = L.admittedSites(sites, [
++        "src/a.css:3:padding-bottom",
++        { file: "src/a.css", line: 9, prop: "min-height" },
++      ]);
++      return (
++        !a.ok &&
++        a.unadmitted.length === 1 &&
++        a.unadmitted[0].line === 9 &&
++        a.stale.length === 0 &&
++        !b.ok &&
++        b.stale.length === 1 &&
++        b.unadmitted.length === 1 &&
++        c.ok
++      );
++    },
++  ],
++  [
++    "bounds",
++    "TAPE",
++    "C6 `999rem` bounds at 15984 px; `calc(100dvh + 1px)` at 801 on the 1280×800 desk; `max(1rem, env())` [16, ∞); an unpublished var() (−∞, ∞); `min(50vh, 30rem)` 422 at 390×844",
++    (L) => {
++      if (typeof L.bounds !== "function") return false;
++      const eq = (a, b) => a[0] === b[0] && a[1] === b[1];
++      return (
++        eq(L.bounds("999rem", "desk-1280x800"), [15984, 15984]) &&
++        eq(L.bounds("calc(100dvh + 1px)", "desk-1280x800"), [801, 801]) &&
++        eq(L.bounds("max(1rem, env(safe-area-inset-bottom))", "desk-1280x800"), [
++          16,
++          Infinity,
++        ]) &&
++        eq(L.bounds("var(--nope)", "desk-1280x800"), [-Infinity, Infinity]) &&
++        eq(L.bounds("min(50vh, 30rem)", "phone-portrait-390x844"), [422, 422])
++      );
++    },
++  ],
++  [
++    "r4-descend",
++    "LEDGER",
++    "C1 padding-block, C2 font-size, C3 a :has() pad on the voice, C4 a descendant margin, C5 vertical-align, C6 line-height on the ink each RED R4; the shipped ink + star GREEN",
++    (L) => {
++      if (typeof L.reserveReading !== "function") return false;
++      // (the shipped ink and star are inline blocks; the reading keys no display, so none is written:
++      // a display keyword in scripts/ text mints a Tailwind utility, T9-R6)
++      const INK =
++        ".margin-note-ink {\n  animation: none;\n}\n.note-star {\n  height: 1.1em;\n  vertical-align: -0.15em;\n}\n";
++      const SWAP = [
++        "{{ text }}",
++        '<span class="margin-note-ink"><svg class="note-star"></svg>{{ text }}</span>',
++      ];
++      const r4 = (plant, files) =>
++        L.reserveReading(
++          L,
++          plantedFixture({
++            tail: INK + plant,
++            _swap: SWAP,
++            ...(files ? { files } : {}),
++          }),
++        ).filter((x) => /^R4/.test(x));
++      // the component tree bounds the reach: another file's scoped `svg` rule never reaches the star (the
++      // WAVE's GameControlPanel `.icon-btn svg` read as the star's height); a `:deep(svg)` of a component
++      // that RENDERS the note does
++      const OTHER = {
++        "src/Other.vue":
++          "<template>\n  <i />\n</template>\n<style scoped>\nsvg { height: 90px; }\n</style>\n",
++      };
++      const HOST = {
++        "src/Host.vue":
++          '<template>\n  <MarginNote />\n</template>\n<script setup lang="ts">\nimport MarginNote from "./MarginNote.vue";\n</script>\n<style scoped>\n:deep(svg) { height: 90px; }\n</style>\n',
++      };
++      const C = [
++        ".margin-note-ink { padding-block: 6px; }\n",
++        ".margin-note-ink { font-size: 30px; }\n",
++        ".margin-note:has(.margin-note-ink) { padding-top: 8px; }\n",
++        ".margin-note-block > p > span { margin-top: 10px; }\n",
++        ".margin-note-ink { vertical-align: 12px; }\n",
++        ".margin-note-ink { line-height: 2.2; }\n",
++      ];
++      return (
++        r4("").length === 0 &&
++        C.every((c) => r4(c).length > 0) &&
++        r4("", OTHER).length === 0 &&
++        r4("", HOST).length > 0
++      );
++    },
++  ],
++  [
++    "typed-om",
++    "TIN",
++    'N1 (regression row, homes v3) · `attributeStyleMap.set("--color-peer-5-name", "#000")` publishes',
++    (L) => {
++      const f = fixture({
++        "src/a.ts": 'el.attributeStyleMap.set("--color-peer-5-name", "#000");\n',
++      });
++      return L.tokenSites(f.fe, "--color-peer-5-name", f).length === 1;
++    },
++  ],
++  [
++    "at-property-site",
++    "TIN",
++    "N34 (regression row, homes v3) · `@property --color-peer-1-ring { initial-value: #000 }` is a publisher of the arm",
++    (L) => {
++      const f = fixture({
++        "src/a.css":
++          '@property --color-peer-1-ring { syntax: "<color>"; inherits: false; initial-value: #000; }\n',
++      });
++      return L.tokenSites(f.fe, "--color-peer-1-ring", f).some(
++        (x) => x.value === "#000",
++      );
++    },
+   ],
+ ];
+ /** The pass-7 shape-plants battery, re-cut to the union's `1lh` anchor and run in memory on the
+@@ -6330,6 +7597,16 @@ const LIB = {
+   colorLiterals,
+   chromaOf,
+   darkArmCensus,
++  // homes v3
++  calleeNormal,
++  pctDecode,
++  cssWide,
++  selectorKey,
++  admittedSites,
++  bounds,
++  componentReach,
++  reserveReading,
++  cacheStats,
+ };
+ 
+ // ========================================================================================= CLI

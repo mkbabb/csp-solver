@@ -1,0 +1,318 @@
+== control-webkit-A project=webkit url=http://127.0.0.1:4255 grep=T9-M18 · the foot's|forced colours|row 28 · behaviour|row 28 · paint|iPad coarse card stays under the P1 seal|the ruled page's own names
+Tue Nov  3 21:58:22 EST 2026
+load { 19.75 18.95 15.66 }
+zone inuse=191758
+served index-CubiZsMVSwTc.js
+
+Running 11 tests using 1 worker
+
+[1/11] [webkit] › e2e/visual-regression.spec.ts:814:1 › the iPad coarse card stays under the P1 seal: the chip seam is PAID for
+[2/11] [webkit] › e2e/zone-grammar.spec.ts:1325:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line
+  1) [webkit] › e2e/zone-grammar.spec.ts:1325:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line 
+
+    Error: page.evaluate: TypeError: null is not an object (evaluating 'el.style')
+
+      1192 |    *  `em` is read as the engine reads it, never matched as text (LAWS P8 §F; both engines). */
+      1193 |   const SERVED_PAD = (page: Page) =>
+    > 1194 |     page.evaluate(() => {
+           |          ^
+      1195 |       const el = document.getElementById("card-foot")!;
+      1196 |       const PAD = ["padding-bottom", "padding-block-end", "padding", "padding-block"];
+      1197 |       const SHIFT = ["margin-bottom", "margin-block-end", "margin", "margin-block", "bottom", "inset-block-end", "inset", "inset-block"];
+        at SERVED_PAD (<tree>/web/frontend/e2e/zone-grammar.spec.ts:1194:10)
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:1334:26
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-the-foot-stan-0f5e0-34-it-clears-the-inset-line-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-the-foot-stan-0f5e0-34-it-clears-the-inset-line-webkit/error-context.md
+
+
+[3/11] [webkit] › e2e/zone-grammar.spec.ts:1387:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · paint under a real inset (chromium CDP): the lowest ink clears the inset line by ≥ 2 css, and max() reds it
+[4/11] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+  2) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1892 |         if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
+      1893 |           await page.locator(".drawer-tab").tap();
+    > 1894 |         await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                                 ^
+      1895 |         await SHEET_SETTLED(page);
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:1894:65
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--19858--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--19858--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[5/11] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+  3) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1892 |         if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
+      1893 |           await page.locator(".drawer-tab").tap();
+    > 1894 |         await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                                 ^
+      1895 |         await SHEET_SETTLED(page);
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:1894:65
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--4f7a3--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--4f7a3--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[6/11] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+  4) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1892 |         if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
+      1893 |           await page.locator(".drawer-tab").tap();
+    > 1894 |         await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                                 ^
+      1895 |         await SHEET_SETTLED(page);
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:1894:65
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--ffa9e--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--ffa9e--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[7/11] [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it
+  5) [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1892 |         if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed")))
+      1893 |           await page.locator(".drawer-tab").tap();
+    > 1894 |         await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                                 ^
+      1895 |         await SHEET_SETTLED(page);
+      1896 |         const d = await FOOT_RULE(page);
+      1897 |         console.log(`[RULE M18] ${cell.name} ${theme} ${JSON.stringify(d)}`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:1894:65
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--6504e--0-—-and-five-plants-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-the--6504e--0-—-and-five-plants-red-it-webkit/error-context.md
+
+
+[8/11] [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[RULE M18 forced] webkit light regime witness forced-colors:active true
+
+  6) [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      2028 |       test.skip(!forced, `${browserName} does not enter forced-colors: active under emulation (UNREAD, not GREEN)`);
+      2029 |       if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").tap();
+    > 2030 |       await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                               ^
+      2031 |       await SHEET_SETTLED(page);
+      2032 |       const bands = (d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>) => ({
+      2033 |         quarters: d.quarters.every((q) => q.n >= 8 && q.median >= 3.0),
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:2030:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-forc-6b698-nd-THIN-1PX-and-P055-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-forc-6b698-nd-THIN-1PX-and-P055-red-it-webkit/error-context.md
+
+
+[9/11] [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it
+[RULE M18 forced] webkit dark regime witness forced-colors:active true
+
+  7) [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+
+    Error: expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot svg.ruled-line')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - Expect "toHaveCount" with timeout 10000ms
+      - waiting for locator('#card-foot svg.ruled-line')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      2028 |       test.skip(!forced, `${browserName} does not enter forced-colors: active under emulation (UNREAD, not GREEN)`);
+      2029 |       if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").tap();
+    > 2030 |       await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+           |                                                               ^
+      2031 |       await SHEET_SETTLED(page);
+      2032 |       const bands = (d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>) => ({
+      2033 |         quarters: d.quarters.every((q) => q.n >= 8 && q.median >= 3.0),
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:2030:63
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-T9-M18-·-forc-3fe51-nd-THIN-1PX-and-P055-red-it-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-T9-M18-·-forc-3fe51-nd-THIN-1PX-and-P055-red-it-webkit/error-context.md
+
+
+[10/11] [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › light: the first three names clear the glyph gate, and its eight plants red each
+  8) [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › light: the first three names clear the glyph gate, and its eight plants red each 
+
+    Error: the first three names in view
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 1
+
+    - Array [
+    -   "size",
+    -   "level",
+    -   "new game",
+    - ]
+    + Array []
+
+      2084 |           .map(({ id, t }) => ({ id, t })),
+      2085 |       );
+    > 2086 |       expect(names.map((n) => n.t), "the first three names in view").toEqual(["size", "level", "new game"]);
+           |                                                                      ^
+      2087 |       for (const n of names) {
+      2088 |         const g = await glyphGate(page, { subject: `[id="${n.id}"]`, payload: `sudoku-3-EASY 390x844c dpr2 ${theme} '${n.t}'` });
+      2089 |         console.log(`[RULE names] ${theme} '${n.t}' CLEAN ${glyphFmt(g.clean)} (bound ${g.bound})`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:2086:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-the-ruled-pag-850ea-d-its-eight-plants-red-each-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-the-ruled-pag-850ea-d-its-eight-plants-red-each-webkit/error-context.md
+
+
+[11/11] [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › dark: the first three names clear the glyph gate, and its eight plants red each
+  9) [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › dark: the first three names clear the glyph gate, and its eight plants red each 
+
+    Error: the first three names in view
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 5
+    + Received  + 1
+
+    - Array [
+    -   "size",
+    -   "level",
+    -   "new game",
+    - ]
+    + Array []
+
+      2084 |           .map(({ id, t }) => ({ id, t })),
+      2085 |       );
+    > 2086 |       expect(names.map((n) => n.t), "the first three names in view").toEqual(["size", "level", "new game"]);
+           |                                                                      ^
+      2087 |       for (const n of names) {
+      2088 |         const g = await glyphGate(page, { subject: `[id="${n.id}"]`, payload: `sudoku-3-EASY 390x844c dpr2 ${theme} '${n.t}'` });
+      2089 |         console.log(`[RULE names] ${theme} '${n.t}' CLEAN ${glyphFmt(g.clean)} (bound ${g.bound})`);
+        at <tree>/web/frontend/e2e/zone-grammar.spec.ts:2086:70
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    <lane-scratch>/pw-out/zone-grammar-the-ruled-pag-701c4-d-its-eight-plants-red-each-webkit/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: <lane-scratch>/pw-out/zone-grammar-the-ruled-pag-701c4-d-its-eight-plants-red-each-webkit/error-context.md
+
+
+  9 failed
+    [webkit] › e2e/zone-grammar.spec.ts:1325:3 › the foot stands on the safe-area inset (chair §6.1) › row 28 · behaviour, both engines: the served cascade EVALUATES at inset 0 and 34, the flat phone's lowest ink clears the edge, and under a SYNTHETIC 34 it clears the inset line 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 1280×800 fine › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › light: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:1879:7 › T9-M18 · the foot's drawn rule is painted and seen @ 390×844 coarse › dark: present, painted across the foot, core median ≥ 3.0 — and five plants red it 
+    [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › light: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+    [webkit] › e2e/zone-grammar.spec.ts:2016:5 › T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light) › dark: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it 
+    [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › light: the first three names clear the glyph gate, and its eight plants red each 
+    [webkit] › e2e/zone-grammar.spec.ts:2065:5 › the ruled page's own names are painted and seen (390×844 coarse, DPR 2) › dark: the first three names clear the glyph gate, and its eight plants red each 
+  1 skipped
+  1 passed (1.4m)
+Tue Nov  3 21:59:46 EST 2026
+load-end { 17.97 18.30 15.70 }
+zone-end inuse=240484
+EXIT 1

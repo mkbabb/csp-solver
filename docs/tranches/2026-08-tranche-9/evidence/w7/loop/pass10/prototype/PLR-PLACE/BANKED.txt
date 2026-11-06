@@ -1,0 +1,39 @@
+PLR-PLACE · pass 10 · BANKED (2026-11-04 01:25, re-cut after the 15f witness fix; cut through temporary indexes; nothing committed; every exit read bare from a file)
+worktree             .claude/worktrees/w7-p4-PLR-PLACE (HEAD 74a2b5d9, the diff uncommitted)
+open state           tree 4a97c02c = pass9.diff 070cda60 byte for byte (no disagreement with pass-9 BANKED.txt)
+homes v3             homes.on-WAVE.diff 0723d508 applied at open (exit 0, 10 paths); 13 home paths = ac862f1e (74a2b5d9 + homes.diff 07257854); residual home edits 0
+SELF pass 10         by sha from SELF's tree e855ff06: node.d.ts 011ce521, rowBudget.ts 031f9471, pencilConfig.ts 12e0922d; player-mark.spec.ts merged (4 hunks by hand)
+
+work tree (add -A web/frontend on 74a2b5d9)   e6f54f71b7cbf30df9a3e713d5f54ab53dd3796b   (0 paths outside web/frontend; the scratch probe e2e/zz-place10-sweep.spec.ts excluded by pathspec, 0 in the diff)
+
+pass10.diff                 DECLARED BASE 74a2b5d9 (runs on ac862f1e = 74a2b5d9 + homes.diff 07257854; carries NO home path: 0 of 13)
+  sha1 b41bf5a7506eba9a0eb08f2859d8523e17ad3354 · 312002 B · 32 files changed, 5151 insertions(+), 406 deletions(-) (--binary, product paths only)
+  = git diff --binary ac862f1e e6f54f71
+pass10.delta.on-WAVE.diff   DECLARED BASE 71f71a26 = 954bbbab + homes.on-WAVE.diff 0723d508 (-> 8c46d9de) + PLR-SELF pass10.delta.on-WAVE.diff 540b93da
+  sha1 7d888a8acd8e540a7694f2db80493dae4c115a07 · 36710 B · 4 files changed, 321 insertions(+), 64 deletions(-)
+  result tree f6f7e6b4f89804bd2c5f43c8c2d1fb07070a88fc (index); paths: e2e/player-place.spec.ts, src/games/shared/useSession.ts,
+  src/pencil/chrome/PlayerMark/PlayerLobby.vue, src/pencil/chrome/PlayerMark/PlayerMark.vue (none of PLR-COUNT's player-tally.spec.ts)
+
+apply --check (fresh git archive, own git init, git dir printed; exit bare)
+  base | tree 74a2b5d9 | pass10.diff | exit 0 | paths 32 | git dir <lane scratch>/ac/run/base/.git
+  basehomes | tree ac862f1e | pass10.diff | exit 0 | paths 32 | git dir <lane scratch>/ac/run/basehomes/.git
+  wave-full | tree 954bbbab | pass10.diff | exit 1 | paths 32 | git dir <lane scratch>/ac/run/wave-full/.git
+      error: patch failed: web/frontend/e2e/join-language-prm.spec.ts:79
+      error: web/frontend/e2e/join-language-prm.spec.ts: patch does not apply
+      error: patch failed: web/frontend/e2e/multiplayer.spec.ts:187
+  waveself | tree 71f71a26 | pass10.delta.on-WAVE.diff | exit 0 | paths 4 | git dir <lane scratch>/ac/run/waveself/.git
+  wave3 | tree 8c46d9de | pass10.delta.on-WAVE.diff | exit 0 | paths 4 | git dir <lane scratch>/ac/run/wave3/.git
+  wave | tree 954bbbab | pass10.delta.on-WAVE.diff | exit 0 | paths 4 | git dir <lane scratch>/ac/run/wave/.git
+  acde | tree acde977b | pass10.delta.on-WAVE.diff | exit 1 | paths 4 | git dir <lane scratch>/ac/run/acde/.git
+      error: web/frontend/e2e/player-place.spec.ts: No such file or directory
+      error: patch failed: web/frontend/src/games/shared/useSession.ts:1113
+      error: web/frontend/src/games/shared/useSession.ts: patch does not apply
+    wave3-stack: PLR-SELF pass10.delta.on-WAVE.diff 540b93da git-applied first on the 8c46d9de archive, exit 0 (the stacked route), then this delta:
+  wave3-stack | tree 8c46d9de | pass10.delta.on-WAVE.diff | exit 0 | paths 4 | git dir <lane scratch>/ac/run/wave3-stack/.git
+  COUNT delta: not on disk at 2026-11-04 01:25:02
+  section's integrated tree = the WAVE union 954bbbab (§11 is in neither s10 nor s13-s7-s3)
+  acde977b is not a route: pass 9's WAVE (acb9c08e) + homes v2 carries no player-place.spec.ts, and SELF's delta exits 1 there too (SELF's BANKED.txt)
+
+grep (scratchpad | /private/tmp | /tmp/ | .claude/t9-scratch | t9-scratch | /Users/ ; a dot-dir on a ---/+++ line ; an import from docs/)
+  pass10.diff 0 · 0 · 0 · 0 · 0 · 0 ; dot-dir 0 ; docs import 0
+  pass10.delta.on-WAVE.diff 0 · 0 · 0 · 0 · 0 · 0 ; dot-dir 0 ; docs import 0

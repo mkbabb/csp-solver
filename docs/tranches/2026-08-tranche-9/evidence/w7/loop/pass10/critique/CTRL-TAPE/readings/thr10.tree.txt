@@ -1,0 +1,20 @@
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: 9.99px
+RED  12 THE ADMITTED LIST                        expect GREEN4   4a font-size: 10px
+RED  12 THE ADMITTED LIST                        expect GREEN4   4a font-size: 10.01px
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect ?        4a font-size: x-small (≈10px)
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: xx-small (≈9px)
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect ?        4a font-size: smaller
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: 0.5em
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: 1%
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font: 9px serif
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font: italic 9px/1 serif
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: calc(10px - 0.01px)
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: max(1px, 0.1rem)
+RED  4 ONE HAND|12 THE ADMITTED LIST             expect RED4     4a font-size: clamp(1px, 1vw, 2px)
+RED  12 THE ADMITTED LIST                        expect RED-any  4a scale: 0.1 (collapses the words, not a font)
+RED  12 THE ADMITTED LIST|12 THE SEED            expect RED      12s band 1.5deg -> 1.49deg
+RED  12 THE SEED                                 expect RED      12s literal * 3 -> * 3.0000001
+RED  12 THE SEED                                 expect RED      12s literal * 3 -> * (3)
+RED  12 THE ADMITTED LIST                        expect RED      12s cap 15rem -> 16rem
+RED  12 THE ADMITTED LIST|12 THE SEED            expect ?        12s cap 15rem -> 240px (same length, other unit)
+RED  12 THE ADMITTED LIST|12 THE SEED            expect ?        12s band in turn: 1.5deg -> 0.00416667turn

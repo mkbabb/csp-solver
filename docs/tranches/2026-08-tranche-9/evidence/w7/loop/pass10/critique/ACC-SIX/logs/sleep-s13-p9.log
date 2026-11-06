@@ -1,0 +1,11 @@
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793669332 slope=30.2/s inuse=36211 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+SLEEP LINT — 45 specs · 50 waitForTimeout sites in 21 files · 3 fixed in-page sampling windows · 4 cited exemptions · 2 sleep-ok tags
+
+3 failure(s):
+
+  • count-yield.spec.ts:302 — a fixed 500ms sleep sits inside `across()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:305 — a fixed 1600ms sleep sits inside `speak()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+
+  • note-reserve.spec.ts:357 — a fixed 1200ms sleep sits inside `openCell()`, itself a live read — every call site inherits it, so the wait is a settle proxy for assertions it never names. Poll the invariant the assertion actually names (expect.poll / toPass / a settle predicate), or tag the site `sleep-ok: <reason>` if the elapsed time IS the subject.
+

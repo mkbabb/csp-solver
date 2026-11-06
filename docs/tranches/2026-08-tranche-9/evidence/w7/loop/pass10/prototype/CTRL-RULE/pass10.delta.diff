@@ -1,0 +1,351 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 25c32b15..8b127d99 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -3,7 +3,7 @@ import { readFileSync } from "node:fs";
+ import { join } from "node:path";
+ import { fileURLToPath } from "node:url";
+ // PASS 8 — THE INSTRUMENTS AT THEIR PRODUCT HOMES (registry-v7 §2.4), imported by relative path only.
+-import { INK_PLANTS } from "./lib/edge-bands.mjs";
++import { INK_PLANTS, DRAWN_FRAMES, DRAWN_PLANTS } from "./lib/edge-bands.mjs";
+ import { glyphGate, fmt as glyphFmt } from "./lib/glyph-pop.mjs";
+ import { elementSites, REGIMES, effectiveAt, sabotage, tokenSites, census as shapeCensus } from "../scripts/shape-census.mjs";
+ 
+@@ -1012,8 +1012,11 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+    *  (why the charter's "Δ = 34" binds the pad sites only). A value the evaluator cannot reduce to
+    *  px (a `var()`, an `em`, a viewport unit, another `env()`) is RED by name, never assumed. */
+   const FOOT_EPS = 0.05;
+-  const FOOT_PAD_PROPS = ["padding-bottom", "padding-block-end", "padding-block"];
+-  const FOOT_SHIFT_PROPS = ["margin-bottom", "margin-block-end", "margin-block", "bottom", "inset-block-end", "inset-block"];
++  // PASS 10: the read set is the PHYSICAL side; its logical twins (`padding-block(-end)`,
++  // `margin-block(-end)`, `inset-block(-end)`) are the ONE library's `logical-sides` clause (homes v3,
++  // folded from this lane's pass-9 PROPOSED), so the gate's own `logical` switch is now the library's.
++  const FOOT_PAD_PROPS = ["padding-bottom"];
++  const FOOT_SHIFT_PROPS = ["margin-bottom", "bottom"];
+   const BLOCK_END = (prop: string, value: string, inset: number): number | null => {
+     const v = value
+       .replace(/\s*!important\s*$/, "")
+@@ -1086,8 +1089,8 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     const r = elementSites(FE, {
+       file: "src/games/shared/GameScene.vue",
+       pick: (el: { id: string | null }) => el.id === "card-foot",
+-      // `logical` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
+-      props: off.includes("logical") ? ["padding-bottom"] : [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
++      // the library's `logical-sides` off = the pass-8 read set (the physical longhand alone; blind to K13b / K14)
++      props: [...FOOT_PAD_PROPS, ...(off.includes("shift") ? [] : FOOT_SHIFT_PROPS)],
+       read,
+     });
+     // `regimes` off = the one portrait cell (what a row that reads one emulated cell sees)
+@@ -1166,7 +1169,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       ["gate every-site", () => verdict(["every-site"])],
+       ["gate regimes", () => verdict(["regimes"])],
+       ["gate evaluate (pass 8's text match)", () => verdict(["evaluate"])],
+-      ["gate logical", () => verdict(["logical"])],
++      ["library logical-sides", () => { sabotage(["logical-sides"]); try { return verdict(); } finally { sabotage([]); } }],
+       ["gate own-pad", () => verdict(["own-pad"])],
+       ["gate shift", () => verdict(["shift"])],
+     ] as const) {
+@@ -1295,16 +1298,23 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+   /** A plant as it would be served at a synthetic inset (its own `env()` rewritten too). */
+   const AT_INSET = (css: string, inset: number) => css.replace(FOOT_ENV, `${inset}px`);
+ 
+-  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a synthetic 34]. */
+-  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean][] = [
+-    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true],
+-    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true],
+-    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
+-    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true],
+-    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true],
+-    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true],
+-    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true],
+-    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true],
++  /** Row 28's plants for the served and painted arms: [name, css, reds the paint at inset 0, at a
++   *  synthetic 34, the SERVED arm reads it]. Pass 10 (the pass-9 critic's N1/N6/N2; LAWS P9 §F, a plant
++   *  per disjunct): three displacements the source and served arms are BLIND to by design (`translate`,
++   *  `top`, the foot's children) — row 28 closes them on the PAINT arm alone, so each is that arm's own
++   *  born-RED here, in both engines, and the served arm's blindness is printed, not hidden. */
++  const FOOT_BEHAVIOUR_PLANTS: [string, string, boolean, boolean, boolean][] = [
++    ["E4 !important max() in a coarse block", "@media (pointer: coarse) { .card-foot { padding-bottom: max(0.15rem, env(safe-area-inset-bottom)) !important; } }", false, true, true],
++    ["E3 the compound override", "#card-foot.card-foot { padding-bottom: 0.15rem; }", false, true, true],
++    ["a shadowing declaration in one block", ".card-foot { padding-bottom: calc(0.15rem + env(safe-area-inset-bottom)); padding-bottom: 0.15rem; }", false, false, true], // loses to the scoped `.card-foot[data-v]` (0,2,0): a served site, never paint
++    ["a structural selector", "div:nth-last-child(n)[id='card-foot'] { padding-bottom: 0 !important; }", true, true, true],
++    ["an !important universal", "* { padding-bottom: 0 !important; }", true, true, true],
++    ["K1b the net-zero stack", "#card-foot.card-foot { padding-bottom: calc(0.15rem - env(safe-area-inset-bottom) + env(safe-area-inset-bottom)); }", false, true, true],
++    ["K13b the logical longhand", "#card-foot.card-foot { padding-block-end: 0.15rem; }", false, true, true],
++    ["K14 the logical shorthand", "#card-foot.card-foot { padding-block: 0 0.15rem; }", false, true, true],
++    ["N1 translate sinks the foot by the inset", "#card-foot.card-foot { translate: 0 env(safe-area-inset-bottom); }", false, true, false],
++    ["N6 top sinks the foot by the inset", "#card-foot.card-foot { position: relative; top: env(safe-area-inset-bottom); }", false, true, false],
++    ["N2 the foot's children sink by the inset", "#card-foot.card-foot > * { position: relative; top: env(safe-area-inset-bottom); }", false, true, false],
+   ];
+   const FOOT_READ = async (page: Page, inset: number) => {
+     const pad = await page.evaluate(() => parseFloat(getComputedStyle(document.getElementById("card-foot")!).paddingBottom));
+@@ -1318,7 +1328,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+   }) => {
+     // eighteen page loads (a fresh page per plant, flat and synthetic): the default 30 s is one
+     // WebKit load's budget under a box load of 60–70 (the first WAVE run timed out at plant 4)
+-    test.setTimeout(240_000);
++    test.setTimeout(300_000);
+     const st = await SYNTH_ROUTE(page);
+     await OPEN(page);
+     const served = await SERVED_PAD(page);
+@@ -1340,7 +1350,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     const greens: Record<string, string[]> = { logical: [], evaluate: [], shift: [] };
+     // NEGATIVE CONTROLS, each on a fresh page: the served arm reds on every plant, the flat paint on
+     // the ones that move ink at inset 0, and the synthetic 34 on every one that gives the inset away.
+-    for (const [name, css, paints0, paints34] of FOOT_BEHAVIOUR_PLANTS) {
++    for (const [name, css, paints0, paints34, seen] of FOOT_BEHAVIOUR_PLANTS) {
+       await OPEN(page, () => page.addStyleTag({ content: css }));
+       const s = await SERVED_PAD(page);
+       const p0 = paints0 ? await FOOT_READ(page, 0) : null;
+@@ -1351,8 +1361,10 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+       }
+       const p34 = paints34 ? await FOOT_READ(page, 34) : null;
+       console.log(`[RULE row 28 plant] ${browserName} ${name}: served ${JSON.stringify(SERVED_BAD(s))}${p0 ? ` flat ${JSON.stringify(p0)}` : ""}${p34 ? ` synth34 ${JSON.stringify(p34)}` : ""}`);
+-      expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
+-      for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      if (seen) {
++        expect(SERVED_OK(s), `negative control ${name} (served)`).toBe(false);
++        for (const off of ["logical", "evaluate", "shift"] as const) if (SERVED_OK_OFF(s, off)) greens[off].push(name);
++      } else console.log(`[RULE row 28 plant] ${browserName} ${name}: the served arm is blind by design (served ${SERVED_OK(s) ? "GREEN" : "RED"}); the paint arm owns it`);
+       if (p0) expect(p0.clears ?? 0, `negative control ${name} (flat paint)`).toBeLessThan(2);
+       if (p34) expect(p34.clears ?? 0, `negative control ${name} (synthetic 34 paint)`).toBeLessThan(2);
+     }
+@@ -1401,7 +1413,7 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     expect(red, "negative control: max() gives the band away").toBeLessThan(2);
+     await tag.evaluate((n) => (n as Element).remove());
+     // pass 9: the pass-8 critic's K-plants under the REAL inset (each reds here, as on the synthetic arm)
+-    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^K1/.test(n))) {
++    for (const [name, css] of FOOT_BEHAVIOUR_PLANTS.filter(([n]) => /^(K1|N[126] )/.test(n))) {
+       const k = await page.addStyleTag({ content: css });
+       await SHEET_SETTLED(page);
+       const r = await FOOT_READ(page, 34);
+@@ -1638,21 +1650,35 @@ const FOOT_RULE = async (page: Page) => {
+   const scale = await rule.evaluate((el) => el.getBoundingClientRect().height / (el as SVGSVGElement).viewBox.baseVal.height);
+   return { chain: +chain.toFixed(3), scale: +scale.toFixed(3), ...paint, ...ink };
+ };
+-/** The rule's AUTHORED stroke width, read from the authored sheet through the ONE library (LAWS P8
+- *  §E: a drawn frame's floor is 0.9 × its authored width, never `getComputedStyle`): the one
+- *  `stroke-width` site that may reach the template's `<path>` in `RuledLine.vue` (element-keyed, every
+- *  file the estate walks). A second site, or none, throws. */
+-const RULE_AUTHORED = (() => {
++/** PASS 10 — THE PINNED REFERENCE (LAWS P9 §E; the pass-9 critic's N5). The rule's authored width is
++ *  a LITERAL, the derivation `RuledLine.vue` states ("the thinnest stroke that clears every phase in
++ *  both engines is 3"), never read from the subject: pass 9 read it off RuledLine.vue's own sheet, so
++ *  a 1.65 stroke authored there moved the floor to 1.485 and held 6/8 cells. The ruled line is NOT on
++ *  SELF's drawn roster (`DRAWN_FRAMES`, pass-9 ruling 7), so the law's 1.80 css at DPR 1 binds it as
++ *  well: the weight floor is max(0.9 × 3, 1.80) = 2.70. The source read below is an ASSERTION against
++ *  the pin (its own browserless row), never the reference. */
++const RULE_PIN = 3;
++const RULE_LAW_FLOOR = 1.8;
++const RULE_WEIGHT = 0.9;
++const RULE_FLOOR = Math.max(RULE_WEIGHT * RULE_PIN, RULE_LAW_FLOOR);
++/** The rule's AUTHORED stroke width as the source writes it, read through the ONE library (the one
++ *  `stroke-width` site that may reach the template's `<path>` in `RuledLine.vue`, element-keyed).
++ *  `read` is the plant seam (the row below writes N5 through it; no file on disk is touched). A
++ *  second site, or none, or a non-number, reads NaN and reds the pin row by name. */
++const RULE_SOURCE = (read?: (f: string) => string) => {
+   // the library is conservative across files (it lists `DifficultyTally.vue`'s SCOPED `.dt-placeholder
+   // path`, which cannot reach another component's path): the authored width is RuledLine.vue's own
+-  const s = elementSites(FE, { file: "src/games/shared/RuledLine.vue", pick: (el) => el.tag === "path", props: ["stroke-width"] }).sites.filter((x) =>
+-    /RuledLine\.vue$/.test(String(x.file)),
+-  );
+-  if (s.length !== 1 || !Number.isFinite(parseFloat(String(s[0].value))))
+-    throw new Error(`RULE_AUTHORED: ${s.length} stroke-width sites ${JSON.stringify(s.map((x) => `${x.file}:${x.line} ${x.value}`))}`);
+-  return parseFloat(String(s[0].value));
+-})();
+-const RULE_WEIGHT = 0.9;
++  const s = elementSites(FE, {
++    file: "src/games/shared/RuledLine.vue",
++    pick: (el: { tag: string }) => el.tag === "path",
++    props: ["stroke-width"],
++    ...(read ? { read } : {}),
++  }).sites.filter((x: { file?: unknown }) => /RuledLine\.vue$/.test(String(x.file)));
++  const where = s.map((x: { file?: unknown; line?: unknown; value?: unknown }) => `${x.file}:${x.line} ${x.value}`);
++  const v = s.length === 1 ? String(s[0].value).trim() : "";
++  const width = /^\d*\.?\d+(px)?$/.test(v) ? parseFloat(v) : NaN;
++  return { width, where };
++};
+ 
+ /** PASS 7 (the pass-6 critic's gaps 3/4; LAWS P6 §E). Two holes the median above leaves:
+  *  · THE INK THIS PASS CHOSE. A core median ≥ 3.0 passed the pass-5 ink (`--ink-press-rule`, 55 %)
+@@ -1772,12 +1798,19 @@ const RULE_INK = async (page: Page, clip: { x: number; y: number; width: number;
+         const s = stations.slice(lo, hi);
+         return { n: s.length, median: +med(s).toFixed(3), thick: +med(thick.slice(lo, hi)).toFixed(3) };
+       });
++      // PASS 10 — THE SECOND STATISTIC (LAWS P9 §F; the pass-9 critic's 390c bracket): the WHOLE-SPAN
++      // median over the middle 60 % of stations, with its p10, printed beside the per-quarter medians.
++      // The pass-9 critic read W087 at chromium 390c 2.759 by this statistic (above the floor) and the
++      // lane 2.512 per quarter: the column is bimodal there, so the two are read and both bind.
++      const mid = thick.slice(Math.floor(thick.length * 0.2), Math.ceil(thick.length * 0.8)).sort((m, n) => m - n);
++      const span = { median: +med(mid).toFixed(3), p10: +(mid.length ? mid[Math.floor(0.1 * (mid.length - 1))] : 0).toFixed(3), n: mid.length };
+       const alphas = fullMoves
+         .filter((m) => m.d >= 0.5 * ref)
+         .map((m) => (a.data[m.o + m.k] - b.data[m.o + m.k]) / (f.data[m.o + m.k] - b.data[m.o + m.k]));
+       const coreR = fullMoves.filter((m) => m.d >= 0.5 * ref).map((m) => cr(m.o));
+       return {
+         quarters,
++        span,
+         stationsUnder3: +(stations.filter((v) => v < 3).length / Math.max(1, stations.length)).toFixed(3),
+         alpha: alphas.length ? +med(alphas).toFixed(3) : 0,
+         alphaN: alphas.length,
+@@ -1798,11 +1831,44 @@ const FOOT_RULE_CLAUSES = (d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>
+   floor: d.quarters.every((q) => q.median >= RULE_QUARTER_FLOOR),
+   stations: d.stationsUnder3 <= 0.05,
+   alpha: d.alphaN >= 40 && d.alpha >= 0.62,
+-  weight: d.quarters.every((q) => q.thick >= RULE_WEIGHT * RULE_AUTHORED * d.scale),
++  // the pinned floor (pass 10) on the DECLARED statistic, per quarter (the four bands): a thinned
++  // quarter is the class, and the whole-span median of the middle 60 % averages one away. The span is
++  // read beside it at every weight plant (`SPAN_HOLDS`), printed, and owed agreement at bound + ε.
++  weight: d.quarters.every((q) => q.thick >= RULE_FLOOR * d.scale),
+ });
++const SPAN_HOLDS = (d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>) => d.span.median >= RULE_FLOOR * d.scale;
+ const FOOT_RULE_HOLDS = (d: Awaited<ReturnType<typeof FOOT_RULE>>) =>
+   !!d && Object.values(FOOT_RULE_CLAUSES(d)).every(Boolean);
+ 
++/** PASS 10 — THE PIN, ITS ROSTER SCOPE AND ITS BORN-RED (browserless; LAWS P9 §E). The source must
++ *  author exactly the pinned 3; the ruled line must sit on no `DRAWN_FRAMES` entry (so ruling 7's
++ *  authored floor cannot be claimed for it and the law's 1.80 binds); the floor is the literal 2.70.
++ *  N5 (the pass-9 critic's `stroke-width: 1.65` in RuledLine.vue) and a second site are written
++ *  through the library's `read` seam, each read back as planted, each RED. */
++test("T9-M18 · the ruled line's authored stroke is the PINNED 3, off the drawn roster, floor 2.70 — and N5 reds the pin", () => {
++  const RL = join(FE, "src/games/shared/RuledLine.vue");
++  const plant = (to: string) => (f: string) => {
++    const t = readFileSync(f, "utf8");
++    return f === RL ? t.replace(/stroke-width:\s*3;/, to) : t;
++  };
++  const shipped = RULE_SOURCE();
++  const roster = Object.values(DRAWN_FRAMES).map((f) => f.file);
++  console.log(`[RULE M18 pin] source ${JSON.stringify(shipped)} pin ${RULE_PIN} floor ${RULE_FLOOR} roster ${JSON.stringify(roster)}`);
++  expect(shipped.width, `the authored stroke ${JSON.stringify(shipped.where)}`).toBe(RULE_PIN);
++  expect(RULE_FLOOR, "the floor is max(0.9 × 3, 1.80)").toBeCloseTo(2.7, 9);
++  expect(roster.some((f) => /RuledLine\.vue$/.test(f)), "the ruled line is off SELF's drawn roster").toBe(false);
++  const n5 = RULE_SOURCE(plant("stroke-width: 1.65;"));
++  const two = RULE_SOURCE(plant("stroke-width: 3;\n  stroke-width: 3;"));
++  const unit = RULE_SOURCE(plant("stroke-width: 3px;"));
++  console.log(`[RULE M18 pin] N5 ${JSON.stringify(n5)} · two sites ${JSON.stringify(two)} · 3px ${JSON.stringify(unit)}`);
++  expect(n5.width, "N5 planted (read back)").toBe(1.65);
++  expect(n5.width === RULE_PIN, "N5 reds the pin").toBe(false);
++  expect(two.where.length, "a second site planted (read back)").toBe(2);
++  expect(two.width === RULE_PIN, "a second site reds the pin").toBe(false);
++  // a unit spelling is the same stroke: read as 3, GREEN (the decoy — the pin reads value, not text)
++  expect(unit.width, "the 3px decoy reads the pin").toBe(RULE_PIN);
++});
++
+ for (const cell of [
+   { name: "1280×800 fine", use: { viewport: { width: 1280, height: 800 } } },
+   { name: "390×844 coarse", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+@@ -1876,33 +1942,54 @@ for (const cell of [
+         // 0.93× passes by ε). Sole-catcher plants: graphite at 60 % (alpha's where the floor has room:
+         // dark), an ancestor at opacity .89 (the chain's, dark), a mask at .81 (the floor's). A plant
+         // whose ONLY failing clause is X is X's sole catch: deleting X lets it through. Printed per cell.
+-        const W = (k: number) => `#card-foot svg.ruled-line path { stroke-width: ${+(RULE_AUTHORED * k).toFixed(3)} !important; }`;
++        // PASS 10: every weight plant is a LITERAL width (LAWS P9 §F: a ±ε plant is a pin, never derived
++        // from the constant) — 1.65 (0.55 × 3), 1 unit, and the floor's two edges 2.61 / 2.79 around 2.70.
++        const W = (w: number) => `#card-foot svg.ruled-line path { stroke-width: ${w} !important; }`;
+         const M81 = "linear-gradient(rgba(0, 0, 0, 0.81), rgba(0, 0, 0, 0.81))";
+         const SOLE: [string, string, boolean][] = [
+-          ["W055 the stroke at 0.55×", W(0.55), true],
+-          ["W1 the stroke at 1 unit", "#card-foot svg.ruled-line path { stroke-width: 1 !important; }", true],
+-          ["W087 the stroke at 0.87× (bound − ε)", W(0.87), true],
+-          ["W093 the stroke at 0.93× (bound + ε)", W(0.93), false],
++          ["W055 the stroke at 1.65 (0.55 × 3)", W(1.65), true],
++          ["W1 the stroke at 1 unit", W(1), true],
++          ["W087 the stroke at 2.61 (floor − ε)", W(2.61), true],
++          ["W093 the stroke at 2.79 (floor + ε)", W(2.79), false],
+           ["INK60 graphite at 60 %", "#card-foot svg.ruled-line path { stroke: color-mix(in srgb, var(--color-pencil-graphite, var(--grid-line-color)) 60%, transparent) !important; }", true],
+           ["ANC89 the action bar at opacity .89", "#card-foot .action-bar { opacity: 0.89 !important; }", true],
+           ["MASK81 a mask at .81", `#card-foot svg.ruled-line { mask-image: ${M81} !important; -webkit-mask-image: ${M81} !important; }`, true],
+         ];
+         const soles: Record<string, string[]> = { chain: [], alpha: [], floor: [], weight: [] };
++        const weights: Record<string, NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>> = {};
+         for (const [plant, css, reds] of SOLE) {
+           const tag = await page.addStyleTag({ content: css });
+           const red = await FOOT_RULE(page);
+           const c = red ? FOOT_RULE_CLAUSES(red) : null;
+           const failing = c ? Object.entries(c).filter(([, v]) => !v).map(([k]) => k) : ["absent"];
+-          const floorW = +(RULE_WEIGHT * RULE_AUTHORED * (red?.scale ?? 1)).toFixed(3);
++          const floorW = +(RULE_FLOOR * (red?.scale ?? 1)).toFixed(3);
+           const thin = red ? Math.min(...red.quarters.map((x) => x.thick)) : null;
+           console.log(`[RULE M18 sole] ${browserName} ${cell.name} ${theme} ${plant}: failing ${JSON.stringify(failing)} thick-min ${thin} vs ${floorW} (margin ${thin === null ? null : +(thin - floorW).toFixed(3)}) ${JSON.stringify(red)}`);
+           expect(FOOT_RULE_HOLDS(red), `plant ${plant} ${JSON.stringify(failing)}`).toBe(!reds);
+-          if (/^W/.test(plant)) expect(c?.weight, `${plant}: the weight clause`).toBe(!reds);
++          if (/^W/.test(plant) && red) {
++            // TWO STATISTICS (LAWS P9 §F): the per-quarter carries the ±ε bracket at every cell; the
++            // whole-span is read beside it, and bound + ε holds under BOTH (a disagreement at a bound − ε
++            // plant is printed as the declared statistic's reason, never hidden)
++            const span = SPAN_HOLDS(red);
++            console.log(`[RULE M18 two-stat] ${browserName} ${cell.name} ${theme} ${plant}: per-quarter ${c?.weight ? "GREEN" : "RED"} (min ${thin}) · whole-span ${span ? "GREEN" : "RED"} (median ${red.span.median}, p10 ${red.span.p10}, n ${red.span.n}) vs ${floorW}${c?.weight !== span ? " · DISAGREE: the per-quarter binds (declared)" : ""}`);
++            expect(c?.weight, `${plant}: the weight clause (per quarter, the declared statistic)`).toBe(!reds);
++            if (!reds) expect(span, `${plant}: bound + ε holds under the whole-span statistic too`).toBe(true);
++            weights[plant] = red;
++          }
+           if (failing.length === 1 && failing[0] in soles) soles[failing[0]].push(plant);
+           await tag.evaluate((n) => (n as Element).remove());
+         }
+         console.log(`[RULE M18 sole] ${browserName} ${cell.name} ${theme} SOLE CATCHES ${JSON.stringify(soles)}`);
+         expect(soles.weight.length, "the weight clause is the sole catcher of ≥ 1 plant").toBeGreaterThan(0);
++        // THE THRESHOLD SABOTAGE (LAWS P8 §F; P9 §F literal pins): the floor moved to 2.45 and to 2.85 —
++        // LITERALS the constant cannot move — over the readings just taken flips the bracket at that
++        // edge (2.45 passes the 2.61 plant, 2.85 fails the 2.79 plant), so the floor is load-bearing.
++        const at = (f: number, d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>) => d.quarters.every((q) => q.thick >= f * d.scale);
++        const lo = weights["W087 the stroke at 2.61 (floor − ε)"];
++        const hi = weights["W093 the stroke at 2.79 (floor + ε)"];
++        console.log(`[RULE M18 threshold] ${browserName} ${cell.name} ${theme} floor 2.45: W087 ${lo && at(2.45, lo)} · floor 2.85: W093 ${hi && at(2.85, hi)}`);
++        expect(lo && at(2.45, lo), "threshold − : the floor at 2.45 passes the 2.61 plant").toBe(true);
++        expect(hi && at(2.85, hi), "threshold + : the floor at 2.85 fails the 2.79 plant").toBe(false);
+         // on DARK paper the floor (4.8 under 6.01–6.07) has room, so alpha and the chain each own a
+         // plant there; on LIGHT paper the floor (4.8 under 5.236) is the tighter clause and catches
+         // both their plants too (pass-9 matrix: 0/4 light, 4/4 dark, both engines) — read, not hoped
+@@ -1917,6 +2004,52 @@ for (const cell of [
+   });
+ }
+ 
++/** PASS 10 — THE FORCED-COLOURS GRAFT (FACE's per-band row; the pass-9 critic's gap 5). Under
++ *  `forced-colors: active` the foot's rule still paints in each of its four bands (quarters ≥ 8
++ *  stations, station median ≥ 3.0, ≤ 5 % of stations under 3:1) at the pinned weight (every quarter
++ *  ≥ 2.70 css), and the ONE library's drawn-edge plants red it: THIN_1PX and the 0.55× of the pinned
++ *  3 (1.650 css), both non-scaling. The regime is witnessed in the page first; an engine that does
++ *  not enter it is SKIPPED by name (an UNREAD cell), never read as GREEN. */
++test.describe("T9-M18 · forced colours: the foot's rule paints in all four bands (1280×800 fine, dark and light)", () => {
++  test.use({ viewport: { width: 1280, height: 800 } });
++  for (const theme of ["light", "dark"] as const) {
++    test(`${theme}: four bands at the pinned weight under forced colours, and THIN_1PX and P055 red it`, async ({ page, browserName }) => {
++      await page.emulateMedia({ colorScheme: theme, forcedColors: "active" });
++      await page.addInitScript((t) => {
++        try {
++          localStorage.setItem("sudoku-color-scheme", t);
++        } catch {
++          /* private mode: the media query carries it */
++        }
++      }, theme);
++      await loadSudoku(page);
++      const forced = await page.evaluate(() => matchMedia("(forced-colors: active)").matches);
++      console.log(`[RULE M18 forced] ${browserName} ${theme} regime witness forced-colors:active ${forced}`);
++      test.skip(!forced, `${browserName} does not enter forced-colors: active under emulation (UNREAD, not GREEN)`);
++      if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").tap();
++      await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
++      await SHEET_SETTLED(page);
++      const bands = (d: NonNullable<Awaited<ReturnType<typeof FOOT_RULE>>>) => ({
++        quarters: d.quarters.every((q) => q.n >= 8 && q.median >= 3.0),
++        stations: d.stationsUnder3 <= 0.05,
++        weight: d.quarters.every((q) => q.thick >= RULE_FLOOR * d.scale),
++      });
++      const d = await FOOT_RULE(page);
++      console.log(`[RULE M18 forced] ${browserName} ${theme} shipped ${d && JSON.stringify(bands(d))} ${JSON.stringify(d)}`);
++      expect(d, "the rule is present under forced colours").not.toBeNull();
++      expect(bands(d!), `four bands under forced colours ${JSON.stringify(d)}`).toEqual({ quarters: true, stations: true, weight: true });
++      for (const [plant, css] of Object.entries(DRAWN_PLANTS("#card-foot svg.ruled-line", RULE_PIN))) {
++        const tag = await page.addStyleTag({ content: css });
++        const red = await FOOT_RULE(page);
++        const c = red ? bands(red) : null;
++        console.log(`[RULE M18 forced] ${browserName} ${theme} plant ${plant} ${JSON.stringify(c)} ${JSON.stringify(red)}`);
++        expect(c?.weight, `forced plant ${plant}: the pinned weight reds it`).toBe(false);
++        await tag.evaluate((n) => (n as Element).remove());
++      }
++    });
++  }
++});
++
+ /** PASS 8 · THE PAGE'S OWN NAMES ON PAINT (the pass-7 critic's gap 4). `.rp-name` is the ruled
+  *  page's central text, `--color-muted-foreground` (#737373) in Fraunces 800 at φ, and no row
+  *  photographed it. The glyph population through the chair's ONE probe (G1–G5 at the 4.5 floor,

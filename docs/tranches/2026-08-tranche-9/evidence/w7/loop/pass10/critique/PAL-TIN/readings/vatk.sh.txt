@@ -1,0 +1,18 @@
+#!/bin/bash
+# crit-PAL-TIN: consumer-head escapes of gate 4's class reading (no rm; plants mv to trash)
+S=/Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-PAL-TIN
+A=$S/a-base/web/frontend; TR=$S/trash/vatk; L=$S/logs/vatk; mkdir -p $TR $L; cd $A || exit 9
+out=$S/logs/vatk.txt; : > $out
+echo "gate $(shasum scripts/check-peer-tin.mjs|cut -c1-8) lib $(shasum scripts/shape-census.mjs|cut -c1-8) load $(uptime|sed 's/.*averages*: //')" >> $out
+run() { node scripts/check-peer-tin.mjs > $L/$1.log 2>&1; local e=$?; echo "$1 exit $e · $(grep -c '^  4a' $L/$1.log) 4a findings · $2" >> $out; }
+new() { local rel=$1 body=$2 tag=$3; mkdir -p "$(dirname $rel)"; printf '%s\n' "$body" > $rel; od -c $rel | head -2 >> $L/$tag.od; run $tag "$rel: $body"; mv $rel $TR/$tag.$(basename $rel); }
+run clean0 baseline
+new src/games/shared/p.ts 'declare const el: HTMLElement; el.style.setProperty("--color-peer-2-ring", "#000");' POS-plain-write
+new src/games/shared/p.css '.x { color: var(--color-peer-2-ring); }' NEG-true-consumer
+new src/games/shared/p.ts 'declare const el: HTMLElement; el.style.setProperty("var(--color-peer-2-ring)".slice(4, -1), "#000");' V1-var-slice
+new src/games/shared/p.ts 'declare const el: HTMLElement; const T = { get: (k: string) => k }; el.style.setProperty(T.get("--color-peer-2-ring"), "#000");' V2-get-headed-write
+new src/games/shared/p.ts 'document.styleSheets[0].insertRule(":root{" + "var(--color-peer-2-ring)".slice(4, -1) + ":#000}");' V4-insertRule-var-slice
+new src/games/shared/P11.vue "<template><span :style=\"{ ['var(--color-peer-2-ring)'.slice(4, -1)]: 'black' }\">x</span></template>" V5-vue-key-var-slice
+new src/games/shared/p.ts 'declare const el: HTMLElement; const H = { has: (k: string) => k }; el.attributeStyleMap.set(H.has("--peer-ring-l"), 0.2);' V6-has-headed-typedom
+run clean1 after
+echo DONE >> $out

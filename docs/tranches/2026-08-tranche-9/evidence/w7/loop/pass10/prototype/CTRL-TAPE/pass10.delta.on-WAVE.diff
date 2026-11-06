@@ -1,0 +1,1983 @@
+diff --git a/web/frontend/e2e/zone-grammar.spec.ts b/web/frontend/e2e/zone-grammar.spec.ts
+index 9cdc5cf..262d07b 100644
+--- a/web/frontend/e2e/zone-grammar.spec.ts
++++ b/web/frontend/e2e/zone-grammar.spec.ts
+@@ -2258,3 +2258,80 @@ test.describe("the foot stands on the safe-area inset (chair §6.1)", () => {
+     expect(i0.clears).toBeGreaterThanOrEqual(2);
+   });
+ });
++
++// PASS 10 · BOARD INK IS THE TRUTH (CHAIR-RULINGS p10 §7; the pass-9 critic's edges R and C). The
++// session-log walk read a reload as pristine (the log starts empty, so ONE click cleared the
++// restored digit, both engines, tree and WAVE) and read a board an answered Clear had emptied as
++// dirty (Solve asked about nothing). The ask reads `boardInk` now. Each pointer is its own cell,
++// its regime witnessed first. The `__asked` recorder is proven in-run: it must read TRUE across
++// the press that mounts the question, then FALSE across the press that must not.
++for (const cell of [
++  { name: "fine 1440×900", viewport: { width: 1440, height: 900 }, hasTouch: false, coarse: false },
++  { name: "coarse 1440×900", viewport: { width: 1440, height: 900 }, hasTouch: true, coarse: true },
++]) {
++  test.describe(`T9-M12 across a reload @ ${cell.name}`, () => {
++    test.use({ viewport: cell.viewport, hasTouch: cell.hasTouch });
++
++    test("a restored digit asks before Clear; a board the answered Clear emptied solves on one click", async ({
++      page,
++    }) => {
++      test.setTimeout(90_000);
++      await loadSudoku(page);
++      await footSettled(page);
++      expect(await page.evaluate(() => matchMedia("(pointer: coarse)").matches), "the regime witness").toBe(cell.coarse);
++      const ribbon = page.locator("#card-foot .confirm-ribbon");
++      const empties = () =>
++        page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].filter((i) => !(i as HTMLInputElement).value).length);
++      const at = await page.evaluate(() => [...document.querySelectorAll(".sudoku-cell input")].findIndex((i) => !(i as HTMLInputElement).value));
++      expect(at, "the board has an empty cell").toBeGreaterThanOrEqual(0);
++      const cellAt = () => page.locator(".sudoku-cell input").nth(at);
++      await cellAt().click();
++      await page.keyboard.type("5");
++      await expect(cellAt()).toHaveValue("5");
++      // the write is persisted before the reload (the board's own save, not a test hook)
++      await expect
++        .poll(
++          () =>
++            page.evaluate((i) =>
++              Object.keys(localStorage).some((k) => {
++                try {
++                  return JSON.parse(localStorage.getItem(k) ?? "null")?.values?.[String(i)] === 5;
++                } catch {
++                  return false;
++                }
++              }), at),
++          { timeout: 5000, message: "the saved board holds the digit" },
++        )
++        .toBe(true);
++      await page.reload();
++      await page.waitForSelector("svg.handwritten-logo", { timeout: 15000 });
++      await footSettled(page);
++      await expect(cellAt(), "the reload restores the player's digit").toHaveValue("5");
++      const record = () =>
++        page.evaluate(() => {
++          const w = window as unknown as { __asked: boolean };
++          w.__asked = false;
++          new MutationObserver(() => {
++            if (document.querySelector("#card-foot .confirm-ribbon")) w.__asked = true;
++          }).observe(document.getElementById("card-foot")!, { childList: true, subtree: true });
++        });
++      const asked = () => page.evaluate(() => (window as unknown as { __asked: boolean }).__asked);
++      // R · the restored digit is player ink: the press asks, and clears nothing
++      await record();
++      await page.locator('#card-foot button[aria-label="Clear the board"]').click();
++      await expect(ribbon, "R · a restored digit asks").toHaveCount(1);
++      await expect(ribbon).toHaveAttribute("aria-label", "clear the board?");
++      expect(await asked(), "the recorder sees the question it must see").toBe(true);
++      await expect(cellAt(), "the ask alone clears nothing").toHaveValue("5");
++      await ribbon.getByRole("button", { name: "clear", exact: true }).click();
++      await expect(cellAt(), "the answer clears the board").toHaveValue("");
++      await expect(ribbon).toHaveCount(0);
++      // C · the answered Clear left no ink: Solve acts on one press, never asked
++      await record();
++      await page.locator('#card-foot button[aria-label="Solve puzzle"]').click();
++      await expect.poll(empties, { timeout: 20000, message: "C · one press solves the cleared board" }).toBe(0);
++      expect(await asked(), "C · a board the Clear emptied is never asked").toBe(false);
++      console.log(`[M12 reload ${cell.name}] R asked, C solved unasked`);
++    });
++  });
++}
+diff --git a/web/frontend/scripts/check-tape-foot.mjs b/web/frontend/scripts/check-tape-foot.mjs
+index 760723c..5e904cd 100644
+--- a/web/frontend/scripts/check-tape-foot.mjs
++++ b/web/frontend/scripts/check-tape-foot.mjs
+@@ -239,6 +239,88 @@ export function chain(t) {
+ }
+ const cwCache = new Map();
+ 
++// ------------------------------------------------------------------------------ the admitted list
++/** PASS 10 · THE SUBJECTS OF CLAUSE 12 (LAWS P9 §F, the admitted-list inversion). The chain's six
++ *  boxes, the case's and the frame's outline subtrees, and EVERY element under the bar: the verbs,
++ *  their buttons, the words (`.icon-sublabel`, which set their own painted size) and the glyphs. A
++ *  component under the bar is MOUNTED one level: its template root merges into the host (tag,
++ *  classes, scope) and its subtree hangs under it, so `.action-bar svg` reaches the glyph. →
++ *  { els, outer, sig, list: [{role, el}] } */
++export function subjects(t, ch) {
++  const els = ch.els.map((e) => ({ ...e, classes: new Set(e.classes), from: new Set(e.from) }));
++  const imports = new Map();
++  for (const s of sfc(t.read(t.abs(PANEL))).scripts)
++    for (const m of s.text.matchAll(/import\s+(\w+)\s+from\s+["']([^"']+\.vue)["']/g))
++      imports.set(
++        m[1],
++        m[2].replace(/^@pencil\//, "src/pencil/").replace(/^@\//, "src/").replace(/^\.\//, "src/games/shared/"),
++      );
++  const under = (e, top) => {
++    for (let p = e; p; p = p.parent == null ? null : els[p.parent]) if (p.i === top.i) return true;
++    return false;
++  };
++  const bar = els[ch.BAR.i];
++  const hosts = els.filter((e) => e !== bar && under(e, bar) && imports.has(e.tag));
++  for (const host of hosts) {
++    const rel = imports.get(host.tag);
++    if (!fs.existsSync(t.abs(rel))) continue;
++    const list = elementsOf(t, rel);
++    const root = list.find((e) => e.parent == null);
++    if (!root) continue;
++    host.comp = host.tag;
++    host.tag = root.tag;
++    for (const c of root.classes) host.classes.add(c);
++    host.from.add(rel);
++    const at = new Map([[root.i, host.i]]);
++    list.filter((e) => e !== root).forEach((e, k) => at.set(e.i, els.length + k));
++    for (const e of list.filter((e) => e !== root))
++      els.push({
++        ...e,
++        i: at.get(e.i),
++        parent: at.get(e.parent) ?? host.i,
++        classes: new Set(e.classes),
++        attrs: new Map(e.attrs),
++        from: new Set([rel]),
++        comp: `${host.comp}>`,
++      });
++  }
++  const label = (e) =>
++    `${e.comp && !e.comp.endsWith(">") ? e.comp + "=" : e.comp ?? ""}${e.tag}${[...e.classes].sort().map((c) => "." + c).join("")}`;
++  const list = [];
++  for (const n of ["CASE", "CARD", "FOOT", "BAR", "VERBS", "FRAME"]) list.push({ role: n, el: els[ch[n].i] });
++  for (const [n, sub] of [["CASE", ch.CASE_SUB], ["FRAME", ch.FRAME_SUB]])
++    for (const e of sub) list.push({ role: `${n}>${label(e)}`, el: els[e.i] });
++  const named = new Set(list.map((x) => x.el));
++  for (const e of els)
++    if (!named.has(e) && under(e, bar)) list.push({ role: `BAR>${label(e)}`, el: e });
++  // the case's ancestors in GameScene's template: a rule or an attribute that hides THEM hides
++  // the tape (the critic's T7, `v-show` on `.scene-controls`)
++  for (let p = els[ch.CASE.parent]; p; p = p.parent == null ? null : els[p.parent])
++    list.push({ role: `ANC>${label(p)}`, el: p, anc: true });
++  return { els, outer: ch.outer, sig: `${ch.sig}\0subjects`, list };
++}
++/** The admitted declarations (`scripts/tape-foot-admitted.json`): one line per declaration that
++ *  may reach a subject, `role ⟂ file ⟂ ctx ⟂ selector ⟂ prop ⟂ resolved value`. The line number is
++ *  carried for the reader and printed on every red; it is not part of the match (a sibling lane's
++ *  edit above a rule shifts it without changing what paints). */
++const ATTR_Z =
++  /^(class|:class|v-bind:class|style|:style|v-bind:style|v-bind|v-show|v-if|v-else-if|v-else|hidden|:hidden|v-bind:hidden|inert|:inert|v-bind:inert|is|:is)$/;
++export const ADMITTED_FILE = "scripts/tape-foot-admitted.json";
++export const admitKey = (role, s, v) =>
++  [role, s.file, s.ctx, s.prelude, s.prop, v].join("⟂");
++let admittedOverride = null;
++const ADMITTED_NOTE =
++  "check-tape-foot clause 12: every declaration that may reach the foot's chain, its pseudo-elements or any element under the bar. [role, file, at-rule context, selector, property, resolved value] joined by U+27C2, and the line it stood on when admitted. A new or changed entry is a §10 change: re-read FACE row 7 and TAPE row 7 on the union. Regenerate with --admitted-dump only after reading the diff it makes.";
++/** `--admitted-dump`: check() collects the live subjects' declarations here instead of judging. */
++let dumpZ = null;
++function admitted() {
++  if (admittedOverride) return admittedOverride;
++  const p = path.join(ROOT, ADMITTED_FILE);
++  if (!fs.existsSync(p)) return new Map();
++  const j = JSON.parse(fs.readFileSync(p, "utf8"));
++  return new Map(j.admitted.map(([key, line]) => [key, line]));
++}
++
+ // ------------------------------------------------------------------------------ sites
+ const PSEUDO_EL =
+   /::?(before|after|marker|placeholder|selection|backdrop|first-line|first-letter|-webkit-[\w-]+)\s*$/;
+@@ -570,6 +652,25 @@ const WATCHED = {
+     "max-height",
+     "min-height",
+     "height",
++    // PASS 10 · the critic's 14, as script writes (clause 12 holds the declarations; a script
++    // write has no declaration to admit, so its property list grows by every sibling that moved
++    // paint: a denylist here, declared, because the library reads a script write per property)
++    "min-block-size",
++    "max-block-size",
++    "block-size",
++    "row-gap",
++    "gap",
++    "writing-mode",
++    "flex-flow",
++    "border-bottom",
++    "border-bottom-width",
++    "border-block-end",
++    "margin-top",
++    "margin-block-start",
++    "padding-top",
++    "padding-block-start",
++    "font-size",
++    "order",
+   ],
+   10: [
+     "top",
+@@ -584,6 +685,49 @@ const WATCHED = {
+   ],
+ };
+ 
++/** PASS 10 · a template expression is CONSTANT when its truth is the same under every assignment
++ *  of its free names (each of true, false, 0, 1, "", "x", null, undefined, {}, NaN, and a deep
++ *  object whose every member and call is true, or false; up to six names,
++ *  the rest held). JS globals keep their values (`Boolean(1)` is `true`). → "varies" | "true" |
++ *  "false" | "unreadable" (an expression that throws on every assignment is unreadable: RED). */
++const GLOBALS = new Set(
++  "Boolean Number String Math JSON Array Object Date RegExp Symbol BigInt Infinity NaN undefined null true false parseInt parseFloat isNaN isFinite globalThis".split(" "),
++);
++const deep = (v) => new Proxy(() => v, { get: (_, k) => (k === Symbol.toPrimitive ? () => v : deep(v)) });
++const PROBES = [true, false, 0, 1, "", "x", null, undefined, {}, NaN, deep(true), deep(false)];
++export function constantOf(expr) {
++  const js = String(expr);
++  const strip = js.replace(/(["'`])(?:\\.|(?!\1).)*\1/g, '""');
++  const names = [
++    ...new Set(
++      [...strip.matchAll(/(?<![.\w$])([A-Za-z_$][\w$]*)/g)]
++        .map((m) => m[1])
++        .filter((n) => !GLOBALS.has(n) && !/^(typeof|void|new|in|instanceof|of)$/.test(n)),
++    ),
++  ];
++  let fn;
++  try {
++    fn = new Function(...names, `"use strict"; return (${js});`);
++  } catch {
++    return "unreadable";
++  }
++  const seen = new Set();
++  const free = names.slice(0, 6);
++  const total = PROBES.length ** free.length;
++  for (let k = 0; k < Math.min(total, 1e5); k++) {
++    const args = names.map((_, j) =>
++      j < free.length ? PROBES[Math.floor(k / PROBES.length ** j) % PROBES.length] : true,
++    );
++    try {
++      seen.add(String(Boolean(fn(...args))));
++    } catch {
++      // an assignment the expression cannot take (a member read on null) is no witness
++    }
++    if (seen.size > 1) return "varies";
++  }
++  return seen.size ? [...seen][0] : "unreadable";
++}
++
+ // ------------------------------------------------------------------------------ the check
+ export function check(overlay = {}) {
+   const t = tree(overlay);
+@@ -1078,6 +1222,85 @@ export function check(overlay = {}) {
+         }
+   }
+ 
++  // 12 · THE ADMITTED LIST (PASS 10; LAWS P9 §F, the critic's 63 + V8/V10). Clauses 9a–9f name
++  // properties, and 14 one-line siblings moved the verbs on paint past every name (min-height,
++  // min-block-size, row-gap, writing-mode, flex-flow, a pseudo box, a border, the bar's own top
++  // side, an arbitrary utility). The inversion: EVERY declaration that may reach a subject (the
++  // chain, its pseudo-elements, every element under the bar, the words and the glyphs) is on the
++  // admitted list, whatever its property; anything else reds. A bound style is admitted by its
++  // EXPRESSION (`?expr`): a new binding, or a changed one, reds.
++  {
++    const Z = subjects(t, ch);
++    const namedZ = Object.fromEntries(Z.list.map((x, k) => [`Z${k}`, x.el]));
++    const SZ = sitesOf(t, Z, namedZ);
++    const ok = dumpZ ? null : admitted();
++    const seenZ = new Set();
++    Z.list.forEach(({ role, el }, k) => {
++      // the template's own word on the subject: its classes (a utility the reader cannot parse,
++      // the critic's T16 `mt-[100vh]`), a bound class or style, a hide, an inert
++      for (const [a, av] of el.attrs) {
++        if (!ATTR_Z.test(a)) continue;
++        const s = { file: [...el.from][0], ctx: "attr", prelude: a, prop: a, line: el.line };
++        const id = admitKey(role, s, av ?? "");
++        if (seenZ.has(id)) continue;
++        seenZ.add(id);
++        if (dumpZ) dumpZ.push([id, el.line]);
++        else if (!ok.has(id))
++          fail(
++            12,
++            `THE ADMITTED LIST: ${s.file}:${el.line} <${el.tag} ${a}${av != null ? `="${av}"` : ""}> on the ${role} is not admitted`,
++            "12a",
++          );
++      }
++      for (const s of SZ.get(`Z${k}`)) {
++        // a token PUBLISHED on the page root is no declaration on the subject: what it feeds is
++        // read through `val()` on the declaration that spends it (the resolved value is the key)
++        if (s.prop.startsWith("--") && /^(?::root|html)$/.test(s.prelude.trim())) continue;
++        const v = s.unresolved ? `?${s.value}` : val(s);
++        // 4a, re-keyed (LAWS P9 §F): the words SET their own size (`.icon-sublabel`, 14.384 px),
++        // so the voice is read on the element that paints it, not on the bar it never inherits from
++        if (/\.icon-sublabel\b/.test(role) && /^font(-size)?$/.test(s.prop) && !s.pseudo) {
++          const size =
++            s.prop === "font-size"
++              ? v
++              : (topSplit(v).find((x) => /^(-?\d|calc|min|max|clamp|var)/.test(x)) ?? "").split("/")[0];
++          const [lo] = bounds(size || "NaN", regime("desk-1280x800"));
++          if (!(lo >= 10))
++            fail(4, `ONE HAND: ${where(s)} { ${s.prop}: ${v} } collapses the verbs' words (${role})`, "4a");
++        }
++        const id = admitKey(role, s, v);
++        if (seenZ.has(id)) continue;
++        seenZ.add(id);
++        if (dumpZ) dumpZ.push([id, s.line]);
++        else if (!ok.has(id))
++          fail(
++            12,
++            `THE ADMITTED LIST: ${where(s)} { ${s.prop}: ${v} } reaches the ${role}${s.pseudo ? " (a pseudo-element)" : ""} and is not admitted`,
++            "12d",
++          );
++      }
++    });
++  }
++
++  // 12s · THE SEED'S INPUTS (pass-10 CHAIR-RULINGS §8): the berth is cut to half the widest
++  // note's cap × sin(the tilt band). The cap and the band are published once (index.css), and the
++  // seed in SheetWashiLabel draws its tilt in ±the band by a JS literal no stylesheet reads: the
++  // literal's half is pinned to the token, so a re-rolled band reds here, not in the verbs.
++  {
++    const WASHI = "src/pencil/sheet/SheetWashiLabel.vue";
++    const js = sfc(t.read(t.abs(WASHI)))
++      .scripts.map((x) => x.text)
++      .join("\n");
++    const m = /const\s+tilt\s*=\s*\(\s*rng\(\)\s*-\s*0\.5\s*\)\s*\*\s*(\d*\.?\d+)\s*;/.exec(stripJs(js));
++    const band = /^(\d*\.?\d+)deg$/.exec(String(map.get("--washi-tilt-band") ?? "").trim());
++    if (!m || !band)
++      fail(12, `THE SEED: ${!m ? `${WASHI} draws no tilt the gate can read` : "no `--washi-tilt-band` in deg is published"}`, "12s");
++    else if (Math.abs(+m[1] / 2 - +band[1]) > 1e-9)
++      fail(12, `THE SEED: ${WASHI} draws its tilt in ±${+m[1] / 2}°, the berth is cut to ±${band[1]}° (\`--washi-tilt-band\`)`, "12s");
++    if (!/^\d*\.?\d+rem$/.test(String(map.get("--washi-wide-cap") ?? "").trim()))
++      fail(12, "THE SEED: no `--washi-wide-cap` in rem is published", "12s");
++  }
++
+   // 11 · THE MOUNT (PASS 9; the critic's G3). A template-level hide is no declaration: `v-show`,
+   // `hidden` or a `v-if` on the chain, or a Teleport that never moves the bar into the foot.
+   for (const n of ["CASE", "CARD", "FOOT", "BAR", "FRAME", "VERBS"]) {
+@@ -1093,6 +1316,18 @@ export function check(overlay = {}) {
+         );
+     }
+   }
++  // PASS 10 · the case's ancestors in GameScene's template (the critic's T7: `v-show="false"` on
++  // `.scene-controls` hid the tape with clause 11 GREEN)
++  for (let p = ch.els[ch.CASE.parent]; p; p = p.parent == null ? null : ch.els[p.parent])
++    for (const [a, v] of p.attrs) {
++      const name = a.replace(/^(?::|v-bind:)/, "");
++      if (/^(v-show|v-if|v-else-if|v-else|hidden)$/.test(name))
++        fail(
++          11,
++          `THE MOUNT: the case's ancestor <${p.tag} .${[...p.classes].join(".")}> carries \`${a}${v != null ? `="${v}"` : ""}\` (${[...p.from][0]}:${p.line})`,
++          "11c",
++        );
++    }
+   {
+     const list = elementsOf(t, PANEL);
+     const bar = list.find((e) => e.classes.has("action-bar"));
+@@ -1114,11 +1349,9 @@ export function check(overlay = {}) {
+         fail(11, "THE MOUNT: the bar's Teleport is `disabled` outright", "11b");
+       const d = tp.attrs.get(":disabled") ?? tp.attrs.get("v-bind:disabled");
+       if (d != null) {
+-        const bare = String(d).replace(
+-          /\b(true|false|null|undefined|NaN|Infinity)\b|\d+|["'`][^"'`]*["'`]/g,
+-          "",
+-        );
+-        if (!/[A-Za-z_$]/.test(bare))
++        // PASS 10 · EVALUATED, not read for a name (LAWS P9 §F: `Boolean(1)` and
++        // `!footBerth || true` named something and pinned the bar out of the foot)
++        if (constantOf(String(d)) !== "varies")
+           fail(
+             11,
+             `THE MOUNT: the bar's Teleport is \`:disabled="${d}"\`, a constant: the bar never reaches the foot`,
+@@ -1307,6 +1540,8 @@ function plants() {
+     html: rd("index.html"),
+     tab: rd(TAB),
+     app: rd("src/App.vue"),
++    washi: rd("src/pencil/sheet/SheetWashiLabel.vue"),
++    idx: rd("src/assets/index.css"),
+   };
+   const once = (s, a, b) => (s.includes(a) ? s.replace(a, b) : null);
+   const re = (s, a, b) => (a.test(s) ? s.replace(a, b) : null);
+@@ -1700,6 +1935,28 @@ function plants() {
+       "S9d classList.add an overflow utility",
+       script(`bar.classList.add("${J("overflow", "-hidden")}");`),
+     ],
++    [
++      "9",
++      "S10a App.vue writes the case's row-gap (the critic's G1, as a script)",
++      {
++        "src/App.vue": once(
++          live.app,
++          "</script>",
++          'document.querySelector<HTMLElement>(".drawer-case")!.style.rowGap = "100vh";\n</script>',
++        ),
++      },
++    ],
++    [
++      "9",
++      "S10b App.vue writes the bar's min-height through setProperty",
++      {
++        "src/App.vue": once(
++          live.app,
++          "</script>",
++          'document.querySelector<HTMLElement>(".action-bar")!.style.setProperty("min-height", "100vh");\n</script>',
++        ),
++      },
++    ],
+     [
+       "8",
+       "S9e App.vue writes #card-foot's overflow",
+@@ -1791,12 +2048,61 @@ function plants() {
+       addScene("#card-foot path { stroke-width: 0; }"),
+     ],
+     ...pass9Plants({ live, once, P, addScene, bar }),
++    ...pass10Plants({ live, once, P, addScene, bar }),
+   ];
+ }
+ 
+ /** PASS 9 · the pass-8 critic's escapes (C1 C4 C6 C7 C9–C12 C14 P7 P9 T4–T6) as plants, each
+  *  sub-clause's siblings beside them, and a BOUNDARY pair per numeric bound: the `green` arm passes
+  *  by ε and must stay GREEN on its clause, the other reds by ε (LAWS P8 §F, threshold sabotage). */
++/** PASS 10 · the critic's pass-9 escapes (gaps 1–3), each a plant on the clause that now reds it:
++ *  the 14 that moved the verbs on paint in both engines, the words and the glyphs (V8, V10), the
++ *  unparsed utility (T16), the ancestor hide (T7) and the two constant `:disabled` spellings. */
++function pass10Plants({ live, once, P, addScene, bar }) {
++  const desk = (rule) => addScene(`@media (min-width: 1024px) { ${rule} }`);
++  const gs = (a, b) => ({ [SCENE_SFC]: once(live.gsfc, a, b) });
++  const tp = (a, b) => P(once(live.panel, a, b));
++  const verbsRule = (rule) =>
++    tp(".action-bar > .action-verbs,", `${rule}\n\n.action-bar > .action-verbs,`);
++  const z = (name, patch) => ["12", name, patch];
++  return [
++    z("B1 the case's min-height beats its cap", desk(".drawer-case { min-height: 200vh; }")),
++    z("B2 its logical twin", desk(".drawer-case { min-block-size: 200vh; }")),
++    z("B10 the cap lifted at a 1920 desk", addScene("@media (min-width: 1600px) { .drawer-case { max-height: none; } }")),
++    z("A2 the card's min-block-size", desk(".controls-card { min-block-size: 100vh; }")),
++    z("G1 the column's row-gap", addScene(".drawer-case { row-gap: 100vh; }")),
++    z("G2 the column's gap shorthand", addScene(".drawer-case { gap: 100vh 0; }")),
++    z("G3 the column turned (writing-mode)", addScene(".drawer-case { writing-mode: vertical-rl; }")),
++    z("G4 flex-flow column-reverse", addScene(".drawer-case { flex-flow: column-reverse; }")),
++    z("G5 a pseudo box after the foot", addScene('.drawer-case::after { content: ""; display: block; height: 100vh; flex: none; }')),
++    z("G6 the case's bottom border", addScene(".drawer-case { border-bottom: 100vh solid transparent; }")),
++    z("D6 a pseudo box inside the foot", addScene('.card-foot::before { content: ""; display: block; height: 100vh; }')),
++    z("F1 the bar's min-height", bar("min-height: 100vh")),
++    z("F3 the bar's top margin", bar("margin-top: 100vh")),
++    z("F4 the bar's top pad", bar("padding-top: 100vh")),
++    z("T16 an arbitrary-value utility on the foot", gs('class="card-foot"', `class="card-foot ${J("mt-", "[100vh]")}"`)),
++    z("V8 the words sized to nothing", verbsRule(".action-bar .icon-sublabel { font-size: 0; }")),
++    z("V10 the glyphs hidden", verbsRule(".action-bar svg { display: none; }")),
++    ["4", "V8 on 4a: the words' own size to nothing", verbsRule(".action-bar .icon-sublabel { font-size: 0; }")],
++    ["4", "4a −ε: the words at 9.99px", verbsRule(".action-bar .icon-sublabel { font-size: 9.99px; }")],
++    ["4", "4a +ε: the words at 10.01px", verbsRule(".action-bar .icon-sublabel { font-size: 10.01px; }"), "green"],
++    z("a changed binding on the foot", gs(":class=\"rowRegime ? 'px-5' : 'px-2'\"", ":class=\"rowRegime ? 'px-5' : 'px-2 pt-[100vh]'\"")),
++    z("an ancestor's rule (the drawer hidden)", addScene(".scene-controls { visibility: hidden; }")),
++    ["12", "12s the seed re-rolled to ±2° (the JS literal)", {
++      "src/pencil/sheet/SheetWashiLabel.vue": once(live.washi, "const tilt = (rng() - 0.5) * 3;", "const tilt = (rng() - 0.5) * 4;"),
++    }],
++    ["12", "12s the seed's band unpublished", {
++      "src/assets/index.css": once(live.idx, "  --washi-tilt-band: 1.5deg;\n", ""),
++    }],
++    ["11", "T7 v-show on the case's ancestor", gs('class="scene-controls', 'v-show="false"\n      class="scene-controls')],
++    ["11", "an ancestor `hidden`", gs('class="scene-controls', `${J("hid", "den")}\n      class="scene-controls`)],
++    ["11", "T11 :disabled=\"Boolean(1)\"", tp(':disabled="!footBerth"', ':disabled="Boolean(1)"')],
++    ["11", "T12 :disabled=\"!footBerth || true\"", tp(':disabled="!footBerth"', ':disabled="!footBerth || true"')],
++    ["11", "T10 :disabled=\"!undefined\"", tp(':disabled="!footBerth"', ':disabled="!undefined"')],
++    ["11", ":disabled a constant false by a ternary", tp(':disabled="!footBerth"', ':disabled="footBerth ? false : false"')],
++  ];
++}
++
+ function pass9Plants({ live, once, P, addScene, bar }) {
+   const desk = (rule) => addScene(`@media (min-width: 1024px) { ${rule} }`);
+   const dockQ = (rule) => addScene(`@media (max-width: 1023.98px) { ${rule} }`);
+@@ -2021,6 +2327,11 @@ function sabotageBattery() {
+     "apply",
+     "11a",
+     "11b",
++    "11c",
++    "12",
++    "12a",
++    "12d",
++    "12s",
+   ];
+   let dead = 0;
+   for (const id of ids) {
+@@ -2046,10 +2357,21 @@ if (process.argv[1] === import.meta.filename) {
+       console.log(
+         `${r.n.padEnd(6)} <${r.tag}> .${r.classes}  sites ${r.sites} from ${r.files} files`,
+       );
++  if (process.argv.includes("--admitted-dump")) {
++    dumpZ = [];
++    check();
++    const rows = dumpZ;
++    dumpZ = null;
++    rows.sort((a, b) => (a[0] < b[0] ? -1 : a[0] > b[0] ? 1 : 0));
++    console.log(
++      `{\n "note": ${JSON.stringify(ADMITTED_NOTE)},\n "admitted": [\n${rows.map((r) => "  " + JSON.stringify(r)).join(",\n")}\n ]\n}`,
++    );
++    process.exit(0);
++  }
+   if (process.argv.includes("--self-test")) bad += selfTest();
+   if (process.argv.includes("--sabotage-battery")) bad += sabotageBattery();
+   const fails = check();
+   for (const f of fails) console.error(`check-tape-foot: ${f}`);
+-  if (!fails.length) console.log("check-tape-foot: 11 clauses hold");
++  if (!fails.length) console.log("check-tape-foot: 12 clauses hold");
+   process.exit(bad || fails.length ? 1 : 0);
+ }
+diff --git a/web/frontend/scripts/tape-foot-admitted.json b/web/frontend/scripts/tape-foot-admitted.json
+new file mode 100644
+index 0000000..110a2af
+--- /dev/null
++++ b/web/frontend/scripts/tape-foot-admitted.json
+@@ -0,0 +1,1062 @@
++{
++ "note": "check-tape-foot clause 12: every declaration that may reach the foot's chain, its pseudo-elements or any element under the bar. [role, file, at-rule context, selector, property, resolved value] joined by U+27C2, and the line it stood on when admitted. A new or changed entry is a §10 change: re-read FACE row 7 and TAPE row 7 on the union. Admitted on three trees at pass 10 (the lane's, s10 and the pass-9 WAVE union), the union of the three; regenerate with --admitted-dump only after reading the diff it makes.",
++ "admitted": [
++  ["ANC>div.app-layout.scene-leaving⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["ANC>div.app-layout.scene-leaving⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["ANC>div.app-layout.scene-leaving⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["ANC>div.app-layout.scene-leaving⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["ANC>div.app-layout.scene-leaving⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/GameScene.vue⟂attr⟂:class⟂:class⟂{ 'scene-leaving': leaving }", 124],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/GameScene.vue⟂attr⟂class⟂class⟂app-layout", 124],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (max-width: 1023px)⟂.app-layout⟂--board-col⟂min(42rem, calc(100vw - 1.5rem))", 533],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (max-width: 1023px)⟂.app-layout⟂align-items⟂center", 533],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (max-width: 1023px)⟂.app-layout⟂flex-direction⟂column", 533],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (max-width: 1023px)⟂.app-layout⟂gap⟂1.25rem", 533],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (max-width: 1023px)⟂.app-layout⟂width⟂100%", 533],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.app-layout⟂gap⟂3.5rem", 150],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.app-layout⟂position⟂relative", 150],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂⟂.app-layout⟂align-items⟂center", 40],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂⟂.app-layout⟂display⟂flex", 40],
++  ["ANC>div.app-layout.scene-leaving⟂src/games/shared/scene.css⟂⟂.app-layout⟂gap⟂2rem", 40],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/GameScene.vue⟂attr⟂:inert⟂:inert⟂rowRegime ? drawerInert : undefined", 194],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/GameScene.vue⟂attr⟂class⟂class⟂scene-controls lg:flex lg:flex-col lg:items-start", 194],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px) and (orientation: landscape) and (max-height: 500px) and (min-aspect-ratio: 2/1)⟂.scene-controls⟂--sheet-chrome⟂4rem", 751],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂--sheet-chrome⟂max(12rem, calc(var(--masthead-foot) + 8px - var(--case-offset)))", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂align-items⟂stretch", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂display⟂flex", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂flex-direction⟂column", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂left⟂0", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂max-height⟂calc(100dvh - 4rem)", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂padding-inline⟂env(safe-area-inset-left, 0px) env(safe-area-inset-right, 0px)", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂position⟂fixed", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂right⟂0", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂top⟂100dvh", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂translate⟂0 -100%", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂width⟂auto", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.scene-controls⟂z-index⟂60", 599],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂html.drawer-closed .scene-controls⟂translate⟂0", 644],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂html.drawer-gesturing .scene-controls⟂will-change⟂transform", 659],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.scene-controls⟂position⟂relative", 159],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.scene-controls⟂z-index⟂10", 159],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-closed .scene-controls⟂position⟂absolute", 176],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-closed .scene-controls⟂right⟂3rem", 176],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-closed .scene-controls⟂top⟂50%", 176],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-closed .scene-controls⟂translate⟂0 -50%", 176],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-closed .scene-controls⟂visibility⟂hidden", 176],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-gesturing .scene-controls⟂visibility⟂visible", 195],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂html.drawer-gesturing .scene-controls⟂will-change⟂transform", 195],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.app-layout.scene-leaving .scene-controls⟂animation⟂none", 782],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.app-layout.scene-leaving .scene-controls⟂opacity⟂0", 782],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.app-layout.scene-leaving .scene-controls⟂transition⟂opacity 200ms cubic-bezier(0.32, 0, 0.67, 0)", 782],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.app-layout.scene-leaving .scene-controls⟂transition⟂opacity var(--motion-leave) cubic-bezier(0.32, 0, 0.67, 0)", 784],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.scene-controls⟂animation⟂controls-fade-in 250ms cubic-bezier(0.33, 1, 0.68, 1) 150ms backwards", 778],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.scene-controls⟂animation⟂controls-fade-in var(--motion-note) cubic-bezier(0.22, 1, 0.36, 1) 150ms\n      backwards", 779],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂html.gallery-leaving .scene-controls⟂animation⟂none", 794],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂html.gallery-leaving .scene-controls⟂opacity⟂0", 794],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂html.gallery-leaving .scene-controls⟂transition⟂opacity 200ms cubic-bezier(0.32, 0, 0.67, 0)", 794],
++  ["ANC>div.lg:flex.lg:flex-col.lg:items-start.scene-controls⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂html.gallery-leaving .scene-controls⟂transition⟂opacity var(--motion-leave) cubic-bezier(0.32, 0, 0.67, 0)", 796],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂align-items⟂center", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂display⟂flex", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂gap⟂0.5rem", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂justify-content⟂space-between", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂padding-block⟂0.35rem", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ribbon⟂width⟂100%", 104],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂barAsking", 1543],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .confirm-ribbon⟂grid-column⟂1 / -1", 2610],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .confirm-ribbon⟂position⟂relative", 2610],
++  ["BAR>ConfirmRibbon=div.confirm-ribbon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .confirm-ribbon⟂z-index⟂1", 2610],
++  ["BAR>ConfirmRibbon>HandDrawnOutline⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>HandDrawnOutline⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>HandDrawnOutline⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>HandDrawnOutline⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>HandDrawnOutline⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂attr⟂class⟂class⟂confirm-answer confirm-go", 86],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂align-items⟂center", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂background⟂none", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂border⟂0", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂cursor⟂pointer", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂display⟂inline-flex", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂font-family⟂\"Patrick Hand\", cursive", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂justify-content⟂center", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂letter-spacing⟂0.025em", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂line-height⟂1", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂min-height⟂2.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂min-width⟂2.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂padding-inline⟂0.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂position⟂relative", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂text-transform⟂lowercase", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-go⟂color⟂hsl(48 10% 92%)", 174],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline-offset⟂3px", 2401],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid #3a7bc4", 2401],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-go⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid hsl(0 0% 0%)", 2515],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂attr⟂class⟂class⟂confirm-answer confirm-keep", 71],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂align-items⟂center", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂background⟂none", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂border⟂0", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂cursor⟂pointer", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂display⟂inline-flex", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂font-family⟂\"Patrick Hand\", cursive", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂justify-content⟂center", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂letter-spacing⟂0.025em", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂line-height⟂1", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂min-height⟂2.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂min-width⟂2.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂padding-inline⟂0.75rem", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂position⟂relative", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answer⟂text-transform⟂lowercase", 133],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-keep⟂color⟂hsl(48 10% 92%)", 174],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline-offset⟂3px", 2401],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid #3a7bc4", 2401],
++  ["BAR>ConfirmRibbon>button.confirm-answer.confirm-keep⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid hsl(0 0% 0%)", 2515],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/games/shared/ConfirmRibbon.vue⟂attr⟂class⟂class⟂confirm-answers", 70],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answers⟂align-items⟂center", 123],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answers⟂display⟂flex", 123],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answers⟂flex⟂none", 123],
++  ["BAR>ConfirmRibbon>div.confirm-answers⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-answers⟂gap⟂0.75rem", 123],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂attr⟂class⟂class⟂confirm-ask", 69],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂color⟂hsl(48 10% 92%)", 113],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂font-family⟂\"Patrick Hand\", cursive", 113],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 113],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂line-height⟂1.2", 113],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂min-width⟂0", 113],
++  ["BAR>ConfirmRibbon>span.confirm-ask⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-ask⟂text-transform⟂lowercase", 113],
++  ["BAR>ConfirmRibbon>span⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ConfirmRibbon>span⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ConfirmRibbon>span⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ConfirmRibbon>span⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ConfirmRibbon>span⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ConfirmRibbon>span⟂src/games/shared/ConfirmRibbon.vue⟂⟂.confirm-go > span⟂color⟂#ff5c7c", 180],
++  ["BAR>EraserIcon=svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>EraserIcon=svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>EraserIcon=svg⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>EraserIcon=svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>EraserIcon=svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>EraserIcon=svg⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂height⟂30px", 2661],
++  ["BAR>EraserIcon=svg⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂width⟂30px", 2661],
++  ["BAR>EraserIcon=svg⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂height⟂32px", 2643],
++  ["BAR>EraserIcon=svg⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂width⟂32px", 2643],
++  ["BAR>EraserIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>EraserIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>EraserIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>EraserIcon>circle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>EraserIcon>circle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>EraserIcon>circle⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>EraserIcon>circle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>EraserIcon>circle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>EraserIcon>g⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>EraserIcon>g⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>EraserIcon>g⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>EraserIcon>g⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>EraserIcon>g⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>EraserIcon>line⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>EraserIcon>line⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>EraserIcon>line⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>EraserIcon>line⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>EraserIcon>line⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>EraserIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>FillForcedIcon=svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>FillForcedIcon=svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>FillForcedIcon=svg⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>FillForcedIcon=svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>FillForcedIcon=svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>FillForcedIcon=svg⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂height⟂30px", 2661],
++  ["BAR>FillForcedIcon=svg⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂width⟂30px", 2661],
++  ["BAR>FillForcedIcon=svg⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂height⟂32px", 2643],
++  ["BAR>FillForcedIcon=svg⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂width⟂32px", 2643],
++  ["BAR>FillForcedIcon=svg⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>FillForcedIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>FillForcedIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>FillForcedIcon=svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂attr⟂:class⟂:class⟂{ 'mark-draw': playing }", 45],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂attr⟂:style⟂:style⟂\n        playing\n          ? { strokeDasharray: 4, strokeDashoffset: 4, animationDelay: '110ms' }\n          : undefined\n      ", 53],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂attr⟂:style⟂:style⟂playing ? { strokeDasharray: 4, strokeDashoffset: 4 } : undefined", 45],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂⟂.mark-draw⟂animation⟂markDraw 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards", 71],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂⟂.mark-draw⟂animation⟂markDraw var(--motion-dusk) cubic-bezier(0.32, 0.72, 0, 1) forwards", 76],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂⟂<path :style>⟂?style⟂?\n        playing\n          ? { strokeDasharray: 4, strokeDashoffset: 4, animationDelay: '110ms' }\n          : undefined\n      ", 53],
++  ["BAR>FillForcedIcon>path.mark-draw⟂src/pencil/chrome/icons/FillForcedIcon.vue⟂⟂<path :style>⟂?style⟂?playing ? { strokeDasharray: 4, strokeDashoffset: 4 } : undefined", 45],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>FillForcedIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂height⟂100%", 215],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂width⟂100%", 215],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂overflow⟂visible", 176],
++  ["BAR>HandDrawnOutline=div.outline-container⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂position⟂relative", 176],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-active': currentFrame === f }", 154],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂boil-pose", 154],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-show⟂v-show⟂!pruned || currentFrame === f", 154],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose.is-active⟂opacity⟂1", 207],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂opacity⟂0", 193],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂will-change⟂opacity", 193],
++  ["BAR>HandDrawnOutline>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg.is-pruned .boil-pose⟂will-change⟂auto", 203],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1652],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1629],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1629],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>HandDrawnOutline>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>HandDrawnOutline>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>HandDrawnOutline>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>HandDrawnOutline>slot⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>HandDrawnOutline>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>HandDrawnOutline>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-pruned': pruned }", 146],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂outline-svg", 146],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-if⟂v-if⟂frames.length", 146],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂height⟂calc(100% + 0px * 2)", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂inset⟂calc(0px * -1)", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂overflow⟂visible", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂pointer-events⟂none", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂position⟂absolute", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂width⟂calc(100% + 0px * 2)", 181],
++  ["BAR>HandDrawnOutline>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂z-index⟂1", 181],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂color⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  )", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂display⟂grid", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂font-family⟂\"Patrick Hand\", cursive", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂gap⟂0.15rem 0.75rem", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂grid-template-columns⟂1fr 1fr", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂justify-content⟂center", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂margin⟂0 0 0.5rem", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂@media (hover: hover) and (pointer: fine)⟂.keyboard-legend⟂user-select⟂none", 59],
++  ["BAR>KeyboardLegend=dl.keyboard-legend⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.keyboard-legend⟂display⟂none", 54],
++  ["BAR>KeyboardLegend>dd⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend>dd⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend>dd⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend>dd⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend>dd⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend>dd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dd⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 87],
++  ["BAR>KeyboardLegend>dd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dd⟂letter-spacing⟂0.025em", 87],
++  ["BAR>KeyboardLegend>dd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dd⟂margin⟂0", 87],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/pencil/chrome/KeyboardLegend.vue⟂attr⟂class⟂class⟂legend-row", 31],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row⟂align-items⟂center", 73],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row⟂display⟂flex", 73],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row⟂gap⟂0.3rem", 73],
++  ["BAR>KeyboardLegend>div.legend-row⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row⟂margin⟂0", 73],
++  ["BAR>KeyboardLegend>dt⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend>dt⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend>dt⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend>dt⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend>dt⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend>dt⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dt⟂align-items⟂center", 80],
++  ["BAR>KeyboardLegend>dt⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dt⟂display⟂inline-flex", 80],
++  ["BAR>KeyboardLegend>dt⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dt⟂gap⟂0.12rem", 80],
++  ["BAR>KeyboardLegend>dt⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row dt⟂margin⟂0", 80],
++  ["BAR>KeyboardLegend>kbd⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend>kbd⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend>kbd⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend>kbd⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend>kbd⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂align-items⟂center", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂border-radius⟂0.3rem", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂border⟂1.5px solid color-mix(\n    in srgb,\n    hsl(0 0% 0%) 55%,\n    transparent\n  )", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂color⟂inherit", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂display⟂inline-flex", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂font-family⟂\"Patrick Hand\", cursive", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂justify-content⟂center", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂line-height⟂1.4", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂min-width⟂1.15em", 93],
++  ["BAR>KeyboardLegend>kbd⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-row kbd⟂padding⟂0 0.25em", 93],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/pencil/chrome/KeyboardLegend.vue⟂attr⟂class⟂class⟂legend-sep", 38],
++  ["BAR>KeyboardLegend>span.legend-sep⟂src/pencil/chrome/KeyboardLegend.vue⟂⟂.legend-sep⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 113],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂height⟂30px", 2661],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂width⟂30px", 2661],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂text-muted-foreground", 1593],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂solvePending && !solveAnimating", 1593],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂height⟂32px", 2643],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂width⟂32px", 2643],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/pencil/chrome/ScribbleLoader.vue⟂⟂.scribble-loader⟂color⟂inherit", 73],
++  ["BAR>ScribbleLoader=svg.scribble-loader.text-muted-foreground⟂src/pencil/chrome/ScribbleLoader.vue⟂⟂.scribble-loader⟂overflow⟂visible", 73],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂@media (prefers-reduced-motion: reduce)⟂.scribble-path⟂animation⟂none", 110],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂@media (prefers-reduced-motion: reduce)⟂.scribble-path⟂opacity⟂0.6", 110],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂@media (prefers-reduced-motion: reduce)⟂.scribble-path⟂stroke-dashoffset⟂0", 110],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂attr⟂class⟂class⟂scribble-path", 60],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂⟂.scribble-path⟂animation⟂scribble-cycle 1000ms linear infinite", 78],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂⟂.scribble-path⟂stroke-dasharray⟂1", 78],
++  ["BAR>ScribbleLoader>path.scribble-path⟂src/pencil/chrome/ScribbleLoader.vue⟂⟂.scribble-path⟂stroke-dashoffset⟂1", 78],
++  ["BAR>ShareIcon=svg.share-pop⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ShareIcon=svg.share-pop⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ShareIcon=svg.share-pop⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ShareIcon=svg.share-pop⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ShareIcon=svg.share-pop⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂height⟂30px", 2661],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂width⟂30px", 2661],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂attr⟂:class⟂:class⟂{ 'share-pop': shareAct.animating.value }", 1619],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂height⟂32px", 2643],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂width⟂32px", 2643],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂⟂.share-pop⟂animation⟂sharePop 500ms ease", 2926],
++  ["BAR>ShareIcon=svg.share-pop⟂src/games/shared/GameControlPanel.vue⟂⟂.share-pop⟂display⟂inline-flex", 2926],
++  ["BAR>ShareIcon=svg.share-pop⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>ShareIcon=svg.share-pop⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>ShareIcon=svg.share-pop⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>ShareIcon>circle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ShareIcon>circle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ShareIcon>circle⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ShareIcon>circle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ShareIcon>circle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>ShareIcon>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂background⟂linear-gradient(color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  ), color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  )),\n    hsl(24 6% 7%)", 1773],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂color⟂#000", 1240],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂opacity⟂1", 1240],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂bottom⟂auto", 1248],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂margin-bottom⟂0", 1248],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂margin-top⟂0.5rem", 1248],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂top⟂100%", 1248],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂berth-note", 1653],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂noteBerth && (!session.roomId.value || aloneInRoom)", 1653],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂bottom⟂auto", 2573],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂margin-bottom⟂0", 2573],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂margin-top⟂calc(15rem / 2 * sin(1.5deg) + 0.5px)", 2573],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂max-width⟂min(15rem, 100%)", 2693],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂top⟂100%", 2573],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.drawer-case:has(.invite-btn:focus-visible) .berth-note⟂opacity⟂1", 2593],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.drawer-case:has(.invite-btn:hover) .berth-note⟂opacity⟂1", 2593],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂@media (pointer: coarse)⟂.washi-persistent⟂opacity⟂1", 276],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂@media (prefers-reduced-transparency: reduce)⟂.washi-label⟂background⟂hsl(24 6% 7%)", 283],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂bottom⟂auto", 157],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂left⟂50%", 157],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂margin-bottom⟂0", 157],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂top⟂50%", 157],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂transform⟂translate(-50%, -50%) rotate(var(--washi-tilt))", 157],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂background⟂color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  )", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂border⟂none", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂bottom⟂100%", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂color⟂hsl(48 10% 92%)", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-family⟂\"Patrick Hand\", cursive", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-size⟂clamp(1rem, 0.8rem + 0.25vw, 1.25rem)", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-weight⟂600", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂left⟂50%", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂letter-spacing⟂0", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂margin-bottom⟂0.5rem", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂opacity⟂0", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂padding⟂0.25rem 0.7rem", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂pointer-events⟂none", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂position⟂absolute", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transform⟂translateX(-50%) rotate(var(--washi-tilt))", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transition⟂opacity 150ms", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transition⟂opacity var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 127],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂white-space⟂nowrap", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂z-index⟂50", 121],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂--washi-tag-lh⟂1.2", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂align-self⟂flex-start", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂bottom⟂auto", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-family⟂\"Patrick Hand\", cursive", 222],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-size⟂1.618rem", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 222],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-weight⟂500", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂left⟂auto", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂letter-spacing⟂0.025em", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂line-height⟂1.2", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂line-height⟂1.5", 222],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂margin⟂calc(-1lh - 0.04rem - 3px) 0\n    calc(3px - 0px)\n    0.35rem", 222],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂margin⟂calc(1.2 * -1em - 0.04rem - 3px) 0\n    calc(3px - 0px)\n    0.35rem", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂opacity⟂1", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂padding⟂0.02rem 0.4rem", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂position⟂sticky", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂text-transform⟂lowercase", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂top⟂calc(0.15rem - calc(0.15rem + var(--pin-tape-h)))", 222],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂top⟂calc(0.6rem - calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)))", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂transform⟂rotate(var(--washi-tilt))", 194],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂line-height⟂1.3", 262],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂max-width⟂15rem", 262],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂text-align⟂center", 262],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂white-space⟂normal", 262],
++  ["BAR>SheetWashiLabel=component.berth-note.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂width⟂max-content", 262],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂background⟂linear-gradient(color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  ), color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  )),\n    hsl(24 6% 7%)", 1773],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂color⟂#000", 1240],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape :deep(.washi-label)⟂opacity⟂1", 1240],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂bottom⟂auto", 1248],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂margin-bottom⟂0", 1248],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂margin-top⟂0.5rem", 1248],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameBoard.vue⟂⟂.attribution-tape.is-below :deep(.washi-label)⟂top⟂100%", 1248],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂noteBerth", 1563],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂bottom⟂auto", 2573],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂margin-bottom⟂0", 2573],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂margin-top⟂calc(15rem / 2 * sin(1.5deg) + 0.5px)", 2573],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂max-width⟂min(15rem, 100%)", 2693],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .washi-label⟂top⟂100%", 2573],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂@media (pointer: coarse)⟂.washi-persistent⟂opacity⟂1", 276],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂@media (prefers-reduced-transparency: reduce)⟂.washi-label⟂background⟂hsl(24 6% 7%)", 283],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.group:focus-visible .washi-label⟂opacity⟂1", 151],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.group:hover .washi-label⟂opacity⟂1", 151],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂bottom⟂auto", 157],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂left⟂50%", 157],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂margin-bottom⟂0", 157],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂top⟂50%", 157],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-center⟂transform⟂translate(-50%, -50%) rotate(var(--washi-tilt))", 157],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂background⟂color-mix(\n    in srgb,\n    hsl(48 10% 92%) 6%,\n    hsl(24 5% 21% / 0.92)\n  )", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂border⟂none", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂bottom⟂100%", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂color⟂hsl(48 10% 92%)", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-family⟂\"Patrick Hand\", cursive", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-size⟂clamp(1rem, 0.8rem + 0.25vw, 1.25rem)", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂font-weight⟂600", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂left⟂50%", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂letter-spacing⟂0", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂margin-bottom⟂0.5rem", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂opacity⟂0", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂padding⟂0.25rem 0.7rem", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂pointer-events⟂none", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂position⟂absolute", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transform⟂translateX(-50%) rotate(var(--washi-tilt))", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transition⟂opacity 150ms", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂transition⟂opacity var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 127],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂white-space⟂nowrap", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-label⟂z-index⟂50", 121],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂--washi-tag-lh⟂1.2", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂align-self⟂flex-start", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂bottom⟂auto", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-family⟂\"Patrick Hand\", cursive", 222],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-size⟂1.618rem", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 222],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂font-weight⟂500", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂left⟂auto", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂letter-spacing⟂0.025em", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂line-height⟂1.2", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂line-height⟂1.5", 222],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂margin⟂calc(-1lh - 0.04rem - 3px) 0\n    calc(3px - 0px)\n    0.35rem", 222],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂margin⟂calc(1.2 * -1em - 0.04rem - 3px) 0\n    calc(3px - 0px)\n    0.35rem", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂opacity⟂1", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂padding⟂0.02rem 0.4rem", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂position⟂sticky", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂text-transform⟂lowercase", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂top⟂calc(0.15rem - calc(0.15rem + var(--pin-tape-h)))", 222],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂top⟂calc(0.6rem - calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)))", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-tag⟂transform⟂rotate(var(--washi-tilt))", 194],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂line-height⟂1.3", 262],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂max-width⟂15rem", 262],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂text-align⟂center", 262],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂white-space⟂normal", 262],
++  ["BAR>SheetWashiLabel=component.center.tag.washi-center.washi-label.washi-persistent.washi-tag.washi-wide⟂src/pencil/sheet/SheetWashiLabel.vue⟂⟂.washi-wide⟂width⟂max-content", 262],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>SheetWashiLabel>PlayerTick⟂src/pencil/sheet/SheetWashiLabel.vue⟂attr⟂v-if⟂v-if⟂tally", 122],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover .sparkle-icon⟂filter⟂drop-shadow(0 0 5px color-mix(in srgb, #e5c74d 60%, transparent))", 2644],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover .sparkle-icon⟂filter⟂drop-shadow(0 0 5px rgba(196, 181, 253, 0.6))", 2526],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂height⟂30px", 2661],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂@media (max-width: 1023.98px) and (pointer: coarse)⟂.icon-btn svg⟂width⟂30px", 2661],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂sparkle-icon", 1598],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-else⟂v-else⟂", 1598],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂height⟂32px", 2643],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn svg⟂width⟂32px", 2643],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon⟂filter⟂drop-shadow(0 0 2px color-mix(in srgb, #e5c74d 30%, transparent))", 2636],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon⟂filter⟂drop-shadow(0 0 2px rgba(196, 181, 253, 0.3))", 2520],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon⟂transition⟂all 200ms", 2520],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon⟂transition⟂filter var(--motion-leave) cubic-bezier(0.32, 0.72, 0, 1),\n    transform var(--motion-leave) cubic-bezier(0.32, 0.72, 0, 1)", 2636],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["BAR>SolveIcon=svg.sparkle-icon⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["BAR>SolveIcon>line.check-draw⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SolveIcon>line.check-draw⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SolveIcon>line.check-draw⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SolveIcon>line.check-draw⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>SolveIcon>line.check-draw⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>SolveIcon>line.check-draw⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon :deep(*)⟂fill⟂url(#sparkle-rainbow)", 2515],
++  ["BAR>SolveIcon>line.check-draw⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon :deep(*)⟂stroke⟂url(#sparkle-rainbow)", 2515],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂attr⟂:class⟂:class⟂{ 'check-draw': playing }", 17],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂attr⟂:style⟂:style⟂\n        playing\n          ? { strokeDasharray: 20, strokeDashoffset: 20, animationDelay: '120ms' }\n          : undefined\n      ", 28],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂attr⟂:style⟂:style⟂playing ? { strokeDasharray: 10, strokeDashoffset: 10 } : undefined", 17],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂.check-draw⟂animation⟂drawIn 350ms cubic-bezier(0.4, 0, 0.2, 1) forwards", 54],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂.check-draw⟂animation⟂drawIn var(--motion-dusk) cubic-bezier(0.32, 0.72, 0, 1) forwards", 56],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂<line :style>⟂?style⟂?\n        playing\n          ? { strokeDasharray: 20, strokeDashoffset: 20, animationDelay: '120ms' }\n          : undefined\n      ", 28],
++  ["BAR>SolveIcon>line.check-draw⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂<line :style>⟂?style⟂?playing ? { strokeDasharray: 10, strokeDashoffset: 10 } : undefined", 17],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon :deep(*)⟂fill⟂url(#sparkle-rainbow)", 2515],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/games/shared/GameControlPanel.vue⟂⟂.sparkle-icon :deep(*)⟂stroke⟂url(#sparkle-rainbow)", 2515],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/pencil/chrome/icons/SolveIcon.vue⟂attr⟂:class⟂:class⟂{ 'star-sparkle': playing }", 44],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂.star-sparkle⟂animation⟂sparkleGrow 500ms cubic-bezier(0.34, 1.56, 0.64, 1) forwards", 68],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂.star-sparkle⟂animation⟂sparkleGrow var(--motion-throw) cubic-bezier(0.34, 1.56, 0.64, 1) forwards", 70],
++  ["BAR>SolveIcon>path.star-sparkle⟂src/pencil/chrome/icons/SolveIcon.vue⟂⟂.star-sparkle⟂transform-origin⟂5px 5.5px", 68],
++  ["BAR>button.group.icon-btn.info-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>button.group.icon-btn.info-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>button.group.icon-btn.info-btn⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>button.group.icon-btn.info-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>button.group.icon-btn.info-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂min-height⟂2.75rem", 156],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂min-width⟂2.75rem", 156],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂padding⟂0.2rem 0", 156],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.action-bar .info-btn⟂display⟂inline-flex", 2845],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.action-bar.ring-arm .info-btn:hover⟂color⟂hsl(48 10% 92%)", 2913],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover⟂background⟂hsl(24 5% 15%)", 2472],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover⟂color⟂hsl(48 10% 92%)", 2472],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂:style⟂:style⟂{ '--keys-underline': keysUnderline }", 1728],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂icon-btn info-btn group", 1728],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂!mobile && !keysRingArm", 1728],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .info-btn⟂display⟂none", 2840],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂align-items⟂center", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂background⟂none", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂border⟂none", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂color⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  )", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂cursor⟂pointer", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂height⟂2rem", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂justify-content⟂center", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂padding⟂0", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂width⟂2rem", 2894],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active⟂transform⟂none", 2872],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:active⟂transform⟂scale(0.93)", 2478],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:disabled⟂opacity⟂0.4", 2530],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:disabled⟂pointer-events⟂none", 2530],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂align-items⟂center", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂background⟂transparent", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂border-radius⟂0.5rem", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂border⟂none", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂color⟂hsl(48 5% 64%)", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂cursor⟂pointer", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂display⟂inline-flex", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂flex-direction⟂column", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂gap⟂0.15rem", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂height⟂auto", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂justify-content⟂center", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂min-height⟂2.75rem", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂min-width⟂2.75rem", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂padding⟂0.3rem 0.5rem", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂transition⟂background-color 150ms,\n    color 150ms", 2536],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂transition⟂background-color var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1),\n    color var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂width⟂auto", 2439],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"]⟂color⟂hsl(48 10% 92%)", 2881],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline-offset⟂3px", 2515],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid #3a7bc4", 2612],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid hsl(0 0% 0%)", 2515],
++  ["BAR>button.group.icon-btn.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂<button :style>⟂?style⟂?{ '--keys-underline': keysUnderline }", 1728],
++  ["BAR>button.group.icon-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>button.group.icon-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>button.group.icon-btn⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>button.group.icon-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>button.group.icon-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>button.group.icon-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂min-height⟂2.75rem", 156],
++  ["BAR>button.group.icon-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂min-width⟂2.75rem", 156],
++  ["BAR>button.group.icon-btn⟂src/games/shared/DrawerTab.vue⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂html.drawer-closed .quick-set :deep(.icon-btn)⟂padding⟂0.2rem 0", 156],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover⟂background⟂hsl(24 5% 15%)", 2472],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.icon-btn:hover⟂color⟂hsl(48 10% 92%)", 2359],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂:class⟂:class⟂{ group: !mobile }", 1552],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂icon-btn", 1552],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active⟂transform⟂none", 2872],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:active⟂transform⟂scale(0.93)", 2364],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:disabled⟂opacity⟂0.4", 2420],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn:disabled⟂pointer-events⟂none", 2420],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂align-items⟂center", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂background⟂transparent", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂border-radius⟂0.5rem", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂border⟂none", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂color⟂hsl(48 5% 64%)", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂cursor⟂pointer", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂display⟂inline-flex", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂flex-direction⟂column", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂gap⟂0.15rem", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂height⟂auto", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂justify-content⟂center", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂min-height⟂2.75rem", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂min-width⟂2.75rem", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂padding⟂0.3rem 0.5rem", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂transition⟂background-color 150ms,\n    color 150ms", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂transition⟂background-color var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1),\n    color var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 2439],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-btn⟂width⟂auto", 2321],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline-offset⟂3px", 2401],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid #3a7bc4", 2401],
++  ["BAR>button.group.icon-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid hsl(0 0% 0%)", 2515],
++  ["BAR>button.info-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>button.info-btn⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>button.info-btn⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>button.info-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>button.info-btn⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.action-bar .info-btn⟂display⟂inline-flex", 2845],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂align-items⟂center", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂background⟂none", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂border⟂none", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂cursor⟂pointer", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂display⟂inline-flex", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂height⟂2rem", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂justify-content⟂center", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂padding⟂0", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover) and (pointer: fine)⟂.info-btn⟂width⟂2rem", 2714],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.action-bar.ring-arm .info-btn:hover⟂color⟂hsl(48 10% 92%)", 2913],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂info-btn", 1635],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂!mobile && !barAsking", 1635],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂!mobile && keysRingArm && !barAsking", 1744],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar .info-btn⟂display⟂none", 2840],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .info-btn⟂position⟂relative", 2559],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .info-btn⟂z-index⟂1", 2559],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂align-items⟂center", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂background⟂none", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂border⟂none", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂color⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  )", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂cursor⟂pointer", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂height⟂2rem", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂justify-content⟂center", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂padding⟂0", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-btn⟂width⟂2rem", 2894],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"]⟂color⟂hsl(48 10% 92%)", 2881],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn⟂display⟂none", 2709],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline-offset⟂3px", 2401],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid #3a7bc4", 2401],
++  ["BAR>button.info-btn⟂src/games/shared/GameControlPanel.vue⟂⟂:deep(button:focus-visible)⟂outline⟂2px solid hsl(0 0% 0%)", 2515],
++  ["BAR>div.is-open.legend-fold⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>div.is-open.legend-fold⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>div.is-open.legend-fold⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>div.is-open.legend-fold⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>div.is-open.legend-fold⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂@media (prefers-reduced-motion: reduce)⟂.legend-fold⟂transition⟂none", 2826],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂attr⟂:class⟂:class⟂{ 'is-open': keysOpen }", 1607],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂legend-fold", 1607],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-if⟂v-if⟂!mobile", 1607],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .legend-fold⟂position⟂relative", 2679],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .legend-fold⟂z-index⟂1", 2679],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold.is-open⟂grid-template-rows⟂1fr", 2817],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂clip-path⟂inset(0)", 2809],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂display⟂grid", 2809],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂grid-column⟂1 / -1", 2809],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂grid-template-rows⟂0fr", 2809],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂transition⟂grid-template-rows 200ms cubic-bezier(0.33, 1, 0.68, 1)", 2899],
++  ["BAR>div.is-open.legend-fold⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold⟂transition⟂grid-template-rows var(--motion-leave) cubic-bezier(0.33, 1, 0.68, 1)", 2809],
++  ["BAR>div⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>div⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>div⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>div⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 1416],
++  ["BAR>div⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 1416],
++  ["BAR>div⟂src/games/shared/GameControlPanel.vue⟂⟂.legend-fold > div⟂min-height⟂0", 2821],
++  ["BAR>span.eraser-scrub⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>span.eraser-scrub⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>span.eraser-scrub⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>span.eraser-scrub⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>span.eraser-scrub⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>span.eraser-scrub⟂src/games/shared/GameControlPanel.vue⟂attr⟂:class⟂:class⟂{ 'eraser-scrub': clearAnimating }", 1559],
++  ["BAR>span.eraser-scrub⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>span.eraser-scrub⟂src/games/shared/GameControlPanel.vue⟂⟂.eraser-scrub⟂animation⟂eraserScrub 400ms ease", 2947],
++  ["BAR>span.eraser-scrub⟂src/games/shared/GameControlPanel.vue⟂⟂.eraser-scrub⟂display⟂inline-flex", 2947],
++  ["BAR>span.icon-sublabel⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>span.icon-sublabel⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>span.icon-sublabel⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>span.icon-sublabel⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>span.icon-sublabel⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂icon-sublabel", 1562],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-sublabel⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 2651],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂color⟂hsl(48 5% 64%)", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂font-family⟂\"Patrick Hand\", cursive", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂font-size⟂clamp(0.875rem, 0.71rem + 0.21vw, 1rem)", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂letter-spacing⟂0.025em", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂line-height⟂1", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.icon-sublabel⟂text-transform⟂lowercase", 2479],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn .icon-sublabel⟂position⟂relative", 2861],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel::after⟂background⟂var(--keys-underline) no-repeat left top / 100% 6px", 2885],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel::after⟂content⟂\"\"", 2885],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel::after⟂height⟂6px", 2885],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel::after⟂inset⟂calc(100% - 1px) -2px auto", 2885],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel::after⟂position⟂absolute", 2885],
++  ["BAR>span.icon-sublabel⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .icon-sublabel⟂color⟂hsl(48 10% 92%)", 2881],
++  ["BAR>span.info-glyph⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR>span.info-glyph⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR>span.info-glyph⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR>span.info-glyph⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR>span.info-glyph⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂@media (hover: hover)⟂.info-btn:hover .info-glyph⟂color⟂hsl(48 10% 92%)", 2754],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂info-glyph", 1644],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-glyph⟂font-size⟂clamp(1rem, 0.8rem + 0.25vw, 1.25rem)", 2906],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-glyph⟂height⟂1.75rem", 2906],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm .info-glyph⟂width⟂1.75rem", 2906],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs .icon-btn:active > :not(.washi-label)⟂transform⟂scale(0.93)", 2876],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-btn[aria-expanded=\"true\"] .info-glyph⟂color⟂hsl(48 10% 92%)", 2742],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂align-items⟂center", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂color⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  )", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂display⟂inline-flex", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂font-family⟂\"Patrick Hand\", cursive", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂font-size⟂32px", 2850],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂font-size⟂clamp(1rem, 0.8rem + 0.25vw, 1.25rem)", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂height⟂32px", 2850],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂justify-content⟂center", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂line-height⟂1", 2732],
++  ["BAR>span.info-glyph⟂src/games/shared/GameControlPanel.vue⟂⟂.info-glyph⟂width⟂32px", 2850],
++  ["BAR⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["BAR⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["BAR⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["BAR⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["BAR⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂attr⟂:class⟂:class⟂{ 'ring-arm': keysRingArm }", 1587],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂action-bar", 1519],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar.ring-arm⟂grid-template-columns⟂1fr auto", 2805],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂align-items⟂center", 2537],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂display⟂grid", 2537],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂grid-template-columns⟂1fr", 2656],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂grid-template-columns⟂1fr auto", 2537],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂padding-block⟂0.4rem 0.15rem", 2537],
++  ["BAR⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar⟂position⟂relative", 2537],
++  ["CARD⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CARD⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CARD⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CARD⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: no-preference)⟂html.theme-turning .bg-card⟂transition⟂background-color 350ms ease,\n        color 350ms ease", 761],
++  ["CARD⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: no-preference)⟂html.theme-turning .bg-card⟂transition⟂background-color var(--motion-dusk) cubic-bezier(0.25, 0.1, 0.25, 1),\n        color var(--motion-dusk) cubic-bezier(0.25, 0.1, 0.25, 1)", 1277],
++  ["CARD⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CARD⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CARD⟂src/assets/index.css⟂@media print⟂.controls-card⟂display⟂none", 1012],
++  ["CARD⟂src/games/shared/GameScene.vue⟂attr⟂:class⟂:class⟂rowRegime ? 'rounded-xl px-5' : 'rounded-lg px-2'", 221],
++  ["CARD⟂src/games/shared/GameScene.vue⟂attr⟂class⟂class⟂controls-card bg-card", 221],
++  ["CARD⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.controls-card⟂overflow-y⟂auto", 666],
++  ["CARD⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.controls-card⟂overscroll-behavior⟂contain", 666],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card::-webkit-scrollbar-thumb⟂background⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  )", 494],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card::-webkit-scrollbar-thumb⟂border-radius⟂3px", 494],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card::-webkit-scrollbar-track⟂background⟂transparent", 499],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card::-webkit-scrollbar⟂width⟂6px", 490],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card⟂--card-gutter⟂6px", 484],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card⟂overflow-y⟂auto", 135],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card⟂overscroll-behavior⟂contain", 135],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card⟂padding-right⟂calc(1.25rem - 6px)", 484],
++  ["CARD⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.controls-card⟂scrollbar-gutter⟂stable", 484],
++  ["CARD⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.controls-card::after⟂transition⟂opacity 150ms", 456],
++  ["CARD⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.controls-card::after⟂transition⟂opacity var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 457],
++  ["CARD⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.controls-card::before⟂transition⟂opacity 150ms", 456],
++  ["CARD⟂src/games/shared/scene.css⟂@media (prefers-reduced-motion: no-preference)⟂.controls-card::before⟂transition⟂opacity var(--motion-whisper) cubic-bezier(0.32, 0.72, 0, 1)", 457],
++  ["CARD⟂src/games/shared/scene.css⟂@supports not selector(::-webkit-scrollbar)⟂.controls-card⟂scrollbar-color⟂color-mix(\n    in srgb,\n    hsl(0 0% 0%) 68%,\n    transparent\n  ) transparent", 517],
++  ["CARD⟂src/games/shared/scene.css⟂@supports not selector(::-webkit-scrollbar)⟂.controls-card⟂scrollbar-width⟂thin", 517],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂border-image⟂linear-gradient(\n      to top,\n      hsl(24 6% 7%) 0.5rem,\n      transparent\n    )\n    0 fill / 0 / 0 1.25rem", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂border-image⟂linear-gradient(\n      to top,\n      hsl(24 6% 7%) var(--card-pad-b),\n      transparent\n    )\n    0 fill / 0 / 0 1.25rem", 426],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂bottom⟂calc(-1 * 0.5rem)", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂bottom⟂calc(-1 * var(--card-pad-b))", 426],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂content⟂\"\"", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂display⟂block", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂height⟂calc(2rem + 0.5rem)", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂height⟂calc(2rem + var(--card-pad-b))", 426],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂margin-top⟂calc(-2rem - 0.5rem)", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂margin-top⟂calc(-2rem - var(--card-pad-b))", 426],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂opacity⟂0", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂pointer-events⟂none", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂position⟂sticky", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::after⟂z-index⟂30", 425],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂background⟂linear-gradient(\n    to bottom,\n    hsl(24 6% 7%) calc(0.15rem + var(--pin-tape-h)),\n    transparent\n  )", 396],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂background⟂linear-gradient(\n    to bottom,\n    hsl(24 6% 7%) calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)),\n    transparent\n  )", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂content⟂\"\"", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂display⟂block", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂height⟂calc(2rem + calc(0.15rem + var(--pin-tape-h)))", 396],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂height⟂calc(2rem + calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)))", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂margin-bottom⟂calc(-2rem - calc(0.15rem + var(--pin-tape-h)))", 396],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂margin-bottom⟂calc(-2rem - calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)))", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂opacity⟂0", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂pointer-events⟂none", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂position⟂sticky", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂top⟂calc(-1 * calc(0.15rem + var(--pin-tape-h)))", 396],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂top⟂calc(-1 * calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem)))", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card::before⟂z-index⟂30", 395],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--card-pad-b⟂0.5rem", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--pin-band⟂calc(0.15rem + var(--pin-tape-h))", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--pin-band⟂calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem))", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--washi-tag-h⟂calc(1.618rem * 1.2 + 0.2rem)", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--washi-tag-leading⟂1.2", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂--washi-tag-rung⟂1.618rem", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂padding-bottom⟂0.5rem", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂padding-top⟂calc(0.15rem + var(--pin-tape-h))", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂padding-top⟂calc(0.6rem + calc(1.618rem * 1.2 + 0.2rem))", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂position⟂relative", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂scroll-padding-bottom⟂calc(2rem + 0.5rem)", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂scroll-padding-bottom⟂calc(2rem + var(--card-pad-b))", 231],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂scroll-padding-top⟂2.4rem", 375],
++  ["CARD⟂src/games/shared/scene.css⟂⟂.controls-card⟂z-index⟂45", 231],
++  ["CASE>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CASE>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CASE>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CASE>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CASE>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-active': currentFrame === f }", 154],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂boil-pose", 154],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-show⟂v-show⟂!pruned || currentFrame === f", 154],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose.is-active⟂opacity⟂1", 207],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂opacity⟂0", 193],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂will-change⟂opacity", 193],
++  ["CASE>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg.is-pruned .boil-pose⟂will-change⟂auto", 203],
++  ["CASE>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CASE>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CASE>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CASE>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CASE>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CASE>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["CASE>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["CASE>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["CASE>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["CASE>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["CASE>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["CASE>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CASE>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CASE>slot⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CASE>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CASE>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CASE>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CASE>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CASE>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CASE>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CASE>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-pruned': pruned }", 146],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂outline-svg", 146],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-if⟂v-if⟂frames.length", 146],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂height⟂calc(100% + 0px * 2)", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂inset⟂calc(0px * -1)", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂overflow⟂visible", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂pointer-events⟂none", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂position⟂absolute", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂width⟂calc(100% + 0px * 2)", 181],
++  ["CASE>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂z-index⟂1", 181],
++  ["CASE⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["CASE⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["CASE⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["CASE⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["CASE⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["CASE⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂height⟂100%", 212],
++  ["CASE⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂width⟂100%", 212],
++  ["CASE⟂src/games/shared/GameScene.vue⟂attr⟂:inert⟂:inert⟂!rowRegime && drawerInert", 207],
++  ["CASE⟂src/games/shared/GameScene.vue⟂attr⟂class⟂class⟂drawer-case", 207],
++  ["CASE⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.drawer-case⟂max-height⟂calc(100dvh - 4rem - 1.5rem)", 671],
++  ["CASE⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂.drawer-case⟂width⟂100%", 671],
++  ["CASE⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂html.drawer-closed .drawer-case⟂visibility⟂hidden", 651],
++  ["CASE⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px)⟂html.drawer-gesturing .drawer-case⟂visibility⟂visible", 655],
++  ["CASE⟂src/games/shared/scene.css⟂@media (min-width: 1024px)⟂.drawer-case⟂max-height⟂calc(min(42rem, 85vw, 100dvh - 10rem) - 2rem)", 132],
++  ["CASE⟂src/games/shared/scene.css⟂⟂.drawer-case⟂display⟂flex", 308],
++  ["CASE⟂src/games/shared/scene.css⟂⟂.drawer-case⟂flex-direction⟂column", 308],
++  ["CASE⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂overflow⟂visible", 176],
++  ["CASE⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂position⟂relative", 176],
++  ["FOOT⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FOOT⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FOOT⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FOOT⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FOOT⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FOOT⟂src/games/shared/GameScene.vue⟂attr⟂:class⟂:class⟂rowRegime ? 'px-5' : 'px-2'", 232],
++  ["FOOT⟂src/games/shared/GameScene.vue⟂attr⟂class⟂class⟂card-foot", 232],
++  ["FOOT⟂src/games/shared/scene.css⟂@media (max-width: 1023.98px) and (orientation: landscape)⟂.card-foot⟂padding-bottom⟂calc(1.125rem + env(safe-area-inset-bottom))", 340],
++  ["FOOT⟂src/games/shared/scene.css⟂@media (min-width: 1024px) and (hover: hover) and (pointer: fine)⟂.card-foot⟂padding-bottom⟂max(3.5rem, env(safe-area-inset-bottom))", 334],
++  ["FOOT⟂src/games/shared/scene.css⟂⟂.card-foot⟂flex⟂none", 313],
++  ["FOOT⟂src/games/shared/scene.css⟂⟂.card-foot⟂padding-bottom⟂calc(0.75rem + env(safe-area-inset-bottom))", 313],
++  ["FOOT⟂src/games/shared/scene.css⟂⟂.card-foot⟂position⟂relative", 313],
++  ["FOOT⟂src/games/shared/scene.css⟂⟂.card-foot⟂z-index⟂45", 313],
++  ["FRAME>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FRAME>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FRAME>g.boil-pose.is-active⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FRAME>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FRAME>g.boil-pose.is-active⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-active': currentFrame === f }", 154],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂boil-pose", 154],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-show⟂v-show⟂!pruned || currentFrame === f", 154],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose.is-active⟂opacity⟂1", 207],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂opacity⟂0", 193],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.boil-pose⟂will-change⟂opacity", 193],
++  ["FRAME>g.boil-pose.is-active⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg.is-pruned .boil-pose⟂will-change⟂auto", 203],
++  ["FRAME>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FRAME>path⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FRAME>path⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FRAME>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FRAME>path⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FRAME>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.glyph-svg path⟂stroke⟂CanvasText", 1054],
++  ["FRAME>path⟂src/assets/index.css⟂@media (forced-colors: active) @layer base⟂.roster-tick path⟂stroke⟂CanvasText", 1652],
++  ["FRAME>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂filter⟂none", 1032],
++  ["FRAME>path⟂src/assets/index.css⟂@media print @layer base⟂.glyph-svg path⟂stroke⟂#000", 1032],
++  ["FRAME>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂filter⟂none", 1629],
++  ["FRAME>path⟂src/assets/index.css⟂@media print @layer base⟂.roster-tick path⟂stroke⟂#000", 1629],
++  ["FRAME>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FRAME>slot⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FRAME>slot⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FRAME>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FRAME>slot⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂height⟂100%", 126],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂overflow⟂visible", 126],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/chrome/CelebrationHeart.vue⟂⟂.celebration-heart :deep(svg)⟂width⟂100%", 126],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂:class⟂:class⟂{ 'is-pruned': pruned }", 146],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂class⟂class⟂outline-svg", 146],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂attr⟂v-if⟂v-if⟂frames.length", 146],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂height⟂calc(100% + 0px * 2)", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂inset⟂calc(0px * -1)", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂overflow⟂visible", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂pointer-events⟂none", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂position⟂absolute", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂width⟂calc(100% + 0px * 2)", 181],
++  ["FRAME>svg.is-pruned.outline-svg⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-svg⟂z-index⟂1", 181],
++  ["FRAME⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["FRAME⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["FRAME⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["FRAME⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["FRAME⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["FRAME⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂height⟂100%", 212],
++  ["FRAME⟂src/games/shared/DrawerTab.vue⟂⟂.drawer-tab :deep(.outline-container)⟂width⟂100%", 212],
++  ["FRAME⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂bar-frame", 1532],
++  ["FRAME⟂src/games/shared/GameControlPanel.vue⟂⟂.bar-frame⟂inset⟂0", 2551],
++  ["FRAME⟂src/games/shared/GameControlPanel.vue⟂⟂.bar-frame⟂pointer-events⟂none", 2551],
++  ["FRAME⟂src/games/shared/GameControlPanel.vue⟂⟂.bar-frame⟂position⟂absolute", 2551],
++  ["FRAME⟂src/games/shared/GameControlPanel.vue⟂⟂.bar-frame⟂z-index⟂0", 2551],
++  ["FRAME⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂overflow⟂visible", 176],
++  ["FRAME⟂src/pencil/grid/HandDrawnOutline.vue⟂⟂.outline-container⟂position⟂relative", 176],
++  ["VERBS⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline-offset⟂2px", 981],
++  ["VERBS⟂src/assets/index.css⟂@layer base @media (forced-colors: active)⟂:focus-visible⟂outline⟂2px solid Highlight", 981],
++  ["VERBS⟂src/assets/index.css⟂@layer base⟂:focus-visible⟂outline⟂none", 974],
++  ["VERBS⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-duration⟂0.01ms", 840],
++  ["VERBS⟂src/assets/index.css⟂@layer utilities @media (prefers-reduced-motion: reduce)⟂*⟂animation-iteration-count⟂1", 840],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂attr⟂class⟂class⟂action-verbs", 1551],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂attr⟂v-else⟂v-else⟂", 1551],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .action-verbs⟂position⟂relative", 2559],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-bar > .action-verbs⟂z-index⟂1", 2559],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs⟂align-items⟂flex-start", 2597],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs⟂display⟂flex", 2597],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs⟂flex⟂1", 2597],
++  ["VERBS⟂src/games/shared/GameControlPanel.vue⟂⟂.action-verbs⟂justify-content⟂space-evenly", 2597]
++ ]
++}
+diff --git a/web/frontend/src/assets/index.css b/web/frontend/src/assets/index.css
+index daf13af..bbc6129 100644
+--- a/web/frontend/src/assets/index.css
++++ b/web/frontend/src/assets/index.css
+@@ -1540,6 +1540,17 @@ html {
+   --icon-tool: 26px; /* the play tools' shipped `:size` */
+ }
+ 
++/* THE TAPE SEED'S FROZEN INPUTS (T9-W7 pass-10 CHAIR-RULINGS §8; pass 9 §4). The widest note's
++ * cap and the seeded tilt's half-band, published once: `.washi-wide` spends the cap,
++ * `SheetWashiLabel`'s seed draws its tilt in ±the band (`check-tape-foot` clause 12s pins the
++ * literal there to this one), and the bar's note berth drops half the cap × sin(the band). A
++ * change here is a §10 change: it owes FACE row 7 (the tilt floor) and TAPE row 7 (the berth),
++ * both re-read on the union in the same return. */
++:root {
++  --washi-wide-cap: 15rem;
++  --washi-tilt-band: 1.5deg;
++}
++
+ /* Same key as the read floor and the tap floor — one regime, three floors. The
+    band is width AND pointer (the W2 adjudication's graft): a coarse surface at
+    desk width keeps the desk's glyphs, which this wave has not measured. */
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index dfbf3ae..1c7ab19 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -126,8 +126,9 @@ const props = defineProps<{
+   sections: ControlSection[];
+   loading: boolean;
+   // T4-WU/U3 — the board's dirty state, which gates the ask: a DIRTY Deal / Clear / Fill / Solve
+-  // arms first, a pristine board acts instantly. PASS 9 (CHAIR-RULINGS p9 §8): dirty is PLAYER
+-  // INK SINCE THE DEAL (the composable's `inkSinceDeal`), not undo-depth, which counts the deal.
++  // arms first, a pristine board acts instantly. PASS 10 (CHAIR-RULINGS p10 §7): dirty is the
++  // PLAYER INK THE BOARD HOLDS (the composable's `boardInk`), across a reload and after a Clear;
++  // not undo-depth, which counts the deal, and not the session's log, which a reload empties.
+   isDirty: boolean;
+   mobile?: boolean;
+   // T4-W8 ROW 2 — the error-check mode (off/on-demand/live). LEFT a manual prop+emit (§1a):
+@@ -697,7 +698,7 @@ function useTwoTap(name: AskableAct, act: () => void) {
+     // a dirty board at a fine pointer still cleared, dealt, filled and solved on ONE click
+     // (1440×900, the pass-5 critic). The dirty gate stays: a pristine board has nothing to ask
+     // about, and that nag is the defect T4-WU/U3 was born to remove. A DEALT board with no player
+-    // ink is pristine too (pass 9): `isDirty` arrives as `inkSinceDeal`, so it solves on one click.
++    // ink is pristine too (pass 10): `isDirty` arrives as `boardInk`, so it solves on one click.
+     if (props.isDirty && !armed.value) {
+       arm(
+         name,
+@@ -2697,8 +2698,9 @@ const quickBerth = computed(() =>
+      tilt in `SheetWashiLabel`, CHAIR-RULINGS p9 §4) and the widest note is `.washi-wide`'s 15rem,
+      so the drop is 7.5rem × sin(1.5°) = 3.14 px, plus 0.5 px of air. The 0.1rem it replaces held
+      no tilt: a +1.21° re-roll on the union put Clear's note 0.52 px into the verbs (24 px²), and
+-     the band's edge puts the widest note 1.54 px into them (71 px²). */
+-  margin-top: calc(7.5rem * sin(1.5deg) + 0.5px);
++     the band's edge puts the widest note 1.54 px into them (71 px²). PASS 10 (CHAIR §8): the
++     two literals are the tape seed's frozen inputs, read from their one home in index.css. */
++  margin-top: calc(var(--washi-wide-cap) / 2 * sin(var(--washi-tilt-band)) + 0.5px);
+   margin-bottom: 0;
+   /* the bar is the note's berth, so the bar's width is its cap: a 15rem note centred in a
+      218 px bar hung 8–14 px past both of the card's edges (pass 8, INTAKE row 11's root) */
+diff --git a/web/frontend/src/games/shared/GameShell.vue b/web/frontend/src/games/shared/GameShell.vue
+index eb50ff6..ac6f6c4 100644
+--- a/web/frontend/src/games/shared/GameShell.vue
++++ b/web/frontend/src/games/shared/GameShell.vue
+@@ -172,7 +172,7 @@ function onCandidatePeekEnd() {
+       <GameControlPanel
+         :sections="sections"
+         :loading="model.loading.value"
+-        :is-dirty="model.inkSinceDeal.value"
++        :is-dirty="model.boardInk.value"
+         :pencil-mode="model.pencilMode.value"
+         :error-check-mode="model.errorCheckMode.value"
+         :candidates-pinned="model.candidatesPinned.value"
+diff --git a/web/frontend/src/games/shared/defineGame.ts b/web/frontend/src/games/shared/defineGame.ts
+index b54cf18..01a696b 100644
+--- a/web/frontend/src/games/shared/defineGame.ts
++++ b/web/frontend/src/games/shared/defineGame.ts
+@@ -72,9 +72,10 @@ export interface GameModel {
+   errorCode: ReadRef<string>;
+   linkError: ReadRef<boolean>;
+   isDirty: ReadRef<boolean>;
+-  /** player ink since the deal: the destructive ask's signal (T9-M12; `isDirty` stays the
+-   *  gallery guard's undo-depth reading). */
+-  inkSinceDeal: ReadRef<boolean>;
++  /** the player's ink on the board (values off the clues and the solver's tone, or notes): the
++   *  destructive ask's signal (T9-M12, across a reload; `isDirty` stays the gallery guard's
++   *  undo-depth reading). */
++  boardInk: ReadRef<boolean>;
+   hintReasoning: ReadRef<HintResult | null>;
+   gradeTally: ReadRef<TallyDescriptor>;
+   pencilMarks: ReadRef<Record<string, number[]>>;
+diff --git a/web/frontend/src/games/shared/useGameState.ink.test.ts b/web/frontend/src/games/shared/useGameState.ink.test.ts
+new file mode 100644
+index 0000000..2da91dd
+--- /dev/null
++++ b/web/frontend/src/games/shared/useGameState.ink.test.ts
+@@ -0,0 +1,144 @@
++import { describe, it, expect } from "vitest";
++import { defineComponent, h } from "vue";
++import { flushPromises, mount } from "@vue/test-utils";
++import { useGameState, type GameStateDomain } from "./useGameState";
++
++/**
++ * T9-M12 · BOARD INK IS THE TRUTH (pass-10 CHAIR-RULINGS §7).
++ *
++ * The destructive ask (Deal / Clear / Fill / Solve on a dirty board) read the session's undo log
++ * at pass 9: player writes since the last deal. Two edges broke it, both engines, tree and WAVE.
++ * R: a reload restores the digits and starts the log empty, so ONE click cleared a board the
++ * player had written on with no ask. C: after a digit and an answered Clear the board holds no
++ * ink, but the walk still found the pre-Clear write and Solve asked about nothing. `boardInk`
++ * reads the board: a value off the clues and off the solver's tone, or a note.
++ */
++
++type Dealt = { values: Record<string, number> };
++interface Persisted {
++  values: Record<string, number>;
++  givenCells: string[];
++  originalGivenCells: string[];
++  solvedValues: Record<string, number>;
++  boardGeneration: number;
++  size: number;
++  difficulty: "EASY";
++}
++type Domain = GameStateDomain<"EASY", Dealt, Record<string, never>, Persisted>;
++type Model = ReturnType<
++  typeof useGameState<"EASY", Dealt, Record<string, never>, Persisted>
++>;
++
++/** A 9×9 with two clues; every other square empty. */
++const DEALT: Dealt = { values: { "0": 5, "1": 3 } };
++
++function makeDomain(persisted: Persisted | null = null): Domain {
++  return {
++    initial: {
++      difficulty: "EASY",
++      source: persisted ? "storage-only" : "fresh",
++      persisted,
++      boardLink: "absent",
++    },
++    initialSize: 3,
++    boardSizeOf: (raw) => raw * raw,
++    getRandomBoard: async () => DEALT,
++    applyDealFurniture: () => {},
++    resetFurniture: () => {},
++    grade: () => ({ hardestTechnique: null, solved: true }),
++    solve: async (values) => ({
++      solved: true,
++      values,
++      backtracks: 0,
++      nodesExplored: 0,
++      propagations: 0,
++      solutionCount: 1,
++    }),
++    propagate: async () => new Uint32Array(0),
++    fillForced: () => ({ placements: [] }),
++    hint: () => null,
++    snapshotExtra: () => ({}),
++    restoreExtra: () => {},
++    restorePersistedFurniture: () => {},
++    syncToUrl: () => {},
++    persist: () => {},
++    clearPersisted: () => {},
++    dropBoardParam: () => {},
++    writeShareUrl: () => {},
++  };
++}
++
++async function mountModel(domain: Domain) {
++  let model!: Model;
++  const wrapper = mount(
++    defineComponent({
++      setup() {
++        model = useGameState(domain);
++        return () => h("div");
++      },
++    }),
++  );
++  await flushPromises();
++  return { model, wrapper };
++}
++
++/** A saved board: clues at 0 and 1, the player's 7 at 40, the solver's 9 at 41. */
++const SAVED = (extra: Record<string, number> = { "40": 7 }): Persisted => ({
++  values: { "0": 5, "1": 3, "41": 9, ...extra },
++  givenCells: ["0", "1"],
++  originalGivenCells: ["0", "1"],
++  solvedValues: { "41": 9 },
++  boardGeneration: 4,
++  size: 3,
++  difficulty: "EASY",
++});
++
++describe("boardInk — the destructive ask's signal is the board's player ink", () => {
++  it("a dealt board with clues alone is pristine", async () => {
++    const { model, wrapper } = await mountModel(makeDomain());
++    expect(model.boardInk.value).toBe(false);
++    wrapper.unmount();
++  });
++
++  it("one player digit is ink; undoing it is not", async () => {
++    const { model, wrapper } = await mountModel(makeDomain());
++    model.setCell(40, 7);
++    expect(model.boardInk.value).toBe(true);
++    model.undo();
++    expect(model.boardInk.value).toBe(false);
++    wrapper.unmount();
++  });
++
++  it("R · a digit restored on reload is player ink, with the undo log empty", async () => {
++    // Born RED on pass 9's walk: the log starts empty after a restore, so it read pristine.
++    const { model, wrapper } = await mountModel(makeDomain(SAVED()));
++    expect(model.undoDepth.value).toBe(0);
++    expect(model.boardInk.value).toBe(true);
++    wrapper.unmount();
++  });
++
++  it("R′ · a restored board whose only non-clue digit is the solver's is pristine", async () => {
++    const { model, wrapper } = await mountModel(makeDomain(SAVED({})));
++    expect(model.boardInk.value).toBe(false);
++    wrapper.unmount();
++  });
++
++  it("C · after a digit and an answered Clear the board holds no ink", async () => {
++    // Born RED on pass 9's walk: the clear does not end it, so the pre-Clear write still counted.
++    const { model, wrapper } = await mountModel(makeDomain());
++    model.setCell(40, 7);
++    model.clearBoard();
++    expect(model.boardInk.value).toBe(false);
++    model.undo(); // the Clear undone: the digit is back on the board
++    expect(model.boardInk.value).toBe(true);
++    wrapper.unmount();
++  });
++
++  it("a player's note is ink", async () => {
++    const { model, wrapper } = await mountModel(makeDomain());
++    model.setPencilMode("corner");
++    model.toggleUserMark(40, 3);
++    expect(model.boardInk.value).toBe(true);
++    wrapper.unmount();
++  });
++});
+diff --git a/web/frontend/src/games/shared/useGameState.ts b/web/frontend/src/games/shared/useGameState.ts
+index d90f8aa..3f32a79 100644
+--- a/web/frontend/src/games/shared/useGameState.ts
++++ b/web/frontend/src/games/shared/useGameState.ts
+@@ -300,7 +300,6 @@ export function useGameState<
+     canUndo,
+     canRedo,
+     undoDepth,
+-    inkSinceDeal,
+   } = useUndoHistory<BoardBlob, MarksBlob>({
+     // T6.2 — a replay is a write. Undo/redo pops the log rather than pushing it, so `onEntry`
+     // below never fires for a replay; each effect announces its own board change or the room
+@@ -920,6 +919,19 @@ export function useGameState<
+     };
+   }
+ 
++  // T9-M12 · BOARD INK IS THE TRUTH (pass-10 CHAIR-RULINGS §7; extends pass 9's narrowing). The
++  // destructive ask reads what the BOARD holds of the player's, not what this session's log
++  // recorded: a digit restored on reload is player ink (the log starts empty, so the walk read
++  // pristine and one click cleared it), and a board an answered Clear emptied holds none (the
++  // walk still found the pre-Clear writes and Solve asked about nothing). Player ink is a value
++  // that is neither a clue nor in the solver's own tone, or any note the player wrote.
++  const boardInk = computed(() => {
++    for (const [k, v] of Object.entries(values.value))
++      if (v && !givenCells.value.has(k) && solvedValues.value[k] !== v) return true;
++    const noted = (m: Record<string, number[]>) => Object.values(m).some((x) => x.length > 0);
++    return noted(cornerMarks.value) || noted(centerMarks.value);
++  });
++
+   // The board-undo/redo replay (T4-WU) — the restore-order edge. Raise `restoring` so the marks
+   // void-watch no-ops on the generation bump this restore performs, then re-hydrate the board AND
+   // the marks that annotated it; lower the flag next tick, after the watch flushed.
+@@ -1240,7 +1252,7 @@ export function useGameState<
+     canRedo,
+     undoDepth,
+     isDirty,
+-    inkSinceDeal,
++    boardInk,
+     hintCell,
+     hintReasoning,
+     hardestTechnique,
+diff --git a/web/frontend/src/games/shared/useUndoHistory.test.ts b/web/frontend/src/games/shared/useUndoHistory.test.ts
+index 7d673f3..ba38fa0 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.test.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.test.ts
+@@ -395,71 +395,6 @@ describe("canUndo / canRedo / undoDepth — the signals a dirty gate reads", ()
+   });
+ });
+ 
+-// PASS 9 · THE ASK'S DIRTY SIGNAL IS PLAYER INK SINCE THE DEAL (CHAIR-RULINGS p9 §8; T9-M12).
+-// Born RED: the panel read `undoDepth > 0`, which is 1 after a deal with no ink (row D1), so a
+-// fine pointer was asked "fill in the whole board?" on a board nobody had written on.
+-describe("inkSinceDeal — the destructive ask's signal", () => {
+-  const deal = (h: ReturnType<typeof harness>, tag: string) =>
+-    h.recordBoard(board("prev"), board(tag), emptyMarks(), emptyMarks(), "deal");
+-  it("D1 a deal alone is not ink, though it is undo depth", () => {
+-    const h = harness();
+-    deal(h, "b1");
+-    expect(h.undoDepth.value).toBe(1);
+-    expect(h.inkSinceDeal.value).toBe(false);
+-  });
+-  it("D2 one player digit after the deal is ink; undoing it is not", () => {
+-    const h = harness();
+-    deal(h, "b1");
+-    h.recordEdit(4, 0, 7);
+-    expect(h.inkSinceDeal.value).toBe(true);
+-    h.undo();
+-    expect(h.inkSinceDeal.value).toBe(false);
+-    h.redo();
+-    expect(h.inkSinceDeal.value).toBe(true);
+-  });
+-  it("D3 a mark, a fill sweep and hint ink each count as ink", () => {
+-    for (const write of [
+-      (h: ReturnType<typeof harness>) =>
+-        h.recordMark(2, { corner: { prev: [], next: [3] } }),
+-      (h: ReturnType<typeof harness>) => h.recordBatch([{ pos: 1, prev: 0, next: 5 }]),
+-      (h: ReturnType<typeof harness>) => h.recordHintInk(3, 0, 9),
+-    ]) {
+-      const h = harness();
+-      deal(h, "b1");
+-      write(h);
+-      expect(h.inkSinceDeal.value).toBe(true);
+-    }
+-  });
+-  it("D4 a new deal ends the epoch; a clear or a solve does not", () => {
+-    const h = harness();
+-    deal(h, "b1");
+-    h.recordEdit(4, 0, 7);
+-    h.recordBoard(board("b1"), board("blank"), emptyMarks(), emptyMarks(), "clear");
+-    expect(h.inkSinceDeal.value).toBe(true);
+-    h.recordBoard(board("blank"), board("solved"), emptyMarks(), emptyMarks(), "solve");
+-    expect(h.inkSinceDeal.value).toBe(true);
+-    deal(h, "b2");
+-    expect(h.inkSinceDeal.value).toBe(false);
+-    h.recordBoard(board("b2"), board("b3"), emptyMarks(), emptyMarks(), "resize");
+-    h.recordEdit(0, 0, 1);
+-    h.undo();
+-    expect(h.inkSinceDeal.value).toBe(false);
+-  });
+-  it("D6 a resize is a deal: ink before it is not ink after it", () => {
+-    const h = harness();
+-    deal(h, "b1");
+-    h.recordEdit(4, 0, 7);
+-    h.recordBoard(board("b1"), board("b4x4"), emptyMarks(), emptyMarks(), "resize");
+-    expect(h.inkSinceDeal.value).toBe(false);
+-  });
+-  it("D5 a log with no deal in it (the mount deal is off-log) reads its own writes", () => {
+-    const h = harness();
+-    expect(h.inkSinceDeal.value).toBe(false);
+-    h.recordEdit(0, 0, 1);
+-    expect(h.inkSinceDeal.value).toBe(true);
+-  });
+-});
+-
+ // ── T6 mark 13 — the log as the PER-PLAYER ledger ────────────────────────────────
+ 
+ describe("onEntry — the one seam the local op stream leaves by", () => {
+diff --git a/web/frontend/src/games/shared/useUndoHistory.ts b/web/frontend/src/games/shared/useUndoHistory.ts
+index 997946c..11a7c7b 100644
+--- a/web/frontend/src/games/shared/useUndoHistory.ts
++++ b/web/frontend/src/games/shared/useUndoHistory.ts
+@@ -320,20 +320,6 @@ export function useUndoHistory<B, M>(effects: UndoEffects<B, M>) {
+     canRedo: computed(() => undoIndex.value < undoStack.value.length),
+     /** Depth of the undo portion — the honest signal an `isDirty` gate reads (E9 r2 §6). */
+     undoDepth: computed(() => undoIndex.value),
+-    /** PLAYER INK SINCE THE DEAL — what the destructive ask reads (T9-M12's precondition: "input
+-     *  a value … then attempt a destructive action"). `undoDepth > 0` counts the deal itself, so a
+-     *  fine pointer was asked "fill in the whole board?" on a board nobody had written on. Walk
+-     *  the undo portion back from its top: any value, fill or mark entry before the last deal
+-     *  (or resize) is ink; a clear or a solve between them does not end the walk, since neither
+-     *  is a deal. An undone write sits above `undoIndex` and is not counted. */
+-    inkSinceDeal: computed(() => {
+-      for (let i = undoIndex.value - 1; i >= 0; i--) {
+-        const e = undoStack.value[i];
+-        if (e.kind !== "board") return true;
+-        if (e.op === "deal" || e.op === "resize") return false;
+-      }
+-      return false;
+-    }),
+     /** Test/measurement handles — the pool's live blob count + total entry count. */
+     _poolSize: () => pool.size,
+     _historyLength: () => undoStack.value.length,
+diff --git a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+index 2132806..6fb5910 100644
+--- a/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
++++ b/web/frontend/src/pencil/sheet/SheetWashiLabel.vue
+@@ -100,7 +100,9 @@ const geom = computed(() => {
+     `${lx + j()}% 100%`,
+     `0% 50%`,
+   ].join(", ");
+-  const tilt = (rng() - 0.5) * 3; // ±1.5°
++  // ±1.5°: twice `--washi-tilt-band` (index.css), a tape seed input the bar's note berth is cut
++  // to (CHAIR-RULINGS p10 §8). `check-tape-foot` clause 12s reds when the two disagree.
++  const tilt = (rng() - 0.5) * 3;
+   return { clip: `polygon(${clip})`, tilt: `${tilt.toFixed(2)}deg` };
+ });
+ </script>
+@@ -271,7 +273,7 @@ const geom = computed(() => {
+        — without it, an absolutely-positioned label shrink-wraps against its 44px button box
+        and breaks after ~1 word. */
+   width: max-content;
+-  max-width: 15rem;
++  max-width: var(--washi-wide-cap); /* a tape seed input (index.css) */
+   text-align: center;
+   line-height: 1.3;
+ }

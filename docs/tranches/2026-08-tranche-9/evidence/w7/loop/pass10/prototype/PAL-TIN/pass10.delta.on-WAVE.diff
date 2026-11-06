@@ -1,0 +1,421 @@
+diff --git a/web/frontend/scripts/check-peer-tin.mjs b/web/frontend/scripts/check-peer-tin.mjs
+index 4843cb7..ce36144 100644
+--- a/web/frontend/scripts/check-peer-tin.mjs
++++ b/web/frontend/scripts/check-peer-tin.mjs
+@@ -63,8 +63,9 @@
+  * A gate that cannot be shown failing is not a gate. Pass 9 adds the pass-8 critic's fresh
+  * publishers (C1–C4, C7a/b, C9, C12–C14, C16a/b, C18a/b, the built `.pcss` re-declaration, C2 in the
+  * shipped chunk), the walk on a virtual tree, a named channel-arity control, and THE FLOORS PINNED:
+- * every bound (MIN_DE, RING_FLOOR, EXEMPT_FLOOR, COPY_DE, DIST_BLANK) carries a control at bound − ε
+- * that must red and one at bound + ε that must not, and `--threshold-battery` moves each bound both
++ * every bound (MIN_DE, RING_FLOOR, EXEMPT_FLOOR, COPY_DE, DIST_BLANK, MIN_SEP, ABS_FLOOR, RATIO_FLOOR,
++ * RING_DH, SCALAR_EPS) carries a control ε past its PIN that must red and one ε inside it that
++ * must not, and `--threshold-battery` moves each bound both
+  * ways and reads the self-test's exit.
+  *
+  * RUN IT BARE. `node check-peer-tin.mjs | tail` prints RED and exits 0 — the pipe eats the
+@@ -102,7 +103,8 @@ const TIN_CLAUSES = {
+   "g4-copy": "4a a colour literal within COPY_DE of an arm (after the fold)",
+   "g4-int": "4a a packed 24-bit int read as a colour",
+   "g4-triple": "4a a numeric byte triple read as a colour",
+-  "g4-decl": "4a a peer token declared outside index.css",
++  "g4-decl": "4a a peer token named outside index.css, in any position but a var()",
++  "g4-decl-admit": "4a a var() consumer of a peer token is admitted (the class's one exemption)",
+   "g4-lname": "4a a lightness-shaped name bound to a number",
+   "g4-band": "4a a band table under a ring/peer/hand name",
+   "g4-table": "4a a second tin (a table of ≥2 colours)",
+@@ -161,7 +163,7 @@ const TH = Object.fromEntries(
+     .map(([k, v]) => [k.trim(), Number(v)]),
+ );
+ const INDEX_CSS = path.join(ROOT, "src", "assets", "index.css");
+-const MIN_SEP = 12; // degrees, the r0 instrument's own floor
++const MIN_SEP = TH.MIN_SEP ?? 12; // degrees, the r0 instrument's own floor
+ const MIN_DE = TH.MIN_DE ?? 0.1; // OKLab, between two PLAYERS
+ /** the light name arms' floor while they ARE the ring arms (gate 2's exemption): the shipped
+  *  green–teal 0.0769 less the 8-bit slack of a low-chroma arm */
+@@ -179,16 +181,16 @@ const EXEMPT_FLOOR = TH.EXEMPT_FLOOR ?? 0.075;
+ const RING_FLOOR = TH.RING_FLOOR ?? 0.075;
+ /** ΔE to the nearest ink that paints in a CELL. Pinned from the prototype's own reading
+  *  (0.082 light / 0.100 dark) with the margin the band move bought, and never raised to pass. */
+-const ABS_FLOOR = 0.075;
++const ABS_FLOOR = TH.ABS_FLOOR ?? 0.075;
+ /** …as a fraction of what five hue-locked sticks can hold on THIS paper at all. Re-derived
+  *  below from the same `index.css`, in the same run, at the tin's own bands. */
+-const RATIO_FLOOR = 0.75;
++const RATIO_FLOOR = TH.RATIO_FLOOR ?? 0.75;
+ const SPREAD = 40; // degrees between berths in the ceiling search — the tin's own rule
+ /** how far a RING ARM may sit from its stick's hue. One degree: the arm is authored as a byte
+  *  triple at a different lightness, and quantising a low-chroma colour there costs a fraction
+  *  of a degree (teal, C 0.050 light, is the worst at 0.88). Anything past that is a different
+  *  pencil wearing the stick's name. */
+-const RING_DH = 1;
++const RING_DH = TH.RING_DH ?? 1;
+ 
+ /** The 19 named inks a player's stick must not be mistaken for. */
+ const RESERVED = [
+@@ -772,6 +774,8 @@ function run(css, label, sources = SOURCES) {
+     red: {
+       g1a: c1a.length,
+       g1b: c1b.length,
++      "g1b-abs": c1b.filter((l) => /UNREADABLE/.test(l)).length,
++      "g1b-ratio": c1b.filter((l) => /UNDER THE PAPER/.test(l)).length,
+       g2: c2.length,
+       // per floor (row 3's boundary controls key the floor they pin, not the gate)
+       "g2-stick": c2.filter((l) => / stick /.test(l)).length,
+@@ -780,6 +784,7 @@ function run(css, label, sources = SOURCES) {
+       g3: c3.length,
+       g3b: c3b.length,
+       g4: g4.findings.length,
++      "g4-light": g4.findings.filter((f) => f.startsWith("4b:")).length,
+     },
+   };
+ }
+@@ -819,6 +824,13 @@ const NAME_PAIR = { light: 0.295, dark: 0.86 };
+ const SCALAR_EPS = TH.SCALAR_EPS ?? 0.005; // the 8-bit round trip of an authored arm (worst measured 0.0015)
+ const COPY_DE = TH.COPY_DE ?? 0.03;
+ const PEER_TOKEN = /(--color-peer-\d+(?:-ring|-name)?|--peer-(?:ink|ring|name)-l)/;
++/** a peer token as a whole name (gate 4's class), and the head that makes it a consumer */
++const PEER_NAMED = new RegExp(`(?<![\\w-])${PEER_TOKEN.source}(?![\\w-])`, "g");
++/** a READ is a consumer too: \`var(\` (and its spelling inside a regex literal, \`var\\(\\s*\`), a
++ *  computed-style read \`getPropertyValue(\`, a Typed-OM read \`.get(\` / \`.getAll(\` / \`.has(\` — WALK's
++ *  spec reads the bands so on the union. A write is never admitted. */
++const CONSUMER_HEAD =
++  /(?:var\\?\((?:\\s\*|\s)*|(?:getPropertyValue|\.get|\.getAll|\.has)\(\s*["'`])$/;
+ /** a lightness-shaped identifier: RING_L, ringL, ring_l, peerInkL, ringLightness, TIN_L… */
+ const L_NAME =
+   /^(?:[A-Za-z]*?)(?:ring|peer|tin|stick|hand|band|name)(?:[-_]?ink)?(?:[-_]?(?:l|lightness|light|lightnesses))$/i;
+@@ -841,7 +853,14 @@ const uncomment = (text, rel = "x.ts") =>
+  *  (comma or space, `%`), hsl/hsla (deg/turn/rad/grad), hwb, lab, lch, oklab, oklch,
+  *  `color(srgb …)`, named colours and `color-mix` — plus a NUMERIC TRIPLE `[r, g, b]` of bytes,
+  *  which is a colour spelled as data (D7). Alpha is ignored (a copy at 50 % is still the copy). */
++/** read once per text: the self-test re-runs the gate per plant over ~300 unchanged files, and this
++ *  pure reading was a third of its time */
++const LITERALS = new Map();
+ function colourLiterals(text) {
++  if (!LITERALS.has(text)) LITERALS.set(text, readLiterals(text));
++  return LITERALS.get(text);
++}
++function readLiterals(text) {
+   const out = [];
+   for (const c of SHAPE.colorLiterals(text))
+     if (c.a > 0 || !/^transparent$/i.test(c.text))
+@@ -1095,15 +1114,18 @@ function gate4(css, arms, files) {
+         } else if (n.d < innocent.d)
+           innocent = { d: n.d, where: `${f.rel} ${m[0]} → ${n.hex}` };
+       }
+-    for (const re of [
+-      new RegExp(`${PEER_TOKEN.source}\\s*:`, "g"),
+-      new RegExp(`["'\`]${PEER_TOKEN.source}["'\`]\\s*:`, "g"),
+-      new RegExp(`setProperty\\(\\s*["'\`]${PEER_TOKEN.source}["'\`]`, "g"),
+-    ])
+-      for (const m of on("g4-decl") ? text.matchAll(re) : [])
+-        findings.push(
+-          `4a: ${f.rel} declares ${m[1]} — a second publisher of the tin index.css owns`,
+-        );
++    // THE CLASS (pass-9 critic §1.1, charter row 1): index.css is the ONE publisher of a peer token,
++    // so the token spelled anywhere else, in any position but a consumer's `var(`, is a second
++    // publisher: a declaration, a quoted or computed key, a bound const, the argument of any call
++    // (`setProperty`, Typed OM's `attributeStyleMap.set`, a bracket or `Reflect.apply` spelling), an
++    // `@property` prelude. One reading, no call shape enumerated.
++    for (const m of on("g4-decl") ? text.matchAll(PEER_NAMED) : []) {
++      if (on("g4-decl-admit") && CONSUMER_HEAD.test(text.slice(Math.max(0, m.index - 24), m.index)))
++        continue;
++      findings.push(
++        `4a: ${f.rel} names ${m[1]} outside a var() — a second publisher of the tin index.css owns`,
++      );
++    }
+     if (f.bundle && on("g4-blank") && /\.m?js$/.test(f.rel)) {
+       const ink = (x) => x.replace(/\s+/g, "").length;
+       const all = ink(f.text);
+@@ -1347,14 +1369,27 @@ if (process.argv.includes("--threshold-battery")) {
+     RING_FLOOR,
+     EXEMPT_FLOOR,
+     COPY_DE,
++    MIN_SEP,
++    ABS_FLOOR,
++    RATIO_FLOOR,
++    RING_DH,
++    SCALAR_EPS,
+     ...(DIST ? { DIST_BLANK } : {}),
+   };
++  /** each bound moved in its own unit, past its plant's ε both ways (the critic's pass-9 moves among
++   *  them: MIN_SEP 11/13, ABS_FLOOR 0.07/0.08, RATIO_FLOOR 0.70, RING_DH 0.9/1.5, SCALAR_EPS 0.010) */
++  const MOVES = {
++    DIST_BLANK: [-0.005, -0.002, +0.002, +0.005],
++    MIN_SEP: [-1, -0.6, +0.6, +1],
++    ABS_FLOOR: [-0.005, -0.004, +0.004, +0.005],
++    RATIO_FLOOR: [-0.05, -0.03, +0.03, +0.05],
++    RING_DH: [-0.1, -0.07, +0.15, +0.5],
++    SCALAR_EPS: [-0.003, +0.003, +0.005, +0.014],
++  };
+   let green = 0;
+   let n = 0;
+   for (const [k, v] of Object.entries(shipped))
+-    for (const d of k === "DIST_BLANK"
+-      ? [-0.005, -0.002, +0.002, +0.005]
+-      : [-0.01, -0.006, +0.006, +0.01]) {
++    for (const d of MOVES[k] ?? [-0.01, -0.006, +0.006, +0.01]) {
+       const moved = +(v + d).toFixed(4);
+       const r = spawnSync(
+         process.execPath,
+@@ -1677,6 +1712,34 @@ if (process.argv.includes("--self-test")) {
+         'document.documentElement.style.setProperty("--color-peer-1-ring", "red");\n',
+       ),
+     ],
++    // THE CLASS (charter row 1; the pass-9 critic's fresh shapes): a peer token named in any
++    // position but a consumer's is a publisher, whatever carries it
++    ...[
++      ["N1 Typed OM", 'el.attributeStyleMap.set("--color-peer-5-name", "#000");\n'],
++      ["N2 a bracket call", 'el.style["setProperty"]("--color-peer-5-name", "#000");\n'],
++      ["N3b a computed key", 'export const s = { ["--color-peer-5-name"]: "#000" };\n'],
++      ["N4 a bound alias", 'const N = "--color-peer-5-name";\nel.style.setProperty(N, "#000");\n'],
++      ["N5 a space before the paren", 'el.style.setProperty ("--color-peer-5-name", "#000");\n'],
++      ["N6 Reflect.apply", 'Reflect.apply(el.style.setProperty, el.style, ["--color-peer-5-name", "#000"]);\n'],
++      ["T1 a Map of arms", 'export const m = new Map([["--color-peer-3-ring", "#000"]]);\n'],
++      ["T2 a band in a Typed-OM write", 'el.attributeStyleMap.set("--peer-ring-l", 0.2);\n'],
++    ].map(([label, text]) => [`${label} (the class)`, css, plant(G, text)]),
++    [
++      "N3a a Vue computed key (the class)",
++      css,
++      plant(
++        "src/games/shared/Planted.vue",
++        "<template><span :style=\"{ ['--color-peer-5-name']: 'black' }\">x</span></template>\n",
++      ),
++    ],
++    [
++      "N34 @property on an arm (the class)",
++      css,
++      plant(
++        "src/games/shared/gameCell.css",
++        '@property --color-peer-1-ring { syntax: "<color>"; inherits: false; initial-value: #000; }\n',
++      ),
++    ],
+     [
+       "a tin hex spelled in a source file",
+       css,
+@@ -2161,7 +2224,11 @@ if (process.argv.includes("--self-test")) {
+           'probe.style.color = "var(--color-peer-" + k + "-name)";\n' +
+           // a script's own helper named like a colour function is no colour (and no throw):
+           // peer-tin.spec.ts's `lab(want)` crashed the pass-8 gate before channel-arity
+-          "const d = dE(lab(name.rgb), lab(want)) + hsl(h);\n",
++          "const d = dE(lab(name.rgb), lab(want)) + hsl(h);\n" +
++          // READS are consumers (WALK's spec on the union): computed style, Typed OM, a regex literal
++          'const band = getComputedStyle(el).getPropertyValue("--peer-ink-l").trim();\n' +
++          'const ring = el.computedStyleMap().get("--color-peer-1-ring");\n' +
++          "probe.style.color = raw.replace(/var\\(\\s*--peer-name-l\\s*\\)/g, band);\n",
+       ).concat(
+         [
+           {
+@@ -2194,7 +2261,15 @@ if (process.argv.includes("--self-test")) {
+     EXEMPT_FLOOR: 0.075,
+     COPY_DE: 0.03,
+     DIST_BLANK: 0.01,
++    MIN_SEP: 12,
++    ABS_FLOOR: 0.075,
++    RATIO_FLOOR: 0.75,
++    RING_DH: 1,
++    SCALAR_EPS: 0.005,
+   };
++  /** each bound's ε in its own unit (degrees, ΔE, a ratio, degrees, OKLab L): under the critic's
++   *  pass-9 moves (12→11/13, 0.075→0.07/0.08, 0.75→0.70, 1→0.9/1.5, 0.005→0.010) */
++  const PIN_EPS = { MIN_SEP: 0.3, ABS_FLOOR: 0.003, RATIO_FLOOR: 0.015, RING_DH: 0.05, SCALAR_EPS: 0.002 };
+   const atDE = (anchor, from, target) => {
+     const A = oklab(anchor);
+     const F = oklab(from);
+@@ -2252,6 +2327,167 @@ if (process.argv.includes("--self-test")) {
+       css,
+       plant(G, `export const x = "${cp.hex}";\n`),
+     ]);
++    // THE FIVE BOUNDS THE PASS-9 CRITIC MOVED GREEN (charter row 4): MIN_SEP, ABS_FLOOR, RATIO_FLOOR
++    // (floors: RED at PIN − ε) and RING_DH, SCALAR_EPS (caps: RED at PIN + ε), each on its own tally,
++    // each plant's achieved value printed and required on its side of the PIN.
++    const side = (floor) => (floor ? sign : -sign); // the offset's sign: a floor reds below, a cap above
++    {
++      // MIN_SEP: a light stick re-hued to the PIN ∓ ε from one reserved ink, every other reserved
++      // ink ≥ PIN + 1deg away, so only that pair can collide
++      const target = PIN.MIN_SEP + side(true) * PIN_EPS.MIN_SEP;
++      // the byte triple NEAREST the target on its side, over every stick, reserved ink, side and a
++      // 0.01deg sweep: the plant's achieved offset is the bound's true sensitivity, so it is minimised
++      let got = null;
++      for (const s of arms.light.sticks)
++        for (const r of arms.light.reserved)
++          for (const dir of [1, -1])
++            for (let k = -20; k <= 20; k++) {
++              const hex = at(s.hex, hueOf(r.hex) + dir * (target + k * 0.01));
++              const d = gap(hueOf(hex), hueOf(r.hex));
++              const others = arms.light.reserved
++                .filter((q) => q !== r)
++                .every((q) => gap(hueOf(hex), hueOf(q.hex)) >= PIN.MIN_SEP + 1);
++              if (
++                others &&
++                (want ? d < PIN.MIN_SEP : d >= PIN.MIN_SEP) &&
++                Math.abs(d - target) <= 0.15 &&
++                (!got || Math.abs(d - target) < Math.abs(got.d - target))
++              )
++                got = { s, r, hex, d };
++            }
++      edges.push([
++        `MIN_SEP ${sign < 0 ? "−" : "+"}ε`,
++        "g1a",
++        want,
++        got
++          ? `light peer-${got.s.i} re-hued to ${got.hex}, ${got.d.toFixed(2)}deg from --color-${got.r.name} (pin ${PIN.MIN_SEP}, gate ${MIN_SEP})`
++          : "NO CONSTRUCTION (the plant could not be built; the edge reds)",
++        got ? swap(css, "light", got.s.i, got.hex) : null,
++      ]);
++    }
++    {
++      // ABS_FLOOR and RATIO_FLOOR: the worst light stick slid along the line to its nearest cell ink.
++      // ABS reads that ΔE; the ratio reads it over the paper's ceiling, re-derived per plant.
++      const nearestCell = (arm, hex) =>
++        arms[arm].cell.reduce(
++          (b, r) => (dE(hex, r.hex) < b.e ? { e: dE(hex, r.hex), r } : b),
++          { e: Infinity, r: null },
++        );
++      const worst = arms.light.sticks
++        .map((s) => ({ s, ...nearestCell("light", s.hex) }))
++        .sort((x, y) => x.e - y.e)[0];
++      const slide = (t) => atDE(worst.r.hex, worst.s.hex, t).hex;
++      const absT = PIN.ABS_FLOOR + side(true) * PIN_EPS.ABS_FLOOR;
++      const ah = slide(absT);
++      const ae = Math.min(...arms.light.cell.map((r) => dE(ah, r.hex)));
++      const absOk = want ? ae < PIN.ABS_FLOOR : ae >= PIN.ABS_FLOOR;
++      edges.push([
++        `ABS_FLOOR ${sign < 0 ? "−" : "+"}ε`,
++        "g1b-abs",
++        want,
++        absOk
++          ? `light peer-${worst.s.i} slid to ${ah}, ΔE ${ae.toFixed(4)} from --color-${worst.r.name} (pin ${PIN.ABS_FLOOR}, gate ${ABS_FLOOR})`
++          : `NO CONSTRUCTION (achieved ΔE ${ae.toFixed(4)} is not on its side of ${PIN.ABS_FLOOR}; the edge reds)`,
++        absOk ? swap(css, "light", worst.s.i, ah) : null,
++      ]);
++      // the ratio: the ΔE whose score (worst ΔE / ceiling, the ceiling re-derived on the plant) reads
++      // the PIN ∓ ε, found by bisection on the slide
++      const scoreOf = (hex) => {
++        const a2 = read(swap(css, "light", worst.s.i, hex));
++        const band2 = {};
++        const cap2 = {};
++        for (const a of ["light", "dark"]) {
++          band2[a] = a2[a].sticks.reduce((t, s) => t + lOf(s.hex), 0) / a2[a].sticks.length;
++          cap2[a] = Math.max(...a2[a].sticks.map((s) => chromaOf(s.hex)));
++        }
++        const c = ceilingOf(a2, band2, cap2);
++        let w = Infinity;
++        for (const a of ["light", "dark"])
++          for (const s of a2[a].sticks)
++            for (const r of a2[a].cell) w = Math.min(w, dE(s.hex, r.hex));
++        return w / c.floor;
++      };
++      const rT = PIN.RATIO_FLOOR + side(true) * PIN_EPS.RATIO_FLOOR;
++      let lo = 0.01;
++      let hi = worst.e;
++      for (let k = 0; k < 18; k++) {
++        const mid = (lo + hi) / 2;
++        if (scoreOf(slide(mid)) < rT) lo = mid;
++        else hi = mid;
++      }
++      // the 8-bit slide jumps: the plant is the triple nearest the target on its side, scanned about
++      // the bisection's boundary
++      let rh = slide(want ? lo : hi);
++      let rs = scoreOf(rh);
++      for (let t = lo - 0.003; t <= hi + 0.003; t += 0.0001) {
++        const h = slide(t);
++        const sc = scoreOf(h);
++        if ((want ? sc < PIN.RATIO_FLOOR : sc >= PIN.RATIO_FLOOR) && Math.abs(sc - rT) < Math.abs(rs - rT)) {
++          rh = h;
++          rs = sc;
++        }
++      }
++      const rOk = want ? rs < PIN.RATIO_FLOOR : rs >= PIN.RATIO_FLOOR;
++      edges.push([
++        `RATIO_FLOOR ${sign < 0 ? "−" : "+"}ε`,
++        "g1b-ratio",
++        want,
++        rOk
++          ? `light peer-${worst.s.i} slid to ${rh}, the paper's score ${rs.toFixed(4)} (pin ${PIN.RATIO_FLOOR}, gate ${RATIO_FLOOR})`
++          : `NO CONSTRUCTION (achieved score ${rs.toFixed(4)} is not on its side of ${PIN.RATIO_FLOOR}; the edge reds)`,
++        rOk ? swap(css, "light", worst.s.i, rh) : null,
++      ]);
++    }
++    {
++      // RING_DH: a ring arm re-hued off its stick to the PIN ± ε (a cap: + reds); every ring of both
++      // arms is tried and the byte triple nearest the target taken, its achieved |Δh| printed
++      const target = PIN.RING_DH + side(false) * PIN_EPS.RING_DH;
++      let got = null;
++      for (const a of ["light", "dark"])
++        for (const r of arms[a].rings) {
++          const st = arms[a].sticks.find((x) => x.i === r.i);
++          for (let k = -40; k <= 40; k++)
++            for (const dir of [1, -1]) {
++              const hex = paint(lOf(r.hex), chromaOf(r.hex), hueOf(st.hex) + dir * (target + k * 0.01)).hex;
++              const d = gap(hueOf(st.hex), hueOf(hex));
++              if ((want ? d > PIN.RING_DH : d <= PIN.RING_DH) && (!got || Math.abs(d - target) < Math.abs(got.d - target)))
++                got = { a, r, hex, d };
++            }
++        }
++      const ok = got && Math.abs(got.d - target) <= 0.15;
++      edges.push([
++        `RING_DH ${sign < 0 ? "−" : "+"}ε`,
++        "g3b",
++        want,
++        ok
++          ? `${got.a} peer-${got.r.i}-ring at ${got.hex}, ${got.d.toFixed(3)}deg off its stick (pin ${PIN.RING_DH}, gate ${RING_DH})`
++          : `NO CONSTRUCTION (nearest ${got ? got.d.toFixed(3) : "none"} for ${target}; the edge reds)`,
++        ok ? swapRing(css, got.a, got.r.i, got.hex) : null,
++      ]);
++    }
++    {
++      // SCALAR_EPS: a ring arm's lightness off the pair by the PIN ± ε (a cap: + reds), a and b held
++      const target = PIN.SCALAR_EPS + side(false) * PIN_EPS.SCALAR_EPS;
++      let got = null;
++      for (const a of ["light", "dark"])
++        for (const r of arms[a].rings)
++          for (let k = -60; k <= 60; k++) {
++            const hex = nudge(r.hex, RING_PAIR[a] - lOf(r.hex) + k * 0.0002);
++            const d = Math.abs(lOf(hex) - RING_PAIR[a]);
++            if ((want ? d > PIN.SCALAR_EPS : d <= PIN.SCALAR_EPS) && (!got || Math.abs(d - target) < Math.abs(got.d - target)))
++              got = { a, r, hex, d };
++          }
++      const ok = got && Math.abs(got.d - target) <= 0.001;
++      edges.push([
++        `SCALAR_EPS ${sign < 0 ? "−" : "+"}ε`,
++        "g4-light",
++        want,
++        ok
++          ? `${got.a} peer-${got.r.i}-ring at ${got.hex}, L off the pair by ${got.d.toFixed(4)} (pin ${PIN.SCALAR_EPS}, gate ${SCALAR_EPS})`
++          : `NO CONSTRUCTION (nearest ${got ? got.d.toFixed(4) : "none"} for ${target}; the edge reds)`,
++        ok ? swapRing(css, got.a, got.r.i, got.hex) : null,
++      ]);
++    }
+   }
+   // DIST_BLANK (with --dist): a real block comment appended to the shipped entry chunk so the stripper
+   // blanks the pin ∓ 0.1 % of it — over the pin must red, under it must not
+@@ -2338,6 +2574,11 @@ if (process.argv.includes("--self-test")) {
+       ? (sources ?? SOURCES)
+       : (sources ?? SOURCES).filter((f) => !BUILT.has(f));
+   for (const [what, key, want, how, text, sources] of edges) {
++    if (text == null) {
++      console.log(`SELF-TEST FAILED: floor ${what} (${key}) — ${how}`);
++      code = code || 3;
++      continue;
++    }
+     const r = run(text, `edge ${what}`, sheetSources(text, sources));
+     const moved = r.red[key] > base.red[key];
+     const ok = moved === want;
+diff --git a/web/frontend/src/games/shared/useSession.ts b/web/frontend/src/games/shared/useSession.ts
+index 8597326..78aecbd 100644
+--- a/web/frontend/src/games/shared/useSession.ts
++++ b/web/frontend/src/games/shared/useSession.ts
+@@ -701,7 +701,11 @@ export function withSelfInk(
+     takesAHand && Object.keys(next).length > 1
+       ? ident!.inkFor(inkIndex[selfId.value] ?? 0)
+       : {};
+-  return { ...next, [selfId.value]: { ...me, ink } };
++  // an assignment, not a computed key: a player id is no style token, and the wash-reach census
++  // pins this file's unresolvable keys by count (check-theme-tokens `unreadable`)
++  const out = { ...next };
++  out[selfId.value] = { ...me, ink };
++  return out;
+ }
+ 
+ // ── PRESENCE, SAID ON A CLOCK (T9-W6 §3.7, 2026-09-17) ────────────────────────────────────

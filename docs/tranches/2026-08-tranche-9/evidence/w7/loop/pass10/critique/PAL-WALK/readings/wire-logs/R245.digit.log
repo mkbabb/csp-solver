@@ -1,0 +1,64 @@
+
+ RUN  v4.1.11 <crit-scratch>/wv2/web/frontend
+
+ ❯ src/games/shared/useSession.test.ts (50 tests | 2 failed) 135ms
+     × ink is the tin taken in order, digit and ring off one arithmetic 4ms
+     × F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND 4ms
+ ❯ src/games/shared/BoardHost.authors.test.ts (10 tests | 1 failed) 43ms
+     × binds the ring's own ink, not the digit's 4ms
+
+⎯⎯⎯⎯⎯⎯⎯ Failed Tests 3 ⎯⎯⎯⎯⎯⎯⎯
+
+ FAIL  src/games/shared/BoardHost.authors.test.ts > BoardHost — the peer's ring is the hand's other pressure, and it says who > binds the ring's own ink, not the digit's
+AssertionError: expected 'var(--color-peer-4)' not to be 'var(--color-peer-4)' // Object.is equality
+ ❯ src/games/shared/BoardHost.authors.test.ts:244:30
+    242|     const ink = inkFor(3);
+    243|     expect(h.ringInk(1)).toBe(ink["--color-peer-cursor-ink"]);
+    244|     expect(h.ringInk(1)).not.toBe(ink["--color-user-ink"]);
+       |                              ^
+    245|     // Re-authored on PAL-TIN's mechanism (pass 10, CHAIR pick 9): the…
+    246|     // (the tin's `--color-peer-N-ring`, or the walk's `--peer-ring-l`…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[1/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > identity — derived on every page, negotiated on none > ink is the tin taken in order, digit and ring off one arithmetic
+AssertionError: expected 'var(--color-peer-1)' to be 'var(--color-peer-1-ring)' // Object.is equality
+
+Expected: "var(--color-peer-1-ring)"
+Received: "var(--color-peer-1)"
+
+ ❯ src/games/shared/useSession.test.ts:152:50
+    150|     // against a 3.0 floor. The ring is that pencil at its own lightne…
+    151|     // the two keys can never name two different colours for one perso…
+    152|     expect(inkFor(0)["--color-peer-cursor-ink"]).toBe("var(--color-pee…
+       |                                                  ^
+    153|     expect(inkFor(13)["--color-peer-cursor-ink"]).toBe("var(--color-pe…
+    154|     // …and the NAME ARM the attribution tape writes in is the same st…
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[2/3]⎯
+
+ FAIL  src/games/shared/useSession.test.ts > ink is the room's, not the page's — `k` adoption > F1: your own row takes the room's index for you exactly when SELF_TAKES_A_HAND
+AssertionError: expected false to be true // Object.is equality
+
+- Expected
++ Received
+
+- true
++ false
+
+ ❯ src/games/shared/useSession.test.ts:446:44
+    444|     const mine = () => p.session.session.players.value.find((r) => r.s…
+    445|     // minted at the join (`mint`): an index of your own, or nothing
+    446|     expect(Object.keys(mine()).length > 0).toBe(SELF_TAKES_A_HAND);
+       |                                            ^
+    447|     // adopted from the room's `k` (`adoptInk`): the room's index for …
+    448|     const me = p.selfId();
+
+⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯⎯[3/3]⎯
+
+
+ Test Files  2 failed (2)
+      Tests  3 failed | 57 passed (60)
+   Start at  13:47:12
+   Duration  918ms (transform 533ms, setup 27ms, import 723ms, tests 178ms, environment 619ms)
+

@@ -1,0 +1,24 @@
+CTRL-FACE · pass 10 · BANKED 2026-11-03 22:36
+cut through temporary indexes (GIT_INDEX_FILE; read-tree/add/write-tree/diff --binary); no commit, no ref moved
+
+pass10.diff · sha1 b83cd2baa878b901cd7e5d90e86c70c9a596fb1d · 446591 B · 26 files · 26 files changed, 5832 insertions(+), 367 deletions(-)
+pass10.delta.on-WAVE.diff · sha1 865ab9e62fd45916b78e141ffaf2e6c6d27256f1 · 56350 B · 7 files · 7 files changed, 359 insertions(+), 358 deletions(-)
+pass10.delta.on-s10.diff · sha1 f1c14487c8bb65b091aaa934077d705f7a55fc48 · 56207 B · 7 files · 7 files changed, 359 insertions(+), 360 deletions(-)
+
+pass10.diff: base 74a2b5d9 (declared), product paths only, the 13 home paths stripped; work tree's temp-index tree 1f491595002835843c94d6cfa14c56cb54469947
+  route: 74a2b5d9 + homes.diff (07257854, homes v3) + pass10.diff
+pass10.delta.on-WAVE.diff: base 954bbbab + homes.on-WAVE.diff (0723d508) (declared); trees 72b7ad67 -> 5254dd12
+pass10.delta.on-s10.diff: base 1be6fe37 + homes.on-WAVE.diff (0723d508) (declared); trees a969477d -> f7b8695d
+
+apply --check (exits read bare; $S = the lane's durable scratch, each base a git-inited archive with no commit):
+pass10.diff on 74a2b5d9 (base): exit 0 · gitdir $S/base/.git · 26 paths
+pass10.delta.on-WAVE.diff on 954bbbab + homes v3 (waveh3): exit 0 · gitdir $S/waveh3/.git · 7 paths
+pass10.delta.on-WAVE.diff on 954bbbab bare (wave): exit 0 · gitdir $S/wave/.git · 7 paths
+pass10.delta.on-s10.diff on 1be6fe37 + homes v3 (s10h3): exit 0 · gitdir $S/s10h3/.git · 7 paths
+pass10.delta.on-s10.diff on 1be6fe37 bare (s10): exit 0 · gitdir $S/s10/.git · 7 paths
+pass10.delta.on-WAVE.diff on 1be6fe37 + homes v3 (s10h3): exit 1 · gitdir $S/s10h3/.git · 7 paths · error: patch failed: web/frontend/e2e/face-law.spec.ts:2228 error: web/frontend/e2e/face-law.spec.ts: patch does not apply 
+pass10.diff -R --check on the integrated tree (the work tree, 74a2b5d9 + homes v3 + pass10): exit 0 · gitdir <main>/.git/worktrees/wf_f72f3b5a-83a-33 · 26 paths
+pass10.delta.on-WAVE.diff -R --check on the union (WAVE + homes v3 + delta): exit 0 · gitdir $S/union/.git · 7 paths
+
+grep of the three diffs for every scratch, temp-dir and lane dot-dir token the bank law names: 0 hits each (two worktree citations in index.css comments, carried from pass 9, were struck before the cut; the emitted CSS is unchanged, rebuild digest 41f5c943 equal)
+lint:sleep: tree exit 0 (36 specs); union exit 1 = waveh3 exit 1, identical findings (note-reserve.spec.ts:357, the WAVE's), 0 face-law findings

@@ -1,0 +1,6 @@
+// scratch: print every site that may pad #card-foot (the row-28 read set) on the tree given, file:line
+const fe = process.argv[2];
+const { elementSites } = await import(fe + "/scripts/shape-census.mjs");
+const r = elementSites(fe, { file: "src/games/shared/GameScene.vue", pick: (el) => el.id === "card-foot", props: ["padding-bottom", "margin-bottom", "bottom"] });
+for (const x of r.sites) console.log(`${x.file}:${x.line} ${x.prelude} { ${x.prop}: ${x.value} } regimes=${(x.regimes ?? []).length}`);
+console.log(`sites ${r.sites.length}`);

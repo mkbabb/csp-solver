@@ -1,0 +1,45 @@
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+live: 0 fails
+X RED  1 THE INSET                             N1 (paint) scene.css appends a copy of the admitted base `.card-foot { padding-bottom: calc(0.75rem + env(safe-area-inset-bottom)) }` after the desk rule (cascade order not in the key)
+   1 THE INSET: at phone-landscape-844x390 the effective pad is src/games/shared/scene.css:810 `.card-foot` `calc(0.75rem + env(safe-area-inset-bottom))`
+   1 THE INSET: at phone-landscape-812x375 the effective pad is src/games/shared/scene.css:810 `.card-foot` `calc(0.75rem + env(safe-area-inset-bottom))`
+X GREEN                                        N1b (paint) scene.css swaps nothing, re-declares the admitted mobile cap at desk order: `.drawer-case { max-height: calc(100dvh - 4rem - 1.5rem) }` inside the admitted @media (max-width: 1023.98px) appended last (control-ish: no desk paint)
+X GREEN                                        N2 (paint) panel `.action-bar { grid-template-columns: 1fr }` (the WAVE's value, admitted from the WAVE)
+X GREEN                                        N3 (paint) footBerth pinned false in the script (`… && false`): the Teleport never moves
+X GREEN                                        N3b (paint) footBerth reads a wrong id (`card-foot-x`): constant false at runtime
+X GREEN                                        N4 :disabled="footBerth !== footBerth" (true only for NaN; constant false on a boolean ref: the bar always teleports, the guest case breaks)
+X GREEN                                        N4b :disabled="!footBerth && footBerth === footBerth" (equivalent to !footBerth on booleans; control: must stay GREEN)
+X RED  10 THE SCRIPT                           N5 (paint) App.vue writes the verbs' transform: translateY(100vh)
+   10 THE SCRIPT: src/App.vue:847 writes `transform`
+X GREEN                                        N5b (paint) App.vue writes the bar's zoom
+X GREEN                                        N5c (paint) App.vue writes the words' visibility
+X RED  1 THE SCRIPT                            N5d (paint) App.vue sets a style attribute string on the bar
+   1 THE SCRIPT: src/App.vue:847 writes `padding-top`
+X RED  1 THE SCRIPT                            N5e (paint) App.vue cssText on the foot
+   1 THE SCRIPT: src/App.vue:847 writes `padding-top`
+X RED  4 ONE HAND|12 THE ADMITTED LIST         N6 (paint) index.css `[class*="sublabel"] { font-size: 0 }`
+   4 ONE HAND: src/assets/index.css:1280 `[class*="sublabel"]` { font-size: 0 } collapses the voice the verbs inherit
+   12 THE ADMITTED LIST: src/assets/index.css:1280 `[class*="sublabel"]` { font-size: 0 } reaches the CARD and is not admitted
+X RED  3 THE PEN|12 THE ADMITTED LIST          N6b (paint) index.css `#card-foot > * > * { min-height: 100vh }`
+   3 THE PEN: src/assets/index.css:1280 `#card-foot > * > *` { min-height: 100vh } reaches the bar's frame and not a well's
+   12 THE ADMITTED LIST: src/assets/index.css:1280 `#card-foot > * > *` { min-height: 100vh } reaches the VERBS and is not admitted
+X RED  9 THE COLUMN|12 THE ADMITTED LIST       N6c (paint) index.css `:is(div, section):has(> .icon-sublabel) { padding-top: 100vh }`
+   9 THE COLUMN: src/assets/index.css:1280 `:is(div, section, button):has(> .icon-sublabel)` { padding-top: 100vh } puts a band above the tape
+   12 THE ADMITTED LIST: src/assets/index.css:1280 `:is(div, section, button):has(> .icon-sublabel)` { padding-top: 100vh } reaches the CASE and is not admitted
+X RED  4 ONE HAND|12 THE ADMITTED LIST         N6d (paint) index.html <style> `.action-bar .icon-sublabel { font-size: 0 }`
+   4 ONE HAND: index.html:41 `.action-bar .icon-sublabel` { font-size: 0 } collapses the verbs' words (BAR>span.icon-sublabel)
+   12 THE ADMITTED LIST: index.html:41 `.action-bar .icon-sublabel` { font-size: 0 } reaches the BAR>span.icon-sublabel and is not admitted
+X GREEN                                        N7 (paint) index.css `body { writing-mode: vertical-rl }` (inherited by every subject)
+X GREEN                                        N7b (paint) index.css `#app { line-height: 6 }` (inherited by the words)
+X GREEN                                        N8 (paint) index.css prepends `@layer utilities, components, base, theme;` (base beats every utility)
+X GREEN                                        N9 (paint) SheetWashiLabel: `const tilt = (rng() - 0.5) * 3;` kept, a later `* 2` scale on the returned tilt
+pass-10 critic siblings: GREEN 12/20; paint-moving GREEN 10/18
+constantOf("!footBerth") = varies
+constantOf("footBerth !== footBerth") = varies
+constantOf("!footBerth && footBerth === footBerth") = varies
+constantOf("!(footBerth ?? true)") = varies
+constantOf("typeof footBerth === 'symbol'") = false
+constantOf("!footBerth.value") = varies
+constantOf("[].includes(footBerth)") = false
+constantOf("footBerth > Infinity") = false
+exit=0

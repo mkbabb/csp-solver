@@ -1,0 +1,91 @@
+zone inuse=7625086 load 10.38 9.93 8.27
+[guarded] WARNING: the kernel zone leak is ARMED (armed 1793759449 slope=40.7/s inuse=30389 net=- kext=nfs); see ~/.claude/guard/ZONE-ARMED. Finish what you are doing and report it; the owner decides on the reboot.
+
+Running 1 test using 1 worker
+
+[1/1] [chromium] › e2e/focus-ring.spec.ts:1134:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline
+[chromium] › e2e/focus-ring.spec.ts:1134:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline
+[G-LIVE-21] Highlight rgba(5, 0, 73, 0.8) · deck card rgba(5, 0, 73, 0.8) painted 154 px [top 34/334=0.102 · bottom 58/334=0.174 · left 34/409=0.083 · right 28/409=0.068] · staging solid 2px rgba(5, 0, 73, 0.8) painted 124 px [top 49/87=0.563 · bottom 45/87=0.517 · left 26/41=0.634 · right 4/41=0.098] · FCCLIP2 card 0 px, staging 0 px (outline-style still solid)
+
+[G-LIVE-21] FCSIDE card 31 px [top 31/334=0.093 · bottom 0/334=0 · left 0/409=0 · right 0/409=0] ⟨top depth 0.093 < 1.80 (31 px over 334); bottom depth 0 < 1.80 (0 px over 334); left depth 0 < 1.80 (0 px over 409); right depth 0 < 1.80 (0 px over 409)⟩ · staging 43 px [top 43/87=0.494 · bottom 0/87=0 · left 0/41=0 · right 0/41=0] ⟨top depth 0.494 < 1.80 (43 px over 87); bottom depth 0 < 1.80 (0 px over 87); left depth 0 < 1.80 (0 px over 41); right depth 0 < 1.80 (0 px over 41)⟩
+
+[G-LIVE-21] FC1PX card 71 px [top 13/334=0.039 · bottom 25/334=0.075 · left 5/409=0.012 · right 28/409=0.068] ⟨top depth 0.039 < 1.80 (13 px over 334); bottom depth 0.075 < 1.80 (25 px over 334); left depth 0.012 < 1.80 (5 px over 409); right depth 0.068 < 1.80 (28 px over 409)⟩ · staging 45 px [top 13/87=0.149 · bottom 2/87=0.023 · left 26/41=0.634 · right 4/41=0.098] ⟨top depth 0.149 < 1.80 (13 px over 87); bottom depth 0.023 < 1.80 (2 px over 87); left depth 0.634 < 1.80 (26 px over 41); right depth 0.098 < 1.80 (4 px over 41)⟩
+
+[G-LIVE-21] CRIT-FCMOVE card 0 px [top 0/334=0 · bottom 0/334=0 · left 0/409=0 · right 0/409=0] ⟨top depth 0 < 1.80 (0 px over 334); bottom depth 0 < 1.80 (0 px over 334); left depth 0 < 1.80 (0 px over 409); right depth 0 < 1.80 (0 px over 409)⟩ · staging 0 px [top 0/87=0 · bottom 0/87=0 · left 0/41=0 · right 0/41=0] ⟨top depth 0 < 1.80 (0 px over 87); bottom depth 0 < 1.80 (0 px over 87); left depth 0 < 1.80 (0 px over 41); right depth 0 < 1.80 (0 px over 41)⟩
+
+  1) [chromium] › e2e/focus-ring.spec.ts:1134:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+
+    Error: every strip of the deck card's outline is painted at 0.9 × its authored width
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "top depth 0.102 < 1.80 (34 px over 334)",
+    +   "bottom depth 0.174 < 1.80 (58 px over 334)",
+    +   "left depth 0.083 < 1.80 (34 px over 409)",
+    +   "right depth 0.068 < 1.80 (28 px over 409)",
+    + ]
+
+      1310 |   // read: the deck card's strips paint 0.55–1.32 px of focus change in both engines, the staging
+      1311 |   // face's bottom 0.92–0.97, because the 2 px outline lands on ink the host already draws there).
+    > 1312 |   expect.soft(stripReds(cardPx), "every strip of the deck card's outline is painted at 0.9 × its authored width").toEqual([]);
+           |                                                                                                                   ^
+      1313 |   expect.soft(stripReds(stagingPx), "every strip of the staging face's outline is painted at 0.9 × its authored width").toEqual([]);
+      1314 |   expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
+      1315 |   expect(clipCard.total, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1312:115
+
+    Error: every strip of the staging face's outline is painted at 0.9 × its authored width
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 6
+
+    - Array []
+    + Array [
+    +   "top depth 0.563 < 1.80 (49 px over 87)",
+    +   "bottom depth 0.517 < 1.80 (45 px over 87)",
+    +   "left depth 0.634 < 1.80 (26 px over 41)",
+    +   "right depth 0.098 < 1.80 (4 px over 41)",
+    + ]
+
+      1311 |   // face's bottom 0.92–0.97, because the 2 px outline lands on ink the host already draws there).
+      1312 |   expect.soft(stripReds(cardPx), "every strip of the deck card's outline is painted at 0.9 × its authored width").toEqual([]);
+    > 1313 |   expect.soft(stripReds(stagingPx), "every strip of the staging face's outline is painted at 0.9 × its authored width").toEqual([]);
+           |                                                                                                                         ^
+      1314 |   expect(clipStyle, "FCCLIP2 leaves the computed outline standing (the existence read it defeats)").not.toBe("none");
+      1315 |   expect(clipCard.total, "FCCLIP2: a clipped card outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+      1316 |   expect(clipStaging.total, "FCCLIP2: a clipped staging outline is caught on paint").toBeLessThanOrEqual(FLOOR);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1313:121
+
+    Error: FC1PX: a 1 px staging outline is caught by the thickness clause
+
+    expect(received).toBeGreaterThan(expected)
+
+    Expected: > 4
+    Received:   4
+
+      1331 |   expect(fc1px.c.total, "FC1PX: a 1 px card outline paints less than the clean 2 px").toBeLessThan(cardPx.total);
+      1332 |   expect(fc1px.s.total, "FC1PX: a 1 px staging outline paints less than the clean 2 px").toBeLessThan(stagingPx.total);
+    > 1333 |   expect(stripReds(fc1px.s).length, "FC1PX: a 1 px staging outline is caught by the thickness clause").toBeGreaterThan(stripReds(stagingPx).length);
+           |                                                                                                        ^
+      1334 |   expect(stripReds(fcmove.c).length, "CRIT-FCMOVE: a moved card with no outline reds all four strips").toBe(4);
+      1335 |   expect(stripReds(fcmove.s).length, "CRIT-FCMOVE: a moved staging face with no outline reds all four strips").toBe(4);
+      1336 |   expect(staging.on && staging.fv, "a staging face took keyboard focus").toBe(true);
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/worktrees/wf_f72f3b5a-83a-35/web/frontend/e2e/focus-ring.spec.ts:1333:104
+
+    attachment #1: screenshot (image/png) ──────────────────────────────────────────────────────────
+    test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/test-failed-1.png
+    ────────────────────────────────────────────────────────────────────────────────────────────────
+
+    Error Context: test-results/focus-ring-G-LIVE-21-·-for-afa9c-ve-card-carries-the-outline-chromium/error-context.md
+
+
+  1 failed
+    [chromium] › e2e/focus-ring.spec.ts:1134:1 › G-LIVE-21 · forced colours: the deck's active card carries the outline 
+end zone inuse=7625086 load 10.40 9.95 8.29

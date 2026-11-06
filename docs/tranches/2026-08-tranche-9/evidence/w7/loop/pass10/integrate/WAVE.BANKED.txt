@@ -1,0 +1,19 @@
+lane      integrate-WAVE · pass 10 · Opus · archive copies with their own .git (alternates to main's objects, read-only), temporary indexes, write-tree only, --binary, never committed
+base      74a2b5d9317e7795cee6bf63e861bd44f54ae80e (git archive + the docs/precepts gitlink 160000 8781ebb0 restored: tree 5fd59288)
+route     pass-9 WAVE 954bbbab -> + homes.on-WAVE 0723d508 -> 8c46d9de -> + s13-s7-s3.delta.on-p9h 8d2d03a4 (rebuilds s13 d77fcfc4 byte for byte on S13_9 + homes v3) -> UW1 dcae64ef -> + s10.delta.on-WAVE 86e9e551 (--3way, direct) -> UW2 c165f844
+arms      SELF 540b93da -> 1d6c3703 · COUNT b5496790 -> 7804688a · PLACE 7d888a8a -> 3b7934c5 · TIN dd52a3f4 -> 4932d4a3 · WALK: NO DELTA ON DISK (gap row) · LIVE b21fafb3 -> 174d6f71 · GRAPHITE 5b12eec0 -> 92dd36de · TAB-PEN ad6badcf -> abb84148 (each rc 0, direct, no conflict)
+restamp   check 8 restamped once (census.stamp.json +8 -8; chromium floor 476 -> 522, webkit 473 -> 519) -> 561a337a
+gitdir    <lane>/tree/.git on every apply; <lane>/chk/<name>/.git for every check
+tree      561a337afc116b057de2380be38bcd97957fa772
+bank      WAVE.diff bytes 4130282 sha1 058376b6e42a7b490a2ff6b96197149b605833e7 · 189 files changed, 75232 insertions(+), 2270 deletions(-)
+  form    git diff --binary 5fd59288 561a337a, cumulative on 74a2b5d9
+  check   fresh git archive 74a2b5d9 + own .git (<lane>/chk/banked/.git), the banked copy: --check exit 0 · apply --index exit 0, 189 paths · write-tree 561a337a = the tree · diff -rq --no-dereference vs git archive 561a337a: 0 lines, exit 0
+  check   WAVE.diff whole on s13 d77fcfc4, s10 afd594a1, pass-9 WAVE 954bbbab: exit 1 each (expected: those trees carry its hunks)
+  section WAVE.delta-on-s13 (d77fcfc4) bytes 2281488 sha1 f1ef89bcb01e8c07e9482054c93ef4a88bed509f, 118 files: --check exit 0 on a fresh archive of d77fcfc4
+  section WAVE.delta-on-s10 (afd594a1) bytes 2573613 sha1 ed69e74ac0d73e711c984bb214f3da31e91f9779, 150 files: --check exit 0 on a fresh archive of afd594a1
+  wave    WAVE.delta-on-W9H3 (8c46d9de) bytes 757879 sha1 c871bee412a5eb10a99dc51ae4d6eae94eed52d8, 59 files: --check exit 0 · WAVE.delta-on-W9 (954bbbab) bytes 897030 sha1 a14469be7277b253e3d0d4fbe1855eb986fd7c3a, 69 files: --check exit 0  (companions recorded, not banked)
+grep      WAVE.diff: scratchpad 0 · /private/tmp 0 · t9-scratch 0 · '.claude/' 0 · /tmp/ 1 (the literal ROOT "/tmp/lawful-copy" in a check-motion-bands self-test plant, carried from 8c46d9de) · dot-dir +++ 2 (.github/workflows/ci.yml TAB-PEN comment-only +8 -5; .gitignore no pass-10 hunk; product paths since pass 8)
+seal      928.76 unmoved both engines (chromium shipped 928.13 / handRung 896.88 / reverted 1290.03; webkit 928 / 896.78 / 1290.08); control 1227.09 / 1227.06 RED
+columns   union chromium 539/39/3 · webkit 534/40/7 of 581 · control chromium 249/330/2 · webkit 248/328/5 · UNREAD none
+never     committed, stashed, pushed or deployed · no git status on main or in w7-control · main written only under pass10/integrate/
+record    WAVE.md bytes 66145 sha1 49d89e7b86850ad3b1642ba53ddd3a72b2058729

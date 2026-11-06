@@ -1,0 +1,33 @@
+gate ca658a10 lib c2a4abd5 load 19.44 15.26 11.31
+clean0 exit 0 · 0 findings · baseline
+N1-typed-om exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.attributeStyleMap.set("--color-peer-5-name", "#000");
+N2-bracket-call exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style["setProperty"]("--color-peer-5-name", "#000");
+N3a-vue-computed-key exit 1 · 1 findings · src/games/shared/Tw.vue: <template><span :style="{ ['--color-peer-5-name']: 'black' }">x</span></template>
+N3b-ts-computed-key exit 1 · 1 findings · src/games/shared/p.ts: export const s = { ["--color-peer-5-name"]: "#000" };
+N4-bound-alias exit 1 · 1 findings · src/games/shared/p.ts: const N = "--color-peer-5-name"; declare const el: HTMLElement; el.style.setProperty(N, "#000");
+N5-space-before-paren exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty ("--color-peer-5-name", "#000");
+N6-reflect-apply exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; Reflect.apply(el.style.setProperty, el.style, ["--color-peer-5-name", "#000"]);
+N7-css-escaped-propname exit 1 · 1 findings · src/games/shared/gameCell.css += :root.dark { --color-peer-5-nam\65: #000; }
+N8-cursor-ink-binder exit 1 · 1 findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("--color-peer-cursor-ink", "#123456");
+N9-hwb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "hwb(309.4 69.8% 0%)";
+N10-rgb-percent exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(100% 69.8% 95.3%)";
+N11-srgb-linear exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(srgb-linear 1 0.4451 0.8963)";
+N12-color-srgb exit 1 · 1 findings · src/games/shared/p.ts: export const x = "color(srgb 1 0.698 0.953)";
+N14-decimal-packed exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#" + (16757491).toString(16);
+N21-datauri-pct23-css exit 1 · 1 findings · src/games/shared/gameCell.css += .x { background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect fill='%23ffb2f3'/%3E%3C/svg%3E"); }
+N22-datauri-pct23-ts exit 1 · 1 findings · src/games/shared/p.ts: export const u = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg'%3E%3Crect fill='%23ffb2f3'/%3E%3C/svg%3E";
+N26a-postcss-unimported exit 1 · 2 findings · src/games/shared/tin.postcss: :root.dark { --color-peer-5-name: #ff00ff; } .x { color: #ffb2f3; }
+N26b-postcss-imported exit 1 · 2 findings · src/games/shared/p.ts: import "./tin.postcss";
+N26c-sss-imported exit 0 · 0 findings · src/games/shared/p.ts: import "./tin.sss";
+N27-raw-txt-style exit 1 · 1 findings · src/games/shared/p.ts: import t from "./tin.txt?raw"; const s = document.createElement("style"); s.textContent = t; document.head.append(s);
+N29-sfc-style-src-outside exit 1 · 2 findings · src/games/shared/Tw.vue: <template><span>x</span></template><style src="../../../theme/tin2.css"></style>
+N30-ts-import-outside exit 1 · 2 findings · src/games/shared/p.ts: import "../../../theme/tin2.css";
+N34-property-registers-arm exit 1 · 1 findings · src/games/shared/gameCell.css += @property --color-peer-5-name { syntax: "<color>"; inherits: false; initial-value: #000; }
+N42-hex8 exit 1 · 1 findings · src/games/shared/p.ts: export const x = "#ffb2f380";
+N41-legacy-commas exit 1 · 1 findings · src/games/shared/p.ts: export const x = "rgb(255,178,243)";
+clean1 exit 0 · 0 findings · after
+gameCell restored
+ls: src/games/shared/Tw.vue: No such file or directory
+ls: src/games/shared/p.ts: No such file or directory
+ls: theme: No such file or directory
+DONE

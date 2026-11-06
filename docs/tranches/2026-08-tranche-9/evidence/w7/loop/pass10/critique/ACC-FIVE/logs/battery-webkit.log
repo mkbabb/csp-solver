@@ -1,0 +1,77 @@
+OPEN webkit 18:13:08 alive 4236:200 4258:200  control index-CubiZsMVSwTc.js
+RUN p30 webkit exit 1 18:13:08-18:14:59 load 14.01-11.27 inuse=15966/inuse=15977 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-PARTIAL30 webkit off -1: first tick 29.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 12.5
+D10-PARTIAL30 webkit off 2: first tick 21.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.7
+D10-PARTIAL30 webkit off 6: first tick 20.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.7
+D10-PARTIAL30 webkit off 15: first tick 15.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/25.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.0
+D10-PARTIAL30 webkit off 27: first tick 31.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.0
+    Error: 1 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+RUN d10 webkit exit 0 18:14:59-18:15:08 load 11.27-10.23 inuse=15977/inuse=15977 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-STALLRUN webkit 5 stalled ticks (dt 156/155/156/153/152 ms) travelled 17.0/17.0/17.0/17.0/17.0 ms; cap max(stepMs 17, shortest tick 4.0) + 1 = 18.00 ms, margin 1.000 ms; 39 healthy ticks, worst healthy shortfall 2.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.7
+  1 passed (4.2s)
+SWAP 458bb26f 18:15:08
+RUN p30-p9 webkit exit 1 18:15:12-18:15:30 load 10.23-10.58 inuse=15977/inuse=15986 base http://127.0.0.1:4236 blob 458bb26f env: 
+D10-PARTIAL30 webkit off -1: first tick 29.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/29.0/29.0/29.0/29.0/29.0/27.0; 4 of 4 whole frames from the fifth step under dt − 1; load 10.4
+D10-PARTIAL30 webkit off 2: first tick 24.0 ms after start(); ended on frame 12; dt 33/34/33/33/34/33/33/34/33/33/34; travel 17.0/17.0/17.0/24.0/24.0/24.0/24.0/24.0/24.0/24.0/4.0; 6 of 6 whole frames from the fifth step under dt − 1; load 10.4
+D10-PARTIAL30 webkit off 6: first tick 20.0 ms after start(); ended on frame 13; dt 34/33/33/34/33/33/34/33/33/34/33/34; travel 17.0/17.0/17.0/20.0/20.0/20.0/20.0/20.0/20.0/20.0/20.0/12.0; 7 of 7 whole frames from the fifth step under dt − 1; load 10.4
+D10-PARTIAL30 webkit off 15: first tick 14.0 ms after start(); ended on frame 15; dt 34/33/33/34/33/33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/17.0/5.0; 9 of 9 whole frames from the fifth step under dt − 1; load 10.6
+D10-PARTIAL30 webkit off 27: first tick 32.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/34; travel 17.0/17.0/17.0/32.0/32.0/32.0/32.0/32.0/12.0; 1 of 4 whole frames from the fifth step under dt − 1; load 10.6
+    Error: 5 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+SWAP eeb58de2 18:15:30
+RUN d10-p8 webkit exit 1 18:15:34-18:15:43 load 10.21-9.85 inuse=15986/inuse=15986 base http://127.0.0.1:4236 blob eeb58de2 env: 
+D10-STALLRUN webkit 5 stalled ticks (dt 155/156/156/153/153 ms) travelled 17.0/17.0/17.0/18.0/153.0 ms; cap max(stepMs 17, shortest tick 3.0) + 1 = 18.00 ms, margin -135.000 ms; 39 healthy ticks, worst healthy shortfall 2.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.4
+    Error: 5 stalled ticks (dt 155/156/156/153/153 ms) travelled 17.0/17.0/17.0/18.0/153.0 ms; cap max(stepMs 17, shortest tick 3.0) + 1 = 18.00 ms, margin -135.000 ms; 39 healthy ticks, worst healthy shortfall 2.00 ms, 0 under min(dt, 17) − 1; config stepMs 17; load 10.4
+  1 failed
+RESTORED-BYTE-EQUAL 18:15:43
+alive 4236:200 4258:200 
+RUN ctrl webkit exit 1 18:15:47-18:16:31 load 9.85-10.20 inuse=15986/inuse=15986 base http://127.0.0.1:4258 blob f67c70ee env: 
+    Error: expect(received).toBeGreaterThan(expected)
+    Error: page.evaluate: TypeError: Importing a module script failed.
+    Error: page.evaluate: TypeError: Importing a module script failed.
+    Error: page.evaluate: TypeError: Importing a module script failed.
+  4 failed
+DONE webkit 18:16:31 alive 4236:200 4258:200 
+SWAP slow95 18:16:31
+RUN p30-slow95 webkit exit 1 18:16:35-18:16:54 load 11.23-11.63 inuse=15986/inuse=16008 base http://127.0.0.1:4236 blob a9f2e27e env: 
+D10-PARTIAL30 webkit off -1: first tick 29.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 16.1/16.1/16.1/16.2/31.3/31.3/31.3/31.3/31.3/2.5; 5 of 5 whole frames from the fifth step under dt − 1; load 11.1
+D10-PARTIAL30 webkit off 2: first tick 21.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 16.1/16.1/16.1/16.2/31.3/31.3/31.3/31.3/31.3/1.7; 5 of 5 whole frames from the fifth step under dt − 1; load 10.7
+D10-PARTIAL30 webkit off 6: first tick 17.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 16.1/16.1/16.1/16.2/31.3/31.3/31.3/31.3/31.3/1.7; 5 of 5 whole frames from the fifth step under dt − 1; load 10.7
+D10-PARTIAL30 webkit off 15: first tick 12.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 16.1/16.1/16.1/16.2/31.3/31.3/31.3/31.3/31.3/6.7; 5 of 5 whole frames from the fifth step under dt − 1; load 10.0
+D10-PARTIAL30 webkit off 27: first tick 32.0 ms after start(); ended on frame 11; dt 34/33/33/34/33/33/34/33/33/34; travel 16.1/16.1/16.1/16.2/31.3/31.3/31.3/31.3/31.3/2.5; 5 of 5 whole frames from the fifth step under dt − 1; load 10.0
+    Error: 5 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+RESTORED-BYTE-EQUAL 18:16:54
+DONE2 webkit 18:16:54
+RUN p30-rep2 webkit exit 1 18:16:55-18:17:13 load 11.63-10.94 inuse=16008/inuse=16008 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-PARTIAL30 webkit off -1: first tick 32.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 11.4
+D10-PARTIAL30 webkit off 2: first tick 23.0 ms after start(); ended on frame 10; dt 33/33/34/33/33/34/33/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 11.4
+D10-PARTIAL30 webkit off 6: first tick 19.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 12.0
+D10-PARTIAL30 webkit off 15: first tick 9.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/31.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.0
+D10-PARTIAL30 webkit off 27: first tick 2.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/33.0/5.0; 1 of 5 whole frames from the fifth step under dt − 1; load 11.5
+    Error: 2 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+RUN p30-rep3 webkit exit 1 18:17:14-18:17:32 load 10.94-9.83 inuse=16008/inuse=16008 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-PARTIAL30 webkit off -1: first tick 30.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 10.6
+D10-PARTIAL30 webkit off 2: first tick 21.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 10.6
+D10-PARTIAL30 webkit off 6: first tick 23.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 10.6
+D10-PARTIAL30 webkit off 15: first tick 16.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/24.0; 0 of 4 whole frames from the fifth step under dt − 1; load 10.3
+D10-PARTIAL30 webkit off 27: first tick 30.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 10.3
+    Error: 2 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+RUN p30-rep4 webkit exit 1 18:17:32-18:17:53 load 9.83-9.02 inuse=16008/inuse=16023 base http://127.0.0.1:4236 blob f67c70ee env: 
+D10-PARTIAL30 webkit off -1: first tick 31.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 9.8
+D10-PARTIAL30 webkit off 2: first tick 25.0 ms after start(); ended on frame 10; dt 33/33/34/33/33/34/33/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 9.9
+D10-PARTIAL30 webkit off 6: first tick 24.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/33/34/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 9.9
+D10-PARTIAL30 webkit off 15: first tick 8.0 ms after start(); ended on frame 10; dt 34/33/33/34/33/34/33/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/32.0; 0 of 4 whole frames from the fifth step under dt − 1; load 9.4
+D10-PARTIAL30 webkit off 27: first tick 32.0 ms after start(); ended on frame 10; dt 33/33/34/33/33/34/33/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 9.4
+    Error: 1 of 5 arms slowed or late
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+  1 failed
+DONE3 webkit 18:17:53

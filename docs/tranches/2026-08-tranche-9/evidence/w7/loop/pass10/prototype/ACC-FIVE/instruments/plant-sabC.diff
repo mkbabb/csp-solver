@@ -1,0 +1,11 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (sabC)
+@@ -685,7 +685,7 @@
+ ): number {
+   const remainder =
+     afterStall && ticks.length >= PANEL_MIN_TICKS && dt < Math.min(...ticks);
+-  if (!partial && !remainder && dt > 0 && Math.abs(at - tickAt) >= 1) {
++  if ((partial || !partial) && !remainder && dt > 0 && Math.abs(at - tickAt) >= 1) {
+     tickAt = at;
+     ticks.push(dt);
+     if (ticks.length > PANEL_WINDOW) ticks.shift();

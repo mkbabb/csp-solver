@@ -1,0 +1,16 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-40 (HEAD 74a2b5d9317e7795cee6bf63e861bd44f54ae80e, advanced in place, uncommitted)
+open-state: temporary-index cut at open = tree df9999af2d99f34ff960e10574575e53d7abe243, diff sha1 457a7984b79b916ebb3ac738f21dad3676c78220, 600007 B, 37 files = pass9.diff / BANKED.txt byte for byte (no disagreement)
+homes v3: homes.on-WAVE.diff sha1 0723d5085bb55d245158723f8d6a854a2526044f applied --3way (temporary index) rc 0, 10 paths; the 13 home paths blob-equal to 74a2b5d9 + homes.diff (07257854) = ac862f1e (13/13 eq); no residual home edit
+lane tree at bank (temporary index, git add -A, scratch vite config moved to trash first) 7674feb83a7537dfc478a5e97aa257fffa13ab5a
+pass10.diff  DECLARED BASE ac862f1e173f711ac214a8ade6a9de56ee746de8 (74a2b5d9 + homes.diff 07257854; net of the homes, LAWS P9 §A) bytes 164468 sha1 aded94f977c55b774eaf7f8346171fcb7a996a82 shortstat 24 files changed, 2406 insertions(+), 198 deletions(-)
+pass10.delta.on-WAVE.diff  DECLARED BASE 8c46d9dedc7fe6b726b9b7fdbdfa23e320cff204 (954bbbab + homes.on-WAVE.diff 0723d508) -> 2e5a1b735287a0c8cd844a640907f1b34261a4f2 bytes 11096 sha1 5b12eec00a7fa6e258c8a91cb39eb9bcf3011176 shortstat 6 files changed, 105 insertions(+), 12 deletions(-)
+  paths: src/games/shared/{GameBoard.vue,boardRaster.ts,gameCell.css,useGameCell.ts} src/pencil/grid/{gridPaths.ts,gridPaths.partial30.test.ts} (all under web/frontend/)
+apply --check (exit read bare; each on a fresh git archive with its own git init, gitdir printed):
+  pass10.diff on 74a2b5d9 (chk74/.git, 24 paths): 0
+  pass10.diff on 74a2b5d9 + homes v3 = ac862f1e, the declared base (chk74/.git): 0
+  pass10.diff on the WAVE 954bbbab (chkW/.git, temporary index --cached): 1 (multiplayer.spec.ts, check-ink-pressure.mjs, ...: the 74a2b5d9 arm's tally/pen/palette rows collide with the union, as at pass 8 and 9; the union route is the on-WAVE delta)
+  pass10.delta.on-WAVE.diff on the WAVE 954bbbab (chkW/.git, temporary index --cached, 6 paths): 0
+  pass10.delta.on-WAVE.diff on 954bbbab + homes v3 = 8c46d9de, the declared base (chkW/.git worktree): 0; applied for real -> 2e5a1b73 (= the lane's cut)
+  section's integrated tree = the WAVE union (prompt): the same two rows
+contaminant grep (scratchpad|/private/tmp|/tmp/|.claude/t9-scratch): pass10.diff 0, on-WAVE 0 · dot-path grep (^+++ .*/\.): 0, 0
+replay: 74a2b5d9 -> git apply homes.diff (07257854) -> git apply pass10.diff = the lane tree 7674feb8;  954bbbab -> homes.on-WAVE.diff (0723d508) -> pass10.delta.on-WAVE.diff = 2e5a1b73 (the row-1 build adds the one-line RING_ARM flip, never banked)

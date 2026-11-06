@@ -1,0 +1,71 @@
+ROW p9-spec-chromium spec chromium :4230/p9/ start 23:12:27 load { 11.13 10.53 10.40 } zone inuse=1389006 armed yes served index-CvXg-ZAXdOCh.js
+
+Running 2 tests using 1 worker
+
+  ✘  1 [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ fine 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click (12.0s)
+  ✘  2 [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ coarse 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click (11.9s)
+
+
+  1) [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ fine 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click 
+
+    Error: R · a restored digit asks
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot .confirm-ribbon')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - R · a restored digit asks with timeout 10000ms
+      - waiting for locator('#card-foot .confirm-ribbon')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1776 |       await record();
+      1777 |       await page.locator('#card-foot button[aria-label="Clear the board"]').click();
+    > 1778 |       await expect(ribbon, "R · a restored digit asks").toHaveCount(1);
+           |                                                         ^
+      1779 |       await expect(ribbon).toHaveAttribute("aria-label", "clear the board?");
+      1780 |       expect(await asked(), "the recorder sees the question it must see").toBe(true);
+      1781 |       await expect(cellAt(), "the ask alone clears nothing").toHaveValue("5");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-CTRL-TAPE/base74/web/frontend/e2e/zone-grammar.spec.ts:1778:57
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M12-across-7af50-emptied-solves-on-one-click-chromium/error-context.md
+
+  2) [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ coarse 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click 
+
+    Error: R · a restored digit asks
+
+    expect(locator).toHaveCount(expected) failed
+
+    Locator:  locator('#card-foot .confirm-ribbon')
+    Expected: 1
+    Received: 0
+    Timeout:  10000ms
+
+    Call log:
+      - R · a restored digit asks with timeout 10000ms
+      - waiting for locator('#card-foot .confirm-ribbon')
+        24 × locator resolved to 0 elements
+           - unexpected value "0"
+
+
+      1776 |       await record();
+      1777 |       await page.locator('#card-foot button[aria-label="Clear the board"]').click();
+    > 1778 |       await expect(ribbon, "R · a restored digit asks").toHaveCount(1);
+           |                                                         ^
+      1779 |       await expect(ribbon).toHaveAttribute("aria-label", "clear the board?");
+      1780 |       expect(await asked(), "the recorder sees the question it must see").toBe(true);
+      1781 |       await expect(cellAt(), "the ask alone clears nothing").toHaveValue("5");
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-CTRL-TAPE/base74/web/frontend/e2e/zone-grammar.spec.ts:1778:57
+
+    Error Context: ../../../pw-out/zone-grammar-T9-M12-across-b26c5-emptied-solves-on-one-click-chromium/error-context.md
+
+  2 failed
+    [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ fine 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click 
+    [chromium] › e2e/zone-grammar.spec.ts:1731:5 › T9-M12 across a reload @ coarse 1440×900 › a restored digit asks before Clear; a board the answered Clear emptied solves on one click 
+END 23:12:58 load { 11.18 10.58 10.42 } zone inuse=1400307
+EXIT 1

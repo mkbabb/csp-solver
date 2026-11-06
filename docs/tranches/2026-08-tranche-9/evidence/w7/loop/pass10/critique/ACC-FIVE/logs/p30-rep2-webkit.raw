@@ -1,0 +1,43 @@
+
+Running 1 test using 1 worker
+
+[1/1] [webkit] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame
+[webkit] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame
+D10-PARTIAL30 webkit off -1: first tick 32.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 11.4
+
+D10-PARTIAL30 webkit off 2: first tick 23.0 ms after start(); ended on frame 10; dt 33/33/34/33/33/34/33/33/34; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 0 of 4 whole frames from the fifth step under dt − 1; load 11.4
+
+D10-PARTIAL30 webkit off 6: first tick 19.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 12.0
+
+D10-PARTIAL30 webkit off 15: first tick 9.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/31.0; 0 of 4 whole frames from the fifth step under dt − 1; load 12.0
+
+D10-PARTIAL30 webkit off 27: first tick 2.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/33.0/5.0; 1 of 5 whole frames from the fifth step under dt − 1; load 11.5
+
+  1) [webkit] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame 
+
+    Error: 2 of 5 arms slowed or late
+
+    expect(received).toEqual(expected) // deep equality
+
+    - Expected  - 1
+    + Received  + 4
+
+    - Array []
+    + Array [
+    +   "off 6: first tick 19.0 ms after start(); ended on frame 10; dt 33/34/33/33/34/33/33/34/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/23.0; 1 of 4 whole frames from the fifth step under dt − 1; load 12.0",
+    +   "off 27: first tick 2.0 ms after start(); ended on frame 11; dt 33/34/33/33/34/33/33/34/33/33; travel 17.0/17.0/17.0/17.0/33.0/33.0/33.0/33.0/33.0/5.0; 1 of 5 whole frames from the fifth step under dt − 1; load 11.5",
+    + ]
+
+      596 |   for (const l of lines) console.log(`D10-PARTIAL30 ${testInfo.project.name} ${l}`);
+      597 |   testInfo.annotations.push({ type: "D10-partial30", description: lines.join(" · ") });
+    > 598 |   expect(reds, `${reds.length} of ${offs.length} arms slowed or late`).toEqual([]);
+          |                                                                        ^
+      599 | });
+      600 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-ACC-FIVE/tree/web/frontend/e2e/front-rate.spec.ts:598:72
+
+    Error Context: ../../../pw-out-p30-rep2-webkit/front-rate-D10-partial30-a-32db6-l-travels-every-whole-frame-webkit/error-context.md
+
+
+  1 failed
+    [webkit] › e2e/front-rate.spec.ts:550:1 › D10-partial30: a front started between frames on a 30 Hz panel travels every whole frame 

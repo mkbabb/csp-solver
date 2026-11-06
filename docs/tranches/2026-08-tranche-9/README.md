@@ -48,11 +48,14 @@ came back all-terminal, 28 of 31 probed terminal rows resisted, text contrast is
 | [W6 THE SUBSTRATE](waves/T9-W6-substrate.md) | The no-legacy sweep: dead modules and false knip entries out, the retired quarantine's park torn down, holdouts narrowed to their true cause, the wanderer root-caused, relay.ts and e2e/ under typecheck and lint, R13's FOLLOW residue and R15's resize residue cured | census-zero per kill; born-RED for the two residue cures |
 | [W7 THE DESIGN WAVE](waves/T9-W7-design.md) | The design-language census answered under the convergent loop: one heading voice, a button system, the accent family, the fill meter explained, the wobble law extended to the selection ring, focus rings in the house hand, the hint note retracted, the mobile tabs made tabs — PLUS the controls-estate system re-cut and the masthead telemetry (the 2026-08-10 owner marks; B6's scope condition fired) | loop law: earned-100% (two clean passes + non-author audit); marks close on the owner's re-look (U-10) |
 | [W8 FIRST PAINT](waves/T9-W8-first-paint.md) | The cold boot attributed then cured on real iOS (owner marks M06/M02): the bake pipeline at first paint, the dark-toggle's first invocation, the main chunk's freight, the drawer's frames — GATE D finally gets its executor | attribution before cure; born-RED device budgets; real-iOS readings close it (M19 intact: owner-run script) |
+| [W9 THE RUNTIME](waves/T9-W9-runtime.md) | Every frame, deal and peer message made cheap at the mechanism: the wordmark and underlines bake coverage so a theme flip bakes nothing (W8's B2 closed without a pre-warm), the toggle's turbulence baked once, blankness checked at capture; uniqueness proved without rediscovery, the ordering constraint native, the thermo bank retired on its price; a reconnected peer converges, heartbeats carry a digest, one changed cell patches one cell, one Durable Object per room; the cell declared not a credential field | born-RED per row on its own number; deals byte-identical; π + filterBudget 9 |
 | [WGATE](waves/T9-WGATE.md) | The close that cannot lie, now with frames: ledger-diff zero, doc-truth zero, floors restamped, ballots resolved-or-defaulted, production re-pass WITH banked captures — the capture-or-it-didn't-happen law's first enforcement | arithmetic + artifacts, not narrative |
 
 DAG: W0 first (docs-only, unblocks the record gates). Then W1 ∥ W4 ∥ W5; W2 → W3 → W7
 (shared surfaces in sequence); W6 after W5 (floor/park interplay); W8 after W2 (its
-budgets read a settled layout), device validation at the owner's convenience. WGATE
+budgets read a settled layout), device validation at the owner's convenience. W9
+(drafted 2026-11-05) opens at W7's fold, and its solver track may develop beside W7 in its
+own worktree and land after the fold. WGATE
 last. Ballots dispatch at W0-open and fire their defaults at the WGATE
 (`DISPOSITIONS.md` §2).
 

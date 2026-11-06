@@ -1,0 +1,11 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (sabE)
+@@ -684,7 +684,7 @@
+   afterStall: boolean,
+ ): number {
+   const remainder =
+-    afterStall && ticks.length >= PANEL_MIN_TICKS && dt < Math.min(...ticks);
++    afterStall && ticks.length >= PANEL_MIN_TICKS && dt > 0; // SAB: every post-stall tick dropped
+   if (!partial && !remainder && dt > 0 && Math.abs(at - tickAt) >= 1) {
+     tickAt = at;
+     ticks.push(dt);

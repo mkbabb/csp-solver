@@ -1,0 +1,37 @@
+PLR-SELF · pass 10 · BANKED (cut through temporary indexes; nothing committed; exits read bare)
+
+open state           tree 7fb4bdf0 = pass9-substrate.diff 013f21bb byte for byte (no disagreement with pass9 BANKED.txt)
+homes v3             homes.on-WAVE.diff 0723d508 applied at open (exit 0, 10 paths); 13 home paths = ac862f1e (74a2b5d9 + homes.diff 07257854); residual home edits 0
+
+pass10.diff                 DECLARED BASE 74a2b5d9 (runs on ac862f1e = 74a2b5d9 + homes.diff 07257854; carries NO home path)
+  pass10.diff sha1 c6e830c67be52d0e61124ab6aa11c813f5a2d458 bytes   184025  26 files changed, 2779 insertions(+), 402 deletions(-)
+  tree b959448e891a5965406846dc4e1e8ef8630c9b87 (74a2b5d9 + pass10.diff); with homes v3: e855ff06fba39568a817e97a098985feeae1cbe2
+pass10.delta.on-WAVE.diff   DECLARED BASE 8c46d9de = 954bbbab + homes.on-WAVE.diff 0723d508 (git-archive tree 72b7ad67)
+  delta sha1 540b93da61ddc419957616d6d73c552f119cd95f bytes    25204  8 files changed, 174 insertions(+), 44 deletions(-)
+  result (archive tree) a9e00185b8a31f709070d0db4556ed9ad3502832
+
+apply --check (fresh git archive, own git init, git dir printed; exit bare)
+  base | tree 74a2b5d9 | pass10.diff | exit 0 | paths 26 | git dir <lane scratch>/ac/base/.git
+  basehomes | tree ac862f1e173f711ac214a8ade6a9de56ee746de8 | pass10.diff | exit 0 | paths 26 | git dir <lane scratch>/ac/basehomes/.git
+  wave3 | tree 8c46d9dedc7fe6b726b9b7fdbdfa23e320cff204 | pass10.delta.on-WAVE.diff | exit 0 | paths 8 | git dir <lane scratch>/ac/wave3/.git
+  wave | tree 954bbbab | pass10.delta.on-WAVE.diff | exit 0 | paths 8 | git dir <lane scratch>/ac/wave/.git
+  wave-full | tree 954bbbab | pass10.diff | exit 1 | paths 26 | git dir <lane scratch>/ac/wave-full/.git
+  acde | tree acde977b | pass10.delta.on-WAVE.diff | exit 1 | (pass 9's WAVE+homes v2; player-mark.spec.ts absent there — not a route)
+  section's integrated tree = the WAVE union (§11 is in neither s10 nor s13-s7-s3)
+
+grep (LAWS P8 §K's four scratch-path patterns, home-absolute paths, a dot-dir on a +++ line): 0 in both diffs, 0 in this file and README.md
+
+blobs (for COUNT / PLACE, batch 4, by sha)
+  lane    725f06d1 web/frontend/e2e/player-mark.spec.ts
+  lane    011ce521 web/frontend/e2e/node.d.ts
+  lane    031f9471 web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
+  lane    12e0922d web/frontend/src/pencil/config/pencilConfig.ts
+  lane    fcfec07d web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue (unchanged since pass 9)
+  W3+delta e7d92ffd web/frontend/e2e/node.d.ts
+  W3+delta 849d0a3d web/frontend/e2e/player-mark.spec.ts
+  W3+delta 4c6dcc26 web/frontend/scripts/check-motion-bands.mjs
+  W3+delta 0554ac9a web/frontend/scripts/check-pencil-verbs.mjs
+  W3+delta 49d7b2a9 web/frontend/src/games/shared/useSession.test.ts
+  W3+delta ef87690c web/frontend/src/pencil/chrome/PlayerMark/PlayerMark.vue
+  W3+delta 031f9471 web/frontend/src/pencil/chrome/PlayerMark/rowBudget.ts
+  W3+delta 3842338a web/frontend/src/pencil/config/pencilConfig.ts

@@ -1,0 +1,546 @@
+diff --git a/web/frontend/e2e/affordances.spec.ts b/web/frontend/e2e/affordances.spec.ts
+index b140328..2cd7d63 100644
+--- a/web/frontend/e2e/affordances.spec.ts
++++ b/web/frontend/e2e/affordances.spec.ts
+@@ -427,18 +427,37 @@ for (const adversary of DROP_CLOCK_ADVERSARIES) {
+  *  BLIND: every leave answers a running rub-out, so the hook writes the rung on every leave (the
+  *  pass-7 hook).
+  *  NAME_KEY: a leave answers a running animation whenever its COMPUTED name is not `none` (the
+- *  pass-8 hook, keyed on the proxy): a name that no `@keyframes` defines writes the rung. */
+-const fakeAnimations = (mode: 'blind' | 'name') => `(() => {
++ *  pass-8 hook, keyed on the proxy): a name that no `@keyframes` defines writes the rung.
++ *  PRESENT_KEY: a leave answers every CSS animation it carries as running on the document's
++ *  timeline, whatever its play state or timeline (the pass-9 hook, keyed on presence, LAWS P9 §D):
++ *  a paused verb, a verb on no timeline and one on a scroll timeline write the rung.
++ *  Every answer carries `playState: 'running'` and `timeline: document.timeline`, so the hook's
++ *  pass-10 key can't refuse a fake on its own clauses: what a negative proves is the old key. */
++const fakeAnimations = (mode: 'blind' | 'name' | 'present') => `(() => {
+   const real = Element.prototype.getAnimations;
+   Element.prototype.getAnimations = function (o) {
+-    if (!/-leave-active/.test(String(this.getAttribute('class')))) return real.call(this, o);
++    const own = real.call(this, o);
++    if (!/-leave-active/.test(String(this.getAttribute('class')))) return own;
++    const run = (animationName) => ({ animationName, playState: 'running', timeline: document.timeline });
++    if ('${mode}' === 'present') return own.filter((a) => 'animationName' in a).map((a) => run(a.animationName));
+     const n = getComputedStyle(this).animationName;
+     const still = n.split(',').every((x) => x.trim() === 'none');
+-    return '${mode}' === 'blind' || !still ? [{ animationName: n, playState: 'running' }] : [];
++    return '${mode}' === 'blind' || !still ? [run(n)] : [];
+   };
+ })();`;
+ const BLIND_THE_FENCE = fakeAnimations('blind');
+ const NAME_KEY = fakeAnimations('name');
++const PRESENT_KEY = fakeAnimations('present');
++
++/** The pass-9 critic's class (LAWS P9 §D): a leave that SHIPS its verb, with one declaration that
++ *  keeps the verb present and stops it running. Each is `!important`, since the site's `animation`
++ *  shorthand resets both longhands. Under the presence key each holds the sentence for the rung,
++ *  both engines. */
++const NOT_RUNNING: { name: string; decl: string }[] = [
++  { name: 'animation-play-state: paused', decl: 'animation-play-state: paused !important' },
++  { name: 'animation-timeline: none', decl: 'animation-timeline: none !important' },
++  { name: 'animation-timeline: scroll(root)', decl: 'animation-timeline: scroll(root) !important' },
++];
+ 
+ /** The pass-8 critic's plant (LAWS P8 §D): a leave whose computed name no `@keyframes` defines.
+  *  Assembled at run time, never spelled: a spelled plant is a Tailwind source (T9-R6). */
+@@ -544,21 +563,75 @@ const STILL_LEAVES: { name: string; computed: string; arm: (page: Page) => Promi
+   },
+ ];
+ 
++/** THE TEETH of a zero-length leave (pass 10, LAWS P9 §F): the exact `0s` the hook wrote and at
++ *  most ZERO_LEAVE_FRAMES frames connected. Both are literal pins. The pass-9 time clause
++ *  (`ms < MOTION.rungs.whisper`) is STRUCK as decorative: its bound is the negative's own clock
++ *  (Vue's `duration + 1`), so a 140 ms write held 145-150 ms and passed it (the pass-9 critic). The
++ *  `visible <= painted` clause is STRUCK as vacuous: a visible frame is a connected frame by
++ *  construction. `ms` and `visible` are printed, never gated, on a still leave. */
++const ZERO_LEAVE_FRAMES = 2;
++const zeroLengthLeave = (leave: { animationDuration: string; painted: number }) =>
++  leave.animationDuration === '0s' && leave.painted <= ZERO_LEAVE_FRAMES;
++
++// The bound ±ε, pinned as literals the constant can't move (LAWS P9 §F): a record connected on
++// 1 or 2 frames is a zero-length leave, on 3 it is not; a 1 ms write is not `0s`.
++test('drop clock: the zero-length bound, ±1 frame and ±1 ms, as literals', () => {
++  expect(zeroLengthLeave({ animationDuration: '0s', painted: 1 })).toBe(true);
++  expect(zeroLengthLeave({ animationDuration: '0s', painted: 2 })).toBe(true);
++  expect(zeroLengthLeave({ animationDuration: '0s', painted: 3 })).toBe(false);
++  expect(zeroLengthLeave({ animationDuration: '0.001s', painted: 1 })).toBe(false);
++});
++
+ for (const still of STILL_LEAVES) {
+   test(`drop clock: a leave with no animation has no clock — ${still.name}`, async ({ page }) => {
+     const leave = await redLineLeaves(page, still.arm);
+     expect(leave.animationName).toBe(still.computed);
+     expect(leave.animationDuration).toBe('0s');
+-    // A zero-length leave: gone inside one whisper, connected (and so visible) on at most two frames.
+-    expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+-    expect(leave.painted).toBeLessThanOrEqual(2);
+-    expect(leave.visible).toBeLessThanOrEqual(leave.painted);
++    expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
++    expect(zeroLengthLeave(leave)).toBe(true);
+     console.log(
+       `still leave ${still.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+     );
+   });
+ }
+ 
++/** The shipped red-line leave with one declaration that stops its verb without removing it. */
++const notRunningArm = (decl: string) => (page: Page) =>
++  page
++    .addStyleTag({ content: `.margin-note-ink.note-leave-active { ${decl}; }` })
++    .then(() => undefined);
++
++for (const scheme of ['light', 'dark'] as const)
++for (const plant of NOT_RUNNING) {
++  test(`drop clock: a verb PRESENT but not RUNNING has no clock — ${scheme}, ${plant.name}`, async ({
++    page,
++  }) => {
++    await page.emulateMedia({ colorScheme: scheme });
++    const leave = await redLineLeaves(page, notRunningArm(plant.decl));
++    // The verb is still the leave's: present, and named.
++    expect(leave.animationName).not.toBe('none');
++    expect(leave.animationDuration).toBe('0s');
++    expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
++    console.log(
++      `not running ${scheme} ${plant.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
++  });
++
++  test(`drop clock (negative, in-run): the pass-9 presence key holds ${plant.name} for the rung — ${scheme}`, async ({
++    page,
++  }) => {
++    await page.emulateMedia({ colorScheme: scheme });
++    await page.addInitScript(PRESENT_KEY);
++    const leave = await redLineLeaves(page, notRunningArm(plant.decl));
++    expect(leave.animationName).not.toBe('none');
++    expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++    expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
++    console.log(
++      `presence negative ${scheme} ${plant.name}: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
++  });
++}
++
+ test('drop clock (negative, in-run): the fence blinded holds a still leave for the rung', async ({
+   page,
+ }) => {
+@@ -567,7 +640,6 @@ test('drop clock (negative, in-run): the fence blinded holds a still leave for t
+   const leave = await redLineLeaves(page);
+   // The pass-7 hook's reading: the rung written on a leave with no verb, the node held for it.
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
+   expect(leave.painted).toBeGreaterThan(2);
+   // On the tree the held node is VISIBLE on one frame: `.note-leave-to` is `opacity: 0` from frame
+   // two. Its harm is the next line's write-in held for the rung (out-in), not a double paint.
+@@ -589,7 +661,6 @@ test('drop clock (negative, in-run): the pass-8 name key holds a GHOST leave for
+   );
+   expect(leave.animationName).toBe(GHOST);
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
+   expect(leave.painted).toBeGreaterThan(2);
+   console.log(
+     `ghost negative (name key): held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+@@ -695,11 +766,11 @@ for (const sw of SWAP_ARMS) {
+     expect(await lineOne(page)).not.toBe(held);
+     expect(leave.animationName).toBe(sw.computed);
+     expect(leave.animationDuration).toBe('0s');
+-    expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+     // Every frame the old node is VISIBLE, line two already paints its sentence: these ARE the
+-    // both-line frames (no `-leave-to` on the swap, so connected and visible agree).
+-    expect(leave.visible).toBeLessThanOrEqual(2);
+-    expect(leave.painted).toBeLessThanOrEqual(2);
++    // both-line frames (no `-leave-to` on the swap, so connected and visible agree). The teeth are
++    // the connected count (a visible frame is a connected one); the time clause is struck (pass 10).
++    expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
++    expect(zeroLengthLeave(leave)).toBe(true);
+     console.log(
+       `swap ${scheme} ${sw.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+     );
+@@ -715,7 +786,6 @@ test('drop clock, the SWAP (negative, in-run): the fence blinded holds the swap
+   await ask(page);
+   const leave = await done();
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
+   expect(leave.painted).toBeGreaterThan(2);
+   console.log(
+     `swap negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+@@ -733,7 +803,7 @@ for (const scheme of ['light', 'dark'] as const)
+     const leave = await done();
+     expect(leave.animationName).toBe(GHOST);
+     expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-    expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++    expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
+     expect(leave.visible).toBeGreaterThan(2);
+     console.log(
+       `swap ghost negative ${scheme}: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+@@ -800,8 +870,7 @@ for (const adv of LINE_TWO_ADVERSARIES) {
+     if (adv.still) {
+       expect(leave.animationName).toBe(adv.still);
+       expect(leave.animationDuration).toBe('0s');
+-      expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+-      expect(leave.painted).toBeLessThanOrEqual(2);
++      expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
+     } else {
+       expect(leave.animationName).toContain('ink-rub-out');
+       for (const d of leave.animationDuration.split(','))
+@@ -821,7 +890,7 @@ test('drop clock, line two (negative, in-run): the pass-8 name key holds a GHOST
+   const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`);
+   expect(leave.animationName).toBe(GHOST);
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
+   console.log(
+     `line two ghost negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+   );
+@@ -832,8 +901,7 @@ test('drop clock, line two: the ghost name is a zero-length leave — dark', asy
+   const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`, 'dark');
+   expect(leave.animationName).toBe(GHOST);
+   expect(leave.animationDuration).toBe('0s');
+-  expect(leave.ms).toBeLessThan(MOTION.rungs.whisper);
+-  expect(leave.painted).toBeLessThanOrEqual(2);
++  expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
+   console.log(
+     `line two dark ghost: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+   );
+@@ -846,12 +914,95 @@ test('drop clock, line two (negative, in-run): the pass-8 name key holds a GHOST
+   const leave = await lineTwoLeaves(page, `${TWO} { animation-name: ${GHOST} !important; }`, 'dark');
+   expect(leave.animationName).toBe(GHOST);
+   expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
+-  expect(leave.ms).toBeGreaterThanOrEqual(MOTION.rungs.whisper);
++  expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
+   console.log(
+     `line two dark ghost negative: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
+   );
+ });
+ 
++// Pass 10 (LAWS P9 §D): PRESENT IS NOT RUNNING, on the union's two other leaves. The SWAP ships no
++// verb (`animation: none`), so its plants give it the real one (`ink-rub-out` on its own length),
++// and the POSITIVE control is that verb running: the rung is written and the node fades. Each class
++// plant adds one declaration that keeps the verb present and stops it running; line two ships its
++// verb, so its plants are that one declaration. Every negative is the pass-9 presence key in-run.
++const SWAP_VERB = `.margin-note-ink.note-swap-leave-active { animation-name: ink-rub-out; animation-duration: ${MOTION.rungs.whisper}ms`;
++const swapVerb = (decl?: string) => (page: Page) =>
++  page
++    .addStyleTag({ content: `${SWAP_VERB}${decl ? `; ${decl}` : ''}; }` })
++    .then(() => undefined);
++
++async function swapLeaves(page: Page, scheme: 'light' | 'dark', arm: (page: Page) => Promise<void>) {
++  await holdDeal(page, scheme, arm);
++  const held = await lineOne(page);
++  const done = await watchLeave(page, LINE_ONE_LEAVING);
++  await ask(page);
++  const leave = await done();
++  await expect.poll(() => lineTwo(page)).toBe(held);
++  return leave;
++}
++
++for (const scheme of ['light', 'dark'] as const) {
++  test(`drop clock, the SWAP (positive, in-run): a RUNNING verb keeps its rung — ${scheme}`, async ({
++    page,
++  }) => {
++    const leave = await swapLeaves(page, scheme, swapVerb());
++    expect(leave.animationName).toBe('ink-rub-out');
++    expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++    // Held across frames, not to the millisecond: a running leave's clock IS Vue's rung + 1, read
++    // from first sight of the class (149.2 ms once, chromium, pass 10). The time is printed.
++    expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
++    console.log(
++      `swap running verb ${scheme}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++    );
++  });
++  for (const plant of NOT_RUNNING) {
++    test(`drop clock, the SWAP: a verb PRESENT but not RUNNING has no clock — ${scheme}, ${plant.name}`, async ({
++      page,
++    }) => {
++      const leave = await swapLeaves(page, scheme, swapVerb(plant.decl));
++      expect(leave.animationName).toBe('ink-rub-out');
++      expect(leave.animationDuration).toBe('0s');
++      expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
++      console.log(
++        `swap not running ${scheme} ${plant.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++      );
++    });
++    test(`drop clock, the SWAP (negative, in-run): the pass-9 presence key holds ${plant.name} — ${scheme}`, async ({
++      page,
++    }) => {
++      await page.addInitScript(PRESENT_KEY);
++      const leave = await swapLeaves(page, scheme, swapVerb(plant.decl));
++      expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++      expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
++      console.log(
++        `swap presence negative ${scheme} ${plant.name}: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++      );
++    });
++    test(`drop clock, line two: a verb PRESENT but not RUNNING has no clock — ${scheme}, ${plant.name}`, async ({
++      page,
++    }) => {
++      const leave = await lineTwoLeaves(page, `${TWO} { ${plant.decl}; }`, scheme);
++      expect(leave.animationName).toContain('ink-rub-out');
++      expect(leave.animationDuration).toBe('0s');
++      expect(leave.painted).toBeLessThanOrEqual(ZERO_LEAVE_FRAMES);
++      console.log(
++        `line two not running ${scheme} ${plant.name}: ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++      );
++    });
++    test(`drop clock, line two (negative, in-run): the pass-9 presence key holds ${plant.name} — ${scheme}`, async ({
++      page,
++    }) => {
++      await page.addInitScript(PRESENT_KEY);
++      const leave = await lineTwoLeaves(page, `${TWO} { ${plant.decl}; }`, scheme);
++      expect(leave.animationDuration).toBe(`${MOTION.rungs.whisper / 1000}s`);
++      expect(leave.painted).toBeGreaterThan(ZERO_LEAVE_FRAMES);
++      console.log(
++        `line two presence negative ${scheme} ${plant.name}: held ${leave.ms} ms, ${leave.painted} connected / ${leave.visible} visible frames`,
++      );
++    });
++  }
++}
++
+ for (const adv of LINE_TWO_ADVERSARIES.filter((a) => /layer|shorthand|:root/.test(a.name)))
+   test(`drop clock, line two (negative, in-run): pass 6's hook is held by ${adv.name}`, async ({
+     page,
+diff --git a/web/frontend/scripts/check-theme-tokens.mjs b/web/frontend/scripts/check-theme-tokens.mjs
+index 0aee5de..2995a34 100644
+--- a/web/frontend/scripts/check-theme-tokens.mjs
++++ b/web/frontend/scripts/check-theme-tokens.mjs
+@@ -586,7 +586,11 @@ for (const id of OFF)
+     throw new Error(`THEME_SABOTAGE: no clause ${id} (${REG_CLAUSES.join(", ")})`);
+ /** A registration a SCRIPT makes: `registerProperty(` in code, or `@property` text in a script
+  *  string (the library's `script-css`). C4's shape: any of them reds, whatever the name. */
+-const fromScript = (r) => r.kind === "registerProperty" || /script/.test(r.kind);
++// Every `registerProperty*` kind: the call itself, and (homes v3, `register-callee`) the UNRESOLVED
++// `registerProperty-ref` and `registerProperty-computed` sites. Keyed on the bare kind, the row
++// dropped both and read 0 (pass 10, born RED in `--self-test`).
++const fromScript = (r) =>
++  /^registerProperty(?:$|-)/.test(r.kind) || /script/.test(r.kind);
+ 
+ /**
+  * THE REGISTRATION ROW, THROUGH THE ONE LIBRARY (pass 8, LAWS P7 §F/§I). Pass 7's row walked
+@@ -1449,6 +1453,36 @@ function main() {
+             `\nconst reg = CSS.registerProperty.bind(CSS);\nreg(${JSREG});\n`,
+         ),
+       ],
++      // Pass 10 (the pass-9 critic's six, LAWS P9 §F): a call whose CALLEE resolves to
++      // `CSS.registerProperty`, each live in both engines with this row at 0 on homes v2. Homes v3's
++      // `callee-norm` resolves them by name.
++      ...[
++        [".call", `CSS.registerProperty.call(CSS, ${JSREG});`],
++        ["an optional call", `CSS.registerProperty?.(${JSREG});`],
++        ["Reflect.apply", `Reflect.apply(CSS.registerProperty, CSS, [${JSREG}]);`],
++        ["a comma callee", `(0, CSS.registerProperty)(${JSREG});`],
++        [
++          "a const-keyed bracket",
++          `const k10 = "registerProperty";\nCSS[k10](${JSREG});`,
++        ],
++        [
++          "an assigned .bind alias",
++          `let r10;\nr10 = CSS.registerProperty.bind(CSS);\nr10(${JSREG});`,
++        ],
++        // What no reader resolves is an UNRESOLVED registration (`register-callee`), and this row
++        // reds it: the reference handed off, and a bracket key known only at run time.
++        [
++          "UNRESOLVED: the reference handed off",
++          `const q10 = [];\nq10.push(CSS.registerProperty);\nq10[0].call(CSS, ${JSREG});`,
++        ],
++        [
++          "UNRESOLVED: a run-time bracket key",
++          `const f10 = document.body.dataset.k ?? "registerProperty";\nCSS[f10](${JSREG});`,
++        ],
++      ].map(([label, code]) => [
++        `a script registration by callee: ${label}`,
++        plantFile("src/main.ts", real("src/main.ts") + `\n${code}\n`),
++      ]),
+       [
+         'concatenated "@prop" + "erty …" text appended as a <style>',
+         plantFile(
+diff --git a/web/frontend/src/pencil/chrome/MarginNote.vue b/web/frontend/src/pencil/chrome/MarginNote.vue
+index 67e183b..f1a64c8 100644
+--- a/web/frontend/src/pencil/chrome/MarginNote.vue
++++ b/web/frontend/src/pencil/chrome/MarginNote.vue
+@@ -223,15 +223,29 @@ onUnmounted(() => {
+ // THE KEY IS A RUNNING ANIMATION, NOT A NAME (pass 9, LAWS P8 §D). A computed name is a proxy: a
+ // name that no `@keyframes` defines (a typo, a sheet that never loaded) still computes, so the
+ // pass-8 read wrote the rung and the old line sat on the page 156-167 ms with nothing running (the
+-// pass-8 critic's plant, in chromium and in WebKit). The key now is `getAnimations()`, which
+-// flushes style first: read on `@leave` it returns the leave's own CSS animation when, and only
+-// when, one runs. A CSS animation is the only kind that carries `animationName`; a script's own
+-// `animate()` and a fenced transition do not, and Vue's clock reads neither. `none`, the PRM arm
+-// and a name with no keyframes all run nothing, so each writes 0s. An engine without
++// pass-8 critic's plant, in chromium and in WebKit). The key is `getAnimations()`, which flushes
++// style first, read on `@leave`. A CSS animation is the only kind that carries `animationName`; a
++// script's own `animate()` and a fenced transition do not, and Vue's clock reads neither. `none`,
++// the PRM arm and a name with no keyframes return nothing, so each writes 0s. An engine without
+ // `getAnimations` (none this site supports) writes 0s too: no proof of a verb, no clock.
++//
++// PRESENT IS NOT RUNNING (pass 10, LAWS P9 §D). `getAnimations()` also returns an animation that
++// will not move: one paused (`animation-play-state: paused`), one on no timeline
++// (`animation-timeline: none`), one on a scroll or view timeline that Vue's clock can't follow.
++// Keyed on presence, each wrote the rung and the sentence sat at full ink for 157-278 ms (the
++// pass-9 critic, both engines). So the rung is written only for a CSS animation whose
++// `playState` is `running` on the document's own timeline. Anything else is a zero-length leave.
+ function stopTheClock(el: Element): void {
+   const style = (el as HTMLElement).style;
+-  const runs = el.getAnimations?.().some((a) => "animationName" in a) ?? false;
++  const runs =
++    el
++      .getAnimations?.()
++      .some(
++        (a) =>
++          "animationName" in a &&
++          a.playState === "running" &&
++          a.timeline === document.timeline,
++      ) ?? false;
+   style.setProperty(
+     "animation-duration",
+     runs ? `${MOTION.rungs.whisper}ms` : "0s",
+diff --git a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+index c82d204..b81adb9 100644
+--- a/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
++++ b/web/frontend/src/pencil/chrome/marginNote.motion.test.ts
+@@ -80,8 +80,12 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     expect(MARGIN_NOTE_SRC).toMatch(/function stopTheClock\(el: Element\): void/);
+     // Pass 9 (LAWS P8 §D): the key is a RUNNING animation, never the computed name, which a name
+     // with no `@keyframes` satisfies while nothing runs.
+-    expect(MARGIN_NOTE_SRC).toMatch(/el\.getAnimations\?\.\(\)/);
++    expect(MARGIN_NOTE_SRC).toMatch(/el\s*\.getAnimations\?\.\(\)/);
+     expect(MARGIN_NOTE_SRC).not.toMatch(/getComputedStyle\(el\)\.animationName/);
++    // Pass 10 (LAWS P9 §D): present is not running. The key carries all three clauses.
++    expect(MARGIN_NOTE_SRC).toMatch(/"animationName" in a\s*&&/);
++    expect(MARGIN_NOTE_SRC).toMatch(/a\.playState === "running"\s*&&/);
++    expect(MARGIN_NOTE_SRC).toMatch(/a\.timeline === document\.timeline/);
+     expect(MARGIN_NOTE_SRC).toContain(
+       'style.setProperty("transition", "none", "important")',
+     );
+@@ -101,10 +105,19 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+    *  are the names a sheet defines, and the stub answers a CSS animation (it carries
+    *  `animationName`) for each computed name among them, as a browser does; `extra` adds what a
+    *  script's `animate()` leaves on the node. `engine: false` is an engine with no
+-   *  `getAnimations` at all. */
++   *  `getAnimations` at all. A CSS animation is answered RUNNING on the document's timeline, as a
++   *  browser's is on `@leave`; `anim` overrides its `playState` or `timeline` (pass 10: paused,
++   *  idle, finished, no timeline, a scroll timeline). jsdom has no `document.timeline`, so one is
++   *  installed for the read: an answer with no `timeline` field never matches it by `undefined`. */
+   async function leaveClock(
+     sheet: string,
+-    engine: { keyframes: string[]; extra?: object[] } | false = {
++    engine:
++      | {
++          keyframes: string[];
++          extra?: object[];
++          anim?: { playState?: string; timeline?: object | null };
++        }
++      | false = {
+       keyframes: ["ink-rub-out", "ink-rub-out-fade"],
+     },
+   ) {
+@@ -114,6 +127,11 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     const proto = Element.prototype as unknown as { getAnimations?: () => object[] };
+     const had = Object.prototype.hasOwnProperty.call(proto, "getAnimations");
+     const real = proto.getAnimations;
++    const tl = Object.getOwnPropertyDescriptor(document, "timeline");
++    Object.defineProperty(document, "timeline", {
++      value: DOC_TIMELINE,
++      configurable: true,
++    });
+     if (engine)
+       proto.getAnimations = function (this: Element) {
+         const names = getComputedStyle(this)
+@@ -122,7 +140,12 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+         return [
+           ...names
+             .filter((n) => engine.keyframes.includes(n))
+-            .map((animationName) => ({ animationName })),
++            .map((animationName) => ({
++              animationName,
++              playState: "running",
++              timeline: document.timeline,
++              ...engine.anim,
++            })),
+           ...(engine.extra ?? []),
+         ];
+       };
+@@ -158,8 +181,11 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+       st.remove();
+       if (had) proto.getAnimations = real;
+       else delete proto.getAnimations;
++      if (tl) Object.defineProperty(document, "timeline", tl);
++      else delete (document as { timeline?: unknown }).timeline;
+     }
+   }
++  const DOC_TIMELINE = { kind: "document" };
+ 
+   it("G16 (CI half): a rub-out leave carries the rung, no delay, no transition", async () => {
+     // The row above reads the hook's TEXT, so a dead hook with its strings intact
+@@ -216,12 +242,43 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+     expect(half.duration).toBe(`${MOTION.rungs.whisper}ms|important`);
+   });
+ 
++  it("G16 (CI half): a leave PRESENT but not RUNNING is a zero-length leave (pass 10)", async () => {
++    // The pass-9 critic's class (LAWS P9 §D): `getAnimations()` returns a paused animation, one on
++    // no timeline and one on a scroll timeline, and the presence key wrote the rung on each (the
++    // sentence held 157-278 ms at full ink, both engines). One plant per clause of the key, each
++    // the only thing wrong with an otherwise running rub-out.
++    const sheet =
++      ".note-leave-active { animation-name: ink-rub-out, ink-rub-out-fade; }";
++    const verbs = ["ink-rub-out", "ink-rub-out-fade"];
++    const plants: { playState?: string; timeline?: object | null }[] = [
++      { playState: "paused" },
++      { playState: "idle" },
++      { playState: "finished" },
++      { timeline: null },
++      { timeline: { kind: "scroll" } },
++    ];
++    for (const anim of plants) {
++      const clock = await leaveClock(sheet, { keyframes: verbs, anim });
++      expect(clock.name).toBe("ink-rub-out, ink-rub-out-fade");
++      expect(clock.duration, JSON.stringify(anim)).toBe("0s|important");
++      expect(clock.delay).toBe("0s|important");
++      expect(clock.transition).toBe("none|important");
++    }
++    // The positive control in the same row: the same verbs, running on the document's timeline.
++    const live = await leaveClock(sheet, {
++      keyframes: verbs,
++      anim: { playState: "running", timeline: DOC_TIMELINE },
++    });
++    expect(live.duration).toBe(`${MOTION.rungs.whisper}ms|important`);
++  });
++
+   it("G16 (CI half): only a CSS animation keys the clock; no getAnimations writes 0s", async () => {
+     // A script's own `animate()` on the leaving node carries no `animationName` and Vue's clock
+     // never reads it: the rub-out's name is off (`none`) and the script's animation is present.
+     const scripted = await leaveClock(".note-leave-active { animation-name: none; }", {
+       keyframes: ["ink-rub-out"],
+-      extra: [{ playState: "running" }],
++      // Running on the document's timeline (pass 10): only the `animationName` clause refuses it.
++      extra: [{ playState: "running", timeline: DOC_TIMELINE }],
+     });
+     expect(scripted.duration).toBe("0s|important");
+     // An engine with no `getAnimations`: no proof of a running verb, so no clock.
+@@ -254,8 +311,18 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+         .animationName.split(",")
+         .map((n) => n.trim())
+         .filter((n) => n === "ink-rub-out" || n === "ink-rub-out-fade")
+-        .map((animationName) => ({ animationName }));
++        .map((animationName) => ({
++          animationName,
++          playState: "running",
++          timeline: document.timeline,
++        }));
+     };
++    // Pass 10: the key reads `playState` and the document's timeline; jsdom has none, so one is
++    // installed for the row (an answer with no `timeline` never matches it by `undefined`).
++    Object.defineProperty(document, "timeline", {
++      value: DOC_TIMELINE,
++      configurable: true,
++    });
+     try {
+       const w = mount(MarginNote, {
+         props: { text: "only 5 fits here", seq: 1, kind: "record" },
+@@ -303,6 +370,7 @@ describe("the margin note's motion (T9-W7 §7)", () => {
+       st.remove();
+       Element.prototype.animate = realAnimate;
+       delete gproto.getAnimations;
++      delete (document as { timeline?: unknown }).timeline;
+     }
+   });
+ 

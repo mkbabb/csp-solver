@@ -1,0 +1,142 @@
+--- a/web/frontend/scripts/check-peer-arcs.mjs
++++ b/web/frontend/scripts/check-peer-arcs.mjs
+@@ -1252,11 +1252,18 @@
+         inkAt: (n) => (n === j ? { ...base(n), [key]: s } : base(n)),
+       };
+     };
+-    // THE BOUNDARY CONTROLS (LAWS P8 §F): one per floor the law holds, at floor − 0.005 (RED) and
+-    // floor + 0.005 (GREEN), on the row that floor gates and no other.
+-    for (const [tok, band, day, night] of SEP_STRINGS)
++    // THE BOUNDARY CONTROLS (LAWS P8 §F), IN PIN FORM (PAL-TIN pass 10, handed by sha): one per
++    // floor the law holds, at PIN − 0.005 (RED) and PIN + 0.005 (GREEN), on the row that floor gates
++    // and no other. The pins are NUMBERS here, never read off the constants they pin: a floor that
++    // moves past its pin by more than the 8-bit grain (0.005) reds its own control.
++    const FLOOR_PIN = {
++      "--color-user-ink": [0.1, 0.1],
++      "--color-peer-cursor-ink": [0.075, 0.1],
++      "--color-peer-name-ink": [0.1, 0.1],
++    };
++    for (const [tok, band] of SEP_STRINGS)
+       for (const k of [0, 1]) {
+-        const floor = k ? night : day;
++        const floor = FLOOR_PIN[tok][k];
+         const L = Number(armOf(k).get(band));
+         for (const [eps, wantRed] of [
+           [-0.005, true],
+@@ -1266,9 +1273,11 @@
+           const row = check2Separation(CTX, ts, pl.inkAt).law.find(
+             (r) => r.tok === tok && r.arm === (k ? "dark" : "light"),
+           );
+-          const ok = wantRed ? !row.ok : row.ok;
++          // the plant must sit on its side of the PIN, or it is no control of that pin
++          const sided = wantRed ? pl.d < floor : pl.d >= floor;
++          const ok = sided && (wantRed ? !row.ok : row.ok);
+           console.log(
+-            `  ${ok ? "✓" : "✗"} 2 ${wantRed ? "reds" : "GREEN on"} ${tok} ${k ? "dark" : "light"} at floor ${floor} ${eps > 0 ? "+" : "−"} 0.005 (planted ${pl.d.toFixed(4)}, read ${row.d.toFixed(4)})`,
++            `  ${ok ? "✓" : "✗"} 2 ${wantRed ? "reds" : "GREEN on"} ${tok} ${k ? "dark" : "light"} at PIN ${floor} ${eps > 0 ? "+" : "−"} 0.005 (planted ${pl.d.toFixed(4)}, read ${row.d.toFixed(4)})`,
+           );
+           if (!ok)
+             failures.push(
+@@ -1307,40 +1316,70 @@
+       if (!ok)
+         failures.push("[SELF-TEST] c2-cap passed a walk that grew past SEP_HANDS");
+     }
+-    // c2-cost: the churned cost may not read worse than the B-TAPE row (n=8 light, pair 2–7).
++    // c2-cost, EVERY CELL AND ARM (PAL-TIN pass 10, handed by sha; charter row 4): the churned cost
++    // may not read worse than the B-TAPE row, at n = 8 and n = 16, light and dark. The PINS are the
++    // row's numbers as written (count under MIN_DE; worst − COST_EPS), NEVER read off CHURN_COST or
++    // COST_EPS: a cost constant that moves by more than 0.001 at its bound, or by one pair at its
++    // count, reds its own control here. Each cell plants on its own worst pair.
+     {
+       const N = "--color-peer-name-ink";
+-      const L = Number(light.get("--peer-name-l"));
+-      const c8 = CHURN_COST[8];
+-      const costRed = (r) =>
+-        r.failures.some((f) => /the light names of 8 issued hands/.test(f));
+-      for (const [label, target, wantRed] of [
+-        ["WORST − (bound − 0.001)", c8.worst[0] - COST_EPS - 0.001, true],
+-        ["WORST + (bound + 0.001)", c8.worst[0] - COST_EPS + 0.001, false],
+-      ]) {
+-        const pl = reHue(walkModule.inkFor, 7, N, 2, L, target);
+-        const r = check2Separation(CTX, ts, pl.inkAt);
+-        const c = r.cost.find((x) => x.n === 8 && x.arm === "light");
+-        const ok = costRed(r) === wantRed;
+-        console.log(
+-          `  ${ok ? "✓" : "✗"} 2 ${wantRed ? "reds" : "GREEN on"} the churned cost ${label}: planted ${pl.d.toFixed(4)}, read ${c.under} under, worst ${c.d.toFixed(4)} against ${c8.worst[0]} − ${COST_EPS}`,
+-        );
+-        if (!ok)
+-          failures.push(`[SELF-TEST] c2-cost did not hold its boundary at ${label}`);
+-      }
+-      let more = null;
+-      for (let i = 0; i < 7 && !more; i++) {
+-        const pl = reHue(walkModule.inkFor, 7, N, i, L, 0.05);
+-        const r = check2Separation(CTX, ts, pl.inkAt);
+-        const c = r.cost.find((x) => x.n === 8 && x.arm === "light");
+-        if (c.under > c8.under[0] && c.d >= c8.worst[0] - COST_EPS) more = { i, c, r };
+-      }
+-      const ok = !!more && costRed(more.r);
+-      console.log(
+-        `  ${ok ? "✓" : "✗"} 2 reds COUNT + (hand 7's name 0.05 from hand ${more?.i ?? "?"}: ${more?.c.under ?? "?"} under against the row's ${c8.under[0]}, worst held)`,
+-      );
+-      if (!ok)
+-        failures.push("[SELF-TEST] c2-cost passed one more churned pair under the law");
++      const COST_PIN = {
++        8: { under: [11, 11], bound: [0.0124, 0.0119] },
++        16: { under: [51, 51], bound: [0.0053, 0.0037] },
++      };
++      for (const n of [8, 16])
++        for (const k of [0, 1]) {
++          const arm = k ? "dark" : "light";
++          const L = Number(armOf(k).get("--peer-name-l"));
++          const pin = COST_PIN[n];
++          const costRed = (r) =>
++            r.failures.some((f) => f.startsWith(`the ${arm} names of ${n} issued hands`));
++          const cell = (r) => r.cost.find((x) => x.n === n && x.arm === arm);
++          const [a, b] = pairsOf(walkModule.inkFor, N, L, n).at.split("–").map(Number);
++          for (const [label, target, wantRed] of [
++            ["WORST − (pin − 0.001)", pin.bound[k] - 0.001, true],
++            ["WORST + (pin + 0.001)", pin.bound[k] + 0.001, false],
++          ]) {
++            // the construction: hand b re-hued off hand a (else a off b) so the cell's worst pair
++            // reads the target and no pair is added under the law (the COUNT is not this plant's
++            // variable)
++            let got = null;
++            for (const [j, i] of [
++              [b, a],
++              [a, b],
++            ]) {
++              const pl = reHue(walkModule.inkFor, j, N, i, L, target);
++              const r = check2Separation(CTX, ts, pl.inkAt);
++              const c = cell(r);
++              if (Math.abs(c.d - target) <= 0.0005 && c.under <= pin.under[k]) {
++                got = { pl, r, c, j, i };
++                break;
++              }
++            }
++            const ok = !!got && costRed(got.r) === wantRed;
++            console.log(
++              `  ${ok ? "✓" : "✗"} 2 ${wantRed ? "reds" : "GREEN on"} the churned cost n=${n} ${arm} ${label}: ${got ? `hand ${got.j} off ${got.i}, planted ${got.pl.d.toFixed(4)}, read ${got.c.under} under, worst ${got.c.d.toFixed(4)} against PIN ${pin.bound[k]}` : "no construction"}`,
++            );
++            if (!ok)
++              failures.push(`[SELF-TEST] c2-cost n=${n} ${arm} did not hold its PIN at ${label}`);
++          }
++          // COUNT + : one more pair under the law, the worst held at or above the PIN's bound
++          let more = null;
++          for (let i = 0; i < n - 1 && !more; i++)
++            for (const t of [0.05, 0.08]) {
++              if (more) break;
++              const pl = reHue(walkModule.inkFor, n - 1, N, i, L, t);
++              const r = check2Separation(CTX, ts, pl.inkAt);
++              const c = cell(r);
++              if (c.under === pin.under[k] + 1 && c.d >= pin.bound[k]) more = { i, t, c, r };
++            }
++          const ok = !!more && costRed(more.r);
++          console.log(
++            `  ${ok ? "✓" : "✗"} 2 reds COUNT + at n=${n} ${arm} (hand ${n - 1}'s name ${more?.t ?? "?"} from hand ${more?.i ?? "?"}: ${more?.c.under ?? "?"} under against the PIN's ${pin.under[k]}, worst ${more ? more.c.d.toFixed(4) : "?"} held)`,
++          );
++          if (!ok)
++            failures.push(`[SELF-TEST] c2-cost n=${n} ${arm} passed one more churned pair under the law`);
++        }
+     }
+     // The law at TIN's room of five REDS the walk, printed as the cost it is, never as a pass.
+     const five = [light, dark].map(

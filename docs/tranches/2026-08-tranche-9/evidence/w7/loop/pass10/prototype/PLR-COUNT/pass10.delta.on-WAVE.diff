@@ -1,0 +1,534 @@
+diff --git a/web/frontend/e2e/player-tally.spec.ts b/web/frontend/e2e/player-tally.spec.ts
+index e7df212..02caa24 100644
+--- a/web/frontend/e2e/player-tally.spec.ts
++++ b/web/frontend/e2e/player-tally.spec.ts
+@@ -57,6 +57,67 @@ const nameAt = (N: number) =>
+ /** How many people a name counts: its state line's number, the first in it, under every arm. */
+ const countOf = (label: string | null) => Number((label ?? "").match(/\d+/)?.[0] ?? 0);
+ 
++/**
++ * THE STATE LINE UNDER THE SHIPPED ARM (CHAIR pass-10 §9: PLR-PLACE and PLR-COUNT cut ONE route).
++ * PLACE's seating chart, where it ships, IS the sheet's first line in a room, and the state line is
++ * then not drawn (`<p v-if="!chart" class="pl-state">`, PlayerLobby.vue): the mark's name already
++ * says it. Like `SIX_ARM`, the arm is read from the component's own source, so a row asserts the
++ * arm it runs under and no other. The rule is ONE predicate on both arms, read on the open sheet:
++ * the name counts the room; a chart and a drawn state line never share a sheet; with no chart the
++ * state line is drawn, once, and reads the count. `STATE_PLANTS` flips each half of it in the run.
++ */
++const CHART_ARM = /<p\s+v-if="!chart"\s+class="pl-state"/.test(
++  readFileSync(
++    fileURLToPath(new URL("../src/pencil/chrome/PlayerMark/PlayerLobby.vue", import.meta.url)),
++    "utf8",
++  ),
++);
++type StateRead = { chart: number; state: string[]; name: string | null };
++const stateWhy = (s: StateRead, text: string) => {
++  const why: string[] = [];
++  if (countOf(s.name) !== countOf(text)) why.push(`the name counts ${countOf(s.name)}, not ${text}`);
++  if (s.chart > 0 && s.state.length) why.push(`a state line drawn under the chart (${s.state})`);
++  if (s.chart === 0 && (s.state.length !== 1 || s.state[0] !== text))
++    why.push(`no chart, and the state line reads ${JSON.stringify(s.state)}, not ${text}`);
++  if (s.chart > 0 && !CHART_ARM) why.push("a chart drawn under a source with no chart arm");
++  return why;
++};
++/** The open sheet's first line, read whole; `plant` flips one half of the rule for this read only
++ *  and puts the page back as it was (the node itself, at its own place). */
++async function stateLine(page: Page, plant: "" | "state" | "chart" = "") {
++  const s = await page
++    .locator("[data-lobby]:visible")
++    .first()
++    .evaluate((e, plant) => {
++      const undo: (() => void)[] = [];
++      const flip = (sel: string, tag: string, text: string) => {
++        const n = e.querySelector(sel);
++        if (n) {
++          const [parent, next] = [n.parentNode!, n.nextSibling];
++          n.remove();
++          undo.push(() => parent.insertBefore(n, next));
++        } else {
++          const t = document.createElement(tag);
++          t.className = sel.slice(1);
++          t.textContent = text;
++          e.prepend(t);
++          undo.push(() => t.remove());
++        }
++      };
++      if (plant === "state") flip(".pl-state", "p", "16 players");
++      if (plant === "chart") flip(".pl-chart", "div", "");
++      const read = {
++        chart: e.querySelectorAll(".pl-chart").length,
++        state: [...e.querySelectorAll(".pl-state")].map((p) => (p.textContent ?? "").trim()),
++      };
++      undo.forEach((u) => u());
++      return read;
++    }, plant);
++  return { ...s, name: await mark(page).getAttribute("aria-label") } as StateRead;
++}
++/** Each half of the rule, planted in the run on the arm the page ships: both must be SEEN. */
++const STATE_PLANTS = ["state", "chart"] as const;
++
+ /** A pose is settled when two reads 150ms apart agree (the leader's `stable`, one rule). */
+ async function stable(read: () => Promise<unknown>) {
+   let last: unknown = Symbol("unread");
+@@ -548,7 +609,7 @@ test.describe("the short phone", () => {
+     const sheet = page.locator("[data-lobby]:visible").first();
+     await expect(sheet).toBeVisible();
+     await settle(page);
+-    await expect(sheet.locator(".pl-state")).toHaveText("3 players");
++    await expect.poll(async () => stateWhy(await stateLine(page), "3 players")).toEqual([]);
+     await expect(sheet.locator(".pl-row")).toHaveCount(1);
+     await expect(sheet.locator(".pl-more")).toHaveText("and 2 more");
+     const named = await sheet.locator(".pl-name").allTextContents();
+@@ -576,9 +637,22 @@ test.describe("the tall phone", () => {
+     const sheet = page.locator("[data-lobby]:visible").first();
+     await expect(sheet).toBeVisible();
+     await settle(page);
+-    await expect(sheet.locator(".pl-state")).toHaveText("16 players");
+-    await expect(sheet.locator(".pl-row")).toHaveCount(4);
+-    await expect(sheet.locator(".pl-more")).toHaveText("and 12 more");
++    await expect.poll(async () => stateWhy(await stateLine(page), "16 players")).toEqual([]);
++    // EACH HALF OF THE RULE, PLANTED: the arm this page ships, flipped, must be SEEN
++    const statePlants = Object.fromEntries(
++      await Promise.all(STATE_PLANTS.map(async (k) => [k, stateWhy(await stateLine(page, k), "16 players")] as const)),
++    );
++    console.log("STATE", JSON.stringify({ engine: test.info().project.name, CHART_ARM, clean: await stateLine(page), statePlants }));
++    for (const k of STATE_PLANTS) expect(statePlants[k], `the ${k} plant is SEEN`).not.toEqual([]);
++    // THE ROWS UNDER THE SHIPPED ARM: with no chart the §11 key's tall budget draws four; where PLACE's
++    // chart is drawn it takes the rows' room and the key draws what fits (the chart's own no-growth
++    // predicate). Either way the foot counts the rest of the same sixteen people.
++    const tallChart = (await stateLine(page)).chart;
++    if (tallChart === 0) await expect(sheet.locator(".pl-row")).toHaveCount(4);
++    const tallRows = await sheet.locator(".pl-row").count();
++    console.log("TALL ROWS", JSON.stringify({ engine: test.info().project.name, CHART_ARM, chart: tallChart, rows: tallRows }));
++    expect(tallRows, "the key draws at least one named row").toBeGreaterThan(0);
++    await expect(sheet.locator(".pl-more")).toHaveText(`and ${16 - tallRows} more`);
+     const box = await sheet.boundingBox();
+     console.log("TALL SHEET", JSON.stringify(box));
+     // The bottom of the sheet clears the board's own top edge on the tall phone. The board's
+@@ -674,7 +748,7 @@ for (const c of WIDE_CELLS)
+       );
+       // THE NEGATIVE CONTROL, same page: the mark moved onto the grid's first cell must be SEEN
+       // lapping it, so a lap count of 0 is a reading and not a blind one.
+-      await expect(page.locator("[data-lobby]:visible .pl-state").first()).toHaveText("16 players");
++      await expect.poll(async () => stateWhy(await stateLine(page), "16 players")).toEqual([]);
+       await page.keyboard.press("Escape");
+       await expect(page.locator("[data-lobby]:visible")).toHaveCount(0);
+       const onto = await page.addStyleTag({
+@@ -735,8 +809,18 @@ const TAG_RUNG = (q: Quiet) =>
+ /** G3's slack over the control's fraction (the probe's default, stated): a line may hold at most
+  *  5 % more of its pixels under 4.5 than the control holds on the same payload. */
+ const G14_SLACK = Number(process.env.G14_SLACK ?? 0.05);
++/** THE SLACK'S PIN, literals (LAWS P9 §F: a ±ε control the constant cannot move). PIN_SLACK is the
++ *  stated 0.05, typed, not read from G14_SLACK; PIN_EPS the half-width of the straddle a rung must
++ *  sit in to witness it. STRADDLE_CELLS: the cells where pass 9 read rungs within PIN_EPS on both
++ *  sides of the bound (the critic's WebKit four lines in light-1 and dark-1; chromium's dark-1). */
++const PIN_SLACK = 0.05;
++const PIN_EPS = 0.01;
++const STRADDLE_CELLS: Record<string, string[]> = { webkit: ["light-1", "dark-1"], chromium: ["dark-1"] };
+ /** The served π control (LOCAL, O-12): the row cannot read without it, and says so. */
+ const G14_CONTROL = process.env.G14_CONTROL ?? "";
++/** The π control's served identity (`74a2b5d9`'s pre-built dist), a LITERAL: the anchor is asserted
++ *  in the run, never assumed from the README (LAWS P9 §F, the pass-9 critic's A1). */
++const G14_BUNDLE = /\/assets\/index-CubiZsMVSwTc\.js$/;
+ /** The clause-sabotage battery (LAWS P7 §F (ii)): `G14_DROP=G5` deletes that clause from the
+  *  verdict, and the row must then RED on the plant only that clause sees. */
+ const G14_DROP = new Set((process.env.G14_DROP ?? "").split(",").filter(Boolean));
+@@ -900,6 +984,93 @@ for (const theme of ["light", "dark"] as const)
+           "the theme is witnessed",
+         ).toBe(theme === "dark");
+         expect(await boundId(page, room), "the page is B").toBe(B_ID);
++        const subjectOf = (q: Quiet) => `.corner-left [data-lobby] ${q}`;
++        /** ONE POSE'S READ: the lines it draws, the control's read of the same payload (its bundle
++         *  ASSERTED to be the π control's, LAWS P9 §F), and the probe's gate per line. */
++        async function readPose(lines: Quiet[], payload: string) {
++          const at = await Promise.all(
++            lines.map((q) =>
++              page.locator(subjectOf(q)).evaluate(
++                (e, q) => {
++                  const r = e.getBoundingClientRect();
++                  const cs = getComputedStyle(e);
++                  return {
++                    q,
++                    text: (e.textContent ?? "").trim(),
++                    left: r.left,
++                    top: r.top,
++                    style: [cs.fontFamily, cs.fontSize, cs.fontWeight, cs.lineHeight].join(" | "),
++                  };
++                },
++                q,
++              ),
++            ),
++          );
++          const ctl = await controlReads(browser, theme, dpr, at);
++          // THE ANCHOR IS ASSERTED (the pass-9 critic's A1): a run pointed at any other server reads
++          // a token regression against itself, so the control's served bundle is the gate's first red
++          expect(ctl.bundle, `the control is the π control's dist (${cell})`).toMatch(G14_BUNDLE);
++          // the identity's negative control, same run: the page under test is never taken for it
++          const own = await page.evaluate(
++            () => [...document.scripts].map((s) => s.src).find((s) => s.includes("/assets/index-")) ?? "",
++          );
++          expect(own, `the tree's own page is not the control (${cell})`).not.toMatch(G14_BUNDLE);
++          const reads: Partial<Record<Quiet, Awaited<ReturnType<typeof glyphGate>>>> = {};
++          const printed: Partial<Record<Quiet, Set<string>>> = {};
++          const edges: Partial<Record<Quiet, { margin: number; under: string[]; over: string[] }>> = {};
++          for (const q of lines) {
++            const subject = subjectOf(q);
++            printed[q] = printedBy(ctl.reads[q]);
++            const sweep = await G5SWEEP(page, subject);
++            reads[q] = await glyphGate(page, {
++              subject,
++              payload,
++              slack: G14_SLACK,
++              control: ctl.reads[q],
++              plants: {
++                ...TEXT_PLANTS(subject),
++                X1b: X1B,
++                ...(theme === "dark" ? { X2w: X2W } : {}),
++                ...Object.fromEntries(sweep.map((css, k) => [`G5one_${k}`, css])),
++                ...Object.fromEntries(G2SWEEP(subject)),
++              },
++            });
++            // THE COMPARATOR, read in the run: the same line against its own fraction −ε must red G3
++            // and +ε must not. This pins G3's strictness at the line's fraction, NOT the slack (the
++            // critic's A2): the slack's pin is the straddle row below. The margin is printed.
++            const f = reads[q]!.clean.fracUnder ?? 1;
++            const edge = (b: number) =>
++              glyphPopulation(page, { subject, fracBound: b, tolerate: ctl.reads[q].g4Lows ?? [] }).then((r) =>
++                r.why.map(clauseOf),
++              );
++            edges[q] = {
++              margin: +((reads[q]!.bound ?? 0) - f).toFixed(3),
++              under: await edge(f - 0.005),
++              over: await edge(f + 0.005),
++            };
++          }
++          return { lines, payload, at, ctl, reads, printed, edges };
++        }
++        type Pose = Awaited<ReturnType<typeof readPose>>;
++        const poses: Pose[] = [];
++        if (CHART_ARM) {
++          // UNDER THE CHART ARM the state line is drawn only where no chart is, which is alone: its
++          // rung is read there, on this page, before the room arrives (its own payload, named).
++          await mark(page).click();
++          await settle(page);
++          expect(stateWhy(await stateLine(page), "1 player"), `alone, the first line (${cell})`).toEqual([]);
++          poses.push(await readPose([".pl-state"], `one at the desk, ${B_ID}, ${cell}`));
++          await page.keyboard.press("Escape");
++          await expect
++            .poll(() =>
++              page.evaluate(() =>
++                [...document.querySelectorAll("[data-lobby]")].every(
++                  (e) => getComputedStyle(e).visibility === "hidden",
++                ),
++              ),
++            )
++            .toBe(true);
++        }
+         await peers(page, room, 15);
+         await beat(page, room, Array.from({ length: 15 }, (_, i) => `tally-${i}`));
+         await mark(page).click();
+@@ -917,60 +1088,39 @@ for (const theme of ["light", "dark"] as const)
+         await expect.poll(ground).toBe(shipped);
+         const rows = await sheet.locator(".pl-row").count();
+         const foot = (await sheet.locator(".pl-more").textContent())?.trim();
+-        const subjectOf = (q: Quiet) => `.corner-left [data-lobby] ${q}`;
+-        const at = await Promise.all(
+-          QUIET.map((q) =>
+-            page.locator(subjectOf(q)).evaluate(
+-              (e, q) => {
+-                const r = e.getBoundingClientRect();
+-                const cs = getComputedStyle(e);
+-                return {
+-                  q,
+-                  text: (e.textContent ?? "").trim(),
+-                  left: r.left,
+-                  top: r.top,
+-                  style: [cs.fontFamily, cs.fontSize, cs.fontWeight, cs.lineHeight].join(" | "),
+-                };
+-              },
+-              q,
+-            ),
++        // THE SHIPPED ARM IN THE ROOM (CHAIR pass-10 §9): the sheet's first line obeys the one rule,
++        // and the room's pose reads every quiet line it draws; under the chart arm `.pl-state` was
++        // read alone, above, where it is drawn
++        const roomState = await stateLine(page);
++        expect(stateWhy(roomState, "16 players"), `the room's first line (${cell})`).toEqual([]);
++        poses.push(
++          await readPose(
++            QUIET.filter((q) => !(roomState.chart > 0 && q === ".pl-state") && !poses.some((p) => p.lines.includes(q))),
++            `sixteen at the desk, ${B_ID} + tally-0…14, ${cell}`,
+           ),
+         );
+-        const ctl = await controlReads(browser, theme, dpr, at);
+-        const payload = `sixteen at the desk, ${B_ID} + tally-0…14, ${cell}`;
++        // EACH LINE IS READ ONCE, on the pose that draws it
++        expect(poses.flatMap((p) => p.lines).sort(), `every quiet line read once (${cell})`).toEqual(
++          [...QUIET].sort(),
++        );
+         const reads = {} as Record<Quiet, Awaited<ReturnType<typeof glyphGate>>>;
+         const printed = {} as Record<Quiet, Set<string>>;
+         const edges = {} as Record<Quiet, { margin: number; under: string[]; over: string[] }>;
+-        for (const q of QUIET) {
+-          const subject = subjectOf(q);
+-          printed[q] = printedBy(ctl.reads[q]);
+-          const sweep = await G5SWEEP(page, subject);
+-          reads[q] = await glyphGate(page, {
+-            subject,
+-            payload,
+-            slack: G14_SLACK,
+-            control: ctl.reads[q],
+-            plants: {
+-              ...TEXT_PLANTS(subject),
+-              X1b: X1B,
+-              ...(theme === "dark" ? { X2w: X2W } : {}),
+-              ...Object.fromEntries(sweep.map((css, k) => [`G5one_${k}`, css])),
+-              ...Object.fromEntries(G2SWEEP(subject)),
+-            },
+-          });
+-          // THE BOUND'S EDGE, read in the run (LAWS P8 §F): the same line against its own fraction
+-          // −ε must red G3 and +ε must not; the margin to the control-anchored bound is printed
+-          const f = reads[q].clean.fracUnder ?? 1;
+-          const edge = (b: number) =>
+-            glyphPopulation(page, { subject, fracBound: b, tolerate: ctl.reads[q].g4Lows ?? [] }).then((r) =>
+-              r.why.map(clauseOf),
+-            );
+-          edges[q] = {
+-            margin: +((reads[q].bound ?? 0) - f).toFixed(3),
+-            under: await edge(f - 0.005),
+-            over: await edge(f + 0.005),
+-          };
+-        }
++        const ctlRead = {} as Record<Quiet, GlyphRead>;
++        const ctlStyle = {} as Record<Quiet, string>;
++        const atOf = {} as Record<Quiet, Pose["at"][number]>;
++        const payloadOf = {} as Record<Quiet, string>;
++        for (const p of poses)
++          for (const [i, q] of p.lines.entries()) {
++            reads[q] = p.reads[q]!;
++            printed[q] = p.printed[q]!;
++            edges[q] = p.edges[q]!;
++            ctlRead[q] = p.ctl.reads[q];
++            ctlStyle[q] = p.ctl.style[i];
++            atOf[q] = p.at[i];
++            payloadOf[q] = p.payload;
++          }
++        const payload = [...new Set(poses.map((p) => p.payload))].join(" · ");
+         const verdict = (r: GlyphRead, q: Quiet) => gated(r, printed[q]);
+         const brief = (r: GlyphRead) => ({
+           pop: r.population,
+@@ -984,7 +1134,9 @@ for (const theme of ["light", "dark"] as const)
+             engine: test.info().project.name,
+             cell,
+             payload,
+-            control: ctl.bundle,
++            control: poses.map((p) => p.ctl.bundle),
++            chartArm: CHART_ARM,
++            roomState,
+             slack: G14_SLACK,
+             drop: [...G14_DROP],
+             shipped,
+@@ -992,13 +1144,14 @@ for (const theme of ["light", "dark"] as const)
+             rows,
+             foot,
+             lines: Object.fromEntries(
+-              QUIET.map((q, i) => [
++              QUIET.map((q) => [
+                 q,
+                 {
+-                  text: at[i].text,
+-                  style: at[i].style,
+-                  ctlStyle: ctl.style[i],
+-                  control: fmt(ctl.reads[q]),
++                  payload: payloadOf[q],
++                  text: atOf[q].text,
++                  style: atOf[q].style,
++                  ctlStyle: ctlStyle[q],
++                  control: fmt(ctlRead[q]),
+                   printed: [...printed[q]],
+                   bound: reads[q].bound,
+                   edge: edges[q],
+@@ -1021,8 +1174,8 @@ for (const theme of ["light", "dark"] as const)
+         // surface, and never only because an in-run plant then goes unseen
+         for (const q of QUIET) expect(verdict(reads[q].clean, q), `${q} (${cell})`).toEqual([]);
+         // the control painted the SAME payload: the line's own text in the rung's own type
+-        for (const [i, l] of at.entries())
+-          expect(ctl.style[i], `the control's ${l.q} is the line's type (${cell})`).toBe(l.style);
++        for (const q of QUIET)
++          expect(ctlStyle[q], `the control's ${q} is the line's type (${cell})`).toBe(atOf[q].style);
+         // G3's edge is pinned on this read: its own fraction −ε reds, +ε holds
+         for (const q of QUIET) {
+           expect(edges[q].under, `G3 at ${q}'s own fraction −0.005 (${cell})`).toContain("G3");
+@@ -1068,11 +1221,50 @@ for (const theme of ["light", "dark"] as const)
+           description: `${cell}: window on ${g2lines.join(" ") || "no line"}; ${g2alone.join(", ") || "none"}`,
+         });
+         if (g2lines.length) expect(g2alone, `G2 sees a fade no other gated clause sees (${cell})`).not.toEqual([]);
++        // G14_SLACK PINNED (CHAIR pass-10 §17; the pass-9 critic's A2): the G2win ladder the run already
++        // reads straddles the bound, so every rung is held to ONE literal rule: G3 sees it exactly when
++        // its fraction passes the control's + PIN_SLACK. PIN_SLACK is a literal the knob cannot move
++        // (LAWS P9 §F): slack 0.045 sees a rung at +0.048 that the rule calls inside, slack 0.055 misses
++        // one at +0.051 it calls past, and either reds here. A bound in the G3clamp zone (control +
++        // 0.05 ≥ 0.95) is held half-way to 1, not at +0.05, and is printed, never asserted. The rungs
++        // within PIN_EPS of the bound are the pin's witness: where the pass-9 read found rungs on both
++        // sides (STRADDLE_CELLS, keyed per engine), both sides must be present again.
++        const rungs = QUIET.flatMap((q) => {
++          const c = ctlRead[q].fracUnder;
++          if (c == null || c + PIN_SLACK >= 0.95) return [];
++          return Object.entries(reads[q].plants)
++            .filter(([n]) => n.startsWith("G2win_"))
++            .map(([n, r]) => ({
++              line: q,
++              rung: n.slice(6),
++              off: +((r.fracUnder ?? 1) - c).toFixed(4),
++              past: (r.fracUnder ?? 1) > c + PIN_SLACK,
++              g3: verdict(r, q).map(clauseOf).includes("G3"),
++            }));
++        });
++        const near = rungs.filter((r) => Math.abs(r.off - PIN_SLACK) <= PIN_EPS);
++        const pin = {
++          inside: Math.max(...rungs.filter((r) => !r.past).map((r) => r.off), -1),
++          past: Math.min(...rungs.filter((r) => r.past).map((r) => r.off), 2),
++        };
++        console.log("G14-PIN", JSON.stringify({ engine: test.info().project.name, cell, slack: G14_SLACK, pin, near }));
++        test.info().annotations.push({
++          type: "G14 pin",
++          description: `${cell}: slack held in (${pin.inside}, ${pin.past}]; ${near.length} rungs within ${PIN_EPS} of +${PIN_SLACK}`,
++        });
++        expect(
++          rungs.filter((r) => r.g3 !== r.past),
++          `every G2win rung is seen by G3 exactly when it passes the control + ${PIN_SLACK} (${cell})`,
++        ).toEqual([]);
++        if (STRADDLE_CELLS[test.info().project.name]?.includes(cell)) {
++          expect(near.filter((r) => !r.past).length, `a rung within ${PIN_EPS} inside the bound (${cell})`).toBeGreaterThan(0);
++          expect(near.filter((r) => r.past).length, `a rung within ${PIN_EPS} past the bound (${cell})`).toBeGreaterThan(0);
++        }
+         for (const q of QUIET)
+           for (const c of printed[q])
+             test.info().annotations.push({
+               type: "T9-R8",
+-              description: `${cell} ${q}: ${c} printed, the control fails it on the same payload (${fmt(ctl.reads[q])})`,
++              description: `${cell} ${q}: ${c} printed, the control fails it on the same payload (${fmt(ctlRead[q])})`,
+             });
+       });
+     });
+@@ -1420,22 +1612,40 @@ const PLUS = /plus:\s*\([^)]*\)\s*=>\s*`\$\{\w+\}([^`$]*)\$\{\w+\}`/.exec(
+     "utf8",
+   ),
+ )![1];
++/** The unplaced peer's qualifier under the chart arm (null where the source ships no chart). */
++const UNPLACED =
++  /unplaced:\s*"([^"]+)"/.exec(
++    readFileSync(
++      fileURLToPath(new URL("../src/pencil/chrome/PlayerMark/copy.ts", import.meta.url)),
++      "utf8",
++    ),
++  )?.[1] ?? null;
+ const PLUS_LINE = new RegExp(`\\d+${PLUS.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\d+`);
+ /** Every string the page shows outside an accessible name. */
+ const shown = (page: Page) =>
+   page.evaluate(() => {
+     const out: string[] = [];
+     const tw = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
++    const nodes: string[] = [];
+     for (let n = tw.nextNode(); n; n = tw.nextNode()) {
+       if (n.parentElement?.closest("script, style, template, noscript")) continue;
+       if (n.textContent?.trim()) out.push(n.textContent);
++      nodes.push(n.textContent ?? "");
+     }
++    // THE LINE AS IT RENDERS, ACROSS NODES (the pass-9 critic's PLUSSPLIT): a line painted over
++    // several elements — a <b> or <i> around the digits, an SVG <tspan> — holds no `plus` line in
++    // any one text node. The page's text nodes joined with nothing between them, and the body's
++    // rendered text, read it whole.
++    out.push(nodes.join(""));
++    out.push(document.body.innerText);
+     for (const el of document.body.querySelectorAll("*")) {
+       const t = el.getAttribute("title");
+       if (t) out.push(t);
+       for (const p of ["::before", "::after"]) {
+         const c = getComputedStyle(el, p).content;
+-        if (c && c !== "none" && c !== "normal") out.push(c);
++        // an engine that serialises `attr()` unresolved is read through the attribute itself
++        if (c && c !== "none" && c !== "normal")
++          out.push(c.replace(/attr\(\s*([\w-]+)\s*\)/g, (_, a) => el.getAttribute(a) ?? ""));
+       }
+     }
+     return out.join("\n");
+@@ -1455,14 +1665,41 @@ test("the `plus` line reaches only the mark's accessible name (LOBBY_ARIA_ONLY's
+     const name = await mark(page).getAttribute("aria-label");
+     reads.push({ N, name, shown: PLUS_LINE.exec(await shown(page))?.[0] ?? null });
+   }
+-  await mark(page).evaluate((el, s) => {
+-    const t = document.createElement("span");
+-    t.textContent = s;
+-    el.append(t);
+-  }, `5${PLUS}11`);
+-  const plantSeen = PLUS_LINE.exec(await shown(page))?.[0] ?? null;
+-  console.log("PLUS", JSON.stringify({ engine: test.info().project.name, arm: SIX_ARM, PLUS, reads, plantSeen }));
+-  expect(plantSeen, "the planted plus line is SEEN").toBe(`5${PLUS}11`);
++  // A PLANT PER DISJUNCT (LAWS P9 §F), each painted into the mark in the run, read, and taken out:
++  // one text node; the line split over three elements; an SVG <text> with a <tspan>; a ::after
++  // `content: attr()`; a `title`. Each must be SEEN, and only the one it plants is on the page.
++  const PLUS_PLANTS = ["node", "split", "svg", "attr", "title"] as const;
++  const plantSeen: Record<string, string | null> = {};
++  for (const k of PLUS_PLANTS) {
++    await mark(page).evaluate(
++      (el, { k, a, p, b }) => {
++        const t = document.createElement("span");
++        t.dataset.plusPlant = k;
++        if (k === "node") t.textContent = `${a}${p}${b}`;
++        if (k === "split") t.innerHTML = `<b>${a}</b><i>${p}</i><b>${b}</b>`;
++        if (k === "svg")
++          t.innerHTML = `<svg width="80" height="12"><text y="10">${a}<tspan>${p}</tspan>${b}</text></svg>`;
++        if (k === "attr") {
++          t.dataset.p = `${a}${p}${b}`;
++          const st = document.createElement("style");
++          st.textContent = "[data-plus-plant=attr]::after { content: attr(data-p); }";
++          t.append(st);
++        }
++        if (k === "title") t.title = `${a}${p}${b}`;
++        el.append(t);
++      },
++      { k, a: "5", p: PLUS, b: "11" },
++    );
++    plantSeen[k] = PLUS_LINE.exec(await shown(page))?.[0] ?? null;
++    await mark(page).evaluate((el) => el.querySelectorAll("[data-plus-plant]").forEach((n) => n.remove()));
++  }
++  const after = PLUS_LINE.exec(await shown(page))?.[0] ?? null;
++  console.log("PLUS", JSON.stringify({ engine: test.info().project.name, arm: SIX_ARM, PLUS, reads, plantSeen, after }));
++  // the joined read runs a plant into its neighbours' digits (`16` + `5 plus 11` + `16`), so SEEN is the
++  // plant's own line inside the match, never the match whole
++  for (const k of PLUS_PLANTS) expect(plantSeen[k], `the ${k} plus plant is SEEN`).toContain(`5${PLUS}11`);
++  // every in-run plant is gone: the page reads as it did before them (a FILE plant reds below, at its N)
++  expect(after, "every plant is gone").toBe(reads[reads.length - 1].shown);
+   for (const r of reads) {
+     expect(r.shown, `no shown text holds a plus line at ${r.N}`).toBeNull();
+     expect(PLUS_LINE.test(r.name ?? ""), `the name holds the plus line at ${r.N} under arm (c) only`).toBe(
+@@ -1605,11 +1842,10 @@ test("a peer quiet for 26 seconds reads '26 seconds ago', and one quiet for 5 re
+     await page.clock.setFixedTime(T + at);
+     await mark(page).click();
+     await settle(page);
+-    const q = await page
+-      .locator("[data-lobby]:visible .pl-row")
+-      .nth(1)
+-      .locator(".pl-qual")
+-      .allTextContents();
++    const q = {
++      qual: await page.locator("[data-lobby]:visible .pl-row").nth(1).locator(".pl-qual").allTextContents(),
++      chart: await page.locator("[data-lobby]:visible .pl-chart").count(),
++    };
+     await page.keyboard.press("Escape");
+     // A CLOSE IS A POSE: every sheet is shut when every sheet reads `visibility: hidden`
+     await expect
+@@ -1625,7 +1861,10 @@ test("a peer quiet for 26 seconds reads '26 seconds ago', and one quiet for 5 re
+   };
+   const early = await qual(5000);
+   const late = await qual(26000);
+-  console.log("QUIET", JSON.stringify({ early, late }));
+-  expect(early).toEqual([]);
+-  expect(late).toEqual(["26 seconds ago"]);
++  console.log("QUIET", JSON.stringify({ engine: test.info().project.name, CHART_ARM, UNPLACED, early, late }));
++  // UNDER THE SHIPPED ARM (CHAIR pass-10 §9): where PLACE's chart is drawn, a peer with no settled
++  // cell has a row and no dot, and its row says so (`LOBBY_COPY.unplaced`); the quiet qualifier
++  // outranks it. So the early read is no qualifier, or the unplaced one under a chart, never a time.
++  expect(early.qual).toEqual(early.chart > 0 && UNPLACED ? [UNPLACED] : []);
++  expect(late.qual).toEqual(["26 seconds ago"]);
+ });

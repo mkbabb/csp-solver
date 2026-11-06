@@ -1,0 +1,1015 @@
+diff --git a/web/frontend/config-node.d.ts b/web/frontend/config-node.d.ts
+index 604a92c..b65bb51 100644
+--- a/web/frontend/config-node.d.ts
++++ b/web/frontend/config-node.d.ts
+@@ -21,24 +21,12 @@
+ // at all until someone declares what they meant.
+ 
+ declare module "node:fs" {
+-  /** `readFileSync(abs, 'utf8')`, and the bare form for `face-stamp`'s BYTES (CTRL-FACE pass 9). */
++  /** `readFileSync(abs, 'utf8')` — the only form the configs call. */
+   export function readFileSync(path: string, encoding: "utf8"): string;
+-  export function readFileSync(path: string): Uint8Array;
+   export function writeFileSync(path: string, data: string): void;
+   export function existsSync(path: string): boolean;
+   export function readdirSync(path: string): string[];
+   export function statSync(path: string): { isDirectory(): boolean };
+-  /** `.face-engine/` for the build's `face-stamp` sidecar (T9-W7 CTRL-FACE). */
+-  export function mkdirSync(path: string, options: { recursive: true }): void;
+-}
+-
+-/** `face-stamp`'s digest over the build's module graph (T9-W7 CTRL-FACE). */
+-declare module "node:crypto" {
+-  interface Hash {
+-    update(data: string | Uint8Array): Hash;
+-    digest(encoding: "hex"): string;
+-  }
+-  export function createHash(algorithm: "sha1"): Hash;
+ }
+ 
+ declare module "node:path" {
+diff --git a/web/frontend/e2e/face-law.spec.ts b/web/frontend/e2e/face-law.spec.ts
+index d65196a..9ff5fb0 100644
+--- a/web/frontend/e2e/face-law.spec.ts
++++ b/web/frontend/e2e/face-law.spec.ts
+@@ -1,8 +1,10 @@
+ import { test, expect, devices, type Locator, type Page } from "@playwright/test";
+ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from "node:fs";
+-import { join } from "node:path";
++import { createHash } from "node:crypto";
++import { join, relative } from "node:path";
+ import { fileURLToPath } from "node:url";
+ import { fourBands, EDGE_PLANTS, type FourBands as Bands } from "./lib/edge-bands.mjs";
++import { admittedSites } from "../scripts/shape-census.mjs";
+ 
+ // PRM: frozen — emulateMedia({reducedMotion:'reduce'}) before goto (loadCard, below)
+ //
+@@ -47,17 +49,30 @@ import { fourBands, EDGE_PLANTS, type FourBands as Bands } from "./lib/edge-band
+    REPORT and never reaches disk, so the gate would depend on which reporter the caller picked.
+    `e2e/node.d.ts` gains the two write forms with that reason written where the shim is. */
+ const ENGINE_DIR = join(fileURLToPath(new URL("../.face-engine", import.meta.url)));
+-/* PASS 5 — the census is STAMPED; PASS 8 — with the digest the last BUILD wrote over its own
+-   module graph (`.face-engine/dist-stamp.json`, vite.config.ts `face-stamp`; LAWS P7 §F: never a
+-   hand list). The gate re-hashes that graph from disk, so a census taken before an edit to ANY file
+-   the build read reds. The census lives OUTSIDE `test-results/`, which every Playwright run wipes. */
+-const ENGINE_STAMP = (() => {
++/* PASS 10 — THE CENSUS RECORDS THE BYTES IT SERVED (LAWS P9 §F: a stamp hashes the EMITTED dist,
++   never its sources). Every file under `dist/`, sha1 each, and the digest over the sorted
++   `<rel>\n<sha1>\n`: the same twelve lines `scripts/check-face-engine-identity.mjs` reads `dist/` with
++   (it holds the two copies equal, and re-builds the tree to hold the dist to it). A reader that
++   throws is recorded WITH its exception, and the gate reds on it; it is never read as 'missing'. */
++const DIST_DIR = fileURLToPath(new URL("../dist", import.meta.url));
++function distReading(): { digest: string; files: Record<string, string> } | { error: string } {
++  const files: Record<string, string> = {};
++  const walk = (d: string) => {
++    for (const n of readdirSync(d).sort()) {
++      const p = join(d, n);
++      if (statSync(p).isDirectory()) walk(p);
++      else files[relative(DIST_DIR, p)] = createHash("sha1").update(readFileSync(p)).digest("hex");
++    }
++  };
+   try {
+-    return JSON.parse(readFileSync(join(ENGINE_DIR, "dist-stamp.json"), "utf8")).stamp ?? null;
+-  } catch {
+-    return null; // no build: the gate reds "no build graph"
++    walk(DIST_DIR);
++  } catch (e) {
++    return { error: String(e) };
+   }
+-})();
++  const h = createHash("sha1");
++  for (const rel of Object.keys(files).sort()) h.update(`${rel}\n${files[rel]}\n`);
++  return { digest: h.digest("hex"), files };
++}
+ 
+ const CARD = ".controls-card";
+ /* THE DESK KEEPS A HIDDEN TWIN of the card in the DOM (the drawer's copy), so every read below
+@@ -731,7 +746,7 @@ test.describe("the written chips", () => {
+       JSON.stringify(
+         {
+           engine: test.info().project.name,
+-          stamp: ENGINE_STAMP,
++          dist: distReading(),
+           served,
+           dpr,
+           words: census,
+@@ -2228,26 +2243,24 @@ for (const [label, use, sites] of [
+    ledger below (each entry still red on its named band somewhere, or the row reds). The negative
+    in the same run: a control given a second form (a dashed `currentColor` ring) reds the census. */
+ const RING_FOCUSABLE = 'button, [role="tab"], [tabindex="0"]';
+-/** THE HOLE LEDGER: a band the ONE ring cannot paint for a reason this family does not own, named
+- *  with its owner and its band. It is CONTROL-ANCHORED, never an excuse: each entry must still hold
+- *  (red on a listed band) on at least one control it names, so a cure reds the row until the entry
+- *  is struck, and a red on any other band reds at once. Off the ledger, every band paints. */
+-const RING_HOLES: readonly { at: string; bands: readonly string[]; owner: string; cells?: readonly string[] }[] = [
+-  // On the union the case's `#card-foot` lays the bar outside the scrollport: the verbs' clip is
+-  // gone (four bands whole at 390×844), and at 1280 a verb's own note, revealed by the same
+-  // `:focus-visible`, hangs over the ring's bottom band from the foot's berth.
+-  {
+-    at: "#card-foot .action-verbs button",
+-    bands: ["bottom"],
+-    owner: "the verb's own note, hung in the foot's berth (CTRL-TAPE's berth)",
+-    cells: ["1280 fine"],
+-  },
+-  {
+-    at: ".drawer-tab",
+-    bands: ["left", "bottom"],
+-    owner: "the drawer's tongue is tucked 0.5rem under the board's paper (T9-W2 §2.7)",
+-  },
++/** THE HOLE LEDGER, RE-KEYED (pass 10; LAWS P9 §D; the pass-9 critic's HIDE plant). Pass 9 keyed an
++ *  entry 'held' on a control's THINNEST band and let it hold on ONE control it named, so a plant that
++ *  took every foot verb's bottom AND left band read GREEN in both engines, and the drawer tab's three
++ *  thin bands at 390 (right 1.061 / d0.03) sat under it. An entry is now ONE band of ONE control in
++ *  ONE engine at ONE cell, `cell|engine|control|band`, read through the ONE library's admitted-list
++ *  inversion (`admittedSites`): a thin band no entry names reds, and an entry no thin band answers is
++ *  STALE and reds, so a cure reds the row until its entry is struck, the pass the cure lands. Each
++ *  entry carries its owner in the comment above it; a band no family owns is a defect, never an entry. */
++const RING_HOLES: readonly string[] = [
++  /* RING_HOLES_ENTRIES */
+ ];
++/** The ledger's two negatives, each ONE whole band taken from EVERY probed control (`[data-ring-probe]`),
++ *  clipped at the box edge so no ring offset survives it (the pass-9 critic's HIDE/BITE forms clip at
++ *  -4px and spare a ring drawn closer than 3px: six chips at 1280 escaped them on the union). */
++const LEDGER_PLANTS = [
++  ["HIDE (the bottom band, whole)", "clip-path: inset(-8px -8px 0 -8px)", ["bottom"]],
++  ["BITE (the left band, whole)", "clip-path: inset(-8px -8px -8px 0)", ["left"]],
++] as const;
+ for (const [label, use] of [
+   ["390×844 coarse", coarse(390, 844)],
+   ["1280 fine", {}],
+@@ -2255,10 +2268,11 @@ for (const [label, use] of [
+   test.describe(`one ring on every card control — ${label}`, () => {
+     test.use(use);
+     // Two rows on one census: the FORM (CHAIR-RULINGS §5: one ring form per card) and the PAINT
+-    // (station 1, off the hole ledger), so a paint hole never hides the form's verdict or the reverse.
++    // (station 1, every band of every control, off the keyed ledger), so neither hides the other.
+     for (const clause of ["form", "paint"] as const)
+-    test(`every focusable in the card, and the drawer's tab, ${clause === "form" ? "wears" : "paints"} the ONE ring; a second form reds`, async ({ page }) => {
+-      test.setTimeout(150_000);
++    test(`every focusable in the card, and the drawer's tab, ${clause === "form" ? "wears" : "paints"} the ONE ring; a second form reds`, async ({ page, browserName }) => {
++      // sized to the census count (LAWS P9 §B): the paint row reads the card three times over
++      test.setTimeout(clause === "paint" ? 420_000 : 150_000);
+       // `reduce`: the chips' 150 ms colour transition carries `outline-color` and snaps under it
+       // (row 9); a read inside the fade is the transition's, not the ring's
+       await page.emulateMedia({ reducedMotion: "reduce" });
+@@ -2282,13 +2296,16 @@ for (const [label, use] of [
+             const els = [...root.querySelectorAll(sel), ...(foot ? foot.querySelectorAll(sel) : []), ...document.querySelectorAll(".drawer-tab")].filter(live);
+             document.querySelectorAll("[data-ring-census]").forEach((e) => e.removeAttribute("data-ring-census"));
+             els.forEach((e, i) => e.setAttribute("data-ring-census", String(i)));
+-            return els.map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].slice(0, 2).join(".")}`);
++            // a control's ledger name: its tag, two classes and its own label (a verb is not its sibling)
++            const said = (e: Element) => (e.getAttribute("aria-label") || e.textContent || "").trim().replace(/\s+/g, " ").slice(0, 24);
++            return els.map((e) => `${e.tagName.toLowerCase()}.${[...e.classList].slice(0, 2).join(".")} "${said(e)}"`);
+           },
+           { card: CARD, sel: RING_FOCUSABLE },
+         );
+-      const census = async () => {
++      type Read = { name: string; fv: boolean; form: string; ok: boolean; bands: string; thin: string[] };
++      const census = async (): Promise<Read[]> => {
+         const names = await tag();
+-        const out: { name: string; fv: boolean; form: string; ok: boolean; bands: string; red: boolean; occ: string | null; whole: string | null }[] = [];
++        const out: Read[] = [];
+         for (const [i, name] of names.entries()) {
+           await page.keyboard.press("Shift");
+           await page.keyboard.press("Tab");
+@@ -2305,52 +2322,56 @@ for (const [label, use] of [
+             return { fv: el.matches(":focus-visible") && el.hasAttribute("data-ring-probe"), style: cs.outlineStyle, width: cs.outlineWidth, color: cs.outlineColor };
+           });
+           const b = await fourBands(page, RING_OPTS);
+-          const ok = r.fv && r.style === "solid" && r.width === "2px" && r.color === ringInk;
+-          // an entry scoped to named cells (`cells`) applies only there
+-          const hole = await page.evaluate(
+-            (list) => list.findIndex((o) => o.on && document.querySelector("[data-ring-probe]")!.matches(o.at)),
+-            RING_HOLES.map((h) => ({ at: h.at, on: !h.cells || h.cells.includes(label) })),
+-          );
+-          const thinnest = b.bands ? (Object.entries(b.bands).sort((x, y) => x[1].thickness - y[1].thickness)[0][0] as string) : null;
+-          // on the ledger: the hole must still be there, on a listed band; off it: every band paints
+-          const occ = hole >= 0 ? RING_HOLES[hole].owner : null;
+-          const held = hole >= 0 && b.red && !!thinnest && RING_HOLES[hole].bands.includes(thinnest);
+-          // on a ledger control a green read is no offence (one note may clear its verb where its
+-          // sibling's does not); a red read off the listed bands is; the ENTRY must hold somewhere
+-          const offLedger = hole >= 0 && b.red && !held;
+-          out.push({ name, fv: r.fv, form: `${r.style} ${r.width} ${r.color}`, ok, bands: sayBands(b), red: hole >= 0 ? offLedger : b.red, occ, whole: hole >= 0 ? (held ? `held on ${thinnest}` : b.red ? `RED OFF THE LEDGER on ${thinnest}` : "whole") : null });
++          // every band the read names thin; a why-row that names no side keys "*" (never admitted)
++          const thin = b.red ? [...new Set(b.why.map((x) => /^B\d+ (top|right|bottom|left)\b/.exec(x)?.[1] ?? "*"))] : [];
++          out.push({ name, fv: r.fv, form: `${r.style} ${r.width} ${r.color}`, ok: r.fv && r.style === "solid" && r.width === "2px" && r.color === ringInk, bands: sayBands(b), thin });
+         }
+         return out;
+       };
++      const at = `${label}|${browserName}|`;
++      const entries = RING_HOLES.filter((k) => k.startsWith(at));
++      const ledger = (cs: Read[]) =>
++        admittedSites(
++          cs.flatMap((c) => c.thin.map((band) => ({ line: 0, key: `${at}${c.name}|${band}` }))),
++          entries,
++          { key: (s) => s.key },
++        );
+       const clean = await census();
+-      const off = (c: { ok: boolean; red: boolean }) => (clause === "form" ? !c.ok : c.red);
+-      const bad = clean.filter(off);
++      const read = ledger(clean);
++      const bad =
++        clause === "form"
++          ? clean.filter((c) => !c.ok).map((c) => `${c.name}: ${c.form} fv ${c.fv}`)
++          : [...read.unadmitted.map((s) => `THIN, OFF THE LEDGER ${s.key}`), ...read.stale.map((k) => `STALE ENTRY (no thin band answers it; strike it) ${k}`)];
+       test.info().annotations.push({
+         type: "ring-census",
+-        description: `${clean.length} controls, ${clean.length - bad.length} on the ONE ring · ink ${ringInk} · ${clean.map((c) => `${c.name}: ${c.form}${c.red ? " BANDS RED " + c.bands : ""}`).join(" | ")}`,
+-      });
+-      const named = clean.filter((c) => c.occ);
+-      // a ledger entry no control matches is stale: strike it or it hides the next hole
+-      if (clause === "paint")
+-        for (const h of RING_HOLES.filter((x) => !x.cells || x.cells.includes(label)))
+-          expect(
+-            clean.some((c) => c.occ === h.owner && /^held/.test(c.whole ?? "")),
+-            `the hole ledger's entry for ${h.at} still holds on a control (else strike it)`,
+-          ).toBe(true);
+-      test.info().annotations.push({
+-        type: "ring-census-ledger",
+-        description: named.length ? named.map((c) => `${c.name}: ${c.bands} · ledger ${c.whole} · ${c.occ}`).join(" | ") : "none",
++        description: `${clean.length} controls · ${browserName} · ink ${ringInk} · ${clean.map((c) => `${c.name}: ${c.form}${c.thin.length ? ` THIN [${c.thin.join(",")}] ${c.bands}` : ""}`).join(" | ")}`,
+       });
++      test.info().annotations.push({ type: "ring-census-ledger", description: `${entries.length} entr(ies) at ${at} · ${read.unadmitted.length} unadmitted · ${read.stale.length} stale` });
+       expect(clean.length, "the census found the card's controls").toBeGreaterThan(5);
+       expect(clean.some((c) => /drawer-tab/.test(c.name)), "the drawer's tab is in the census").toBe(true);
+-      // THE NEGATIVE, same run: a second form on one control (the shape the fold shipped)
+-      const t = await page.addStyleTag({ content: '[data-ring-census="0"]:focus-visible { outline: 2px dashed currentColor !important; }' });
+-      const planted = await census();
+-      await t.evaluate((e) => (e as Element).remove());
+-      const caught = planted.filter(off).length;
+-      test.info().annotations.push({ type: "ring-census-plant", description: `a second form on control 0: ${caught} control(s) off the ONE ring` });
+-      expect(caught, "the planted second form reds the census").toBeGreaterThan(0);
+-      expect(bad.map((c) => `${c.name}: ${c.form} fv ${c.fv}${c.red ? " · " + c.bands : ""}`), `every card control ${clause === "form" ? "wears" : "paints"} the ONE ring`).toEqual([]);
++      if (clause === "form") {
++        // THE NEGATIVE, same run: a second form on one control (the shape the fold shipped)
++        const t = await page.addStyleTag({ content: '[data-ring-census="0"]:focus-visible { outline: 2px dashed currentColor !important; }' });
++        const planted = await census();
++        await t.evaluate((e) => (e as Element).remove());
++        const caught = planted.filter((c) => !c.ok).length;
++        test.info().annotations.push({ type: "ring-census-plant", description: `a second form on control 0: ${caught} control(s) off the ONE ring` });
++        expect(caught, "the planted second form reds the census").toBeGreaterThan(0);
++      } else {
++        // THE NEGATIVES, same run (the critic's HIDE and BITE): every control whose listed bands do not
++        // cover the planted ones must red OFF the ledger; a member never loses a band it does not list
++        for (const [name, css, took] of LEDGER_PLANTS) {
++          const t = await page.addStyleTag({ content: `[data-ring-probe] { ${css} !important; }` });
++          const planted = await census();
++          await t.evaluate((e) => (e as Element).remove());
++          const hit = new Set(ledger(planted).unadmitted.map((s) => s.key.split("|")[2]));
++          const listed = (c: string) => entries.filter((k) => k.split("|")[2] === c).map((k) => k.split("|")[3]);
++          const escaped = planted.filter((c) => !took.every((b) => listed(c.name).includes(b)) && !hit.has(c.name)).map((c) => `${c.name} (${c.bands})`);
++          test.info().annotations.push({ type: "ring-census-plant", description: `${name}: ${hit.size}/${planted.length} controls RED off the ledger · escaped ${escaped.length}` });
++          expect(escaped, `${name}: every control reds off the ledger`).toEqual([]);
++        }
++      }
++      expect(bad, `every card control ${clause === "form" ? "wears" : "paints"} the ONE ring`).toEqual([]);
+     });
+   });
+ }
+diff --git a/web/frontend/e2e/node.d.ts b/web/frontend/e2e/node.d.ts
+index ca3fe00..c35a15c 100644
+--- a/web/frontend/e2e/node.d.ts
++++ b/web/frontend/e2e/node.d.ts
+@@ -18,6 +18,8 @@
+ declare module 'node:fs' {
+   /** `readFileSync(abs, 'utf8')` — the only form the estate calls. */
+   export function readFileSync(path: string, encoding: 'utf8'): string
++  /** The bare form returns BYTES: the census's dist reading hashes them (CTRL-FACE pass 10). */
++  export function readFileSync(path: string): Uint8Array
+   export function readdirSync(path: string): string[]
+   export function statSync(path: string): { isDirectory(): boolean }
+   /**
+@@ -37,10 +39,10 @@ declare module 'node:fs' {
+   export function mkdirSync(path: string, options: { recursive: true }): void
+ }
+ 
+-/** `createHash('sha1').update(s).digest('hex')` — the census stamp (CTRL-FACE pass 5). */
++/** `createHash('sha1').update(s | bytes).digest('hex')` — the census's dist reading (CTRL-FACE pass 10). */
+ declare module 'node:crypto' {
+   interface Hash {
+-    update(data: string): Hash
++    update(data: string | Uint8Array): Hash
+     digest(encoding: 'hex'): string
+   }
+   export function createHash(algorithm: 'sha1'): Hash
+diff --git a/web/frontend/scripts/check-face-engine-identity.mjs b/web/frontend/scripts/check-face-engine-identity.mjs
+index 8508144..a0683e4 100644
+--- a/web/frontend/scripts/check-face-engine-identity.mjs
++++ b/web/frontend/scripts/check-face-engine-identity.mjs
+@@ -52,6 +52,7 @@
+  *
+  * Usage:  node scripts/check-face-engine-identity.mjs [--self-test] [--dir <path>] [--dist <dist dir>]
+  */
++import { spawnSync } from "node:child_process";
+ import crypto from "node:crypto";
+ import fs from "node:fs";
+ import path from "node:path";
+@@ -65,76 +66,83 @@ const FRONTEND = path.join(path.dirname(fileURLToPath(import.meta.url)), "..");
+    census before the second wrote its own. `.face-engine/` is ignored by the repo's .gitignore. */
+ const DIR = dirArg >= 0 ? args[dirArg + 1] : path.join(FRONTEND, ".face-engine");
+ 
+-/* PASS 5 — THE CENSUS IS STAMPED WITH THE FILES IT DESCRIBES, and a stamp that no longer
+-   matches the tree is a RED (pass 4 compared two JSON files and nothing bound them to the tree).
+-   PASS 8 — THE FILES ARE THE BUILD'S MODULE GRAPH, NEVER A HAND LIST (LAWS P7 §F). Pass 7 hashed
+-   seven hand-picked files and a `scene.css` plant with its mtime restored exited 0 — the file that
+-   pass edited. The build's `face-stamp` plugin (vite.config.ts) writes every module and watched
+-   file it read under this package into `.face-engine/dist-stamp.json` (`files`), with the digest
+-   of their bytes; this gate re-hashes that list from disk NOW, and `face-law.spec.ts` stamps each
+-   census with the sidecar's digest at the time it ran. A file the build read that changed since,
+-   or went missing, reds; no sidecar reds (build first). */
+-const SIDECAR_REL = path.join(".face-engine", "dist-stamp.json");
+-function sidecar(root = FRONTEND) {
+-  try {
+-    return JSON.parse(fs.readFileSync(path.join(root, SIDECAR_REL), "utf8"));
+-  } catch {
+-    return null;
+-  }
+-}
+-/** sha1 over `<rel>\n` + BYTES + `\n` for each file of the build's graph, in the sidecar's (sorted)
+- *  order — the plugin's digest, byte for byte. `read` lets the self-test overlay one file.
+- *  PASS 9 — BYTES, never utf8 (a woff2 decoded as text folds invalid sequences to U+FFFD: the
+- *  pass-8 critic's flipped Fraunces byte kept the digest), and the graph carries every EMITTED
+- *  asset's source, the CSS `url()` fonts first among them (the plugin writes it). */
+-function graphStamp(files, root = FRONTEND, read = (p) => fs.readFileSync(p)) {
+-  if (!Array.isArray(files) || files.length === 0) return null;
+-  const h = crypto.createHash("sha1");
+-  for (const rel of files) {
+-    let bytes;
+-    try {
+-      bytes = read(path.join(root, rel));
+-    } catch {
+-      bytes = `\u0000MISSING ${rel}`;
+-    }
+-    h.update(`${rel}\n`).update(bytes).update("\n");
+-  }
+-  return h.digest("hex");
+-}
+-/** The faces the census measures, reached by `url()` from the sheets: each must be in the graph. */
+-const FACE_ASSETS = [
+-  "src/assets/fonts/patrickhand-subset.woff2",
+-  "src/assets/fonts/firacode-subset.woff2",
+-  "src/assets/fonts/fraunces-subset.woff2",
+-];
+-const GRAPH = sidecar()?.files ?? null;
+-const TREE_STAMP = graphStamp(GRAPH);
+-
+-/* PASS 6 — A DIGEST OF `src/` IS NOT THE ARTIFACT A DIST RUN MEASURED. The critic planted `6ch`
+-   in `src/`, re-ran face-law against the UNREBUILT dist, and the spec wrote the planted src's
+-   digest over the old dist's numbers: PASS on a tree whose next build paints the plant. So the
+-   census records what the page SERVED (`served.mode/js/css`, read in-page) and a dist census is
+-   bound twice: (a) its `index-*.js`/`.css` are the ones `dist/index.html` names, and (b) that
+-   dist is NEWER than every file under `src/` — a build that predates an edit describes bytes
+-   that are no longer on disk. A dev census (`/src/main.ts`) is compiled from `src/` on request,
+-   so the src digest is its artifact. A census with no `served` field is refused. */
++/* PASS 10 — THE STAMP IS THE EMITTED DIST, NEVER ITS SOURCES (LAWS P9 §F). Passes 7–9 hashed what
++   the build READ (a hand list, then the module graph, then the emitted assets' sources), and each
++   left a class outside: the pass-9 critic's plant W (one statement in `solver.worker.ts`, a sub-build
++   `getModuleIds()` never names) and plant R (utility names in a README, which Tailwind scans though no
++   module imports it; T9-R6's class) each moved the next build's bytes and kept the stamp. So nothing
++   here names a source. Three readings of BYTES are held equal, file by file:
++     (a) the census records every file under `dist/` as it served it (`dist.files`, sha1 each);
++     (b) this gate re-reads `dist/` NOW;
++     (c) this gate REBUILDS the tree into `.face-engine/rebuild/` and reads what it emitted.
++   (a)=(b) binds the census to the dist on disk; (b)=(c) binds that dist to the tree as it stands,
++   so ANY edit that moves an emitted byte reds without anyone remembering to rebuild, and an edit
++   that moves none is, correctly, no edit to the card. The census and this gate each hold a copy of
++   the twelve-line digest; the sabotage battery's clean run is where they must agree. */
+ const DIST = (() => {
+   const i = args.indexOf("--dist");
+   return i >= 0 ? path.resolve(args[i + 1]) : path.join(FRONTEND, "dist");
+ })();
+-function distFacts(dist = DIST, root = FRONTEND) {
++const REBUILD = path.join(FRONTEND, ".face-engine", "rebuild");
++/** The clause-sabotage battery (LAWS P8 §F): `FACE_SABOTAGE=tree,served,dist,twin,word,paint` switches
++ *  each disjunct off in turn, and `--self-test` must then report a BLIND plant (exit 1). */
++const OFF = new Set((process.env.FACE_SABOTAGE ?? "").split(",").filter(Boolean));
++/** Every file under `dir` → sha1 of its BYTES, and `digest` = sha1 over the sorted `<rel>\n<sha1>\n`.
++ *  `io` is the reader (the self-test overlays it). A reader that THROWS is never read as 'missing':
++ *  the exception reaches the caller, which reds WITH it (LAWS P9 §F; s10's seam 2, `utf8(p)`). */
++function distRead(dir, io = fs) {
++  const files = {};
++  const walk = (d) => {
++    for (const n of io.readdirSync(d).sort()) {
++      const p = path.join(d, n);
++      if (io.statSync(p).isDirectory()) walk(p);
++      else files[path.relative(dir, p)] = crypto.createHash("sha1").update(io.readFileSync(p)).digest("hex");
++    }
++  };
++  walk(dir);
++  return { files, digest: digestOf(files) };
++}
++const digestOf = (files) => {
++  const h = crypto.createHash("sha1");
++  for (const rel of Object.keys(files).sort()) h.update(`${rel}\n${files[rel]}\n`);
++  return h.digest("hex");
++};
++/** The paths two readings disagree on (bytes, or present on one side only). */
++function differ(a, b, an = "a", bn = "b") {
++  const out = [];
++  for (const k of Object.keys(a)) if (b[k] !== a[k]) out.push(k in b ? `${k} (bytes)` : `${k} (${an} only)`);
++  for (const k of Object.keys(b)) if (!(k in a)) out.push(`${k} (${bn} only)`);
++  return out;
++}
++/** dist/index.html's entry names and the dist's bytes NOW; a throwing reader is `{ error }`. */
++function distFacts(dist = DIST, io = fs) {
+   let html;
+   try {
+-    html = fs.readFileSync(path.join(dist, "index.html"), "utf8");
+-  } catch {
+-    return { missing: true };
++    html = String(io.readFileSync(path.join(dist, "index.html"), "utf8"));
++  } catch (e) {
++    return e?.code === "ENOENT" ? { missing: true } : { error: `reading ${dist}/index.html threw ${e}` };
+   }
+   const js = /\/assets\/index-[^"'/]+\.js/.exec(html)?.[0] ?? null;
+   const css = /\/assets\/index-[^"'/]+\.css/.exec(html)?.[0] ?? null;
+-  // PASS 7 — CONTENT, NOT MTIME (the pass-6 critic's `cp -p` plant); PASS 8 — over the build's
+-  // module graph: the dist is this tree only if the sidecar's js is the one dist/index.html names
+-  // AND the sidecar's digest is the digest of the same files on disk now.
+-  return { js, css, built: sidecar(root) };
++  try {
++    return { js, css, now: distRead(dist, io) };
++  } catch (e) {
++    return { js, css, error: `the dist reader threw ${e}` };
++  }
++}
++/** (c) A fresh build of THIS tree, into `.face-engine/rebuild/` (ignored; nothing ships). */
++function rebuild() {
++  const r = spawnSync("npx", ["vite", "build", "--outDir", REBUILD, "--emptyOutDir", "--logLevel", "error"], {
++    cwd: FRONTEND,
++    encoding: "utf8",
++  });
++  if (r.status !== 0)
++    return { error: `the rebuild exited ${r.status ?? r.signal}: ${String(r.stderr || r.error || "").slice(-300)}` };
++  try {
++    return distRead(REBUILD);
++  } catch (e) {
++    return { error: `the rebuild's reader threw ${e}` };
++  }
+ }
+ const ENGINES = ["chromium", "webkit"];
+ 
+@@ -170,72 +178,69 @@ function load(dir) {
+   return out;
+ }
+ 
+-function run(censuses, facts = distFacts(), treeStamp = TREE_STAMP) {
++function run(censuses, facts, rebuilt) {
+   const result = {
++    "a fresh build of this tree emits this dist": [],
+     "both engines reported": [],
+-    "each census describes THIS tree": [],
++    "each census read THIS dist, byte for byte": [],
+     "the word is one width": [],
+     "the painted mark is one width": [],
+   };
+ 
++  // (b)=(c) · THE FROZEN TREE. The dist on disk is what the tree builds NOW; needs no census.
++  const tree = result["a fresh build of this tree emits this dist"];
++  if (facts.missing) tree.push(`no ${path.join(DIST, "index.html")} — build, serve, then run face-law.spec.ts`);
++  else if (facts.error) tree.push(facts.error);
++  else if (!rebuilt || rebuilt.error) tree.push(rebuilt?.error ?? "no rebuild was read");
++  else if (!OFF.has("tree") && rebuilt.digest !== facts.now.digest) {
++    const d = differ(facts.now.files, rebuilt.files, "dist", "rebuild");
++    tree.push(
++      `the tree now builds other bytes than ${DIST} — ${d.length} file(s): ${d.slice(0, 8).join(", ")}; ` +
++        "rebuild, re-serve and re-run face-law.spec.ts",
++    );
++  }
++
+   for (const e of ENGINES) {
+     if (!censuses[e])
+       result["both engines reported"].push(
+         `${e}: no census at ${path.join(DIR, `${e}.json`)} — run \`face-law.spec.ts\` on BOTH projects`,
+       );
+     else if (censuses[e]._bad)
+-      result["both engines reported"].push(
+-        `${e}: unreadable census (${censuses[e]._bad})`,
+-      );
++      result["both engines reported"].push(`${e}: unreadable census (${censuses[e]._bad})`);
+   }
+   if (result["both engines reported"].length) {
+-    // NOT GREEN, NOT RUN. Printing the other two checks as GREEN here would be the same lie the
+-    // gate exists to stop: they compared nothing.
+-    result["the word is one width"].push("NOT RUN — a census is missing");
+-    result["the painted mark is one width"].push("NOT RUN — a census is missing");
++    // NOT GREEN, NOT RUN. Printing the census checks as GREEN here would be the same lie the gate
++    // exists to stop: they compared nothing.
++    for (const k of ["each census read THIS dist, byte for byte", "the word is one width", "the painted mark is one width"])
++      result[k].push("NOT RUN — a census is missing");
+     return result;
+   }
+ 
+   const [a, b] = ENGINES.map((e) => censuses[e]);
+ 
+-  // 0 · THE STAMP. A census taken over other bytes describes a card that is not on disk.
+-  if (!treeStamp)
+-    result["each census describes THIS tree"].push(
+-      `no build graph at ${SIDECAR_REL} (or an empty one) — build, then re-run face-law.spec.ts`,
+-    );
+-  for (const c of [a, b])
+-    if (treeStamp && c.stamp !== treeStamp)
+-      result["each census describes THIS tree"].push(
+-        `${c.engine}: census stamp ${c.stamp ?? "(none)"} ≠ the tree's ${treeStamp} — one of the ` +
+-          `${GRAPH?.length ?? 0} files the build read changed since the census was written; rebuild and re-run face-law.spec.ts`,
+-      );
+-
+-  // 0b · THE ARTIFACT. What the page served, bound to what is on disk.
++  // (a)=(b) · THE ARTIFACT. What each page served, bound to the bytes on disk.
++  const read = result["each census read THIS dist, byte for byte"];
+   for (const c of [a, b]) {
+     const sv = c.served;
+-    if (!sv || !sv.mode)
+-      result["each census describes THIS tree"].push(
+-        `${c.engine}: the census names no served artifact — re-run face-law.spec.ts (pass 6 records it)`,
++    if (!sv || !sv.mode) read.push(`${c.engine}: the census names no served artifact — re-run face-law.spec.ts`);
++    else if (sv.mode !== "dist")
++      read.push(
++        `${c.engine}: a ${sv.mode} census — a dev server compiles src/ on request and emits no bytes to hold; ` +
++          "serve the build (vite preview) and re-run",
+       );
+-    else if (sv.mode === "dist") {
+-      if (facts.missing)
+-        result["each census describes THIS tree"].push(
+-          `${c.engine}: a DIST census and no ${path.join(DIST, "index.html")} to bind it to`,
++    else if (facts.missing || facts.error) read.push(`${c.engine}: a dist census and no readable ${DIST}`);
++    else {
++      if (!OFF.has("served") && (sv.js !== facts.js || sv.css !== facts.css))
++        read.push(`${c.engine}: the page served ${sv.js} + ${sv.css}; ${DIST}/index.html names ${facts.js} + ${facts.css}`);
++      if (!c.dist?.files || typeof c.dist.files !== "object")
++        read.push(
++          `${c.engine}: the census carries no dist reading ${c.dist?.error ? `(its reader threw ${c.dist.error})` : "(a pre-pass-10 census)"} — re-run face-law.spec.ts`,
+         );
+-      else {
+-        if (sv.js !== facts.js || sv.css !== facts.css)
+-          result["each census describes THIS tree"].push(
+-            `${c.engine}: the page served ${sv.js} + ${sv.css}; ${DIST} is ${facts.js} + ${facts.css}`,
+-          );
+-        if (!facts.built || facts.built.js !== facts.js)
+-          result["each census describes THIS tree"].push(
+-            `${c.engine}: ${DIST} carries no build stamp for ${facts.js} (the sidecar names ${facts.built?.js ?? "nothing"}) — rebuild`,
+-          );
+-        else if (facts.built.stamp !== treeStamp)
+-          result["each census describes THIS tree"].push(
+-            `${c.engine}: the served dist was built from other bytes (build stamp ${facts.built.stamp} ≠ the tree's ` +
+-              `${treeStamp}) — rebuild, re-serve and re-run; a stale dist is not this tree`,
+-          );
++      else if (!OFF.has("twin") && digestOf(c.dist.files) !== c.dist.digest)
++        read.push(`${c.engine}: the census's digest is not its own files' — the spec's copy of the digest and this gate's disagree`);
++      else if (!OFF.has("dist") && c.dist.digest !== facts.now.digest) {
++        const d = differ(c.dist.files, facts.now.files, "census", "dist");
++        read.push(`${c.engine}: ${DIST} changed since the census — ${d.length} file(s): ${d.slice(0, 8).join(", ")}`);
+       }
+     }
+   }
+@@ -254,7 +259,7 @@ function run(censuses, facts = distFacts(), treeStamp = TREE_STAMP) {
+     }
+     if (wa.wordW === null || wb.wordW === null) continue; // a chip with no word box carries no mark
+     const d = Math.abs(wa.wordW - wb.wordW);
+-    if (d > WORD_BAND_CSS_PX)
++    if (!OFF.has("word") && d > WORD_BAND_CSS_PX)
+       result["the word is one width"].push(
+         `"${name}" ${wa.wordW} vs ${wb.wordW} = ${d.toFixed(3)}px apart (band ${WORD_BAND_CSS_PX})`,
+       );
+@@ -270,7 +275,7 @@ function run(censuses, facts = distFacts(), treeStamp = TREE_STAMP) {
+     const band = PAINT_BAND_DEVICE_PX / a.dpr;
+     const d = Math.abs(a.paintedMark - b.paintedMark);
+     const devicePx = (d * a.dpr).toFixed(2);
+-    if (d > band)
++    if (!OFF.has("paint") && d > band)
+       result["the painted mark is one width"].push(
+         `${a.paintedMark} vs ${b.paintedMark} = ${d.toFixed(3)}px = ${devicePx} device px ` +
+           `(band ${PAINT_BAND_DEVICE_PX} device px = ${band.toFixed(3)}px at dpr ${a.dpr}); ` +
+@@ -280,146 +285,128 @@ function run(censuses, facts = distFacts(), treeStamp = TREE_STAMP) {
+   return result;
+ }
+ 
+-function selfTest(censuses) {
++function selfTest(censuses, facts, rebuilt) {
+   let blind = 0;
+-  const plant = (label, mutate, facts, treeStamp) => {
++  /** One planted defect: it must red, and where `say` is given a row must NAME it. */
++  const plant = (label, mutate, f = facts, rb = rebuilt, say = null) => {
+     const copy = JSON.parse(JSON.stringify(censuses));
+     mutate(copy);
+-    const r = run(copy, facts, treeStamp);
+-    const red = Object.values(r).some((rows) => rows.length > 0);
+-    console.log(`  ${red ? "bites" : "BLIND"}  ${label}`);
++    const rows = Object.values(run(copy, f, rb)).flat();
++    const red = rows.length > 0 && (!say || rows.some((x) => say.test(x)));
++    console.log(`  ${red ? "bites" : "BLIND"}  ${label}${rows.length && !red ? ` (red, but no row names ${say})` : ""}`);
+     if (!red) blind++;
+   };
++  const keep = () => {};
+   plant("a missing engine census", (c) => delete c.webkit);
+-  plant(
+-    "a census stamped against another tree (the 6ch re-price after the run)",
+-    (c) => {
+-      c.webkit.stamp = "0".repeat(40);
+-    },
+-  );
+   plant("one chip's word 0.6px wider on webkit", (c) => {
+-    const w = c.webkit.words.find((x) => x.wordW !== null);
+-    w.wordW += 0.6;
++    c.webkit.words.find((x) => x.wordW !== null).wordW += 0.6;
+   });
+-  // PLANTED AWAY FROM THE OTHER ENGINE, not simply "+4". The first form of this plant added
+-  // 4 device px to webkit's 32.000 against chromium's 32.667 and CLOSED the real gap on its way
+-  // past — the mutant landed 2 device px apart and the check stayed green, correctly. A plant
+-  // must move the quantity the check reads, and here that quantity is a distance.
++  // PLANTED AWAY FROM THE OTHER ENGINE, not simply "+4": a plant that closes the real gap on its
++  // way past moves nothing the check reads (pass 4).
+   plant("the painted mark 4 device px apart", (c) => {
+     const away = Math.sign(c.webkit.paintedMark - c.chromium.paintedMark) || -1;
+     c.webkit.paintedMark += (away * 4) / c.webkit.dpr;
+   });
+-  plant("a census that names no served artifact", (c) => {
+-    delete c.webkit.served;
++  plant("a chip renamed on one engine", (c) => {
++    c.webkit.words[0].text += "-renamed";
++  });
++  plant("the two censuses taken at different dpr", (c) => {
++    c.webkit.dpr = c.webkit.dpr === 1 ? 2 : 1;
++  });
++  plant("a census that names no served artifact", (c) => delete c.webkit.served);
++  plant("a dev census (src/ compiled on request: no emitted bytes)", (c) => {
++    c.webkit.served = { ...c.webkit.served, mode: "dev", js: "/src/main.ts" };
+   });
+   plant("a dist census whose index-*.js is not dist/index.html's", (c) => {
+-    c.webkit.served = {
+-      mode: "dist",
+-      js: "/assets/index-STALE0000000.js",
+-      css: c.webkit.served?.css ?? null,
+-    };
++    c.webkit.served = { ...c.webkit.served, js: "/assets/index-STALE0000000.js" };
+   });
+-  // pass 7 — the pass-6 critic's `cp -p` plant, at the level it bit: new bytes, the old build. A
+-  // dist whose build stamp is another tree's digest (mtime can say anything) must red; so must a
+-  // dist whose sidecar names another js (a rebuild elsewhere) and a dist with no sidecar at all.
+-  const f0 = distFacts();
+-  const withServed = (c) => {
+-    for (const e of ENGINES)
+-      if (c[e]) c[e].served = { mode: "dist", js: f0.js, css: f0.css };
+-  };
+-  plant(
+-    "a dist built from other bytes (the cp -p plant: the build stamp is not the tree's)",
+-    withServed,
+-    {
+-      ...f0,
+-      built: { js: f0.js, stamp: "0".repeat(40) },
+-    },
+-  );
+-  plant("a dist whose build stamp names another js", withServed, {
+-    ...f0,
+-    built: { js: "/assets/index-OTHER.js", stamp: TREE_STAMP },
++  plant("a census with no dist reading (a pre-pass-10 census)", (c) => delete c.webkit.dist);
++  plant("a census digest that is not its own files' (the two copies of the digest disagree)", (c) => {
++    c.webkit.dist.digest = "0".repeat(40);
+   });
+-  plant("a dist with no build stamp", withServed, { ...f0, built: null });
+-  // pass 8 — the pass-7 critic's plant: a file OUTSIDE the old hand list, in the build's graph
+-  // (`scene.css`), edited after the build with its mtime restored. Overlaid in memory: the tree's
+-  // digest moves, the build's does not.
+-  const scene = "src/games/shared/scene.css";
+-  if (!GRAPH?.includes(scene)) {
+-    console.log(
+-      `  BLIND  ${scene} is not in the build's graph — the graph read is short`,
+-    );
+-    blind++;
+-  }
+-  const bytes = (p) => fs.readFileSync(p);
+-  const sceneStamp = graphStamp(GRAPH, FRONTEND, (p) =>
+-    p.endsWith(scene)
+-      ? Buffer.concat([
+-          bytes(p),
+-          Buffer.from("\n.controls-card { letter-spacing: 1px }\n"),
+-        ])
+-      : bytes(p),
++  // the twin clause alone: the digest still names this dist, the files under it do not
++  plant("a census whose files are not its digest's (the twin clause alone)", (c) => {
++    const k = Object.keys(c.webkit.dist.files)[0];
++    c.webkit.dist.files[k] = "0".repeat(40);
++  });
++  plant("a census taken over another dist (one file's bytes)", (c) => {
++    const k = Object.keys(c.webkit.dist.files)[0];
++    c.webkit.dist.files[k] = "0".repeat(40);
++    c.webkit.dist.digest = digestOf(c.webkit.dist.files);
++  });
++  // THE DIST MOVES ON DISK after the census and the build: the REAL dist read through an overlay
++  const io = ({ list, stat, read } = {}) => ({
++    readdirSync: (d) => (list ? list(d) : fs.readdirSync(d)),
++    statSync: (p) => (stat ? stat(p) : fs.statSync(p)),
++    readFileSync: (p, enc) => (read ? read(p, enc) : fs.readFileSync(p, enc)),
++  });
++  const names = Object.keys(facts.now.files);
++  const worker = names.find((k) => /solver\.worker/.test(k)) ?? names[0];
++  const assets = path.join(DIST, "assets");
++  plant(
++    `the dist's ${worker} one byte flipped`,
++    keep,
++    distFacts(DIST, io({
++      read: (p, enc) => {
++        const b = fs.readFileSync(p, enc);
++        if (enc || !p.endsWith(worker)) return b;
++        const c = Buffer.from(b);
++        c[c.length >> 1] ^= 1;
++        return c;
++      },
++    })),
+   );
++  const extra = path.join(assets, "plant.js");
+   plant(
+-    "scene.css edited after the build (letter-spacing on the card; a file the hand list missed)",
+-    withServed,
+-    f0,
+-    sceneStamp,
++    "a file added to the dist",
++    keep,
++    distFacts(DIST, io({
++      list: (d) => (d === assets ? [...fs.readdirSync(d), "plant.js"] : fs.readdirSync(d)),
++      stat: (p) => (p === extra ? { isDirectory: () => false } : fs.statSync(p)),
++      read: (p, enc) => (p === extra ? Buffer.from("x") : fs.readFileSync(p, enc)),
++    })),
+   );
+-  // pass 9 — the pass-8 critic's three font plants, overlaid in memory (the CLI battery plants
+-  // them on disk with the mtime restored): a byte appended, a face replaced by another face's
+-  // bytes, one byte flipped where utf8 decoding hid it. Each face must be IN the graph first.
+-  for (const f of FACE_ASSETS)
+-    if (!GRAPH?.includes(f)) {
+-      console.log(
+-        `  BLIND  ${f} is not in the build's graph — a url() asset the stamp cannot see`,
+-      );
+-      blind++;
+-    }
+-  const [ph, fc, fr] = FACE_ASSETS;
+-  const overlay = (name, fn) =>
+-    plant(
+-      name,
+-      withServed,
+-      f0,
+-      graphStamp(GRAPH, FRONTEND, (p) =>
+-        p.endsWith(name.split(" ")[0]) ? fn(bytes(p)) : bytes(p),
+-      ),
+-    );
+-  overlay(`${ph} one byte appended`, (b) => Buffer.concat([b, Buffer.from([0])]));
+-  overlay(`${fc} replaced whole by the Fraunces bytes`, () =>
+-    bytes(path.join(FRONTEND, fr)),
++  plant(
++    `${worker} gone from the dist`,
++    keep,
++    distFacts(DIST, io({ list: (d) => fs.readdirSync(d).filter((n) => !worker.endsWith(n)) })),
+   );
+-  overlay(`${fr} offset 127 flipped`, (b) => {
+-    const c = Buffer.from(b);
+-    c[127] ^= 0x01;
+-    return c;
+-  });
++  // THE THROWING READER (s10's seam 2): red, and the row names the exception, never 'missing'
+   plant(
+-    "a file the build read has gone missing",
+-    withServed,
+-    f0,
+-    graphStamp(GRAPH, FRONTEND, (p) => {
+-      if (p.endsWith(GRAPH[0])) throw new Error("gone");
+-      return bytes(p);
+-    }),
++    "a reader that throws (ReferenceError) reds WITH its exception",
++    keep,
++    distFacts(DIST, io({
++      read: (p, enc) => {
++        if (enc) return fs.readFileSync(p, enc);
++        throw new ReferenceError("utf8 is not defined");
++      },
++    })),
++    rebuilt,
++    /ReferenceError: utf8 is not defined/,
+   );
+-  plant("no build graph at all", withServed, f0, null);
+-  plant("a chip renamed on one engine", (c) => {
+-    c.webkit.words[0].text += "-renamed";
+-  });
+-  plant("the two censuses taken at different dpr", (c) => {
+-    c.webkit.dpr = c.webkit.dpr === 1 ? 2 : 1;
+-  });
++  plant("no dist at all", keep, { missing: true });
++  // THE FROZEN TREE: a rebuild that emits other bytes, and one that fails
++  const other = { ...rebuilt.files, [worker]: "0".repeat(40) };
++  plant("the tree now builds another worker (plant W's class)", keep, facts, { files: other, digest: digestOf(other) }, /builds other bytes/);
++  plant("the rebuild fails", keep, facts, { error: "the rebuild exited 1: (planted)" }, /rebuild exited 1/);
+   return blind;
+ }
+ 
+ const censuses = load(DIR);
+-const result = run(censuses);
++const FACTS = distFacts();
++const REBUILT = FACTS.missing || FACTS.error ? null : rebuild();
++const result = run(censuses, FACTS, REBUILT);
+ 
+ console.log(`check-face-engine-identity — ${DIR}`);
++console.log(
++  `  dist ${DIST}: ${FACTS.missing ? "ABSENT" : FACTS.error ? "UNREADABLE" : `${FACTS.js} + ${FACTS.css}, ${Object.keys(FACTS.now.files).length} files, digest ${FACTS.now.digest}`}`,
++);
++console.log(
++  `  rebuild ${REBUILD}: ${!REBUILT ? "NOT RUN" : REBUILT.error ?? `${Object.keys(REBUILT.files).length} files, digest ${REBUILT.digest}`}`,
++);
+ for (const e of ENGINES)
+   console.log(
+-    `  ${e}: ${censuses[e] && !censuses[e]._bad ? `${censuses[e].words.length} chips, painted mark ${censuses[e].paintedMark} @dpr${censuses[e].dpr}` : "ABSENT"}`,
++    `  ${e}: ${censuses[e] && !censuses[e]._bad ? `${censuses[e].words.length} chips, painted mark ${censuses[e].paintedMark} @dpr${censuses[e].dpr}, dist ${censuses[e].dist?.digest ?? "(none)"}` : "ABSENT"}`,
+   );
+ 
+ let violations = 0;
+@@ -437,11 +424,9 @@ let blind = 0;
+ if (args.includes("--self-test")) {
+   console.log("\nself-test — one planted defect per check:");
+   if (violations > 0) {
+-    console.log(
+-      "  SKIPPED — the gate is already red; a plant on a red tree proves nothing.",
+-    );
++    console.log("  SKIPPED — the gate is already red; a plant on a red tree proves nothing.");
+   } else {
+-    blind = selfTest(censuses);
++    blind = selfTest(censuses, FACTS, REBUILT);
+   }
+ }
+ 
+diff --git a/web/frontend/scripts/check-font-coverage.mjs b/web/frontend/scripts/check-font-coverage.mjs
+index 17cdf72..77f77ee 100644
+--- a/web/frontend/scripts/check-font-coverage.mjs
++++ b/web/frontend/scripts/check-font-coverage.mjs
+@@ -1110,6 +1110,12 @@ const FACE_SITES = {
+         if (!declsOf.has(t.prop)) declsOf.set(t.prop, []);
+         declsOf.get(t.prop).push(t);
+       }
++      // every custom property's declared value, for `cssWide`'s var() read (a name declared twice
++      // is read by C1 over every declaration; a keyword in ANY of them resets, so the map keeps one)
++      const customs = new Map();
++      for (const [n, ds] of declsOf)
++        if (n.startsWith("--"))
++          customs.set(n, String((ds.find((d) => SC.cssWide(String(d.value))) ?? ds.at(-1)).value));
+       // V1 + V2: the voice set closed, one declaration per voice at its home
+       const voiceSites = [];
+       for (const t of all) if (VOICE_RE.test(t.prop)) voiceSites.push(t);
+@@ -1154,7 +1160,17 @@ const FACE_SITES = {
+       // C1: resolve at the consumer
+       const lawful = (family, depth = 0) => {
+         const first = split(family, /,/)[0] ?? "";
+-        if (KEYWORD.test(first)) return true;
++        // PASS 10 (KW) — a CSS-wide keyword is lawful only where it CASCADES the voice: `inherit`,
++        // or `unset` on this inherited property. `initial`, `revert` and `revert-layer` leave the
++        // author's cascade for the UA's face, and a `var()` that carries a keyword is invalid at
++        // computed-value time (the pass-9 critic's S8–S11, exit 0 on every pass-9 tree). The
++        // library's `cssWide` reads `resets`; this law reads it before it admits a keyword.
++        if (off.has("KW")) {
++          if (KEYWORD.test(first)) return true;
++        } else {
++          const kw = SC.cssWide(first, customs);
++          if (kw) return !kw.resets;
++        }
+         const m = /^var\(\s*(--[\w-]+)\s*(?:,([\s\S]*))?\)$/.exec(first);
+         if (!m) return false;
+         if (VOICES.has(m[1])) return true;
+@@ -1416,6 +1432,34 @@ const FACE_SITES = {
+             "text{font-family:'Comic Sans MS',Georgia,serif;",
+           ),
+       },
++      // pass 10 — the pass-9 critic's eleven siblings (critique gap 3): the fork-parity trio is a
++      // rule a script WRITES (the library's string-rule arm), the rest a CSS-wide keyword (KW)
++      "S2 insertRule": {
++        ts: `document.styleSheets[0]?.insertRule(".ctrl-word { font-family: \\"Comic Sans MS\\"; }");\n`,
++      },
++      // a rule built by concatenation: the library's script-css arm reads it whole, and so does the
++      // string-rule fold, so neither alone carries the read (`SHAPE_SABOTAGE=string-rule` stays 0)
++      "S2c insertRule over a concatenated rule": {
++        ts: `document.styleSheets[0]?.insertRule(".ctrl-word { font-family: " + "'Comic Sans MS'" + "; }");\n`,
++      },
++      "S3 replaceSync": {
++        ts: `const s = new CSSStyleSheet();\ns.replaceSync(".ctrl-word { font-family: 'Comic Sans MS'; }");\n`,
++      },
++      "S4 <style>.textContent": {
++        ts: `const t = document.createElement("style");\nt.textContent = ".ctrl-word { font-family: 'Comic Sans MS'; }";\n`,
++      },
++      "S7 a remote @import's face": {
++        vue: block(
++          '@import url("https://fonts.googleapis.com/css2?family=Comic+Neue");\n.ctrl-word { font-family: "Comic Neue", cursive; }',
++        ),
++      },
++      "S8 revert-layer": { vue: block(".ctrl-word { font-family: revert-layer; }") },
++      "S9 initial": { vue: block(".ctrl-word { font-family: initial; }") },
++      "S10 font: initial": { vue: block(".ctrl-word { font: initial; }") },
++      "S11 var() carrying revert": {
++        vue: block(".ctrl-word { --plant-k: revert; font-family: var(--plant-k); }"),
++      },
++      "S12 revert": { vue: block(".ctrl-word { font-family: revert; }") },
+     };
+     const LAWFUL = {
+       "font: inherit": { vue: block(".ctrl-word { font: inherit; }") },
+@@ -1445,6 +1489,12 @@ const FACE_SITES = {
+       "a TS style object reading a voice": {
+         ts: 'export const ok = { style: { fontFamily: "var(--face-printed)" } };\n',
+       },
++      // pass 10 — the two keywords that CASCADE the voice stay lawful (KW's negatives)
++      "font-family: inherit": { vue: block(".ctrl-word { font-family: inherit; }") },
++      "font-family: unset": { vue: block(".ctrl-word { font-family: unset; }") },
++      "a var() whose name holds a voice": {
++        vue: block(".ctrl-word { --plant-v: var(--face-mono); font-family: var(--plant-v); }"),
++      },
+     };
+     const optsFor = (pl) => {
+       const extra = pl.ts ? [tsHost] : [];
+@@ -1511,7 +1561,7 @@ const FACE_SITES = {
+         g.push("index.html <style>");
+       return g;
+     };
+-    const CLAUSES7 = ["V1", "V2", "C1", "K1", "B1u", "B1h", "B1n"];
++    const CLAUSES7 = ["V1", "V2", "C1", "K1", "B1u", "B1h", "B1n", "KW"];
+     if (process.argv.includes("--sabotage")) {
+       // LAWS P7 §F (ii): each clause off in turn must red the plant battery
+       let holes = 0;
+diff --git a/web/frontend/src/games/shared/GameControlPanel.vue b/web/frontend/src/games/shared/GameControlPanel.vue
+index 234e044..bcf7c31 100644
+--- a/web/frontend/src/games/shared/GameControlPanel.vue
++++ b/web/frontend/src/games/shared/GameControlPanel.vue
+@@ -2579,8 +2579,8 @@ const quickBerth = computed(() =>
+    The tongue's own ring (`DrawerTab.vue`, the estate's one AUTHORED focus ring) promoted to
+    every control in this card. It closes a live a11y row rather than decorating one: WebKit's
+    shipped default ring measures **2.15:1** on the card's paper at head — under the 3:1 non-text
+-   floor, in the engine the owner reads on. Dashed `currentColor` at offset 3 reads 4.59:1 at
+-   its worst on four painted grounds, and it is one rule instead of a ring per treatment.
++   floor, in the engine the owner reads on. It is one rule instead of a ring per treatment: the
++   solid 2 px `--ring-ink` at offset 3 that pass 9 shipped (below).
+    The BOARD keeps its drawn `--color-focus-sketch` ring: that surface is not this family's.
+    `:deep()` IS LOAD-BEARING and it was found by a red. Written as `.controls-card :is(button,
+    …):focus-visible`, Vue's scoped transform attaches the scope attribute to the FIRST compound
+diff --git a/web/frontend/vite.config.ts b/web/frontend/vite.config.ts
+index 92e9df6..30fedc6 100644
+--- a/web/frontend/vite.config.ts
++++ b/web/frontend/vite.config.ts
+@@ -1,6 +1,5 @@
+-import { existsSync, mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
++import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
+ import { join, resolve } from 'node:path'
+-import { createHash } from 'node:crypto'
+ import vue from '@vitejs/plugin-vue'
+ import tailwindcss from '@tailwindcss/vite'
+ import path from 'path'
+@@ -24,51 +23,6 @@ import { defineConfig, type Plugin } from 'vite'
+  * browser `tsconfig` — so its `node:fs`/`node:path` use never reaches the
+  * app typecheck.
+  */
+-/**
+- * `face-stamp` (T9-W7 CTRL-FACE pass 7; pass 8 keyed on the MODULE GRAPH) — THE BUILD RECORDS WHAT
+- * IT WAS BUILT FROM, BY CONTENT. `scripts/check-face-engine-identity.mjs` binds a dist census to its
+- * build: pass 7 hashed a hand list of seven files and missed `scene.css`, the file that pass edited
+- * (LAWS P7 §F: a stamp keys on the build's module graph, never a hand list). The build now lists
+- * every module it read under this package (node_modules and dist aside) plus each sheet an `@import`
+- * pulls in, hashes each `<rel>\n<bytes>\n` in sorted order, and writes `{ js, stamp, files }` beside
+- * the census OUTSIDE `dist/` — nothing ships. The gate re-hashes the same list from disk.
+- * PASS 9 — the list adds every EMITTED asset's source (CSS `url()` fonts and images) and every file is
+- * hashed as BYTES (`<rel>\n` + bytes + `\n`).
+- */
+-function faceStamp(): Plugin {
+-  return {
+-    name: 'face-stamp',
+-    apply: 'build',
+-    async writeBundle(_opts, bundle) {
+-      const root = resolve(__dirname)
+-      const mine = (p: string) => p.startsWith(root + '/') && !/\/(node_modules|dist)\//.test(p)
+-      const mods = new Set<string>()
+-      for (const id of this.getModuleIds()) {
+-        const abs = id.replace(/^\0/, '').replace(/\?.*$/, '')
+-        if (mine(abs) && existsSync(abs) && !statSync(abs).isDirectory()) mods.add(abs)
+-      }
+-      // a sheet an `@import` pulls in (Tailwind inlines `typography.css` into `index.css`) is read
+-      // by the build but is no module of its own: the ONE shape-census library follows the chain
+-      const { followImports } = await import('./scripts/shape-census.mjs')
+-      const srcs = new Set(followImports([...mods]).filter(mine))
+-      // PASS 9 — THE EMITTED ASSETS' SOURCES. A file CSS reaches by `url()` (the three woff2 subsets,
+-      // avatar.png) is emitted, never a module: `getModuleIds()` does not name it. Every emitted asset
+-      // carries the files it was made from (`originalFileNames`); each joins the list.
+-      for (const out of Object.values(bundle))
+-        if (out.type === 'asset') for (const o of out.originalFileNames ?? []) srcs.add(resolve(root, o))
+-      const list = [...srcs].filter((p) => mine(p) && existsSync(p)).map((p) => p.slice(root.length + 1)).sort()
+-      // BYTES, never utf8: a woff2 decoded as text maps every invalid sequence to U+FFFD, so a flipped
+-      // byte in a font kept the digest (pass 8, fraunces offset 127 0xfe→0xff).
+-      const h = createHash('sha1')
+-      for (const rel of list) h.update(`${rel}\n`).update(readFileSync(join(root, rel))).update('\n')
+-      const js = Object.keys(bundle).find((k) => /^assets\/index-[^/]+\.js$/.test(k))
+-      const dir = resolve(__dirname, '.face-engine')
+-      if (!existsSync(dir)) mkdirSync(dir, { recursive: true })
+-      writeFileSync(join(dir, 'dist-stamp.json'), JSON.stringify({ js: js ? `/${js}` : null, stamp: h.digest('hex'), files: list }))
+-    },
+-  }
+-}
+-
+ function sudokuTemplates(): Plugin {
+   const SRC_REL = '../../csp-solver/data/sudoku_puzzles'
+   const OUT_REL = 'src/games/sudoku/data/templates.ts'
+@@ -331,7 +285,6 @@ export default defineConfig({
+     tailwindcss(),
+     sudokuTemplates(),
+     headHints(),
+-    faceStamp(),
+   ],
+   // W6 Option C: `solver.worker.ts` is an ES-module Worker (`{ type: 'module' }`)
+   // that top-level-imports the wasm glue — the production Worker bundle must be

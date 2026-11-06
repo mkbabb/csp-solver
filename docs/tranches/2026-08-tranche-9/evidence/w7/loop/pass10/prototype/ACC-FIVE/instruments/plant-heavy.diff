@@ -1,0 +1,10 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (heavy)
+@@ -604,6 +604,7 @@
+     slot = now >= slot + FRONT_MIN_MS ? now + FRONT_MIN_MS : slot + FRONT_MIN_MS;
+     last = now;
+     commit(v);
++    { const t0 = performance.now(); while (performance.now() - t0 < 18); } // PLANT heavy-commit
+     // queued after the render's flush (the commit queued it), so this reads the landing; a
+     // write with no frame IS its landing, so the next frame is timed from there
+     queueMicrotask(() => {

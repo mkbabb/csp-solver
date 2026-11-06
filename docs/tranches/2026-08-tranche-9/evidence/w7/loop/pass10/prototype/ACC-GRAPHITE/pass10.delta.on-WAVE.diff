@@ -1,0 +1,217 @@
+diff --git a/web/frontend/src/games/shared/GameBoard.vue b/web/frontend/src/games/shared/GameBoard.vue
+index 4c77e19e..8f8f4008 100644
+--- a/web/frontend/src/games/shared/GameBoard.vue
++++ b/web/frontend/src/games/shared/GameBoard.vue
+@@ -38,7 +38,13 @@ import {
+ } from "@games/shared/useJoinWash";
+ import { MOTION } from "@pencil/config/pencilConfig";
+ import { mulberry32 } from "@mkbabb/pencil-boil";
+-import { generateCellRects, generateCellFrames } from "@pencil/grid/gridPaths";
++import {
++  BOARD_GHOST_SEED,
++  BOARD_VIEWBOX_SIZE,
++  generateCellRects,
++  generateCellFrames,
++} from "@pencil/grid/gridPaths";
++import { useDevicePixelRatio } from "@vueuse/core";
+ import { revealStaggerMs, BOIL_CONFIG } from "@pencil/config/pencilConfig";
+ import { useMarkPose } from "@pencil/composables/boilBeat";
+ import { useLayoutBoxSize } from "@pencil/composables/rasterPose";
+@@ -165,9 +171,9 @@ const gridTemplateColumns = computed(
+ // generateCellRects emits ONLY the ghost half (the frame/line pass is dead weight for
+ // this consumer) and is LRU-backed (T3-W8) — a 9→16→9 round-trip is a cache hit, not a
+ // 256-rect regen on the switch's synchronous main-thread burst.
+-const VIEWBOX_SIZE = 1000;
++const VIEWBOX_SIZE = BOARD_VIEWBOX_SIZE;
+ const cellRects = computed(() =>
+-  generateCellRects(props.boardSize, props.subgridSize, VIEWBOX_SIZE, 42),
++  generateCellRects(props.boardSize, props.subgridSize, VIEWBOX_SIZE, BOARD_GHOST_SEED),
+ );
+ 
+ // ── Marks idle-chunk gate (T3-W8, G7 R-7) ────────────────────────────
+@@ -357,9 +363,11 @@ const boardVars = computed(() =>
+ // with their unit row. The layout box, not the transformed rect, for the reason HandDrawnGrid
+ // gives (CH-67).
+ const boardWrapper = ref<HTMLElement | null>(null);
++// The DPR is a ref (a zoom or a move to another display changes it), so the raster re-keys with it.
+ const { width: boardCssWidth } = useLayoutBoxSize(boardWrapper);
++const { pixelRatio } = useDevicePixelRatio();
+ const boardRaster = computed(() =>
+-  boardRasterOf(boardCssWidth.value, window.devicePixelRatio),
++  boardRasterOf(boardCssWidth.value, pixelRatio.value),
+ );
+ 
+ // ── Conflict detection — the teacher's red pencil (§1.4) + error-check MODE (T4-W8 ROW 2) ──
+diff --git a/web/frontend/src/games/shared/boardRaster.ts b/web/frontend/src/games/shared/boardRaster.ts
+index c69d4174..1d0ac157 100644
+--- a/web/frontend/src/games/shared/boardRaster.ts
++++ b/web/frontend/src/games/shared/boardRaster.ts
+@@ -1,11 +1,13 @@
+ // THE BAND'S RASTER (T9-W7 ACC-GRAPHITE). The focus band's second pass is weighed against the
+ // frame's stroke, and that ratio moves with the DEVICE pixels the board spans, never with the
+ // pointer: a 1x tablet is a large raster under a coarse pointer. A board under SMALL_RASTER_DPX
+-// takes the thinner pass (gameCell.css `[data-raster="small"]`).
++// takes the thinner pass (gameCell.css `[data-raster="small"]`, 13 units against 15).
+ //
+-// THE CLIFF IS BETWEEN 365 AND 380 (pass 9, both engines, five rigs and a sweep of eleven spans):
++// THE CLIFF IS BETWEEN 365 AND 380 (pass 9, both engines, five rigs and a sweep of twelve spans):
+ // 12 units holds 1.37-1.39 at 365 and reds at 400-470; 15 reds at 365 (1.47-1.50) and holds
+-// 1.38-1.44 from 380 up, except chromium at 450 (1.457). 366-379 is unread. A fitted constant.
++// 1.38-1.44 from 380 up, except chromium at 450 (1.457). Pass 10: 12 reds at 347 (the 812x375
++// phone, chromium 1.349), 12.5 rasterizes as 12 there, and 13 holds 347 and 365. 366-379 is
++// unread. A fitted constant: its ballot caption names the cells it flips.
+ 
+ /** The span, in device pixels, below which the board takes the thinner second pass. */
+ export const SMALL_RASTER_DPX = 375;
+diff --git a/web/frontend/src/games/shared/gameCell.css b/web/frontend/src/games/shared/gameCell.css
+index 3baf99bf..8d7931f1 100644
+--- a/web/frontend/src/games/shared/gameCell.css
++++ b/web/frontend/src/games/shared/gameCell.css
+@@ -477,7 +477,8 @@
+ /* WAVE union (pass 9, provisional — ACC-GRAPHITE's and MRK-LIVE's owners rule it): GRAPHITE's
+    second pass rides THIS arm. Its delta drew the retrace on every keyboard focus; on the union the
+    blue tiers are the default (`RING_ARM`), so the retrace shows only where the ring is graphite,
+-   and it sits after the arm's 12 so its 15 wins. The small raster keeps 12 (GRAPHITE's cliff). */
++   and it sits after the arm's 12 so its 15 wins. The small raster takes 13 (GRAPHITE's cliff,
++   `boardRaster.ts`). */
+ [data-ring-arm="graphite"] .game-cell:has(input:focus-visible) .cell-ghost-path,
+ [data-ring-arm="graphite"] .game-cell:has(input:focus-visible) .cell-ghost-retrace {
+   fill: none;
+@@ -492,7 +493,7 @@
+   [data-raster="small"]
+   .game-cell:has(input:focus-visible)
+   .cell-ghost-retrace {
+-  stroke-width: 12;
++  stroke-width: 13;
+ }
+ 
+ /* Forced-colors / Windows High Contrast keyboard-focus ring (T4-W10 gate 2, WCAG 2.4.7).
+diff --git a/web/frontend/src/games/shared/useGameCell.ts b/web/frontend/src/games/shared/useGameCell.ts
+index 6b89b02a..e83a890b 100644
+--- a/web/frontend/src/games/shared/useGameCell.ts
++++ b/web/frontend/src/games/shared/useGameCell.ts
+@@ -1,6 +1,10 @@
+ import { computed, onUnmounted, ref, useTemplateRef } from "vue";
+ import { getVariant, toDisplayChar } from "@pencil/glyph/glyphRegistry";
+-import { generateCellRetraceRects } from "@pencil/grid/gridPaths";
++import {
++  BOARD_GHOST_SEED,
++  BOARD_VIEWBOX_SIZE,
++  generateCellRetraceRects,
++} from "@pencil/grid/gridPaths";
+ import { useLongPress } from "@games/shared/useLongPress";
+ import { MOTION } from "@pencil/config/pencilConfig";
+ import type { PencilMode } from "@games/shared/useUserMarks";
+@@ -90,7 +94,7 @@ export function useGameCell(
+ 
+   // Compute the cell's viewBox region in 1000×1000 board coords
+   const cellViewBox = computed(() => {
+-    const cellSize = 1000 / props.boardSize;
++    const cellSize = BOARD_VIEWBOX_SIZE / props.boardSize;
+     const col = props.position % props.boardSize;
+     const row = Math.floor(props.position / props.boardSize);
+     // Pad outward by half a cell to allow the ghost stroke to render without clipping
+@@ -108,7 +112,10 @@ export function useGameCell(
+   // through the shared boil LRU, so 81 cells cost one generation and 81 lookups, and no board
+   // has to carry a second prop for a mark only the focused cell ever shows.
+   const ghostRetracePath = computed(
+-    () => generateCellRetraceRects(props.boardSize, 1000, 42)[props.position] ?? "",
++    () =>
++      generateCellRetraceRects(props.boardSize, BOARD_VIEWBOX_SIZE, BOARD_GHOST_SEED)[
++        props.position
++      ] ?? "",
+   );
+ 
+   // Hidden input keeps the raw numeric string; the glyph overlay renders the display CHARACTER
+diff --git a/web/frontend/src/pencil/grid/gridPaths.partial30.test.ts b/web/frontend/src/pencil/grid/gridPaths.partial30.test.ts
+new file mode 100644
+index 00000000..6f4ee78d
+--- /dev/null
++++ b/web/frontend/src/pencil/grid/gridPaths.partial30.test.ts
+@@ -0,0 +1,70 @@
++import { describe, it, expect, vi } from "vitest";
++import { MOTION } from "@pencil/config/pencilConfig";
++
++// crit.partial30 (T9-W7 pass 10, CHAIR §6) — ACC-GRAPHITE's own copy of FIVE's critic's unit row,
++// shipped by every consumer of `frontTween` until FIVE's first-tick cure lands. The band's retrace
++// draws on the board this primitive paces, so the row rides with the band. It reads the primitive,
++// never the band: a 30 Hz panel whose tween starts MID-FRAME. frontTween's first tick is
++// dt = (first rAF ts) - (start()'s performance.now()), a PARTIAL frame (0..33 ms at 30 Hz). Keyed on
++// the minimum of 32 ticks, one partial tick under stepMs pins the cap at stepMs for 32 frames, and
++// every 33 ms frame then travels 17 ms. RED here is FIVE's row 1 (LAWS P9 §D), not this family's.
++const F = 1000 / 30;
++const load = async () => {
++  vi.resetModules();
++  let carrier: {
++    onProgress: (e: number, raw: number) => void;
++    durationMs: number;
++  } | null = null;
++  vi.doMock("@mkbabb/pencil-boil", async (orig) => ({
++    ...(await orig<typeof import("@mkbabb/pencil-boil")>()),
++    createSequenceSubscription: (o: typeof carrier) => {
++      carrier = o;
++      return { start() {}, stop() {} };
++    },
++  }));
++  const { frontTween } = await import("@pencil/grid/gridPaths");
++  vi.spyOn(performance, "now").mockImplementation(() => 1000);
++  // run one 240 ms tween over the given rAF elapsed times (ms from its start()); frames to its end
++  const run = (elapsed: number[]) => {
++    let n = 0;
++    let done = -1;
++    frontTween({
++      durationMs: 240,
++      easing: (x) => x,
++      onProgress: () => void n++,
++      onComplete: () => (done = n + 1),
++    }).start();
++    for (const ms of elapsed)
++      if (done < 0) carrier!.onProgress(0, ms / carrier!.durationMs);
++    return done;
++  };
++  return run;
++};
++
++describe("crit.partial30 — a 30 Hz panel with a partial first tick", () => {
++  for (const partial of [2, 5, 9, 12, 16])
++    it(`first tick ${partial} ms then 30 Hz frames: a 240 ms front ends by frame 11 (the 30 Hz cure)`, async () => {
++      const run = await load();
++      const done = run(Array.from({ length: 40 }, (_, k) => partial + k * F));
++      vi.doUnmock("@mkbabb/pencil-boil");
++      // whole-frame start ends on frame 10 (the tree's own unit row); one partial frame adds <= 1
++      expect(done).toBeLessThanOrEqual(11);
++    });
++
++  it("a SECOND front 12 frames after a partial-start front still runs at the panel's frame", async () => {
++    const run = await load();
++    run(Array.from({ length: 12 }, (_, k) => 5 + k * F)); // front A, 5 ms partial first tick
++    // front B starts on a frame boundary of the SAME page (window shared); its ticks are whole frames
++    const done = run(Array.from({ length: 40 }, (_, k) => (k + 1) * F));
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(done).toBeLessThanOrEqual(11);
++  });
++
++  it("NEGATIVE CONTROL: a whole-frame start ends on frame 10 (MOTION.hand.stepMs read)", async () => {
++    const run = await load();
++    const done = run(Array.from({ length: 40 }, (_, k) => (k + 1) * F));
++    vi.doUnmock("@mkbabb/pencil-boil");
++    expect(MOTION.hand.stepMs).toBe(17);
++    expect(done).toBe(10);
++  });
++});
+diff --git a/web/frontend/src/pencil/grid/gridPaths.ts b/web/frontend/src/pencil/grid/gridPaths.ts
+index 0a6af1e5..9e7f54ae 100644
+--- a/web/frontend/src/pencil/grid/gridPaths.ts
++++ b/web/frontend/src/pencil/grid/gridPaths.ts
+@@ -24,6 +24,11 @@ interface BoilFrames {
+   cellLines: string[][];
+ }
+ 
++/** The board's ghost space and seed. GameBoard's ghost rects and each cell's retrace (useGameCell)
++ *  read these two numbers, so the two passes of the focus band are drawn in one space. */
++export const BOARD_VIEWBOX_SIZE = 1000;
++export const BOARD_GHOST_SEED = 42;
++
+ /**
+  * Generate ONLY the per-cell ghost rects for a grid — the half both boards' `cellRects`
+  * computed actually consumes. Split out of the former full grid-path generator (T3-W8) so

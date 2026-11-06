@@ -1,0 +1,9 @@
+SPREAD=30 self-test exit 0
+CONTROL banked self-test exit 0
+SPREAD=50 self-test exit 0
+pass-9 gate MIN_SEP 13 self-test exit 0
+banked gate TIN_THRESH=MIN_SEP=13 self-test exit 3
+banked gate TIN_THRESH=SCALAR_EPS=0.010 self-test exit 3
+SELF-TEST FAILED: floor SCALAR_EPS −ε (g4-light) — dark peer-5-ring at #ff8bf4, L off the pair by 0.0070 (pin 0.005, gate 0.01): unmoved
+banked gate TIN_THRESH=RATIO_FLOOR=0.70 self-test exit 3
+SELF-TEST FAILED: floor RATIO_FLOOR −ε (g1b-ratio) — light peer-4 slid to #3c36c5, the paper's score 0.7357 (pin 0.75, gate 0.7): unmoved

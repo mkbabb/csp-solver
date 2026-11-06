@@ -1,0 +1,65 @@
+
+/* ===== crit-CTRL-RULE pass-10 probe (scratch, never banked): the spec's own FOOT_RULE + clauses
+   under geometry plants, beside the pass-9 critic's clipped ON−OFF whole-span reader ===== */
+const CRIT_READ = async (page: Page) => {
+  const rule = page.locator("#card-foot svg.ruled-line");
+  const box = await rule.boundingBox();
+  if (!box) return null;
+  const clip = { x: box.x, y: box.y - 3, width: box.width, height: box.height + 6 };
+  const on = (await page.screenshot({ clip })).toString("base64");
+  const tag = await page.addStyleTag({ content: "#card-foot svg.ruled-line { visibility: hidden !important; }" });
+  const off = (await page.screenshot({ clip })).toString("base64");
+  await tag.evaluate((n) => (n as Element).remove());
+  return page.evaluate(async ({ on, off, ch }) => {
+    const px = async (b: string) => { const bmp = await createImageBitmap(await (await fetch(`data:image/png;base64,${b}`)).blob()); const c = new OffscreenCanvas(bmp.width, bmp.height); const g = c.getContext("2d")!; g.drawImage(bmp, 0, 0); return g.getImageData(0, 0, bmp.width, bmp.height); };
+    const [a, b] = [await px(on), await px(off)];
+    const { width: w, height: h } = a; const dpr = h / ch;
+    const mv = (o: number) => Math.max(Math.abs(a.data[o] - b.data[o]), Math.abs(a.data[o + 1] - b.data[o + 1]), Math.abs(a.data[o + 2] - b.data[o + 2]));
+    const all: number[] = []; for (let o = 0; o < a.data.length; o += 4) { const d = mv(o); if (d > 8) all.push(d); }
+    all.sort((m, n) => m - n); const p98 = all.length ? all[Math.floor(0.98 * (all.length - 1))] : 1;
+    const cols: number[] = [];
+    for (let x = Math.floor(w * 0.05); x < Math.ceil(w * 0.95); x++) { let s = 0; for (let y = 0; y < h; y++) { const d = mv((y * w + x) * 4); if (d > 8) s += Math.min(1, d / p98); } cols.push(s / dpr); }
+    const mid = cols.slice(Math.floor(cols.length * 0.2), Math.ceil(cols.length * 0.8)).sort((m, n) => m - n);
+    return { median: +mid[mid.length >> 1].toFixed(3), p10: +mid[Math.floor(0.1 * (mid.length - 1))].toFixed(3), n: mid.length, dpr };
+  }, { on, off, ch: clip.height });
+};
+for (const cell of [
+  { name: "1280x800 fine", use: { viewport: { width: 1280, height: 800 } } },
+  { name: "390x844 coarse", use: { viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true } },
+]) {
+  test.describe(`CRIT RULE probe @ ${cell.name}`, () => {
+    test.use(cell.use);
+    for (const theme of ["light", "dark"] as const) {
+      test(`CRIT ${theme}`, async ({ page, browserName }) => {
+        await page.emulateMedia({ colorScheme: theme });
+        await page.addInitScript((t) => { try { localStorage.setItem("sudoku-color-scheme", t); } catch { /* */ } }, theme);
+        await loadSudoku(page);
+        if (await page.evaluate(() => document.documentElement.classList.contains("drawer-closed"))) await page.locator(".drawer-tab").tap();
+        await expect(page.locator("#card-foot svg.ruled-line")).toHaveCount(1);
+        await SHEET_SETTLED(page);
+        const S = "#card-foot svg.ruled-line";
+        const out: Record<string, unknown> = {};
+        for (const [plant, css] of [
+          ["shipped", ""],
+          ["W087 2.61", `${S} path { stroke-width: 2.61 !important; }`],
+          ["W093 2.79", `${S} path { stroke-width: 2.79 !important; }`],
+          ["W055 1.65", `${S} path { stroke-width: 1.65 !important; }`],
+          ["SQ55 svg height 2.75px", `${S} { height: 2.75px !important; }`],
+          ["SQT55 transform scaleY(.55)", `${S} { transform: scaleY(0.55) !important; }`],
+          ["SQ87 svg height 4.35px", `${S} { height: 4.35px !important; }`],
+        ] as const) {
+          const tag = css ? await page.addStyleTag({ content: css }) : null;
+          await page.waitForTimeout(0);
+          const d = await FOOT_RULE(page);
+          const c = d ? FOOT_RULE_CLAUSES(d) : null;
+          const crit = await CRIT_READ(page);
+          const thin = d ? Math.min(...d.quarters.map((q) => q.thick)) : null;
+          const line = { holds: FOOT_RULE_HOLDS(d), failing: c ? Object.entries(c).filter(([, v]) => !v).map(([k]) => k) : ["absent"], scale: d?.scale, floorUsed: d ? +(RULE_FLOOR * d.scale).toFixed(3) : null, thickMin: thin, span: d?.span, crit };
+          console.log(`[CRIT] ${browserName} ${cell.name} ${theme} ${plant} ${JSON.stringify(line)}`);
+          out[plant] = line;
+          if (tag) await tag.evaluate((n) => (n as Element).remove());
+        }
+      });
+    }
+  });
+}

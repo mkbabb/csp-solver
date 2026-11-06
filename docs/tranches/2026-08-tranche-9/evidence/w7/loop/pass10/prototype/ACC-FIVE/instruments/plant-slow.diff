@@ -1,0 +1,11 @@
+--- gridPaths.ts (p10)
+--- gridPaths.ts (slow)
+@@ -725,7 +725,7 @@
+         MOTION.hand.stepMs,
+         panelFrameMs(dt, origin + t, first, held),
+       );
+-      clock += Math.min(dt, cap);
++      clock += Math.min(dt, cap * 0.6); // PLANT healthy-slow
+       held = dt > cap;
+       first = false;
+       prev = t;

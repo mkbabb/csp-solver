@@ -1,0 +1,27 @@
+#!/bin/zsh
+# The lane's ONE WebKit run (inside a single `guarded --exclusive webkit`): phase A tree + control,
+# phase B N5 on :4231, phase C the B13(b) numbers probe (tree :4231 vs s10 :4255); servers restored at the end.
+S=<lane-scratch>
+T=<tree>/web/frontend
+CTL=<control>/web/frontend
+G="T9-M18 · the foot's|forced colours|row 28 · behaviour|row 28 · paint|iPad coarse card stays under the P1 seal|the ruled page's own names"
+pw() { # tag url grep fe
+  log=$S/runs/$1.log
+  { echo "== $1 project=webkit url=$2 grep=$3"; date; echo "load $(sysctl -n vm.loadavg)"; echo "zone $(tail -1 ~/.claude/guard/log/zone.log | grep -o 'inuse=[0-9]*')"; echo "served $(curl -s $2/ | grep -o 'index-[A-Za-z0-9_-]*\.js' | head -1)"; } > $log
+  z=$(tail -1 ~/.claude/guard/log/zone.log | grep -o 'inuse=[0-9]*' | cut -d= -f2)
+  if [ "${z:-0}" -ge 8000000 ]; then echo "ZONE $z >= 8M: UNREAD" >> $log; echo 9 > $S/runs/$1.exit; return; fi
+  (cd $4 && PW_FE=$4 PLAYWRIGHT_BASE_URL=$2 npx playwright test --config $S/pw-lane.config.ts --project=webkit --workers=1 --retries=0 --reporter=line -g "$3" >> $log 2>&1; echo $? > $S/runs/$1.exit)
+  { date; echo "load-end $(sysctl -n vm.loadavg)"; echo "zone-end $(tail -1 ~/.claude/guard/log/zone.log | grep -o 'inuse=[0-9]*')"; echo "EXIT $(cat $S/runs/$1.exit)"; } >> $log
+}
+echo "chain start $(date)"
+pw tree-webkit-A $1 "$G" $T
+pw control-webkit-A $2 "$G" $T
+$S/srv.sh stop tree 4231; $S/srv.sh start n5 $S/n5/web/frontend 4231 .vite-lane.config.ts
+pw n5-webkit-B http://127.0.0.1:4231 "T9-M18 · the foot's" $S/n5/web/frontend
+$S/srv.sh stop n5 4231; $S/srv.sh start tree $S/arch/web/frontend 4231 .vite-lane.config.ts
+$S/srv.sh stop ctrl 4255; $S/srv.sh start s10 $S/s10/web/frontend 4255 .vite-lane.config.ts
+{ echo "== b13b webkit"; date; echo "load $(sysctl -n vm.loadavg)"; echo "zone $(tail -1 ~/.claude/guard/log/zone.log | grep -o 'inuse=[0-9]*')"; } > $S/runs/b13b-webkit-C.log
+node $S/b13b-numbers.mjs webkit ruled http://127.0.0.1:4231 s10 http://127.0.0.1:4255 >> $S/runs/b13b-webkit-C.log 2>&1; echo $? > $S/runs/b13b-webkit-C.exit
+echo "load-end $(sysctl -n vm.loadavg)" >> $S/runs/b13b-webkit-C.log
+$S/srv.sh stop s10 4255; $S/srv.sh start ctrl $CTL 4255 .vite-control.config.ts
+echo "chain end $(date)"

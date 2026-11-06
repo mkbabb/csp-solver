@@ -1,0 +1,8 @@
+// scratch: the pin row's source read (RULE_SOURCE's exact call) on the tree given
+const fe = process.argv[2];
+const { elementSites } = await import(fe + "/scripts/shape-census.mjs");
+let s = [];
+try {
+  s = elementSites(fe, { file: "src/games/shared/RuledLine.vue", pick: (el) => el.tag === "path", props: ["stroke-width"] }).sites.filter((x) => /RuledLine\.vue$/.test(String(x.file)));
+} catch (e) { console.log(`throws: ${e.message.slice(0, 160)}`); }
+console.log(`RuledLine stroke-width sites ${s.length} ${JSON.stringify(s.map((x) => `${x.file}:${x.line} ${x.value}`))} -> pin row ${s.length === 1 && Number(s[0].value) === 3 ? "GREEN" : "RED"}`);

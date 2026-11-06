@@ -1,0 +1,11 @@
+gate 76255232 lib 49115989 load 8.49 8.49 10.01
+clean0 exit 0 · 0 4a findings · baseline
+POS-plain-write exit 1 · 1 4a findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("--color-peer-2-ring", "#000");
+NEG-true-consumer exit 0 · 0 4a findings · src/games/shared/p.css: .x { color: var(--color-peer-2-ring); }
+V1-var-slice exit 0 · 0 4a findings · src/games/shared/p.ts: declare const el: HTMLElement; el.style.setProperty("var(--color-peer-2-ring)".slice(4, -1), "#000");
+V2-get-headed-write exit 0 · 0 4a findings · src/games/shared/p.ts: declare const el: HTMLElement; const T = { get: (k: string) => k }; el.style.setProperty(T.get("--color-peer-2-ring"), "#000");
+V4-insertRule-var-slice exit 0 · 0 4a findings · src/games/shared/p.ts: document.styleSheets[0].insertRule(":root{" + "var(--color-peer-2-ring)".slice(4, -1) + ":#000}");
+V5-vue-key-var-slice exit 0 · 0 4a findings · src/games/shared/P11.vue: <template><span :style="{ ['var(--color-peer-2-ring)'.slice(4, -1)]: 'black' }">x</span></template>
+V6-has-headed-typedom exit 0 · 0 4a findings · src/games/shared/p.ts: declare const el: HTMLElement; const H = { has: (k: string) => k }; el.attributeStyleMap.set(H.has("--peer-ring-l"), 0.2);
+clean1 exit 0 · 0 4a findings · after
+DONE

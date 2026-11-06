@@ -28,6 +28,9 @@ any line unmet, the tranche does not seal.
   evidence policy). A verdict without a frame is VOID — the capture-or-it-didn't-
   happen law binds from this gate forward.
 - Identity verified from ONE response per surface (the CF domain-flap trap).
+- W9's prices are read on the deployed edge: the first-flip delta in both engines, contact
+  time against the relay's identifiable revision, and live 16×16 deal timings, each cited to
+  its `evidence/w9/` row.
 - The bare-path probe: `/` and one deep path both serve the app shell (W5's fallback
   cure proven on the edge, or its deliberate retirement recorded).
 

@@ -1,0 +1,16 @@
+--- a/web/frontend/scripts/shape-census.mjs	2026-11-03 23:53:51
++++ b/web/frontend/scripts/shape-census.mjs	2026-11-03 23:54:00
+@@ -1777,7 +1777,12 @@
+     for (const m of s.matchAll(
+       /(?:^|[{,(\s])(['"]?)([a-zA-Z][\w-]*)\1\s*:\s*([^,{}\n;]+)/g,
+     ))
+-      if (kebab(m[2]) === prop && !inStr(m.index + m[0].indexOf(m[2])))
++      // LADDER (pass 10, PROPOSED, C21): a QUOTED key's own quotes are the key, never a string it
++      // sits inside — read the position of its opening quote (`{ "animation-duration": "50ms" }`)
++      if (
++        kebab(m[2]) === prop &&
++        !inStr(m.index + m[0].indexOf(on("quoted-key") ? m[1] + m[2] : m[2]))
++      )
+         push(m[2], m[3], m.index);
+     for (const o of s.matchAll(/\bstyle\s*:\s*\{([^{}]*)\}/g))
+       if (!inStr(o.index))

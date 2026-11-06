@@ -1,0 +1,237 @@
+diff --git a/web/frontend/e2e/lib/postpaint.d.mts b/web/frontend/e2e/lib/postpaint.d.mts
+index f5778ce6..b9a638bc 100644
+--- a/web/frontend/e2e/lib/postpaint.d.mts
++++ b/web/frontend/e2e/lib/postpaint.d.mts
+@@ -2,7 +2,7 @@
+ // so a TypeScript spec imports it under `typecheck:e2e` (strict, no `allowJs`). No behaviour lives here.
+ // Every export is typed with its option names (LAWS P8 §I: never `[k: string]: unknown`); the pass-8
+ // hand-rolled copies (ERASE, VERB, TAPE, the WAVE's) are folded into this one.
+-// NOT-A-LANE: the chair's home (T9-W7 pass 9, homes v2).
++// NOT-A-LANE: the chair's home (T9-W7 pass 9, homes v2; pass 10, homes v3).
+ import type { Browser, Page } from "@playwright/test";
+ 
+ /** One read of the subject: frame index, the frame's timeline time, the timeline AT the read (a post
+@@ -13,10 +13,25 @@ export interface PPRead {
+   tlNow?: number;
+   ct: number | null;
+   ps: string | null;
++  /** the animation's playbackRate at the read (MOT-VERB pass 9 PROPOSED, stale-rebase) */
++  pr?: number | null;
+   x: number;
+   y: number;
+   w: number;
+   stale?: boolean;
++  /** a stale RUNNING post read whose clock was carried back to its own frame (stale-rebase) */
++  rebased?: boolean;
++  /** homes v3 (seek-guard): the subject's clock-write count at the read */
++  wn?: number;
++  /** homes v3 (seek-guard): a stale post read refused its rebase (a seek fell between) */
++  seek?: boolean;
++}
++/** homes v3 (seek-guard): one logged write of the subject's clock. */
++export interface PPWrite {
++  n: number;
++  k: number;
++  inRaf: boolean;
++  kind: string;
+ }
+ /** `window.__pp` after `installSampler`. */
+ export interface PP {
+@@ -26,6 +41,7 @@ export interface PP {
+   stamps: number[];
+   io: number | null;
+   done: boolean;
++  writes?: PPWrite[];
+ }
+ /** One analysed arm: F1 (frame 1 at rest by position AND at ct ≤ ctTol) and CI (the clock identity). */
+ export interface Arm {
+@@ -40,6 +56,8 @@ export interface Arm {
+   frames?: number;
+   dropped: number;
+   stale?: number;
++  /** homes v3 (seek-guard): stale post reads refused their rebase */
++  seeks?: number;
+ }
+ export interface Mover {
+   kPaint: number;
+@@ -61,6 +79,8 @@ export interface AnalyseOptions {
+   ctTol?: number;
+   /** the in-rAF reads that stand in for a STALE post read of the same frame */
+   inRAF?: PPRead[] | null;
++  /** homes v3 (seek-guard): the sampler's write log (`pp.writes`) */
++  writes?: PPWrite[] | null;
+ }
+ export const PP_CLAUSES: readonly string[];
+ export function installSampler(o: { sel: string; anyAnim?: boolean; maxFrames?: number; io?: boolean }): void;
+diff --git a/web/frontend/e2e/lib/postpaint.mjs b/web/frontend/e2e/lib/postpaint.mjs
+index 7629992e..c6e82ed2 100644
+--- a/web/frontend/e2e/lib/postpaint.mjs
++++ b/web/frontend/e2e/lib/postpaint.mjs
+@@ -58,7 +58,49 @@ import { playwright, args, load as loadStr, openCell } from "./paint-lib.mjs";
+  *  transition nor a CSS animation (the product's scripted motion), or any when `anyAnim`. */
+ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = true }) {
+   const w = window;
+-  w.__pp = { inRAF: [], post: [], rAF2: [], stamps: [], io: null, done: false };
++  w.__pp = { inRAF: [], post: [], rAF2: [], stamps: [], io: null, done: false, writes: [] };
++  // homes v3 (seek-guard; pass10/CHAIR-RULINGS §18, the critic's missing disjunct): every write of the
++  // SUBJECT's clock is logged with the sampler frame it fell in and whether it ran inside a rAF callback.
++  // The frame's own start write (in a rAF of frame k) is lawful; a write in a task, or in a later frame,
++  // between frame k's in-rAF read and its post read is a SEEK, and a stale post read is then never rebased
++  let i = 0,
++    rafDepth = 0;
++  const raf0 = w.requestAnimationFrame.bind(w);
++  w.requestAnimationFrame = (cb) =>
++    raf0((t) => {
++      rafDepth++;
++      try {
++        cb(t);
++      } finally {
++        rafDepth--;
++      }
++    });
++  const logWrite = (anim, kind) => {
++    const t = anim?.effect?.target;
++    if (t && t.matches?.(sel)) w.__pp.writes.push({ k: i - 1, inRaf: rafDepth > 0, kind, n: w.__pp.writes.length });
++  };
++  for (const p of ["currentTime", "startTime"]) {
++    const d = Object.getOwnPropertyDescriptor(Animation.prototype, p);
++    if (d?.set)
++      Object.defineProperty(Animation.prototype, p, {
++        get() {
++          return d.get.call(this);
++        },
++        set(v) {
++          logWrite(this, p);
++          d.set.call(this, v);
++        },
++        configurable: true,
++      });
++  }
++  for (const m of ["play", "pause", "finish", "reverse", "updatePlaybackRate"]) {
++    const f = Animation.prototype[m];
++    if (typeof f === "function")
++      Animation.prototype[m] = function (...a) {
++        logWrite(this, m);
++        return f.apply(this, a);
++      };
++  }
+   if (io) {
+     const animate = Element.prototype.animate;
+     Element.prototype.animate = function (...a) {
+@@ -81,13 +123,12 @@ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = tru
+     const r = b.getBoundingClientRect();
+     // tlNow: the timeline AT the read. A post read whose task ran after the NEXT frame's timeline
+     // update reads that frame's clock (WebKit #5 under load: post k0 ct 16 beside inRAF k0 ct 0) — STALE
+-    return { k, tl, tlNow: Number(document.timeline.currentTime ?? 0), ct: a ? Number(a.currentTime ?? 0) : null, ps: a ? a.playState : null, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
++    return { k, tl, tlNow: Number(document.timeline.currentTime ?? 0), ct: a ? Number(a.currentTime ?? 0) : null, ps: a ? a.playState : null, pr: a ? a.playbackRate : null, wn: w.__pp.writes.length, x: r.left + r.width / 2, y: r.top + r.height / 2, w: r.width };
+   };
+   const mc = new MessageChannel();
+   const q = [];
+   mc.port1.onmessage = () => q.shift()?.();
+-  let i = 0,
+-    seen = false;
++  let seen = false;
+   const tick = (ts) => {
+     const k = i++;
+     // the FRAME's time (the rAF argument), not performance.now() inside the callback: WebKit stamps an
+@@ -117,7 +158,7 @@ export function installSampler({ sel, anyAnim = false, maxFrames = 240, io = tru
+ }
+ 
+ /** Clause switches for the postpaint sabotage battery (POSTPAINT_SABOTAGE=a,b; LAWS P7 §F (ii)). */
+-export const PP_CLAUSES = ["F1", "F1ct", "CI", "key-inraf", "stale"];
++export const PP_CLAUSES = ["F1", "F1ct", "CI", "key-inraf", "stale", "stale-rebase", "seek-guard"];
+ const PP_OFF = new Set((process.env.POSTPAINT_SABOTAGE ?? "").split(",").filter(Boolean));
+ const ppOn = (c) => !PP_OFF.has(c);
+ /** The frame that first painted the mover: the last frame whose rAF time is at or before the entry,
+@@ -134,16 +175,35 @@ export const kPaintOf = (pp) => {
+ };
+ 
+ /** Frames with the animation present, keyed on `kPaint` (reads before it DROPPED); F1 + CI verdicts. */
+-export function analyse(frames, rest, { kPaint = -1, tolPx = 3, tolMs = 2, ks = [2, 3], ctTol = 4, inRAF = null } = {}) {
++export function analyse(frames, rest, { kPaint = -1, tolPx = 3, tolMs = 2, ks = [2, 3], ctTol = 4, inRAF = null, writes = null } = {}) {
+   // STALE (the chair, pass 9): a post read whose timeline moved past its frame's is the NEXT frame's
+   // read; frame k's own pre-update read (inRAF) stands in for it, marked, never silently kept
+-  let stale = 0;
++  let stale = 0,
++    seeks = 0;
+   const byK = new Map((inRAF ?? []).map((x) => [x.k, x]));
+   const fixed = frames.map((x) => {
+     if (!ppOn("stale") || x.tlNow == null || x.tlNow === x.tl || x.ct === null) return x;
+     stale++;
+     const s = byK.get(x.k);
+-    return s ? { ...s, stale: true } : { ...x, ct: null };
++    // STALE-REBASE (MOT-VERB pass 9, PROPOSED): the in-rAF twin is read BEFORE the frame's later rAF
++    // callbacks, so a mover held paused and started by a write in a rAF registered after the sampler's
++    // (the fold's holdFirstFrame) reads ct 0 there whatever the write was: WebKit's frame-1 post read
++    // is stale on every fold, and PLANT skip painted frame 1 at ct 150 GREEN. A RUNNING stale read
++    // carries the frame's own clock back: ct − (tlNow − tl) × rate. Position stays the twin's.
++    // homes v3 (seek-guard): a clock write between frame k's in-rAF read and this post read, other than
++    // the frame's own start (inside a rAF of frame k), is a SEEK; the rebase would infer a clock the
++    // frame never painted, so the read is UNREAD (ct null), never rebased to a green
++    const lo = s?.wn ?? 0,
++      hi = x.wn ?? lo;
++    const seeked =
++      ppOn("seek-guard") && (writes ?? []).some((wr) => wr.n >= lo && wr.n < hi && !(wr.inRaf && wr.k === x.k));
++    if (seeked && x.ps === "running" && ppOn("stale-rebase")) {
++      seeks++;
++      return { ...x, ct: null, stale: true, seek: true };
++    }
++    const back = ppOn("stale-rebase") && x.ps === "running" ? x.ct - (x.tlNow - x.tl) * (x.pr ?? 1) : null;
++    if (s) return back === null ? { ...s, stale: true } : { ...s, ct: back, stale: true, rebased: true };
++    return back === null ? { ...x, ct: null } : { ...x, ct: back, stale: true, rebased: true };
+   });
+   const all = fixed.filter((x) => x.ct !== null).sort((a, b) => a.k - b.k);
+   const f = kPaint >= 0 ? all.filter((x) => x.k >= kPaint) : all;
+@@ -176,7 +236,7 @@ export function analyse(frames, rest, { kPaint = -1, tolPx = 3, tolMs = 2, ks =
+       ciRed = true;
+     }
+   }
+-  return { red: why.length > 0, f1red, f1pos, f1ct, ciRed, why, f1: { k: f[0].k, ct: +f[0].ct.toFixed(1), c: +c(f[0]).toFixed(2), dw: +dw(f[0]).toFixed(2), ps: f[0].ps, stale: !!f[0].stale }, ci, frames: f.length, dropped, stale };
++  return { red: why.length > 0, f1red, f1pos, f1ct, ciRed, why, f1: { k: f[0].k, ct: +f[0].ct.toFixed(1), c: +c(f[0]).toFixed(2), dw: +dw(f[0]).toFixed(2), ps: f[0].ps, stale: !!f[0].stale }, ci, frames: f.length, dropped, stale, seeks };
+ }
+ 
+ /** Init-script plants. SKIP: every explicit startTime write lands 150 ms early. */
+@@ -227,9 +287,9 @@ export async function readMover(page, { sel, key = null, click = null, io = true
+     kPaint,
+     io: pp.io == null ? "none" : pp.io < 0 ? "pending" : +pp.io.toFixed(1),
+     kStamp: kPaintByStamp(pp),
+-    post: analyse(pp.post, rest, { kPaint, inRAF: pp.inRAF }),
++    post: analyse(pp.post, rest, { kPaint, inRAF: pp.inRAF, writes: pp.writes }),
+     /** the same POST frames keyed on the rAF time alone (the pass-8 key; printed, never gated) */
+-    byStamp: analyse(pp.post, rest, { kPaint: kPaintByStamp(pp), inRAF: pp.inRAF }),
++    byStamp: analyse(pp.post, rest, { kPaint: kPaintByStamp(pp), inRAF: pp.inRAF, writes: pp.writes }),
+     legacy: analyse(pp.post, rest),
+     inRAF: analyse(pp.inRAF, rest, { kPaint }),
+     rAF2: analyse(pp.rAF2, rest, { kPaint }),
+@@ -305,6 +365,31 @@ export function unitSelfTest() {
+   const u4 = !at(3.99, 0).f1ct && at(4.01, 0).f1ct && !at(0, 2.99).f1pos && at(0, 3.01).f1pos;
+   if (!u4) hole = true;
+   rows.push(`POSTPAINT unit U4 bounds: ct 3.99 ${at(3.99, 0).f1ct ? "RED" : "GREEN"} / 4.01 ${at(4.01, 0).f1ct ? "RED" : "GREEN"} · dx 2.99 ${at(0, 2.99).f1pos ? "RED" : "GREEN"} / 3.01 ${at(0, 3.01).f1pos ? "RED" : "GREEN"} ${u4 ? "OK (margins ±0.01)" : "← a hole"}`);
++  // U5 stale-rebase (MOT-VERB pass 9, PROPOSED): the fold's shape. Frame 1's in-rAF read holds the
++  // paused mover at ct 0 (the product's start write runs in a later rAF of the same frame); its post
++  // read ran after frame 2's timeline update. Clean: post ct 17 at tlNow 263 → rebased 0, GREEN.
++  // Planted (startTime written 150 ms early): post ct 167 → rebased 150, RED on F1ct alone.
++  const held = (ct0) => [fr(0, 246, ct0, 0, 263), fr(1, 263, ct0), fr(2, 280, ct0 + 17)];
++  const twin = [{ ...fr(0, 246, 0), ps: "paused" }, fr(1, 263, 17), fr(2, 280, 34)];
++  const u5c = analyse(held(17), rest, { kPaint: 0, inRAF: twin });
++  const u5p = analyse(held(167), rest, { kPaint: 0, inRAF: twin });
++  const u5 = !u5c.red && u5p.f1ct;
++  if (!u5) hole = true;
++  rows.push(`POSTPAINT unit U5 stale-rebase: clean ${fmtArm(u5c)} · planted ${fmtArm(u5p)} → ${u5 ? "OK (planted F1ct RED, clean GREEN)" : "← a hole: a stale frame 1 reads its pre-write twin"}`);
++  // U6 seek-guard (homes v3; pass10/CHAIR-RULINGS §18, the critic's missing plant): the fold's shape with
++  // a SEEK between frame 1's paint and its stale post read — frame 1 painted ct 150 (a skip) and a task
++  // wound the clock back 150 ms, so the post read holds ct 17 and the rebase alone infers a clean 0. With
++  // the guard the read is UNREAD and frame 2 (ct 17) reds F1ct; the frame's own in-rAF start write alone
++  // is lawful (GREEN, U5's clean)
++  const w6 = (n, k, inRaf, kind) => ({ n, k, inRaf, kind });
++  const held6 = [{ ...fr(0, 246, 17, 0, 263), wn: 2 }, { ...fr(1, 263, 17), wn: 2 }, { ...fr(2, 280, 34), wn: 2 }];
++  const twin6 = [{ ...fr(0, 246, 0), ps: "paused", wn: 0 }, { ...fr(1, 263, 17), wn: 2 }, { ...fr(2, 280, 34), wn: 2 }];
++  const u6s = analyse(held6, rest, { kPaint: 0, inRAF: twin6, writes: [w6(0, 0, true, "startTime"), w6(1, 0, false, "currentTime")] });
++  const u6o = analyse(held6, rest, { kPaint: 0, inRAF: twin6, writes: [w6(0, 0, true, "startTime")] });
++  const u6l = analyse(held6, rest, { kPaint: 0, inRAF: twin6, writes: [w6(0, 0, true, "startTime"), w6(1, 1, true, "currentTime")] });
++  const u6 = u6s.f1red && u6s.seeks === 1 && !u6o.red && u6l.f1red;
++  if (!u6) hole = true;
++  rows.push(`POSTPAINT unit U6 seek-guard: task seek ${fmtArm(u6s)} (seeks ${u6s.seeks}) · own start only ${fmtArm(u6o)} · a later frame's write ${fmtArm(u6l)} → ${u6 ? "OK (both seeks RED, the frame's own start GREEN)" : "← a hole: a seek between frame 1 and its post read is rebased to a green"}`);
+   return { rows, hole };
+ }
+ 

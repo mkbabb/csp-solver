@@ -1,0 +1,37 @@
+
+Running 8 tests using 1 worker
+
+  ✓  1 [chromium] › e2e/spoken-gallery.spec.ts:93:1 › deck exit by Escape hands focus back to the wordmark that opened it (909ms)
+  ✓  2 [chromium] › e2e/spoken-gallery.spec.ts:105:1 › deck exit by Enter on the SAME game hands focus back (858ms)
+  ✓  3 [chromium] › e2e/spoken-gallery.spec.ts:120:1 › deck exit by Enter on ANOTHER game hands focus back (906ms)
+  ✓  4 [chromium] › e2e/spoken-gallery.spec.ts:136:1 › deck exit by `d` to deal hands focus back (854ms)
+  ✓  5 [chromium] › e2e/spoken-gallery.spec.ts:150:1 › deck entered by `g` hands focus back to the control that held it, not to the wordmark (863ms)
+  ✓  6 [chromium] › e2e/spoken-gallery.spec.ts:178:1 › an Escape taken with focus OUTSIDE the deck does not steal focus back (891ms)
+  ✘  7 [chromium] › e2e/spoken-gallery.spec.ts:236:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport (10.6s)
+  ✓  8 [chromium] › e2e/spoken-gallery.spec.ts:308:1 › the head is read in the order it is painted, at every width (346ms)
+
+
+  1) [chromium] › e2e/spoken-gallery.spec.ts:236:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+
+    Error: expect(received).toBe(expected) // Object.is equality
+
+    Expected: "whole"
+    Received: "clipped: the ring reaches 6px out, air is 1417.6/-694.4/24.0/24.0"
+
+    Call Log:
+    - Timeout 10000ms exceeded while waiting on the predicate
+
+      260 |     // ONE ring, on the option the deck says is active — and on nothing else.
+      261 |     await expect.poll(() => ringOwner(page), { timeout: 10000 }).toBe(id);
+    > 262 |     await expect.poll(() => ringWhole(page), { timeout: 10000 }).toBe('whole');
+          |                                                                  ^
+      263 |   }
+      264 | });
+      265 |
+        at /Users/mkbabb/Programming/csc411/CSC411_HW2_ProgrammingQuestion/.claude/t9-scratch/work/pass10/crit-MOT-LADDER/builds/bt/web/frontend/e2e/spoken-gallery.spec.ts:262:66
+
+    Error Context: ../../../../logs/browse/pwout-sg-bt-chromium/spoken-gallery-the-deck-fo-2e161-not-the-clipping-scrollport-chromium/error-context.md
+
+  1 failed
+    [chromium] › e2e/spoken-gallery.spec.ts:236:1 › the deck focus ring rides the ACTIVE option, not the clipping scrollport 
+  7 passed (16.9s)

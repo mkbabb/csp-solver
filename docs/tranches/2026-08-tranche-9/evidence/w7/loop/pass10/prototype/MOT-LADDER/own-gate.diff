@@ -1,0 +1,1562 @@
+diff --git a/web/frontend/scripts/check-motion-bands.mjs b/web/frontend/scripts/check-motion-bands.mjs
+index 4de46655..cb4e7039 100644
+--- a/web/frontend/scripts/check-motion-bands.mjs
++++ b/web/frontend/scripts/check-motion-bands.mjs
+@@ -68,11 +68,14 @@ import process from "node:process";
+ // block, public/ sheet and index.html is read through the ONE shape-census library.
+ import {
+   clockReads,
++  componentReach,
+   compoundClasses,
+   cssBlocks as shapeBlocks,
+   cssRules,
++  fixture,
+   lengthPx,
+   mayMatch,
++  rulesOf,
+   scriptWrites,
+   sfc,
+   sources,
+@@ -423,17 +426,37 @@ const ADMITTED = [
+     cls: "RETUNE",
+     why: "600 → 520: pass4/CHAIR-RULINGS §1.3 — ruling 1's 520 STANDS; `rise` reverts to the ratified default and 600 is the ballot, one line away",
+   },
++  // ── RETUNE (2d, the element's clock) — PASS 10 · MOT-LADDER row 3: the base (74a2b5d9) already
++  // ships these two deletions. The leave pose sets `animation: none` on the card so the mount
++  // fade-in can never fight the leave (scene.css's own comment), and the leave's banked 200 ms
++  // opacity transition carries the card out. They read only once scene.css, GameScene's
++  // `<style scoped src>`, landed on GameScene's elements (pass 10): before that, no banked
++  // scene.css site landed anywhere.
++  ...[
++    ".app-layout.scene-leaving .scene-controls",
++    "html.gallery-leaving .scene-controls",
++  ].map((sel) => ({
++    file: "src/games/shared/scene.css",
++    key: `src/games/shared/scene.css :: ${sel} :: animation`,
++    to: 0,
++    cls: "RETUNE",
++    why: "the base's leave pose (74a2b5d9, unmoved): the fade-in is stopped, never shortened, while the banked 200 ms leave carries the card; pass9/critique/MOT-LADDER C14 (the class 2d reads)",
++  })),
+   // ── RETUNE (consumer) — MOT-VERB pass 9, charter row 3: the hand's pace keys on the window MINIMUM
+   // (ACC-FIVE's graft), so the pass-8 SEED `[stepMs, stepMs]` left bootHand.ts (2 reads → 1) and the
+   // file gained `MOTION.hand.paceSlack`, a RATIO the roster reads as a 1.5 ms clock. No length on
+   // screen fell: the floor is still `stepMs` (17) and the cap rose 34 → 42. The roster cannot tell a
+   // ratio from a clock; this row licenses that one read, at its value.
++  // PASS 10 · MOT-LADDER row 12 (pass10/CHAIR-RULINGS §19, a VERB byte moved, declared in the
++  // lane's rung ledger): the roster now TYPES `MOTION.hand.paceSlack` a RATIO (ROSTER_TYPES), so no
++  // 1.5 ms clock is gained and nothing is licensed at it; what happened is that one `stepMs` read
++  // LEFT, at its value — a DELETED row. The RETUNE validator's `consumer` subject stays (ratified).
+   {
+     file: "src/pencil/composables/bootHand.ts",
+     consumer: "src/pencil/composables/bootHand.ts :: MOTION.hand.stepMs",
+-    to: 1.5,
+-    cls: "RETUNE",
+-    why: "the seed's second `stepMs` read left with the median (pass8/critique/MOT-VERB gap 4, registry-v8 §2.10: ACC-FIVE's minimum-keyed pace); the gained `paceSlack` is a ratio (NOT A LENGTH), the floor stays 17 and the cap rose to 42",
++    ms: 17,
++    cls: "DELETED",
++    why: "the seed's second `stepMs` read left with the median (pass8/critique/MOT-VERB gap 4, registry-v8 §2.10: ACC-FIVE's minimum-keyed pace); the floor stays 17 and the cap rose to 42; pass10/CHAIR-RULINGS §19 (the ratio is typed, never a clock)",
+   },
+   // ── MOVED (TS) — three MOTION members the base shipped were re-homed onto rungs (pass 3/4):
+   // the TS ratchet (pass 7) banks the base's clocks, so each names its rung WITH its value.
+@@ -470,6 +493,8 @@ const LIST = process.argv.includes("--list");
+ const INVENTORY = process.argv.includes("--inventory");
+ const WRITE_BANK = process.argv.includes("--bank");
+ const SELF_TEST = process.argv.includes("--self-test");
++/** `--times` prints each check's wall time (charter row 8: the tree half timed before/after). */
++const TIMES = process.argv.includes("--times");
+ /** THE GATE'S OWN CLAUSE-SABOTAGE SWITCHES (pass 8, LAWS P7 §F (ii)). Each ratchet clause has an
+  *  id; `MOTION_SABOTAGE=<id>` switches it off, and `--sabotage-battery` runs the self-test once per
+  *  id and demands a red every time (a clause the self-test cannot miss is a clause with a plant).
+@@ -479,6 +504,18 @@ const GATE_CLAUSES = {
+     "B6 · a new site whose SUBJECT COMPOUND reaches a banked subject may not ship shorter",
+   "element-reach":
+     "B6 · a new site that may land on a TEMPLATE ELEMENT a banked subject lands on may not ship shorter",
++  "component-reach":
++    "B6 · the element universe is the COMPONENT TREE: a parent's scoped rule reaches each child's root, a class on a component tag falls through to its root",
++  "element-clock":
++    "B6 · on a banked element a new curve that is no house curve, a deletion (`none`/a CSS-wide keyword) or a negative delay is a cut of its clock",
++  "local-token":
++    "B6 · a local custom property carrying a length is valued at its own site (`--cq: 150ms; … var(--cq)`)",
++  "roster-types":
++    "B6 · the consumer roster TYPES a ratio, a count, a fraction: read, never valued as a clock (paceSlack 1.5)",
++  "keyframes-ratchet":
++    "B6 · a banked animation's @keyframes steps are ratcheted against BASE_REF (K23: 60% → 6%, an effective-time cut)",
++  "script-time":
++    "B6 · a time string in script or a template binding (any spelling) is a site: on the frozen roster by file and text, or red",
+   "css-arith":
+     "B6 · calc()/min()/max()/clamp() over a rung is valued at its lower bound, never at the rung",
+   "script-durations":
+@@ -586,7 +623,7 @@ function arithMs(expr, byName) {
+  * Position-aware read of one declaration body. Returns the ordered time positions per
+  * comma-separated clause, each tagged duration|delay and named|literal.
+  */
+-function positions(prop, body) {
++function positions(prop, body, locals = null) {
+   const longhand = /-duration$/.test(prop)
+     ? "duration"
+     : /-delay$/.test(prop)
+@@ -625,6 +662,13 @@ function positions(prop, body) {
+       toks.push({ kind: "local", ms: toMs(n, u), raw: fb });
+       return `«${toks.length - 1}»`;
+     }
++    // PASS 10 (charter row 3; pass-9 critique C24y): a LOCAL token that carries a length is valued
++    // at its own site — the lowest length any declaration of it in the estate (or its own rule)
++    // carries; `--cq: 150ms; animation: cell-reveal var(--cq) …` shipped the reveal at 150 ms
++    if (mon("local-token") && locals?.has(name)) {
++      toks.push({ kind: "local", ms: locals.get(name), raw: name });
++      return `«${toks.length - 1}»`;
++    }
+     return "§";
+   });
+   // 3 · one clause per comma, then walk each clause in order
+@@ -720,6 +764,39 @@ function scopedAt(text, at) {
+   return /^<style\b[^>]*\bscoped\b/.test(text.slice(open, text.indexOf(">", open) + 1));
+ }
+ 
++/** Every custom property a stylesheet declares with a bare length (`--cq: 150ms`), at its LOWEST
++ *  value: the estate's (read once, every collected file) merged with `scan`'s own. A rung read is
++ *  masked before (RUNG_VAR, B3's), so `--motion-*` never reaches this map's reader; a token set
++ *  from script is `script-time`'s. */
++const TOKEN_TIME =
++  /(?<![\w-])(--[A-Za-z][\w-]*)\s*:\s*(-?\d+(?:\.\d+)?)(ms|s)\s*(?=[;}\n])/g;
++let ESTATE_TIMES = null;
++/** The self-test's models are HERMETIC: a token the tree declares (a plant's `--cq`) never values a
++ *  fixture's `var(--cq)`, and a model with no `timing` of its own reads no tree declaration into
++ *  2d (a plant's `steps(1, end)` never regresses a fixture built on the estate's elements). Set while
++ *  the self-test's cases run. */
++let HERMETIC = false;
++function timesIn(scan, into = new Map()) {
++  for (const m of scan.matchAll(TOKEN_TIME)) {
++    const ms = toMs(m[2], m[3]);
++    if (!into.has(m[1]) || ms < into.get(m[1])) into.set(m[1], ms);
++  }
++  return into;
++}
++function localTimes(scan) {
++  if (!mon("local-token")) return null;
++  if (!ESTATE_TIMES) {
++    ESTATE_TIMES = new Map();
++    for (const f of collectFiles())
++      try {
++        timesIn(readFileSync(f, "utf8").replace(/\/\*[^]*?\*\//g, " "), ESTATE_TIMES);
++      } catch {
++        /* an unreadable file publishes nothing */
++      }
++  }
++  return timesIn(scan, HERMETIC ? new Map() : new Map(ESTATE_TIMES));
++}
++
+ function collectText(text, rel) {
+   const decls = [];
+   // PROSE IS NOT CODE. Comments are masked to spaces — offsets preserved, so every window
+@@ -736,7 +813,7 @@ function collectText(text, rel) {
+     const head = text.slice(lineStart, m.index).trim();
+     if (head.startsWith("*") || head.startsWith("//") || head.startsWith("/*"))
+       continue; // prose
+-    const pos = termed(prop, positions(prop, body));
++    const pos = termed(prop, positions(prop, body, localTimes(scan)));
+     if (!pos.length) continue;
+     decls.push({
+       file: rel,
+@@ -1077,7 +1154,7 @@ const FIT_WRITERS = [
+     value: /^String\(Math\.min\(faceW \/ bw, faceH \/ bh\)\)\)?$/,
+   },
+ ];
+-function fitOneWriter(files = null) {
++function fitOneWriter(files = null, ledger = RUNG_LEDGER) {
+   if (!mon("fit-one-writer")) return [];
+   const opt = files
+     ? (() => {
+@@ -1089,7 +1166,17 @@ function fitOneWriter(files = null) {
+         };
+       })()
+     : {};
+-  const sites = tokenSites(ROOT, "--live-fit", opt);
++  // PASS 10 (charter row 6; pass-9 critique §5 "FIT-1 is consumer-less"): the token this clause
++  // guards is READ from the rung ledger's FIT-1 row, so the row is consumed: struck, or re-pointed
++  // at another token, the clause reds
++  const fit = ledger.find((x) => x.id === "FIT-1");
++  if (!fit || fit.subject !== "--live-fit")
++    return [
++      `RUNG_LEDGER's FIT-1 row ${fit ? `names ${fit.subject}` : "is gone"} — the measured fit's one writer is ruled by that row (pass9/CHAIR-RULINGS §11), and fit-one-writer reads its token from it.`,
++    ];
++  const sites = files
++    ? tokenSites(ROOT, fit.subject, opt)
++    : treeTokenSites(fit.subject);
+   const bad = [];
+   const hits = new Map(FIT_WRITERS.map((w) => [w, 0]));
+   for (const x of sites) {
+@@ -1123,6 +1210,19 @@ function fitOneWriter(files = null) {
+  *  `setProperty("--motion-leave", "10ms")` in main.ts beat the publisher and moved every consumer to
+  *  10 ms in both engines. A computed-key write is UNRESOLVED and printed, never counted a publisher. */
+ const RP_MEMO = new Map();
++/** PASS 10 (charter row 8; pass-9 critique gap 10, "tokenSites ×8 un-memoized"): every tree read
++ *  of `tokenSites` (seven rungs + the fit) shares ONE pass over the sources — each file read from
++ *  disk once, and the library's per-file parse cache keyed on that one text. */
++const TOKEN_TEXT = new Map();
++const TOKEN_OPT = {
++  read: (f) => {
++    if (!TOKEN_TEXT.has(f)) TOKEN_TEXT.set(f, readFileSync(f, "utf8"));
++    return TOKEN_TEXT.get(f);
++  },
++};
++function treeTokenSites(token) {
++  return tokenSites(ROOT, token, TOKEN_OPT);
++}
+ function rungPublishers(rungs, files = null) {
+   if (!mon("rung-publishers")) return { bad: [], unresolved: 0 };
+   const memo = files ? null : rungs.map((r) => r.key).join(",");
+@@ -1146,7 +1246,7 @@ function rungPublishersRead(rungs, files) {
+   let unresolved = 0;
+   for (const r of rungs) {
+     const token = `--motion-${r.key}`;
+-    for (const x of tokenSites(ROOT, token, opt)) {
++    for (const x of files ? tokenSites(ROOT, token, opt) : treeTokenSites(token)) {
+       if (x.unresolved) {
+         unresolved++;
+         continue;
+@@ -1239,6 +1339,183 @@ function scriptDurations(files = null, ledger = LEDGER) {
+   return bad;
+ }
+ 
++/** PASS 10 (charter row 2; pass-9 critique §4a/§4b, K1's CLASS): a TIME STRING in script or in a
++ *  template style binding is a duration the cascade will read, whatever spelling carries it to the
++ *  element — a bracket, `Object.assign`, a computed key, a camelCase dot write, a template `:style`
++ *  key, a negative delay, a bare clock hole (`${MOTION.rungs.whisper}ms`): C6 C19 C21 C22 C23 C27
++ *  each shipped the reveal shorter in both engines with every gate at 0, because the duration
++ *  clause reads only the spellings the library's `scriptWrites` keys. This clause keys the VALUE:
++ *  every string literal whose text is a time (`"50ms"`, `'-150ms'`, `` `${x}ms` ``) in a product
++ *  script or a template `:style`/`v-bind` binding is a site, ratcheted by the frozen roster below
++ *  (file :: literal text → count; written at this pass from the tree, never by a reader). A new
++ *  literal, a changed one, or one more of a rostered one reds; a roster entry the tree no longer
++ *  carries reds too (an entry is consumed or it is struck). */
++const SCRIPT_TIME_ROSTER = {
++  "src/games/shared/DigitCell.vue :: `${props.noiseDelay}ms`": 1,
++  "src/games/shared/DigitCell.vue :: `${refuseDurMs}ms`": 1,
++  "src/games/shared/DigitCell.vue :: '160ms'": 1,
++  "src/games/shared/DigitCell.vue :: `${marks!.indexOf(v) * 20}ms`": 1,
++  "src/games/shared/GameBoard.vue :: `${MOTION.characters.refuse}ms`": 1,
++  "src/pencil/chrome/CelebrationHeart.vue :: `${CELEBRATION.heartBounceMs}ms`": 1,
++  "src/pencil/chrome/CelebrationHeart.vue :: `${CELEBRATION.heartCrestMs}ms`": 1,
++  "src/pencil/chrome/CelebrationHeart.vue :: `${CELEBRATION.wiggleCycleMs}ms`": 1,
++  "src/pencil/chrome/CelebrationHeart.vue :: `${CELEBRATION.heartBlinkMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starBloomStartMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starBloomMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starCrestMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starFlashMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starFadeMs}ms`": 1,
++  "src/pencil/chrome/CelebrationStar.vue :: `${CELEBRATION.starLandMs}ms`": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '200ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '240ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '280ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '320ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '360ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '400ms'": 1,
++  "src/pencil/chrome/icons/DiceIcon.vue :: '440ms'": 1,
++  "src/pencil/chrome/icons/FillForcedIcon.vue :: '110ms'": 1,
++  "src/pencil/chrome/icons/SolveIcon.vue :: '120ms'": 1,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: `${KEY_DRAW_MS}ms`": 1,
++  "src/pencil/chrome/CelebrationHeart.vue :: `${CELEBRATION.heartCrestMs + CELEBRATION.heartBounceMs + CELEBRATION.heartBlinkDelayMs}ms`": 1,
++  "src/pencil/sheet/AnswerKeyLaminate.vue :: `${KEY_DELAY_LEAD_MS + ((cell.pos * 31) % KEY_STAGGER_BUCKETS) * keyBucketMs}ms`": 1,
++};
++const TIME_TEXT = /^\s*-?\s*(?:\d+\.?\d*|\.\d+)\s*m?s\s*$/;
++const TIME_HOLE = /^\s*-?\s*\$\{[^]*\}\s*m?s\s*$/;
++function scriptTimeSites(texts) {
++  const found = new Map();
++  for (const [rel, text] of texts) {
++    const parts = [];
++    if (rel.endsWith(".vue")) {
++      const b = sfc(text);
++      for (const s of b.scripts) parts.push(s.text);
++      if (b.template)
++        for (const m of b.template.text.matchAll(
++          /(?:^|\s)(?::|v-bind:|v-bind)(?:style)?\s*=\s*(["'])([^]*?)\1/g,
++        ))
++          parts.push(m[2]);
++    } else parts.push(text);
++    for (const p of parts)
++      for (const m of stripJs(p).matchAll(/(["'`])((?:\\.|(?!\1)[^\\])*)\1/g)) {
++        const body = m[2];
++        const hit =
++          TIME_TEXT.test(body) ||
++          (m[1] === "`" && /\$\{/.test(body) && TIME_HOLE.test(body));
++        if (!hit) continue;
++        const key = `${rel} :: ${m[0].replace(/\s+/g, " ")}`;
++        found.set(key, (found.get(key) ?? 0) + 1);
++      }
++  }
++  return found;
++}
++function scriptTimes(files = null, roster = SCRIPT_TIME_ROSTER) {
++  if (!mon("script-time")) return [];
++  const texts =
++    files ??
++    sources(ROOT)
++      .map((f) => [relative(ROOT, f), f])
++      .filter(
++        ([rel]) =>
++          /\.(ts|tsx|js|vue)$/.test(rel) &&
++          !/\.(test|spec)\.[jt]sx?$/.test(rel) &&
++          !rel.includes("/pencil/dev/"),
++      )
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  const found = scriptTimeSites(texts);
++  const bad = [];
++  for (const [key, n] of found)
++    if ((roster[key] ?? 0) < n)
++      bad.push(
++        `${key}  — a TIME STRING in script (${n} here, ${roster[key] ?? 0} on the roster): a duration no CSS site keys, whatever spelling carries it to the element. Move it to the cascade, or add it to SCRIPT_TIME_ROSTER with the pass's cite.`,
++      );
++  if (!files)
++    for (const [key, n] of Object.entries(roster))
++      if ((found.get(key) ?? 0) < n)
++        bad.push(
++          `${key}  — a SCRIPT_TIME_ROSTER entry the tree carries ${found.get(key) ?? 0}× of ${n}: an entry is consumed by a site or it is struck.`,
++        );
++  return bad;
++}
++
++/** PASS 10 (charter row 3; the lane's pass-9 gap 8, K23's class): an EFFECTIVE-time cut through
++ *  the keyframes — the reveal's `60%` step moved to `6%` and the motion done by `10%` of a 300 ms
++ *  clock, every length unmoved. The keyframes of every banked animation term are RATCHETED against
++ *  BASE_REF: a step's offsets and declarations, read by the ONE library's `rulesOf`, may not change
++ *  unless KEYFRAMES_RETUNED names the file :: name with its new signature and a cite. */
++const KEYFRAMES_RETUNED = [];
++function keyframeSigs(rel, text) {
++  const out = new Map();
++  for (const r of rulesOf(join(ROOT, rel), text, ROOT)) {
++    const kf = r.ctx
++      .map((c) => /^@(?:-\w+-)?keyframes\s+([\w-]+)/.exec(c)?.[1])
++      .find(Boolean);
++    if (!kf) continue;
++    const step = `${r.prelude.replace(/\s+/g, "")}{${r.decls.map((d) => `${d.prop}:${String(d.value).replace(/\s+/g, " ").trim()}`).join(";")}}`;
++    out.set(kf, [...(out.get(kf) ?? []), step]);
++  }
++  return new Map([...out].map(([k, v]) => [k, v.sort().join(" ")]));
++}
++function keyframesRatchet(
++  bank,
++  files = null,
++  base = null,
++  retuned = KEYFRAMES_RETUNED,
++) {
++  if (!mon("keyframes-ratchet")) return [];
++  const terms = new Set(
++    Object.keys(bank?.sites ?? {}).map((k) => k.split(" :: ").at(-1)),
++  );
++  const texts =
++    files ??
++    [...collectFiles()]
++      .map((f) => [relative(ROOT, f), f])
++      .filter(([rel]) => /\.(css|vue)$/.test(rel) && !rel.includes("/pencil/dev/"))
++      .map(([rel, f]) => [rel, readFileSync(f, "utf8")]);
++  const bad = [];
++  const used = new Set();
++  for (const [rel, text] of texts) {
++    const now = keyframeSigs(rel, text);
++    const hits = [...now.keys()].filter((k) => terms.has(k));
++    if (!hits.length) continue;
++    let was;
++    if (base) was = base(rel);
++    else if (baseReachable())
++      try {
++        was = execFileSync("git", ["show", `${BASE_SHA}:web/frontend/${rel}`], {
++          cwd: ROOT,
++          encoding: "utf8",
++          maxBuffer: 32e6,
++          stdio: ["ignore", "pipe", "ignore"],
++        });
++      } catch {
++        was = null; // the file is new since the base
++      }
++    else
++      return [
++        "keyframes-ratchet: BASE_REF is unreachable — the banked keyframes have nothing to ratchet against.",
++      ];
++    if (was == null) continue;
++    const then = keyframeSigs(rel, was);
++    for (const k of hits) {
++      if (!then.has(k) || then.get(k) === now.get(k)) continue;
++      const row = retuned.find(
++        (x) => x.key === `${rel} :: ${k}` && x.sig === now.get(k),
++      );
++      if (row && /CHAIR-RULINGS|critique|registry-v\d|census\//.test(row.why ?? "")) {
++        used.add(row);
++        continue;
++      }
++      bad.push(
++        `${rel} :: @keyframes ${k}  — the steps of a BANKED animation changed against ${BASE_REF} (${then.get(k).slice(0, 60)} → ${now.get(k).slice(0, 60)}): an effective-time cut the lengths never show. A KEYFRAMES_RETUNED row with its signature and cite, or restore the steps.`,
++      );
++    }
++  }
++  if (!files)
++    for (const r of retuned)
++      if (!used.has(r))
++        bad.push(`KEYFRAMES_RETUNED ${r.key} licenses no changed keyframes — STALE.`);
++  return bad;
++}
++
+ function published(cfg) {
+   const theme = readFileSync(THEME, "utf8");
+   // INTAKE-23 row 19 (one home, one publisher): the toggle's `--storybook-*` clocks are the
+@@ -1673,19 +1950,53 @@ function reaches(rs, ks) {
+ let ESTATE_ELS = null;
+ function estateElements() {
+   if (ESTATE_ELS) return ESTATE_ELS;
+-  ESTATE_ELS = [];
++  const entries = [];
+   for (const f of sources(ROOT)) {
+     const rel = relative(ROOT, f);
+     if (!rel.endsWith(".vue") || rel.includes("/pencil/dev/")) continue;
+-    const b = sfc(readFileSync(f, "utf8"));
+-    if (b.template)
+-      ESTATE_ELS.push({
+-        file: rel,
+-        els: templateElements(b.template.text, b.template.line),
+-      });
++    entries.push([rel, readFileSync(f, "utf8")]);
+   }
++  ESTATE_ELS = universeOf(
++    entries,
++    mon("component-reach") ? componentReach(ROOT) : null,
++  );
+   return ESTATE_ELS;
+ }
++/** PASS 10 (charter row 1; LAWS P9 §F "the shape universe is the COMPONENT TREE"; pass-9 critique
++ *  §4d, C1y/C17y): the universe as Vue renders it, read by the ONE library's `componentReach`. A
++ *  class (or a `:class`) a parent writes on a component tag is not a prop: it FALLS THROUGH to that
++ *  child's root(s), so each root carries the classes its parents write. `reach` rides the universe
++ *  for `landsOn`: a `<style scoped>` rule lands on its own file's elements AND on the root of every
++ *  child its template renders (a dynamic `<component :is>`/`<RouterView>` may render any), and a
++ *  `:deep()` rule on any element of a component it renders at any depth. */
++function universeOf(entries, reach) {
++  const u = [];
++  const scopedSrc = new Map();
++  for (const [rel, text] of entries) {
++    const b = sfc(text);
++    if (!b.template) continue;
++    const els = templateElements(b.template.text, b.template.line);
++    const ft = reach ? reach.fallThrough(rel).map((x) => x.cls) : [];
++    if (ft.length)
++      for (const r of reach.roots(rel))
++        if (els[r.i])
++          els[r.i] = { ...els[r.i], classes: new Set([...els[r.i].classes, ...ft]) };
++    u.push({ file: rel, els });
++    // a `<style scoped src="…">` stylesheet is THIS file's scoped style (scene.css is GameScene's)
++    for (const m of text.matchAll(/<style\b([^>]*)>/g)) {
++      const src = /\bscoped\b/.test(m[1]) && /\bsrc=["']([^"']+)["']/.exec(m[1]);
++      if (!src) continue;
++      const to = src[1].startsWith("@/")
++        ? `src/${src[1].slice(2)}`
++        : join(dirname(rel), src[1]).replace(/\\/g, "/");
++      if (!scopedSrc.has(to)) scopedSrc.set(to, []);
++      scopedSrc.get(to).push(rel);
++    }
++  }
++  u.reach = reach;
++  u.scopedSrc = scopedSrc;
++  return u;
++}
+ /** The element as its CLASSES are carried: the static `class=` and every literal a `:class` names.
+  *  An opaque `:class`/`v-bind` (it MAY carry any class) does not make every rule in the estate land
+  *  on it here — the subject's own match keeps the library's conservative reading for its ancestors. */
+@@ -1699,9 +2010,21 @@ const selOf = (key) => key.split(" :: ")[1].replace(/^<style[^>]*>\s*/, "");
+ function landsOn(r, universe) {
+   const out = [];
+   const sel = (r.sel ?? selOf(r.key)).replace(/^<style[^>]*>\s*/, "");
++  const reach = universe.reach ?? null;
++  // the SFC(s) whose scoped style the rule is: its own file, or the importers of a scoped `src`
++  const owners = universe.scopedSrc?.get(r.file) ?? [r.file];
++  const scoped = r.scoped || universe.scopedSrc?.has(r.file);
+   for (const { file, els } of universe) {
+-    if (r.scoped && r.file !== file) continue;
++    const foreign = scoped && !owners.includes(file);
++    if (foreign && !reach) continue;
++    // a scoped `:deep()` rule reaches every element of a component its file renders at any depth
++    const deep =
++      foreign &&
++      /:deep\(|::v-deep/.test(sel) &&
++      owners.some((o) => reach.deepReaches(o, file));
+     for (const el of els) {
++      // otherwise a scoped rule reaches another file's element only at a ROOT its file renders
++      if (foreign && !deep && !owners.some((o) => reach.reaches(o, file, el))) continue;
+       let hit;
+       try {
+         hit = mayMatch(sel, carried(el), els);
+@@ -1714,6 +2037,72 @@ function landsOn(r, universe) {
+   return out;
+ }
+ 
++/** 2d's universe: every animation/transition declaration the ONE library's `rulesOf` reads, as
++ *  `{key, file, sel, scoped, fam, prop, value, prm}` — durations or not (a curve, a deletion and a
++ *  delay carry no length, so `inventoryRows` never sees them). */
++const CLOCK_PROP = /^(animation|transition)(-timing-function|-name|-property|-delay)?$/;
++function timingDeclsOf(entries) {
++  const out = [];
++  for (const [rel, text] of entries)
++    for (const r of rulesOf(join(ROOT, rel), text, ROOT)) {
++      const sel = r.as ?? r.prelude;
++      // a keyframe step's curve is the keyframes' own (lands on no element)
++      if (sel.startsWith("@") || r.ctx.some((c) => /^@(?:-\w+-)?keyframes\b/.test(c)))
++        continue;
++      const prm = /prefers-reduced-motion\s*:\s*reduce/.test(r.ctx.join(" "));
++      for (const d of r.decls)
++        if (CLOCK_PROP.test(d.prop))
++          out.push({
++            key: `${rel} :: ${sel.replace(/\s+/g, " ").trim().slice(0, 80)} :: ${d.prop}`,
++            file: rel,
++            sel,
++            scoped: r.kind === "sfc-style-scoped",
++            fam: d.prop.startsWith("animation") ? "animation" : "transition",
++            prop: d.prop,
++            value: String(d.value).trim(),
++            prm,
++            line: d.line,
++          });
++    }
++  return out;
++}
++let TIMING = null;
++function timingDecls() {
++  if (TIMING) return TIMING;
++  const entries = [];
++  for (const f of collectFiles()) {
++    const rel = relative(ROOT, f);
++    if (rel.includes("/pencil/dev/") || /\.(test|spec)\.[jt]sx?$/.test(rel)) continue;
++    if (!/\.(css|vue|html|scss|sass|less|styl|pcss|postcss)$/.test(rel)) continue;
++    entries.push([rel, readFileSync(f, "utf8")]);
++  }
++  return (TIMING = timingDeclsOf(entries));
++}
++const HOUSE_CURVE = /var\(\s*--(?:ease-[A-Za-z]+|verb-[A-Za-z]+-ease)\s*\)/g;
++const CSS_WIDE = /^(?:none|initial|unset|revert|revert-layer|inherit)$/;
++/** What a declaration cuts of its element's clock, or null: a curve that is no house curve, a
++ *  deletion, a negative delay. */
++function clockCut(d) {
++  if (d.prm) return null;
++  const v = d.value.replace(/\s*!important\s*$/, "");
++  if (/-timing-function$/.test(d.prop)) {
++    const rest = v.replace(HOUSE_CURVE, "").replace(/[\s,]/g, "");
++    return rest ? `sets the curve \`${v.slice(0, 40)}\` (no house curve)` : null;
++  }
++  if (/^(animation|transition)(-name|-property)?$/.test(d.prop) && CSS_WIDE.test(v))
++    return `deletes the ${d.fam} (\`${d.prop}: ${v}\`)`;
++  const neg = /-delay$/.test(d.prop)
++    ? /(?:^|[\s,(])-\s*(?:\d|\.\d|var\(|calc\()|\*\s*-\s*\d/.test(v)
++    : /(?:^|\s)-\d+(?:\.\d+)?m?s\b/.test(v);
++  if (neg) return `starts it part-way (a NEGATIVE delay \`${v.slice(0, 40)}\`)`;
++  if (
++    !/-delay$/.test(d.prop) &&
++    /\bsteps\(|\bcubic-bezier\(|\blinear\(/.test(v.replace(HOUSE_CURVE, ""))
++  )
++    return `sets the curve in \`${v.slice(0, 40)}\` (no house curve)`;
++  return null;
++}
++
+ /** The document shapes a RETUNE's `why` may cite. */
+ const RETUNE_CITE =
+   /CHAIR-RULINGS|INTAKE-?\d*|census\/|critique|registry-v\d|DISPOSITIONS|T9-B\d+/;
+@@ -1785,8 +2174,17 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+         `${r.key}  ships ${r.ms}ms; its RETUNE row says to: ${to}ms.  ${r.clause}`,
+       );
+   }
++  // (pass 10: a RETUNE keyed on a 2d site — `file :: selector :: prop` — is live while that
++  //  declaration ships; it carries no length, so `rows` never holds it)
++  const clockKeys = mon("element-clock")
++    ? new Set(
++        (ctx.timing ?? (ctx.elements || HERMETIC ? [] : timingDecls())).map(
++          (d) => d.key,
++        ),
++      )
++    : new Set();
+   for (const [key] of siteTo)
+-    if (!liveMs.has(key))
++    if (!liveMs.has(key) && !clockKeys.has(key))
+       bad.push(`RETUNE row for ${key}, which is not a live site — STALE.`);
+   // 2b · THE SUBJECT COMPOUND, NEVER THE PRELUDE (pass 8, charter row 1; LAWS P7 §F). A new key
+   //     was 'a new position with nothing to shorten', so `html .cell-reveal-animated { animation:
+@@ -1839,6 +2237,42 @@ function b6NoShorten(rows, bank, lad, ledger = LEDGER, ctx = {}) {
+         );
+     }
+   }
++  // 2d · THE ELEMENT'S CLOCK, NOT ONLY ITS DURATION (pass 10, charter row 3; pass-9 critique
++  //      C13/C14/C3): a new declaration on a banked element that swaps its curve for one that is no
++  //      house curve (`steps(1, end)`: a 300 ms hold and a pop), deletes it (`animation: none`, a
++  //      CSS-wide keyword) or starts it part-way (a negative delay) cuts the clock the bank holds,
++  //      whatever its duration reads. A reduced-motion arm is B5's; the escape is a RETUNE keyed
++  //      on the site `file :: selector :: prop` with its cite.
++  if (mon("element-clock") && universe.length) {
++    // keyed on the element AND the family: one element carries a banked transition and a banked
++    // animation (scene.css's `.controls-card::before` opacity and `.scene-controls` fade-in land
++    // on GameScene's one card), so the first banked site to claim it never hides the other family
++    const held = new Map();
++    for (const [k] of Object.entries(sites)) {
++      const kr = live.get(k);
++      if (kr)
++        for (const t of on(kr)) {
++          if (!held.has(t.el)) held.set(t.el, new Map());
++          const byFam = held.get(t.el);
++          if (!byFam.has(kr.fam)) byFam.set(kr.fam, { k, fam: kr.fam, t });
++        }
++    }
++    const retuned = new Set(
++      ledger.filter((x) => x.cls === "RETUNE" && x.key).map((x) => x.key),
++    );
++    for (const d of ctx.timing ?? (ctx.elements || HERMETIC ? [] : timingDecls())) {
++      const cut = clockCut(d);
++      if (!cut || retuned.has(d.key)) continue;
++      for (const x of landsOn(d, universe)) {
++        const h = held.get(x.el)?.get(d.fam);
++        if (!h) continue;
++        bad.push(
++          `${d.key}  ${cut} on ${x.file}:${x.el.line} <${x.el.tag}>, the ELEMENT ${h.k} is banked on — a cut of its clock, not a new position. A RETUNE keyed on this site with a cite, or drop it.`,
++        );
++        break;
++      }
++    }
++  }
+   // 3 · THE ORPHAN CLAUSE (pass-4, the other half of §2.1's cure). Masking the selector shut
+   //     the prose door; this shuts the last one. A shortening can now hide ONLY by moving the
+   //     key itself — rewriting the rule head, re-spelling the property — and a banked key that
+@@ -2424,8 +2858,86 @@ const RUNG_LEDGER = [
+     why: "row 9's fallback: any fallback, declared default or second writer reds B3; GC1 reads the ablation at desk 1440x900 and phone 390x844, both engines",
+     retrigger: "a second writer, a fallback, or a declared default of --live-fit",
+   },
++  {
++    id: "DIP-1",
++    subject:
++      "DRAW_IN_PRESETS.{gridFrame,gridSubgrid,gridCell,glyph}.duration beside MOTION.hand.serial",
++    value:
++      "350 / 280 / 200 / 350 ms beside serial {frame: throw 520, subgrid: note 250, cell: whisper 150}",
++    pin: {
++      presets: { gridFrame: 350, gridSubgrid: 280, gridCell: 200, glyph: 350 },
++      serial: { frame: "throw", subgrid: "note", cell: "whisper" },
++    },
++    ruling:
++      "pass9/registry-v9 §2.2 (MOT-VERB BANKED; its bytes do not move) · INTAKE-23 row 17",
++    why: "two homes that disagree on every tier: the preset is each stroke's own draw-on clock, serial the rung at which the next line lands (VERB's banked design); ledgered on its numbers, never re-tuned silently",
++    retrigger:
++      "any preset duration or serial rung moves (this row's reader reds until it is re-read)",
++  },
++  {
++    id: "DOOR-6a",
++    subject: "motion-bank.json `consumers` — the TS consumer roster's floor",
++    value:
++      "Σ count × ms over the banked roster, 32141.1 ms at pass 10 (57 keys, 10 unvalued)",
++    mass: 32141.1,
++    ruling: "pass9/critique/MOT-LADDER §6 row 9 (door 6a priced, not closed)",
++    why: "the roster's only floor was the stamp: a swap, `--bank` and a re-stamp shipped 200 → 150 in one diff; the mass pins the re-bank so a lowering is a fourth edit, here, with its cite",
++    retrigger:
++      "a re-bank that lowers the mass, or the base-derived roster floor built (then this row is struck)",
++  },
+ ];
+ 
++/** PASS 10 (charter row 6): the rung ledger's non-KT rows are READ — DIP-1 pins the draw-on presets
++ *  and the serial rungs, DOOR-6a the banked consumer roster's clock mass. A row nothing reads is
++ *  prose in an array (FIT-1 at pass 9); each of these reds when its subject moves. */
++function ledgerRead(bank, src = readFileSync(CONFIG, "utf8"), ledger = RUNG_LEDGER) {
++  if (!mon("twin-ratchet")) return [];
++  const bad = [];
++  const dip = ledger.find((x) => x.id === "DIP-1");
++  const blk =
++    /export const DRAW_IN_PRESETS = \{([^]*?)\n\}(?: as const)?;/.exec(src)?.[1] ?? "";
++  const pres = {};
++  for (const m of blk.matchAll(/(\w+):\s*\{[^{}]*?\bduration:\s*(\d+(?:\.\d+)?)/g))
++    pres[m[1]] = Number(m[2]);
++  const ser = Object.fromEntries(
++    [
++      ...(/\bserial:\s*\{([^}]*)\}/.exec(src)?.[1] ?? "").matchAll(/(\w+):\s*"(\w+)"/g),
++    ].map((m) => [m[1], m[2]]),
++  );
++  if (!dip)
++    bad.push(
++      "RUNG_LEDGER's DIP-1 row is gone — the draw-on presets beside MOTION.hand.serial are unledgered.",
++    );
++  else {
++    for (const k of new Set([...Object.keys(pres), ...Object.keys(dip.pin.presets)]))
++      if (pres[k] !== dip.pin.presets[k])
++        bad.push(
++          `DRAW_IN_PRESETS.${k}.duration ships ${pres[k] ?? "—"}ms; RUNG_LEDGER DIP-1 pins ${dip.pin.presets[k] ?? "—"}ms — a draw-on clock moved with its ledger row unread.`,
++        );
++    for (const k of new Set([...Object.keys(ser), ...Object.keys(dip.pin.serial)]))
++      if (ser[k] !== dip.pin.serial[k])
++        bad.push(
++          `MOTION.hand.serial.${k} reads ${ser[k] ?? "—"}; RUNG_LEDGER DIP-1 pins ${dip.pin.serial[k] ?? "—"} — the next-line rung moved with its ledger row unread.`,
++        );
++  }
++  const door = ledger.find((x) => x.id === "DOOR-6a");
++  const banked = bank?.consumers ?? {};
++  const mass =
++    Math.round(
++      Object.values(banked).reduce((a, [n, ms]) => a + (ms === null ? 0 : n * ms), 0) *
++        10,
++    ) / 10;
++  if (!door)
++    bad.push(
++      "RUNG_LEDGER's DOOR-6a row is gone — the consumer roster's floor is the stamp alone.",
++    );
++  else if (mass < door.mass)
++    bad.push(
++      `motion-bank.json's consumer roster carries ${mass} ms of clock mass, below DOOR-6a's ${door.mass}: a re-bank LOWERED a consumer (door 6a). Re-read the row with the RETUNE's cite.`,
++    );
++  return bad;
++}
++
+ /** The rung ledger is CLOSED both ways (pass 9): a KT row names a twin that carries its id. */
+ function ledgerBound(twins, ledger = RUNG_LEDGER) {
+   if (!mon("twin-ratchet")) return [];
+@@ -3325,7 +3837,8 @@ function consumerRoster(files = null, lad = null) {
+   const out = {};
+   const add = (rel, path) => {
+     const k = `${rel} :: ${path}`;
+-    const ms = leaves[path];
++    // a TYPED leaf (a ratio, a count, a fraction) is read, never valued as a clock
++    const ms = mon("roster-types") && ROSTER_TYPES[path] ? null : leaves[path];
+     out[k] = [(out[k]?.[0] ?? 0) + 1, typeof ms === "number" ? ms : null];
+   };
+   for (const [rel, text] of texts) {
+@@ -3362,6 +3875,29 @@ function consumerRoster(files = null, lad = null) {
+  *  least ms (a move up, a rename), RED when the file gained a SHORTER one (the swap), RED when it
+  *  gained nothing (it left — a DELETED/MOVED row `{ consumer, ms }` with a cite), unless a RETUNE
+  *  `{ consumer, to }` licenses the one swap it names. */
++/** PASS 10 (LADDER row 12; pass10/CHAIR-RULINGS §19; LAWS P9 §E "a fitted constant names its
++ *  ballot"): the consumer roster's TYPES. A leaf typed here is a RATIO, a COUNT or a FRACTION — read
++ *  by its consumer, never a clock: `paceSlack` 1.5 was carried as a "1.5 ms clock" and licensed by a
++ *  RETUNE at that value. Each typed leaf must be one EXEMPT_KEYS names NOT A LENGTH (typesBound). */
++const ROSTER_TYPES = {
++  "MOTION.hand.paceSlack": "ratio",
++  "MOTION.hand.paceWindow": "count",
++  "MOTION.hand.lift": "fraction",
++  "MOTION.hinge.dark": "fraction",
++  "MOTION.hinge.light": "fraction",
++};
++function typesBound(types = ROSTER_TYPES, exempt = EXEMPT_KEYS) {
++  if (!mon("roster-types")) return [];
++  return Object.entries(types)
++    .filter(
++      ([path]) =>
++        !/^NOT A LENGTH/.test(exempt[path.replace(/^MOTION\./, "")]?.why ?? ""),
++    )
++    .map(
++      ([path, t]) =>
++        `ROSTER_TYPES types ${path} a ${t}, but EXEMPT_KEYS does not name it NOT A LENGTH — a clock typed out of the roster is a shortening no row licenses.`,
++    );
++}
+ function consumerRatchet(bank, roster, ledger = LEDGER) {
+   if (!mon("consumer-roster")) return [];
+   const bad = [];
+@@ -3373,6 +3909,7 @@ function consumerRatchet(bank, roster, ledger = LEDGER) {
+   const esc = (k) => ledger.find((r) => r.consumer === k);
+   for (const [k, [n, ms]] of Object.entries(banked)) {
+     if (ms === null) continue;
++    if (mon("roster-types") && ROSTER_TYPES[k.split(" :: ")[1]]) continue; // not a clock
+     const now = roster[k]?.[0] ?? 0;
+     if (now >= n) continue;
+     const file = k.split(" :: ")[0];
+@@ -3860,6 +4397,10 @@ const checks = (ledger = LEDGER) => [
+       ...b6NoShorten(rows, bank, lad, ledger),
+       ...consumerRatchet(bank, consumerRoster(null, lad), ledger),
+       ...scriptDurations(null, ledger),
++      ...scriptTimes(null),
++      ...ledgerRead(bank, lad.src),
++      ...typesBound(),
++      ...keyframesRatchet(bank),
+     ],
+   ],
+   ["B7 TAILWIND", () => b7Tailwind()],
+@@ -3933,9 +4474,10 @@ if (SABOTAGE_BATTERY) {
+ 
+ const failures = [];
+ for (const [name, fn] of CHECKS) {
++  const t0 = performance.now();
+   const found = run(fn);
+   console.log(
+-    `  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}`,
++    `  ${found.length ? "✗" : "✓"} ${name}${found.length ? ` — ${found.length}` : ""}${TIMES ? `  (${Math.round(performance.now() - t0)} ms)` : ""}`,
+   );
+   if (LIST) for (const f of found) console.log(`      ${f}`);
+   failures.push(...found.map((f) => `[${name}] ${f}`));
+@@ -5223,6 +5765,658 @@ if (SELF_TEST) {
+           ],
+         ]),
+     ],
++    // ══ PASS 10 · the pass-9 critic's CLASS plants (C1y C17y C2 C13 C14 C3 C24y C28y) on the
++    //    component-tree universe, and the rows that pin each disjunct and guard (D3 D4 D7 D8) ═══
++    ...(() => {
++      const css = "src/assets/index.css";
++      const dc = "src/games/shared/DigitCell.vue";
++      const bh = "src/games/shared/BoardHost.vue";
++      const W = "var(--motion-" + "whisper)";
++      const banked = `.cell-reveal-animated {\n  animation: cell-reveal 0.3s var(--ease-anticipatePop);\n}\n.gallery-fade-leave-active {\n  transition: opacity var(--motion-leave) var(--verb-lift-ease);\n}\n`;
++      const leaveMs = lad.rungs.find((r) => r.key === "leave")?.value ?? 200;
++      const bank = {
++        rungs: {},
++        sites: {
++          [`${css} :: .cell-reveal-animated :: cell-reveal`]: 300,
++          [`${css} :: .gallery-fade-leave-active :: opacity`]: leaveMs,
++        },
++      };
++      const DC_ROOT = `<template>\n  <div class="game-cell" :class="{ 'cell-reveal-animated': armed }"><span class="digit">1</span></div>\n</template>\n`;
++      const DC_INNER = `<template>\n  <div class="wrap"><div class="game-cell" :class="{ 'cell-reveal-animated': armed }">1</div></div>\n</template>\n`;
++      const host = ({ child = "dyn", cls = "", style = "" } = {}) =>
++        child === "dyn"
++          ? `<template>\n  <div class="board-cells"><component :is="cell"${cls} /></div>\n</template>\n<script setup lang="ts">\nconst cell = 1;\n</script>\n<style scoped>\n${style}</style>\n`
++          : `<template>\n  <div class="board-cells"><DigitCell${cls} /></div>\n</template>\n<script setup lang="ts">\nimport DigitCell from "./DigitCell.vue";\n</script>\n<style scoped>\n${style}</style>\n`;
++      const rowsOf = (text, file) => {
++        const found = collectText(text, file);
++        return inventoryRows(
++          [...found, ...libraryOnly(join(ROOT, file), text, file, found)],
++          lad,
++        );
++      };
++      // the universe as the gate reads the estate: the ONE library's componentReach over a fixture
++      const universeFx = (tree) => {
++        const fx = fixture(tree);
++        const R = mon("component-reach") ? componentReach(fx.fe, fx) : null;
++        return universeOf(
++          Object.entries(tree).filter(([k]) => k.endsWith(".vue")),
++          R,
++        );
++      };
++      // tree: { rel: text } (the banked index.css is added); every file's rows, timing and elements
++      const tree = (files, ledger = []) => {
++        const all = { [css]: banked, ...files };
++        if (files[css]) all[css] = banked + files[css];
++        const rows = Object.entries(all).flatMap(([rel, text]) => rowsOf(text, rel));
++        return b6NoShorten(rows, bank, { rungs: [] }, ledger, {
++          elements: universeFx(all),
++          timing: timingDeclsOf(Object.entries(all)),
++        });
++      };
++      const k7y = `.game-cell {\n  animation: cell-reveal ${W} var(--verb-layDown-ease);\n}\n`;
++      // the scene.css shape (pass 10): a stylesheet a component takes as `<style scoped src>`, a
++      // transition banked on the card BEFORE its fade-in (one element, two families)
++      const cardCss = "src/games/shared/card.css";
++      const cardVue = "src/games/shared/Card.vue";
++      const cardBank = {
++        rungs: {},
++        sites: {
++          [`${cardCss} :: .card :: opacity`]: 150,
++          [`${cardCss} :: .card :: card-in`]: 250,
++        },
++      };
++      const cardBase = `.card {\n  transition: opacity 150ms var(--ease-standard);\n  animation: card-in 250ms var(--ease-standard);\n}\n`;
++      const card = (src) =>
++        `<template>\n  <div class="card">c</div>\n</template>\n<style scoped src="${src}"></style>\n`;
++      const srcTree = (files, ledger = []) => {
++        const all = { [cardCss]: cardBase, ...files };
++        if (files[cardCss]) all[cardCss] = cardBase + files[cardCss];
++        const rows = Object.entries(all).flatMap(([rel, text]) => rowsOf(text, rel));
++        return b6NoShorten(rows, cardBank, { rungs: [] }, ledger, {
++          elements: universeFx(all),
++          timing: timingDeclsOf(Object.entries(all)),
++        });
++      };
++      const leaveNone = ".leaving .card {\n  animation: none;\n}\n";
++      return [
++        [
++          "B6 RATCHET",
++          'scene.css VERBATIM — Card.vue takes card.css as `<style scoped src="@/…">`; `.leaving .card { animation: none }` deletes the banked fade-in on Card\'s root (a transition banked on it first)',
++          () =>
++            srcTree({
++              [cardVue]: card("@/games/shared/card.css"),
++              [cardCss]: leaveNone,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          'scene.css relative — the same, `<style scoped src="./card.css">`',
++          () => srcTree({ [cardVue]: card("./card.css"), [cardCss]: leaveNone }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a scoped-src stylesheet is its importer's scoped style: Other.vue's own `.card`, with its own scoped `animation: none`, is not the element card.css banks",
++          () =>
++            srcTree({
++              [cardVue]: card("@/games/shared/card.css"),
++              "src/games/shared/Other.vue": `<template>\n  <p class="card">o</p>\n</template>\n<style scoped>\n${leaveNone}</style>\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C1y VERBATIM — BoardHost's `<style scoped>` `.game-cell { animation: cell-reveal var(--motion-whisper) … }` reaches DigitCell's ROOT through `<component :is>`",
++          () => tree({ [dc]: DC_ROOT, [bh]: host({ style: k7y }) }),
++        ],
++        [
++          "B6 RATCHET",
++          "C1y static child — the same rule, BoardHost rendering `<DigitCell />` by import",
++          () => tree({ [dc]: DC_ROOT, [bh]: host({ child: "static", style: k7y }) }),
++        ],
++        [
++          "B6 RATCHET",
++          "C17y VERBATIM — `class=\"cell-quick\"` on BoardHost's `<component>` FALLS THROUGH to DigitCell's root; index.css `.cell-quick { animation: … var(--motion-whisper) … }`",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [bh]: host({ cls: ' class="cell-quick"' }),
++              [css]: k7y.replace(".game-cell", ".cell-quick"),
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C2 from a GRANDPARENT — Shell's scoped `:deep(.game-cell)` (Shell renders BoardHost renders DigitCell, the reveal on an inner element)",
++          () =>
++            tree({
++              [dc]: DC_INNER,
++              [bh]: host({ child: "static" }),
++              "src/games/shared/Shell.vue": `<template>\n  <main><BoardHost /></main>\n</template>\n<script setup lang="ts">\nimport BoardHost from "./BoardHost.vue";\n</script>\n<style scoped>\n${k7y.replace(".game-cell", ":deep(.game-cell)")}</style>\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the Other.vue row RE-CUT (pass-9 critique §4d): Other renders `<Badge />`, whose ROOT carries `.game-cell`; its scoped K7y reaches Badge's root, never DigitCell's",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [bh]: host({ child: "static" }),
++              "src/games/shared/Badge.vue": `<template>\n  <span class="game-cell">b</span>\n</template>\n`,
++              "src/games/shared/Other.vue": `<template>\n  <p><Badge /></p>\n</template>\n<script setup lang="ts">\nimport Badge from "./Badge.vue";\n</script>\n<style scoped>\n${k7y}</style>\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a parent's scoped rule stops at the child's ROOT: the reveal on DigitCell's INNER element, BoardHost's scoped `.game-cell` (no `:deep`)",
++          () => tree({ [dc]: DC_INNER, [bh]: host({ child: "static", style: k7y }) }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a scoped `:deep(.game-cell)` in a file with NO render path to DigitCell",
++          () =>
++            tree({
++              [dc]: DC_INNER,
++              [bh]: host({ child: "static" }),
++              "src/games/shared/Lone.vue": `<template>\n  <p>z</p>\n</template>\n<style scoped>\n${k7y.replace(".game-cell", ":deep(.game-cell)")}</style>\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C13 VERBATIM — `.game-cell { animation-timing-function: steps(1, end) }` (the reveal a 300 ms hold and a pop)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  animation-timing-function: steps(1, end);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C13 shorthand — `.game-cell { animation: cell-reveal 0.3s steps(1, end) }` (the length held, the curve swapped)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  animation: cell-reveal 0.3s steps(1, end);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C14 VERBATIM — `.game-cell { animation: none }` (the reveal DELETED)",
++          () => tree({ [dc]: DC_ROOT, [css]: ".game-cell {\n  animation: none;\n}\n" }),
++        ],
++        [
++          "B6 RATCHET",
++          "C14 keyword twin — `.game-cell { animation-name: initial }`",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  animation-name: initial;\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C3 VERBATIM — `.game-cell { animation-delay: -150ms }` (half the reveal skipped)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  animation-delay: -150ms;\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C3v — `.game-cell { animation-delay: calc(var(--motion-whisper) * -1) }`",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: `.game-cell {\n  animation-delay: calc(${W} * -1);\n}\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C3w — `animation-delay: calc(var(--motion-whisper)*-1)` (the product's sign with no space before it)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: `.game-cell {\n  animation-delay: calc(${W}*-1);\n}\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C3s — the negative delay inside the SHORTHAND: `animation: cell-reveal 0.3s -150ms var(--ease-anticipatePop)`",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                ".game-cell {\n  animation: cell-reveal 0.3s -150ms var(--ease-anticipatePop);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a TRANSITION curve (`steps(1)`) on the element an ANIMATION is banked on (2d keys the family)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  transition-timing-function: steps(1);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a keyframe step's own curve (`@keyframes cell-reveal { 50% { animation-timing-function: linear } }`) lands on no element",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                "@keyframes cell-reveal {\n  50% {\n    animation-timing-function: linear;\n  }\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C24m — a token declared twice (`--cq: 400ms` and `--cq: 150ms`) is valued at its LOWEST",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                ":root {\n  --cq: 400ms;\n}\n.board {\n  --cq: 150ms;\n}\n.game-cell {\n  animation-duration: var(--cq);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — on the banked element a HOUSE curve, a positive delay, and `animation: none` in a reduced-motion arm",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: `.game-cell {\n  animation-timing-function: var(--verb-layDown-ease);\n  animation-delay: 40ms;\n}\n@media (prefers-reduced-motion: reduce) {\n  .game-cell {\n    animation: none;\n  }\n}\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — C13 on ANOTHER element (`.cell-quick`, no tag writes it)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".cell-quick {\n  animation-timing-function: steps(1, end);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — C13 behind a RETUNE keyed on its site (the escape)",
++          () =>
++            tree(
++              {
++                [dc]: DC_ROOT,
++                [css]: ".game-cell {\n  animation-timing-function: steps(1, end);\n}\n",
++              },
++              [
++                {
++                  cls: "RETUNE",
++                  key: `${css} :: .game-cell :: animation-timing-function`,
++                  to: 0,
++                  why: "pass-9 critique C13 (the self-test's escape)",
++                },
++              ],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "C24y VERBATIM — `.game-cell { --cq: 150ms; animation: cell-reveal var(--cq) var(--verb-layDown-ease) }` (a LOCAL token carrying a length)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                ".game-cell {\n  --cq: 150ms;\n  animation: cell-reveal var(--cq) var(--verb-layDown-ease);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C25 — the token declared on `:root`, read on the banked element",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                ":root {\n  --cq: 150ms;\n}\n.game-cell {\n  animation-duration: var(--cq);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — a local token at the bound (`--cq: 300ms`)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]:
++                ".game-cell {\n  --cq: 300ms;\n  animation: cell-reveal var(--cq) var(--verb-layDown-ease);\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "C28y VERBATIM — `html .gallery-fade-leave-active { transition: opacity var(--motion-whisper) var(--verb-lift-ease) }` (the TERM disjunct: D4's door)",
++          () =>
++            tree({
++              [css]: `html .gallery-fade-leave-active {\n  transition: opacity ${W} var(--verb-lift-ease);\n}\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "D3's row — a new `animation` on the banked element running OTHER keyframes (`cell-pop` at 150 ms): the animation disjunct (it replaces the element's animation whole)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: `.game-cell {\n  animation: cell-pop ${W} var(--verb-layDown-ease);\n}\n`,
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — D8's row: a TRANSITION longhand at 150 ms on the element an ANIMATION is banked on (another family)",
++          () =>
++            tree({
++              [dc]: DC_ROOT,
++              [css]: ".game-cell {\n  transition-duration: 150ms;\n}\n",
++            }),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — D5b's row: with NO component tree on the universe (component-reach off), a scoped rule lands on its own file only",
++          () =>
++            b6NoShorten(
++              [
++                ...rowsOf(banked, css),
++                ...rowsOf(host({ child: "static", style: k7y }), bh),
++              ],
++              bank,
++              { rungs: [] },
++              [],
++              {
++                elements: [
++                  { file: dc, els: templateElements(DC_ROOT.slice(10, -12), 1) },
++                ],
++                timing: [],
++              },
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "D7's row — an element the library cannot read (its attributes unreadable) may land anywhere: the fallback over-reds",
++          () => {
++            const rows = [
++              ...rowsOf(banked, css),
++              ...rowsOf(".game-cell {\n  animation-duration: 150ms;\n}\n", "src/x.css"),
++            ];
++            const broken = {
++              i: 0,
++              tag: "div",
++              id: null,
++              classes: new Set(),
++              sure: new Set(),
++              parent: null,
++              attrs: null,
++              line: 1,
++            };
++            return b6NoShorten(rows, bank, { rungs: [] }, [], {
++              elements: [{ file: dc, els: [broken] }],
++              timing: [],
++            });
++          },
++        ],
++      ];
++    })(),
++    // ══ PASS 10 · K1's CLASS (pass-9 critique §4a/§4b): every spelling that carries a time string ═══
++    ...(() => {
++      const dc = "src/games/shared/DigitCell.vue";
++      const bh = "src/games/shared/BoardHost.vue";
++      const A1 =
++        'if (revealArmed.value) vars["--reveal-delay"] = `${props.noiseDelay}ms`;';
++      const cellSfc = (extra = "") =>
++        `<template>\n  <div class="game-cell" :style="cellVars"></div>\n</template>\n<script setup lang="ts">\nimport { MOTION } from "@pencil/config/pencilConfig";\nconst vars: Record<string, string> = {};\n${A1}\n${extra}\n</script>\n`;
++      const roster = { [`${dc} :: \`\${props.noiseDelay}ms\``]: 1 };
++      const st = (text, file = dc, r = roster) => scriptTimes([[file, text]], r);
++      const plant = (label, code) => [
++        "B6 RATCHET",
++        `${label} — DigitCell \`${code.slice(0, 70)}\``,
++        () => st(cellSfc(code)),
++      ];
++      return [
++        plant("K1 VERBATIM (the bracket)", 'vars["animation-duration"] = "50ms";'),
++        plant(
++          "C21 — Object.assign",
++          'Object.assign(vars, { "animation-duration": "50ms" });',
++        ),
++        plant(
++          "C19 — a computed key",
++          'vars[["animation", "duration"].join("-")] = "50ms";',
++        ),
++        plant("C22 — a camelCase dot write", 'vars.animationDuration = "50ms";'),
++        plant("C23 — a NEGATIVE delay", 'vars["--reveal-delay"] = "-150ms";'),
++        plant(
++          "C27 — a BARE clock hole",
++          'vars["animation-duration"] = `${MOTION.rungs.whisper}ms`;',
++        ),
++        plant("a single-quoted seconds literal", "vars.x = '0.05s';"),
++        [
++          "B6 RATCHET",
++          "C6 VERBATIM — BoardHost's template `:style=\"{ 'animation-duration': '150ms', … }\"` on `<component>` (a template binding is script)",
++          () =>
++            st(
++              `<template>\n  <component\n    :is="cell"\n    :style="{\n      'animation-duration': '150ms',\n      ...ink,\n    }"\n  />\n</template>\n`,
++              bh,
++              {},
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "a rostered literal ONE MORE time (the roster counts)",
++          () => st(cellSfc(A1)),
++        ],
++        [
++          "B6 RATCHET",
++          "a rostered literal RE-VALUED (`${props.noiseDelay / 2}ms`)",
++          () =>
++            st(
++              cellSfc("").replace("${props.noiseDelay}ms", "${props.noiseDelay / 2}ms"),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "the roster's stale arm — an entry the tree no longer carries (`src/x.ts :: '1ms'`)",
++          () =>
++            scriptTimes(null, { ...SCRIPT_TIME_ROSTER, "src/x.ts :: '1ms'": 1 }).filter(
++              (f) => f.includes("src/x.ts"),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the roster's own literal, once; strings that are no time (`'cell-reveal'`, `'150'`, `'ms'`, `` `${a}px` ``)",
++          () =>
++            st(cellSfc("const a = ['cell-reveal', '150', 'ms', `${A1.length}px`];")),
++        ],
++      ];
++    })(),
++    // ══ PASS 10 · row 6 (FIT-1, DIP-1, DOOR-6a READ) and row 12 (MOT-VERB's re-homed rows) ═══
++    ...(() => {
++      const src = lad.src;
++      const bankNow = readBank(decls, lad) ?? { consumers: {} };
++      const consumers = bankNow.consumers ?? {};
++      const cellAt = (ms) => src.replace(/(gridCell: \{\s*duration: )200,/, `$1${ms},`);
++      const lowered = Object.fromEntries(
++        Object.entries(consumers).map(([k, v], i) => [
++          k,
++          i === 0 && v[1] !== null ? [v[0], v[1] - 50] : v,
++        ]),
++      );
++      const swapBank = { consumers: { "src/a.ts :: MOTION.rungs.leave": [1, 200] } };
++      const swapRoster = { "src/a.ts :: MOTION.rungs.whisper": [1, 150] };
++      const retune = (row) => [
++        ...consumerRatchet(swapBank, swapRoster, [row]),
++        ...b6NoShorten([], { rungs: {}, sites: {} }, { rungs: [] }, [row], {
++          elements: [],
++          timing: [],
++        }),
++      ];
++      const ratified = {
++        consumer: "src/a.ts :: MOTION.rungs.leave",
++        to: 150,
++        cls: "RETUNE",
++        why: "pass10/CHAIR-RULINGS §19 (the self-test's consumer swap)",
++      };
++      return [
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "FIT-1 STRUCK — fit-one-writer reads its token from the rung ledger's row (pass-9 critique: consumer-less)",
++          () =>
++            fitOneWriter(
++              null,
++              RUNG_LEDGER.filter((x) => x.id !== "FIT-1"),
++            ),
++        ],
++        [
++          "B3 ONE HOME, NO FALLBACK",
++          "FIT-1 RE-POINTED at another token",
++          () =>
++            fitOneWriter(
++              null,
++              RUNG_LEDGER.map((x) =>
++                x.id === "FIT-1" ? { ...x, subject: "--live-fit-x" } : x,
++              ),
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "DIP-1 — `DRAW_IN_PRESETS.gridCell.duration` 200 → 150 with its ledger row unread",
++          () => ledgerRead(bankNow, cellAt(150)),
++        ],
++        [
++          "B6 RATCHET",
++          "DIP-1 bound+ε — `gridCell` 200 → 201 (a rise is a move too: the row pins its number)",
++          () => ledgerRead(bankNow, cellAt(201)),
++        ],
++        [
++          "B6 RATCHET",
++          "DIP-1 — `MOTION.hand.serial.cell` whisper → leave",
++          () =>
++            ledgerRead(bankNow, src.replace('cell: "whisper" }', 'cell: "leave" }')),
++        ],
++        [
++          "B6 RATCHET",
++          "DOOR-6a — a re-bank LOWERS one consumer 50 ms (swap → `--bank` → re-stamp, pass 9's door)",
++          () => ledgerRead({ consumers: lowered }, src),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the tree's own presets, serial and banked roster",
++          () => ledgerRead(bankNow, src),
++        ],
++        [
++          "B6 RATCHET",
++          "a TYPED leaf EXEMPT_KEYS does not name NOT A LENGTH (`MOTION.rungs.leave` typed a ratio)",
++          () => typesBound({ "MOTION.rungs.leave": "ratio" }),
++        ],
++        [
++          "B6 RATCHET",
++          "paceSlack read as a CLOCK again (the type struck): VERB's pass-9 shape — one `stepMs` read leaves, a 1.5 ms 'clock' arrives",
++          () =>
++            consumerRatchet(
++              { consumers: { "src/h.ts :: MOTION.hand.stepMs": [2, 17] } },
++              {
++                "src/h.ts :: MOTION.hand.stepMs": [1, 17],
++                "src/h.ts :: MOTION.hand.paceSlackX": [1, 1.5],
++              },
++              [],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — paceSlack TYPED: one `stepMs` read leaves at its value (DELETED), the ratio arrives unvalued",
++          () =>
++            consumerRatchet(
++              { consumers: { "src/h.ts :: MOTION.hand.stepMs": [2, 17] } },
++              consumerRoster(
++                [
++                  [
++                    "src/h.ts",
++                    "const a = MOTION.hand.stepMs;\nconst b = MOTION.hand.paceSlack;\n",
++                  ],
++                ],
++                lad,
++              ),
++              [
++                {
++                  consumer: "src/h.ts :: MOTION.hand.stepMs",
++                  ms: 17,
++                  cls: "DELETED",
++                  why: "pass10/CHAIR-RULINGS §19",
++                },
++              ],
++            ),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the RETUNE `consumer` subject, RATIFIED (pass10/CHAIR-RULINGS §19): a swap licensed at its value",
++          () => retune(ratified),
++        ],
++        [
++          "B6 RATCHET",
++          "a `consumer` RETUNE with no `to` (the ratified subject keeps the value law)",
++          () => retune({ ...ratified, to: undefined }),
++        ],
++        [
++          "B6 RATCHET",
++          "a `consumer` RETUNE at ANOTHER value (to: 100 licenses no 150)",
++          () => retune({ ...ratified, to: 100 }),
++        ],
++      ];
++    })(),
++    // ══ PASS 10 · K23's class: the banked animation's keyframes, ratcheted against BASE_REF ═══
++    ...(() => {
++      const css = "src/assets/index.css";
++      const kb = { sites: { [`${css} :: .cell-reveal-animated :: cell-reveal`]: 300 } };
++      const was =
++        "@keyframes cell-reveal {\n  0% {\n    opacity: 0;\n  }\n  60% {\n    transform: scale(1.1);\n  }\n  100% {\n    opacity: 1;\n  }\n}\n@keyframes other {\n  50% {\n    opacity: 0.5;\n  }\n}\n";
++      const k23 = was.replace(
++        "60% {\n    transform: scale(1.1);\n  }",
++        "6% {\n    transform: scale(1.1);\n  }\n  10% {\n    transform: scale(1);\n    opacity: 1;\n  }",
++      );
++      const kr = (now, retuned = []) =>
++        keyframesRatchet(kb, [[css, now]], () => was, retuned);
++      const sig = keyframeSigs(css, k23).get("cell-reveal");
++      return [
++        [
++          "B6 RATCHET",
++          "K23 VERBATIM — the reveal's `60%` step moved to `6%`, the motion done by `10%` (every length unmoved)",
++          () => kr(k23),
++        ],
++        [
++          "B6 RATCHET",
++          "K23 one declaration — `transform: scale(1.1)` → `scale(1.01)` in the banked keyframes",
++          () => kr(was.replace("scale(1.1)", "scale(1.01)")),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — the banked keyframes re-spaced only (whitespace), and an UNBANKED `@keyframes other` changed",
++          () =>
++            kr(was.replace(/\n {2}/g, "\n\t").replace("opacity: 0.5", "opacity: 0.4")),
++        ],
++        [
++          "B6 RATCHET",
++          "NEGATIVE-NEGATIVE — K23 behind a KEYFRAMES_RETUNED row carrying its signature and cite",
++          () =>
++            kr(k23, [
++              {
++                key: `${css} :: cell-reveal`,
++                sig,
++                why: "pass-9 critique K23 (the self-test's escape)",
++              },
++            ]),
++        ],
++        [
++          "B6 RATCHET",
++          "K23 behind a row with NO cite (a retune is a decision with its document)",
++          () => kr(k23, [{ key: `${css} :: cell-reveal`, sig, why: "faster" }]),
++        ],
++        [
++          "B6 RATCHET",
++          "K23 behind a row whose signature is ANOTHER step set (the row licenses one value)",
++          () =>
++            kr(k23, [
++              { key: `${css} :: cell-reveal`, sig: "x", why: "pass-9 critique K23" },
++            ]),
++        ],
++      ];
++    })(),
+     // ══ PASS 9 · the pass-8 critic's plants (K7r K7s K3 K1-shape K15), each through its clause ═══
+     ...(() => {
+       const f = "src/assets/index.css";
+@@ -5286,16 +6480,8 @@ if (SELF_TEST) {
+           "NEGATIVE-NEGATIVE — K7r where `.game-cell` and the reveal sit on DIFFERENT elements",
+           () => reach(k7r, apart),
+         ],
+-        [
+-          "B6 RATCHET",
+-          "NEGATIVE-NEGATIVE — K7r in ANOTHER file's `<style scoped>` (it lands on that file's elements only)",
+-          () =>
+-            reach(
+-              `<template><p class="x"></p></template>\n<style scoped>\n${k7r}</style>\n`,
+-              cell,
+-              "src/games/shared/Other.vue",
+-            ),
+-        ],
++        // (PASS 10: the Other.vue NEGATIVE-NEGATIVE that rendered a bare `<p>` is STRUCK — it pinned the
++        //  parent-scope miss as lawful; its re-cut renders a child, in the component-tree block above)
+         [
+           "B6 RATCHET",
+           "NEGATIVE-NEGATIVE — K7r at a LONGER rung (dusk ≥ the banked 300)",
+@@ -6010,6 +7196,7 @@ if (SELF_TEST) {
+     })(),
+   ];
+   const vacuous = [];
++  HERMETIC = true;
+   for (const [target, desc, fn] of cases) {
+     const got = run(fn);
+     // a crash is not a red: the control CRASHED, and says so (pass-6 critique §2.3)
+diff --git a/web/frontend/src/pencil/composables/bootHand.test.ts b/web/frontend/src/pencil/composables/bootHand.test.ts
+index d18ca152..23f5383d 100644
+--- a/web/frontend/src/pencil/composables/bootHand.test.ts
++++ b/web/frontend/src/pencil/composables/bootHand.test.ts
+@@ -23,8 +23,8 @@ describe("the hand's clock (T9-M20 D1)", () => {
+     for (const t of [0, 16, 316, 332]) drive!(0, t / SPAN);
+     // 16 ms passes whole; the 300 ms stall advances one CAP (1.5 × 16 = 24, above the 17 ms floor);
+     // the next frame is whole again
+-    const cap = Math.max(16 * MOTION.hand.paceSlack, MOTION.hand.stepMs);
+-    expect(seen).toEqual([0, 16, 16 + cap, 32 + cap]);
++    // LITERAL (pass 10, LAWS P9 §F "a value roster is no behavioural gate"): 1.5 × 16 = 24
++    expect(seen).toEqual([0, 16, 40, 56]);
+   });
+ });
+ 
+@@ -61,18 +61,21 @@ describe("the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F)", (
+       expect(rate).toBeGreaterThanOrEqual(0.95);
+       expect(rate).toBeLessThanOrEqual(1 + 1e-9);
+     });
+-  /** The most one lost frame moves the hand on a panel of period `p`. */
+-  const capAt = (p: number) =>
+-    Math.min(
+-      Math.max(p * MOTION.hand.paceSlack, MOTION.hand.stepMs),
+-      MOTION.hand.maxStepMs,
+-    );
++  // THE BOUNDS ARE LITERALS (pass 10, LADDER row 12; LAWS P9 §F "a value roster is no behavioural
++  // gate"): pass 9 read every run length and bound from MOTION.hand itself, so paceWindow 5 → 2 and
++  // maxStepMs 42 → 60 / 100 left every row GREEN. The design's numbers, typed: one lost frame at 60 Hz
++  // moves the hand 25 ms (1.5 × 16.7), at 30 Hz 42 ms (1.5 × 33.3 = 50, capped at one 24 Hz frame);
++  // the window is FIVE frames; the cap is 42.
++  const CAP60 = 25;
++  const CAP30 = 42;
++  const WINDOW = 5;
++  const MAX_STEP = 42;
+   it("a stall pauses the hand for at most one and a half frames at the panel's own rate", async () => {
+     const at30 = await drawAt([...frames(1000 / 30, 10), 300, 1000 / 30]);
+-    expect(at30[11] - at30[10]).toBeCloseTo(capAt(1000 / 30), 3);
++    expect(at30[11] - at30[10]).toBeCloseTo(CAP30, 3);
+     expect(at30[11] - at30[10]).toBeLessThanOrEqual(1.5 * (1000 / 30) + 1e-9);
+     const at60 = await drawAt([...frames(1000 / 60, 10), 300, 1000 / 60]);
+-    expect(at60[11] - at60[10]).toBeCloseTo(capAt(1000 / 60), 3);
++    expect(at60[11] - at60[10]).toBeCloseTo(CAP60, 3);
+     expect(at60[11] - at60[10]).toBeLessThanOrEqual(1.5 * (1000 / 60) + 1e-9);
+   });
+   it("a jittery shimmed 60 Hz panel (15.6/23.4 ms, chromium's) travels whole", async () => {
+@@ -86,18 +89,18 @@ describe("the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F)", (
+   // so every stall of a run shorter than the window travels one cap (1.5 × the panel's frame). Pass
+   // 8's median let the third consecutive 150 ms stall of five travel its cap (34 ms at 60 Hz).
+   it("every stall of a run shorter than the window travels one cap (≤ 1.5 frames)", async () => {
+-    const n = MOTION.hand.paceWindow - 1;
++    const n = WINDOW - 1;
+     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, n)]);
+     for (let k = 11; k <= 10 + n; k++)
+-      expect(seen[k] - seen[k - 1]).toBeCloseTo(capAt(1000 / 60), 6);
++      expect(seen[k] - seen[k - 1]).toBeCloseTo(CAP60, 6);
+   });
+   it("a run that fills the window is read as the panel, never past maxStepMs", async () => {
+-    const n = MOTION.hand.paceWindow;
++    const n = WINDOW;
+     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, n + 1)]);
+     // the stall before the window fills still travels one frame; the one that fills it, the cap
+-    expect(seen[9 + n] - seen[8 + n]).toBeCloseTo(capAt(1000 / 60), 6);
+-    expect(seen[10 + n] - seen[9 + n]).toBeCloseTo(MOTION.hand.maxStepMs, 6);
+-    expect(seen[11 + n] - seen[10 + n]).toBeCloseTo(MOTION.hand.maxStepMs, 6);
++    expect(seen[9 + n] - seen[8 + n]).toBeCloseTo(CAP60, 6);
++    expect(seen[10 + n] - seen[9 + n]).toBeCloseTo(MAX_STEP, 6);
++    expect(seen[11 + n] - seen[10 + n]).toBeCloseTo(MAX_STEP, 6);
+   });
+   it("a jittery fast panel never crawls (the stepMs floor)", async () => {
+     // 125 Hz with 4/12 ms jitter: the minimum is 4, the floor keeps every 12 ms frame whole
+@@ -110,7 +113,26 @@ describe("the hand is a RATE on every panel (T9-W7 §13 pass 8, LAWS P7 §F)", (
+   it("a run of stalls is never read as the pace (capped at maxStepMs)", async () => {
+     const seen = await drawAt([...frames(1000 / 60, 10), ...frames(150, 10)]);
+     for (let k = 11; k <= 20; k++)
+-      expect(seen[k] - seen[k - 1]).toBeLessThanOrEqual(MOTION.hand.maxStepMs + 1e-9);
++      expect(seen[k] - seen[k - 1]).toBeLessThanOrEqual(MAX_STEP + 1e-9);
++  });
++  // crit.partial30 (pass-10 CHAIR-RULINGS §6; LAWS P9 §D, the first-tick law): the subscription's
++  // FIRST progress call lands part-way into a frame (pencil-boil stamps startTime at start()); that
++  // partial tick is never an interval of the window, so a 30 Hz panel keeps its pace from frame 1.
++  it("crit.partial30 — a partial first tick (4 ms) never pins a 30 Hz panel's pace", async () => {
++    vi.resetModules();
++    const m = await import("./bootHand");
++    const seen: number[] = [];
++    m.enrollStroke((c) => {
++      seen.push(c);
++      return seen.length > 31;
++    });
++    let t = 4;
++    drive!(0, t / SPAN);
++    for (let k = 0; k < 30; k++) drive!(0, (t += 1000 / 30) / SPAN);
++    // every interval after the partial tick travels whole: 30 frames of 33.3 ms
++    for (let k = 1; k < seen.length; k++)
++      expect(seen[k] - seen[k - 1]).toBeCloseTo(1000 / 30, 6);
++    expect(seen[seen.length - 1]).toBeCloseTo(1000, 6);
+   });
+ });
+ 

@@ -1,0 +1,29 @@
+worktree .claude/worktrees/wf_f72f3b5a-83a-28 (HEAD 74a2b5d9317e7795cee6bf63e861bd44f54ae80e)
+tree at bank (temporary index, the whole product diff incl. homes v3) 490df7cdd305c159d2fd5a0880508269af5366ad
+pass10.diff (--binary, on 74a2b5d9, temporary index, product paths only, the 13 homes v3 paths EXCLUDED: apply homes.diff 07257854 first)
+  bytes 392925 sha1 3057c02283080395e1ed846435af02994e5d8479
+  shortstat 34 files changed, 3798 insertions(+), 1234 deletions(-)
+pass10.delta.diff (this lane's own pass-10 move: tree after homes v3 at open, 84e59d0f047cbc02d63a47e60e20e432b5ab37d5 -> 490df7cdd305c159d2fd5a0880508269af5366ad; home paths touched: 0)
+  bytes 27798 sha1 a2e935d62d4f5ce6982989dc11a94963633510fc
+  shortstat 1 file changed, 175 insertions(+), 42 deletions(-)
+pass10.delta.on-WAVE.diff (DECLARED BASE: 954bbbab + pass10/instruments/homes.on-WAVE.diff 0723d508 = archive write-tree 72b7ad67)
+  bytes 9689 sha1 e07b684116a21e8defad6488d900a309319f78b7
+  shortstat 1 file changed, 32 insertions(+), 20 deletions(-)
+apply --check (git apply --check --binary -v, exit captured first, pristine git-init'd archive trees):
+  check pass10.diff on 74a2b5d9 (archive 243fbf57) [gitdir <lane-scratch>/chk74/.git] exit 0 paths 34 refused 0
+  check pass10.delta.on-WAVE.diff on s10 1be6fe37 + homes.on-WAVE (a969477d) [gitdir <lane-scratch>/chkS10/.git] exit 0 paths 1 refused 0
+  check pass10.delta.on-WAVE.diff on WAVE 954bbbab + homes.on-WAVE (72b7ad67), the declared base [gitdir <lane-scratch>/chkWAVE/.git] exit 0 paths 1 refused 0
+  check pass10.diff on s10 1be6fe37 + homes.on-WAVE (expected refusal: B13, the centre does not travel) [gitdir <lane-scratch>/chkS10/.git] exit 1 paths 34 refused 63
+  check pass10.diff on WAVE + homes.on-WAVE (expected refusal, as on s10) [gitdir <lane-scratch>/chkWAVE/.git] exit 1 paths 34 refused 69
+grep (LAWS P8 §K's four scratch-path patterns | +++ or --- dot-path) per bank:
+  pass10.diff 0 / 0
+  pass10.delta.diff 0 / 0
+  pass10.delta.on-WAVE.diff 0 / 0
+stacked checks (temporary index in the chk74 / chkWAVE scratch repos, read-tree of the pristine archive tree first):
+  homes.diff (07257854) on 74a2b5d9 archive 243fbf57 exit 0; then check pass10.diff exit 0 paths 34; applied -> write-tree dcfd2f5a
+    (the worktree's 490df7cd carries the docs/precepts gitlink that git archive drops; the product paths are the bank's)
+  pass9.diff (38c952dc) + homes.on-WAVE.diff (0723d508) on 243fbf57 exit 0 / 0; then check pass10.delta.diff exit 0 paths 1
+  check pass10.delta.on-WAVE.diff on the WAVE alone (archive write-tree 044284b5 = 954bbbab's archive form) exit 0 paths 1
+REPLAY ROUTE: 74a2b5d9 -> git apply homes.diff (07257854) -> git apply pass10.diff (3057c022) = this tree's product state.
+  On the integrated trees: s10 (1be6fe37) or the WAVE (954bbbab) -> homes.on-WAVE.diff (0723d508) -> pass10.delta.on-WAVE.diff (e07b6841);
+  the centre (RuledLine.vue, RuledGroup.vue, the M18 / pin / forced rows) does not travel (B13(b)).
